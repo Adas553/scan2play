@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Scan2Play - Zamów Piosenkę</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #121212; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { background: #1e1e1e; border: 1px solid #333; border-radius: 15px; width: 100%; max-width: 500px; }
+        .btn-success { background: #1DB954; border: none; } /* Spotify Green */
+        .btn-success:hover { background: #1ed760; }
+    </style>
+</head>
+<body>
+<div class="container d-flex justify-content-center">
+    <div class="card p-4 shadow-lg w-100">
+        <h1 class="mb-4 text-center">🎵 Scan2Play</h1>
+        <p class="text-secondary text-center">Co chcesz usłyszeć?</p>
+
+        <form action="/request" method="POST" class="p-3 border rounded bg-dark text-light">
+            <h4 class="mb-4 text-center">Zamów piosenkę</h4>
+
+            <div class="mb-3">
+                <label for="songInput" class="form-label fw-bold">Czego chcesz posłuchać?</label>
+                <input type="text" id="songInput" name="songName" class="form-control"
+                       placeholder="np. 'coś do kawy', 'skakanie na parkiecie'..." required>
+                <div class="form-text text-secondary">Podaj tytuł, artystę lub po prostu opisz swój nastrój!</div>
+            </div>
+
+            <div class="mb-4" th:if="${globalVibe.name() == 'ANY'}">
+                <label for="styleInput" class="form-label fw-bold">Wybierz klimat (opcjonalnie)</label>
+                <select id="styleInput" name="style" class="form-select">
+                    <option value="Auto (Zaufaj AI)" selected th:text="#{msg.party.vibe.trust_ai}">✨ Zaufaj AI</option>
+                    <option value="Pop / Dance">Pop / Dance</option>
+                    <option value="Rock / Alternatywa">Rock / Alternatywa</option>
+                    <option value="Rap / Hip-Hop">Rap / Hip-Hop</option>
+                    <option value="Chillout / Jazz">Chillout / Jazz</option>
+                </select>
+            </div>
+
+            <div class="mb-4" th:unless="${globalVibe.name() == 'ANY'}">
+                <div class="alert alert-warning text-dark text-center fw-bold shadow-sm">
+                    <span th:text="#{msg.party.vibe.alert}">🛑 UWAGA: Szef imprezy narzucił klimat:</span><br>
+                    <span class="fs-4 text-uppercase" th:text="#{vibe.__${globalVibe}__}">JAZZ</span>
+                </div>
+                <input type="hidden" name="style" th:value="#{vibe.__${globalVibe}__}">
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm py-2">Wyślij do DJ-a!</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
