@@ -6,6 +6,8 @@ import com.scan2play.service.DjService;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +18,7 @@ import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class DjController {
 
     private final DjService djService;
@@ -26,7 +29,7 @@ public class DjController {
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
-        return "index"; // looks for src/main/resources/templates/index.html
+        return "index";
     }
 
     /**
@@ -54,14 +57,21 @@ public class DjController {
      * Shows all previous song evaluations stored in database.
      */
     @GetMapping("/dashboard")
-    public String dashboard(Model model) {
+    public String dashboard(Model model, OAuth2AuthenticationToken authentication) {
+        if (authentication != null) {
+            String activeProvider = authentication.getAuthorizedClientRegistrationId();
+            log.info("DJ logged in using: {}", activeProvider);
+            model.addAttribute("activeProvider", activeProvider);
+        }
+
         model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
         try {
             model.addAttribute("history", repository.findAll());
         } catch (Exception e) {
+            log.error("Error while fetching song history", e);
             model.addAttribute("history", List.of());
         }
-        return "dashboard"; // will show src/main/resources/templates/dashboard.html
+        return "dashboard";
     }
 
     /**
@@ -75,7 +85,7 @@ public class DjController {
      */
     @GetMapping("/history")
     public List<SongRequestEntity> getHistory() {
-        return repository.findAll(); // Pobiera wszystko z bazy danych
+        return repository.findAll();
     }
 
     /**
@@ -89,7 +99,7 @@ public class DjController {
     public String getDashboardUpdates(Model model) {
         List<SongRequestEntity> history = repository.findAll();
         model.addAttribute("history", history);
-        return "dashboard :: songTableBody"; // Zwraca tylko fragment o nazwie songTableBody
+        return "dashboard :: songTableBody";
     }
 
     /**
@@ -101,6 +111,6 @@ public class DjController {
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam VibeType newVibe) {
         djService.setCurrentGlobalVibe(newVibe);
-        return "redirect:/dashboard"; // Po zmianie odświeżamy panel DJ-a
+        return "redirect:/dashboard";
     }
 }

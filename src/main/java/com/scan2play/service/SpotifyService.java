@@ -1,5 +1,6 @@
 package com.scan2play.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
@@ -10,6 +11,7 @@ import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequ
  * Service responsible for interacting with the Spotify API.
  */
 @Service
+@Slf4j
 public class SpotifyService {
 
     private final SpotifyApi spotifyApi;
@@ -44,8 +46,7 @@ public class SpotifyService {
             // Set the obtained token on the SpotifyApi instance
             spotifyApi.setAccessToken(clientCredentials.getAccessToken());
         } catch (Exception e) {
-            // In production: consider proper logging + fallback / retry strategy
-            System.err.println("Spotify authentication failed: " + e.getMessage());
+            log.error("Spotify authentication failed", e);
         }
     }
 
@@ -72,8 +73,7 @@ public class SpotifyService {
                 return track.getExternalUrls().get("spotify");
             }
         } catch (Exception e) {
-            // In production: log with structured logger (SLF4J/Logback)
-            System.err.println("Spotify track search failed: " + e.getMessage());
+            log.error("Spotify track search failed for query: '{}'", query, e);
         }
         return null;
     }

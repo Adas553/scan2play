@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class PartySettingsEntity {
 
     @Id
-    private Long id; // Zawsze będziemy używać ID = 1, bo mamy jedną imprezę naraz
+    private Long id; // We will always use ID = 1, as we manage one party at a time
 
     @Enumerated(EnumType.STRING)
     private VibeType globalVibe;

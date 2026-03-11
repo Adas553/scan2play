@@ -10,9 +10,8 @@ import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.core.io.Resource;
@@ -21,7 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
 @Service
-@RequiredArgsConstructor // Lombok
+@RequiredArgsConstructor
+@Slf4j
 public class DjService {
 
     private final Client client;
@@ -46,6 +46,7 @@ public class DjService {
         try {
             return new String(promptResource.getContentAsByteArray(), StandardCharsets.UTF_8);
         } catch (Exception e) {
+            log.error("Failed to load prompt template", e);
             throw new RuntimeException("Failed to load prompt template", e);
         }
     }
@@ -62,8 +63,10 @@ public class DjService {
      * @throws RuntimeException if AI client is not properly configured
      */
     public DjResponse evaluateAndSaveSong(String songName, String style) {
+        log.info("Evaluating song: '{}' with style: '{}'", songName, style);
         // Step 1: Get classification from Gemini AI
         DjResponse aiResponse = this.evaluateSong(songName, style);
+        log.info("AI response: {}", aiResponse);
 
         // Step 2: Build persistent entity
         SongRequestEntity entity = SongRequestEntity.builder()
@@ -77,12 +80,14 @@ public class DjService {
 
         // Step 3: Add Spotify link only for songs approved by the AI DJ
         if ("accepted".equals(aiResponse.decision())) {
+            log.info("Song accepted, finding Spotify URL for '{}'", aiResponse.songName());
             String url = spotifyService.findTrackUrl(aiResponse.songName());
             entity.setSpotifyUrl(url);  // null is acceptable if track not found
         }
 
         // Step 4: Persist to database
         repository.save(entity);
+        log.info("Saved song request to database with ID: {}", entity.getId());
 
         return aiResponse;
     }
@@ -108,6 +113,7 @@ public class DjService {
             GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
             return objectMapper.readValue(response.text(), DjResponse.class);
         } catch (Exception e) {
+            log.error("AI evaluation failed for song: '{}', style: '{}'", songName, style, e);
             return new DjResponse("error", "AI failed: " + e.getMessage(), songName, 0);
         }
     }
@@ -115,7 +121,7 @@ public class DjService {
     /**
      * Retrieves the current global party vibe from the database.
      *
-     * @return the current vibe string, or "Dowolny" (Any) if no settings are found.
+     * @return the current vibe string, or VibeType.ANY if no settings are found.
      */
     public VibeType getCurrentGlobalVibe() {
         return partySettingsRepository.findById(1L)
@@ -134,5 +140,6 @@ public class DjService {
 
         settings.setGlobalVibe(newVibe);
         partySettingsRepository.save(settings);
+        log.info("Global vibe updated to: {}", newVibe);
     }
 }
