@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.core.io.Resource;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
@@ -45,7 +46,7 @@ public class DjService {
     private String getPromptTemplate() {
         try {
             return new String(promptResource.getContentAsByteArray(), StandardCharsets.UTF_8);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Failed to load prompt template", e);
             throw new RuntimeException("Failed to load prompt template", e);
         }
@@ -112,7 +113,7 @@ public class DjService {
 
             GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
             return objectMapper.readValue(response.text(), DjResponse.class);
-        } catch (Exception e) {
+        } catch (Exception e) { // Catching a broad exception as various issues can occur (API, network, parsing)
             log.error("AI evaluation failed for song: '{}', style: '{}'", songName, style, e);
             return new DjResponse("error", "AI failed: " + e.getMessage(), songName, 0);
         }

@@ -1,11 +1,15 @@
 package com.scan2play.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.core5.http.ParseException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
+import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequest;
+
+import java.io.IOException;
 
 /**
  * Service responsible for interacting with the Spotify API.
@@ -45,7 +49,7 @@ public class SpotifyService {
             var clientCredentials = clientCredentialsRequest.execute();
             // Set the obtained token on the SpotifyApi instance
             spotifyApi.setAccessToken(clientCredentials.getAccessToken());
-        } catch (Exception e) {
+        } catch (IOException | SpotifyWebApiException | ParseException e) {
             log.error("Spotify authentication failed", e);
         }
     }
@@ -54,8 +58,8 @@ public class SpotifyService {
      * Searches for a track on Spotify using the provided query
      * and returns the Spotify URL of the best matching track (if found).
      *
-     * @param query search phrase (e.g. "artist - title", "song name", "The Weeknd Blinding Lights")
-     * @return Spotify track URL (e.g. "https://open.spotify.com/track/...")
+     * @param query search phrase
+     * @return Spotify track URL
      * or {@code null} if no track was found or an error occurred
      */
     public String findTrackUrl(String query) {
@@ -72,7 +76,7 @@ public class SpotifyService {
                 // Return the Spotify open link (web / app compatible)
                 return track.getExternalUrls().get("spotify");
             }
-        } catch (Exception e) {
+        } catch (IOException | SpotifyWebApiException | ParseException e) {
             log.error("Spotify track search failed for query: '{}'", query, e);
         }
         return null;

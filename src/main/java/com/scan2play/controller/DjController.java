@@ -67,7 +67,7 @@ public class DjController {
         model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
         try {
             model.addAttribute("history", repository.findAll());
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error while fetching song history", e);
             model.addAttribute("history", List.of());
         }
