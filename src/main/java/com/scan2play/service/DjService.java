@@ -7,6 +7,7 @@ import com.google.genai.types.GenerateContentResponse;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
@@ -28,7 +29,7 @@ public class DjService {
     private final Client client;
     private final ObjectMapper objectMapper;
     private final SongRequestRepository repository;
-    private final SpotifyService spotifyService;
+    private final QueueService queueService;
 
     @Value("${google.ai.model-name}")
     private String modelName;
@@ -45,7 +46,7 @@ public class DjService {
      */
     private String getPromptTemplate() {
         try {
-            return new String(promptResource.getContentAsByteArray(), StandardCharsets.UTF_8);
+            return promptResource.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             log.error("Failed to load prompt template", e);
             throw new RuntimeException("Failed to load prompt template", e);
@@ -81,9 +82,14 @@ public class DjService {
 
         // Step 3: Add Spotify link only for songs approved by the AI DJ
         if ("accepted".equals(aiResponse.decision())) {
-            log.info("Song accepted, finding Spotify URL for '{}'", aiResponse.songName());
-            String url = spotifyService.findTrackUrl(aiResponse.songName());
-            entity.setSpotifyUrl(url);  // null is acceptable if track not found
+            try {
+                log.info("Song accepted, finding Spotify URL for '{}'", aiResponse.songName());
+                String url = queueService.resolveTrack(aiResponse.songName(), MusicProviderType.SPOTIFY);
+                entity.setSpotifyUrl(url);  // null is acceptable if track not found
+            } catch (Exception e) {
+                log.warn("Failed to resolve Spotify URL for '{}'", aiResponse.songName(), e);
+                entity.setSpotifyUrl(null); // Proceed without URL if there's an error
+            }
         }
 
         // Step 4: Persist to database

@@ -1,5 +1,7 @@
 package com.scan2play.service;
 
+import com.scan2play.integration.MusicProvider;
+import com.scan2play.model.MusicProviderType;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.core5.http.ParseException;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,13 +13,9 @@ import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequ
 
 import java.io.IOException;
 
-/**
- * Service responsible for interacting with the Spotify API.
- */
 @Service
 @Slf4j
-public class SpotifyService {
-
+public class SpotifyMusicProvider implements MusicProvider {
     private final SpotifyApi spotifyApi;
 
     /**
@@ -26,7 +24,7 @@ public class SpotifyService {
      * @param clientId     Spotify application client ID
      * @param clientSecret Spotify application client secret
      */
-    public SpotifyService(
+    public SpotifyMusicProvider(
             @Value("${spotify.client-id}") String clientId,
             @Value("${spotify.client-secret}") String clientSecret) {
 
@@ -34,6 +32,11 @@ public class SpotifyService {
                 .setClientId(clientId)
                 .setClientSecret(clientSecret)
                 .build();
+    }
+
+    @Override
+    public MusicProviderType getType() {
+        return MusicProviderType.SPOTIFY;
     }
 
     /**
