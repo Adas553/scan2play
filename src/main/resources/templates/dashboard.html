@@ -1,23 +1,20 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>DJ Dashboard - Scan2Play</title>
+    <meta charset="UTF-8">
+    <title th:text="#{dashboard.title}">DJ Dashboard - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #0b0b0b; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        /* Mniejsze marginesy na telefonach (p-3), większe na PC (p-md-4) */
         .container { background: #161616; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         h1 { color: #fff; font-weight: 700; font-size: 1.8rem; }
-
         .status-accepted { color: #1DB954 !important; font-weight: bold; text-transform: uppercase; }
         .status-rejected { color: #ff4444 !important; font-weight: bold; text-transform: uppercase; }
-
-        .table { border-color: #333; white-space: nowrap; /* Zapobiega łamaniu tekstu w tabeli */ }
+        .table { border-color: #333; white-space: nowrap; }
         .btn-success { background-color: #1DB954; border: none; font-weight: 600; }
         .btn-success:hover { background-color: #1ed760; }
-
         .badge-energy { background: #333; color: #fff; padding: 5px 10px; border-radius: 20px; border: 1px solid #444; }
     </style>
 </head>
@@ -25,7 +22,7 @@
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
 
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
-        <h1 class="mb-0 text-center text-md-start">🎧 Panel DJ-a</h1>
+        <h1 class="mb-0 text-center text-md-start" th:text="#{dashboard.title}">🎧 DJ Dashboard</h1>
 
         <div class="bg-dark p-2 rounded border border-secondary w-100" style="max-width: 300px;">
             <form action="/dashboard/vibe" method="POST" class="m-0">
@@ -39,6 +36,21 @@
             </form>
         </div>
 
+        <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <form action="/dashboard/provider" method="POST" class="d-flex align-items-center">
+                        <label for="providerSelect" class="me-3 fw-bold text-light" th:text="#{dashboard.provider.label}">🎵 Playback source:</label>
+                        <select id="providerSelect" name="activeProvider" class="form-select bg-black text-light border-secondary w-auto" onchange="this.form.submit()">
+                            <option value="SPOTIFY" th:selected="${activeProvider.name() == 'SPOTIFY'}">Spotify</option>
+                            <option value="YOUTUBE" th:selected="${activeProvider.name() == 'YOUTUBE'}">YouTube</option>
+                        </select>
+                    </form>
+                </div>
+                <div class="col-md-6"></div>
+            </div>
+        </div>
+
         <div class="form-check form-switch mt-2 mt-md-0">
             <input class="form-check-input" type="checkbox" id="autoSpotify">
             <label class="form-check-label fw-bold" for="autoSpotify" style="color: #1DB954">Auto-Pilot</label>
@@ -49,21 +61,28 @@
         <table class="table table-dark table-hover align-middle">
             <thead>
             <tr>
-                <th>Godzina</th>
-                <th>Piosenka</th>
-                <th>Vibe</th>
-                <th>Werdykt AI</th>
-                <th>Komentarz DJ-a</th>
-                <th>Energia</th>
+                <th th:text="#{dashboard.table.header.time}">Time</th>
+                <th th:text="#{dashboard.table.header.song}">Song</th>
+                <th th:text="#{dashboard.table.header.vibe}">Vibe</th>
+                <th th:text="#{dashboard.table.header.decision}">AI Verdict</th>
+                <th th:text="#{dashboard.table.header.comment}">DJ's Comment</th>
+                <th th:text="#{dashboard.table.header.energy}">Energy</th>
             </tr>
             </thead>
             <tbody id="song-list">
             <tr th:fragment="songTableBody" th:each="req : ${history}">
                 <td class="text-secondary" th:text="${#temporals.format(req.requestedAt, 'HH:mm:ss')}">12:00</td>
                 <td>
-                    <span class="fw-bold" th:text="${req.songName}">Song</span>
-                    <a th:if="${req.spotifyUrl != null}" th:href="${req.spotifyUrl}" target="_blank"
-                       class="btn btn-sm btn-success ms-2 shadow-sm">▶ GRAJ</a>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-truncate me-3" style="max-width: 250px;" th:text="${req.songName}">Song</span>
+                        <a th:if="${req.trackUrl != null}"
+                           th:href="${req.trackUrl}"
+                           target="_blank"
+                           class="btn btn-sm shadow-sm fw-bold flex-shrink-0"
+                           th:classappend="${#strings.contains(req.trackUrl, 'spotify') ? 'btn-success text-dark' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-danger text-white' : 'btn-secondary')}"
+                           th:text="${#strings.contains(req.trackUrl, 'spotify') ? '▶ SPOTIFY' : (#strings.contains(req.trackUrl, 'youtube') ? '▶ YOUTUBE' : '▶ PLAY')}">
+                        </a>
+                    </div>
                 </td>
                 <td><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
                 <td th:class="${req.decision == 'accepted' ? 'status-accepted' : 'status-rejected'}"
@@ -81,18 +100,16 @@
         try {
             const response = await fetch('/dashboard/updates');
             if (!response.ok) {
-                throw new Error(`Błąd HTTP: ${response.status}`);
+                throw new Error(`HTTP error: ${response.status}`);
             }
             const html = await response.text();
             document.getElementById('song-list').innerHTML = html;
         } catch (error) {
-            console.error('Błąd odświeżania:', error);
+            console.error('Refresh error:', error);
         } finally {
             setTimeout(refreshTable, 5000);
         }
     }
-
-    // Odpal pierwsze sprawdzenie
     setTimeout(refreshTable, 5000);
 </script>
 
