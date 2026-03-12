@@ -26,5 +26,5 @@ public class SongRequestEntity {
 
     private int energyLevel;
     private LocalDateTime requestedAt;
-    private String spotifyUrl;
+    private String trackUrl;
 }

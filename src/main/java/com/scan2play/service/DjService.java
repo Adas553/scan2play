@@ -5,8 +5,8 @@ import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.model.DjResponse;
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.model.DjResponse;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
@@ -14,8 +14,9 @@ import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,9 +27,13 @@ import java.time.LocalDateTime;
 @Slf4j
 public class DjService {
 
+    private static final String DECISION_ACCEPTED = "accepted";
+    private static final String DECISION_REJECTED = "rejected";
+
     private final Client client;
     private final ObjectMapper objectMapper;
-    private final SongRequestRepository repository;
+    private final SongRequestRepository songRequestRepository;
+    private final PartySettingsRepository partySettingsRepository;
     private final QueueService queueService;
 
     @Value("${google.ai.model-name}")
@@ -37,116 +42,123 @@ public class DjService {
     @Value("classpath:prompt-template.txt")
     private Resource promptResource;
 
-    private final PartySettingsRepository partySettingsRepository;
-
-    /**
-     * Reads the prompt template from the classpath resource.
-     *
-     * @return the content of the prompt template as a String
-     */
-    private String getPromptTemplate() {
-        try {
-            return promptResource.getContentAsString(StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            log.error("Failed to load prompt template", e);
-            throw new RuntimeException("Failed to load prompt template", e);
-        }
-    }
-
     /**
      * Core business method:
      * 1. Asks Gemini AI to evaluate if the song fits the requested style/vibe
-     * 2. Saves the evaluation result to the database
-     * 3. Returns the AI verdict to the caller
+     * 2. Resolves track URL if accepted
+     * 3. Saves the evaluation result to the database
      *
      * @param songName title of the song (usually from QR scan or user input)
      * @param style    desired style / mood selected by the user
      * @return complete AI response (decision + comment + energy level)
-     * @throws RuntimeException if AI client is not properly configured
      */
+    @Transactional
     public DjResponse evaluateAndSaveSong(String songName, String style) {
         log.info("Evaluating song: '{}' with style: '{}'", songName, style);
-        // Step 1: Get classification from Gemini AI
-        DjResponse aiResponse = this.evaluateSong(songName, style);
-        log.info("AI response: {}", aiResponse);
 
-        // Step 2: Build persistent entity
+        // 1. Get AI Verdict
+        DjResponse aiResponse = evaluateWithAi(songName, style);
+        
+        // 2. Resolve URL (only if accepted)
+        String trackUrl = null;
+        if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
+            trackUrl = resolveTrackUrl(aiResponse.songName());
+        }
+
+        // 3. Persist Request
+        saveSongRequest(aiResponse, style, trackUrl);
+
+        return aiResponse;
+    }
+
+    private DjResponse evaluateWithAi(String songName, String style) {
+        try {
+            String prompt = String.format(getPromptTemplate(), songName, style);
+            GenerateContentConfig config = GenerateContentConfig.builder()
+                    .responseMimeType("application/json")
+                    .build();
+
+            GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
+            DjResponse djResponse = objectMapper.readValue(response.text(), DjResponse.class);
+            log.info("AI Verdict for '{}': {}", songName, djResponse.decision());
+            return djResponse;
+
+        } catch (Exception e) {
+            log.error("AI evaluation failed for song: '{}'", songName, e);
+            // Fallback response in case of AI failure
+            return new DjResponse(DECISION_REJECTED, "AI is currently offline. Please try again.", songName, 0);
+        }
+    }
+
+    private String resolveTrackUrl(String songName) {
+        try {
+            MusicProviderType provider = getActiveProvider();
+            log.debug("Resolving track '{}' using provider: {}", songName, provider);
+            return queueService.resolveTrack(songName, provider);
+        } catch (Exception e) {
+            log.warn("Failed to resolve track URL for '{}'", songName, e);
+            return null; // Graceful degradation: save song without URL
+        }
+    }
+
+    private void saveSongRequest(DjResponse aiResponse, String style, String trackUrl) {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .songName(aiResponse.songName())
                 .style(style)
                 .decision(aiResponse.decision())
                 .djComment(aiResponse.comment())
                 .energyLevel(aiResponse.energyLevel())
+                .trackUrl(trackUrl)
                 .requestedAt(LocalDateTime.now())
                 .build();
 
-        // Step 3: Add Spotify link only for songs approved by the AI DJ
-        if ("accepted".equals(aiResponse.decision())) {
-            try {
-                log.info("Song accepted, finding Spotify URL for '{}'", aiResponse.songName());
-                String url = queueService.resolveTrack(aiResponse.songName(), MusicProviderType.SPOTIFY);
-                entity.setSpotifyUrl(url);  // null is acceptable if track not found
-            } catch (Exception e) {
-                log.warn("Failed to resolve Spotify URL for '{}'", aiResponse.songName(), e);
-                entity.setSpotifyUrl(null); // Proceed without URL if there's an error
-            }
-        }
-
-        // Step 4: Persist to database
-        repository.save(entity);
-        log.info("Saved song request to database with ID: {}", entity.getId());
-
-        return aiResponse;
+        songRequestRepository.save(entity);
+        log.info("Saved song request: ID={}", entity.getId());
     }
 
-    /**
-     * Internal helper method that asks Gemini AI to classify a song into the requested vibe/style.
-     * <p>
-     * The model is instructed to return a structured JSON response that is then mapped
-     * to the {@link DjResponse} record.
-     *
-     * @param songName the song title / artist – song combination provided by user
-     * @param style    target style or atmosphere the user wants to match
-     * @return parsed AI judgment or error fallback object
-     */
-    public DjResponse evaluateSong(String songName, String style) {
-        String prompt = String.format(getPromptTemplate(), songName, style);
+    // --- Configuration & Settings Helpers ---
 
+    private String getPromptTemplate() {
         try {
-            GenerateContentConfig config = GenerateContentConfig.builder()
-                    .responseMimeType("application/json")
-                    .build();
-
-            GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
-            return objectMapper.readValue(response.text(), DjResponse.class);
-        } catch (Exception e) { // Catching a broad exception as various issues can occur (API, network, parsing)
-            log.error("AI evaluation failed for song: '{}', style: '{}'", songName, style, e);
-            return new DjResponse("error", "AI failed: " + e.getMessage(), songName, 0);
+            return promptResource.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.error("Failed to load prompt template", e);
+            throw new RuntimeException("System configuration error: prompt template missing", e);
         }
     }
 
-    /**
-     * Retrieves the current global party vibe from the database.
-     *
-     * @return the current vibe string, or VibeType.ANY if no settings are found.
-     */
     public VibeType getCurrentGlobalVibe() {
-        return partySettingsRepository.findById(1L)
-                .map(PartySettingsEntity::getGlobalVibe)
-                .orElse(VibeType.ANY);
+        return getPartySettings().getGlobalVibe();
+    }
+
+    public void setCurrentGlobalVibe(VibeType newVibe) {
+        updatePartySettings(settings -> settings.setGlobalVibe(newVibe));
+        log.info("Global vibe updated to: {}", newVibe);
+    }
+
+    public MusicProviderType getActiveProvider() {
+        return getPartySettings().getActiveProvider();
+    }
+
+    public void setActiveProvider(MusicProviderType newProvider) {
+        updatePartySettings(settings -> settings.setActiveProvider(newProvider));
+        log.info("Music provider updated to: {}", newProvider);
     }
 
     /**
-     * Updates the global party vibe in the database.
-     *
-     * @param newVibe the new vibe VibeType to be set for the party
+     * Helper to get or create party settings (Singleton-like approach for MVP)
      */
-    public void setCurrentGlobalVibe(VibeType newVibe) {
-        PartySettingsEntity settings = partySettingsRepository.findById(1L)
-                .orElse(new PartySettingsEntity(1L, VibeType.ANY));
+    private PartySettingsEntity getPartySettings() {
+        return partySettingsRepository.findById(1L)
+                .orElse(new PartySettingsEntity(1L, VibeType.ANY, MusicProviderType.SPOTIFY));
+    }
 
-        settings.setGlobalVibe(newVibe);
+    /**
+     * Helper to update party settings transactionally
+     */
+    private void updatePartySettings(java.util.function.Consumer<PartySettingsEntity> updater) {
+        PartySettingsEntity settings = getPartySettings();
+        updater.accept(settings);
         partySettingsRepository.save(settings);
-        log.info("Global vibe updated to: {}", newVibe);
     }
 }

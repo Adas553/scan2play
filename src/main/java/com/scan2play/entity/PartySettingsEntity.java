@@ -1,5 +1,6 @@
 package com.scan2play.entity;
 
+import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.VibeType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -18,4 +19,7 @@ public class PartySettingsEntity {
 
     @Enumerated(EnumType.STRING)
     private VibeType globalVibe;
+
+    @Enumerated(EnumType.STRING)
+    private MusicProviderType activeProvider = MusicProviderType.SPOTIFY;
 }
