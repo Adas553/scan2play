@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.model.DjResponse;
+import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.DjService;
 import com.scan2play.entity.SongRequestEntity;
@@ -65,6 +66,8 @@ public class DjController {
         }
 
         model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
+        model.addAttribute("activeProvider", djService.getActiveProvider());
+
         try {
             model.addAttribute("history", repository.findAll());
         } catch (RuntimeException e) {
@@ -111,6 +114,12 @@ public class DjController {
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam VibeType newVibe) {
         djService.setCurrentGlobalVibe(newVibe);
+        return "redirect:/dashboard";
+    }
+
+    @PostMapping("/dashboard/provider")
+    public String updateProvider(@RequestParam MusicProviderType activeProvider) {
+        djService.setActiveProvider(activeProvider);
         return "redirect:/dashboard";
     }
 }
