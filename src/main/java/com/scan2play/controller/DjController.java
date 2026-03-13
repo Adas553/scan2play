@@ -17,6 +17,9 @@ import org.springframework.ui.Model;
 
 import java.util.List;
 
+/**
+ * Main web controller for handling guest requests and DJ dashboard interactions.
+ */
 @Controller
 @RequiredArgsConstructor
 @Slf4j
@@ -26,7 +29,12 @@ public class DjController {
     private final SongRequestRepository repository;
 
 
-    // 1. Home page for the guest (Form)
+    /**
+     * Displays the main guest-facing page with the song request form and public queue.
+     *
+     * @param model Spring model to pass attributes to the view.
+     * @return The name of the index view template.
+     */
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
@@ -57,6 +65,10 @@ public class DjController {
     /**
      * Displays the DJ/Admin control panel with full request history.
      * Shows all previous song evaluations stored in database.
+     *
+     * @param model          Spring model for view attributes.
+     * @param authentication The current user's authentication token (used to identify the provider).
+     * @return The name of the dashboard view template.
      */
     @GetMapping("/dashboard")
     public String dashboard(Model model, OAuth2AuthenticationToken authentication) {
@@ -86,7 +98,7 @@ public class DjController {
      * - mobile app
      * - external monitoring tools
      *
-     * @return list of all SongRequestEntity objects
+     * @return list of all SongRequestEntity objects, sorted from newest to oldest.
      */
     @GetMapping("/history")
     public List<SongRequestEntity> getHistory() {
@@ -119,9 +131,28 @@ public class DjController {
         return "redirect:/dashboard";
     }
 
+    /**
+     * Updates the active music provider for the party.
+     *
+     * @param activeProvider The new {@link MusicProviderType} to use for resolving tracks.
+     * @return A redirect to the DJ dashboard.
+     */
     @PostMapping("/dashboard/provider")
     public String updateProvider(@RequestParam MusicProviderType activeProvider) {
         djService.setActiveProvider(activeProvider);
+        return "redirect:/dashboard";
+    }
+    
+    /**
+     * Marks a specific song request as "played", removing it from the public queue
+     * but keeping it in the history log.
+     *
+     * @param id the ID of the song request to archive
+     * @return redirects back to the dashboard
+     */
+    @PostMapping("/dashboard/play")
+    public String markAsPlayed(@RequestParam Long id) {
+        djService.markSongAsPlayed(id);
         return "redirect:/dashboard";
     }
 }

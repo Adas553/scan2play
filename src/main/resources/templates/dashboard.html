@@ -12,6 +12,7 @@
         h1 { color: #fff; font-weight: 700; font-size: 1.8rem; }
         .status-accepted { color: #1DB954 !important; font-weight: bold; text-transform: uppercase; }
         .status-rejected { color: #ff4444 !important; font-weight: bold; text-transform: uppercase; }
+        .status-played { color: #0dcaf0 !important; font-weight: bold; text-transform: uppercase; } /* Cyan for Played */
         .table { border-color: #333; white-space: nowrap; }
         .btn-success { background-color: #1DB954; border: none; font-weight: 600; }
         .btn-success:hover { background-color: #1ed760; }
@@ -67,6 +68,7 @@
                 <th th:text="#{dashboard.table.header.decision}">AI Verdict</th>
                 <th th:text="#{dashboard.table.header.comment}">DJ's Comment</th>
                 <th th:text="#{dashboard.table.header.energy}">Energy</th>
+                <th>Action</th>
             </tr>
             </thead>
             <tbody id="song-list">
@@ -85,10 +87,16 @@
                     </div>
                 </td>
                 <td><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
-                <td th:class="${req.decision == 'accepted' ? 'status-accepted' : 'status-rejected'}"
+                <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}"
                     th:text="${req.decision}">Decision</td>
                 <td class="fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
                 <td><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
+                <td>
+                    <form th:if="${req.decision == 'accepted'}" th:action="@{/dashboard/play}" method="post" class="m-0">
+                        <input type="hidden" name="id" th:value="${req.id}" />
+                        <button type="submit" class="btn btn-sm btn-outline-info">Mark as Played</button>
+                    </form>
+                </td>
             </tr>
             </tbody>
         </table>

@@ -28,8 +28,9 @@ import java.util.List;
 @Slf4j
 public class DjService {
 
-    private static final String DECISION_ACCEPTED = "accepted";
-    private static final String DECISION_REJECTED = "rejected";
+    public static final String DECISION_ACCEPTED = "accepted";
+    public static final String DECISION_REJECTED = "rejected";
+    public static final String DECISION_PLAYED = "played";
 
     private final Client client;
     private final ObjectMapper objectMapper;
@@ -121,6 +122,18 @@ public class DjService {
 
     public List<SongRequestEntity> getPublicQueue() {
         return songRequestRepository.findTop5ByDecisionOrderByRequestedAtDesc(DECISION_ACCEPTED);
+    }
+
+    /**
+     * Marks a song as played, effectively removing it from the public queue but keeping it in history.
+     */
+    @Transactional
+    public void markSongAsPlayed(Long id) {
+        songRequestRepository.findById(id).ifPresent(song -> {
+            song.setDecision(DECISION_PLAYED);
+            songRequestRepository.save(song);
+            log.info("Marked song ID={} as PLAYED", id);
+        });
     }
 
     // --- Configuration & Settings Helpers ---
