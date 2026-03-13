@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +115,12 @@ public class DjService {
 
         songRequestRepository.save(entity);
         log.info("Saved song request: ID={}", entity.getId());
+    }
+
+    // --- Public Data Accessors ---
+
+    public List<SongRequestEntity> getPublicQueue() {
+        return songRequestRepository.findTop5ByDecisionOrderByRequestedAtDesc(DECISION_ACCEPTED);
     }
 
     // --- Configuration & Settings Helpers ---

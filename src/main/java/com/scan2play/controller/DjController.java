@@ -30,6 +30,7 @@ public class DjController {
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
+        model.addAttribute("publicQueue", djService.getPublicQueue());
         return "index";
     }
 
@@ -69,7 +70,8 @@ public class DjController {
         model.addAttribute("activeProvider", djService.getActiveProvider());
 
         try {
-            model.addAttribute("history", repository.findAll());
+            // Using sorting by RequestedAt Descending (newest first)
+            model.addAttribute("history", repository.findAllByOrderByRequestedAtDesc());
         } catch (RuntimeException e) {
             log.error("Error while fetching song history", e);
             model.addAttribute("history", List.of());
@@ -88,7 +90,7 @@ public class DjController {
      */
     @GetMapping("/history")
     public List<SongRequestEntity> getHistory() {
-        return repository.findAll();
+        return repository.findAllByOrderByRequestedAtDesc();
     }
 
     /**
@@ -100,7 +102,7 @@ public class DjController {
      */
     @GetMapping("/dashboard/updates")
     public String getDashboardUpdates(Model model) {
-        List<SongRequestEntity> history = repository.findAll();
+        List<SongRequestEntity> history = repository.findAllByOrderByRequestedAtDesc();
         model.addAttribute("history", history);
         return "dashboard :: songTableBody";
     }
