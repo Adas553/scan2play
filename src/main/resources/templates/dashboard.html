@@ -68,7 +68,7 @@
                 <th th:text="#{dashboard.table.header.decision}">AI Verdict</th>
                 <th th:text="#{dashboard.table.header.comment}">DJ's Comment</th>
                 <th th:text="#{dashboard.table.header.energy}">Energy</th>
-                <th>Action</th>
+                <th th:text="#{dashboard.table.header.action}">Action</th>
             </tr>
             </thead>
             <tbody id="song-list">
@@ -88,13 +88,13 @@
                 </td>
                 <td><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}"
-                    th:text="${req.decision}">Decision</td>
+                    th:text="${req.decision == 'played'} ? #{dashboard.table.status.played} : ${req.decision}">Decision</td>
                 <td class="fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
                 <td><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
                 <td>
                     <form th:if="${req.decision == 'accepted'}" th:action="@{/dashboard/play}" method="post" class="m-0">
                         <input type="hidden" name="id" th:value="${req.id}" />
-                        <button type="submit" class="btn btn-sm btn-outline-info">Mark as Played</button>
+                        <button type="submit" class="btn btn-sm btn-outline-info" th:text="#{dashboard.table.button.mark_played}">Mark as Played</button>
                     </form>
                 </td>
             </tr>
