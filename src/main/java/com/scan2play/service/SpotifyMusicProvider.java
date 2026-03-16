@@ -17,17 +17,21 @@ import java.io.IOException;
 @Slf4j
 public class SpotifyMusicProvider implements MusicProvider {
     private final SpotifyApi spotifyApi;
+    private final SpotifyAuthService spotifyAuthService;
 
     /**
      * Constructs the SpotifyService with credentials from application properties.
      *
      * @param clientId     Spotify application client ID
      * @param clientSecret Spotify application client secret
+     * @param spotifyAuthService Service to handle user-specific auth
      */
     public SpotifyMusicProvider(
             @Value("${spotify.client-id}") String clientId,
-            @Value("${spotify.client-secret}") String clientSecret) {
+            @Value("${spotify.client-secret}") String clientSecret,
+            SpotifyAuthService spotifyAuthService) {
 
+        this.spotifyAuthService = spotifyAuthService;
         this.spotifyApi = new SpotifyApi.Builder()
                 .setClientId(clientId)
                 .setClientSecret(clientSecret)
@@ -65,6 +69,7 @@ public class SpotifyMusicProvider implements MusicProvider {
      * @return Spotify track URL
      * or {@code null} if no track was found or an error occurred
      */
+    @Override
     public String findTrackUrl(String query) {
         // Ensure we have a valid access token before making the search
         authenticate();
@@ -83,5 +88,40 @@ public class SpotifyMusicProvider implements MusicProvider {
             log.error("Spotify track search failed for query: '{}'", query, e);
         }
         return null;
+    }
+
+    @Override
+    public void addToQueue(String trackUri) {
+        if (trackUri == null || trackUri.isBlank()) {
+            log.warn("Cannot add empty track URI to queue");
+            return;
+        }
+
+        // Basic validation/conversion if we get a URL instead of URI
+        // Example URL: https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT
+        // Example URI: spotify:track:4cOdK2wGLETKBW3PvgPWqT
+        if (trackUri.startsWith("https://open.spotify.com/track/")) {
+            String id = trackUri.substring(trackUri.lastIndexOf('/') + 1);
+            // Remove query params if any
+            if (id.contains("?")) {
+                id = id.substring(0, id.indexOf("?"));
+            }
+            trackUri = "spotify:track:" + id;
+        }
+
+        try {
+            // Retrieve fresh token for the current party/DJ
+            // This might throw IllegalStateException if not connected
+            String userToken = spotifyAuthService.getRefreshedAccessToken();
+
+            SpotifyApi userApi = new SpotifyApi.Builder()
+                    .setAccessToken(userToken)
+                    .build();
+
+            userApi.addItemToUsersPlaybackQueue(trackUri).build().execute();
+            log.info("Successfully added track to Spotify queue: {}", trackUri);
+        } catch (Exception e) {
+            log.error("Failed to add track to Spotify queue: {}", trackUri, e);
+        }
     }
 }

@@ -8,8 +8,8 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.MusicProviderType;
+import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
-import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +35,7 @@ public class DjService {
     private final Client client;
     private final ObjectMapper objectMapper;
     private final SongRequestRepository songRequestRepository;
-    private final PartySettingsRepository partySettingsRepository;
+    private final PartySettingsService partySettingsService;
     private final QueueService queueService;
 
     @Value("${google.ai.model-name}")
@@ -49,8 +49,9 @@ public class DjService {
      * 1. Asks Gemini AI to evaluate if the song fits the requested style/vibe
      * 2. Resolves track URL if accepted
      * 3. Saves the evaluation result to the database
+     * 4. Optionally adds the song to the playback queue if Auto-Pilot mode is active.
      *
-     * @param songName title of the song (usually from QR scan or user input)
+     * @param songName title of the song (usually from QR scan or manual input)
      * @param style    desired style / mood selected by the user
      * @return complete AI response (decision + comment + energy level)
      */
@@ -69,6 +70,15 @@ public class DjService {
 
         // 3. Persist Request
         saveSongRequest(aiResponse, style, trackUrl);
+
+        // 4. Auto-Queue Logic
+        if (trackUrl != null && DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
+            PartySettingsEntity settings = partySettingsService.getSettings();
+            if (settings.getPlaybackMode() == PlaybackMode.AUTO) {
+                // Async call via QueueService to avoid blocking
+                queueService.addToQueue(trackUrl, settings.getActiveProvider());
+            }
+        }
 
         return aiResponse;
     }
@@ -119,7 +129,6 @@ public class DjService {
     }
 
     // --- Public Data Accessors ---
-
     public List<SongRequestEntity> getPublicQueue() {
         return songRequestRepository.findTop5ByDecisionOrderByRequestedAtDesc(DECISION_ACCEPTED);
     }
@@ -148,37 +157,29 @@ public class DjService {
     }
 
     public VibeType getCurrentGlobalVibe() {
-        return getPartySettings().getGlobalVibe();
+        return partySettingsService.getSettings().getGlobalVibe();
     }
 
     public void setCurrentGlobalVibe(VibeType newVibe) {
-        updatePartySettings(settings -> settings.setGlobalVibe(newVibe));
+        partySettingsService.updateSettings(settings -> settings.setGlobalVibe(newVibe));
         log.info("Global vibe updated to: {}", newVibe);
     }
 
     public MusicProviderType getActiveProvider() {
-        return getPartySettings().getActiveProvider();
+        return partySettingsService.getSettings().getActiveProvider();
     }
 
     public void setActiveProvider(MusicProviderType newProvider) {
-        updatePartySettings(settings -> settings.setActiveProvider(newProvider));
+        partySettingsService.updateSettings(settings -> settings.setActiveProvider(newProvider));
         log.info("Music provider updated to: {}", newProvider);
     }
 
-    /**
-     * Helper to get or create party settings (Singleton-like approach for MVP)
-     */
-    private PartySettingsEntity getPartySettings() {
-        return partySettingsRepository.findById(1L)
-                .orElse(new PartySettingsEntity(1L, VibeType.ANY, MusicProviderType.SPOTIFY));
+    public PlaybackMode getCurrentPlaybackMode() {
+        return partySettingsService.getSettings().getPlaybackMode();
     }
 
-    /**
-     * Helper to update party settings transactionally
-     */
-    private void updatePartySettings(java.util.function.Consumer<PartySettingsEntity> updater) {
-        PartySettingsEntity settings = getPartySettings();
-        updater.accept(settings);
-        partySettingsRepository.save(settings);
+    public void setPlaybackMode(PlaybackMode mode) {
+        partySettingsService.updateSettings(settings -> settings.setPlaybackMode(mode));
+        log.info("Playback mode updated to: {}", mode);
     }
 }

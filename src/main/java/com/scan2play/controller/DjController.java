@@ -1,21 +1,26 @@
 package com.scan2play.controller;
 
+import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.MusicProviderType;
+import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
-import com.scan2play.service.DjService;
-import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.service.DjService;
+import com.scan2play.service.PartySettingsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.ui.Model;
 
 import java.util.List;
+
+import static com.scan2play.controller.ViewAttributes.*;
 
 /**
  * Main web controller for handling guest requests and DJ dashboard interactions.
@@ -26,6 +31,7 @@ import java.util.List;
 public class DjController {
 
     private final DjService djService;
+    private final PartySettingsService partySettingsService;
     private final SongRequestRepository repository;
 
 
@@ -37,8 +43,8 @@ public class DjController {
      */
     @GetMapping("/")
     public String index(Model model) {
-        model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
-        model.addAttribute("publicQueue", djService.getPublicQueue());
+        model.addAttribute(GLOBAL_VIBE, djService.getCurrentGlobalVibe());
+        model.addAttribute(PUBLIC_QUEUE, djService.getPublicQueue());
         return "index";
     }
 
@@ -58,7 +64,7 @@ public class DjController {
                               @RequestParam(defaultValue = "90s Rock") String style,
                               Model model) {
         DjResponse response = djService.evaluateAndSaveSong(songName, style);
-        model.addAttribute("response", response);
+        model.addAttribute(RESPONSE, response);
         return "result";
     }
 
@@ -75,18 +81,21 @@ public class DjController {
         if (authentication != null) {
             String activeProvider = authentication.getAuthorizedClientRegistrationId();
             log.info("DJ logged in using: {}", activeProvider);
-            model.addAttribute("activeProvider", activeProvider);
+            model.addAttribute(ACTIVE_PROVIDER, activeProvider);
         }
 
-        model.addAttribute("globalVibe", djService.getCurrentGlobalVibe());
-        model.addAttribute("activeProvider", djService.getActiveProvider());
+        PartySettingsEntity settings = partySettingsService.getSettings();
+        model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
+        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
+        model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
+        model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
 
         try {
             // Using sorting by RequestedAt Descending (newest first)
-            model.addAttribute("history", repository.findAllByOrderByRequestedAtDesc());
+            model.addAttribute(HISTORY, repository.findAllByOrderByRequestedAtDesc());
         } catch (RuntimeException e) {
             log.error("Error while fetching song history", e);
-            model.addAttribute("history", List.of());
+            model.addAttribute(HISTORY, List.of());
         }
         return "dashboard";
     }
@@ -115,7 +124,7 @@ public class DjController {
     @GetMapping("/dashboard/updates")
     public String getDashboardUpdates(Model model) {
         List<SongRequestEntity> history = repository.findAllByOrderByRequestedAtDesc();
-        model.addAttribute("history", history);
+        model.addAttribute(HISTORY, history);
         return "dashboard :: songTableBody";
     }
 
@@ -142,7 +151,7 @@ public class DjController {
         djService.setActiveProvider(activeProvider);
         return "redirect:/dashboard";
     }
-    
+
     /**
      * Marks a specific song request as "played", removing it from the public queue
      * but keeping it in the history log.
@@ -153,6 +162,19 @@ public class DjController {
     @PostMapping("/dashboard/play")
     public String markAsPlayed(@RequestParam Long id) {
         djService.markSongAsPlayed(id);
+        return "redirect:/dashboard";
+    }
+
+    /**
+     * Toggles the playback mode between AUTO and MANUAL.
+     *
+     * @return A redirect to the DJ dashboard.
+     */
+    @PostMapping("/dashboard/playback-mode")
+    public String togglePlaybackMode() {
+        djService.setPlaybackMode(
+                djService.getCurrentPlaybackMode() == PlaybackMode.AUTO ? PlaybackMode.MANUAL : PlaybackMode.AUTO
+        );
         return "redirect:/dashboard";
     }
 }

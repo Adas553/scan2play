@@ -20,4 +20,11 @@ public interface MusicProvider {
      * @return The external URL to the track or null if not found.
      */
     String findTrackUrl(String searchQuery);
+
+    /**
+     * Adds a track to the user's playback queue.
+     *
+     * @param trackId The unique identifier for the track (e.g., Spotify URI).
+     */
+    void addToQueue(String trackId);
 }

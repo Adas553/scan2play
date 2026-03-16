@@ -30,4 +30,9 @@ public class YouTubeMusicProvider implements MusicProvider {
         String encodedQuery = searchQuery.replace(" ", "+");
         return "https://www.youtube.com/results?search_query=" + encodedQuery;
     }
+
+    @Override
+    public void addToQueue(String trackId) {
+        throw new UnsupportedOperationException("YouTube queue management not implemented yet");
+    }
 }
