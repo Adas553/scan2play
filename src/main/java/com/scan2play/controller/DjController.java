@@ -9,8 +9,10 @@ import com.scan2play.model.VibeType;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsService;
+import com.scan2play.service.QrCodeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -33,7 +35,10 @@ public class DjController {
     private final DjService djService;
     private final PartySettingsService partySettingsService;
     private final SongRequestRepository repository;
+    private final QrCodeService qrCodeService;
 
+    @Value("${scan2play.guest-url}")
+    private String guestUrl;
 
     /**
      * Displays the main guest-facing page with the song request form and public queue.
@@ -89,6 +94,10 @@ public class DjController {
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
+
+        // Generate QR Code for guest URL
+        String qrCodeBase64Str = qrCodeService.generateQrCodeBase64(guestUrl, 250, 250);
+        model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
 
         try {
             // Using sorting by RequestedAt Descending (newest first)

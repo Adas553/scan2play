@@ -18,6 +18,7 @@ public final class ViewAttributes {
     public static final String PLAYBACK_MODE = "playbackMode";
     public static final String IS_SPOTIFY_CONNECTED = "isSpotifyConnected";
     public static final String HISTORY = "history";
+    public static final String QR_CODE_BASE64 = "qrCodeBase64";
 
     // --- Index/Guest Attributes ---
     public static final String PUBLIC_QUEUE = "publicQueue";

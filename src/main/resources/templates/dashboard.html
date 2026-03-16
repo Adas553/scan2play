@@ -13,7 +13,7 @@
         .status-accepted { color: #1DB954 !important; font-weight: bold; text-transform: uppercase; }
         .status-rejected { color: #ff4444 !important; font-weight: bold; text-transform: uppercase; }
         .status-played { color: #0dcaf0 !important; font-weight: bold; text-transform: uppercase; } /* Cyan for Played */
-        .table { border-color: #333; white-space: nowrap; }
+        .table { border-color: #333; } /* Removed white-space: nowrap to allow wrapping on mobile if needed */
         .btn-success { background-color: #1DB954; border: none; font-weight: 600; }
         .btn-success:hover { background-color: #1ed760; }
         .badge-energy { background: #333; color: #fff; padding: 5px 10px; border-radius: 20px; border: 1px solid #444; }
@@ -22,48 +22,65 @@
 <body>
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
 
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
-        <h1 class="mb-0 text-center text-md-start" th:text="#{dashboard.title}">🎧 DJ Dashboard</h1>
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+                <h1 class="mb-0 text-center text-md-start" th:text="#{dashboard.title}">🎧 DJ Dashboard</h1>
 
-        <div class="bg-dark p-2 rounded border border-secondary w-100" style="max-width: 300px;">
-            <form action="/dashboard/vibe" method="POST" class="m-0">
-                <select name="newVibe" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
-                            th:value="${vibe}"
-                            th:text="#{vibe.__${vibe}__}"
-                            th:selected="${vibe == globalVibe}">
-                    </option>
-                </select>
-            </form>
-        </div>
-    </div>
-
-    <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
-        <div class="row align-items-center">
-            <div class="col-md-6 mb-3 mb-md-0">
-                <form action="/dashboard/provider" method="POST" class="d-flex align-items-center">
-                    <label for="providerSelect" class="me-3 fw-bold text-light" th:text="#{dashboard.provider.label}">🎵 Playback source:</label>
-                    <select id="providerSelect" name="activeProvider" class="form-select bg-black text-light border-secondary w-auto" onchange="this.form.submit()">
-                        <option value="SPOTIFY" th:selected="${activeProvider.name() == 'SPOTIFY'}">Spotify</option>
-                        <option value="YOUTUBE" th:selected="${activeProvider.name() == 'YOUTUBE'}">YouTube</option>
-                    </select>
-                </form>
+                <div class="bg-dark p-2 rounded border border-secondary w-100" style="max-width: 300px;">
+                    <form action="/dashboard/vibe" method="POST" class="m-0">
+                        <select name="newVibe" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
+                                    th:value="${vibe}"
+                                    th:text="#{vibe.__${vibe}__}"
+                                    th:selected="${vibe == globalVibe}">
+                            </option>
+                        </select>
+                    </form>
+                </div>
             </div>
-            <div class="col-md-6 d-flex justify-content-md-end align-items-center">
-                <!-- If Spotify is not connected, show a button to connect -->
-                <a th:if="${!isSpotifyConnected}" href="/spotify/login" class="btn btn-success">
-                    Connect Spotify for Auto-Pilot
-                </a>
 
-                <!-- If Spotify is connected, show the Auto-Pilot toggle -->
-                <form th:if="${isSpotifyConnected}" action="/dashboard/playback-mode" method="POST" class="d-inline">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" id="autoSpotify"
-                               onchange="this.form.submit()"
-                               th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
-                        <label class="form-check-label fw-bold" for="autoSpotify" style="color: #1DB954">Auto-Pilot (Queue)</label>
+            <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
+                <div class="row align-items-center">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <form action="/dashboard/provider" method="POST" class="d-flex align-items-center">
+                            <label for="providerSelect" class="me-3 fw-bold text-light" th:text="#{dashboard.provider.label}">🎵 Playback source:</label>
+                            <select id="providerSelect" name="activeProvider" class="form-select bg-black text-light border-secondary w-auto" onchange="this.form.submit()">
+                                <option value="SPOTIFY" th:selected="${activeProvider.name() == 'SPOTIFY'}">Spotify</option>
+                                <option value="YOUTUBE" th:selected="${activeProvider.name() == 'YOUTUBE'}">YouTube</option>
+                            </select>
+                        </form>
                     </div>
-                </form>
+                    <div class="col-md-6 d-flex justify-content-md-end align-items-center">
+                        <!-- If Spotify is not connected, show a button to connect -->
+                        <a th:if="${!isSpotifyConnected}" href="/spotify/login" class="btn btn-success">
+                            Connect Spotify for Auto-Pilot
+                        </a>
+
+                        <!-- If Spotify is connected, show the Auto-Pilot toggle -->
+                        <form th:if="${isSpotifyConnected}" action="/dashboard/playback-mode" method="POST" class="d-inline">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="autoSpotify"
+                                       onchange="this.form.submit()"
+                                       th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
+                                <label class="form-check-label fw-bold" for="autoSpotify" style="color: #1DB954">Auto-Pilot (Queue)</label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="col-md-4 text-center">
+            <div class="card bg-dark border-secondary p-3 shadow-sm">
+                <h5 class="text-light mb-3" th:text="#{dashboard.qr.title}">Scan to Request Songs</h5>
+                <img th:if="${qrCodeBase64}"
+                     th:src="${'data:image/png;base64,' + qrCodeBase64}"
+                     th:alt="#{dashboard.qr.alt}"
+                     class="img-fluid rounded border border-light"
+                     style="max-width: 200px; height: auto;" />
+                <p class="text-secondary mt-2 small" th:text="#{dashboard.qr.help}">Direct guests to scan this code.</p>
             </div>
         </div>
     </div>
@@ -72,21 +89,21 @@
         <table class="table table-dark table-hover align-middle">
             <thead>
             <tr>
-                <th th:text="#{dashboard.table.header.time}">Time</th>
+                <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.time}">Time</th>
                 <th th:text="#{dashboard.table.header.song}">Song</th>
-                <th th:text="#{dashboard.table.header.vibe}">Vibe</th>
+                <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.vibe}">Vibe</th>
                 <th th:text="#{dashboard.table.header.decision}">AI Verdict</th>
-                <th th:text="#{dashboard.table.header.comment}">DJ's Comment</th>
-                <th th:text="#{dashboard.table.header.energy}">Energy</th>
+                <th class="d-none d-lg-table-cell" th:text="#{dashboard.table.header.comment}">DJ's Comment</th>
+                <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.energy}">Energy</th>
                 <th th:text="#{dashboard.table.header.action}">Action</th>
             </tr>
             </thead>
             <tbody id="song-list">
             <tr th:fragment="songTableBody" th:each="req : ${history}">
-                <td class="text-secondary" th:text="${#temporals.format(req.requestedAt, 'HH:mm:ss')}">12:00</td>
+                <td class="text-secondary d-none d-md-table-cell" th:text="${#temporals.format(req.requestedAt, 'HH:mm:ss')}">12:00</td>
                 <td>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-truncate me-3" style="max-width: 250px;" th:text="${req.songName}">Song</span>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                        <span class="fw-bold text-break" style="max-width: 100%;" th:text="${req.songName}">Song</span>
                         <a th:if="${req.trackUrl != null}"
                            th:href="${req.trackUrl}"
                            target="_blank"
@@ -96,11 +113,11 @@
                         </a>
                     </div>
                 </td>
-                <td><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
+                <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}"
                     th:text="${req.decision == 'played'} ? #{dashboard.table.status.played} : ${req.decision}">Decision</td>
-                <td class="fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
-                <td><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
+                <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
+                <td class="d-none d-md-table-cell"><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
                 <td>
                     <form th:if="${req.decision == 'accepted'}" th:action="@{/dashboard/play}" method="post" class="m-0">
                         <input type="hidden" name="id" th:value="${req.id}" />
