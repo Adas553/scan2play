@@ -3,6 +3,7 @@ package com.scan2play.entity;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
+import com.scan2play.util.CodeGenerator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +19,11 @@ import java.time.LocalDateTime;
 public class PartySettingsEntity {
 
     @Id
-    private Long id; // We will always use ID = 1, as we manage one party at a time
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false, length = 5)
+    private String partyCode;
 
     @Enumerated(EnumType.STRING)
     private VibeType globalVibe;
@@ -30,11 +35,21 @@ public class PartySettingsEntity {
     private PlaybackMode playbackMode = PlaybackMode.MANUAL;
 
     // --- Spotify OAuth2 Credentials ---
-    @Column(length = 2048) // Tokens can be long
+    @Column(length = 2048)
     private String spotifyAccessToken;
 
     @Column(length = 2048)
     private String spotifyRefreshToken;
 
     private LocalDateTime spotifyTokenExpiresAt;
+
+    @PrePersist
+    public void generateCode() {
+        if (this.partyCode == null || this.partyCode.isEmpty()) {
+            this.partyCode = CodeGenerator.generatePartyCode();
+        }
+        if (this.globalVibe == null) {
+            this.globalVibe = VibeType.ANY;
+        }
+    }
 }

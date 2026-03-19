@@ -32,7 +32,7 @@ public class YouTubeMusicProvider implements MusicProvider {
     }
 
     @Override
-    public void addToQueue(String trackId) {
+    public void addToQueue(String partyCode, String trackId) {
         throw new UnsupportedOperationException("YouTube queue management not implemented yet");
     }
 }

@@ -24,7 +24,8 @@ public interface MusicProvider {
     /**
      * Adds a track to the user's playback queue.
      *
+     * @param partyCode The unique code of the party to add the track to.
      * @param trackId The unique identifier for the track (e.g., Spotify URI).
      */
-    void addToQueue(String trackId);
+    void addToQueue(String partyCode, String trackId);
 }

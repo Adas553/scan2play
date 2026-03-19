@@ -91,9 +91,9 @@ public class SpotifyMusicProvider implements MusicProvider {
     }
 
     @Override
-    public void addToQueue(String trackUri) {
+    public void addToQueue(String partyCode, String trackUri) {
         if (trackUri == null || trackUri.isBlank()) {
-            log.warn("Cannot add empty track URI to queue");
+            log.warn("Party [{}]: Cannot add empty track URI to queue", partyCode);
             return;
         }
 
@@ -111,17 +111,16 @@ public class SpotifyMusicProvider implements MusicProvider {
 
         try {
             // Retrieve fresh token for the current party/DJ
-            // This might throw IllegalStateException if not connected
-            String userToken = spotifyAuthService.getRefreshedAccessToken();
+            String userToken = spotifyAuthService.getRefreshedAccessToken(partyCode);
 
             SpotifyApi userApi = new SpotifyApi.Builder()
                     .setAccessToken(userToken)
                     .build();
 
             userApi.addItemToUsersPlaybackQueue(trackUri).build().execute();
-            log.info("Successfully added track to Spotify queue: {}", trackUri);
+            log.info("Party [{}]: Successfully added track to Spotify queue: {}", partyCode, trackUri);
         } catch (Exception e) {
-            log.error("Failed to add track to Spotify queue: {}", trackUri, e);
+            log.error("Party [{}]: Failed to add track to Spotify queue: {}", partyCode, trackUri, e);
         }
     }
 }

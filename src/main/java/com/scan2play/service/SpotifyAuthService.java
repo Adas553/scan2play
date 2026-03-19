@@ -38,9 +38,11 @@ public class SpotifyAuthService {
     @Value("${spotify.oauth.redirect-uri}")
     private String redirectUri;
 
-    // Use standard Spotify endpoints
-    private final String authorizationUri = "https://accounts.spotify.com/authorize";
-    private final String tokenUri = "https://accounts.spotify.com/api/token";
+    @Value("${spring.security.oauth2.client.provider.spotify.authorization-uri}")
+    private String authorizationUri;
+
+    @Value("${spring.security.oauth2.client.provider.spotify.token-uri}")
+    private String tokenUri;
 
     private String basicAuthHeader;
 
@@ -51,19 +53,20 @@ public class SpotifyAuthService {
         basicAuthHeader = "Basic " + new String(encodedAuth);
     }
 
-    public String getAuthorizationUrl() {
+    public String getAuthorizationUrl(String partyCode) {
         return UriComponentsBuilder.fromUriString(authorizationUri)
                 .queryParam(PARAM_CLIENT_ID, clientId)
                 .queryParam(PARAM_RESPONSE_TYPE, VALUE_RESPONSE_TYPE_CODE)
                 .queryParam(PARAM_REDIRECT_URI, redirectUri)
                 .queryParam(PARAM_SCOPE, Scopes.PLAYBACK_SCOPES)
+                .queryParam(PARAM_STATE, partyCode)
                 .encode()
                 .build()
                 .toUriString();
     }
 
-    public void exchangeCodeForToken(String code) {
-        log.info("Exchanging authorization code for access token using redirect URI: {}", redirectUri);
+    public void exchangeCodeForToken(String code, String partyCode) {
+        log.info("Party [{}]: Exchanging authorization code for access token", partyCode);
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add(PARAM_GRANT_TYPE, GrantTypes.AUTHORIZATION_CODE);
@@ -78,26 +81,26 @@ public class SpotifyAuthService {
                 String refreshToken = root.path("refresh_token").asText();
                 int expiresIn = root.path("expires_in").asInt();
 
-                partySettingsService.updateSpotifyTokens(accessToken, refreshToken, expiresIn);
+                partySettingsService.updateSpotifyTokens(partyCode, accessToken, refreshToken, expiresIn);
             }
         } catch (Exception e) {
-            log.error("Error exchanging code for token", e);
+            log.error("Party [{}]: Error exchanging code for token", partyCode, e);
             throw new RuntimeException("Failed to exchange code for token", e);
         }
     }
 
-    public String getRefreshedAccessToken() {
-        PartySettingsEntity settings = partySettingsService.getSettings();
+    public String getRefreshedAccessToken(String partyCode) {
+        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
 
         if (settings.getSpotifyAccessToken() == null) {
-            throw new IllegalStateException("Spotify not connected");
+            throw new IllegalStateException("Spotify not connected for party: " + partyCode);
         }
 
         if (settings.getSpotifyTokenExpiresAt() != null && settings.getSpotifyTokenExpiresAt().isAfter(LocalDateTime.now().plusMinutes(5))) {
             return settings.getSpotifyAccessToken();
         }
 
-        log.info("Access token expired or about to expire. Refreshing...");
+        log.info("Party [{}]: Access token expired or about to expire. Refreshing...", partyCode);
         return refreshAccessToken(settings);
     }
 
@@ -115,11 +118,11 @@ public class SpotifyAuthService {
 
                 String newRefreshToken = root.has("refresh_token") ? root.path("refresh_token").asText() : settings.getSpotifyRefreshToken();
 
-                partySettingsService.updateSpotifyTokens(accessToken, newRefreshToken, expiresIn);
+                partySettingsService.updateSpotifyTokens(settings.getPartyCode(), accessToken, newRefreshToken, expiresIn);
                 return accessToken;
             }
         } catch (Exception e) {
-            log.error("Error refreshing token", e);
+            log.error("Party [{}]: Error refreshing token", settings.getPartyCode(), e);
         }
         return null;
     }

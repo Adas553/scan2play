@@ -15,14 +15,14 @@ public class SpotifyAuthController {
     private final SpotifyAuthService spotifyAuthService;
 
     @GetMapping("/spotify/login")
-    public String spotifyLogin() {
-        String authorizationUrl = spotifyAuthService.getAuthorizationUrl();
+    public String spotifyLogin(@RequestParam("partyCode") String partyCode) {
+        String authorizationUrl = spotifyAuthService.getAuthorizationUrl(partyCode);
         return "redirect:" + authorizationUrl;
     }
 
     @GetMapping("/spotify/callback")
-    public String spotifyCallback(@RequestParam("code") String code) throws IOException {
-        spotifyAuthService.exchangeCodeForToken(code);
+    public String spotifyCallback(@RequestParam("code") String code, @RequestParam("state") String partyCode) throws IOException {
+        spotifyAuthService.exchangeCodeForToken(code, partyCode);
         return "redirect:/dashboard";
     }
 }

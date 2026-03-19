@@ -56,27 +56,23 @@ public class DjService {
      * @return complete AI response (decision + comment + energy level)
      */
     @Transactional
-    public DjResponse evaluateAndSaveSong(String songName, String style) {
-        log.info("Evaluating song: '{}' with style: '{}'", songName, style);
+    public DjResponse evaluateAndSaveSong(String partyCode, String songName, String style) {
+        log.info("Party [{}]: Evaluating song: '{}' with style: '{}'", partyCode, songName, style);
 
-        // 1. Get AI Verdict
+        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+
         DjResponse aiResponse = evaluateWithAi(songName, style);
-        
-        // 2. Resolve URL (only if accepted)
+
         String trackUrl = null;
         if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
-            trackUrl = resolveTrackUrl(aiResponse.songName());
+            trackUrl = resolveTrackUrl(songName, settings.getActiveProvider());
         }
 
-        // 3. Persist Request
-        saveSongRequest(aiResponse, style, trackUrl);
+        saveSongRequest(partyCode, aiResponse, style, trackUrl);
 
-        // 4. Auto-Queue Logic
         if (trackUrl != null && DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
-            PartySettingsEntity settings = partySettingsService.getSettings();
             if (settings.getPlaybackMode() == PlaybackMode.AUTO) {
-                // Async call via QueueService to avoid blocking
-                queueService.addToQueue(trackUrl, settings.getActiveProvider());
+                queueService.addToQueue(partyCode, trackUrl, settings.getActiveProvider());
             }
         }
 
@@ -91,30 +87,26 @@ public class DjService {
                     .build();
 
             GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
-            DjResponse djResponse = objectMapper.readValue(response.text(), DjResponse.class);
-            log.info("AI Verdict for '{}': {}", songName, djResponse.decision());
-            return djResponse;
-
+            return objectMapper.readValue(response.text(), DjResponse.class);
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);
-            // Fallback response in case of AI failure
             return new DjResponse(DECISION_REJECTED, "AI is currently offline. Please try again.", songName, 0);
         }
     }
 
-    private String resolveTrackUrl(String songName) {
+    private String resolveTrackUrl(String songName, MusicProviderType provider) {
         try {
-            MusicProviderType provider = getActiveProvider();
             log.debug("Resolving track '{}' using provider: {}", songName, provider);
             return queueService.resolveTrack(songName, provider);
         } catch (Exception e) {
             log.warn("Failed to resolve track URL for '{}'", songName, e);
-            return null; // Graceful degradation: save song without URL
+            return null;
         }
     }
 
-    private void saveSongRequest(DjResponse aiResponse, String style, String trackUrl) {
+    private void saveSongRequest(String partyCode, DjResponse aiResponse, String style, String trackUrl) {
         SongRequestEntity entity = SongRequestEntity.builder()
+                .partyCode(partyCode)
                 .songName(aiResponse.songName())
                 .style(style)
                 .decision(aiResponse.decision())
@@ -123,25 +115,23 @@ public class DjService {
                 .trackUrl(trackUrl)
                 .requestedAt(LocalDateTime.now())
                 .build();
-
         songRequestRepository.save(entity);
-        log.info("Saved song request: ID={}", entity.getId());
     }
 
-    // --- Public Data Accessors ---
-    public List<SongRequestEntity> getPublicQueue() {
-        return songRequestRepository.findTop5ByDecisionOrderByRequestedAtDesc(DECISION_ACCEPTED);
+    public List<SongRequestEntity> getHistoryForParty(String partyCode) {
+        return songRequestRepository.findAllByPartyCodeOrderByRequestedAtDesc(partyCode);
     }
 
-    /**
-     * Marks a song as played, effectively removing it from the public queue but keeping it in history.
-     */
+    public List<SongRequestEntity> getPublicQueue(String partyCode) {
+        return songRequestRepository.findTop5ByPartyCodeAndDecisionOrderByRequestedAtDesc(partyCode, DECISION_ACCEPTED);
+    }
+
     @Transactional
     public void markSongAsPlayed(Long id) {
         songRequestRepository.findById(id).ifPresent(song -> {
             song.setDecision(DECISION_PLAYED);
             songRequestRepository.save(song);
-            log.info("Marked song ID={} as PLAYED", id);
+            log.info("Marked song ID={} as PLAYED for party {}", id, song.getPartyCode());
         });
     }
 
@@ -156,30 +146,30 @@ public class DjService {
         }
     }
 
-    public VibeType getCurrentGlobalVibe() {
-        return partySettingsService.getSettings().getGlobalVibe();
+    public VibeType getCurrentGlobalVibe(String partyCode) {
+        return partySettingsService.getSettings(partyCode).getGlobalVibe();
     }
 
-    public void setCurrentGlobalVibe(VibeType newVibe) {
-        partySettingsService.updateSettings(settings -> settings.setGlobalVibe(newVibe));
-        log.info("Global vibe updated to: {}", newVibe);
+    public void setCurrentGlobalVibe(String partyCode, VibeType newVibe) {
+        partySettingsService.updateSettings(partyCode, settings -> settings.setGlobalVibe(newVibe));
+        log.info("Party [{}]: Global vibe updated to: {}", partyCode, newVibe);
     }
 
-    public MusicProviderType getActiveProvider() {
-        return partySettingsService.getSettings().getActiveProvider();
+    public MusicProviderType getActiveProvider(String partyCode) {
+        return partySettingsService.getSettings(partyCode).getActiveProvider();
     }
 
-    public void setActiveProvider(MusicProviderType newProvider) {
-        partySettingsService.updateSettings(settings -> settings.setActiveProvider(newProvider));
-        log.info("Music provider updated to: {}", newProvider);
+    public void setActiveProvider(String partyCode, MusicProviderType newProvider) {
+        partySettingsService.updateSettings(partyCode, settings -> settings.setActiveProvider(newProvider));
+        log.info("Party [{}]: Music provider updated to: {}", partyCode, newProvider);
     }
 
-    public PlaybackMode getCurrentPlaybackMode() {
-        return partySettingsService.getSettings().getPlaybackMode();
+    public PlaybackMode getCurrentPlaybackMode(String partyCode) {
+        return partySettingsService.getSettings(partyCode).getPlaybackMode();
     }
 
-    public void setPlaybackMode(PlaybackMode mode) {
-        partySettingsService.updateSettings(settings -> settings.setPlaybackMode(mode));
-        log.info("Playback mode updated to: {}", mode);
+    public void setPlaybackMode(String partyCode, PlaybackMode mode) {
+        partySettingsService.updateSettings(partyCode, settings -> settings.setPlaybackMode(mode));
+        log.info("Party [{}]: Playback mode updated to: {}", partyCode, mode);
     }
 }

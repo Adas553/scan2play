@@ -30,7 +30,7 @@
             <span class="badge bg-secondary p-2">Energy: <span th:text="${response.energyLevel}">0</span>/10</span>
         </div>
 
-        <a href="/" class="btn btn-outline-light mt-5" th:text="#{result.button.suggest_another}">Suggest another one</a>
+        <a th:href="@{/p/{code}(code=${partyCode})}" class="btn btn-outline-light mt-5" th:text="#{result.button.suggest_another}">Suggest another one</a>
     </div>
 </div>
 </body>

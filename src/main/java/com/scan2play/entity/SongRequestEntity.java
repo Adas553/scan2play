@@ -5,7 +5,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "song_requests")
+@Table(name = "song_requests", indexes = {
+    @Index(name = "idx_party_code", columnList = "partyCode")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,6 +18,9 @@ public class SongRequestEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, length = 5)
+    private String partyCode;
 
     private String songName;
     private String style;

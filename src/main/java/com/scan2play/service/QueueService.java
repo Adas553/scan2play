@@ -48,22 +48,23 @@ public class QueueService {
     /**
      * Asynchronously adds a track to the playback queue of the active provider.
      *
+     * @param partyCode         The unique code of the party.
      * @param trackUrl          The URL or ID of the track to add.
      * @param preferredProvider The provider to use.
      */
     @Async
-    public void addToQueue(String trackUrl, MusicProviderType preferredProvider) {
+    public void addToQueue(String partyCode, String trackUrl, MusicProviderType preferredProvider) {
         MusicProvider provider = providers.get(preferredProvider);
         if (provider != null) {
             try {
-                log.info("Attempting to add track to queue: {} (Provider: {})", trackUrl, preferredProvider);
-                provider.addToQueue(trackUrl);
+                log.info("Party [{}]: Attempting to add track to queue: {} (Provider: {})", partyCode, trackUrl, preferredProvider);
+                provider.addToQueue(partyCode, trackUrl);
             } catch (Exception e) {
                 // Catching exception to prevent thread crash, although @Async handles it gracefully mostly
-                log.error("Failed to add track to queue asynchronously", e);
+                log.error("Party [{}]: Failed to add track to queue asynchronously", partyCode, e);
             }
         } else {
-            log.warn("Provider not found for auto-queue: {}", preferredProvider);
+            log.warn("Party [{}]: Provider not found for auto-queue: {}", partyCode, preferredProvider);
         }
     }
 }

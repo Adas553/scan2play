@@ -5,10 +5,13 @@ import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.util.CodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,48 +26,68 @@ public class PartySettingsService {
     private final PartySettingsRepository partySettingsRepository;
 
     /**
-     * Retrieves the current party settings, cached for performance.
+     * Finds party settings by its unique code.
+     * Caches the result using the party code as the key.
+     *
+     * @param partyCode The 5-character party code.
+     * @return The found PartySettingsEntity or creates a new one (for now, mainly for testing/demo).
      */
-    @Cacheable("partySettings")
-    public PartySettingsEntity getSettings() {
-        log.debug("Fetching party settings from DB");
-        return partySettingsRepository.findById(1L)
-                .orElseGet(() -> {
-                    PartySettingsEntity entity = new PartySettingsEntity();
-                    entity.setId(1L);
-                    entity.setGlobalVibe(VibeType.ANY);
-                    entity.setActiveProvider(MusicProviderType.SPOTIFY);
-                    entity.setPlaybackMode(PlaybackMode.MANUAL);
-                    return partySettingsRepository.save(entity);
-                });
+    @Cacheable(value = "partySettings", key = "#partyCode")
+    public PartySettingsEntity getSettings(String partyCode) {
+        log.debug("Fetching party settings for code: {}", partyCode);
+        return partySettingsRepository.findByPartyCode(partyCode)
+                .orElseThrow(() -> new IllegalArgumentException("Party not found: " + partyCode));
     }
 
     /**
-     * Updates the party settings and invalidates the cache.
+     * Creates a new party session.
+     *
+     * @return The newly created PartySettingsEntity with a unique code.
      */
     @Transactional
-    @CacheEvict(value = "partySettings", allEntries = true)
-    public void updateSettings(Consumer<PartySettingsEntity> updater) {
-        PartySettingsEntity settings = partySettingsRepository.findById(1L)
-                .orElseGet(this::getSettings); // Use getSettings to create if missing
+    public PartySettingsEntity createNewParty() {
+        PartySettingsEntity party = new PartySettingsEntity();
+        party.setPartyCode(CodeGenerator.generatePartyCode());
+        party.setGlobalVibe(VibeType.ANY);
+        party.setActiveProvider(MusicProviderType.SPOTIFY);
+        party.setPlaybackMode(PlaybackMode.MANUAL);
+        return partySettingsRepository.save(party);
+    }
+
+    /**
+     * Updates the party settings and invalidates the cache for the specific party code.
+     */
+    @Transactional
+    @CacheEvict(value = "partySettings", key = "#partyCode")
+    public void updateSettings(String partyCode, Consumer<PartySettingsEntity> updater) {
+        PartySettingsEntity settings = partySettingsRepository.findByPartyCode(partyCode)
+                .orElseThrow(() -> new IllegalArgumentException("Party not found for update: " + partyCode));
+
         updater.accept(settings);
         partySettingsRepository.save(settings);
-        log.debug("Party settings updated and cache evicted");
+        log.debug("Party settings updated for code: {}", partyCode);
     }
 
     /**
      * Specific method to update Spotify tokens, ensuring cache invalidation.
      */
     @Transactional
-    @CacheEvict(value = "partySettings", allEntries = true)
-    public void updateSpotifyTokens(String accessToken, String refreshToken, int expiresInSeconds) {
-        updateSettings(settings -> {
+    @CacheEvict(value = "partySettings", key = "#partyCode")
+    public void updateSpotifyTokens(String partyCode, String accessToken, String refreshToken, int expiresInSeconds) {
+        updateSettings(partyCode, settings -> {
             settings.setSpotifyAccessToken(accessToken);
             if (refreshToken != null && !refreshToken.isEmpty()) {
                 settings.setSpotifyRefreshToken(refreshToken);
             }
             settings.setSpotifyTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresInSeconds));
         });
-        log.info("Spotify tokens updated");
+        log.info("Spotify tokens updated for party: {}", partyCode);
+    }
+
+    /**
+     * Finds all parties with pagination. Used by the dashboard to find a default party.
+     */
+    public Page<PartySettingsEntity> findAll(Pageable pageable) {
+        return partySettingsRepository.findAll(pageable);
     }
 }

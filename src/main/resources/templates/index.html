@@ -23,7 +23,12 @@
 
         <p class="text-white-50 text-center" th:text="#{home.subtitle}">What do you want to hear?</p>
 
-        <form action="/request" method="POST" class="p-3 border border-secondary rounded bg-dark text-light">
+        <!-- Dynamic form action based on party code -->
+        <form th:action="@{/p/{code}/request(code=${partyCode})}" method="POST" class="p-3 border border-secondary rounded bg-dark text-light">
+
+            <!-- Hidden Party Code Input -->
+            <input type="hidden" name="partyCode" th:value="${partyCode}" />
+
             <div class="mb-4">
                 <label for="songInput" class="form-label fw-bold" th:text="#{home.form.input.label}">Your choice</label>
                 <input type="text" id="songInput" name="songName" class="form-control" required>

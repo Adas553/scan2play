@@ -29,6 +29,7 @@
 
                 <div class="bg-dark p-2 rounded border border-secondary w-100" style="max-width: 300px;">
                     <form action="/dashboard/vibe" method="POST" class="m-0">
+                        <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
                         <select name="newVibe" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
                                     th:value="${vibe}"
@@ -44,6 +45,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <form action="/dashboard/provider" method="POST" class="d-flex align-items-center">
+                            <input type="hidden" name="partyCode" th:value="${partyCode}">
                             <label for="providerSelect" class="me-3 fw-bold text-light" th:text="#{dashboard.provider.label}">🎵 Playback source:</label>
                             <select id="providerSelect" name="activeProvider" class="form-select bg-black text-light border-secondary w-auto" onchange="this.form.submit()">
                                 <option value="SPOTIFY" th:selected="${activeProvider.name() == 'SPOTIFY'}">Spotify</option>
@@ -53,12 +55,13 @@
                     </div>
                     <div class="col-md-6 d-flex justify-content-md-end align-items-center">
                         <!-- If Spotify is not connected, show a button to connect -->
-                        <a th:if="${!isSpotifyConnected}" href="/spotify/login" class="btn btn-success">
+                        <a th:if="${!isSpotifyConnected}" th:href="@{/spotify/login(partyCode=${partyCode})}" class="btn btn-success">
                             Connect Spotify for Auto-Pilot
                         </a>
 
                         <!-- If Spotify is connected, show the Auto-Pilot toggle -->
                         <form th:if="${isSpotifyConnected}" action="/dashboard/playback-mode" method="POST" class="d-inline">
+                            <input type="hidden" name="partyCode" th:value="${partyCode}">
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" id="autoSpotify"
                                        onchange="this.form.submit()"
@@ -133,12 +136,16 @@
 <script>
     async function refreshTable() {
         try {
-            const response = await fetch('/dashboard/updates');
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
+            const partyCodeElement = document.getElementById('partyCode');
+            if (partyCodeElement) {
+                const partyCode = partyCodeElement.value;
+                const response = await fetch(`/dashboard/updates?partyCode=${partyCode}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status}`);
+                }
+                const html = await response.text();
+                document.getElementById('song-list').innerHTML = html;
             }
-            const html = await response.text();
-            document.getElementById('song-list').innerHTML = html;
         } catch (error) {
             console.error('Refresh error:', error);
         } finally {
