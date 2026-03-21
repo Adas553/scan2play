@@ -12,8 +12,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -76,46 +74,47 @@ public class DjController {
      * Displays the DJ/Admin control panel.
      * <p>
      * This method:
-     * 1. Identifies the active party (currently defaults to the first one found for MVP).
-     * 2. Generates a QR code linking to the guest page for this specific party.
-     * 3. Fetches current settings (Vibe, Provider, Playback Mode).
-     * 4. Loads the song request history.
+     * 1. Identifies the logged-in DJ via OAuth2 authentication.
+     * 2. Retrieves (or creates) the party associated with this DJ.
+     * 3. Generates a QR code linking to the guest page for this specific party.
+     * 4. Fetches current settings and song request history.
      * </p>
      *
      * @param model          Spring model for view attributes.
-     * @param authentication The current user's authentication token (used to identify the provider).
+     * @param authentication The current user's authentication token.
      * @return The name of the dashboard view template.
      */
     @GetMapping("/dashboard")
     public String dashboard(Model model, OAuth2AuthenticationToken authentication) {
-        // Optimization Note:
-        // In a real multi-tenant scenario, we would fetch the party based on the logged-in user's ID.
-        // For MVP, we fetch the first available party or create one if none exist.
-        Page<PartySettingsEntity> parties = partySettingsService.findAll(PageRequest.of(0, 1));
-        PartySettingsEntity settings = parties.isEmpty()
-                ? partySettingsService.createNewParty()
-                : parties.getContent().getFirst();
-
-        String partyCode = settings.getPartyCode();
-        model.addAttribute("partyCode", partyCode);
-
-        if (authentication != null) {
-            String activeProvider = authentication.getAuthorizedClientRegistrationId();
-            log.info("DJ logged in using: {}", activeProvider);
-            model.addAttribute(ACTIVE_PROVIDER, activeProvider);
+        if (authentication == null) {
+            // Should be handled by Security config, but as a safeguard:
+            return "redirect:/login"; 
         }
 
+        String ownerId = authentication.getName();
+        String activeProvider = authentication.getAuthorizedClientRegistrationId();
+        
+        log.info("DJ Dashboard access: ownerId={}, provider={}", ownerId, activeProvider);
+
+        // Fetch or create the party specifically for this logged-in DJ
+        PartySettingsEntity settings = partySettingsService.getOrCreatePartyForDj(ownerId);
+        String partyCode = settings.getPartyCode();
+
+        model.addAttribute("partyCode", partyCode);
+        model.addAttribute(ACTIVE_PROVIDER, activeProvider); // Provider used to log in to the dashboard app itself
+
+        // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
-        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
+        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider()); // Music source for playback (might differ from login)
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
 
-        // Generate QR Code dynamically for this party
-        // Optimization: QrCodeService could be cached if performance becomes an issue.
+        // --- QR Code ---
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;
         String qrCodeBase64Str = qrCodeService.generateQrCodeBase64(guestUrl, 250, 250);
         model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
 
+        // --- History ---
         model.addAttribute(HISTORY, djService.getHistoryForParty(partyCode));
 
         return "dashboard";

@@ -140,6 +140,13 @@
             if (partyCodeElement) {
                 const partyCode = partyCodeElement.value;
                 const response = await fetch(`/dashboard/updates?partyCode=${partyCode}`);
+
+                // Check if the response was redirected (e.g., to login page due to session expiry)
+                if (response.redirected) {
+                    window.location.reload(); // Reload the page to handle login properly
+                    return;
+                }
+
                 if (!response.ok) {
                     throw new Error(`HTTP error: ${response.status}`);
                 }

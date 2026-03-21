@@ -12,7 +12,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "party_settings")
+@Table(name = "party_settings", indexes = {
+    @Index(name = "idx_owner_id", columnList = "ownerId")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,6 +26,10 @@ public class PartySettingsEntity {
 
     @Column(unique = true, nullable = false, length = 5)
     private String partyCode;
+
+    // The unique ID of the DJ (from OAuth2 provider, e.g., Spotify ID)
+    @Column(nullable = false, unique = true)
+    private String ownerId;
 
     @Enumerated(EnumType.STRING)
     private VibeType globalVibe;

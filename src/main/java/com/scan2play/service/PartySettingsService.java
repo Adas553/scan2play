@@ -10,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +28,7 @@ public class PartySettingsService {
      * Caches the result using the party code as the key.
      *
      * @param partyCode The 5-character party code.
-     * @return The found PartySettingsEntity or creates a new one (for now, mainly for testing/demo).
+     * @return The found PartySettingsEntity or throws exception if not found.
      */
     @Cacheable(value = "partySettings", key = "#partyCode")
     public PartySettingsEntity getSettings(String partyCode) {
@@ -40,17 +38,32 @@ public class PartySettingsService {
     }
 
     /**
-     * Creates a new party session.
+     * Retrieves the existing party for the given DJ (ownerId) or creates a new one if it doesn't exist.
      *
-     * @return The newly created PartySettingsEntity with a unique code.
+     * @param ownerId The unique identifier of the DJ (from OAuth2).
+     * @return The PartySettingsEntity associated with this DJ.
      */
     @Transactional
-    public PartySettingsEntity createNewParty() {
+    public PartySettingsEntity getOrCreatePartyForDj(String ownerId) {
+        return partySettingsRepository.findByOwnerId(ownerId)
+                .orElseGet(() -> createNewParty(ownerId));
+    }
+
+    /**
+     * Creates a new party session for a specific owner.
+     *
+     * @param ownerId The unique identifier of the DJ.
+     * @return The newly created PartySettingsEntity with a unique code.
+     */
+    private PartySettingsEntity createNewParty(String ownerId) {
         PartySettingsEntity party = new PartySettingsEntity();
+        party.setOwnerId(ownerId);
         party.setPartyCode(CodeGenerator.generatePartyCode());
         party.setGlobalVibe(VibeType.ANY);
         party.setActiveProvider(MusicProviderType.SPOTIFY);
         party.setPlaybackMode(PlaybackMode.MANUAL);
+        
+        log.info("Creating new party for owner: {} with code: {}", ownerId, party.getPartyCode());
         return partySettingsRepository.save(party);
     }
 
@@ -82,12 +95,5 @@ public class PartySettingsService {
             settings.setSpotifyTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresInSeconds));
         });
         log.info("Spotify tokens updated for party: {}", partyCode);
-    }
-
-    /**
-     * Finds all parties with pagination. Used by the dashboard to find a default party.
-     */
-    public Page<PartySettingsEntity> findAll(Pageable pageable) {
-        return partySettingsRepository.findAll(pageable);
     }
 }

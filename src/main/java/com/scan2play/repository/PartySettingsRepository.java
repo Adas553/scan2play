@@ -16,4 +16,12 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
      * @return An Optional containing the PartySettingsEntity if found.
      */
     Optional<PartySettingsEntity> findByPartyCode(String partyCode);
+
+    /**
+     * Finds party settings by the owner's unique ID (OAuth2 ID).
+     *
+     * @param ownerId The unique identifier of the DJ/Owner.
+     * @return An Optional containing the PartySettingsEntity if found.
+     */
+    Optional<PartySettingsEntity> findByOwnerId(String ownerId);
 }
