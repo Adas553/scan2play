@@ -31,6 +31,9 @@ public class PartySettingsEntity {
     @Column(nullable = false, unique = true)
     private String ownerId;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     @Enumerated(EnumType.STRING)
     private VibeType globalVibe;
 

@@ -13,6 +13,7 @@ public final class ViewAttributes {
     // --- Common Attributes ---
     public static final String GLOBAL_VIBE = "globalVibe";
     public static final String ACTIVE_PROVIDER = "activeProvider";
+    public static final String PARTY_CODE = "partyCode";
 
     // --- Dashboard Attributes ---
     public static final String PLAYBACK_MODE = "playbackMode";

@@ -39,6 +39,13 @@ public class SecurityConfig {
                             log.error("Failure reason: {}", exception.getMessage(), exception);
                             response.sendRedirect("/?error");
                         })
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/dj/logout") // Standard logout URL
+                        .logoutSuccessUrl("/")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
                 );
 
         return http.build();

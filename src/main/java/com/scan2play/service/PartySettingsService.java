@@ -62,7 +62,8 @@ public class PartySettingsService {
         party.setGlobalVibe(VibeType.ANY);
         party.setActiveProvider(MusicProviderType.SPOTIFY);
         party.setPlaybackMode(PlaybackMode.MANUAL);
-        
+        party.setActive(true);
+
         log.info("Creating new party for owner: {} with code: {}", ownerId, party.getPartyCode());
         return partySettingsRepository.save(party);
     }
@@ -95,5 +96,26 @@ public class PartySettingsService {
             settings.setSpotifyTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresInSeconds));
         });
         log.info("Spotify tokens updated for party: {}", partyCode);
+    }
+
+    /**
+     * Closes the active party for the given DJ.
+     *
+     * @param ownerId The unique identifier of the DJ.
+     */
+    @Transactional
+    public void closeParty(String ownerId) {
+        PartySettingsEntity party = getOrCreatePartyForDj(ownerId);
+        party.setActive(false);
+        partySettingsRepository.save(party);
+        
+        // Evict cache
+        evictPartyCache(party.getPartyCode());
+        log.info("Party closed for owner: {}", ownerId);
+    }
+
+    @CacheEvict(value = "partySettings", key = "#partyCode")
+    public void evictPartyCache(String partyCode) {
+        log.debug("Cache evicted for party: {}", partyCode);
     }
 }

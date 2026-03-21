@@ -1,12 +1,16 @@
 package com.scan2play.controller;
 
+import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.service.DjService;
+import com.scan2play.service.PartySettingsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -17,19 +21,24 @@ import static com.scan2play.controller.ViewAttributes.*;
 public class GuestController {
 
     private final DjService djService;
+    private final PartySettingsService partySettingsService;
 
     @GetMapping("/{partyCode}")
     public String partyIndex(@PathVariable String partyCode, Model model) {
         try {
-            // Validate party exists via service (or just use it, service will throw if needed)
-            // For now, let's assume if we can fetch settings/vibe, it exists.
-            model.addAttribute(GLOBAL_VIBE, djService.getCurrentGlobalVibe(partyCode));
+            PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+            
+            if (!settings.isActive()) {
+                return "party_ended";
+            }
+            
+            model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
             model.addAttribute(PUBLIC_QUEUE, djService.getPublicQueue(partyCode));
-            model.addAttribute("partyCode", partyCode);
+            model.addAttribute(PARTY_CODE, partyCode);
             return "index";
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.warn("Invalid party code access attempt: {}", partyCode);
-            return "error/404"; // You might need a simple 404 page
+            return "error/404"; 
         }
     }
 
@@ -38,9 +47,15 @@ public class GuestController {
                               @RequestParam String songName,
                               @RequestParam(defaultValue = "90s Rock") String style,
                               Model model) {
+        
+        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+        if (!settings.isActive()) {
+             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Party has ended");
+        }
+
         DjResponse response = djService.evaluateAndSaveSong(partyCode, songName, style);
         model.addAttribute(RESPONSE, response);
-        model.addAttribute("partyCode", partyCode);
+        model.addAttribute(PARTY_CODE, partyCode);
         return "result";
     }
 }

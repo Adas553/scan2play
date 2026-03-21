@@ -9,6 +9,7 @@ import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsService;
 import com.scan2play.service.QrCodeService;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -84,20 +85,27 @@ public class DjController {
         }
 
         String ownerId = authentication.getName();
-        String activeProvider = authentication.getAuthorizedClientRegistrationId();
+        // Identify the provider used for login (for dashboard display only)
+        String loginProvider = authentication.getAuthorizedClientRegistrationId();
         
-        log.info("DJ Dashboard access: ownerId={}, provider={}", ownerId, activeProvider);
+        log.info("DJ Dashboard access: ownerId={}, loginProvider={}", ownerId, loginProvider);
 
         // Fetch or create the party specifically for this logged-in DJ
         PartySettingsEntity settings = partySettingsService.getOrCreatePartyForDj(ownerId);
+        
+        // If the party was closed, we re-activate it when the DJ logs back in to the dashboard
+        if (!settings.isActive()) {
+            partySettingsService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
+        }
+        
         String partyCode = settings.getPartyCode();
 
-        model.addAttribute("partyCode", partyCode);
-        model.addAttribute(ACTIVE_PROVIDER, activeProvider); // Provider used to log in to the dashboard app itself
-
+        model.addAttribute(PARTY_CODE, partyCode);
+        
         // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
-        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider()); // Music source for playback (might differ from login)
+        // The active provider stored in settings determines music source (Spotify vs YouTube)
+        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
 
@@ -204,5 +212,28 @@ public class DjController {
         PlaybackMode currentMode = djService.getCurrentPlaybackMode(partyCode);
         djService.setPlaybackMode(partyCode, currentMode == PlaybackMode.AUTO ? PlaybackMode.MANUAL : PlaybackMode.AUTO);
         return "redirect:/dj/dashboard";
+    }
+
+    /**
+     * Ends the current party session and logs out the DJ.
+     *
+     * @param authentication The current user's authentication token.
+     * @param request        The HTTP request to handle logout.
+     * @return Redirect to home page.
+     */
+    @PostMapping("/end-party")
+    public String endParty(OAuth2AuthenticationToken authentication, HttpServletRequest request) {
+        if (authentication != null) {
+            String ownerId = authentication.getName();
+            log.info("Ending party for DJ: {}", ownerId);
+            partySettingsService.closeParty(ownerId);
+            
+            try {
+                request.logout();
+            } catch (Exception e) {
+                log.error("Error logging out after ending party", e);
+            }
+        }
+        return "redirect:/";
     }
 }
