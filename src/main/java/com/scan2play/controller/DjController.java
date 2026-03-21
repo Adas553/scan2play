@@ -17,6 +17,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -36,6 +37,7 @@ import static com.scan2play.controller.ViewAttributes.*;
  * Guest interactions are handled by {@link GuestController}.
  */
 @Controller
+@RequestMapping("/dj")
 @RequiredArgsConstructor
 @Slf4j
 public class DjController {
@@ -58,16 +60,6 @@ public class DjController {
         this.cleanBaseUrl = rawBaseUrl.endsWith("/")
                 ? rawBaseUrl.substring(0, rawBaseUrl.length() - 1)
                 : rawBaseUrl;
-    }
-
-    /**
-     * Redirects the root URL to the DJ dashboard.
-     *
-     * @return The redirect view name.
-     */
-    @GetMapping("/")
-    public String redirectToDashboard() {
-        return "redirect:/dashboard";
     }
 
     /**
@@ -156,7 +148,7 @@ public class DjController {
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe) {
         djService.setCurrentGlobalVibe(partyCode, newVibe);
-        return "redirect:/dashboard";
+        return "redirect:/dj/dashboard";
     }
 
     /**
@@ -169,7 +161,7 @@ public class DjController {
     @PostMapping("/dashboard/provider")
     public String updateProvider(@RequestParam String partyCode, @RequestParam MusicProviderType activeProvider) {
         djService.setActiveProvider(partyCode, activeProvider);
-        return "redirect:/dashboard";
+        return "redirect:/dj/dashboard";
     }
 
     /**
@@ -181,7 +173,7 @@ public class DjController {
     @PostMapping("/dashboard/play")
     public String markAsPlayed(@RequestParam Long id) {
         djService.markSongAsPlayed(id);
-        return "redirect:/dashboard";
+        return "redirect:/dj/dashboard";
     }
 
     /**
@@ -194,6 +186,6 @@ public class DjController {
     public String togglePlaybackMode(@RequestParam String partyCode) {
         PlaybackMode currentMode = djService.getCurrentPlaybackMode(partyCode);
         djService.setPlaybackMode(partyCode, currentMode == PlaybackMode.AUTO ? PlaybackMode.MANUAL : PlaybackMode.AUTO);
-        return "redirect:/dashboard";
+        return "redirect:/dj/dashboard";
     }
 }

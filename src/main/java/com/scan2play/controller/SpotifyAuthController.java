@@ -23,6 +23,6 @@ public class SpotifyAuthController {
     @GetMapping("/spotify/callback")
     public String spotifyCallback(@RequestParam("code") String code, @RequestParam("state") String partyCode) throws IOException {
         spotifyAuthService.exchangeCodeForToken(code, partyCode);
-        return "redirect:/dashboard";
+        return "redirect:dj/dashboard";
     }
 }

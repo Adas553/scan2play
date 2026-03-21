@@ -16,31 +16,28 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF protection
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // Configure authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        // Publicly accessible paths - no authentication required
-                        .requestMatchers("/", "/request", "/css/**", "/js/**").permitAll()
-
-                        // Protected paths - require authentication
-                        .requestMatchers("/dashboard/**").authenticated()
-
-                        // All other requests are allowed without authentication
-                        .anyRequest().permitAll()
+                        // Public resources and landing page
+                        .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/images/**").permitAll()
+                        // OAuth2 login endpoints MUST be public
+                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                        // DJ dashboard is protected
+                        .requestMatchers("/dj/**").authenticated()
+                        // Everything else requires authentication
+                        .anyRequest().authenticated()
                 )
-
-                // Configure OAuth2 Login
                 .oauth2Login(oauth2 -> oauth2
-                        // After successful login, always redirect to /dashboard
-                        .defaultSuccessUrl("/dashboard", true)
-
-                        // Custom failure handler - logs the error and redirects back to home
+                        // We use the root page as our custom login page
+                        .loginPage("/")
+                        // The default Spring Security authorization endpoint is /oauth2/authorization/{registrationId}
+                        // We don't need to customize authorizationEndpoint() if we stick to defaults,
+                        // but ensure the link in HTML matches /oauth2/authorization/spotify
+                        .defaultSuccessUrl("/dj/dashboard", true)
                         .failureHandler((request, response, exception) -> {
                             log.error("=== OAUTH2 LOGIN ERROR ===");
                             log.error("Failure reason: {}", exception.getMessage(), exception);
-                            response.sendRedirect("/");
+                            response.sendRedirect("/?error");
                         })
                 );
 
