@@ -44,7 +44,7 @@
             <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
                 <div class="row align-items-center">
                     <div class="col-md-6 mb-3 mb-md-0">
-                        <form action="/dj/dashboard/provider" method="POST" class="d-flex align-items-center">
+                        <form id="providerForm" action="/dj/dashboard/provider" method="POST" class="d-flex align-items-center">
                             <input type="hidden" name="partyCode" th:value="${partyCode}">
                             <label for="providerSelect" class="me-3 fw-bold text-light" th:text="#{dashboard.provider.label}">🎵 Playback source:</label>
                             <select id="providerSelect" name="activeProvider" class="form-select bg-black text-light border-secondary w-auto" onchange="this.form.submit()">
@@ -60,7 +60,7 @@
                         </a>
 
                         <!-- If Spotify is connected, show the Auto-Pilot toggle -->
-                        <form th:if="${isSpotifyConnected}" action="/dj/dashboard/playback-mode" method="POST" class="d-inline">
+                        <form th:if="${isSpotifyConnected}" action="/dj/dashboard/playback-mode" method="POST" class="d-inline" id="autoPilotForm">
                             <input type="hidden" name="partyCode" th:value="${partyCode}">
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" id="autoSpotify"
@@ -68,6 +68,7 @@
                                        th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
                                 <label class="form-check-label fw-bold" for="autoSpotify" style="color: #1DB954">Auto-Pilot (Queue)</label>
                             </div>
+                             <small id="autoPilotWarning" class="text-secondary ms-2" style="display: none; font-size: 0.8rem;">(Spotify only)</small>
                         </form>
                     </div>
                 </div>
@@ -134,6 +135,45 @@
 </div>
 
 <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const providerSelect = document.getElementById('providerSelect');
+        const autoPilotCheckbox = document.getElementById('autoSpotify');
+        const autoPilotWarning = document.getElementById('autoPilotWarning');
+        const autoPilotLabel = document.querySelector('label[for="autoSpotify"]');
+
+        const updateAutoPilotState = () => {
+             if (!autoPilotCheckbox || !providerSelect) return;
+
+             const isSpotify = providerSelect.value === 'SPOTIFY';
+
+             if (!isSpotify) {
+                 // Disable
+                 autoPilotCheckbox.disabled = true;
+                 autoPilotCheckbox.checked = false;
+
+                 if (autoPilotWarning) autoPilotWarning.style.display = 'inline';
+                 if (autoPilotLabel) {
+                    autoPilotLabel.classList.add('text-muted');
+                    autoPilotLabel.style.color = ''; // Reset custom color override
+                 }
+             } else {
+                 // Enable
+                 autoPilotCheckbox.disabled = false;
+
+                 if (autoPilotWarning) autoPilotWarning.style.display = 'none';
+                 if (autoPilotLabel) {
+                    autoPilotLabel.classList.remove('text-muted');
+                    autoPilotLabel.style.color = '#1DB954'; // Restore green
+                 }
+             }
+        };
+
+        if (providerSelect) {
+            updateAutoPilotState();
+            providerSelect.addEventListener('change', updateAutoPilotState);
+        }
+    });
+
     async function refreshTable() {
         try {
             const partyCodeElement = document.getElementById('partyCode');

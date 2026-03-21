@@ -161,6 +161,13 @@ public class DjController {
     @PostMapping("/dashboard/provider")
     public String updateProvider(@RequestParam String partyCode, @RequestParam MusicProviderType activeProvider) {
         djService.setActiveProvider(partyCode, activeProvider);
+        
+        // Safety check: If provider is NOT Spotify, force Manual Mode
+        if (activeProvider != MusicProviderType.SPOTIFY) {
+            log.info("Non-Spotify provider selected ({}), forcing Manual Mode", activeProvider);
+            djService.setPlaybackMode(partyCode, PlaybackMode.MANUAL);
+        }
+        
         return "redirect:/dj/dashboard";
     }
 
@@ -184,6 +191,16 @@ public class DjController {
      */
     @PostMapping("/dashboard/playback-mode")
     public String togglePlaybackMode(@RequestParam String partyCode) {
+        // Fetch current settings to check provider
+        PartySettingsEntity currentSettings = partySettingsService.getSettings(partyCode);
+        
+        if (currentSettings.getActiveProvider() != MusicProviderType.SPOTIFY) {
+             log.warn("Attempt to enable Auto-Pilot on non-Spotify provider. Action ignored.");
+             // If provider is not Spotify, ensure we stay in MANUAL mode
+             djService.setPlaybackMode(partyCode, PlaybackMode.MANUAL);
+             return "redirect:/dj/dashboard";
+        }
+
         PlaybackMode currentMode = djService.getCurrentPlaybackMode(partyCode);
         djService.setPlaybackMode(partyCode, currentMode == PlaybackMode.AUTO ? PlaybackMode.MANUAL : PlaybackMode.AUTO);
         return "redirect:/dj/dashboard";
