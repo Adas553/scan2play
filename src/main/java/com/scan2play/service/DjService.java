@@ -132,7 +132,8 @@ public class DjService {
      * Returns historical songs (PLAYED and optionally REJECTED).
      */
     public List<SongRequestEntity> getHistory(String partyCode) {
-        return songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+        // Limit to 50 most recent PLAYED/REJECTED requests for performance
+        return songRequestRepository.findTop50ByPartyCodeAndDecisionInOrderByRequestedAtDesc(
                 partyCode, Arrays.asList(DECISION_PLAYED, DECISION_REJECTED)
         );
     }
