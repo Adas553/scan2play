@@ -135,6 +135,27 @@ public class DjService {
         });
     }
 
+    /**
+     * Pushes a specific song to the Spotify queue manually.
+     * Only works if the active provider is Spotify.
+     */
+    @Transactional
+    public void pushToSpotify(Long id) {
+        songRequestRepository.findById(id).ifPresent(song -> {
+            String partyCode = song.getPartyCode();
+            PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+
+            if (settings.getActiveProvider() == MusicProviderType.SPOTIFY && song.getTrackUrl() != null) {
+                queueService.addToQueue(partyCode, song.getTrackUrl(), MusicProviderType.SPOTIFY);
+                song.setDecision(DECISION_PLAYED);
+                songRequestRepository.save(song);
+                log.info("Manually pushed song ID={} to Spotify queue and marked as PLAYED", id);
+            } else {
+                log.warn("Cannot push to Spotify: Provider is {} or track URL is missing", settings.getActiveProvider());
+            }
+        });
+    }
+
     // --- Configuration & Settings Helpers ---
 
     private String getPromptTemplate() {
@@ -146,17 +167,9 @@ public class DjService {
         }
     }
 
-    public VibeType getCurrentGlobalVibe(String partyCode) {
-        return partySettingsService.getSettings(partyCode).getGlobalVibe();
-    }
-
     public void setCurrentGlobalVibe(String partyCode, VibeType newVibe) {
         partySettingsService.updateSettings(partyCode, settings -> settings.setGlobalVibe(newVibe));
         log.info("Party [{}]: Global vibe updated to: {}", partyCode, newVibe);
-    }
-
-    public MusicProviderType getActiveProvider(String partyCode) {
-        return partySettingsService.getSettings(partyCode).getActiveProvider();
     }
 
     public void setActiveProvider(String partyCode, MusicProviderType newProvider) {

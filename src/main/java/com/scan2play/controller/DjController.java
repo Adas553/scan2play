@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -113,6 +114,7 @@ public class DjController {
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;
         String qrCodeBase64Str = qrCodeService.generateQrCodeBase64(guestUrl, 250, 250);
         model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
+        model.addAttribute("permanentLink", guestUrl);
 
         // --- History ---
         model.addAttribute(HISTORY, djService.getHistoryForParty(partyCode));
@@ -142,6 +144,9 @@ public class DjController {
      */
     @GetMapping("/dashboard/updates")
     public String getDashboardUpdates(@RequestParam String partyCode, Model model) {
+        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
+        model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getHistoryForParty(partyCode));
         return "dashboard :: songTableBody";
     }
@@ -188,6 +193,18 @@ public class DjController {
     @PostMapping("/dashboard/play")
     public String markAsPlayed(@RequestParam Long id) {
         djService.markSongAsPlayed(id);
+        return "redirect:/dj/dashboard";
+    }
+    
+    /**
+     * Pushes a specific song to the Spotify queue manually.
+     *
+     * @param id The ID of the song request.
+     * @return Redirects back to the dashboard.
+     */
+    @PostMapping("/requests/{id}/push-to-spotify")
+    public String pushToSpotify(@PathVariable Long id) {
+        djService.pushToSpotify(id);
         return "redirect:/dj/dashboard";
     }
 

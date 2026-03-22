@@ -84,6 +84,19 @@
                      th:alt="#{dashboard.qr.alt}"
                      class="img-fluid rounded border border-light"
                      style="max-width: 200px; height: auto;" />
+
+                 <!-- Permanent Link Section -->
+                <div class="mt-3">
+                    <p class="text-secondary mb-1 small">Your Party Link:</p>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control bg-dark text-light border-secondary"
+                               th:value="${permanentLink}" id="partyLinkInput" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyPartyLink()">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+
                 <p class="text-secondary mt-2 small" th:text="#{dashboard.qr.help}">Direct guests to scan this code.</p>
             </div>
         </div>
@@ -123,10 +136,20 @@
                 <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
                 <td class="d-none d-md-table-cell"><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
                 <td>
-                    <form th:if="${req.decision == 'accepted'}" th:action="@{/dj/dashboard/play}" method="post" class="m-0">
-                        <input type="hidden" name="id" th:value="${req.id}" />
-                        <button type="submit" class="btn btn-sm btn-outline-info" th:text="#{dashboard.table.button.mark_played}">Mark as Played</button>
-                    </form>
+                    <div class="d-flex gap-2">
+                        <form th:if="${req.decision == 'accepted'}" th:action="@{/dj/dashboard/play}" method="post" class="m-0">
+                            <input type="hidden" name="id" th:value="${req.id}" />
+                            <button type="submit" class="btn btn-sm btn-outline-info" th:text="#{dashboard.table.button.mark_played}">Mark Played</button>
+                        </form>
+
+                        <!-- Send to Spotify Button (Only if Spotify is connected and active provider) -->
+                        <form th:if="${req.decision == 'accepted' and activeProvider.name() == 'SPOTIFY' and isSpotifyConnected}"
+                              th:action="@{/dj/requests/{id}/push-to-spotify(id=${req.id})}" method="post" class="m-0">
+                             <button type="submit" class="btn btn-sm btn-outline-success" title="Push to Spotify Queue">
+                                🎵 Spotify
+                            </button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             </tbody>
@@ -211,6 +234,19 @@
     }
     // Start the loop
     setTimeout(refreshTable, 5000);
+
+    function copyPartyLink() {
+        var copyText = document.getElementById("partyLinkInput");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            // Optional: Show a small tooltip or visual feedback
+            const btn = copyText.nextElementSibling;
+            const originalText = btn.innerText;
+            btn.innerText = "Copied!";
+            setTimeout(() => btn.innerText = originalText, 2000);
+        });
+    }
 </script>
 
 </body>
