@@ -33,10 +33,10 @@
     <!-- Navigation -->
     <ul class="nav nav-tabs border-secondary mb-4">
         <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="#">Queue (Dashboard)</a>
+            <a class="nav-link active" aria-current="page" href="#" th:text="#{dashboard.nav.queue}">Queue (Dashboard)</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="/dj/history-view">History</a>
+            <a class="nav-link" href="/dj/history-view" th:text="#{dashboard.nav.history}">History</a>
         </li>
     </ul>
 
@@ -121,7 +121,7 @@
     </div>
 
     <div class="table-responsive mb-4">
-        <h4 class="text-white mb-3">Active Queue</h4>
+        <h4 class="text-white mb-3" th:text="#{dashboard.active.queue}">Active Queue</h4>
         <table class="table table-dark table-hover align-middle">
             <thead>
             <tr>
@@ -164,15 +164,15 @@
                         <!-- Send to Spotify Button (Only if Spotify is connected and active provider) -->
                         <form th:if="${req.decision == 'accepted' and activeProvider.name() == 'SPOTIFY' and isSpotifyConnected}"
                               th:action="@{/dj/requests/{id}/push-to-spotify(id=${req.id})}" method="post" class="m-0">
-                             <button type="submit" class="btn btn-sm btn-outline-success" title="Push to Spotify Queue">
-                                🎵 Spotify
+                             <button type="submit" class="btn btn-sm btn-outline-success" th:title="#{dashboard.button.push_to_spotify}">
+                                🎵 <span th:text="#{dashboard.button.spotify}">Spotify</span>
                             </button>
                         </form>
                     </div>
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(history)}">
-                <td colspan="7" class="text-center text-light py-4" style="background: #232323;">No pending requests. Queue is empty! 🎵</td>
+                <td colspan="7" class="text-center text-light py-4" style="background: #232323;" th:text="#{dashboard.empty.queue}">No pending requests. Queue is empty! 🎵</td>
             </tr>
             </tbody>
         </table>
