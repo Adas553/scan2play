@@ -32,22 +32,22 @@
 <div class="container hero-section">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <h1 class="display-4 fw-bold mb-4" th:text="#{landing.hero.title}">Scan2Play - Twój wirtualny asystent DJ-a</h1>
+            <h1 class="display-4 fw-bold mb-4" th:text="#{landing.hero.title}">Scan2Play - Your Virtual DJ Assistant</h1>
 
             <p class="lead mb-5" th:text="#{landing.hero.subtitle}">
-                Koniec z walką o kabel. Pozwól gościom zamawiać muzykę przez kod QR,
-                a AI zadba o odpowiedni klimat imprezy.
+                Let your guests request music via QR code,
+                while AI ensures the perfect party vibe.
             </p>
 
             <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
                 <!-- Spring Security OAuth2 Login Endpoint -->
                 <a href="/oauth2/authorization/spotify" class="btn btn-spotify btn-lg px-4 gap-3" th:text="#{landing.btn.login.spotify}">
-                    Zaloguj się przez Spotify
+                    Log in with Spotify
                 </a>
             </div>
 
             <div th:if="${param.error}" class="alert alert-danger mt-4" role="alert" th:text="#{landing.error.login}">
-                Błąd logowania. Spróbuj ponownie.
+                Login failed. Please try again.
             </div>
         </div>
     </div>

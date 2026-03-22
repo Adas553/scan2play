@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -118,8 +119,22 @@ public class DjService {
         songRequestRepository.save(entity);
     }
 
-    public List<SongRequestEntity> getHistoryForParty(String partyCode) {
-        return songRequestRepository.findAllByPartyCodeOrderByRequestedAtDesc(partyCode);
+    /**
+     * Returns ONLY the accepted songs (waiting in queue) for the dashboard.
+     */
+    public List<SongRequestEntity> getDashboardQueue(String partyCode) {
+        return songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                partyCode, List.of(DECISION_ACCEPTED)
+        );
+    }
+
+    /**
+     * Returns historical songs (PLAYED and optionally REJECTED).
+     */
+    public List<SongRequestEntity> getHistory(String partyCode) {
+        return songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                partyCode, Arrays.asList(DECISION_PLAYED, DECISION_REJECTED)
+        );
     }
 
     public List<SongRequestEntity> getPublicQueue(String partyCode) {

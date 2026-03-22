@@ -1,7 +1,6 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
@@ -21,9 +20,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-
-import java.util.List;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -65,14 +61,7 @@ public class DjController {
     }
 
     /**
-     * Displays the DJ/Admin control panel.
-     * <p>
-     * This method:
-     * 1. Identifies the logged-in DJ via OAuth2 authentication.
-     * 2. Retrieves (or creates) the party associated with this DJ.
-     * 3. Generates a QR code linking to the guest page for this specific party.
-     * 4. Fetches current settings and song request history.
-     * </p>
+     * Displays the DJ/Admin control panel (Active Queue).
      *
      * @param model          Spring model for view attributes.
      * @param authentication The current user's authentication token.
@@ -81,20 +70,14 @@ public class DjController {
     @GetMapping("/dashboard")
     public String dashboard(Model model, OAuth2AuthenticationToken authentication) {
         if (authentication == null) {
-            // Should be handled by Security config, but as a safeguard:
             return "redirect:/login"; 
         }
 
         String ownerId = authentication.getName();
-        // Identify the provider used for login (for dashboard display only)
-        String loginProvider = authentication.getAuthorizedClientRegistrationId();
-        
-        log.info("DJ Dashboard access: ownerId={}, loginProvider={}", ownerId, loginProvider);
+        log.info("DJ Dashboard access: ownerId={}", ownerId);
 
-        // Fetch or create the party specifically for this logged-in DJ
         PartySettingsEntity settings = partySettingsService.getOrCreatePartyForDj(ownerId);
         
-        // If the party was closed, we re-activate it when the DJ logs back in to the dashboard
         if (!settings.isActive()) {
             partySettingsService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
         }
@@ -105,7 +88,6 @@ public class DjController {
         
         // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
-        // The active provider stored in settings determines music source (Spotify vs YouTube)
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
@@ -116,22 +98,28 @@ public class DjController {
         model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
         model.addAttribute("permanentLink", guestUrl);
 
-        // --- History ---
-        model.addAttribute(HISTORY, djService.getHistoryForParty(partyCode));
+        // --- Active Queue (Accepted songs only) ---
+        model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
 
         return "dashboard";
     }
 
     /**
-     * API endpoint returning all song requests in JSON format for a specific party.
-     *
-     * @param partyCode The unique code of the party to fetch history for.
-     * @return list of all SongRequestEntity objects, sorted from newest to oldest.
+     * Displays the history of played and rejected songs.
      */
-    @GetMapping("/history")
-    @ResponseBody
-    public List<SongRequestEntity> getHistory(@RequestParam String partyCode) {
-        return djService.getHistoryForParty(partyCode);
+    @GetMapping("/history-view")
+    public String historyView(Model model, OAuth2AuthenticationToken authentication) {
+        if (authentication == null) {
+            return "redirect:/login";
+        }
+        String ownerId = authentication.getName();
+        PartySettingsEntity settings = partySettingsService.getOrCreatePartyForDj(ownerId);
+        String partyCode = settings.getPartyCode();
+
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(HISTORY, djService.getHistory(partyCode));
+
+        return "history";
     }
 
     /**
@@ -140,14 +128,14 @@ public class DjController {
      *
      * @param partyCode The unique code of the party context.
      * @param model     Spring MVC model.
-     * @return the "songTableBody" fragment from the dashboard template.
+     * @return returns a partial HTML fragment of the song request table (Active Queue).
      */
     @GetMapping("/dashboard/updates")
     public String getDashboardUpdates(@RequestParam String partyCode, Model model) {
         PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
-        model.addAttribute(HISTORY, djService.getHistoryForParty(partyCode));
+        model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
     }
 
@@ -174,13 +162,9 @@ public class DjController {
     @PostMapping("/dashboard/provider")
     public String updateProvider(@RequestParam String partyCode, @RequestParam MusicProviderType activeProvider) {
         djService.setActiveProvider(partyCode, activeProvider);
-        
-        // Safety check: If provider is NOT Spotify, force Manual Mode
         if (activeProvider != MusicProviderType.SPOTIFY) {
-            log.info("Non-Spotify provider selected ({}), forcing Manual Mode", activeProvider);
             djService.setPlaybackMode(partyCode, PlaybackMode.MANUAL);
         }
-        
         return "redirect:/dj/dashboard";
     }
 
@@ -216,12 +200,9 @@ public class DjController {
      */
     @PostMapping("/dashboard/playback-mode")
     public String togglePlaybackMode(@RequestParam String partyCode) {
-        // Fetch current settings to check provider
         PartySettingsEntity currentSettings = partySettingsService.getSettings(partyCode);
         
         if (currentSettings.getActiveProvider() != MusicProviderType.SPOTIFY) {
-             log.warn("Attempt to enable Auto-Pilot on non-Spotify provider. Action ignored.");
-             // If provider is not Spotify, ensure we stay in MANUAL mode
              djService.setPlaybackMode(partyCode, PlaybackMode.MANUAL);
              return "redirect:/dj/dashboard";
         }

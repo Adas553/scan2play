@@ -17,10 +17,28 @@
         .btn-success { background-color: #1DB954; border: none; font-weight: 600; }
         .btn-success:hover { background-color: #1ed760; }
         .badge-energy { background: #333; color: #fff; padding: 5px 10px; border-radius: 20px; border: 1px solid #444; }
+        .nav-link { color: #aaa; font-weight: 600; }
+        .nav-link.active {
+            color: #1DB954 !important;
+            background-color: #232323 !important;
+            border-bottom: 2px solid #1DB954;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav-link:hover { color: #fff; }
     </style>
 </head>
 <body>
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
+
+    <!-- Navigation -->
+    <ul class="nav nav-tabs border-secondary mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="#">Queue (Dashboard)</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/dj/history-view">History</a>
+        </li>
+    </ul>
 
     <div class="row mb-4">
         <div class="col-md-8">
@@ -103,6 +121,7 @@
     </div>
 
     <div class="table-responsive mb-4">
+        <h4 class="text-white mb-3">Active Queue</h4>
         <table class="table table-dark table-hover align-middle">
             <thead>
             <tr>
@@ -151,6 +170,9 @@
                         </form>
                     </div>
                 </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(history)}">
+                <td colspan="7" class="text-center text-light py-4" style="background: #232323;">No pending requests. Queue is empty! 🎵</td>
             </tr>
             </tbody>
         </table>

@@ -4,6 +4,7 @@ import com.scan2play.entity.SongRequestEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -16,6 +17,15 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * @return A list of song requests.
      */
     List<SongRequestEntity> findAllByPartyCodeOrderByRequestedAtDesc(String partyCode);
+
+    /**
+     * Finds song requests for a specific party filtered by one or more statuses.
+     *
+     * @param partyCode The unique code of the party.
+     * @param decisions The list of statuses to include (e.g., ["accepted"]).
+     * @return A list of matching song requests, ordered by most recent.
+     */
+    List<SongRequestEntity> findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
 
     /**
      * Finds the top 5 most recently accepted songs for a specific party's public queue.
