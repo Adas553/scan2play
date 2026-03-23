@@ -66,7 +66,7 @@ public class DjService {
 
         String trackUrl = null;
         if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
-            trackUrl = resolveTrackUrl(songName, settings.getActiveProvider());
+            trackUrl = resolveTrackUrl(aiResponse.songName(), settings.getActiveProvider());
         }
 
         saveSongRequest(partyCode, aiResponse, style, trackUrl);

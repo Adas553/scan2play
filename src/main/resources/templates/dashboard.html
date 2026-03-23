@@ -117,7 +117,7 @@
                     <div class="input-group input-group-sm mb-2">
                         <input type="text" class="form-control bg-dark text-light border-secondary"
                                th:value="${permanentLink}" id="partyLinkInput" readonly>
-                        <button class="btn btn-outline-secondary" type="button" onclick="copyPartyLink()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyPartyLink()" th:text="#{dashboard.qr.copy}">
                             Copy
                         </button>
                     </div>
