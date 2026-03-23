@@ -6,6 +6,7 @@ import com.scan2play.model.VibeType;
 import com.scan2play.util.CodeGenerator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PartySettingsEntity {
 
     @Id

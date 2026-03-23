@@ -201,4 +201,29 @@ public class DjService {
         partySettingsService.updateSettings(partyCode, settings -> settings.setPlaybackMode(mode));
         log.info("Party [{}]: Playback mode updated to: {}", partyCode, mode);
     }
+
+    /**
+     * Toggles the playback mode for the party.
+     * <p>
+     * Logic:
+     * <ul>
+     *     <li>If provider is NOT Spotify, force MANUAL mode.</li>
+     *     <li>If provider IS Spotify, toggle between AUTO and MANUAL.</li>
+     * </ul>
+     *
+     * @param partyCode The party code.
+     */
+    public void togglePlaybackMode(String partyCode) {
+        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+
+        if (settings.getActiveProvider() != MusicProviderType.SPOTIFY) {
+            setPlaybackMode(partyCode, PlaybackMode.MANUAL);
+            return;
+        }
+
+        PlaybackMode newMode = (settings.getPlaybackMode() == PlaybackMode.AUTO)
+                ? PlaybackMode.MANUAL
+                : PlaybackMode.AUTO;
+        setPlaybackMode(partyCode, newMode);
+    }
 }

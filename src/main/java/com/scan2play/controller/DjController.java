@@ -106,6 +106,10 @@ public class DjController {
 
     /**
      * Displays the history of played and rejected songs.
+     *
+     * @param model          Spring model for view attributes.
+     * @param authentication The current user's authentication token.
+     * @return The name of the history view template.
      */
     @GetMapping("/history-view")
     public String historyView(Model model, OAuth2AuthenticationToken authentication) {
@@ -200,15 +204,7 @@ public class DjController {
      */
     @PostMapping("/dashboard/playback-mode")
     public String togglePlaybackMode(@RequestParam String partyCode) {
-        PartySettingsEntity currentSettings = partySettingsService.getSettings(partyCode);
-        
-        if (currentSettings.getActiveProvider() != MusicProviderType.SPOTIFY) {
-             djService.setPlaybackMode(partyCode, PlaybackMode.MANUAL);
-             return "redirect:/dj/dashboard";
-        }
-
-        PlaybackMode currentMode = djService.getCurrentPlaybackMode(partyCode);
-        djService.setPlaybackMode(partyCode, currentMode == PlaybackMode.AUTO ? PlaybackMode.MANUAL : PlaybackMode.AUTO);
+        djService.togglePlaybackMode(partyCode);
         return "redirect:/dj/dashboard";
     }
 

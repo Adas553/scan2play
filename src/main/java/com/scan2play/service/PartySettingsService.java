@@ -56,13 +56,14 @@ public class PartySettingsService {
      * @return The newly created PartySettingsEntity with a unique code.
      */
     private PartySettingsEntity createNewParty(String ownerId) {
-        PartySettingsEntity party = new PartySettingsEntity();
-        party.setOwnerId(ownerId);
-        party.setPartyCode(CodeGenerator.generatePartyCode());
-        party.setGlobalVibe(VibeType.ANY);
-        party.setActiveProvider(MusicProviderType.SPOTIFY);
-        party.setPlaybackMode(PlaybackMode.MANUAL);
-        party.setActive(true);
+        PartySettingsEntity party = PartySettingsEntity.builder()
+                .ownerId(ownerId)
+                .partyCode(CodeGenerator.generatePartyCode())
+                .globalVibe(VibeType.ANY)
+                .activeProvider(MusicProviderType.SPOTIFY)
+                .playbackMode(PlaybackMode.MANUAL)
+                .active(true)
+                .build();
 
         log.info("Creating new party for owner: {} with code: {}", ownerId, party.getPartyCode());
         return partySettingsRepository.save(party);
