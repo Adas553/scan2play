@@ -117,7 +117,7 @@
                     <div class="input-group input-group-sm mb-2">
                         <input type="text" class="form-control bg-dark text-light border-secondary"
                                th:value="${permanentLink}" id="partyLinkInput" readonly>
-                        <button class="btn btn-outline-secondary" type="button" onclick="copyPartyLink()" th:text="#{dashboard.qr.copy}">
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyPartyLink()" th:text="#{dashboard.qr.copy}" th:attr="data-copied=#{dashboard.qr.copied}">
                             Copy
                         </button>
                     </div>
@@ -270,10 +270,11 @@
         copyText.select();
         copyText.setSelectionRange(0, 99999); // For mobile devices
         navigator.clipboard.writeText(copyText.value).then(() => {
-            // Optional: Show a small tooltip or visual feedback
+            // Show localized feedback
             const btn = copyText.nextElementSibling;
             const originalText = btn.innerText;
-            btn.innerText = "Copied!";
+            const copiedText = btn.getAttribute('data-copied') || 'Copied!';
+            btn.innerText = copiedText;
             setTimeout(() => btn.innerText = originalText, 2000);
         });
     }

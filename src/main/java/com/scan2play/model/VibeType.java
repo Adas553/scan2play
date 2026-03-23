@@ -2,8 +2,17 @@ package com.scan2play.model;
 
 public enum VibeType {
     ANY,
-    JAZZ_ONLY,
-    RETRO_80S,
-    HEAVY_ROCK,
-    CLUB_TECHNO
+    BACHATA_AND_KIZOMBA,
+    CLASSICAL_MUSIC,
+    CHILLOUT_AND_LOUNGE,
+    CLUB_AND_EDM,
+    DISCO_POLO,
+    HIP_HOP_AND_RAP,
+    JAZZ,
+    REGGAETON_AND_DANCEHALL,
+    POP_AND_DANCE,
+    RETRO_80S_90S,
+    ROCK_AND_METAL,
+    SALSA_AND_TIMBA,
+    WEDDING_CLASSICS
 }

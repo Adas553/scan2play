@@ -38,11 +38,10 @@
             <div class="mb-4" th:if="${globalVibe.name() == 'ANY'}">
                 <label for="styleInput" class="form-label fw-bold" th:text="#{home.form.vibe.label}">Choose the vibe (optional)</label>
                 <select id="styleInput" name="style" class="form-select">
-                    <option value="Auto (Zaufaj AI)" selected th:text="#{party.vibe.trust_ai}">✨ Trust AI</option>
-                    <option value="Pop / Dance" th:text="#{home.form.vibe.option.pop}">Pop / Dance</option>
-                    <option value="Rock / Alternatywa" th:text="#{home.form.vibe.option.rock}">Rock / Alternative</option>
-                    <option value="Rap / Hip-Hop" th:text="#{home.form.vibe.option.rap}">Rap / Hip-Hop</option>
-                    <option value="Chillout / Jazz" th:text="#{home.form.vibe.option.chill}">Chillout / Jazz</option>
+                    <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
+                            th:value="${vibe}"
+                            th:text="#{vibe.__${vibe}__}">
+                    </option>
                 </select>
             </div>
 
