@@ -11,6 +11,7 @@ import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.SongRequestRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +25,17 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Service responsible for managing song requests, AI evaluation, and playback settings.
+ * <p>
+ * Key responsibilities:
+ * <ul>
+ *     <li>AI evaluation of song requests</li>
+ *     <li>Queue management (Active/History)</li>
+ *     <li>Integration with music providers via QueueService</li>
+ *     <li>Party configuration updates</li>
+ * </ul>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -45,26 +57,54 @@ public class DjService {
     @Value("classpath:prompt-template.txt")
     private Resource promptResource;
 
+    private String cachedPromptTemplate;
+
+    /**
+     * Initializes the service by loading the AI prompt template from resources.
+     * This avoids File I/O during request processing.
+     */
+    @PostConstruct
+    public void init() {
+        try {
+            this.cachedPromptTemplate = promptResource.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.error("Failed to load prompt template", e);
+            throw new RuntimeException("System configuration error: prompt template missing", e);
+        }
+    }
+
     /**
      * Core business method:
-     * 1. Asks Gemini AI to evaluate if the song fits the requested style/vibe
-     * 2. Resolves track URL if accepted
-     * 3. Saves the evaluation result to the database
-     * 4. Optionally adds the song to the playback queue if Auto-Pilot mode is active.
+     * <ol>
+     *     <li>Asks Gemini AI to evaluate if the song fits the requested style/vibe (Outside Transaction).</li>
+     *     <li>Resolves track URL if accepted.</li>
+     *     <li>Saves the evaluation result to the database (Transactional).</li>
+     *     <li>Optionally adds the song to the playback queue if Auto-Pilot mode is active.</li>
+     * </ol>
      *
-     * @param songName title of the song (usually from QR scan or manual input)
-     * @param style    desired style / mood selected by the user
-     * @return complete AI response (decision + comment + energy level)
+     * @param partyCode The unique code of the party.
+     * @param songName  Title of the song (usually from QR scan or manual input).
+     * @param style     Desired style / mood selected by the user.
+     * @return Complete AI response (decision + comment + energy level).
      */
-    @Transactional
     public DjResponse evaluateAndSaveSong(String partyCode, String songName, String style) {
         log.info("Party [{}]: Evaluating song: '{}' with style: '{}'", partyCode, songName, style);
 
-        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
-
+        // 1. External API Call (Outside Transaction)
         DjResponse aiResponse = evaluateWithAi(songName, style);
 
+        // 2. Database Operations (Transactional)
+        return processSongResult(partyCode, style, aiResponse);
+    }
+
+    /**
+     * Internal method to handle database persistence and queue updates within a transaction.
+     */
+    @Transactional
+    protected DjResponse processSongResult(String partyCode, String style, DjResponse aiResponse) {
+        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
         String trackUrl = null;
+
         if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
             trackUrl = resolveTrackUrl(aiResponse.songName(), settings.getActiveProvider());
         }
@@ -76,13 +116,12 @@ public class DjService {
                 queueService.addToQueue(partyCode, trackUrl, settings.getActiveProvider());
             }
         }
-
         return aiResponse;
     }
 
     private DjResponse evaluateWithAi(String songName, String style) {
         try {
-            String prompt = String.format(getPromptTemplate(), songName, style);
+            String prompt = String.format(cachedPromptTemplate, songName, style);
             GenerateContentConfig config = GenerateContentConfig.builder()
                     .responseMimeType("application/json")
                     .build();
@@ -121,6 +160,9 @@ public class DjService {
 
     /**
      * Returns ONLY the accepted songs (waiting in queue) for the dashboard.
+     *
+     * @param partyCode The unique code of the party.
+     * @return List of accepted song requests.
      */
     public List<SongRequestEntity> getDashboardQueue(String partyCode) {
         return songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
@@ -130,6 +172,10 @@ public class DjService {
 
     /**
      * Returns historical songs (PLAYED and optionally REJECTED).
+     * Limited to the 50 most recent entries.
+     *
+     * @param partyCode The unique code of the party.
+     * @return List of played or rejected song requests.
      */
     public List<SongRequestEntity> getHistory(String partyCode) {
         // Limit to 50 most recent PLAYED/REJECTED requests for performance
@@ -138,10 +184,21 @@ public class DjService {
         );
     }
 
+    /**
+     * Returns the public queue for guest view (top 5 accepted songs).
+     *
+     * @param partyCode The unique code of the party.
+     * @return List of top 5 accepted song requests.
+     */
     public List<SongRequestEntity> getPublicQueue(String partyCode) {
         return songRequestRepository.findTop5ByPartyCodeAndDecisionOrderByRequestedAtDesc(partyCode, DECISION_ACCEPTED);
     }
 
+    /**
+     * Marks a specific song request as "played" in the database.
+     *
+     * @param id The ID of the song request.
+     */
     @Transactional
     public void markSongAsPlayed(Long id) {
         songRequestRepository.findById(id).ifPresent(song -> {
@@ -154,6 +211,8 @@ public class DjService {
     /**
      * Pushes a specific song to the Spotify queue manually.
      * Only works if the active provider is Spotify.
+     *
+     * @param id The ID of the song request.
      */
     @Transactional
     public void pushToSpotify(Long id) {
@@ -172,31 +231,34 @@ public class DjService {
         });
     }
 
-    // --- Configuration & Settings Helpers ---
-
-    private String getPromptTemplate() {
-        try {
-            return promptResource.getContentAsString(StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            log.error("Failed to load prompt template", e);
-            throw new RuntimeException("System configuration error: prompt template missing", e);
-        }
-    }
-
+    /**
+     * Updates the global vibe (theme) for the party.
+     *
+     * @param partyCode The unique code of the party.
+     * @param newVibe   The new vibe to set.
+     */
     public void setCurrentGlobalVibe(String partyCode, VibeType newVibe) {
         partySettingsService.updateSettings(partyCode, settings -> settings.setGlobalVibe(newVibe));
         log.info("Party [{}]: Global vibe updated to: {}", partyCode, newVibe);
     }
 
+    /**
+     * Updates the active music provider (e.g., Spotify, YouTube).
+     *
+     * @param partyCode   The unique code of the party.
+     * @param newProvider The new music provider.
+     */
     public void setActiveProvider(String partyCode, MusicProviderType newProvider) {
         partySettingsService.updateSettings(partyCode, settings -> settings.setActiveProvider(newProvider));
         log.info("Party [{}]: Music provider updated to: {}", partyCode, newProvider);
     }
 
-    public PlaybackMode getCurrentPlaybackMode(String partyCode) {
-        return partySettingsService.getSettings(partyCode).getPlaybackMode();
-    }
-
+    /**
+     * Sets the playback mode (AUTO or MANUAL).
+     *
+     * @param partyCode The unique code of the party.
+     * @param mode      The new playback mode.
+     */
     public void setPlaybackMode(String partyCode, PlaybackMode mode) {
         partySettingsService.updateSettings(partyCode, settings -> settings.setPlaybackMode(mode));
         log.info("Party [{}]: Playback mode updated to: {}", partyCode, mode);
