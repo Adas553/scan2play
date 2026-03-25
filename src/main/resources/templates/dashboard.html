@@ -57,10 +57,11 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
                 <h1 class="mb-0 text-center text-md-start" th:text="#{dashboard.title}">🎧 DJ Dashboard</h1>
 
-                <div class="bg-dark p-2 rounded border border-secondary w-100" style="max-width: 300px;">
-                    <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0">
+                <div class="bg-dark p-2 rounded border border-secondary w-100" style="max-width: 350px;">
+                    <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0 d-flex align-items-center">
                         <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
-                        <select name="newVibe" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <label for="vibeSelect" class="me-2 fw-bold text-light small text-nowrap" th:text="#{dashboard.vibe.label}">🌍 Global Vibe:</label>
+                        <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" onchange="this.form.submit()">
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
                                     th:value="${vibe}"
                                     th:text="#{vibe.__${vibe}__}"
