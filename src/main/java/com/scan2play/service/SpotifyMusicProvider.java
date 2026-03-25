@@ -8,34 +8,31 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
+import se.michaelthelin.spotify.model_objects.credentials.ClientCredentials;
 import se.michaelthelin.spotify.model_objects.specification.Track;
-import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequest;
 
 import java.io.IOException;
+import java.time.Instant;
 
 @Service
 @Slf4j
 public class SpotifyMusicProvider implements MusicProvider {
-    private final SpotifyApi spotifyApi;
+
+    private final String clientId;
+    private final String clientSecret;
     private final SpotifyAuthService spotifyAuthService;
 
-    /**
-     * Constructs the SpotifyService with credentials from application properties.
-     *
-     * @param clientId     Spotify application client ID
-     * @param clientSecret Spotify application client secret
-     * @param spotifyAuthService Service to handle user-specific auth
-     */
+    // Cache for Client Credentials Token (Application level search)
+    private String clientAccessToken;
+        private Instant clientTokenExpiration = Instant.MIN;
+
     public SpotifyMusicProvider(
             @Value("${spotify.client-id}") String clientId,
             @Value("${spotify.client-secret}") String clientSecret,
             SpotifyAuthService spotifyAuthService) {
-
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
         this.spotifyAuthService = spotifyAuthService;
-        this.spotifyApi = new SpotifyApi.Builder()
-                .setClientId(clientId)
-                .setClientSecret(clientSecret)
-                .build();
     }
 
     @Override
@@ -44,83 +41,135 @@ public class SpotifyMusicProvider implements MusicProvider {
     }
 
     /**
-     * Authenticates the application using Client Credentials flow
-     * and sets the access token for subsequent API calls.
-     * <p>
-     * This method should be called before any API requests that require authentication.
-     */
-    private void authenticate() {
-        try {
-            // Obtain an access token using client credentials
-            var clientCredentialsRequest = spotifyApi.clientCredentials().build();
-            var clientCredentials = clientCredentialsRequest.execute();
-            // Set the obtained token on the SpotifyApi instance
-            spotifyApi.setAccessToken(clientCredentials.getAccessToken());
-        } catch (IOException | SpotifyWebApiException | ParseException e) {
-            log.error("Spotify authentication failed", e);
-        }
-    }
-
-    /**
-     * Searches for a track on Spotify using the provided query
-     * and returns the Spotify URL of the best matching track (if found).
+     * Searches for a track using Application Client Credentials flow.
+     * Thread-safe and uses cached token.
      *
      * @param query search phrase
-     * @return Spotify track URL
-     * or {@code null} if no track was found or an error occurred
+     * @return Spotify open URL or null if not found
      */
     @Override
     public String findTrackUrl(String query) {
-        // Ensure we have a valid access token before making the search
-        authenticate();
         try {
-            SearchTracksRequest searchRequest = spotifyApi.searchTracks(query)
-                    .limit(1) // We only need the top result
+            String token = getClientAccessToken();
+            
+            // Create a lightweight API instance just for this request
+            SpotifyApi api = new SpotifyApi.Builder()
+                    .setAccessToken(token)
                     .build();
 
-            var searchResult = searchRequest.execute();
-            if (searchResult.getItems().length > 0) {
+            var searchResult = api.searchTracks(query)
+                    .limit(1)
+                    .build()
+                    .execute();
+
+            if (searchResult.getItems() != null && searchResult.getItems().length > 0) {
                 Track track = searchResult.getItems()[0];
-                // Return the Spotify open link (web / app compatible)
                 return track.getExternalUrls().get("spotify");
             }
         } catch (IOException | SpotifyWebApiException | ParseException e) {
-            log.error("Spotify track search failed for query: '{}'", query, e);
+            log.error("Spotify search failed for query: '{}'", query, e);
         }
         return null;
     }
 
+    /**
+     * Adds a track to the DJ's playback queue.
+     * Requires User Authorization flow (on behalf of the DJ).
+     *
+     * @param partyCode The party context
+     * @param trackUrl  The Spotify URL or URI of the track
+     */
     @Override
-    public void addToQueue(String partyCode, String trackUri) {
-        if (trackUri == null || trackUri.isBlank()) {
-            log.warn("Party [{}]: Cannot add empty track URI to queue", partyCode);
+    public void addToQueue(String partyCode, String trackUrl) {
+        if (trackUrl == null || trackUrl.isBlank()) {
             return;
         }
 
-        // Basic validation/conversion if we get a URL instead of URI
-        // Example URL: https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT
-        // Example URI: spotify:track:4cOdK2wGLETKBW3PvgPWqT
-        if (trackUri.startsWith("https://open.spotify.com/track/")) {
-            String id = trackUri.substring(trackUri.lastIndexOf('/') + 1);
-            // Remove query params if any
-            if (id.contains("?")) {
-                id = id.substring(0, id.indexOf("?"));
-            }
-            trackUri = "spotify:track:" + id;
+        String trackUri = convertUrlToUri(trackUrl);
+        if (trackUri == null) {
+            log.warn("Party [{}]: Invalid Spotify URL format: {}", partyCode, trackUrl);
+            return;
         }
 
         try {
-            // Retrieve fresh token for the current party/DJ
+            // 1. Get fresh user token for the DJ (handles refresh token logic internally)
             String userToken = spotifyAuthService.getRefreshedAccessToken(partyCode);
 
+            // 2. Execute action on behalf of the user
             SpotifyApi userApi = new SpotifyApi.Builder()
                     .setAccessToken(userToken)
                     .build();
 
             userApi.addItemToUsersPlaybackQueue(trackUri).build().execute();
-            log.info("Party [{}]: Successfully added track to Spotify queue: {}", partyCode, trackUri);
+            log.info("Party [{}]: Added to queue: {}", partyCode, trackUri);
+
         } catch (Exception e) {
-            log.error("Party [{}]: Failed to add track to Spotify queue: {}", partyCode, trackUri, e);
+            log.error("Party [{}]: Failed to add to Spotify queue", partyCode, e);
         }
+    }
+
+    /**
+     * Gets a valid Client Access Token, refreshing it only if expired.
+     * Synchronized to prevent multiple threads from refreshing at the same time.
+     */
+    private synchronized String getClientAccessToken() {
+        if (clientAccessToken != null && Instant.now().isBefore(clientTokenExpiration)) {
+            return clientAccessToken;
+        }
+
+        try {
+            log.debug("Refreshing Spotify Client Credentials Token...");
+            SpotifyApi api = new SpotifyApi.Builder()
+                    .setClientId(clientId)
+                    .setClientSecret(clientSecret)
+                    .build();
+
+            ClientCredentials credentials = api.clientCredentials().build().execute();
+            
+            this.clientAccessToken = credentials.getAccessToken();
+            // Buffer of 60 seconds to be safe
+            this.clientTokenExpiration = Instant.now().plusSeconds(credentials.getExpiresIn() - 60);
+            
+            return this.clientAccessToken;
+        } catch (Exception e) {
+            log.error("Failed to obtain Spotify Client Credentials", e);
+            throw new RuntimeException("Spotify Auth Failed", e);
+        }
+    }
+
+    /**
+     * Helper to convert various Spotify URL formats to a standard URI.
+     * Supported formats:
+     * - spotify:track:ID
+     * - https://open.spotify.com/track/ID
+     * - https://open.spotify.com/track/ID?si=...
+     */
+    private String convertUrlToUri(String url) {
+        if (url.startsWith("spotify:track:")) {
+            return url;
+        }
+        
+        if (url.contains("/track/")) {
+            try {
+                String id = url.substring(url.lastIndexOf("/track/") + 7);
+                // Remove query parameters
+                int queryParamIndex = id.indexOf("?");
+                if (queryParamIndex != -1) {
+                    id = id.substring(0, queryParamIndex);
+                }
+                // Remove any trailing slashes or path segments
+                int slashIndex = id.indexOf("/");
+                if (slashIndex != -1) {
+                    id = id.substring(0, slashIndex);
+                }
+                
+                if (!id.isBlank()) {
+                    return "spotify:track:" + id;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse Spotify URL: {}", url);
+            }
+        }
+        return null;
     }
 }
