@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -18,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
 
-import static com.scan2play.integration.SpotifyApiConstants.*; // Static import for convenience
+import static com.scan2play.integration.SpotifyApiConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +47,9 @@ public class SpotifyAuthService {
 
     private String basicAuthHeader;
 
+    /**
+     * Pre-calculates the Basic Auth header for Spotify API requests.
+     */
     @PostConstruct
     public void init() {
         String auth = clientId + ":" + clientSecret;
@@ -53,6 +57,12 @@ public class SpotifyAuthService {
         basicAuthHeader = "Basic " + new String(encodedAuth);
     }
 
+    /**
+     * Generates the Spotify Authorization URL for the DJ to connect their account.
+     *
+     * @param partyCode The unique code for the party session (sent as 'state').
+     * @return The URL to redirect the DJ to.
+     */
     public String getAuthorizationUrl(String partyCode) {
         return UriComponentsBuilder.fromUriString(authorizationUri)
                 .queryParam(PARAM_CLIENT_ID, clientId)
@@ -65,6 +75,12 @@ public class SpotifyAuthService {
                 .toUriString();
     }
 
+    /**
+     * Exchanges an authorization code for Spotify access and refresh tokens.
+     *
+     * @param code      The authorization code received from the callback.
+     * @param partyCode The party session identifier.
+     */
     public void exchangeCodeForToken(String code, String partyCode) {
         log.info("Party [{}]: Exchanging authorization code for access token", partyCode);
 
@@ -77,9 +93,9 @@ public class SpotifyAuthService {
             String responseBody = postToTokenEndpoint(body);
             if (responseBody != null) {
                 JsonNode root = objectMapper.readTree(responseBody);
-                String accessToken = root.path("access_token").asText();
-                String refreshToken = root.path("refresh_token").asText();
-                int expiresIn = root.path("expires_in").asInt();
+                String accessToken = root.path(JsonKeys.ACCESS_TOKEN).asText();
+                String refreshToken = root.path(JsonKeys.REFRESH_TOKEN).asText();
+                int expiresIn = root.path(JsonKeys.EXPIRES_IN).asInt();
 
                 partySettingsService.updateSpotifyTokens(partyCode, accessToken, refreshToken, expiresIn);
             }
@@ -89,6 +105,13 @@ public class SpotifyAuthService {
         }
     }
 
+    /**
+     * Retrieves a valid access token for the given party.
+     * Refreshes the token automatically if it is expired or close to expiration.
+     *
+     * @param partyCode The unique party identifier.
+     * @return A valid Spotify access token.
+     */
     public String getRefreshedAccessToken(String partyCode) {
         PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
 
@@ -96,6 +119,7 @@ public class SpotifyAuthService {
             throw new IllegalStateException("Spotify not connected for party: " + partyCode);
         }
 
+        // Check if token is about to expire in less than 5 minutes
         if (settings.getSpotifyTokenExpiresAt() != null && settings.getSpotifyTokenExpiresAt().isAfter(LocalDateTime.now().plusMinutes(5))) {
             return settings.getSpotifyAccessToken();
         }
@@ -104,6 +128,9 @@ public class SpotifyAuthService {
         return refreshAccessToken(settings);
     }
 
+    /**
+     * Internal method to refresh the Spotify access token using the refresh token.
+     */
     private String refreshAccessToken(PartySettingsEntity settings) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add(PARAM_GRANT_TYPE, GrantTypes.REFRESH_TOKEN);
@@ -113,10 +140,13 @@ public class SpotifyAuthService {
             String responseBody = postToTokenEndpoint(body);
             if (responseBody != null) {
                 JsonNode root = objectMapper.readTree(responseBody);
-                String accessToken = root.path("access_token").asText();
-                int expiresIn = root.path("expires_in").asInt();
+                String accessToken = root.path(JsonKeys.ACCESS_TOKEN).asText();
+                int expiresIn = root.path(JsonKeys.EXPIRES_IN).asInt();
 
-                String newRefreshToken = root.has("refresh_token") ? root.path("refresh_token").asText() : settings.getSpotifyRefreshToken();
+                // Refresh token might be updated in the response, but if not, reuse the old one.
+                String newRefreshToken = root.has(JsonKeys.REFRESH_TOKEN) 
+                        ? root.path(JsonKeys.REFRESH_TOKEN).asText() 
+                        : settings.getSpotifyRefreshToken();
 
                 partySettingsService.updateSpotifyTokens(settings.getPartyCode(), accessToken, newRefreshToken, expiresIn);
                 return accessToken;
@@ -128,16 +158,13 @@ public class SpotifyAuthService {
     }
 
     /**
-     * Helper method to perform a POST request to Spotify's token endpoint.
-     *
-     * @param body The request body containing grant type and other parameters.
-     * @return The response body as a string, or null if the request fails.
+     * Performs a POST request to Spotify's token endpoint with form data and Basic Authentication.
      */
     private String postToTokenEndpoint(MultiValueMap<String, String> body) {
         return restClient.post()
                 .uri(tokenUri)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .header("Authorization", basicAuthHeader)
+                .header(HttpHeaders.AUTHORIZATION, basicAuthHeader)
                 .body(body)
                 .retrieve()
                 .body(String.class);

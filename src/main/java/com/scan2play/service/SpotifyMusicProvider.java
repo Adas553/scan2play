@@ -18,13 +18,16 @@ import java.time.Instant;
 @Slf4j
 public class SpotifyMusicProvider implements MusicProvider {
 
+    private static final String SPOTIFY_URL_KEY = "spotify";
+    private static final String SPOTIFY_TRACK_PREFIX = "spotify:track:";
+
     private final String clientId;
     private final String clientSecret;
     private final SpotifyAuthService spotifyAuthService;
 
     // Cache for Client Credentials Token (Application level search)
     private String clientAccessToken;
-        private Instant clientTokenExpiration = Instant.MIN;
+    private Instant clientTokenExpiration = Instant.MIN;
 
     public SpotifyMusicProvider(
             @Value("${spotify.client-id}") String clientId,
@@ -64,7 +67,7 @@ public class SpotifyMusicProvider implements MusicProvider {
 
             if (searchResult.getItems() != null && searchResult.getItems().length > 0) {
                 Track track = searchResult.getItems()[0];
-                return track.getExternalUrls().get("spotify");
+                return track.getExternalUrls().get(SPOTIFY_URL_KEY);
             }
         } catch (IOException | SpotifyWebApiException | ParseException e) {
             log.error("Spotify search failed for query: '{}'", query, e);
@@ -145,7 +148,7 @@ public class SpotifyMusicProvider implements MusicProvider {
      * - https://open.spotify.com/track/ID?si=...
      */
     private String convertUrlToUri(String url) {
-        if (url.startsWith("spotify:track:")) {
+        if (url.startsWith(SPOTIFY_TRACK_PREFIX)) {
             return url;
         }
         
@@ -164,7 +167,7 @@ public class SpotifyMusicProvider implements MusicProvider {
                 }
                 
                 if (!id.isBlank()) {
-                    return "spotify:track:" + id;
+                    return SPOTIFY_TRACK_PREFIX + id;
                 }
             } catch (Exception e) {
                 log.warn("Failed to parse Spotify URL: {}", url);

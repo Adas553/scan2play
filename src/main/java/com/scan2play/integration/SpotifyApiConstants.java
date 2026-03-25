@@ -4,7 +4,7 @@ package com.scan2play.integration;
  * Constants used for Spotify Web API integration.
  * <p>
  * This class centralizes all "magic strings" related to OAuth2 parameters,
- * grant types, and permission scopes to ensure type safety and avoid typos.
+ * grant types, permission scopes, and JSON response keys to ensure type safety and avoid typos.
  * </p>
  */
 public final class SpotifyApiConstants {
@@ -31,6 +31,14 @@ public final class SpotifyApiConstants {
         private GrantTypes() {}
         public static final String AUTHORIZATION_CODE = "authorization_code";
         public static final String REFRESH_TOKEN = "refresh_token";
+    }
+
+    // --- JSON Response Keys ---
+    public static final class JsonKeys {
+        private JsonKeys() {}
+        public static final String ACCESS_TOKEN = "access_token";
+        public static final String REFRESH_TOKEN = "refresh_token";
+        public static final String EXPIRES_IN = "expires_in";
     }
 
     // --- Permission Scopes ---
