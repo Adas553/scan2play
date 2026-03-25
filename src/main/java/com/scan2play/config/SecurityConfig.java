@@ -8,6 +8,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Main security configuration for Scan2Play.
+ * <p>
+ * Handles OAuth2 login for DJs and public access for guests.
+ * </p>
+ */
 @Configuration
 @EnableWebSecurity
 @Slf4j
@@ -16,11 +22,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Public resources and landing page
-                        .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/images/**").permitAll()
-                        // OAuth2 login endpoints MUST be public
+                        // Public resources, landing page, and guest party views
+                        .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/images/**", "/favicon.ico", "/error").permitAll()
+                        // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // DJ dashboard is protected
                         .requestMatchers("/dj/**").authenticated()
@@ -28,20 +33,16 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        // We use the root page as our custom login page
+                        // Use root landing page as custom login entry point
                         .loginPage("/")
-                        // The default Spring Security authorization endpoint is /oauth2/authorization/{registrationId}
-                        // We don't need to customize authorizationEndpoint() if we stick to defaults,
-                        // but ensure the link in HTML matches /oauth2/authorization/spotify
                         .defaultSuccessUrl("/dj/dashboard", true)
                         .failureHandler((request, response, exception) -> {
-                            log.error("=== OAUTH2 LOGIN ERROR ===");
-                            log.error("Failure reason: {}", exception.getMessage(), exception);
-                            response.sendRedirect("/?error");
+                            log.error("OAuth2 Login Failed: {}", exception.getMessage());
+                            response.sendRedirect("/?error=auth_failed");
                         })
                 )
                 .logout(logout -> logout
-                        .logoutUrl("/dj/logout") // Standard logout URL
+                        .logoutUrl("/dj/logout")
                         .logoutSuccessUrl("/")
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
