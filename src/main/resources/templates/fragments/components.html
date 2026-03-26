@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- DJ Navigation Panel Fragment -->
+<div th:fragment="dj-nav(activeTab, isActive)">
+
+    <div th:if="${!isActive}" class="alert alert-warning text-center border-warning mb-4 shadow" style="background-color: #2b2000; color: #ffca2c;">
+        <h3 class="fw-bold mb-3" th:text="#{dashboard.alert.party_closed.title}">⚠️ Party is CLOSED</h3>
+        <p th:text="#{dashboard.alert.party_closed.description}">Guests scanning your QR code will see that the party has ended. They cannot add new songs.</p>
+
+        <form th:action="@{/dj/start-party}" method="POST">
+            <button type="submit" class="btn btn-warning btn-lg fw-bold shadow" th:text="#{dashboard.button.resume_party}">
+                ▶ Resume Party and Open the Dancefloor
+            </button>
+        </form>
+    </div>
+
+    <!-- Navigation -->
+    <ul class="nav nav-tabs border-secondary mb-4">
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeTab == 'queue' ? 'active' : ''}"
+               th:aria-current="${activeTab == 'queue' ? 'page' : null}"
+               href="/dj/dashboard" th:text="#{dashboard.nav.queue}">Queue (Dashboard)</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeTab == 'history' ? 'active' : ''}"
+               th:aria-current="${activeTab == 'history' ? 'page' : null}"
+               href="/dj/history-view" th:text="#{dashboard.nav.history}">History</a>
+        </li>
+    </ul>
+
+</div>
+
+</body>
+</html>

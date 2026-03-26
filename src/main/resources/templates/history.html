@@ -27,15 +27,8 @@
 <body>
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
 
-    <!-- Navigation -->
-    <ul class="nav nav-tabs border-secondary mb-4">
-        <li class="nav-item">
-            <a class="nav-link" href="/dj/dashboard" th:text="#{history.nav.queue}">Queue (Dashboard)</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="#" th:text="#{history.nav.history}">History</a>
-        </li>
-    </ul>
+    <!-- Navigation and Alert Fragment -->
+    <div th:replace="~{fragments/components :: dj-nav(activeTab='history', isActive=${isActive})}"></div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0" th:text="#{history.title}">📜 Party History</h1>
