@@ -82,7 +82,7 @@ public class DjController {
         String partyCode = settings.getPartyCode();
 
         model.addAttribute(PARTY_CODE, partyCode);
-        model.addAttribute(IS_ACTIVE, settings.isActive());
+        model.addAttribute("isActive", settings.isActive());
 
         // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
