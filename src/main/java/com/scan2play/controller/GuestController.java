@@ -3,7 +3,7 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.service.DjService;
-import com.scan2play.service.PartySettingsService;
+import com.scan2play.service.PartySettingsQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,12 +21,12 @@ import static com.scan2play.controller.ViewAttributes.*;
 public class GuestController {
 
     private final DjService djService;
-    private final PartySettingsService partySettingsService;
+    private final PartySettingsQueryService partySettingsQueryService;
 
     @GetMapping("/{partyCode}")
     public String partyIndex(@PathVariable String partyCode, Model model) {
         try {
-            PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+            PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
             
             if (!settings.isActive()) {
                 return "party_ended";
@@ -48,7 +48,7 @@ public class GuestController {
                               @RequestParam(defaultValue = "90s Rock") String style,
                               Model model) {
         
-        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         if (!settings.isActive()) {
              throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Party has ended");
         }

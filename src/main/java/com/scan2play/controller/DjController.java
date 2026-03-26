@@ -5,7 +5,8 @@ import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.DjService;
-import com.scan2play.service.PartySettingsService;
+import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,7 +42,8 @@ import static com.scan2play.controller.ViewAttributes.*;
 public class DjController {
 
     private final DjService djService;
-    private final PartySettingsService partySettingsService;
+    private final PartySettingsQueryService partySettingsQueryService;
+    private final PartySettingsCommandService partySettingsCommandService;
     private final QrCodeService qrCodeService;
 
     @Value("${scan2play.guest-url}")
@@ -76,16 +78,12 @@ public class DjController {
         String ownerId = authentication.getName();
         log.info("DJ Dashboard access: ownerId={}", ownerId);
 
-        PartySettingsEntity settings = partySettingsService.getOrCreatePartyForDj(ownerId);
-        
-        if (!settings.isActive()) {
-            partySettingsService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
-        }
-        
+        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
         String partyCode = settings.getPartyCode();
 
         model.addAttribute(PARTY_CODE, partyCode);
-        
+        model.addAttribute(IS_ACTIVE, settings.isActive());
+
         // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
@@ -105,6 +103,19 @@ public class DjController {
     }
 
     /**
+     * Re-activates the party session.
+     */
+    @PostMapping("/start-party")
+    public String startParty(OAuth2AuthenticationToken authentication) {
+        if (authentication != null) {
+            String ownerId = authentication.getName();
+            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+            partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
+        }
+        return "redirect:/dj/dashboard";
+    }
+
+    /**
      * Displays the history of played and rejected songs.
      *
      * @param model          Spring model for view attributes.
@@ -117,7 +128,7 @@ public class DjController {
             return "redirect:/login";
         }
         String ownerId = authentication.getName();
-        PartySettingsEntity settings = partySettingsService.getOrCreatePartyForDj(ownerId);
+        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
         String partyCode = settings.getPartyCode();
 
         model.addAttribute(PARTY_CODE, partyCode);
@@ -136,7 +147,7 @@ public class DjController {
      */
     @GetMapping("/dashboard/updates")
     public String getDashboardUpdates(@RequestParam String partyCode, Model model) {
-        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
@@ -220,7 +231,9 @@ public class DjController {
         if (authentication != null) {
             String ownerId = authentication.getName();
             log.info("Ending party for DJ: {}", ownerId);
-            partySettingsService.closeParty(ownerId);
+            
+            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+            partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
             
             try {
                 request.logout();

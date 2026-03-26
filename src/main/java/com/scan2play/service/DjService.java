@@ -48,7 +48,8 @@ public class DjService {
     private final Client client;
     private final ObjectMapper objectMapper;
     private final SongRequestRepository songRequestRepository;
-    private final PartySettingsService partySettingsService;
+    private final PartySettingsQueryService partySettingsQueryService;
+    private final PartySettingsCommandService partySettingsCommandService;
     private final QueueService queueService;
 
     @Value("${google.ai.model-name}")
@@ -102,7 +103,7 @@ public class DjService {
      */
     @Transactional
     protected DjResponse processSongResult(String partyCode, String style, DjResponse aiResponse) {
-        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         String trackUrl = null;
 
         if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
@@ -218,7 +219,7 @@ public class DjService {
     public void pushToSpotify(Long id) {
         songRequestRepository.findById(id).ifPresent(song -> {
             String partyCode = song.getPartyCode();
-            PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+            PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
             if (settings.getActiveProvider() == MusicProviderType.SPOTIFY && song.getTrackUrl() != null) {
                 queueService.addToQueue(partyCode, song.getTrackUrl(), MusicProviderType.SPOTIFY);
@@ -238,7 +239,7 @@ public class DjService {
      * @param newVibe   The new vibe to set.
      */
     public void setCurrentGlobalVibe(String partyCode, VibeType newVibe) {
-        partySettingsService.updateSettings(partyCode, settings -> settings.setGlobalVibe(newVibe));
+        partySettingsCommandService.updateSettings(partyCode, settings -> settings.setGlobalVibe(newVibe));
         log.info("Party [{}]: Global vibe updated to: {}", partyCode, newVibe);
     }
 
@@ -249,7 +250,7 @@ public class DjService {
      * @param newProvider The new music provider.
      */
     public void setActiveProvider(String partyCode, MusicProviderType newProvider) {
-        partySettingsService.updateSettings(partyCode, settings -> settings.setActiveProvider(newProvider));
+        partySettingsCommandService.updateSettings(partyCode, settings -> settings.setActiveProvider(newProvider));
         log.info("Party [{}]: Music provider updated to: {}", partyCode, newProvider);
     }
 
@@ -260,7 +261,7 @@ public class DjService {
      * @param mode      The new playback mode.
      */
     public void setPlaybackMode(String partyCode, PlaybackMode mode) {
-        partySettingsService.updateSettings(partyCode, settings -> settings.setPlaybackMode(mode));
+        partySettingsCommandService.updateSettings(partyCode, settings -> settings.setPlaybackMode(mode));
         log.info("Party [{}]: Playback mode updated to: {}", partyCode, mode);
     }
 
@@ -276,7 +277,7 @@ public class DjService {
      * @param partyCode The party code.
      */
     public void togglePlaybackMode(String partyCode) {
-        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
         if (settings.getActiveProvider() != MusicProviderType.SPOTIFY) {
             setPlaybackMode(partyCode, PlaybackMode.MANUAL);

@@ -26,7 +26,8 @@ import static com.scan2play.integration.SpotifyApiConstants.*;
 @Slf4j
 public class SpotifyAuthService {
 
-    private final PartySettingsService partySettingsService;
+    private final PartySettingsQueryService partySettingsQueryService;
+    private final PartySettingsCommandService partySettingsCommandService;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
@@ -97,7 +98,14 @@ public class SpotifyAuthService {
                 String refreshToken = root.path(JsonKeys.REFRESH_TOKEN).asText();
                 int expiresIn = root.path(JsonKeys.EXPIRES_IN).asInt();
 
-                partySettingsService.updateSpotifyTokens(partyCode, accessToken, refreshToken, expiresIn);
+                partySettingsCommandService.updateSettings(partyCode, settings -> {
+                    settings.setSpotifyAccessToken(accessToken);
+                    if (refreshToken != null && !refreshToken.isEmpty()) {
+                        settings.setSpotifyRefreshToken(refreshToken);
+                    }
+                    settings.setSpotifyTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
+                });
+                log.info("Spotify tokens updated for party: {}", partyCode);
             }
         } catch (Exception e) {
             log.error("Party [{}]: Error exchanging code for token", partyCode, e);
@@ -113,7 +121,7 @@ public class SpotifyAuthService {
      * @return A valid Spotify access token.
      */
     public String getRefreshedAccessToken(String partyCode) {
-        PartySettingsEntity settings = partySettingsService.getSettings(partyCode);
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
         if (settings.getSpotifyAccessToken() == null) {
             throw new IllegalStateException("Spotify not connected for party: " + partyCode);
@@ -144,11 +152,15 @@ public class SpotifyAuthService {
                 int expiresIn = root.path(JsonKeys.EXPIRES_IN).asInt();
 
                 // Refresh token might be updated in the response, but if not, reuse the old one.
-                String newRefreshToken = root.has(JsonKeys.REFRESH_TOKEN) 
+                String newRefreshToken = root.has(JsonKeys.REFRESH_TOKEN)
                         ? root.path(JsonKeys.REFRESH_TOKEN).asText() 
                         : settings.getSpotifyRefreshToken();
 
-                partySettingsService.updateSpotifyTokens(settings.getPartyCode(), accessToken, newRefreshToken, expiresIn);
+                partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> {
+                    s.setSpotifyAccessToken(accessToken);
+                    s.setSpotifyRefreshToken(newRefreshToken);
+                    s.setSpotifyTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
+                });
                 return accessToken;
             }
         } catch (Exception e) {
