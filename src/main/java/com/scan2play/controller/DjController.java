@@ -9,7 +9,6 @@ import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
 import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -221,27 +220,20 @@ public class DjController {
     }
 
     /**
-     * Ends the current party session and logs out the DJ.
+     * Ends the current party session without logging out the DJ.
      *
      * @param authentication The current user's authentication token.
-     * @param request        The HTTP request to handle logout.
-     * @return Redirect to home page.
+     * @return Redirect to the DJ dashboard.
      */
     @PostMapping("/end-party")
-    public String endParty(OAuth2AuthenticationToken authentication, HttpServletRequest request) {
+    public String endParty(OAuth2AuthenticationToken authentication) {
         if (authentication != null) {
             String ownerId = authentication.getName();
             log.info("Ending party for DJ: {}", ownerId);
             
             PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
             partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
-            
-            try {
-                request.logout();
-            } catch (Exception e) {
-                log.error("Error logging out after ending party", e);
-            }
         }
-        return "redirect:/";
+        return "redirect:/dj/dashboard";
     }
 }
