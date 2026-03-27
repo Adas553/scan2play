@@ -158,7 +158,7 @@
                 </td>
                 <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}"
-                    th:text="${req.decision == 'played'} ? #{dashboard.table.status.played} : ${req.decision}">Decision</td>
+                    th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</td>
                 <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
                 <td class="d-none d-md-table-cell"><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
                 <td>
