@@ -44,4 +44,13 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * @return A list of the top 50 matching song requests, ordered by most recent.
      */
     List<SongRequestEntity> findTop50ByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
+
+    /**
+     * Finds song requests for a specific party filtered by one or more statuses, limited to the top 15 most recent.
+     *
+     * @param partyCode The unique code of the party.
+     * @param decisions The list of statuses to include (e.g., ["accepted"]).
+     * @return A list of the top 15 matching song requests, ordered by most recent.
+     */
+    List<SongRequestEntity> findTop15ByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
 }

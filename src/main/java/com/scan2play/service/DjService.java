@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service responsible for managing song requests, AI evaluation, and playback settings.
@@ -51,6 +54,7 @@ public class DjService {
     private final PartySettingsQueryService partySettingsQueryService;
     private final PartySettingsCommandService partySettingsCommandService;
     private final QueueService queueService;
+    private final MessageSource messageSource;
 
     @Value("${google.ai.model-name}")
     private String modelName;
@@ -91,38 +95,65 @@ public class DjService {
     public DjResponse evaluateAndSaveSong(String partyCode, String songName, String style) {
         log.info("Party [{}]: Evaluating song: '{}' with style: '{}'", partyCode, songName, style);
 
-        // 1. External API Call (Outside Transaction)
-        DjResponse aiResponse = evaluateWithAi(songName, style);
-
-        // 2. Database Operations (Transactional)
-        return processSongResult(partyCode, style, aiResponse);
-    }
-
-    /**
-     * Internal method to handle database persistence and queue updates within a transaction.
-     */
-    @Transactional
-    protected DjResponse processSongResult(String partyCode, String style, DjResponse aiResponse) {
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String trackUrl = null;
+        String recentSongs = getRecentSongsContext(partyCode);
 
+        // Fetch i18n error message for autopilot failure in the main thread (where Locale is available)
+        String autopilotErrorMsg = messageSource.getMessage("dashboard.error.autopilot_failed", null, LocaleContextHolder.getLocale());
+
+        // 1. External API Call: AI Evaluation
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs);
+
+        // 2. External API Call: Spotify/YouTube Track Resolution (if accepted)
+        String trackUrl = null;
         if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
             trackUrl = resolveTrackUrl(aiResponse.songName(), settings.getActiveProvider());
         }
 
-        saveSongRequest(partyCode, aiResponse, style, trackUrl);
+        // 3. Database Operations: Safe, quick transaction
+        SongRequestEntity savedRequest = saveSongRequest(partyCode, aiResponse, style, trackUrl);
 
-        if (trackUrl != null && DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
-            if (settings.getPlaybackMode() == PlaybackMode.AUTO) {
-                queueService.addToQueue(partyCode, trackUrl, settings.getActiveProvider());
-            }
-        }
+        // 4. External API Call: Add to Queue (If Accepted & Auto-Pilot is enabled)
+        handleAutoQueue(settings, savedRequest, trackUrl, autopilotErrorMsg);
+
         return aiResponse;
     }
 
-    private DjResponse evaluateWithAi(String songName, String style) {
+    private String getRecentSongsContext(String partyCode) {
+        List<SongRequestEntity> recentRequests = songRequestRepository.findTop15ByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                partyCode, List.of(DECISION_ACCEPTED, DECISION_PLAYED)
+        );
+
+        String recentSongs = recentRequests.stream()
+                .map(SongRequestEntity::getSongName)
+                .collect(Collectors.joining(", "));
+
+        return recentSongs.isEmpty() ? "None" : recentSongs;
+    }
+
+    private void handleAutoQueue(PartySettingsEntity settings, SongRequestEntity savedRequest, String trackUrl, String autopilotErrorMsg) {
+        if (trackUrl == null || !DECISION_ACCEPTED.equalsIgnoreCase(savedRequest.getDecision()) || settings.getPlaybackMode() != PlaybackMode.AUTO) {
+            return;
+        }
+
+        queueService.addToQueue(settings.getPartyCode(), trackUrl, settings.getActiveProvider())
+                .exceptionally(ex -> {
+                    log.error("Failed to Auto-Queue track {} for party {}. Updating song status to indicate failure.", trackUrl, settings.getPartyCode(), ex);
+                    songRequestRepository.findById(savedRequest.getId()).ifPresent(song -> {
+                        song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg);
+                        songRequestRepository.save(song);
+                    });
+                    return null;
+                })
+                .thenAccept(v -> songRequestRepository.findById(savedRequest.getId()).ifPresent(song -> {
+                    song.setDecision(DECISION_PLAYED);
+                    songRequestRepository.save(song);
+                }));
+    }
+
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs) {
         try {
-            String prompt = String.format(cachedPromptTemplate, songName, style);
+            String prompt = String.format(cachedPromptTemplate, songName, style, recentSongs);
             GenerateContentConfig config = GenerateContentConfig.builder()
                     .responseMimeType("application/json")
                     .build();
@@ -145,7 +176,7 @@ public class DjService {
         }
     }
 
-    private void saveSongRequest(String partyCode, DjResponse aiResponse, String style, String trackUrl) {
+    private SongRequestEntity saveSongRequest(String partyCode, DjResponse aiResponse, String style, String trackUrl) {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
                 .songName(aiResponse.songName())
@@ -156,7 +187,7 @@ public class DjService {
                 .trackUrl(trackUrl)
                 .requestedAt(LocalDateTime.now())
                 .build();
-        songRequestRepository.save(entity);
+        return songRequestRepository.save(entity);
     }
 
     /**

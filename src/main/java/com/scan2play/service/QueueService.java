@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,24 +48,27 @@ public class QueueService {
 
     /**
      * Asynchronously adds a track to the playback queue of the active provider.
+     * Returns a CompletableFuture so the caller can handle success or failure callbacks.
      *
      * @param partyCode         The unique code of the party.
      * @param trackUrl          The URL or ID of the track to add.
      * @param preferredProvider The provider to use.
      */
     @Async
-    public void addToQueue(String partyCode, String trackUrl, MusicProviderType preferredProvider) {
+    public CompletableFuture<Void> addToQueue(String partyCode, String trackUrl, MusicProviderType preferredProvider) {
         MusicProvider provider = providers.get(preferredProvider);
         if (provider != null) {
             try {
                 log.info("Party [{}]: Attempting to add track to queue: {} (Provider: {})", partyCode, trackUrl, preferredProvider);
                 provider.addToQueue(partyCode, trackUrl);
+                return CompletableFuture.completedFuture(null);
             } catch (Exception e) {
-                // Catching exception to prevent thread crash, although @Async handles it gracefully mostly
                 log.error("Party [{}]: Failed to add track to queue asynchronously", partyCode, e);
+                return CompletableFuture.failedFuture(e);
             }
         } else {
             log.warn("Party [{}]: Provider not found for auto-queue: {}", partyCode, preferredProvider);
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Provider not found: " + preferredProvider));
         }
     }
 }
