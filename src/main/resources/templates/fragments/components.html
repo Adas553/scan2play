@@ -1,5 +1,35 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!--
+        Per-page scroll memory — include this fragment inside <head>.
+        Hides the page immediately (before first paint), restores scroll on DOMContentLoaded,
+        then reveals the page. Prevents any visible jump when switching between DJ panels.
+    -->
+    <th:block th:fragment="scroll-restore-script">
+        <script>
+            // Hide page before first paint to prevent scroll restoration flash
+            document.documentElement.style.visibility = 'hidden';
+
+            document.addEventListener("DOMContentLoaded", function () {
+                const scrollKey = "scroll_" + window.location.pathname;
+                const savedScroll = sessionStorage.getItem(scrollKey);
+
+                if (savedScroll !== null) {
+                    window.scrollTo({ top: parseInt(savedScroll, 10), behavior: 'instant' });
+                }
+
+                // Reveal page only after scroll position is restored
+                document.documentElement.style.visibility = '';
+
+                // Save position just before leaving or reloading the page
+                window.addEventListener("beforeunload", function () {
+                    sessionStorage.setItem(scrollKey, window.scrollY);
+                });
+            });
+        </script>
+    </th:block>
+</head>
 <body>
 
 <!-- DJ Navigation Panel Fragment -->

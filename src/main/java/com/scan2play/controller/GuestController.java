@@ -6,11 +6,9 @@ import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -38,7 +36,7 @@ public class GuestController {
             return "index";
         } catch (IllegalArgumentException e) {
             log.warn("Invalid party code access attempt: {}", partyCode);
-            return "error/404"; 
+            return "redirect:/";
         }
     }
 
@@ -47,15 +45,21 @@ public class GuestController {
                               @RequestParam String songName,
                               @RequestParam(defaultValue = "90s Rock") String style,
                               Model model) {
-        
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        if (!settings.isActive()) {
-             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Party has ended");
-        }
+        try {
+            PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
-        DjResponse response = djService.evaluateAndSaveSong(partyCode, songName, style);
-        model.addAttribute(RESPONSE, response);
-        model.addAttribute(PARTY_CODE, partyCode);
-        return "result";
+            if (!settings.isActive()) {
+                // Party ended while guest had the form open – show a friendly screen
+                return "party_ended";
+            }
+
+            DjResponse response = djService.evaluateAndSaveSong(partyCode, songName, style);
+            model.addAttribute(RESPONSE, response);
+            model.addAttribute(PARTY_CODE, partyCode);
+            return "result";
+        } catch (IllegalArgumentException e) {
+            log.warn("Song request for unknown party code: {}", partyCode);
+            return "redirect:/";
+        }
     }
 }
