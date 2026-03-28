@@ -24,6 +24,7 @@ public final class ViewAttributes {
 
     // --- Index/Guest Attributes ---
     public static final String PUBLIC_QUEUE = "publicQueue";
+    public static final String ERROR_MESSAGE = "errorMessage";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";

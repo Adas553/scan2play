@@ -88,6 +88,8 @@ public class DjController {
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
+        model.addAttribute("requestLimit", settings.getRequestLimit());
+        model.addAttribute("cooldownMinutes", settings.getCooldownMinutes());
 
         // --- QR Code ---
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;
@@ -180,6 +182,27 @@ public class DjController {
         if (activeProvider != MusicProviderType.SPOTIFY) {
             djService.setPlaybackMode(partyCode, PlaybackMode.MANUAL);
         }
+        return "redirect:/dj/dashboard";
+    }
+
+    /**
+     * Updates the rate limiting parameters (Token Bucket) for the party.
+     *
+     * @param partyCode       The unique code of the party.
+     * @param requestLimit    Maximum number of requests.
+     * @param cooldownMinutes Window size in minutes.
+     * @return Redirects back to the dashboard.
+     */
+    @PostMapping("/dashboard/rate-limit")
+    public String updateRateLimit(@RequestParam String partyCode,
+                                  @RequestParam double requestLimit,
+                                  @RequestParam double cooldownMinutes) {
+        
+        // Convert to integers and ensure minimum value of 1 to prevent zeros, negatives or decimals
+        int safeRequestLimit = Math.max(1, (int) Math.round(requestLimit));
+        int safeCooldownMinutes = Math.max(1, (int) Math.round(cooldownMinutes));
+        
+        djService.setRateLimit(partyCode, safeRequestLimit, safeCooldownMinutes);
         return "redirect:/dj/dashboard";
     }
 

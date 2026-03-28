@@ -19,12 +19,17 @@
 
     <!-- Main Request Form -->
     <div class="card p-4 shadow-lg w-100 text-white mb-4">
-        <h1 class="mb-4 text-center" th:text="#{home.title}">🎵 Scan2Play</h1>
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold" th:text="#{home.title}">🎵 Scan2Play</h1>
+            <p class="text-secondary" th:text="#{home.subtitle}">What do you want to hear?</p>
+        </div>
 
-        <p class="text-white-50 text-center" th:text="#{home.subtitle}">What do you want to hear?</p>
+        <div th:if="${errorMessage}" class="alert alert-danger text-center shadow-sm fw-bold" role="alert">
+            <span th:text="${errorMessage}"></span>
+        </div>
 
         <!-- Dynamic form action based on party code -->
-        <form th:action="@{/p/{code}/request(code=${partyCode})}" method="POST" class="p-3 border border-secondary rounded bg-dark text-light">
+        <form th:action="@{/p/{partyCode}/request(partyCode=${partyCode})}" method="POST" class="p-3 border border-secondary rounded bg-dark text-light">
 
             <!-- Hidden Party Code Input -->
             <input type="hidden" name="partyCode" th:value="${partyCode}" />

@@ -297,6 +297,21 @@ public class DjService {
     }
 
     /**
+     * Updates the rate limiting parameters for the party.
+     *
+     * @param partyCode       The unique code of the party.
+     * @param requestLimit    Maximum number of requests.
+     * @param cooldownMinutes Window size in minutes.
+     */
+    public void setRateLimit(String partyCode, int requestLimit, int cooldownMinutes) {
+        partySettingsCommandService.updateSettings(partyCode, settings -> {
+            settings.setRequestLimit(requestLimit);
+            settings.setCooldownMinutes(cooldownMinutes);
+        });
+        log.info("Party [{}]: Rate limit updated to: {} requests per {} minutes", partyCode, requestLimit, cooldownMinutes);
+    }
+
+    /**
      * Toggles the playback mode for the party.
      * <p>
      * Logic:

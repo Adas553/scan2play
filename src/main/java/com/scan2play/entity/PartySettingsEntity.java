@@ -45,6 +45,13 @@ public class PartySettingsEntity {
     @Enumerated(EnumType.STRING)
     private PlaybackMode playbackMode = PlaybackMode.MANUAL;
 
+    // --- Rate Limiting ---
+    @Column(nullable = false)
+    private int requestLimit = 2;
+
+    @Column(nullable = false)
+    private int cooldownMinutes = 3;
+
     // --- Spotify OAuth2 Credentials ---
     @Column(length = 2048)
     private String spotifyAccessToken;
