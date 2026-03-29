@@ -29,7 +29,7 @@
         </div>
 
         <!-- Dynamic form action based on party code -->
-        <form th:action="@{/p/{partyCode}/request(partyCode=${partyCode})}" method="POST" class="p-3 border border-secondary rounded bg-dark text-light">
+        <form id="requestForm" th:action="@{/p/{partyCode}/request(partyCode=${partyCode})}" method="POST" class="p-3 border border-secondary rounded bg-dark text-light">
 
             <!-- Hidden Party Code Input -->
             <input type="hidden" name="partyCode" th:value="${partyCode}" />
@@ -58,7 +58,9 @@
                 <input type="hidden" name="style" th:value="#{vibe.__${globalVibe}__}">
             </div>
 
-            <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm py-2" th:text="#{home.form.button.submit}">Send to DJ!</button>
+            <button type="submit" id="submitBtn" class="btn btn-success w-100 fw-bold shadow-sm py-2">
+                <span id="submitBtnText" th:text="#{home.form.button.submit}">Send to DJ!</span>
+            </button>
         </form>
     </div>
 
@@ -76,5 +78,26 @@
     </div>
 
 </div>
+
+<script th:inline="javascript">
+    document.getElementById('requestForm').addEventListener('submit', function (e) {
+        const btn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('submitBtnText');
+        const submittingText = [[#{home.form.button.submitting}]];
+
+        // Basic check for HTML5 validation
+        if (this.checkValidity()) {
+            // Disable button to prevent double submit
+            btn.disabled = true;
+
+            // Visual feedback: spinner + changing text
+            btnText.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                ${submittingText}
+            `;
+        }
+    });
+</script>
+
 </body>
 </html>

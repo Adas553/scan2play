@@ -98,11 +98,12 @@ public class DjService {
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         String recentSongs = getRecentSongsContext(partyCode);
 
-        // Fetch i18n error message for autopilot failure in the main thread (where Locale is available)
+        // Fetch i18n error messages in the main thread (where Locale is available)
         String autopilotErrorMsg = messageSource.getMessage("dashboard.error.autopilot_failed", null, LocaleContextHolder.getLocale());
+        String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, LocaleContextHolder.getLocale());
 
         // 1. External API Call: AI Evaluation
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs);
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, aiOfflineMsg);
 
         // 2. External API Call: Spotify/YouTube Track Resolution (if accepted)
         String trackUrl = null;
@@ -151,7 +152,7 @@ public class DjService {
                 }));
     }
 
-    private DjResponse evaluateWithAi(String songName, String style, String recentSongs) {
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg) {
         try {
             String prompt = String.format(cachedPromptTemplate, songName, style, recentSongs);
             GenerateContentConfig config = GenerateContentConfig.builder()
@@ -162,7 +163,7 @@ public class DjService {
             return objectMapper.readValue(response.text(), DjResponse.class);
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);
-            return new DjResponse(DECISION_REJECTED, "AI is currently offline. Please try again.", songName, 0);
+            return new DjResponse(DECISION_REJECTED, aiOfflineMsg, songName, 0);
         }
     }
 
