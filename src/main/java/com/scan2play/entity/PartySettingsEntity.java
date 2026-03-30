@@ -52,6 +52,10 @@ public class PartySettingsEntity {
     @Column(nullable = false)
     private int cooldownMinutes = 3;
 
+    // --- Duplicate Filtering ---
+    @Column(nullable = false)
+    private int duplicateCheckWindow = 15;
+
     // --- Spotify OAuth2 Credentials ---
     @Column(length = 2048)
     private String spotifyAccessToken;

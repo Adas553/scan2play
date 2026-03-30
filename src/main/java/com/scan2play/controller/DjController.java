@@ -90,6 +90,7 @@ public class DjController {
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute("requestLimit", settings.getRequestLimit());
         model.addAttribute("cooldownMinutes", settings.getCooldownMinutes());
+        model.addAttribute("duplicateCheckWindow", settings.getDuplicateCheckWindow());
 
         // --- QR Code ---
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;
@@ -186,23 +187,26 @@ public class DjController {
     }
 
     /**
-     * Updates the rate limiting parameters (Token Bucket) for the party.
+     * Updates the rate limiting and duplicate checking parameters for the party.
      *
-     * @param partyCode       The unique code of the party.
-     * @param requestLimit    Maximum number of requests.
-     * @param cooldownMinutes Window size in minutes.
+     * @param partyCode             The unique code of the party.
+     * @param requestLimit          Maximum number of requests.
+     * @param cooldownMinutes       Window size in minutes.
+     * @param duplicateCheckWindow  Number of recent songs to check for duplicates.
      * @return Redirects back to the dashboard.
      */
-    @PostMapping("/dashboard/rate-limit")
-    public String updateRateLimit(@RequestParam String partyCode,
+    @PostMapping("/dashboard/limits")
+    public String updateLimits(@RequestParam String partyCode,
                                   @RequestParam double requestLimit,
-                                  @RequestParam double cooldownMinutes) {
+                                  @RequestParam double cooldownMinutes,
+                                  @RequestParam int duplicateCheckWindow) {
         
-        // Convert to integers and ensure minimum value of 1 to prevent zeros, negatives or decimals
+        // Convert to integers and ensure minimum values
         int safeRequestLimit = Math.max(1, (int) Math.round(requestLimit));
         int safeCooldownMinutes = Math.max(1, (int) Math.round(cooldownMinutes));
+        int safeDuplicateCheckWindow = Math.max(0, duplicateCheckWindow);
         
-        djService.setRateLimit(partyCode, safeRequestLimit, safeCooldownMinutes);
+        djService.setPartyLimits(partyCode, safeRequestLimit, safeCooldownMinutes, safeDuplicateCheckWindow);
         return "redirect:/dj/dashboard";
     }
 

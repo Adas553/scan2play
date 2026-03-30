@@ -11,14 +11,6 @@ import java.util.List;
 public interface SongRequestRepository extends JpaRepository<SongRequestEntity, Long> {
 
     /**
-     * Finds all song requests for a specific party, ordered by the most recent.
-     *
-     * @param partyCode The unique code of the party.
-     * @return A list of song requests.
-     */
-    List<SongRequestEntity> findAllByPartyCodeOrderByRequestedAtDesc(String partyCode);
-
-    /**
      * Finds song requests for a specific party filtered by one or more statuses.
      *
      * @param partyCode The unique code of the party.
@@ -46,11 +38,12 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     List<SongRequestEntity> findTop50ByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
 
     /**
-     * Finds song requests for a specific party filtered by one or more statuses, limited to the top 15 most recent.
+     * Finds song requests for a specific party filtered by one or more statuses, dynamically paginated.
      *
      * @param partyCode The unique code of the party.
-     * @param decisions The list of statuses to include (e.g., ["accepted"]).
-     * @return A list of the top 15 matching song requests, ordered by most recent.
+     * @param decisions The list of statuses to include.
+     * @param pageable  Pagination/limit constraints.
+     * @return A list of matching song requests.
      */
-    List<SongRequestEntity> findTop15ByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
+    List<SongRequestEntity> findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions, org.springframework.data.domain.Pageable pageable);
 }

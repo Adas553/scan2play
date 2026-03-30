@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,13 +49,10 @@ public class DjService {
     public static final String DECISION_REJECTED = "rejected";
     public static final String DECISION_PLAYED = "played";
 
-    private final Client client;
-    private final ObjectMapper objectMapper;
-    private final SongRequestRepository songRequestRepository;
-    private final PartySettingsQueryService partySettingsQueryService;
-    private final PartySettingsCommandService partySettingsCommandService;
-    private final QueueService queueService;
-    private final MessageSource messageSource;
+    /** Cached config for AI requests – always the same, no need to rebuild per call. */
+    private static final GenerateContentConfig AI_JSON_CONFIG = GenerateContentConfig.builder()
+            .responseMimeType("application/json")
+            .build();
 
     @Value("${google.ai.model-name}")
     private String modelName;
@@ -62,7 +60,19 @@ public class DjService {
     @Value("classpath:prompt-template.txt")
     private Resource promptResource;
 
+    @Value("classpath:prompt-duplicate-rule.txt")
+    private Resource duplicateRuleResource;
+
     private String cachedPromptTemplate;
+    private String cachedDuplicateRuleTemplate;
+
+    private final Client client;
+    private final ObjectMapper objectMapper;
+    private final SongRequestRepository songRequestRepository;
+    private final PartySettingsQueryService partySettingsQueryService;
+    private final PartySettingsCommandService partySettingsCommandService;
+    private final QueueService queueService;
+    private final MessageSource messageSource;
 
     /**
      * Initializes the service by loading the AI prompt template from resources.
@@ -72,6 +82,7 @@ public class DjService {
     public void init() {
         try {
             this.cachedPromptTemplate = promptResource.getContentAsString(StandardCharsets.UTF_8);
+            this.cachedDuplicateRuleTemplate = duplicateRuleResource.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             log.error("Failed to load prompt template", e);
             throw new RuntimeException("System configuration error: prompt template missing", e);
@@ -96,7 +107,7 @@ public class DjService {
         log.info("Party [{}]: Evaluating song: '{}' with style: '{}'", partyCode, songName, style);
 
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String recentSongs = getRecentSongsContext(partyCode);
+        String recentSongs = getRecentSongsContext(partyCode, settings.getDuplicateCheckWindow());
 
         // Fetch i18n error messages in the main thread (where Locale is available)
         String autopilotErrorMsg = messageSource.getMessage("dashboard.error.autopilot_failed", null, LocaleContextHolder.getLocale());
@@ -120,9 +131,13 @@ public class DjService {
         return aiResponse;
     }
 
-    private String getRecentSongsContext(String partyCode) {
-        List<SongRequestEntity> recentRequests = songRequestRepository.findTop15ByPartyCodeAndDecisionInOrderByRequestedAtDesc(
-                partyCode, List.of(DECISION_ACCEPTED, DECISION_PLAYED)
+    private String getRecentSongsContext(String partyCode, int duplicateCheckWindow) {
+        if (duplicateCheckWindow <= 0) {
+            return null; // Return null when feature is disabled
+        }
+
+        List<SongRequestEntity> recentRequests = songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                partyCode, List.of(DECISION_ACCEPTED, DECISION_PLAYED), PageRequest.of(0, duplicateCheckWindow)
         );
 
         String recentSongs = recentRequests.stream()
@@ -154,12 +169,10 @@ public class DjService {
 
     private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg) {
         try {
-            String prompt = String.format(cachedPromptTemplate, songName, style, recentSongs);
-            GenerateContentConfig config = GenerateContentConfig.builder()
-                    .responseMimeType("application/json")
-                    .build();
+            String duplicateRule = (recentSongs != null) ? String.format(cachedDuplicateRuleTemplate, recentSongs) : "";
+            String prompt = String.format(cachedPromptTemplate, songName, style, duplicateRule);
 
-            GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
+            GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_JSON_CONFIG);
             return objectMapper.readValue(response.text(), DjResponse.class);
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);
@@ -298,18 +311,21 @@ public class DjService {
     }
 
     /**
-     * Updates the rate limiting parameters for the party.
+     * Updates the rate limiting and duplicate check parameters for the party.
      *
-     * @param partyCode       The unique code of the party.
-     * @param requestLimit    Maximum number of requests.
-     * @param cooldownMinutes Window size in minutes.
+     * @param partyCode             The unique code of the party.
+     * @param requestLimit          Maximum number of requests.
+     * @param cooldownMinutes       Window size in minutes.
+     * @param duplicateCheckWindow  Number of recent songs to check.
      */
-    public void setRateLimit(String partyCode, int requestLimit, int cooldownMinutes) {
+    public void setPartyLimits(String partyCode, int requestLimit, int cooldownMinutes, int duplicateCheckWindow) {
         partySettingsCommandService.updateSettings(partyCode, settings -> {
             settings.setRequestLimit(requestLimit);
             settings.setCooldownMinutes(cooldownMinutes);
+            settings.setDuplicateCheckWindow(duplicateCheckWindow);
         });
-        log.info("Party [{}]: Rate limit updated to: {} requests per {} minutes", partyCode, requestLimit, cooldownMinutes);
+        log.info("Party [{}]: Limits updated to: {} requests per {} minutes, {} duplicate window", 
+                partyCode, requestLimit, cooldownMinutes, duplicateCheckWindow);
     }
 
     /**

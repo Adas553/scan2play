@@ -100,15 +100,19 @@
             </div>
 
             <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
-                <form th:action="@{/dj/dashboard/rate-limit}" method="POST" class="row align-items-end mx-0">
+                <form th:action="@{/dj/dashboard/limits}" method="POST" class="row align-items-end mx-0">
                     <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <div class="col-md-5 mb-3 mb-md-0">
+                    <div class="col-md-3 mb-3 mb-md-0">
                         <label for="requestLimit" class="form-label text-light fw-bold" th:text="#{dashboard.ratelimit.limit}">Max requests per user:</label>
                         <input type="number" id="requestLimit" name="requestLimit" class="form-control bg-black text-light border-secondary" min="1" step="1" th:value="${requestLimit}" required>
                     </div>
-                    <div class="col-md-5 mb-3 mb-md-0">
+                    <div class="col-md-3 mb-3 mb-md-0">
                         <label for="cooldownMinutes" class="form-label text-light fw-bold" th:text="#{dashboard.ratelimit.cooldown}">Cooldown (minutes):</label>
                         <input type="number" id="cooldownMinutes" name="cooldownMinutes" class="form-control bg-black text-light border-secondary" min="1" step="1" th:value="${cooldownMinutes}" required>
+                    </div>
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <label for="duplicateCheckWindow" class="form-label text-light fw-bold" th:text="#{dashboard.limits.duplicates}">Block duplicates for last X songs:</label>
+                        <input type="number" id="duplicateCheckWindow" name="duplicateCheckWindow" class="form-control bg-black text-light border-secondary" min="0" step="1" th:value="${duplicateCheckWindow}" required>
                     </div>
                     <div class="col-md-2 mt-2 mt-md-0 px-md-1">
                         <button type="submit" class="btn btn-outline-light w-100" th:text="#{dashboard.ratelimit.save}">Save</button>
