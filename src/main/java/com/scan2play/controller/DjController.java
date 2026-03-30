@@ -8,6 +8,7 @@ import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,8 @@ import static com.scan2play.controller.ViewAttributes.*;
 @Slf4j
 public class DjController {
 
+    private static final String SESSION_PARTY_CODE = "djPartyCode";
+
     private final DjService djService;
     private final PartySettingsQueryService partySettingsQueryService;
     private final PartySettingsCommandService partySettingsCommandService;
@@ -68,17 +71,15 @@ public class DjController {
      * @return The name of the dashboard view template.
      */
     @GetMapping("/dashboard")
-    public String dashboard(Model model, OAuth2AuthenticationToken authentication) {
+    public String dashboard(Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication == null) {
             return "redirect:/login"; 
         }
 
-        String ownerId = authentication.getName();
-        MusicProviderType provider = resolveProviderFromAuth(authentication);
-        log.info("DJ Dashboard access: ownerId={}, provider={}", ownerId, provider);
-
-        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
+        PartySettingsEntity settings = getPartySettings(authentication, session);
         String partyCode = settings.getPartyCode();
+
+        log.info("DJ Dashboard access: ownerId={}, partyCode={}", authentication.getName(), partyCode);
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
@@ -108,11 +109,9 @@ public class DjController {
      * Re-activates the party session.
      */
     @PostMapping("/start-party")
-    public String startParty(OAuth2AuthenticationToken authentication) {
+    public String startParty(OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication != null) {
-            String ownerId = authentication.getName();
-            MusicProviderType provider = resolveProviderFromAuth(authentication);
-            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
+            PartySettingsEntity settings = getPartySettings(authentication, session);
             partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
         }
         return "redirect:/dj/dashboard";
@@ -126,13 +125,11 @@ public class DjController {
      * @return The name of the history view template.
      */
     @GetMapping("/history-view")
-    public String historyView(Model model, OAuth2AuthenticationToken authentication) {
+    public String historyView(Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication == null) {
             return "redirect:/login";
         }
-        String ownerId = authentication.getName();
-        MusicProviderType provider = resolveProviderFromAuth(authentication);
-        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
+        PartySettingsEntity settings = getPartySettings(authentication, session);
         String partyCode = settings.getPartyCode();
 
         model.addAttribute(PARTY_CODE, partyCode);
@@ -239,16 +236,41 @@ public class DjController {
      * @return Redirect to the DJ dashboard.
      */
     @PostMapping("/end-party")
-    public String endParty(OAuth2AuthenticationToken authentication) {
+    public String endParty(OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication != null) {
-            String ownerId = authentication.getName();
-            MusicProviderType provider = resolveProviderFromAuth(authentication);
-            log.info("Ending party for DJ: {}", ownerId);
-            
-            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
+            log.info("Ending party for DJ: {}", authentication.getName());
+            PartySettingsEntity settings = getPartySettings(authentication, session);
             partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
         }
         return "redirect:/dj/dashboard";
+    }
+
+    /**
+     * Resolves party settings using a cached partyCode from the HTTP session when available.
+     * Falls back to {@code getOrCreatePartyForDj} (DB lookup by ownerId) on first access,
+     * then stores the partyCode in the session for subsequent requests.
+     *
+     * @param authentication The OAuth2 authentication token.
+     * @param session        The current HTTP session.
+     * @return The PartySettingsEntity for this DJ.
+     */
+    private PartySettingsEntity getPartySettings(OAuth2AuthenticationToken authentication, HttpSession session) {
+        String cachedPartyCode = (String) session.getAttribute(SESSION_PARTY_CODE);
+
+        if (cachedPartyCode != null) {
+            try {
+                return partySettingsQueryService.getSettings(cachedPartyCode);
+            } catch (IllegalArgumentException e) {
+                log.warn("Cached partyCode '{}' no longer valid, falling back to ownerId lookup", cachedPartyCode);
+                session.removeAttribute(SESSION_PARTY_CODE);
+            }
+        }
+
+        String ownerId = authentication.getName();
+        MusicProviderType provider = resolveProviderFromAuth(authentication);
+        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
+        session.setAttribute(SESSION_PARTY_CODE, settings.getPartyCode());
+        return settings;
     }
 
     /**

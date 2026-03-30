@@ -10,14 +10,15 @@ import java.util.List;
 @Repository
 public interface SongRequestRepository extends JpaRepository<SongRequestEntity, Long> {
 
+
     /**
-     * Finds song requests for a specific party filtered by one or more statuses.
+     * Finds the top 100 most recent song requests for the DJ dashboard queue.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include (e.g., ["accepted"]).
-     * @return A list of matching song requests, ordered by most recent.
+     * @return A list of the top 100 matching song requests, ordered by most recent.
      */
-    List<SongRequestEntity> findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
+    List<SongRequestEntity> findTop100ByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
 
     /**
      * Finds the top 5 most recently accepted songs for a specific party's public queue.

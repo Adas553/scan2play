@@ -205,13 +205,14 @@ public class DjService {
     }
 
     /**
-     * Returns ONLY the accepted songs (waiting in queue) for the dashboard.
+     * Returns the accepted songs (waiting in queue) for the dashboard.
+     * Limited to the 100 most recent entries for performance.
      *
      * @param partyCode The unique code of the party.
-     * @return List of accepted song requests.
+     * @return List of accepted song requests (max 100).
      */
     public List<SongRequestEntity> getDashboardQueue(String partyCode) {
-        return songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+        return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtDesc(
                 partyCode, List.of(DECISION_ACCEPTED)
         );
     }
