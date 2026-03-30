@@ -2,7 +2,6 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsCommandService;
@@ -75,9 +74,10 @@ public class DjController {
         }
 
         String ownerId = authentication.getName();
-        log.info("DJ Dashboard access: ownerId={}", ownerId);
+        MusicProviderType provider = resolveProviderFromAuth(authentication);
+        log.info("DJ Dashboard access: ownerId={}, provider={}", ownerId, provider);
 
-        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
         String partyCode = settings.getPartyCode();
 
         model.addAttribute(PARTY_CODE, partyCode);
@@ -111,7 +111,8 @@ public class DjController {
     public String startParty(OAuth2AuthenticationToken authentication) {
         if (authentication != null) {
             String ownerId = authentication.getName();
-            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+            MusicProviderType provider = resolveProviderFromAuth(authentication);
+            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
             partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
         }
         return "redirect:/dj/dashboard";
@@ -130,7 +131,8 @@ public class DjController {
             return "redirect:/login";
         }
         String ownerId = authentication.getName();
-        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+        MusicProviderType provider = resolveProviderFromAuth(authentication);
+        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
         String partyCode = settings.getPartyCode();
 
         model.addAttribute(PARTY_CODE, partyCode);
@@ -167,22 +169,6 @@ public class DjController {
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe) {
         djService.setCurrentGlobalVibe(partyCode, newVibe);
-        return "redirect:/dj/dashboard";
-    }
-
-    /**
-     * Updates the active music provider for the party.
-     *
-     * @param partyCode      The unique code of the party.
-     * @param activeProvider The new {@link MusicProviderType} to use for resolving tracks.
-     * @return Redirects back to the dashboard view.
-     */
-    @PostMapping("/dashboard/provider")
-    public String updateProvider(@RequestParam String partyCode, @RequestParam MusicProviderType activeProvider) {
-        djService.setActiveProvider(partyCode, activeProvider);
-        if (activeProvider != MusicProviderType.SPOTIFY) {
-            djService.setPlaybackMode(partyCode, PlaybackMode.MANUAL);
-        }
         return "redirect:/dj/dashboard";
     }
 
@@ -256,11 +242,26 @@ public class DjController {
     public String endParty(OAuth2AuthenticationToken authentication) {
         if (authentication != null) {
             String ownerId = authentication.getName();
+            MusicProviderType provider = resolveProviderFromAuth(authentication);
             log.info("Ending party for DJ: {}", ownerId);
             
-            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+            PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
             partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
         }
         return "redirect:/dj/dashboard";
+    }
+
+    /**
+     * Resolves the {@link MusicProviderType} from the OAuth2 authentication token.
+     * Spotify registration maps to SPOTIFY, Google registration maps to YOUTUBE.
+     *
+     * @param authentication The OAuth2 authentication token.
+     * @return The resolved music provider type.
+     */
+    private MusicProviderType resolveProviderFromAuth(OAuth2AuthenticationToken authentication) {
+        String registrationId = authentication.getAuthorizedClientRegistrationId();
+        return "google".equalsIgnoreCase(registrationId)
+                ? MusicProviderType.YOUTUBE
+                : MusicProviderType.SPOTIFY;
     }
 }

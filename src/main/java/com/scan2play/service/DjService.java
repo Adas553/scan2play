@@ -288,16 +288,6 @@ public class DjService {
         log.info("Party [{}]: Global vibe updated to: {}", partyCode, newVibe);
     }
 
-    /**
-     * Updates the active music provider (e.g., Spotify, YouTube).
-     *
-     * @param partyCode   The unique code of the party.
-     * @param newProvider The new music provider.
-     */
-    public void setActiveProvider(String partyCode, MusicProviderType newProvider) {
-        partySettingsCommandService.updateSettings(partyCode, settings -> settings.setActiveProvider(newProvider));
-        log.info("Party [{}]: Music provider updated to: {}", partyCode, newProvider);
-    }
 
     /**
      * Sets the playback mode (AUTO or MANUAL).

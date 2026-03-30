@@ -25,6 +25,36 @@
             background-color: #1ed760;
             color: white;
         }
+        .btn-youtube {
+            background-color: #FF0000;
+            color: white;
+            font-weight: bold;
+            border: none;
+        }
+        .btn-youtube:hover {
+            background-color: #cc0000;
+            color: white;
+        }
+        .provider-cards {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .provider-card {
+            padding: 2rem 2.5rem;
+            border-radius: 16px;
+            border: 2px solid #333;
+            background: #1a1a1a;
+            transition: transform 0.2s, border-color 0.2s;
+            text-decoration: none;
+            min-width: 220px;
+        }
+        .provider-card:hover {
+            transform: translateY(-4px);
+            border-color: #555;
+        }
+        .provider-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
     </style>
 </head>
 <body>
@@ -39,10 +69,23 @@
                 while AI ensures the perfect party vibe.
             </p>
 
-            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                <!-- Spring Security OAuth2 Login Endpoint -->
-                <a href="/oauth2/authorization/spotify" class="btn btn-spotify btn-lg px-4 gap-3" th:text="#{landing.btn.login.spotify}">
-                    Log in with Spotify
+            <div class="provider-cards">
+                <!-- Spotify: OAuth2 login flow -->
+                <a href="/oauth2/authorization/spotify" class="provider-card text-center">
+                    <div class="icon">🎵</div>
+                    <div class="btn btn-spotify btn-lg w-100" th:text="#{landing.btn.start.spotify}">
+                        Start Party with Spotify
+                    </div>
+                    <small class="text-secondary d-block mt-2" th:text="#{landing.hint.spotify}">Requires Spotify account</small>
+                </a>
+
+                <!-- YouTube: Google OAuth2 login flow -->
+                <a href="/oauth2/authorization/google" class="provider-card text-center">
+                    <div class="icon">▶️</div>
+                    <div class="btn btn-youtube btn-lg w-100" th:text="#{landing.btn.start.youtube}">
+                        Start Party with YouTube
+                    </div>
+                    <small class="text-secondary d-block mt-2" th:text="#{landing.hint.youtube}">Requires Google account</small>
                 </a>
             </div>
 

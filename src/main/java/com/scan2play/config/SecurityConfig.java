@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -27,6 +26,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/images/**", "/favicon.ico", "/error").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                        // Spotify API OAuth endpoints (custom flow for playback token)
+                        .requestMatchers("/spotify/**").permitAll()
                         // DJ dashboard is protected
                         .requestMatchers("/dj/**").authenticated()
                         // Everything else requires authentication
