@@ -15,12 +15,15 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.Resource;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -73,13 +76,17 @@ public class DjService {
     private final PartySettingsCommandService partySettingsCommandService;
     private final QueueService queueService;
     private final MessageSource messageSource;
+    private final PlatformTransactionManager transactionManager;
+
+    private TransactionTemplate transactionTemplate;
 
     /**
-     * Initializes the service by loading the AI prompt template from resources.
-     * This avoids File I/O during request processing.
+     * Initializes the service by loading the AI prompt template from resources
+     * and setting up the transaction template for async callbacks.
      */
     @PostConstruct
     public void init() {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         try {
             this.cachedPromptTemplate = promptResource.getContentAsString(StandardCharsets.UTF_8);
             this.cachedDuplicateRuleTemplate = duplicateRuleResource.getContentAsString(StandardCharsets.UTF_8);
@@ -155,16 +162,18 @@ public class DjService {
         queueService.addToQueue(settings.getPartyCode(), trackUrl, settings.getActiveProvider())
                 .exceptionally(ex -> {
                     log.error("Failed to Auto-Queue track {} for party {}. Updating song status to indicate failure.", trackUrl, settings.getPartyCode(), ex);
-                    songRequestRepository.findById(savedRequest.getId()).ifPresent(song -> {
-                        song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg);
-                        songRequestRepository.save(song);
-                    });
+                    transactionTemplate.executeWithoutResult(status ->
+                            songRequestRepository.findById(savedRequest.getId()).ifPresent(song ->
+                                    song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg)
+                            )
+                    );
                     return null;
                 })
-                .thenAccept(v -> songRequestRepository.findById(savedRequest.getId()).ifPresent(song -> {
-                    song.setDecision(DECISION_PLAYED);
-                    songRequestRepository.save(song);
-                }));
+                .thenAccept(v -> transactionTemplate.executeWithoutResult(status ->
+                        songRequestRepository.findById(savedRequest.getId()).ifPresent(song ->
+                                song.setDecision(DECISION_PLAYED)
+                        )
+                ));
     }
 
     private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg) {
@@ -211,6 +220,7 @@ public class DjService {
      * @param partyCode The unique code of the party.
      * @return List of accepted song requests (max 100).
      */
+    @Cacheable(value = "dashboardQueue", key = "#partyCode")
     public List<SongRequestEntity> getDashboardQueue(String partyCode) {
         return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtDesc(
                 partyCode, List.of(DECISION_ACCEPTED)
@@ -237,6 +247,7 @@ public class DjService {
      * @param partyCode The unique code of the party.
      * @return List of top 5 accepted song requests.
      */
+    @Cacheable(value = "publicQueue", key = "#partyCode")
     public List<SongRequestEntity> getPublicQueue(String partyCode) {
         return songRequestRepository.findTop5ByPartyCodeAndDecisionOrderByRequestedAtDesc(partyCode, DECISION_ACCEPTED);
     }

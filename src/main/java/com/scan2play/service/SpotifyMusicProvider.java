@@ -13,6 +13,7 @@ import se.michaelthelin.spotify.model_objects.specification.Track;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Slf4j
@@ -24,10 +25,11 @@ public class SpotifyMusicProvider implements MusicProvider {
     private final String clientId;
     private final String clientSecret;
     private final SpotifyAuthService spotifyAuthService;
+    private final ReentrantLock tokenLock = new ReentrantLock();
 
-    // Cache for Client Credentials Token (Application level search)
-    private String clientAccessToken;
-    private Instant clientTokenExpiration = Instant.MIN;
+    // Volatile for safe publication in double-checked locking
+    private volatile String clientAccessToken;
+    private volatile Instant clientTokenExpiration = Instant.MIN;
 
     public SpotifyMusicProvider(
             @Value("${spotify.client-id}") String clientId,
@@ -113,14 +115,25 @@ public class SpotifyMusicProvider implements MusicProvider {
 
     /**
      * Gets a valid Client Access Token, refreshing it only if expired.
-     * Synchronized to prevent multiple threads from refreshing at the same time.
+     * Uses double-checked locking with {@link ReentrantLock} for high concurrency:
+     * <ul>
+     *     <li>Fast path (no lock): returns cached token if still valid</li>
+     *     <li>Slow path (locked): refreshes token, only one thread performs the refresh</li>
+     * </ul>
      */
-    private synchronized String getClientAccessToken() {
+    private String getClientAccessToken() {
+        // Fast path: no lock needed when token is still valid
         if (clientAccessToken != null && Instant.now().isBefore(clientTokenExpiration)) {
             return clientAccessToken;
         }
 
+        tokenLock.lock();
         try {
+            // Double-check after acquiring lock (another thread may have refreshed already)
+            if (clientAccessToken != null && Instant.now().isBefore(clientTokenExpiration)) {
+                return clientAccessToken;
+            }
+
             log.debug("Refreshing Spotify Client Credentials Token...");
             SpotifyApi api = new SpotifyApi.Builder()
                     .setClientId(clientId)
@@ -128,15 +141,17 @@ public class SpotifyMusicProvider implements MusicProvider {
                     .build();
 
             ClientCredentials credentials = api.clientCredentials().build().execute();
-            
+
             this.clientAccessToken = credentials.getAccessToken();
             // Buffer of 60 seconds to be safe
             this.clientTokenExpiration = Instant.now().plusSeconds(credentials.getExpiresIn() - 60);
-            
+
             return this.clientAccessToken;
         } catch (Exception e) {
             log.error("Failed to obtain Spotify Client Credentials", e);
             throw new RuntimeException("Spotify Auth Failed", e);
+        } finally {
+            tokenLock.unlock();
         }
     }
 

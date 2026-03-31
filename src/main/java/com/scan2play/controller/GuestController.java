@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpSession;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -49,39 +50,46 @@ public class GuestController {
         }
     }
 
+    /**
+     * Processes a song request asynchronously using {@link Callable} to release the Tomcat thread
+     * during the AI evaluation and Spotify API calls (~2-4 seconds).
+     * The HTTP connection stays open; the guest sees the result when processing completes.
+     */
     @PostMapping("/{partyCode}/request")
-    public String requestSong(@PathVariable String partyCode,
+    public Callable<String> requestSong(@PathVariable String partyCode,
                               @RequestParam String songName,
                               @RequestParam(defaultValue = "90s Rock") String style,
                               Model model,
                               HttpSession session,
                               RedirectAttributes redirectAttributes) {
-        try {
-            PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        return () -> {
+            try {
+                PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
-            if (!settings.isActive()) {
-                return "party_ended";
-            }
-            
-            Optional<Long> waitTimeSeconds = guestSessionService.getRateLimitWaitTimeSeconds(session, partyCode, settings);
-            if (waitTimeSeconds.isPresent()) {
-                String errorMsg = messageSource.getMessage("guest.error.rate_limit", 
-                        new Object[]{settings.getRequestLimit(), waitTimeSeconds.get()}, 
-                        LocaleContextHolder.getLocale());
-                
-                redirectAttributes.addFlashAttribute(ERROR_MESSAGE, errorMsg);
-                return "redirect:/p/" + partyCode;
-            }
+                if (!settings.isActive()) {
+                    return "party_ended";
+                }
 
-            DjResponse response = djService.evaluateAndSaveSong(partyCode, songName, style);
-            guestSessionService.recordSuccessfulRequest(session, partyCode);
-            
-            model.addAttribute(RESPONSE, response);
-            model.addAttribute(PARTY_CODE, partyCode);
-            return "result";
-        } catch (IllegalArgumentException e) {
-            log.warn("Song request for unknown party code: {}", partyCode);
-            return "redirect:/";
-        }
+                Optional<Long> waitTimeSeconds = guestSessionService.getRateLimitWaitTimeSeconds(session, partyCode, settings);
+                if (waitTimeSeconds.isPresent()) {
+                    String errorMsg = messageSource.getMessage("guest.error.rate_limit",
+                            new Object[]{settings.getRequestLimit(), waitTimeSeconds.get()},
+                            LocaleContextHolder.getLocale());
+
+                    redirectAttributes.addFlashAttribute(ERROR_MESSAGE, errorMsg);
+                    return "redirect:/p/" + partyCode;
+                }
+
+                DjResponse response = djService.evaluateAndSaveSong(partyCode, songName, style);
+                guestSessionService.recordSuccessfulRequest(session, partyCode);
+
+                model.addAttribute(RESPONSE, response);
+                model.addAttribute(PARTY_CODE, partyCode);
+                return "result";
+            } catch (IllegalArgumentException e) {
+                log.warn("Song request for unknown party code: {}", partyCode);
+                return "redirect:/";
+            }
+        };
     }
 }
