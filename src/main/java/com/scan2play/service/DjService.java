@@ -52,6 +52,9 @@ public class DjService {
     public static final String DECISION_REJECTED = "rejected";
     public static final String DECISION_PLAYED = "played";
 
+    /** Default comment attached to manually added DJ picks. */
+    private static final String DJ_PICK_COMMENT = "DJ's Choice 🎧";
+
     /** Cached config for AI requests – always the same, no need to rebuild per call. */
     private static final GenerateContentConfig AI_JSON_CONFIG = GenerateContentConfig.builder()
             .responseMimeType("application/json")
@@ -294,6 +297,36 @@ public class DjService {
                 log.warn("Cannot push to Spotify: Provider is {} or track URL is missing", settings.getActiveProvider());
             }
         });
+    }
+
+    /**
+     * Adds a song directly to the party queue as a DJ Pick, bypassing AI evaluation.
+     * The song is saved immediately as ACCEPTED so it appears in the next polling cycle
+     * and the YouTube Auto-Pilot can pick it up.
+     *
+     * @param partyCode The unique code of the party.
+     * @param songName  The name of the song to add (must not be blank).
+     */
+    @Transactional
+    public void addDjPick(String partyCode, String songName) {
+        log.info("Party [{}]: DJ manually adding track: '{}'", partyCode, songName);
+
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        String trackUrl = resolveTrackUrl(songName, settings.getActiveProvider());
+
+        SongRequestEntity entity = SongRequestEntity.builder()
+                .partyCode(partyCode)
+                .songName(songName)
+                .style("DJ Pick")
+                .decision(DECISION_ACCEPTED)
+                .djComment(DJ_PICK_COMMENT)
+                .energyLevel(0)
+                .trackUrl(trackUrl)
+                .requestedAt(LocalDateTime.now())
+                .build();
+
+        songRequestRepository.save(entity);
+        log.info("Party [{}]: DJ pick '{}' saved. Track URL: {}", partyCode, songName, trackUrl);
     }
 
     /**

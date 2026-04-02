@@ -79,6 +79,10 @@ function isYouTubeProvider() {
                     btn.classList.remove('btn-success');
                 }, 1500);
             }
+            // Clear "add item" forms after successful submission
+            if (form.classList.contains('reset-on-success')) {
+                form.reset();
+            }
         }).catch(function(err) {
             console.error('[Dashboard] AJAX form error:', err);
         });

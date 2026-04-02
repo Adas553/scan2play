@@ -122,7 +122,9 @@
         const tbody = document.getElementById('song-list');
         if (!tbody) return;
         if (tbody.getAttribute('data-playback-mode') !== 'AUTO') return;
-        if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.BUFFERING) return;
+        if (playerState === YT.PlayerState.PLAYING
+                || playerState === YT.PlayerState.BUFFERING
+                || playerState === YT.PlayerState.PAUSED) return;
 
         const rows = tbody.querySelectorAll('tr[data-song-id]');
         if (rows.length === 0) return;

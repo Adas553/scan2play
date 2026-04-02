@@ -246,6 +246,23 @@ public class DjController {
     }
 
     /**
+     * Adds a DJ-picked song directly to the party queue, bypassing AI evaluation.
+     * Only meaningful for the YouTube provider (Auto-Pilot picks it up in the next polling cycle).
+     *
+     * @param partyCode The unique code of the party.
+     * @param songName  The name of the song to add.
+     * @return Redirects back to the dashboard.
+     */
+    @PostMapping("/dashboard/dj-pick")
+    public String addDjPick(@RequestParam String partyCode,
+                            @RequestParam String songName) {
+        if (songName != null && !songName.isBlank()) {
+            djService.addDjPick(partyCode, songName.trim());
+        }
+        return "redirect:/dj/dashboard";
+    }
+
+    /**
      * Ends the current party session without logging out the DJ.
      *
      * @param authentication The current user's authentication token.

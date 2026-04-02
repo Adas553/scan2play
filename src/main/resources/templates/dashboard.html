@@ -129,6 +129,22 @@
     </div>
 
     <div id="queue-content">
+
+    <!-- DJ Pick Form: manual song addition, bypasses AI (YouTube provider only) -->
+    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
+        <h5 class="text-light mb-3">➕ <span th:text="#{dashboard.djpick.title}">Add DJ Pick</span></h5>
+        <form th:action="@{/dj/dashboard/dj-pick}" method="POST"
+              class="d-flex gap-2 reset-on-success" id="dj-pick-form">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <input type="text" name="songName"
+                   class="form-control bg-black text-light border-secondary flex-grow-1"
+                   th:placeholder="#{dashboard.djpick.placeholder}"
+                   autocomplete="off" required maxlength="200">
+            <button type="submit" class="btn btn-outline-danger flex-shrink-0"
+                    th:text="#{dashboard.djpick.button}">Add to Queue</button>
+        </form>
+    </div>
+
     <div class="table-responsive mb-4">
         <h4 class="text-white mb-3" th:text="#{dashboard.active.queue}">Active Queue</h4>
         <table class="table table-dark table-hover align-middle">

@@ -105,6 +105,12 @@ body {
     min-height: 370px;
 }
 
+/* Dark inputs placeholder visibility fix */
+.page-dj .form-control::placeholder {
+    color: var(--s2p-text-muted);
+    opacity: 1; /* Firefox resets opacity by default */
+}
+
 /* ==========================================================================
  * 5. GUEST PAGES — index.html, result.html
  *    Body class: .page-guest
