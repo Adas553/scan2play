@@ -181,7 +181,7 @@ public class DjController {
      */
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe) {
-        djService.setCurrentGlobalVibe(partyCode, newVibe);
+        partySettingsCommandService.setGlobalVibe(partyCode, newVibe);
         return "redirect:/dj/dashboard";
     }
 
@@ -205,7 +205,7 @@ public class DjController {
         int safeCooldownMinutes = Math.max(1, (int) Math.round(cooldownMinutes));
         int safeDuplicateCheckWindow = Math.max(0, duplicateCheckWindow);
         
-        djService.setPartyLimits(partyCode, safeRequestLimit, safeCooldownMinutes, safeDuplicateCheckWindow);
+        partySettingsCommandService.setPartyLimits(partyCode, safeRequestLimit, safeCooldownMinutes, safeDuplicateCheckWindow);
         return "redirect:/dj/dashboard";
     }
 
@@ -241,7 +241,7 @@ public class DjController {
      */
     @PostMapping("/dashboard/playback-mode")
     public String togglePlaybackMode(@RequestParam String partyCode) {
-        djService.togglePlaybackMode(partyCode);
+        partySettingsCommandService.togglePlaybackMode(partyCode);
         return "redirect:/dj/dashboard";
     }
 

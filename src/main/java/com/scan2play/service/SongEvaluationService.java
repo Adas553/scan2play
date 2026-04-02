@@ -1,0 +1,212 @@
+package com.scan2play.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentConfig;
+import com.google.genai.types.GenerateContentResponse;
+import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.model.DjResponse;
+import com.scan2play.model.MusicProviderType;
+import com.scan2play.model.PlaybackMode;
+import com.scan2play.repository.SongRequestRepository;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static com.scan2play.service.DjService.DECISION_ACCEPTED;
+import static com.scan2play.service.DjService.DECISION_PLAYED;
+import static com.scan2play.service.DjService.DECISION_REJECTED;
+
+/**
+ * Handles the full AI-powered song evaluation pipeline:
+ * <ol>
+ *     <li>Asks Google Gemini to evaluate the song request against the party vibe.</li>
+ *     <li>Resolves a playable track URL via the active music provider.</li>
+ *     <li>Persists the evaluation result.</li>
+ *     <li>Optionally queues the song for auto-playback (Spotify only — YouTube is client-side).</li>
+ * </ol>
+ *
+ * Extracted from {@link DjService} to keep each service focused on a single responsibility.
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SongEvaluationService {
+
+    /** Cached config for AI requests — always the same, no need to rebuild per call. */
+    private static final GenerateContentConfig AI_JSON_CONFIG = GenerateContentConfig.builder()
+            .responseMimeType("application/json")
+            .build();
+
+    @Value("${google.ai.model-name}")
+    private String modelName;
+
+    @Value("classpath:prompt-template.txt")
+    private Resource promptResource;
+
+    @Value("classpath:prompt-duplicate-rule.txt")
+    private Resource duplicateRuleResource;
+
+    private String cachedPromptTemplate;
+    private String cachedDuplicateRuleTemplate;
+
+    private final Client client;
+    private final ObjectMapper objectMapper;
+    private final SongRequestRepository songRequestRepository;
+    private final PartySettingsQueryService partySettingsQueryService;
+    private final QueueService queueService;
+    private final MessageSource messageSource;
+    private final PlatformTransactionManager transactionManager;
+
+    private TransactionTemplate transactionTemplate;
+
+    /**
+     * Loads AI prompt templates from classpath resources and sets up the transaction template.
+     */
+    @PostConstruct
+    public void init() {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        try {
+            this.cachedPromptTemplate = promptResource.getContentAsString(StandardCharsets.UTF_8);
+            this.cachedDuplicateRuleTemplate = duplicateRuleResource.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.error("Failed to load prompt template", e);
+            throw new RuntimeException("System configuration error: prompt template missing", e);
+        }
+    }
+
+    /**
+     * Core evaluation pipeline: AI evaluation → track resolution → save → optional auto-queue.
+     *
+     * @param partyCode The unique code of the party.
+     * @param songName  Title of the song (from guest input).
+     * @param style     Desired style / mood selected by the guest.
+     * @return Complete AI response (decision + comment + energy level).
+     */
+    public DjResponse evaluateAndSaveSong(String partyCode, String songName, String style) {
+        log.info("Party [{}]: Evaluating song: '{}' with style: '{}'", partyCode, songName, style);
+
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        String recentSongs = getRecentSongsContext(partyCode, settings.getDuplicateCheckWindow());
+
+        // Fetch i18n error messages in the main thread (where Locale is available)
+        String autopilotErrorMsg = messageSource.getMessage("dashboard.error.autopilot_failed", null, LocaleContextHolder.getLocale());
+        String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, LocaleContextHolder.getLocale());
+
+        // 1. External API Call: AI Evaluation
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, aiOfflineMsg);
+
+        // 2. External API Call: Spotify/YouTube Track Resolution (if accepted)
+        String trackUrl = null;
+        if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
+            trackUrl = resolveTrackUrl(aiResponse.songName(), settings.getActiveProvider());
+        }
+
+        // 3. Database Operations: Safe, quick transaction
+        SongRequestEntity savedRequest = saveSongRequest(partyCode, aiResponse, style, trackUrl);
+
+        // 4. External API Call: Add to Queue (If Accepted & Auto-Pilot is enabled)
+        handleAutoQueue(settings, savedRequest, trackUrl, autopilotErrorMsg);
+
+        return aiResponse;
+    }
+
+    // ---- Private helpers ----
+
+    private String getRecentSongsContext(String partyCode, int duplicateCheckWindow) {
+        if (duplicateCheckWindow <= 0) {
+            return null;
+        }
+
+        List<SongRequestEntity> recentRequests = songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                partyCode, List.of(DECISION_ACCEPTED, DECISION_PLAYED), PageRequest.of(0, duplicateCheckWindow)
+        );
+
+        String recentSongs = recentRequests.stream()
+                .map(SongRequestEntity::getSongName)
+                .collect(Collectors.joining(", "));
+
+        return recentSongs.isEmpty() ? "None" : recentSongs;
+    }
+
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg) {
+        try {
+            String duplicateRule = (recentSongs != null) ? String.format(cachedDuplicateRuleTemplate, recentSongs) : "";
+            String prompt = String.format(cachedPromptTemplate, songName, style, duplicateRule);
+
+            GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_JSON_CONFIG);
+            return objectMapper.readValue(response.text(), DjResponse.class);
+        } catch (Exception e) {
+            log.error("AI evaluation failed for song: '{}'", songName, e);
+            return new DjResponse(DECISION_REJECTED, aiOfflineMsg, songName, 0);
+        }
+    }
+
+    private String resolveTrackUrl(String songName, MusicProviderType provider) {
+        try {
+            log.debug("Resolving track '{}' using provider: {}", songName, provider);
+            return queueService.resolveTrack(songName, provider);
+        } catch (Exception e) {
+            log.warn("Failed to resolve track URL for '{}'", songName, e);
+            return null;
+        }
+    }
+
+    private SongRequestEntity saveSongRequest(String partyCode, DjResponse aiResponse, String style, String trackUrl) {
+        SongRequestEntity entity = SongRequestEntity.builder()
+                .partyCode(partyCode)
+                .songName(aiResponse.songName())
+                .style(style)
+                .decision(aiResponse.decision())
+                .djComment(aiResponse.comment())
+                .energyLevel(aiResponse.energyLevel())
+                .trackUrl(trackUrl)
+                .requestedAt(LocalDateTime.now())
+                .build();
+
+        return transactionTemplate.execute(status -> songRequestRepository.save(entity));
+    }
+
+    private void handleAutoQueue(PartySettingsEntity settings, SongRequestEntity savedRequest, String trackUrl, String autopilotErrorMsg) {
+        if (trackUrl == null || !DECISION_ACCEPTED.equalsIgnoreCase(savedRequest.getDecision()) || settings.getPlaybackMode() != PlaybackMode.AUTO) {
+            return;
+        }
+
+        // YouTube Auto-Pilot is handled entirely client-side via IFrame API
+        if (settings.getActiveProvider() == MusicProviderType.YOUTUBE) {
+            return;
+        }
+
+        queueService.addToQueue(settings.getPartyCode(), trackUrl, settings.getActiveProvider())
+                .exceptionally(ex -> {
+                    log.error("Failed to Auto-Queue track {} for party {}. Updating song status to indicate failure.", trackUrl, settings.getPartyCode(), ex);
+                    transactionTemplate.executeWithoutResult(status ->
+                            songRequestRepository.findById(savedRequest.getId()).ifPresent(song ->
+                                    song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg)
+                            )
+                    );
+                    return null;
+                })
+                .thenAccept(v -> transactionTemplate.executeWithoutResult(status ->
+                        songRequestRepository.findById(savedRequest.getId()).ifPresent(song ->
+                                song.setDecision(DECISION_PLAYED)
+                        )
+                ));
+    }
+}
+

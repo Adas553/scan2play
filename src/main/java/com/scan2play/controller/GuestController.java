@@ -5,6 +5,7 @@ import com.scan2play.model.DjResponse;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.SongEvaluationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
@@ -27,6 +28,7 @@ import static com.scan2play.controller.ViewAttributes.*;
 public class GuestController {
 
     private final DjService djService;
+    private final SongEvaluationService songEvaluationService;
     private final PartySettingsQueryService partySettingsQueryService;
     private final GuestSessionService guestSessionService;
     private final MessageSource messageSource;
@@ -80,7 +82,7 @@ public class GuestController {
                     return "redirect:/p/" + partyCode;
                 }
 
-                DjResponse response = djService.evaluateAndSaveSong(partyCode, songName, style);
+                DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName, style);
                 guestSessionService.recordSuccessfulRequest(session, partyCode);
 
                 model.addAttribute(RESPONSE, response);
