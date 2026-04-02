@@ -140,6 +140,21 @@ public class DjController {
     }
 
     /**
+     * Returns the history table as an HTML fragment for AJAX-based tab switching.
+     * Used by the dashboard to load history without a full page reload,
+     * which preserves the YouTube IFrame player state.
+     *
+     * @param partyCode The unique code of the party.
+     * @param model     Spring MVC model.
+     * @return Partial HTML fragment with the history table.
+     */
+    @GetMapping("/history-view/fragment")
+    public String historyFragment(@RequestParam String partyCode, Model model) {
+        model.addAttribute(HISTORY, djService.getHistory(partyCode));
+        return "history :: historyTableContent";
+    }
+
+    /**
      * HTMX endpoint that returns a partial HTML fragment of the song request table.
      * Used for dynamic dashboard updates without a full page reload.
      *
@@ -151,6 +166,7 @@ public class DjController {
     public String getDashboardUpdates(@RequestParam String partyCode, Model model) {
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
+        model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";

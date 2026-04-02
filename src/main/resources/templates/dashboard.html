@@ -10,37 +10,10 @@
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 
     <th:block th:replace="~{fragments/components :: scroll-restore-script}"></th:block>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #0b0b0b; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .container { background: #161616; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { color: #fff; font-weight: 700; font-size: 1.8rem; }
-        .status-accepted { color: #1DB954 !important; font-weight: bold; text-transform: uppercase; }
-        .status-rejected { color: #ff4444 !important; font-weight: bold; text-transform: uppercase; }
-        .status-played { color: #0dcaf0 !important; font-weight: bold; text-transform: uppercase; } /* Cyan for Played */
-        .table { border-color: #333; } /* Removed white-space: nowrap to allow wrapping on mobile if needed */
-        .btn-success { background-color: #1DB954; border: none; font-weight: 600; }
-        .btn-success:hover { background-color: #1ed760; }
-        .badge-energy { background: #333; color: #fff; padding: 5px 10px; border-radius: 20px; border: 1px solid #444; }
-        .nav-link { color: #aaa; font-weight: 600; }
-        .nav-link.active {
-            color: #1DB954 !important;
-            background-color: #232323 !important;
-            border-bottom: 2px solid #1DB954;
-            border-radius: 8px 8px 0 0;
-        }
-        .nav-link:hover { color: #fff; }
-
-        .qr-card-center {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 370px;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="/css/app.css" rel="stylesheet">
 </head>
-<body>
+<body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
 
     <!-- Navigation and Alert Fragment -->
@@ -55,7 +28,7 @@
                     <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0 d-flex align-items-center">
                         <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
                         <label for="vibeSelect" class="me-2 fw-bold text-light small text-nowrap" th:text="#{dashboard.vibe.label}">🌍 Global Vibe:</label>
-                        <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" onchange="this.form.submit()">
+                        <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" onchange="this.form.requestSubmit()">
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
                                     th:value="${vibe}"
                                     th:text="#{vibe.__${vibe}__}"
@@ -74,20 +47,25 @@
                               th:classappend="${activeProvider.name() == 'SPOTIFY' ? 'bg-success' : 'bg-danger'}"
                               th:text="${activeProvider.name() == 'SPOTIFY' ? 'Spotify' : 'YouTube'}">Spotify</span>
                     </div>
-                    <div th:if="${activeProvider.name() == 'SPOTIFY'}" class="col-md-6 d-flex justify-content-md-end align-items-center">
-                        <!-- If Spotify is not connected, show a button to connect -->
-                        <a th:if="${!isSpotifyConnected}" th:href="@{/spotify/login(partyCode=${partyCode})}" class="btn btn-success">
+                    <div class="col-md-6 d-flex justify-content-md-end align-items-center">
+                        <!-- Spotify: Connect button if not yet linked -->
+                        <a th:if="${activeProvider.name() == 'SPOTIFY' and !isSpotifyConnected}"
+                           th:href="@{/spotify/login(partyCode=${partyCode})}" class="btn btn-success">
                             Connect Spotify for Auto-Pilot
                         </a>
 
-                        <!-- If Spotify is connected, show the Auto-Pilot toggle -->
-                        <form th:if="${isSpotifyConnected}" th:action="@{/dj/dashboard/playback-mode}" method="POST" class="d-inline" id="autoPilotForm">
+                        <!-- Auto-Pilot toggle: YouTube (always) or Spotify (when connected) -->
+                        <form th:if="${activeProvider.name() == 'YOUTUBE' or (activeProvider.name() == 'SPOTIFY' and isSpotifyConnected)}"
+                              th:action="@{/dj/dashboard/playback-mode}" method="POST" class="d-inline" id="autoPilotForm">
                             <input type="hidden" name="partyCode" th:value="${partyCode}">
                             <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="autoSpotify"
-                                       onchange="this.form.submit()"
+                                <input class="form-check-input" type="checkbox" id="autoToggle"
+                                       onchange="submitAutoPilotToggle(this)"
                                        th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
-                                <label class="form-check-label fw-bold" for="autoSpotify" style="color: #1DB954">Auto-Pilot (Queue)</label>
+                                <label class="form-check-label fw-bold" for="autoToggle"
+                                       th:style="${activeProvider.name() == 'SPOTIFY' ? 'color: #1DB954' : 'color: #FF0000'}">
+                                    Auto-Pilot (Queue)
+                                </label>
                             </div>
                         </form>
                     </div>
@@ -126,7 +104,6 @@
                      class="img-fluid rounded border border-light"
                      style="max-width: 200px; height: auto;" />
 
-                 <!-- Permanent Link Section -->
                 <div class="mt-3">
                     <p class="text-secondary mb-1 small" th:text="#{dashboard.qr.link}">Your Party Link:</p>
                     <div class="input-group input-group-sm mb-2">
@@ -143,6 +120,15 @@
         </div>
     </div>
 
+    <!-- YouTube Player (only for YouTube provider) -->
+    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm" id="yt-player-card">
+        <h5 class="text-light mb-2">▶️ YouTube Player</h5>
+        <div class="ratio ratio-16x9" style="max-width: 640px;">
+            <div id="yt-player"></div>
+        </div>
+    </div>
+
+    <div id="queue-content">
     <div class="table-responsive mb-4">
         <h4 class="text-white mb-3" th:text="#{dashboard.active.queue}">Active Queue</h4>
         <table class="table table-dark table-hover align-middle">
@@ -160,18 +146,21 @@
                 <th th:text="#{dashboard.table.header.action}">Action</th>
             </tr>
             </thead>
-            <tbody id="song-list" th:fragment="songTableBody">
-            <tr th:each="req : ${history}">
+            <tbody id="song-list" th:fragment="songTableBody"
+                   th:attr="data-playback-mode=${playbackMode},data-provider=${activeProvider}">
+            <tr th:each="req : ${history}" th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl}">
                 <td class="text-secondary d-none d-md-table-cell" th:text="${#temporals.format(req.requestedAt, 'dd.MM.yyyy HH:mm:ss')}">12:00</td>
                 <td>
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                         <span class="fw-bold text-break" style="max-width: 100%;" th:text="${req.songName}">Song</span>
+                        <!--/* Track link: ▶ SPOTIFY (green) | ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL) */-->
                         <a th:if="${req.trackUrl != null}"
                            th:href="${req.trackUrl}"
                            target="_blank"
-                           class="btn btn-sm shadow-sm fw-bold flex-shrink-0"
-                           th:classappend="${#strings.contains(req.trackUrl, 'spotify') ? 'btn-success text-dark' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-danger text-white' : 'btn-secondary')}"
-                           th:text="${#strings.contains(req.trackUrl, 'spotify') ? '▶ SPOTIFY' : (#strings.contains(req.trackUrl, 'youtube') ? '▶ YOUTUBE' : '▶ PLAY')}">
+                           class="btn btn-sm shadow-sm fw-bold flex-shrink-0 play-link"
+                           th:attr="data-track-url=${req.trackUrl}"
+                           th:classappend="${#strings.contains(req.trackUrl, 'spotify') ? 'btn-success text-dark' : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? 'btn-danger text-white' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-outline-danger text-danger' : 'btn-secondary'))}"
+                           th:text="${#strings.contains(req.trackUrl, 'spotify') ? '▶ SPOTIFY' : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? '▶ YOUTUBE' : (#strings.contains(req.trackUrl, 'youtube') ? '🔍 YOUTUBE' : '▶ PLAY'))}">
                         </a>
                     </div>
                 </td>
@@ -189,7 +178,6 @@
                             <button type="submit" class="btn btn-sm btn-outline-info" th:text="#{dashboard.table.button.mark_played}">Mark Played</button>
                         </form>
 
-                        <!-- Send to Spotify Button (Only if Spotify is connected and active provider, and trackUrl contains 'spotify') -->
                         <form th:if="${req.decision == 'accepted' and activeProvider.name() == 'SPOTIFY' and isSpotifyConnected and #strings.contains(req.trackUrl, 'spotify')}"
                               th:action="@{/dj/requests/{id}/push-to-spotify(id=${req.id})}" method="post" class="m-0">
                              <button type="submit" class="btn btn-sm btn-outline-success" th:title="#{dashboard.button.push_to_spotify}">
@@ -205,72 +193,19 @@
             </tbody>
         </table>
     </div>
+    </div>
+
+    <!-- History content loaded via AJAX (preserves YouTube player) -->
+    <div id="history-content" style="display: none;"></div>
 </div>
 
-<script>
+<!-- Dashboard core JS (polling, AJAX forms, tabs, clipboard) -->
+<script src="/js/dashboard.js"></script>
 
-    async function refreshTable() {
-        try {
-            const partyCodeElement = document.getElementById('partyCode');
-            if (partyCodeElement) {
-                const partyCode = partyCodeElement.value;
-
-                // Read CSRF tokens from meta tags
-                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
-
-                const response = await fetch(`/dj/dashboard/updates?partyCode=${partyCode}`, {
-                    method: 'GET',
-                    headers: {
-                        [csrfHeader]: csrfToken
-                    }
-                });
-
-                // Check if the response was redirected (e.g., to login page due to session expiry)
-                if (response.redirected) {
-                    window.location.reload(); // Reload the page to handle login properly
-                    return;
-                }
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error: ${response.status}`);
-                }
-                const html = await response.text();
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = html;
-                // If the fragment includes the tbody tag itself, we should extract its inner HTML
-                // Or simply use the returned tbody to replace the old one
-                const newTbody = tempDiv.querySelector('#song-list');
-                if (newTbody) {
-                    document.getElementById('song-list').replaceWith(newTbody);
-                } else {
-                    document.getElementById('song-list').innerHTML = html;
-                }
-            }
-        } catch (error) {
-            console.error('Refresh error:', error);
-        } finally {
-            // Re-schedule the next refresh only after the current one finishes
-            setTimeout(refreshTable, 5000);
-        }
-    }
-    // Start the loop
-    setTimeout(refreshTable, 5000);
-
-    function copyPartyLink() {
-        var copyText = document.getElementById("partyLinkInput");
-        copyText.select();
-        copyText.setSelectionRange(0, 99999); // For mobile devices
-        navigator.clipboard.writeText(copyText.value).then(() => {
-            // Show localized feedback
-            const btn = copyText.nextElementSibling;
-            const originalText = btn.innerText;
-            const copiedText = btn.getAttribute('data-copied') || 'Copied!';
-            btn.innerText = copiedText;
-            setTimeout(() => btn.innerText = originalText, 2000);
-        });
-    }
-</script>
+<!-- YouTube Auto-Pilot (only loaded for YouTube provider) -->
+<th:block th:if="${activeProvider.name() == 'YOUTUBE'}">
+    <script src="/js/youtube-autopilot.js"></script>
+</th:block>
 
 </body>
 </html>

@@ -11,18 +11,19 @@
             // Hide page before first paint to prevent scroll restoration flash
             document.documentElement.style.visibility = 'hidden';
 
+            // Safety net: reveal page even if DOMContentLoaded never fires
+            setTimeout(function() { document.documentElement.style.visibility = ''; }, 2000);
+
             document.addEventListener("DOMContentLoaded", function () {
-                const scrollKey = "scroll_" + window.location.pathname;
-                const savedScroll = sessionStorage.getItem(scrollKey);
+                var scrollKey = "scroll_" + window.location.pathname;
+                var savedScroll = sessionStorage.getItem(scrollKey);
 
                 if (savedScroll !== null) {
                     window.scrollTo({ top: parseInt(savedScroll, 10), behavior: 'instant' });
                 }
 
-                // Reveal page only after scroll position is restored
                 document.documentElement.style.visibility = '';
 
-                // Save position just before leaving or reloading the page
                 window.addEventListener("beforeunload", function () {
                     sessionStorage.setItem(scrollKey, window.scrollY);
                 });

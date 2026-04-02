@@ -39,6 +39,11 @@ public class GuestSessionService {
         // Remove expired entries
         requestTimestamps.removeIf(t -> t.isBefore(cutoffTime));
 
+        // After cleanup, if no active requests remain, guest is not rate-limited
+        if (requestTimestamps.isEmpty()) {
+            return Optional.empty();
+        }
+
         // Check if the limit has been exceeded
         if (requestTimestamps.size() >= settings.getRequestLimit()) {
             Instant oldestRequest = requestTimestamps.getFirst();

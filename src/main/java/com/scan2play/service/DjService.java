@@ -159,6 +159,11 @@ public class DjService {
             return;
         }
 
+        // YouTube Auto-Pilot is handled entirely client-side via IFrame API
+        if (settings.getActiveProvider() == MusicProviderType.YOUTUBE) {
+            return;
+        }
+
         queueService.addToQueue(settings.getPartyCode(), trackUrl, settings.getActiveProvider())
                 .exceptionally(ex -> {
                     log.error("Failed to Auto-Queue track {} for party {}. Updating song status to indicate failure.", trackUrl, settings.getPartyCode(), ex);
@@ -210,7 +215,9 @@ public class DjService {
                 .trackUrl(trackUrl)
                 .requestedAt(LocalDateTime.now())
                 .build();
-        return songRequestRepository.save(entity);
+        // Explicit transaction — Callable<String> runs on async thread where
+        // the shared EntityManager proxy may reference a closed session.
+        return transactionTemplate.execute(status -> songRequestRepository.save(entity));
     }
 
     /**
@@ -331,23 +338,14 @@ public class DjService {
     }
 
     /**
-     * Toggles the playback mode for the party.
-     * <p>
-     * Logic:
-     * <ul>
-     *     <li>If provider is NOT Spotify, force MANUAL mode.</li>
-     *     <li>If provider IS Spotify, toggle between AUTO and MANUAL.</li>
-     * </ul>
+     * Toggles the playback mode between AUTO and MANUAL for the party.
+     * Works for both Spotify (server-side queue) and YouTube (client-side IFrame player).
      *
      * @param partyCode The party code.
      */
     public void togglePlaybackMode(String partyCode) {
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
-        if (settings.getActiveProvider() != MusicProviderType.SPOTIFY) {
-            setPlaybackMode(partyCode, PlaybackMode.MANUAL);
-            return;
-        }
 
         PlaybackMode newMode = (settings.getPlaybackMode() == PlaybackMode.AUTO)
                 ? PlaybackMode.MANUAL

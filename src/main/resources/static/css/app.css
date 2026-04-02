@@ -1,0 +1,208 @@
+/* ==========================================================================
+ * Scan2Play — Shared Stylesheet
+ *
+ * All pages link this single file instead of duplicating inline <style> blocks.
+ * Page-specific rules are scoped by a body class:
+ *   .page-dj        — dashboard.html, history.html
+ *   .page-guest     — index.html, result.html
+ *   .page-landing   — landing.html
+ *   .page-error     — error.html
+ *   .page-ended     — party_ended.html
+ *
+ * Sections:
+ *   1. Design Tokens (CSS Custom Properties)
+ *   2. Base / Reset
+ *   3. Shared Components
+ *   4. DJ Pages
+ *   5. Guest Pages
+ *   6. Landing Page
+ *   7. Error & Status Pages
+ * ========================================================================== */
+
+/* ==========================================================================
+ * 1. DESIGN TOKENS
+ * ========================================================================== */
+:root {
+    --s2p-bg:            #0b0b0b;
+    --s2p-bg-card:       #161616;
+    --s2p-bg-elevated:   #1e1e1e;
+    --s2p-bg-input:      #000;
+    --s2p-text:          #e0e0e0;
+    --s2p-text-muted:    #aaa;
+    --s2p-border:        #333;
+    --s2p-green:         #1DB954;
+    --s2p-green-hover:   #1ed760;
+    --s2p-red:           #ff4444;
+    --s2p-cyan:          #0dcaf0;
+    --s2p-font:          'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ==========================================================================
+ * 2. BASE
+ * ========================================================================== */
+body {
+    background-color: var(--s2p-bg);
+    color: var(--s2p-text);
+    font-family: var(--s2p-font);
+}
+
+/* ==========================================================================
+ * 3. SHARED COMPONENTS — used across multiple pages
+ * ========================================================================== */
+
+/* --- Status badges (dashboard + history tables) --- */
+.status-accepted { color: var(--s2p-green) !important; font-weight: bold; text-transform: uppercase; }
+.status-rejected { color: var(--s2p-red)   !important; font-weight: bold; text-transform: uppercase; }
+.status-played   { color: var(--s2p-cyan)  !important; font-weight: bold; text-transform: uppercase; }
+
+/* --- Energy badge --- */
+.badge-energy {
+    background: var(--s2p-border);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 20px;
+    border: 1px solid #444;
+}
+
+/* --- Spotify green button override --- */
+.btn-success       { background-color: var(--s2p-green); border: none; font-weight: 600; }
+.btn-success:hover  { background-color: var(--s2p-green-hover); }
+
+/* --- DJ Navigation tabs --- */
+.nav-link        { color: var(--s2p-text-muted); font-weight: 600; }
+.nav-link:hover  { color: #fff; }
+.nav-link.active {
+    color: var(--s2p-green) !important;
+    background-color: #232323 !important;
+    border-bottom: 2px solid var(--s2p-green);
+    border-radius: 8px 8px 0 0;
+}
+
+/* --- Table border --- */
+.table { border-color: var(--s2p-border); }
+
+/* ==========================================================================
+ * 4. DJ PAGES — dashboard.html, history.html
+ *    Body class: .page-dj
+ * ========================================================================== */
+.page-dj .container {
+    background: var(--s2p-bg-card);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.page-dj h1 {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.8rem;
+}
+
+/* QR code card centering (dashboard only) */
+.qr-card-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 370px;
+}
+
+/* ==========================================================================
+ * 5. GUEST PAGES — index.html, result.html
+ *    Body class: .page-guest
+ * ========================================================================== */
+.page-guest {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    flex-direction: column;
+    padding: 20px 0;
+}
+.page-guest .card {
+    background: var(--s2p-bg-elevated);
+    border: 1px solid var(--s2p-border);
+    border-radius: 15px;
+    width: 100%;
+    max-width: 500px;
+}
+.page-guest .list-group-item {
+    background: var(--s2p-bg-elevated);
+    color: white;
+    border-color: var(--s2p-border);
+}
+.queue-title {
+    color: var(--s2p-text-muted);
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+}
+.page-guest .accepted { color: var(--s2p-green); }
+.page-guest .rejected { color: var(--s2p-red); }
+
+/* ==========================================================================
+ * 6. LANDING PAGE
+ *    Body class: .page-landing
+ * ========================================================================== */
+.page-landing { background-color: #121212; color: #fff; }
+.hero-section  { padding: 100px 0; text-align: center; }
+
+.btn-spotify       { background-color: var(--s2p-green); color: white; font-weight: bold; border: none; }
+.btn-spotify:hover  { background-color: var(--s2p-green-hover); color: white; }
+.btn-youtube       { background-color: #FF0000; color: white; font-weight: bold; border: none; }
+.btn-youtube:hover  { background-color: #cc0000; color: white; }
+
+.provider-cards {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.provider-card {
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    border: 2px solid var(--s2p-border);
+    background: #1a1a1a;
+    transition: transform 0.2s, border-color 0.2s;
+    text-decoration: none;
+    min-width: 220px;
+}
+.provider-card:hover { transform: translateY(-4px); border-color: #555; }
+.provider-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+/* ==========================================================================
+ * 7. ERROR & STATUS PAGES
+ *    Body class: .page-status  (shared centering for error + party_ended)
+ *                .page-error   (error.html specifics)
+ *                .page-ended   (party_ended.html specifics)
+ * ========================================================================== */
+.page-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+}
+
+/* --- Error page --- */
+.page-error .card {
+    background-color: #1c1c38;
+    border: 1px solid #4a4a70;
+    box-shadow: 0 0 50px rgba(120, 120, 255, 0.12);
+    border-radius: 20px;
+}
+.page-error h2       { color: #fff; }
+.page-error .desc    { color: #b0b8d0; }
+.btn-home            { background-color: #5a5aaa; border: none; color: #fff; }
+.btn-home:hover      { background-color: #7070cc; color: #fff; }
+.error-code          { color: #7a7a9a; font-size: 0.85rem; }
+
+/* --- Party ended page --- */
+.page-ended .card {
+    background-color: var(--s2p-bg-elevated);
+    border: 1px solid var(--s2p-border);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+    border-radius: 20px;
+}
+.text-light-custom     { color: #f8f9fa !important; }
+.text-secondary-bright { color: #cfcfcf !important; }
+
