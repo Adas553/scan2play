@@ -34,7 +34,7 @@
 <body>
 
 <!-- DJ Navigation Panel Fragment -->
-<div th:fragment="dj-nav(activeTab, isActive)">
+<div th:fragment="dj-nav(activeTab, isActive, partyCode)">
 
     <div th:if="${!isActive}" class="alert alert-warning text-center border-warning mb-4 shadow" style="background-color: #2b2000; color: #ffca2c;">
         <h3 class="fw-bold mb-3" th:text="#{dashboard.alert.party_closed.title}">⚠️ Party is CLOSED</h3>
@@ -63,6 +63,16 @@
         </ul>
 
         <div class="d-flex gap-2 pb-2 pb-md-2 mt-2 mt-md-0" style="z-index: 10;">
+
+            <!-- Feedback button -->
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm fw-bold"
+                    data-bs-toggle="modal" data-bs-target="#feedbackModal"
+                    th:attr="data-party-code=${partyCode}"
+                    th:title="#{feedback.button.title}">
+                💡 <span class="d-none d-sm-inline" th:text="#{feedback.button.label}">Feedback</span>
+            </button>
+
             <form th:if="${isActive}" th:action="@{/dj/end-party}" method="POST" th:onsubmit="'return confirm(\'' + #{dashboard.confirm.end_party} + '\');'">
                 <button type="submit" class="btn btn-warning fw-bold btn-sm d-flex align-items-center gap-1" title="End Party">
                     <span class="d-sm-none">⏸</span>
@@ -77,6 +87,145 @@
             </form>
         </div>
     </div>
+
+    <!-- ================================================================
+         Feedback Modal
+         ================================================================ -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1"
+         aria-labelledby="feedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-secondary text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="feedbackModalLabel"
+                        th:text="#{feedback.modal.title}">💡 Report a Bug / Share an Idea</h5>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="feedbackMessage" rows="5" maxlength="2000"
+                              class="form-control bg-black text-light border-secondary"
+                              th:placeholder="#{feedback.modal.placeholder}"></textarea>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-danger d-none" id="feedbackError"></small>
+                        <small class="text-secondary ms-auto">
+                            <span id="feedbackCharCount">0</span> / 2000
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                            th:text="#{feedback.modal.cancel}">Cancel</button>
+                    <button type="button" class="btn btn-warning fw-bold" id="feedbackSubmitBtn"
+                            th:attr="data-success-msg=#{feedback.toast.success},data-error-msg=#{feedback.toast.error}"
+                            th:text="#{feedback.modal.submit}">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         Feedback Toast (bottom-right, above everything)
+         ================================================================ -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+        <div id="feedbackToast" class="toast text-white border-0"
+             role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold" id="feedbackToastBody"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         Feedback JS — self-contained, no dependency on dashboard.js
+         ================================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var textarea  = document.getElementById('feedbackMessage');
+            var submitBtn = document.getElementById('feedbackSubmitBtn');
+            var charCount = document.getElementById('feedbackCharCount');
+            var errorEl   = document.getElementById('feedbackError');
+            var toastEl   = document.getElementById('feedbackToast');
+            var toastBody = document.getElementById('feedbackToastBody');
+
+            if (!textarea || !submitBtn) return;
+
+            // --- Character counter ---
+            textarea.addEventListener('input', function () {
+                charCount.textContent = this.value.length;
+            });
+
+            // --- CSRF from <meta> tags (present on all DJ pages) ---
+            function getCsrf() {
+                var t = document.querySelector('meta[name="_csrf"]');
+                var h = document.querySelector('meta[name="_csrf_header"]');
+                return {
+                    token:  t ? t.getAttribute('content') : '',
+                    header: h ? h.getAttribute('content') : 'X-CSRF-TOKEN'
+                };
+            }
+
+            // --- Toast helper ---
+            function showToast(message, success) {
+                toastBody.textContent = message;
+                toastEl.className = 'toast text-white border-0 ' + (success ? 'bg-success' : 'bg-danger');
+                new bootstrap.Toast(toastEl, { delay: 4000 }).show();
+            }
+
+            // --- Submit ---
+            submitBtn.addEventListener('click', function () {
+                var message = textarea.value.trim();
+
+                // Reset validation state
+                errorEl.textContent = '';
+                errorEl.classList.add('d-none');
+
+                if (!message) {
+                    errorEl.textContent = textarea.getAttribute('placeholder') || 'Please enter a message.';
+                    errorEl.classList.remove('d-none');
+                    textarea.focus();
+                    return;
+                }
+
+                // partyCode is stored as data attribute on the button that opened the modal
+                var partyCode = document.querySelector('[data-bs-target="#feedbackModal"]')
+                                        ?.getAttribute('data-party-code') || '';
+
+                var csrf = getCsrf();
+                var fd   = new FormData();
+                fd.append('partyCode', partyCode);
+                fd.append('message', message);
+
+                submitBtn.disabled = true;
+
+                fetch('/dj/feedback', {
+                    method: 'POST',
+                    headers: { [csrf.header]: csrf.token },
+                    body: fd
+                })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(function () {
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('feedbackModal'));
+                    if (modal) modal.hide();
+                    textarea.value = '';
+                    charCount.textContent = '0';
+                    showToast(submitBtn.getAttribute('data-success-msg'), true);
+                })
+                .catch(function (err) {
+                    console.error('[Feedback] Submission error:', err);
+                    showToast(submitBtn.getAttribute('data-error-msg'), false);
+                })
+                .finally(function () {
+                    submitBtn.disabled = false;
+                });
+            });
+        });
+    </script>
 
 </div>
 
