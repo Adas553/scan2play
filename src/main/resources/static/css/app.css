@@ -169,6 +169,54 @@ body {
 .provider-card:hover { transform: translateY(-4px); border-color: #555; }
 .provider-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
+/* --- How-it-works guide (landing page) --- */
+.guide-section {
+    padding: 60px 0 80px;
+}
+.guide-section h2 {
+    color: #fff;
+    font-size: 1.8rem;
+}
+.guide-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+.guide-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    background: #1a1a1a;
+    border: 1px solid var(--s2p-border);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    transition: border-color 0.2s;
+}
+.guide-step:hover {
+    border-color: var(--s2p-green);
+}
+.guide-step-number {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--s2p-green);
+    color: #000;
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+.guide-step-body h5 {
+    color: #fff;
+    margin-bottom: 0.35rem;
+}
+.guide-step-body p {
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+
 /* ==========================================================================
  * 7. ERROR & STATUS PAGES
  *    Body class: .page-status  (shared centering for error + party_ended)
