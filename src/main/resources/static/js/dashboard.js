@@ -21,12 +21,15 @@
 // HELPERS
 // ==========================================================================
 
-/** Returns CSRF token and header name from <meta> tags. */
+/** CSRF token and header — read once from <meta> tags, reused everywhere. */
+const _csrf = {
+    token:  document.querySelector('meta[name="_csrf"]').getAttribute('content'),
+    header: document.querySelector('meta[name="_csrf_header"]').getAttribute('content')
+};
+
+/** Returns the cached CSRF object. */
 function getCsrf() {
-    return {
-        token:  document.querySelector('meta[name="_csrf"]').getAttribute('content'),
-        header: document.querySelector('meta[name="_csrf_header"]').getAttribute('content')
-    };
+    return _csrf;
 }
 
 /** True when the YouTube embedded player is present on the page. */
@@ -41,7 +44,7 @@ function isYouTubeProvider() {
 // are submitted via fetch() to avoid a full page reload that would
 // destroy the YouTube IFrame player.
 //
-// Excluded: logout, end-party, start-party (page reload is expected).
+// Excluded: logout, delete-account (page reload / redirect is expected).
 // ==========================================================================
 
 (function initAjaxFormInterceptor() {
@@ -52,9 +55,13 @@ function isYouTubeProvider() {
         if (!form || form.method.toLowerCase() !== 'post') return;
         if (!form.closest('.container')) return;
 
+        // Respect confirm() dialogs — if onsubmit returned false, the browser
+        // called preventDefault(). The event still bubbles, so we must check.
+        if (e.defaultPrevented) return;
+
         // Allow these actions to do a full page reload
         const action = form.action || '';
-        if (action.includes('/logout') || action.includes('/end-party') || action.includes('/start-party') || action.includes('/delete-account')) return;
+        if (action.includes('/logout') || action.includes('/delete-account')) return;
 
         // Auto-Pilot toggle has its own AJAX handler — skip
         if (form.id === 'autoPilotForm') return;
@@ -68,6 +75,16 @@ function isYouTubeProvider() {
             body: new FormData(form),
             redirect: 'manual'
         }).then(function() {
+            // --- Party state toggle (end/start party) ---
+            if (action.includes('/end-party') || action.includes('/start-party')) {
+                const isEnding = action.includes('/end-party');
+                const banner  = document.getElementById('party-closed-banner');
+                const endForm = document.getElementById('end-party-form');
+                if (banner)  banner.classList.toggle('d-none', !isEnding);
+                if (endForm) endForm.classList.toggle('d-none', isEnding);
+                return; // no flash needed for these buttons
+            }
+
             // Flash the submit button green briefly as confirmation
             const btn = form.querySelector('button[type="submit"]');
             if (btn) {
@@ -192,7 +209,7 @@ function submitAutoPilotToggle(checkbox) {
 // ==========================================================================
 
 (function initPolling() {
-    var currentETag = null;
+    let currentETag = null;
 
     async function refreshTable() {
         try {
@@ -222,7 +239,7 @@ function submitAutoPilotToggle(checkbox) {
             if (!response.ok) throw new Error('HTTP ' + response.status);
 
             // Store new ETag for next poll
-            var newETag = response.headers.get('ETag');
+            const newETag = response.headers.get('ETag');
             if (newETag) {
                 currentETag = newETag;
             }
@@ -263,14 +280,17 @@ function submitAutoPilotToggle(checkbox) {
 
 function copyPartyLink() {
     const input = document.getElementById('partyLinkInput');
-    input.select();
-    input.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(input.value).then(function() {
         const btn = input.nextElementSibling;
         const original = btn.innerText;
         const copied = btn.getAttribute('data-copied') || 'Copied!';
         btn.innerText = copied;
         setTimeout(function() { btn.innerText = original; }, 2000);
+    }).catch(function() {
+        // Fallback for non-HTTPS or denied permissions
+        input.select();
+        input.setSelectionRange(0, 99999);
+        document.execCommand('copy');
     });
 }
 
@@ -282,7 +302,7 @@ function copyPartyLink() {
 //   - Each sortable <td> has data-sort-value + data-val with the raw value
 //   - Clicking a header toggles ASC → DESC → (reset to default server order)
 //   - Sort state for the queue table is remembered and re-applied after
-//     each 5-second polling cycle via window.reapplySort()
+//     each polling cycle (3s) via window.reapplySort()
 //   - History table (AJAX loaded) gets fresh click handlers via
 //     window.initSortableHeaders()
 // ==========================================================================
@@ -291,56 +311,53 @@ function copyPartyLink() {
     'use strict';
 
     // Sort state for the main queue table (survives polling refreshes)
-    var queueSortColumn = null;   // e.g. "time", "song", "energy"
-    var queueSortDir    = null;   // "asc" or "desc"
+    let queueSortColumn = null;   // e.g. "time", "song", "energy"
+    let queueSortDir    = null;   // "asc" or "desc"
 
     /**
      * Sorts the rows of a <tbody> by the given column key and direction.
-     * Rows without data-sort-value cells for the key are left in place.
+     * Pre-extracts values to avoid DOM queries inside the comparator,
+     * and detaches the tbody during reordering to prevent per-row reflows.
      */
     function sortTbody(tbody, colKey, direction) {
         if (!tbody || !colKey || !direction) return;
 
-        // Select all data rows (those containing sortable cells).
-        // This works for both the queue table (tr[data-song-id]) and the
-        // history table (tr without data-song-id). The "empty" placeholder
-        // row is excluded because it has no td[data-sort-value].
-        var rows = Array.from(tbody.querySelectorAll('tr'))
-            .filter(function(r) { return r.querySelector('td[data-sort-value]'); });
-        if (rows.length < 2) return;
+        const isNumeric = (colKey === 'energy');
 
-        var isNumeric = (colKey === 'energy');
+        // Pre-extract { row, value } pairs — O(N) DOM reads, then pure array sort
+        const items = [];
+        const allRows = tbody.querySelectorAll('tr');
+        for (let i = 0; i < allRows.length; i++) {
+            const cell = allRows[i].querySelector('td[data-sort-value="' + colKey + '"]');
+            if (!cell) continue; // skip placeholder rows
+            const raw = cell.getAttribute('data-val') || '';
+            items.push({ row: allRows[i], val: isNumeric ? (parseFloat(raw) || 0) : raw });
+        }
+        if (items.length < 2) return;
 
-        rows.sort(function(a, b) {
-            var cellA = a.querySelector('td[data-sort-value="' + colKey + '"]');
-            var cellB = b.querySelector('td[data-sort-value="' + colKey + '"]');
-            if (!cellA || !cellB) return 0;
-
-            var valA = cellA.getAttribute('data-val') || '';
-            var valB = cellB.getAttribute('data-val') || '';
-
-            var result;
-            if (isNumeric) {
-                result = (parseFloat(valA) || 0) - (parseFloat(valB) || 0);
-            } else {
-                result = valA.localeCompare(valB, undefined, { sensitivity: 'base' });
-            }
-
+        items.sort(function(a, b) {
+            const result = isNumeric
+                ? a.val - b.val
+                : a.val.localeCompare(b.val, undefined, { sensitivity: 'base' });
             return direction === 'desc' ? -result : result;
         });
 
-        // Re-append rows in sorted order (moves DOM nodes, doesn't clone)
-        for (var i = 0; i < rows.length; i++) {
-            tbody.appendChild(rows[i]);
+        // Detach tbody, reorder, reattach — single reflow instead of N
+        const parent = tbody.parentNode;
+        const next   = tbody.nextSibling;
+        parent.removeChild(tbody);
+        for (let j = 0; j < items.length; j++) {
+            tbody.appendChild(items[j].row);
         }
+        parent.insertBefore(tbody, next);
     }
 
     /**
      * Updates the visual state of <th> sort indicators within a <thead>.
      */
     function updateHeaderIndicators(thead, activeCol, activeDir) {
-        var ths = thead.querySelectorAll('th[data-sort]');
-        for (var i = 0; i < ths.length; i++) {
+        const ths = thead.querySelectorAll('th[data-sort]');
+        for (let i = 0; i < ths.length; i++) {
             ths[i].classList.remove('sort-asc', 'sort-desc');
             if (ths[i].getAttribute('data-sort') === activeCol && activeDir) {
                 ths[i].classList.add('sort-' + activeDir);
@@ -353,21 +370,21 @@ function copyPartyLink() {
      * Used for the initial page load and for dynamically loaded history content.
      */
     window.initSortableHeaders = function(container) {
-        var ths = container.querySelectorAll('th[data-sort]');
-        for (var i = 0; i < ths.length; i++) {
+        const ths = container.querySelectorAll('th[data-sort]');
+        for (let i = 0; i < ths.length; i++) {
             // Skip if already initialized
             if (ths[i].hasAttribute('data-sort-init')) continue;
             ths[i].setAttribute('data-sort-init', '1');
 
             ths[i].addEventListener('click', function() {
-                var colKey = this.getAttribute('data-sort');
-                var table  = this.closest('table');
-                var thead  = table.querySelector('thead');
-                var tbody  = table.querySelector('tbody');
-                var isQueueTable = tbody && tbody.id === 'song-list';
+                const colKey = this.getAttribute('data-sort');
+                const table  = this.closest('table');
+                const thead  = table.querySelector('thead');
+                const tbody  = table.querySelector('tbody');
+                const isQueueTable = tbody && tbody.id === 'song-list';
 
                 // Determine current state for this table
-                var curCol, curDir;
+                let curCol, curDir;
                 if (isQueueTable) {
                     curCol = queueSortColumn;
                     curDir = queueSortDir;
@@ -377,7 +394,7 @@ function copyPartyLink() {
                 }
 
                 // Cycle: none → asc → desc → none
-                var newDir;
+                let newDir;
                 if (curCol !== colKey) {
                     newDir = 'asc';
                 } else if (curDir === 'asc') {
@@ -413,19 +430,19 @@ function copyPartyLink() {
      */
     window.reapplySort = function() {
         if (!queueSortColumn || !queueSortDir) return;
-        var tbody = document.getElementById('song-list');
+        const tbody = document.getElementById('song-list');
         if (!tbody) return;
         sortTbody(tbody, queueSortColumn, queueSortDir);
 
         // Re-apply header indicators (thead is NOT replaced by polling)
-        var thead = tbody.closest('table') && tbody.closest('table').querySelector('thead');
+        const thead = tbody.closest('table') && tbody.closest('table').querySelector('thead');
         if (thead) {
             updateHeaderIndicators(thead, queueSortColumn, queueSortDir);
         }
     };
 
     // --- Initialize on page load ---
-    var queueContent = document.getElementById('queue-content');
+    const queueContent = document.getElementById('queue-content');
     if (queueContent) {
         window.initSortableHeaders(queueContent);
     }

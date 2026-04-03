@@ -5,7 +5,7 @@
  *   IDLE → (find accepted song) → LOADING → PLAYING → ENDED → IDLE
  *
  * How it works:
- *   1. Polling (dashboard.js) refreshes the <tbody id="song-list"> every 5s
+ *   1. Polling (dashboard.js) refreshes the <tbody id="song-list"> every 3s
  *   2. After each refresh, checkYouTubeAutoPlay() is called
  *   3. Auto-Pilot scans the table for the oldest accepted song with a valid video URL
  *   4. Loads the video in the embedded player via loadVideoById()
