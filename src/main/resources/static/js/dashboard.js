@@ -54,7 +54,7 @@ function isYouTubeProvider() {
 
         // Allow these actions to do a full page reload
         const action = form.action || '';
-        if (action.includes('/logout') || action.includes('/end-party') || action.includes('/start-party')) return;
+        if (action.includes('/logout') || action.includes('/end-party') || action.includes('/start-party') || action.includes('/delete-account')) return;
 
         // Auto-Pilot toggle has its own AJAX handler — skip
         if (form.id === 'autoPilotForm') return;

@@ -85,12 +85,18 @@
                     <span class="d-none d-sm-inline" th:text="#{dashboard.button.logout}">Logout</span>
                 </button>
             </form>
-            <form th:action="@{/dj/delete-account}" method="POST" th:onsubmit="'return confirm(\'' + #{dashboard.confirm.delete_account} + '\');'">
-                <button type="submit" class="btn btn-outline-danger fw-bold btn-sm d-flex align-items-center gap-1" title="Delete Account">
-                    <span class="d-sm-none">🗑</span>
-                    <span class="d-none d-sm-inline" th:text="#{dashboard.button.delete_account}">Delete Account</span>
-                </button>
-            </form>
+
+            <!-- Delete Account — separated by a vertical divider to signal destructive action -->
+            <div class="border-start border-secondary ms-1 ps-3">
+                <form th:action="@{/dj/delete-account}" method="POST" th:onsubmit="'return confirm(\'' + #{dashboard.confirm.delete_account} + '\');'">
+                    <button type="submit"
+                            class="btn btn-sm fw-bold d-flex align-items-center gap-1"
+                            style="color: #6c757d; border: 1px solid #6c757d;"
+                            th:title="#{dashboard.button.delete_account}">
+                        🗑 <span class="d-none d-sm-inline" th:text="#{dashboard.button.delete_account}">Delete Account</span>
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
