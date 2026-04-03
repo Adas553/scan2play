@@ -1,5 +1,6 @@
 package com.scan2play.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
@@ -77,6 +78,8 @@ public class SongEvaluationService {
     private Map<String, String> promptTemplates;
     /** Duplicate rule template per language code. */
     private Map<String, String> duplicateRuleTemplates;
+    /** Lightweight prompt for normalizing raw song names to "ARTIST - TITLE" format. */
+    private String normalizePromptTemplate;
 
     /**
      * Loads AI prompt templates for all supported languages and sets up the transaction template.
@@ -93,6 +96,7 @@ public class SongEvaluationService {
             }
             this.promptTemplates = Map.copyOf(prompts);
             this.duplicateRuleTemplates = Map.copyOf(duplicates);
+            this.normalizePromptTemplate = loadResource("classpath:prompts/prompt-normalize.txt");
         } catch (IOException e) {
             log.error("Failed to load prompt templates", e);
             throw new RuntimeException("System configuration error: prompt templates missing", e);
@@ -235,6 +239,32 @@ public class SongEvaluationService {
                                 song.setDecision(DECISION_PLAYED)
                         )
                 ));
+    }
+
+    /**
+     * Normalizes a raw song name to canonical "ARTIST - TITLE" format using AI.
+     * Used for DJ picks to ensure consistent YouTube cache keys
+     * (e.g., "nirvanna smells" → "Nirvana - Smells Like Teen Spirit").
+     * <p>
+     * Falls back to the raw input if AI is unavailable or returns an invalid response.
+     *
+     * @param rawInput The raw song name typed by the DJ.
+     * @return The normalized song name, or the raw input as fallback.
+     */
+    public String normalizeSongName(String rawInput) {
+        try {
+            String prompt = String.format(normalizePromptTemplate, rawInput);
+            GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_JSON_CONFIG);
+            JsonNode json = objectMapper.readTree(response.text());
+            String normalized = json.path("songName").asText(null);
+            if (normalized != null && !normalized.isBlank()) {
+                log.info("Song name normalized: '{}' → '{}'", rawInput, normalized);
+                return normalized;
+            }
+        } catch (Exception e) {
+            log.warn("Song name normalization failed for '{}', using raw input", rawInput, e);
+        }
+        return rawInput;
     }
 }
 

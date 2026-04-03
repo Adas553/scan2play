@@ -30,6 +30,8 @@ class DjServiceTest {
     private PartySettingsQueryService partySettingsQueryService;
     @Mock
     private QueueService queueService;
+    @Mock
+    private SongEvaluationService songEvaluationService;
 
     @InjectMocks
     private DjService djService;
@@ -163,17 +165,19 @@ class DjServiceTest {
     // ---- addDjPick ----
 
     @Test
-    void addDjPick_shouldSaveAcceptedSongWithDjPickMetadata() {
+    void addDjPick_shouldNormalizeNameAndSaveWithResolvedTrack() {
         PartySettingsEntity settings = PartySettingsEntity.builder()
                 .partyCode(PARTY_CODE)
                 .activeProvider(MusicProviderType.YOUTUBE)
                 .build();
 
+        when(songEvaluationService.normalizeSongName("nirvanna smells"))
+                .thenReturn("Nirvana - Smells Like Teen Spirit");
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
         when(queueService.resolveTrack("Nirvana - Smells Like Teen Spirit", MusicProviderType.YOUTUBE))
                 .thenReturn("https://www.youtube.com/watch?v=hTWKbfoikeg");
 
-        djService.addDjPick(PARTY_CODE, "Nirvana - Smells Like Teen Spirit");
+        djService.addDjPick(PARTY_CODE, "nirvanna smells");
 
         ArgumentCaptor<SongRequestEntity> captor = ArgumentCaptor.forClass(SongRequestEntity.class);
         verify(songRequestRepository).save(captor.capture());
@@ -182,7 +186,7 @@ class DjServiceTest {
         assertThat(saved.getPartyCode()).isEqualTo(PARTY_CODE);
         assertThat(saved.getSongName()).isEqualTo("Nirvana - Smells Like Teen Spirit");
         assertThat(saved.getDecision()).isEqualTo(DECISION_ACCEPTED);
-        assertThat(saved.getStyle()).isEqualTo("DJ Pick"); // matches DjService.DJ_PICK_STYLE
+        assertThat(saved.getStyle()).isEqualTo("DJ Pick");
         assertThat(saved.getDjComment()).contains("DJ");
         assertThat(saved.getEnergyLevel()).isZero();
         assertThat(saved.getTrackUrl()).isEqualTo("https://www.youtube.com/watch?v=hTWKbfoikeg");
@@ -196,6 +200,7 @@ class DjServiceTest {
                 .activeProvider(MusicProviderType.YOUTUBE)
                 .build();
 
+        when(songEvaluationService.normalizeSongName("Some Song")).thenReturn("Some Song");
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
         when(queueService.resolveTrack(any(), any())).thenThrow(new RuntimeException("API down"));
 

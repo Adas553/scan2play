@@ -45,6 +45,7 @@ public class DjService {
     private final SongRequestRepository songRequestRepository;
     private final PartySettingsQueryService partySettingsQueryService;
     private final QueueService queueService;
+    private final SongEvaluationService songEvaluationService;
 
     // ---- Queue Queries ----
 
@@ -150,12 +151,16 @@ public class DjService {
     public void addDjPick(String partyCode, String songName) {
         log.info("Party [{}]: DJ manually adding track: '{}'", partyCode, songName);
 
+        // Normalize raw input via AI to canonical "ARTIST - TITLE" format.
+        // This ensures consistent YouTube cache keys (e.g. "nirvanna smells" → "Nirvana - Smells Like Teen Spirit").
+        String normalizedName = songEvaluationService.normalizeSongName(songName);
+
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String trackUrl = resolveTrackUrl(songName, settings.getActiveProvider());
+        String trackUrl = resolveTrackUrl(normalizedName, settings.getActiveProvider());
 
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
-                .songName(songName)
+                .songName(normalizedName)
                 .style(DJ_PICK_STYLE)
                 .decision(DECISION_ACCEPTED)
                 .djComment(DJ_PICK_COMMENT)
@@ -165,7 +170,7 @@ public class DjService {
                 .build();
 
         songRequestRepository.save(entity);
-        log.info("Party [{}]: DJ pick '{}' saved. Track URL: {}", partyCode, songName, trackUrl);
+        log.info("Party [{}]: DJ pick '{}' → '{}' saved. Track URL: {}", partyCode, songName, normalizedName, trackUrl);
     }
 
     private String resolveTrackUrl(String songName, MusicProviderType provider) {
