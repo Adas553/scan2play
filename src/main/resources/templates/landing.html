@@ -20,22 +20,28 @@
             </p>
 
             <div class="provider-cards">
-                <!-- Spotify: OAuth2 login flow -->
-                <a href="/oauth2/authorization/spotify" class="provider-card text-center">
-                    <div class="icon">🎵</div>
-                    <div class="btn btn-spotify btn-lg w-100" th:text="#{landing.btn.start.spotify}">
-                        Start Party with Spotify
-                    </div>
-                    <small class="text-secondary d-block mt-2" th:text="#{landing.hint.spotify}">Requires Spotify account</small>
-                </a>
-
-                <!-- YouTube: Google OAuth2 login flow -->
-                <a href="/oauth2/authorization/google" class="provider-card text-center">
+                <!-- YouTube: Primary choice — available to everyone -->
+                <a href="/oauth2/authorization/google" class="provider-card provider-card--recommended text-center">
+                    <span class="badge bg-success mb-2" th:text="#{landing.badge.recommended}">✅ Recommended</span>
                     <div class="icon">▶️</div>
                     <div class="btn btn-youtube btn-lg w-100" th:text="#{landing.btn.start.youtube}">
                         Start Party with YouTube
                     </div>
-                    <small class="text-secondary d-block mt-2" th:text="#{landing.hint.youtube}">Requires Google account</small>
+                    <small class="d-block mt-2" style="color: #adb5bd;" th:text="#{landing.hint.youtube}">Requires Google account</small>
+                </a>
+
+                <!-- Spotify: Closed Beta — limited to whitelisted accounts -->
+                <a href="/oauth2/authorization/spotify" class="provider-card provider-card--beta text-center">
+                    <span class="badge bg-secondary mb-2" th:text="#{landing.badge.spotify.beta}">🔒 Closed Beta</span>
+                    <div class="icon">🎵</div>
+                    <div class="btn btn-spotify btn-lg w-100" th:text="#{landing.btn.start.spotify}">
+                        Start Party with Spotify
+                    </div>
+                    <small class="d-block mt-2" style="color: #adb5bd;" th:text="#{landing.hint.spotify}">Requires Spotify account</small>
+                    <small class="d-block mt-2 fst-italic" style="font-size: 0.8rem; max-width: 260px; margin-inline: auto; color: #adb5bd;"
+                           th:text="#{landing.hint.spotify.beta}">
+                        Due to API limits, Spotify integration is currently available only for selected DJs. Choose YouTube to get started instantly!
+                    </small>
                 </a>
             </div>
 
