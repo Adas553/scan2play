@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="#{privacy.title}">Privacy Policy - Scan2Play</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="/css/app.css" rel="stylesheet">
+</head>
+<body class="page-status">
+<div class="container py-5" style="max-width: 800px;">
+    <div class="card p-4 p-md-5 bg-dark text-light border-secondary">
+
+        <h1 class="fw-bold mb-4" th:text="#{privacy.title}">Privacy Policy</h1>
+        <p class="text-secondary mb-4" th:text="#{privacy.last_updated}">Last updated: April 2026</p>
+
+        <h3 th:text="#{privacy.section1.title}">1. Introduction</h3>
+        <p th:utext="#{privacy.section1.text}">
+            Scan2Play (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is an AI-powered music request platform for events. This Privacy Policy explains how we collect, use, and protect your data when you use our service at scan2play.com.pl.
+        </p>
+
+        <h3 th:text="#{privacy.section2.title}">2. Data We Collect</h3>
+        <p><strong th:text="#{privacy.section2.dj.title}">For DJs (registered users):</strong></p>
+        <ul>
+            <li th:text="#{privacy.section2.dj.item1}">Google account profile information (name, email, profile picture) via OAuth 2.0</li>
+            <li th:text="#{privacy.section2.dj.item2}">Spotify account information (user ID, display name) if Spotify integration is used</li>
+            <li th:text="#{privacy.section2.dj.item3}">Party settings and configuration preferences</li>
+            <li th:text="#{privacy.section2.dj.item4}">Feedback messages submitted through the dashboard</li>
+        </ul>
+        <p><strong th:text="#{privacy.section2.guest.title}">For Guests (anonymous users):</strong></p>
+        <ul>
+            <li th:text="#{privacy.section2.guest.item1}">Song request text (artist/title/description)</li>
+            <li th:text="#{privacy.section2.guest.item2}">Session identifiers for rate limiting (no personal data)</li>
+        </ul>
+
+        <h3 th:text="#{privacy.section3.title}">3. How We Use Your Data</h3>
+        <ul>
+            <li th:text="#{privacy.section3.item1}">To authenticate DJs and manage party sessions</li>
+            <li th:text="#{privacy.section3.item2}">To process song requests and provide AI-powered music evaluation</li>
+            <li th:text="#{privacy.section3.item3}">To search for music via YouTube Data API v3 and Spotify API</li>
+            <li th:text="#{privacy.section3.item4}">To enforce rate limits and prevent abuse</li>
+        </ul>
+
+        <h3 th:text="#{privacy.section4.title}">4. YouTube API Services</h3>
+        <p th:utext="#{privacy.section4.text}">
+            This application uses YouTube API Services to search for and play music videos. By using Scan2Play, you agree to be bound by the
+            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">YouTube Terms of Service</a>.
+            Please review the <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Google Privacy Policy</a>
+            to understand how Google handles your data.
+        </p>
+
+        <h3 th:text="#{privacy.section5.title}">5. Data Retention</h3>
+        <ul>
+            <li th:text="#{privacy.section5.item1}">Song requests: stored for the duration of the party session</li>
+            <li th:text="#{privacy.section5.item2}">YouTube search cache: automatically deleted after 30 days</li>
+            <li th:text="#{privacy.section5.item3}">DJ account data: stored until the DJ deletes their account</li>
+        </ul>
+
+        <h3 th:text="#{privacy.section6.title}">6. Data Sharing</h3>
+        <p th:text="#{privacy.section6.text}">
+            We do not sell or share your personal data with third parties. Data is only sent to Google (YouTube API, OAuth), Spotify (if connected), and Google Gemini (AI song evaluation) as required for the service to function.
+        </p>
+
+        <h3 th:text="#{privacy.section7.title}">7. Your Rights — Data Deletion</h3>
+        <p th:utext="#{privacy.section7.text}">
+            You can delete all your data at any time by clicking <strong>&quot;Delete Account&quot;</strong> in your DJ Dashboard.
+            This permanently removes your party settings, song request history, and feedback.
+            You may also revoke Scan2Play's access from your <a href="https://myaccount.google.com/permissions" target="_blank" class="text-warning">Google Account settings</a>.
+        </p>
+
+        <h3 th:text="#{privacy.section8.title}">8. Contact</h3>
+        <p th:utext="#{privacy.section8.text}">
+            For questions about this Privacy Policy, please contact us at: <strong>contact@scan2play.com.pl</strong>
+        </p>
+
+        <div class="mt-5 text-center">
+            <a href="/" class="btn btn-outline-light btn-lg px-5" th:text="#{privacy.btn.home}">Go Home</a>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+
+</body>
+</html>
+

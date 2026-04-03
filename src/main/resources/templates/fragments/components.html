@@ -85,6 +85,12 @@
                     <span class="d-none d-sm-inline" th:text="#{dashboard.button.logout}">Logout</span>
                 </button>
             </form>
+            <form th:action="@{/dj/delete-account}" method="POST" th:onsubmit="'return confirm(\'' + #{dashboard.confirm.delete_account} + '\');'">
+                <button type="submit" class="btn btn-outline-danger fw-bold btn-sm d-flex align-items-center gap-1" title="Delete Account">
+                    <span class="d-sm-none">🗑</span>
+                    <span class="d-none d-sm-inline" th:text="#{dashboard.button.delete_account}">Delete Account</span>
+                </button>
+            </form>
         </div>
     </div>
 
@@ -228,6 +234,25 @@
     </script>
 
 </div>
+
+<!-- ======================================================================
+     Footer Fragment — Legal links (YouTube ToS, Google Privacy, Scan2Play legal pages)
+     Required by YouTube API Terms of Service (Section III) and Google OAuth compliance.
+     ====================================================================== -->
+<footer th:fragment="footer" class="text-center py-4 mt-5 border-top border-secondary" style="color: #6c757d; font-size: 0.85rem;">
+    <div class="container">
+        <p class="mb-2">
+            <a href="/privacy" class="text-secondary me-3" th:text="#{footer.privacy}">Privacy Policy</a>
+            <a href="/terms" class="text-secondary me-3" th:text="#{footer.terms}">Terms of Service</a>
+        </p>
+        <p class="mb-1" th:utext="#{footer.youtube.attribution}">
+            This application uses
+            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-secondary">YouTube API Services</a>.
+            <a href="https://policies.google.com/privacy" target="_blank" class="text-secondary">Google Privacy Policy</a>.
+        </p>
+        <p class="mb-0">&copy; 2026 Scan2Play</p>
+    </div>
+</footer>
 
 </body>
 </html>

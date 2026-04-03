@@ -52,7 +52,7 @@
 
     window.onYouTubeIframeAPIReady = function() {
         player = new YT.Player('yt-player', {
-            playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
+            playerVars: { autoplay: 0, controls: 1, rel: 0 },
             events: {
                 onReady:       function() { playerReady = true; console.log('[YT Auto-Pilot] Player ready'); tryAutoPlay(); },
                 onStateChange: onPlayerStateChange,

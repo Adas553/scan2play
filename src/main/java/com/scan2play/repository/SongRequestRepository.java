@@ -62,4 +62,12 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
            "FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN :decisions")
     String computeFingerprint(@Param("partyCode") String partyCode,
                               @Param("decisions") Collection<String> decisions);
+
+    /**
+     * Deletes all song requests associated with a specific party.
+     * Used during account deletion to comply with GDPR / Google API data deletion requirements.
+     *
+     * @param partyCode The unique code of the party.
+     */
+    void deleteByPartyCode(String partyCode);
 }

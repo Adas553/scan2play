@@ -5,6 +5,7 @@ import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.DjService;
+import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
@@ -47,6 +48,7 @@ public class DjController {
     private static final String GOOGLE_REGISTRATION_ID = "google";
 
     private final DjService djService;
+    private final AccountDeletionService accountDeletionService;
     private final PartySettingsQueryService partySettingsQueryService;
     private final PartySettingsCommandService partySettingsCommandService;
     private final QrCodeService qrCodeService;
@@ -309,6 +311,26 @@ public class DjController {
             partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
         }
         return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * Deletes all data associated with the currently logged-in DJ account.
+     * Required by Google API Services User Data Policy — users must be able to delete their data.
+     * After deletion, the session is invalidated and the user is redirected to the home page.
+     *
+     * @param authentication The current user's authentication token.
+     * @param session        The current HTTP session (to invalidate after deletion).
+     * @return Redirect to the landing page.
+     */
+    @PostMapping("/delete-account")
+    public String deleteAccount(OAuth2AuthenticationToken authentication, HttpSession session) {
+        if (authentication != null) {
+            String ownerId = authentication.getName();
+            log.info("Account deletion requested by ownerId={}", ownerId);
+            accountDeletionService.deleteAllUserData(ownerId);
+            session.invalidate();
+        }
+        return REDIRECT_HOME;
     }
 
     /**
