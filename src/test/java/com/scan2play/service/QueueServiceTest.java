@@ -46,11 +46,11 @@ class QueueServiceTest {
 
     @Test
     void resolveTrack_shouldDelegateToYouTubeProvider() {
-        when(youtubeProvider.findTrackUrl("Nirvana")).thenReturn("https://youtube.com/watch?v=abc");
+        when(youtubeProvider.findTrackUrl("Nirvana")).thenReturn("https://www.youtube.com/watch?v=hTWKbfoikeg");
 
         String result = queueService.resolveTrack("Nirvana", MusicProviderType.YOUTUBE);
 
-        assertThat(result).isEqualTo("https://youtube.com/watch?v=abc");
+        assertThat(result).isEqualTo("https://www.youtube.com/watch?v=hTWKbfoikeg");
         verify(youtubeProvider).findTrackUrl("Nirvana");
         verify(spotifyProvider, never()).findTrackUrl(any());
     }

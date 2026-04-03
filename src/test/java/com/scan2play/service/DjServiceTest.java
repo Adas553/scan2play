@@ -171,7 +171,7 @@ class DjServiceTest {
 
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
         when(queueService.resolveTrack("Nirvana - Smells Like Teen Spirit", MusicProviderType.YOUTUBE))
-                .thenReturn("https://youtube.com/watch?v=hTWKbfoikeg");
+                .thenReturn("https://www.youtube.com/watch?v=hTWKbfoikeg");
 
         djService.addDjPick(PARTY_CODE, "Nirvana - Smells Like Teen Spirit");
 
@@ -185,7 +185,7 @@ class DjServiceTest {
         assertThat(saved.getStyle()).isEqualTo("DJ Pick"); // matches DjService.DJ_PICK_STYLE
         assertThat(saved.getDjComment()).contains("DJ");
         assertThat(saved.getEnergyLevel()).isZero();
-        assertThat(saved.getTrackUrl()).isEqualTo("https://youtube.com/watch?v=hTWKbfoikeg");
+        assertThat(saved.getTrackUrl()).isEqualTo("https://www.youtube.com/watch?v=hTWKbfoikeg");
         assertThat(saved.getRequestedAt()).isNotNull();
     }
 

@@ -7,6 +7,7 @@ import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
@@ -14,6 +15,7 @@ import java.util.List;
 
 @Configuration
 @EnableCaching
+@EnableScheduling
 public class AppConfig {
 
     @Bean
@@ -25,6 +27,7 @@ public class AppConfig {
      * Custom CacheManager with per-cache TTL configuration via Caffeine.
      * <ul>
      *     <li>{@code partySettings} / {@code qrCodes} — long-lived, evicted manually via @CachePut</li>
+     *     <li>{@code youtubeSearch} — 24h TTL, avoids redundant YouTube Data API calls (100 quota/search)</li>
      *     <li>{@code dashboardQueue} — 3s TTL / {@code publicQueue} — 5s TTL, auto-expires to keep polling data fresh</li>
      * </ul>
      */
@@ -34,6 +37,7 @@ public class AppConfig {
             cacheManager.setCaches(List.of(
                     buildCache("partySettings", Duration.ofHours(24), 500),
                     buildCache("qr-codes", Duration.ofHours(24), 1000),
+                    buildCache("youtubeSearch", Duration.ofHours(24), 1000),
                     buildCache("dashboardQueue", Duration.ofSeconds(3), 200),
                     buildCache("publicQueue", Duration.ofSeconds(5), 200)
             ));

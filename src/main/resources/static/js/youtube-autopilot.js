@@ -12,6 +12,10 @@
  *   5. On PLAYING state, marks the song as PLAYED via fetch POST
  *   6. On ENDED state, resets and waits for the next poll cycle
  *
+ * Quota optimization:
+ *   Video URLs are resolved server-side via YouTube Data API v3 with 24h caching.
+ *   Each unique song costs 100 quota units only once per day.
+ *
  * Dependencies (DOM):
  *   - <div id="yt-player">            YouTube IFrame container
  *   - <meta name="_csrf">             CSRF token
