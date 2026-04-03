@@ -284,10 +284,20 @@ th[data-sort].sort-desc::after {
  * ========================================================================== */
 .page-status {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
     min-height: 100vh;
     text-align: center;
+}
+
+/* Long scrollable legal pages (privacy, terms) — content fills space, footer at bottom */
+.page-legal {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+.page-legal > .container {
+    flex: 1;
 }
 
 /* --- Error page --- */
