@@ -20,3 +20,4 @@ Odpowiedz WYŁĄCZNIE w formacie JSON:
   "songName": "ARTYSTA - TYTUŁ PIOSENKI" (tylko w przypadku accepted, jeśli rejected zostaw puste lub wpisz to co prosił),
   "energyLevel": 1-10
 }
+

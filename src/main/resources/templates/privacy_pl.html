@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Polityka Prywatności - Scan2Play</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="/css/app.css" rel="stylesheet">
+</head>
+<body class="page-status">
+<div class="container py-5" style="max-width: 800px;">
+    <div class="card p-4 p-md-5 bg-dark text-light border-secondary">
+
+        <h1 class="fw-bold mb-4">Polityka Prywatności</h1>
+        <p class="text-secondary mb-4">Ostatnia aktualizacja: kwiecień 2026</p>
+
+        <h3>1. Wprowadzenie</h3>
+        <p>Scan2Play („my", „nasz") to platforma do zamawiania muzyki na imprezach, wykorzystująca sztuczną inteligencję. Niniejsza Polityka Prywatności wyjaśnia, jakie dane zbieramy, jak je wykorzystujemy i jak je chronimy podczas korzystania z serwisu scan2play.com.pl.</p>
+
+        <h3>2. Jakie dane zbieramy</h3>
+        <p><strong>Dla DJ-ów (zarejestrowani użytkownicy):</strong></p>
+        <ul>
+            <li>Informacje z profilu Google (imię, email, zdjęcie profilowe) przez OAuth 2.0</li>
+            <li>Informacje z konta Spotify (ID użytkownika, nazwa wyświetlana), jeśli używana jest integracja ze Spotify</li>
+            <li>Ustawienia imprezy i preferencje konfiguracji</li>
+            <li>Wiadomości feedback przesłane przez panel DJ-a</li>
+        </ul>
+        <p><strong>Dla gości (anonimowi użytkownicy):</strong></p>
+        <ul>
+            <li>Tekst zamówienia piosenki (artysta/tytuł/opis)</li>
+            <li>Identyfikatory sesji do limitowania prób (bez danych osobowych)</li>
+        </ul>
+
+        <h3>3. Jak wykorzystujemy Twoje dane</h3>
+        <ul>
+            <li>Do uwierzytelniania DJ-ów i zarządzania sesjami imprez</li>
+            <li>Do przetwarzania zamówień piosenek i oceny muzyki przez AI</li>
+            <li>Do wyszukiwania muzyki przez YouTube Data API v3 i Spotify API</li>
+            <li>Do egzekwowania limitów i zapobiegania nadużyciom</li>
+        </ul>
+
+        <h3>4. YouTube API Services</h3>
+        <p>Ta aplikacja korzysta z YouTube API Services do wyszukiwania i odtwarzania teledysków. Korzystając ze Scan2Play, akceptujesz
+            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">Warunki korzystania z YouTube</a>.
+            Zapoznaj się również z <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Polityką Prywatności Google</a>.
+        </p>
+
+        <h3>5. Okres przechowywania danych</h3>
+        <ul>
+            <li>Zamówienia piosenek: przechowywane przez czas trwania sesji imprezy</li>
+            <li>Cache wyszukiwań YouTube: automatycznie usuwany po 30 dniach</li>
+            <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
+        </ul>
+
+        <h3>6. Udostępnianie danych</h3>
+        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (YouTube API, OAuth), Spotify (jeśli podłączony) i Google Gemini (ocena piosenek przez AI) w zakresie niezbędnym do działania serwisu.</p>
+
+        <h3>7. Twoje prawa — Usuwanie danych</h3>
+        <p>Możesz usunąć wszystkie swoje dane w dowolnym momencie, klikając <strong>„Usuń konto"</strong> w Panelu DJ-a.
+            Spowoduje to trwałe usunięcie ustawień imprezy, historii piosenek i feedbacku.
+            Możesz również cofnąć dostęp Scan2Play w <a href="https://myaccount.google.com/permissions" target="_blank" class="text-warning">ustawieniach konta Google</a>.
+        </p>
+
+        <h3>8. Kontakt</h3>
+        <p>W sprawie pytań dotyczących niniejszej Polityki Prywatności prosimy o kontakt: <strong>scan2playcontact@gmail.com</strong></p>
+
+        <div class="mt-5 text-center">
+            <a href="/" class="btn btn-outline-light btn-lg px-5">Strona Główna</a>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+
+</body>
+</html>
+

@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -26,6 +27,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
@@ -53,17 +56,11 @@ public class SongEvaluationService {
             .responseMimeType("application/json")
             .build();
 
+    private static final String DEFAULT_LANG = "en";
+    private static final List<String> SUPPORTED_LANGS = List.of("en", "pl");
+
     @Value("${google.ai.model-name}")
     private String modelName;
-
-    @Value("classpath:prompt-template.txt")
-    private Resource promptResource;
-
-    @Value("classpath:prompt-duplicate-rule.txt")
-    private Resource duplicateRuleResource;
-
-    private String cachedPromptTemplate;
-    private String cachedDuplicateRuleTemplate;
 
     private final Client client;
     private final ObjectMapper objectMapper;
@@ -71,23 +68,40 @@ public class SongEvaluationService {
     private final PartySettingsQueryService partySettingsQueryService;
     private final QueueService queueService;
     private final MessageSource messageSource;
+    private final ResourceLoader resourceLoader;
     private final PlatformTransactionManager transactionManager;
 
     private TransactionTemplate transactionTemplate;
 
+    /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt). */
+    private Map<String, String> promptTemplates;
+    /** Duplicate rule template per language code. */
+    private Map<String, String> duplicateRuleTemplates;
+
     /**
-     * Loads AI prompt templates from classpath resources and sets up the transaction template.
+     * Loads AI prompt templates for all supported languages and sets up the transaction template.
      */
     @PostConstruct
     public void init() {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         try {
-            this.cachedPromptTemplate = promptResource.getContentAsString(StandardCharsets.UTF_8);
-            this.cachedDuplicateRuleTemplate = duplicateRuleResource.getContentAsString(StandardCharsets.UTF_8);
+            var prompts = new java.util.HashMap<String, String>();
+            var duplicates = new java.util.HashMap<String, String>();
+            for (String lang : SUPPORTED_LANGS) {
+                prompts.put(lang, loadResource("classpath:prompts/prompt-template_" + lang + ".txt"));
+                duplicates.put(lang, loadResource("classpath:prompts/prompt-duplicate-rule_" + lang + ".txt"));
+            }
+            this.promptTemplates = Map.copyOf(prompts);
+            this.duplicateRuleTemplates = Map.copyOf(duplicates);
         } catch (IOException e) {
-            log.error("Failed to load prompt template", e);
-            throw new RuntimeException("System configuration error: prompt template missing", e);
+            log.error("Failed to load prompt templates", e);
+            throw new RuntimeException("System configuration error: prompt templates missing", e);
         }
+    }
+
+    private String loadResource(String location) throws IOException {
+        Resource resource = resourceLoader.getResource(location);
+        return resource.getContentAsString(StandardCharsets.UTF_8);
     }
 
     /**
@@ -104,12 +118,15 @@ public class SongEvaluationService {
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         String recentSongs = getRecentSongsContext(partyCode, settings.getDuplicateCheckWindow());
 
-        // Fetch i18n error messages in the main thread (where Locale is available)
-        String autopilotErrorMsg = messageSource.getMessage("dashboard.error.autopilot_failed", null, LocaleContextHolder.getLocale());
-        String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, LocaleContextHolder.getLocale());
+        // Capture locale in the main thread (where LocaleContextHolder is available)
+        Locale locale = LocaleContextHolder.getLocale();
 
-        // 1. External API Call: AI Evaluation
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, aiOfflineMsg);
+        // Fetch i18n error messages in the main thread
+        String autopilotErrorMsg = messageSource.getMessage("dashboard.error.autopilot_failed", null, locale);
+        String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, locale);
+
+        // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, aiOfflineMsg, locale);
 
         // 2. External API Call: Spotify/YouTube Track Resolution (if accepted)
         String trackUrl = null;
@@ -144,10 +161,13 @@ public class SongEvaluationService {
         return recentSongs.isEmpty() ? "None" : recentSongs;
     }
 
-    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg) {
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg, Locale locale) {
         try {
-            String duplicateRule = (recentSongs != null) ? String.format(cachedDuplicateRuleTemplate, recentSongs) : "";
-            String prompt = String.format(cachedPromptTemplate, songName, style, duplicateRule);
+            String lang = resolvePromptLanguage(locale);
+            String duplicateRule = (recentSongs != null)
+                    ? String.format(duplicateRuleTemplates.get(lang), recentSongs)
+                    : "";
+            String prompt = String.format(promptTemplates.get(lang), songName, style, duplicateRule);
 
             GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_JSON_CONFIG);
             return objectMapper.readValue(response.text(), DjResponse.class);
@@ -155,6 +175,14 @@ public class SongEvaluationService {
             log.error("AI evaluation failed for song: '{}'", songName, e);
             return new DjResponse(DECISION_REJECTED, aiOfflineMsg, songName, 0);
         }
+    }
+
+    /**
+     * Maps a Locale to a supported prompt language. Falls back to English for unsupported locales.
+     */
+    private String resolvePromptLanguage(Locale locale) {
+        String lang = locale.getLanguage();
+        return promptTemplates.containsKey(lang) ? lang : DEFAULT_LANG;
     }
 
     private String resolveTrackUrl(String songName, MusicProviderType provider) {

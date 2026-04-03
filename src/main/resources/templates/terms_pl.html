@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Regulamin - Scan2Play</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="/css/app.css" rel="stylesheet">
+</head>
+<body class="page-status">
+<div class="container py-5" style="max-width: 800px;">
+    <div class="card p-4 p-md-5 bg-dark text-light border-secondary">
+
+        <h1 class="fw-bold mb-4">Regulamin</h1>
+        <p class="text-secondary mb-4">Ostatnia aktualizacja: kwiecień 2026</p>
+
+        <h3>1. Akceptacja warunków</h3>
+        <p>Korzystając ze Scan2Play (scan2play.com.pl), akceptujesz niniejszy Regulamin. Jeśli się nie zgadzasz, prosimy o niekorzystanie z serwisu.</p>
+
+        <h3>2. Opis usługi</h3>
+        <p>Scan2Play to platforma do zamawiania muzyki na imprezach, wykorzystująca AI. DJ-e tworzą sesje imprezowe, goście zamawiają piosenki przez kod QR, a AI ocenia, czy propozycja pasuje do klimatu imprezy. Muzyka jest odtwarzana przez YouTube lub Spotify.</p>
+
+        <h3>3. Obowiązki użytkownika</h3>
+        <ul>
+            <li>Nie wolno przesyłać obraźliwych, szkodliwych lub nielegalnych treści w zamówieniach piosenek lub feedbacku.</li>
+            <li>DJ-e są odpowiedzialni za treści odtwarzane na swoich imprezach.</li>
+            <li>Nie wolno próbować nadużywać, przeciążać lub zakłócać działania serwisu.</li>
+        </ul>
+
+        <h3>4. Usługi zewnętrzne</h3>
+        <p>Scan2Play korzysta z YouTube API Services do wyszukiwania i odtwarzania muzyki. Korzystając z tej aplikacji, akceptujesz
+            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">Warunki korzystania z YouTube</a>.
+            Zapoznaj się również z <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Polityką Prywatności Google</a>.
+            Jeśli korzystasz z integracji Spotify, akceptujesz także <a href="https://www.spotify.com/legal/end-user-agreement/" target="_blank" class="text-warning">Warunki korzystania ze Spotify</a>.
+        </p>
+
+        <h3>5. Usunięcie konta</h3>
+        <p>Możesz usunąć swoje konto i wszystkie powiązane dane w dowolnym momencie z Panelu DJ-a. Zastrzegamy sobie prawo do zawieszenia lub usunięcia kont naruszających niniejszy Regulamin.</p>
+
+        <h3>6. Wyłączenie odpowiedzialności</h3>
+        <p>Scan2Play jest dostarczany „tak jak jest" bez jakichkolwiek gwarancji. Nie ponosimy odpowiedzialności za licencjonowanie muzyki — DJ-e są odpowiedzialni za zapewnienie, że mają prawo do odtwarzania muzyki na swoich imprezach.</p>
+
+        <h3>7. Zmiany Regulaminu</h3>
+        <p>Możemy aktualizować niniejszy Regulamin w dowolnym momencie. Dalsze korzystanie ze Scan2Play po zmianach oznacza akceptację nowych warunków.</p>
+
+        <h3>8. Kontakt</h3>
+        <p>W sprawie pytań dotyczących niniejszego Regulaminu prosimy o kontakt: <strong>scan2playcontact@gmail.com</strong></p>
+
+        <div class="mt-5 text-center">
+            <a href="/" class="btn btn-outline-light btn-lg px-5">Strona Główna</a>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+
+</body>
+</html>
+

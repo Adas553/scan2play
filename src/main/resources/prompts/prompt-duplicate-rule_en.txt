@@ -1,0 +1,9 @@
+
+Here is the list of recently accepted songs at this party: [%s].
+
+Additional rule (NO DUPLICATES):
+Before accepting a song, check the list above. If the user asks for a track that IS ON THIS LIST
+(even if they misspelled it, used a shortcut, or it's a slightly different remix of the same hit), you must
+REJECT the request (decision: "rejected"). Comment on it in a fun way,
+e.g. "This song already played today, let's give others a chance!" or "Someone beat you to this hit!".
+
