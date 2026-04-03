@@ -2,6 +2,8 @@ package com.scan2play.repository;
 
 import com.scan2play.entity.SongRequestEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -47,4 +49,17 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * @return A list of matching song requests.
      */
     List<SongRequestEntity> findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions, org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * Computes a lightweight fingerprint of the queue state (count + maxId).
+     * Used for ETag-based 304 Not Modified responses during AJAX polling.
+     *
+     * @param partyCode The unique code of the party.
+     * @param decisions The list of statuses to include.
+     * @return A string like "12-487" (count-maxId), or "0-0" if empty.
+     */
+    @Query("SELECT CONCAT(COUNT(s), '-', COALESCE(MAX(s.id), 0)) " +
+           "FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN :decisions")
+    String computeFingerprint(@Param("partyCode") String partyCode,
+                              @Param("decisions") Collection<String> decisions);
 }

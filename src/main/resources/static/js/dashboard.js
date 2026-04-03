@@ -4,7 +4,7 @@
  * Responsibilities:
  *   - AJAX form submissions (preserves YouTube player on POST actions)
  *   - AJAX tab switching (Queue ↔ History without page reload)
- *   - Table polling (refreshes queue every 5 seconds)
+ *   - Table polling (refreshes queue every 3 seconds)
  *   - Clipboard (copy party link)
  *
  * Dependencies (DOM):
@@ -165,6 +165,10 @@ function submitAutoPilotToggle(checkbox) {
             historyLink.classList.add('active');
             queueLink.classList.remove('active');
             activeTab = 'history';
+            // Init sorting on dynamically loaded history table
+            if (typeof window.initSortableHeaders === 'function') {
+                window.initSortableHeaders(historyContent);
+            }
         })
         .catch(function(err) { console.error('[Tabs] History load error:', err); });
     });
@@ -181,26 +185,47 @@ function submitAutoPilotToggle(checkbox) {
 })();
 
 // ==========================================================================
-// TABLE POLLING — refreshes the queue table every 5 seconds
+// TABLE POLLING — refreshes the queue table every 3 seconds
+//
+// Uses ETag / 304 Not Modified to skip DOM replacement when the queue
+// hasn't changed. This preserves client-side sorting and reduces bandwidth.
 // ==========================================================================
 
 (function initPolling() {
+    var currentETag = null;
+
     async function refreshTable() {
         try {
             const partyCodeEl = document.getElementById('partyCode');
             if (!partyCodeEl) return;
 
             const csrf = getCsrf();
+            const headers = { [csrf.header]: csrf.token };
+            if (currentETag) {
+                headers['If-None-Match'] = currentETag;
+            }
+
             const response = await fetch('/dj/dashboard/updates?partyCode=' + partyCodeEl.value, {
                 method: 'GET',
-                headers: { [csrf.header]: csrf.token }
+                headers: headers
             });
+
+            // 304 Not Modified — queue unchanged, skip DOM replacement
+            if (response.status === 304) {
+                return;
+            }
 
             if (response.redirected) {
                 window.location.reload();
                 return;
             }
             if (!response.ok) throw new Error('HTTP ' + response.status);
+
+            // Store new ETag for next poll
+            var newETag = response.headers.get('ETag');
+            if (newETag) {
+                currentETag = newETag;
+            }
 
             const html = await response.text();
 
@@ -217,14 +242,19 @@ function submitAutoPilotToggle(checkbox) {
             if (typeof checkYouTubeAutoPlay === 'function') {
                 checkYouTubeAutoPlay();
             }
+
+            // Re-apply user's sort preference after table refresh
+            if (typeof window.reapplySort === 'function') {
+                window.reapplySort();
+            }
         } catch (err) {
             console.error('[Polling] Refresh error:', err);
         } finally {
-            setTimeout(refreshTable, 5000);
+            setTimeout(refreshTable, 3000);
         }
     }
 
-    setTimeout(refreshTable, 5000);
+    setTimeout(refreshTable, 3000);
 })();
 
 // ==========================================================================
@@ -243,4 +273,161 @@ function copyPartyLink() {
         setTimeout(function() { btn.innerText = original; }, 2000);
     });
 }
+
+// ==========================================================================
+// TABLE SORTING — persistent across polling refreshes
+//
+// How it works:
+//   - Each sortable <th> has a data-sort attribute (e.g. "time", "song", "energy")
+//   - Each sortable <td> has data-sort-value + data-val with the raw value
+//   - Clicking a header toggles ASC → DESC → (reset to default server order)
+//   - Sort state for the queue table is remembered and re-applied after
+//     each 5-second polling cycle via window.reapplySort()
+//   - History table (AJAX loaded) gets fresh click handlers via
+//     window.initSortableHeaders()
+// ==========================================================================
+
+(function initTableSorting() {
+    'use strict';
+
+    // Sort state for the main queue table (survives polling refreshes)
+    var queueSortColumn = null;   // e.g. "time", "song", "energy"
+    var queueSortDir    = null;   // "asc" or "desc"
+
+    /**
+     * Sorts the rows of a <tbody> by the given column key and direction.
+     * Rows without data-sort-value cells for the key are left in place.
+     */
+    function sortTbody(tbody, colKey, direction) {
+        if (!tbody || !colKey || !direction) return;
+
+        // Select all data rows (those containing sortable cells).
+        // This works for both the queue table (tr[data-song-id]) and the
+        // history table (tr without data-song-id). The "empty" placeholder
+        // row is excluded because it has no td[data-sort-value].
+        var rows = Array.from(tbody.querySelectorAll('tr'))
+            .filter(function(r) { return r.querySelector('td[data-sort-value]'); });
+        if (rows.length < 2) return;
+
+        var isNumeric = (colKey === 'energy');
+
+        rows.sort(function(a, b) {
+            var cellA = a.querySelector('td[data-sort-value="' + colKey + '"]');
+            var cellB = b.querySelector('td[data-sort-value="' + colKey + '"]');
+            if (!cellA || !cellB) return 0;
+
+            var valA = cellA.getAttribute('data-val') || '';
+            var valB = cellB.getAttribute('data-val') || '';
+
+            var result;
+            if (isNumeric) {
+                result = (parseFloat(valA) || 0) - (parseFloat(valB) || 0);
+            } else {
+                result = valA.localeCompare(valB, undefined, { sensitivity: 'base' });
+            }
+
+            return direction === 'desc' ? -result : result;
+        });
+
+        // Re-append rows in sorted order (moves DOM nodes, doesn't clone)
+        for (var i = 0; i < rows.length; i++) {
+            tbody.appendChild(rows[i]);
+        }
+    }
+
+    /**
+     * Updates the visual state of <th> sort indicators within a <thead>.
+     */
+    function updateHeaderIndicators(thead, activeCol, activeDir) {
+        var ths = thead.querySelectorAll('th[data-sort]');
+        for (var i = 0; i < ths.length; i++) {
+            ths[i].classList.remove('sort-asc', 'sort-desc');
+            if (ths[i].getAttribute('data-sort') === activeCol && activeDir) {
+                ths[i].classList.add('sort-' + activeDir);
+            }
+        }
+    }
+
+    /**
+     * Attaches click handlers to all <th data-sort> within a container.
+     * Used for the initial page load and for dynamically loaded history content.
+     */
+    window.initSortableHeaders = function(container) {
+        var ths = container.querySelectorAll('th[data-sort]');
+        for (var i = 0; i < ths.length; i++) {
+            // Skip if already initialized
+            if (ths[i].hasAttribute('data-sort-init')) continue;
+            ths[i].setAttribute('data-sort-init', '1');
+
+            ths[i].addEventListener('click', function() {
+                var colKey = this.getAttribute('data-sort');
+                var table  = this.closest('table');
+                var thead  = table.querySelector('thead');
+                var tbody  = table.querySelector('tbody');
+                var isQueueTable = tbody && tbody.id === 'song-list';
+
+                // Determine current state for this table
+                var curCol, curDir;
+                if (isQueueTable) {
+                    curCol = queueSortColumn;
+                    curDir = queueSortDir;
+                } else {
+                    curCol = thead.getAttribute('data-sort-col');
+                    curDir = thead.getAttribute('data-sort-dir');
+                }
+
+                // Cycle: none → asc → desc → none
+                var newDir;
+                if (curCol !== colKey) {
+                    newDir = 'asc';
+                } else if (curDir === 'asc') {
+                    newDir = 'desc';
+                } else {
+                    newDir = null; // reset
+                }
+
+                // Store state
+                if (isQueueTable) {
+                    queueSortColumn = newDir ? colKey : null;
+                    queueSortDir    = newDir;
+                } else {
+                    thead.setAttribute('data-sort-col', newDir ? colKey : '');
+                    thead.setAttribute('data-sort-dir', newDir || '');
+                }
+
+                // Apply
+                updateHeaderIndicators(thead, newDir ? colKey : null, newDir);
+                if (newDir) {
+                    sortTbody(tbody, colKey, newDir);
+                }
+                // When reset (newDir === null), the server order is already
+                // the order from the last polling refresh — no action needed
+                // (next poll will restore original order).
+            });
+        }
+    };
+
+    /**
+     * Re-applies the remembered queue sort after each polling refresh.
+     * Called from the polling function after #song-list is replaced.
+     */
+    window.reapplySort = function() {
+        if (!queueSortColumn || !queueSortDir) return;
+        var tbody = document.getElementById('song-list');
+        if (!tbody) return;
+        sortTbody(tbody, queueSortColumn, queueSortDir);
+
+        // Re-apply header indicators (thead is NOT replaced by polling)
+        var thead = tbody.closest('table') && tbody.closest('table').querySelector('thead');
+        if (thead) {
+            updateHeaderIndicators(thead, queueSortColumn, queueSortDir);
+        }
+    };
+
+    // --- Initialize on page load ---
+    var queueContent = document.getElementById('queue-content');
+    if (queueContent) {
+        window.initSortableHeaders(queueContent);
+    }
+})();
 

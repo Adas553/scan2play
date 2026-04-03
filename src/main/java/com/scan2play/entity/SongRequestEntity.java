@@ -16,6 +16,10 @@ import java.time.LocalDateTime;
 @Builder
 public class SongRequestEntity {
 
+    private static final int DJ_COMMENT_MAX = 500;
+    private static final int SONG_NAME_MAX = 255;
+    private static final int TRACK_URL_MAX = 500;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -27,10 +31,31 @@ public class SongRequestEntity {
     private String style;
     private String decision;
 
-    @Column(length = 500)
+    @Column(length = DJ_COMMENT_MAX)
     private String djComment;
 
     private int energyLevel;
     private LocalDateTime requestedAt;
+
+    @Column(length = TRACK_URL_MAX)
     private String trackUrl;
+
+    /**
+     * Defensive truncation of all free-text fields before persist/update.
+     * Prevents DataIntegrityViolationException from AI-generated content
+     * that may exceed column limits.
+     */
+    @PrePersist
+    @PreUpdate
+    void truncateFields() {
+        songName = truncate(songName, SONG_NAME_MAX);
+        djComment = truncate(djComment, DJ_COMMENT_MAX);
+        trackUrl = truncate(trackUrl, TRACK_URL_MAX);
+    }
+
+    private static String truncate(String value, int maxLength) {
+        return (value != null && value.length() > maxLength)
+                ? value.substring(0, maxLength)
+                : value;
+    }
 }

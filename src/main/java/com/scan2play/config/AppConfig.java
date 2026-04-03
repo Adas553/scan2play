@@ -25,7 +25,7 @@ public class AppConfig {
      * Custom CacheManager with per-cache TTL configuration via Caffeine.
      * <ul>
      *     <li>{@code partySettings} / {@code qrCodes} — long-lived, evicted manually via @CachePut</li>
-     *     <li>{@code dashboardQueue} / {@code publicQueue} — 5s TTL, auto-expires to keep polling data fresh</li>
+     *     <li>{@code dashboardQueue} — 3s TTL / {@code publicQueue} — 5s TTL, auto-expires to keep polling data fresh</li>
      * </ul>
      */
     @Bean
@@ -34,7 +34,7 @@ public class AppConfig {
             cacheManager.setCaches(List.of(
                     buildCache("partySettings", Duration.ofHours(24), 500),
                     buildCache("qr-codes", Duration.ofHours(24), 1000),
-                    buildCache("dashboardQueue", Duration.ofSeconds(5), 200),
+                    buildCache("dashboardQueue", Duration.ofSeconds(3), 200),
                     buildCache("publicQueue", Duration.ofSeconds(5), 200)
             ));
             return cacheManager;

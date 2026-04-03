@@ -81,6 +81,46 @@ body {
 /* --- Table border --- */
 .table { border-color: var(--s2p-border); }
 
+/* --- Table header — distinct background so it doesn't blend with rows (especially on mobile) --- */
+.page-dj .table-dark thead th {
+    background-color: #1a1a2e;
+    border-bottom: 2px solid var(--s2p-green);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+/* --- Sortable column headers --- */
+th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 1.2em !important;
+}
+th[data-sort]:hover {
+    color: var(--s2p-green) !important;
+}
+th[data-sort]::after {
+    content: '⇅';
+    position: absolute;
+    right: 0.3em;
+    opacity: 0.3;
+    font-size: 0.75em;
+}
+th[data-sort].sort-asc::after {
+    content: '▲';
+    opacity: 0.9;
+    color: var(--s2p-green);
+}
+th[data-sort].sort-desc::after {
+    content: '▼';
+    opacity: 0.9;
+    color: var(--s2p-green);
+}
+
 /* ==========================================================================
  * 4. DJ PAGES — dashboard.html, history.html
  *    Body class: .page-dj

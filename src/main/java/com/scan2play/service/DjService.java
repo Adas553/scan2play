@@ -46,6 +46,19 @@ public class DjService {
     // ---- Queue Queries ----
 
     /**
+     * Computes a lightweight fingerprint of the active queue.
+     * Used for ETag-based 304 Not Modified responses — avoids full DB fetch
+     * and Thymeleaf rendering when the queue hasn't changed between polls.
+     *
+     * @param partyCode The unique code of the party.
+     * @return A fingerprint string (e.g. "12-487").
+     */
+    public String getQueueFingerprint(String partyCode) {
+        String raw = songRequestRepository.computeFingerprint(partyCode, List.of(DECISION_ACCEPTED));
+        return raw != null ? raw : "0-0";
+    }
+
+    /**
      * Returns the accepted songs (waiting in queue) for the dashboard.
      * Limited to the 100 most recent entries for performance.
      *

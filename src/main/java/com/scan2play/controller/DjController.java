@@ -2,12 +2,15 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.MusicProviderType;
+import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -155,15 +158,35 @@ public class DjController {
     }
 
     /**
-     * HTMX endpoint that returns a partial HTML fragment of the song request table.
-     * Used for dynamic dashboard updates without a full page reload.
+     * AJAX polling endpoint that returns a partial HTML fragment of the song request table.
+     * <p>
+     * Supports ETag-based conditional responses: if the queue hasn't changed since the
+     * client's last poll, returns 304 Not Modified (empty body). This avoids unnecessary
+     * Thymeleaf rendering, reduces bandwidth, and — crucially — prevents the client-side
+     * DOM replacement that would reset any active column sorting.
      *
      * @param partyCode The unique code of the party context.
      * @param model     Spring MVC model.
-     * @return returns a partial HTML fragment of the song request table (Active Queue).
+     * @param request   HTTP request (carries If-None-Match header).
+     * @param response  HTTP response (receives ETag header).
+     * @return Thymeleaf fragment name, or {@code null} when 304 is sent.
      */
     @GetMapping("/dashboard/updates")
-    public String getDashboardUpdates(@RequestParam String partyCode, Model model) {
+    public String getDashboardUpdates(@RequestParam String partyCode, Model model,
+                                      HttpServletRequest request, HttpServletResponse response) {
+        // --- Lightweight fingerprint check (avoids full query + render) ---
+        String fingerprint = djService.getQueueFingerprint(partyCode);
+        String etag = "\"q-" + fingerprint + "\"";
+
+        String ifNoneMatch = request.getHeader("If-None-Match");
+        if (etag.equals(ifNoneMatch)) {
+            response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+            response.setHeader("ETag", etag);
+            return null;  // response is short-circuited — Spring skips view resolution
+        }
+
+        // --- Full render (queue changed) ---
+        response.setHeader("ETag", etag);
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
@@ -181,7 +204,7 @@ public class DjController {
      */
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe) {
-        partySettingsCommandService.setGlobalVibe(partyCode, newVibe);
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setGlobalVibe(newVibe));
         return "redirect:/dj/dashboard";
     }
 
@@ -205,7 +228,11 @@ public class DjController {
         int safeCooldownMinutes = Math.max(1, (int) Math.round(cooldownMinutes));
         int safeDuplicateCheckWindow = Math.max(0, duplicateCheckWindow);
         
-        partySettingsCommandService.setPartyLimits(partyCode, safeRequestLimit, safeCooldownMinutes, safeDuplicateCheckWindow);
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setRequestLimit(safeRequestLimit);
+            s.setCooldownMinutes(safeCooldownMinutes);
+            s.setDuplicateCheckWindow(safeDuplicateCheckWindow);
+        });
         return "redirect:/dj/dashboard";
     }
 
@@ -241,7 +268,12 @@ public class DjController {
      */
     @PostMapping("/dashboard/playback-mode")
     public String togglePlaybackMode(@RequestParam String partyCode) {
-        partySettingsCommandService.togglePlaybackMode(partyCode);
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            PlaybackMode newMode = (s.getPlaybackMode() == PlaybackMode.AUTO)
+                    ? PlaybackMode.MANUAL
+                    : PlaybackMode.AUTO;
+            s.setPlaybackMode(newMode);
+        });
         return "redirect:/dj/dashboard";
     }
 

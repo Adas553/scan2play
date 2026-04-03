@@ -16,7 +16,7 @@ Twoje zadania:
 Odpowiedz WYŁĄCZNIE w formacie JSON:
 {
   "decision": "accepted" lub "rejected",
-  "comment": "krótki, błyskotliwy, żartobliwy komentarz DJ-a (np. 'Kurt Cobain nie grał na marakasach, dziś tańczymy salsę!')",
+  "comment": "krótki komentarz DJ-a, MAX 300 znaków (np. 'Kurt Cobain nie grał na marakasach, dziś tańczymy salsę!')",
   "songName": "ARTYSTA - TYTUŁ PIOSENKI" (tylko w przypadku accepted, jeśli rejected zostaw puste lub wpisz to co prosił),
   "energyLevel": 1-10
 }

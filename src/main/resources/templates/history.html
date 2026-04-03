@@ -31,21 +31,21 @@
         <table class="table table-dark table-hover align-middle">
             <thead>
             <tr>
-                <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.time}">Time</th>
-                <th th:text="#{dashboard.table.header.song}">Song</th>
+                <th class="d-none d-md-table-cell" data-sort="time" th:text="#{dashboard.table.header.time}">Time</th>
+                <th data-sort="song" th:text="#{dashboard.table.header.song}">Song</th>
                 <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.vibe}">Vibe</th>
                 <th>
                     <span class="d-none d-md-inline" th:text="#{dashboard.table.header.decision}">Status</span>
                     <span class="d-inline d-md-none">AI</span>
                 </th>
                 <th class="d-none d-lg-table-cell" th:text="#{dashboard.table.header.comment}">DJ's Comment</th>
-                <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.energy}">Energy</th>
+                <th class="d-none d-md-table-cell" data-sort="energy" th:text="#{dashboard.table.header.energy}">Energy</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="req : ${history}">
-                <td class="text-secondary d-none d-md-table-cell" th:text="${#temporals.format(req.requestedAt, 'dd.MM.yyyy HH:mm:ss')}">12:00</td>
-                <td>
+                <td class="text-secondary d-none d-md-table-cell" data-sort-value="time" th:attr="data-val=${req.requestedAt}" th:text="${#temporals.format(req.requestedAt, 'dd.MM.yyyy HH:mm:ss')}">12:00</td>
+                <td data-sort-value="song" th:attr="data-val=${req.songName}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                         <span class="fw-bold text-break" th:text="${req.songName}">Song</span>
                         <a th:if="${req.trackUrl != null}"
@@ -63,7 +63,7 @@
                     <span class="d-inline d-md-none" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}" style="font-size: 1.2rem;"></span>
                 </td>
                 <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
-                <td class="d-none d-md-table-cell"><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
+                <td class="d-none d-md-table-cell" data-sort-value="energy" th:attr="data-val=${req.energyLevel}"><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
             </tr>
             <tr th:if="${#lists.isEmpty(history)}">
                 <td colspan="6" class="text-center text-light py-4" style="background: #232323;" th:text="#{history.empty}">History is empty.</td>
@@ -76,5 +76,14 @@
         <a href="/dj/dashboard" class="btn btn-outline-light" th:text="#{history.back.to.dashboard}">Back to Dashboard</a>
     </div>
 </div>
+
+<!-- Reuse dashboard.js for sorting support on history page -->
+<script src="/js/dashboard.js"></script>
+<script>
+    // Init sort headers on the history table (dashboard.js exposes initSortableHeaders)
+    if (typeof window.initSortableHeaders === 'function') {
+        window.initSortableHeaders(document.querySelector('.table-responsive'));
+    }
+</script>
 </body>
 </html>
