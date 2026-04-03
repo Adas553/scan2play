@@ -182,7 +182,7 @@ class DjServiceTest {
         assertThat(saved.getPartyCode()).isEqualTo(PARTY_CODE);
         assertThat(saved.getSongName()).isEqualTo("Nirvana - Smells Like Teen Spirit");
         assertThat(saved.getDecision()).isEqualTo(DECISION_ACCEPTED);
-        assertThat(saved.getStyle()).isEqualTo("DJ Pick");
+        assertThat(saved.getStyle()).isEqualTo("DJ Pick"); // matches DjService.DJ_PICK_STYLE
         assertThat(saved.getDjComment()).contains("DJ");
         assertThat(saved.getEnergyLevel()).isZero();
         assertThat(saved.getTrackUrl()).isEqualTo("https://youtube.com/watch?v=hTWKbfoikeg");

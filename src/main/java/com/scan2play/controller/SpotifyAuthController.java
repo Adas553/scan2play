@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 
+import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
+
 @Controller
 @RequiredArgsConstructor
 public class SpotifyAuthController {
@@ -23,6 +25,6 @@ public class SpotifyAuthController {
     @GetMapping("/spotify/callback")
     public String spotifyCallback(@RequestParam("code") String code, @RequestParam("state") String partyCode) throws IOException {
         spotifyAuthService.exchangeCodeForToken(code, partyCode);
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 }

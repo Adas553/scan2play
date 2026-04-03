@@ -36,6 +36,9 @@ public class DjService {
     public static final String DECISION_REJECTED = "rejected";
     public static final String DECISION_PLAYED = "played";
 
+    /** Default style label for manually added DJ picks. */
+    private static final String DJ_PICK_STYLE = "DJ Pick";
+
     /** Default comment attached to manually added DJ picks. */
     private static final String DJ_PICK_COMMENT = "DJ's Choice 🎧";
 
@@ -153,7 +156,7 @@ public class DjService {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
                 .songName(songName)
-                .style("DJ Pick")
+                .style(DJ_PICK_STYLE)
                 .decision(DECISION_ACCEPTED)
                 .djComment(DJ_PICK_COMMENT)
                 .energyLevel(0)

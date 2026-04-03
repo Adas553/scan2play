@@ -1,7 +1,7 @@
 package com.scan2play.controller;
 
 /**
- * Centralizes constants for model attribute names used in Thymeleaf views.
+ * Centralizes constants for model attribute names and redirect paths used across controllers.
  * This prevents typos and makes refactoring easier.
  */
 public final class ViewAttributes {
@@ -9,6 +9,11 @@ public final class ViewAttributes {
     private ViewAttributes() {
         // Prevent instantiation
     }
+
+    // --- Redirect Paths ---
+    public static final String REDIRECT_DASHBOARD = "redirect:/dj/dashboard";
+    public static final String REDIRECT_LOGIN = "redirect:/login";
+    public static final String REDIRECT_HOME = "redirect:/";
 
     // --- Common Attributes ---
     public static final String GLOBAL_VIBE = "globalVibe";
@@ -21,6 +26,10 @@ public final class ViewAttributes {
     public static final String IS_SPOTIFY_CONNECTED = "isSpotifyConnected";
     public static final String HISTORY = "history";
     public static final String QR_CODE_BASE64 = "qrCodeBase64";
+    public static final String PERMANENT_LINK = "permanentLink";
+    public static final String REQUEST_LIMIT = "requestLimit";
+    public static final String COOLDOWN_MINUTES = "cooldownMinutes";
+    public static final String DUPLICATE_CHECK_WINDOW = "duplicateCheckWindow";
 
     // --- Index/Guest Attributes ---
     public static final String PUBLIC_QUEUE = "publicQueue";

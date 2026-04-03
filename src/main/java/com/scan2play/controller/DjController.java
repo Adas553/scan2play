@@ -44,6 +44,7 @@ import static com.scan2play.controller.ViewAttributes.*;
 public class DjController {
 
     private static final String SESSION_PARTY_CODE = "djPartyCode";
+    private static final String GOOGLE_REGISTRATION_ID = "google";
 
     private final DjService djService;
     private final PartySettingsQueryService partySettingsQueryService;
@@ -76,7 +77,7 @@ public class DjController {
     @GetMapping("/dashboard")
     public String dashboard(Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication == null) {
-            return "redirect:/login"; 
+            return REDIRECT_LOGIN; 
         }
 
         PartySettingsEntity settings = getPartySettings(authentication, session);
@@ -92,15 +93,15 @@ public class DjController {
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
-        model.addAttribute("requestLimit", settings.getRequestLimit());
-        model.addAttribute("cooldownMinutes", settings.getCooldownMinutes());
-        model.addAttribute("duplicateCheckWindow", settings.getDuplicateCheckWindow());
+        model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
+        model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
+        model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
 
         // --- QR Code ---
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;
         String qrCodeBase64Str = qrCodeService.generateQrCodeBase64(guestUrl, 250, 250);
         model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
-        model.addAttribute("permanentLink", guestUrl);
+        model.addAttribute(PERMANENT_LINK, guestUrl);
 
         // --- Active Queue (Accepted songs only) ---
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
@@ -117,7 +118,7 @@ public class DjController {
             PartySettingsEntity settings = getPartySettings(authentication, session);
             partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
         }
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 
     /**
@@ -130,7 +131,7 @@ public class DjController {
     @GetMapping("/history-view")
     public String historyView(Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication == null) {
-            return "redirect:/login";
+            return REDIRECT_LOGIN;
         }
         PartySettingsEntity settings = getPartySettings(authentication, session);
         String partyCode = settings.getPartyCode();
@@ -205,7 +206,7 @@ public class DjController {
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe) {
         partySettingsCommandService.updateSettings(partyCode, s -> s.setGlobalVibe(newVibe));
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 
     /**
@@ -233,7 +234,7 @@ public class DjController {
             s.setCooldownMinutes(safeCooldownMinutes);
             s.setDuplicateCheckWindow(safeDuplicateCheckWindow);
         });
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 
     /**
@@ -245,7 +246,7 @@ public class DjController {
     @PostMapping("/dashboard/play")
     public String markAsPlayed(@RequestParam Long id) {
         djService.markSongAsPlayed(id);
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
     
     /**
@@ -257,7 +258,7 @@ public class DjController {
     @PostMapping("/requests/{id}/push-to-spotify")
     public String pushToSpotify(@PathVariable Long id) {
         djService.pushToSpotify(id);
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 
     /**
@@ -274,7 +275,7 @@ public class DjController {
                     : PlaybackMode.AUTO;
             s.setPlaybackMode(newMode);
         });
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 
     /**
@@ -291,7 +292,7 @@ public class DjController {
         if (songName != null && !songName.isBlank()) {
             djService.addDjPick(partyCode, songName.trim());
         }
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 
     /**
@@ -307,7 +308,7 @@ public class DjController {
             PartySettingsEntity settings = getPartySettings(authentication, session);
             partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
         }
-        return "redirect:/dj/dashboard";
+        return REDIRECT_DASHBOARD;
     }
 
     /**
@@ -347,7 +348,7 @@ public class DjController {
      */
     private MusicProviderType resolveProviderFromAuth(OAuth2AuthenticationToken authentication) {
         String registrationId = authentication.getAuthorizedClientRegistrationId();
-        return "google".equalsIgnoreCase(registrationId)
+        return GOOGLE_REGISTRATION_ID.equalsIgnoreCase(registrationId)
                 ? MusicProviderType.YOUTUBE
                 : MusicProviderType.SPOTIFY;
     }

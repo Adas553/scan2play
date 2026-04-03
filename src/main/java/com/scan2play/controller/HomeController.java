@@ -5,6 +5,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
+
 @Controller
 @Slf4j
 public class HomeController {
@@ -13,7 +15,7 @@ public class HomeController {
     public String home(Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()) {
             log.info("User already authenticated, redirecting to dashboard");
-            return "redirect:/dj/dashboard";
+            return REDIRECT_DASHBOARD;
         }
         return "landing";
     }

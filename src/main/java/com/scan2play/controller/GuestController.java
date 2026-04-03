@@ -48,7 +48,7 @@ public class GuestController {
             return "index";
         } catch (IllegalArgumentException e) {
             log.warn("Invalid party code access attempt: {}", partyCode);
-            return "redirect:/";
+            return REDIRECT_HOME;
         }
     }
 
@@ -90,7 +90,7 @@ public class GuestController {
                 return "result";
             } catch (IllegalArgumentException e) {
                 log.warn("Song request for unknown party code: {}", partyCode);
-                return "redirect:/";
+                return REDIRECT_HOME;
             }
         };
     }
