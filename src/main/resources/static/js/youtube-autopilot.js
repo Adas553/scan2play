@@ -26,6 +26,9 @@
  *   - Playlist position is saved on exit and resumed on re-entry,
  *     so the DJ doesn't hear the same first song every time.
  *   - When the guest queue empties again, fallback resumes from where it left off.
+ *   - Loop is always enabled on fallback playlists. Shuffle is configurable
+ *     by the DJ via a toggle on the dashboard. Both are applied via
+ *     setShuffle() / setLoop(true) on first PLAYING event after loadPlaylist().
  *
  * Quota optimization:
  *   Video URLs are resolved server-side via YouTube Data API v3 with 24h caching.
@@ -33,16 +36,17 @@
  *
  * Dependencies (DOM):
  *   - <div id="yt-player">            YouTube IFrame container
- *   - <div id="yt-player-card">       data-fallback-playlist attribute (playlist ID)
+ *   - <div id="yt-player-card">       data-fallback-playlist, data-fallback-shuffle attributes
  *   - <meta name="_csrf">             CSRF token
  *   - <meta name="_csrf_header">      CSRF header name
  *   - <tbody id="song-list">          with data-playback-mode attribute
  *   - Each <tr> has: data-song-id, data-song-name, data-track-url
  *
  * Exposes (global):
- *   - window.checkYouTubeAutoPlay     — called by polling after table refresh
+ *   - window.checkYouTubeAutoPlay      — called by polling after table refresh
  *   - window.playInEmbeddedPlayer(url) — called by ▶ YOUTUBE link click handler
  *   - window.updateFallbackSource(id)  — called after AJAX save with server-extracted ID
+ *   - window.updateFallbackShuffle(b)  — called after DJ toggles the shuffle checkbox
  *   - window.stopFallback()            — called by the Stop button on dashboard
  */
 (function() {
@@ -60,12 +64,14 @@
     let guestSongCheckInterval = null;   // 500ms interval for detecting fallback track end
     let lastFallbackIndex = 0;           // resume position in fallback playlist
     let fallbackTrackIndex = -1;         // current playlist index — for detecting auto-advance
+    let pendingPlaylistSetup = false;    // true after loadPlaylist() — apply shuffle+loop on first PLAYING event
     const markedAsPlayedIds = new Set();
     const skippedSongIds   = new Set();  // Songs without a valid video URL
 
-    // ---- Fallback Playlist ID (mutable — updated via window.updateFallbackSource) ----
+    // ---- Fallback Playlist ID & Shuffle (mutable — updated via window.updateFallbackSource / toggleShuffle) ----
     const playerCard = document.getElementById('yt-player-card');
     let fallbackPlaylistId = playerCard ? (playerCard.getAttribute('data-fallback-playlist') || null) : null;
+    let shuffleEnabled = playerCard ? (playerCard.getAttribute('data-fallback-shuffle') === 'true') : true;
 
     // ---- CSRF (reuse from meta tags) ----
     const csrf = {
@@ -212,6 +218,17 @@
                 fallbackTrackIndex = currentPlaylistIndex;
             }
 
+            // ---- Apply shuffle + loop once playlist is loaded and playing ----
+            // setShuffle() and setLoop() are only accepted by the YouTube API
+            // AFTER the playlist is fully loaded — calling them right after
+            // loadPlaylist() is unreliable. We defer to the first PLAYING event.
+            if (pendingPlaylistSetup && isFallbackMode && !fallbackIsVideo) {
+                pendingPlaylistSetup = false;
+                player.setShuffle(shuffleEnabled);
+                player.setLoop(true);
+                console.log('[YT Auto-Pilot] Playlist setup: shuffle=' + shuffleEnabled + ', loop=true');
+            }
+
             if (isFallbackMode) {
                 console.log('[YT Auto-Pilot] Fallback playlist track playing');
             }
@@ -273,10 +290,11 @@
         isLoadingSong = false;
         isFallbackMode = false;
         fallbackIsVideo = false;
+        pendingPlaylistSetup = false;
         stopGuestSongWatcher();
     }
 
-    // ---- Core Auto-Pilot Logic ----
+
 
     /** Saves the current fallback playlist index so we can resume later. */
     function saveFallbackPosition() {
@@ -389,11 +407,13 @@
             console.log('[YT Auto-Pilot] Queue empty, starting fallback video (loop): ' + videoId);
             player.loadVideoById({ videoId: videoId });
             fallbackIsVideo = true;
+            pendingPlaylistSetup = false;
         } else {
-            // Playlist fallback — resume from last position
+            // Playlist fallback — resume from last position, shuffle+loop applied on PLAYING event
             console.log('[YT Auto-Pilot] Queue empty, starting fallback playlist at index ' + lastFallbackIndex + ': ' + fallbackPlaylistId);
             player.loadPlaylist({ list: fallbackPlaylistId, listType: 'playlist', index: lastFallbackIndex });
             fallbackIsVideo = false;
+            pendingPlaylistSetup = true;
         }
     }
 
@@ -473,6 +493,7 @@
         }
         stopGuestSongWatcher();
         lastFallbackIndex = 0; // new source — start from beginning
+        pendingPlaylistSetup = false;
 
         fallbackPlaylistId = newId;
 
@@ -509,12 +530,33 @@
         isLoadingSong = false;
         fallbackPlaylistId = null;
         lastFallbackIndex = 0;
+        pendingPlaylistSetup = false;
         stopGuestSongWatcher();
 
         if (playerCard) {
             playerCard.removeAttribute('data-fallback-playlist');
         }
         console.log('[YT Auto-Pilot] Fallback stopped and cleared');
+    };
+
+    /**
+     * Updates the shuffle setting at runtime (called after DJ toggles the checkbox).
+     * If a fallback playlist is currently playing, applies setShuffle() immediately.
+     *
+     * @param {boolean} enabled true = shuffle on, false = sequential order.
+     */
+    window.updateFallbackShuffle = function(enabled) {
+        shuffleEnabled = !!enabled;
+        if (playerCard) {
+            playerCard.setAttribute('data-fallback-shuffle', String(shuffleEnabled));
+        }
+        // Apply immediately if a playlist is currently loaded and playing
+        if (isFallbackMode && !fallbackIsVideo && player && typeof player.setShuffle === 'function') {
+            player.setShuffle(shuffleEnabled);
+            console.log('[YT Auto-Pilot] Shuffle changed live to ' + shuffleEnabled);
+        } else {
+            console.log('[YT Auto-Pilot] Shuffle setting updated to ' + shuffleEnabled + ' (will apply on next playlist load)');
+        }
     };
 
     /** Called by polling (dashboard.js) after each table refresh. */

@@ -347,6 +347,42 @@ function stopFallbackPlaylist() {
 }
 
 // ==========================================================================
+// FALLBACK PLAYLIST — Shuffle toggle handler
+//
+// Toggles shuffle on/off server-side and updates the YouTube player live.
+// ==========================================================================
+
+function toggleFallbackShuffle() {
+    const checkbox = document.getElementById('fallbackShuffleToggle');
+    if (!checkbox) return;
+
+    const partyCode = document.getElementById('partyCode');
+    if (!partyCode) return;
+
+    const csrf = getCsrf();
+    const fd = new FormData();
+    fd.append('partyCode', partyCode.value);
+
+    fetch('/dj/dashboard/fallback-shuffle', {
+        method: 'POST',
+        headers: { [csrf.header]: csrf.token },
+        body: fd
+    }).then(function(response) {
+        if (response.ok) {
+            const newState = response.headers.get('X-Fallback-Shuffle') === 'true';
+            checkbox.checked = newState;
+            if (typeof window.updateFallbackShuffle === 'function') {
+                window.updateFallbackShuffle(newState);
+            }
+        }
+    }).catch(function(err) {
+        console.error('[Dashboard] Fallback shuffle toggle error:', err);
+        // Revert checkbox on error
+        checkbox.checked = !checkbox.checked;
+    });
+}
+
+// ==========================================================================
 // TABLE SORTING — persistent across polling refreshes
 //
 // How it works:

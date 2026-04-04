@@ -111,6 +111,14 @@
                             id="fallbackStopBtn" onclick="stopFallbackPlaylist()"
                             th:text="#{dashboard.fallback.stop}">⏹ Stop</button>
                 </form>
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="fallbackShuffleToggle"
+                           th:checked="${fallbackShuffle}"
+                           onchange="toggleFallbackShuffle()">
+                    <label class="form-check-label text-secondary small" for="fallbackShuffleToggle"
+                           th:text="#{dashboard.fallback.shuffle}">🔀 Shuffle</label>
+                </div>
             </div>
         </div>
 
@@ -142,7 +150,7 @@
 
     <!-- YouTube Player (only for YouTube provider) -->
     <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm" id="yt-player-card"
-         th:attr="data-fallback-playlist=${fallbackPlaylistId}">
+         th:attr="data-fallback-playlist=${fallbackPlaylistId},data-fallback-shuffle=${fallbackShuffle}">
         <h5 class="text-light mb-2">▶️ YouTube Player</h5>
         <div class="ratio ratio-16x9" style="max-width: 640px;">
             <div id="yt-player"></div>

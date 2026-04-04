@@ -61,6 +61,10 @@ public class PartySettingsEntity {
     @Column(length = 500)
     private String fallbackPlaylistUrl;
 
+    /** Whether the fallback playlist should play in shuffled order. Default: true. */
+    @Column(nullable = false)
+    private boolean fallbackShuffle = true;
+
     // --- Spotify OAuth2 Credentials ---
     @Column(length = 2048)
     private String spotifyAccessToken;

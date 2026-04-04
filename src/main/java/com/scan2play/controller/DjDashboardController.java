@@ -97,6 +97,7 @@ public class DjDashboardController {
         model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
         model.addAttribute(FALLBACK_PLAYLIST_ID, extractPlaylistId(settings.getFallbackPlaylistUrl()));
         model.addAttribute(FALLBACK_PLAYLIST_URL, settings.getFallbackPlaylistUrl());
+        model.addAttribute(FALLBACK_SHUFFLE, settings.isFallbackShuffle());
 
         // --- QR Code ---
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;

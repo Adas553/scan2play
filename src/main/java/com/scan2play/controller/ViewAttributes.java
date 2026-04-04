@@ -32,6 +32,7 @@ public final class ViewAttributes {
     public static final String DUPLICATE_CHECK_WINDOW = "duplicateCheckWindow";
     public static final String FALLBACK_PLAYLIST_ID = "fallbackPlaylistId";
     public static final String FALLBACK_PLAYLIST_URL = "fallbackPlaylistUrl";
+    public static final String FALLBACK_SHUFFLE = "fallbackShuffle";
 
     // --- Index/Guest Attributes ---
     public static final String PUBLIC_QUEUE = "publicQueue";

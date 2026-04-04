@@ -141,6 +141,22 @@ public class DjPartySettingsController {
     }
 
     /**
+     * Toggles shuffle mode for the fallback playlist.
+     * Returns 200 OK with the new shuffle state in the {@code X-Fallback-Shuffle} header.
+     */
+    @PostMapping("/dashboard/fallback-shuffle")
+    public ResponseEntity<Void> toggleFallbackShuffle(@RequestParam String partyCode) {
+        PartySettingsEntity updated = partySettingsCommandService.updateSettings(partyCode,
+                s -> s.setFallbackShuffle(!s.isFallbackShuffle()));
+
+        log.info("Party [{}]: Fallback shuffle toggled to {}", partyCode, updated.isFallbackShuffle());
+
+        return ResponseEntity.ok()
+                .header("X-Fallback-Shuffle", String.valueOf(updated.isFallbackShuffle()))
+                .build();
+    }
+
+    /**
      * Deletes all data associated with the currently logged-in DJ account.
      * Required by Google API Services User Data Policy — users must be able to delete their data.
      * After deletion, the session is invalidated and the user is redirected to the home page.
