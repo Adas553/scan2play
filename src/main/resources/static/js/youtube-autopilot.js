@@ -42,7 +42,7 @@
  * Exposes (global):
  *   - window.checkYouTubeAutoPlay     — called by polling after table refresh
  *   - window.playInEmbeddedPlayer(url) — called by ▶ YOUTUBE link click handler
- *   - window.updateFallbackSource(url) — called after AJAX save of fallback URL
+ *   - window.updateFallbackSource(id)  — called after AJAX save with server-extracted ID
  *   - window.stopFallback()            — called by the Stop button on dashboard
  */
 (function() {
@@ -59,6 +59,7 @@
     let guestSongPending = false;        // true when a guest song arrived during fallback playback
     let guestSongCheckInterval = null;   // 500ms interval for detecting fallback track end
     let lastFallbackIndex = 0;           // resume position in fallback playlist
+    let fallbackTrackIndex = -1;         // current playlist index — for detecting auto-advance
     const markedAsPlayedIds = new Set();
     const skippedSongIds   = new Set();  // Songs without a valid video URL
 
@@ -98,6 +99,32 @@
         if (!url) return null;
         const m = url.match(/[?&]v=([A-Za-z0-9_-]{11})/);
         return m ? m[1] : null;
+    }
+
+    /**
+     * Removes stale IDs from markedAsPlayedIds and skippedSongIds that are
+     * no longer present in the queue table. Prevents unbounded Set growth
+     * during long party sessions (8+ hours). Called periodically from tryAutoPlay.
+     */
+    let lastPruneTime = 0;
+    function pruneStaleIds() {
+        const now = Date.now();
+        if (now - lastPruneTime < 60000) return; // at most once per minute
+        lastPruneTime = now;
+
+        const tbody = document.getElementById('song-list');
+        if (!tbody) return;
+        const currentIds = new Set();
+        const rows = tbody.querySelectorAll('tr[data-song-id]');
+        for (let i = 0; i < rows.length; i++) {
+            currentIds.add(rows[i].getAttribute('data-song-id'));
+        }
+        for (const id of markedAsPlayedIds) {
+            if (!currentIds.has(id)) markedAsPlayedIds.delete(id);
+        }
+        for (const id of skippedSongIds) {
+            if (!currentIds.has(id)) skippedSongIds.delete(id);
+        }
     }
 
     /** POST to mark a song as played in the database. */
@@ -152,6 +179,36 @@
                 console.log('[YT Auto-Pilot] Now playing, marked ID=' + currentlyPlayingSongId + ' as PLAYED');
             }
 
+            // ---- Playlist auto-advance guard ----
+            // YouTube keeps a playlist loaded even after stopVideo(), so if the DJ
+            // clicks the native play button the playlist resumes and auto-advances
+            // between tracks. This guard runs REGARDLESS of isFallbackMode to catch
+            // unmanaged playlist playback when Auto-Pilot is OFF.
+            // It also handles the original case when isFallbackMode is still true.
+            const currentPlaylistIndex = (typeof player.getPlaylistIndex === 'function')
+                    ? player.getPlaylistIndex() : -1;
+
+            if (currentPlaylistIndex >= 0 && !fallbackIsVideo) {
+                const tbody = document.getElementById('song-list');
+                const autoPilotOn = tbody && tbody.getAttribute('data-playback-mode') === 'AUTO';
+                const indexChanged = fallbackTrackIndex >= 0 && currentPlaylistIndex !== fallbackTrackIndex;
+
+                if (!autoPilotOn && indexChanged && !currentlyPlayingSongId) {
+                    console.log('[YT Auto-Pilot] Playlist auto-advanced with Auto-Pilot OFF — stopping');
+                    saveFallbackPosition();
+                    player.stopVideo();
+                    playerState = -1;
+                    isFallbackMode = false;
+                    fallbackIsVideo = false;
+                    guestSongPending = false;
+                    stopGuestSongWatcher();
+                    return;
+                }
+
+                // Track playlist index for next auto-advance detection
+                fallbackTrackIndex = currentPlaylistIndex;
+            }
+
             if (isFallbackMode) {
                 console.log('[YT Auto-Pilot] Fallback playlist track playing');
             }
@@ -159,8 +216,11 @@
 
         if (event.data === YT.PlayerState.ENDED) {
             if (isFallbackMode) {
-                // Fallback song ended — check if a guest song is waiting
-                const nextGuest = findNextGuestSong();
+                // Check if Auto-Pilot is still enabled before switching to guest songs
+                const tbody = document.getElementById('song-list');
+                const autoPilotOn = tbody && tbody.getAttribute('data-playback-mode') === 'AUTO';
+
+                const nextGuest = autoPilotOn ? findNextGuestSong() : null;
                 if (nextGuest) {
                     // Guest song arrived! Save position, exit fallback, play guest
                     console.log('[YT Auto-Pilot] Fallback song ended, guest song waiting — switching to guest queue');
@@ -173,6 +233,16 @@
                     currentlyPlayingSongId = null;
                     isLoadingSong = false;
                     playGuestSong(nextGuest);
+                } else if (!autoPilotOn) {
+                    // Auto-Pilot OFF — track finished naturally, don't auto-advance
+                    console.log('[YT Auto-Pilot] Fallback track ended, Auto-Pilot OFF — stopping');
+                    saveFallbackPosition();
+                    stopGuestSongWatcher();
+                    player.stopVideo();
+                    playerState = -1;
+                    isFallbackMode = false;
+                    fallbackIsVideo = false;
+                    guestSongPending = false;
                 } else if (fallbackIsVideo) {
                     // Single video fallback — loop it
                     console.log('[YT Auto-Pilot] Fallback video ended, replaying (loop)');
@@ -208,7 +278,7 @@
     /** Saves the current fallback playlist index so we can resume later. */
     function saveFallbackPosition() {
         if (!fallbackIsVideo && player && typeof player.getPlaylistIndex === 'function') {
-            var idx = player.getPlaylistIndex();
+            const idx = player.getPlaylistIndex();
             if (idx >= 0) {
                 lastFallbackIndex = idx + 1; // resume from next track
                 console.log('[YT Auto-Pilot] Saved fallback position: will resume at index ' + lastFallbackIndex);
@@ -237,26 +307,30 @@
         if (guestSongCheckInterval) return; // already watching
         guestSongCheckInterval = setInterval(function() {
             // Guard: stop watching if conditions no longer apply
-            if (!guestSongPending || !isFallbackMode || !player) {
+            const tbody = document.getElementById('song-list');
+            const autoPilotOff = !tbody || tbody.getAttribute('data-playback-mode') !== 'AUTO';
+            if (!guestSongPending || !isFallbackMode || !player || autoPilotOff) {
+                if (autoPilotOff) guestSongPending = false;
                 stopGuestSongWatcher();
                 return;
             }
             try {
-                var currentTime = player.getCurrentTime();
-                var duration = player.getDuration();
+                const currentTime = player.getCurrentTime();
+                const duration = player.getDuration();
                 // Switch when track is within 1.5 seconds of ending
                 if (duration > 0 && currentTime >= duration - 1.5) {
                     stopGuestSongWatcher();
                     saveFallbackPosition();
 
                     player.stopVideo();
+                    playerState = -1; // prevent stale state before async onStateChange fires
                     isFallbackMode = false;
                     fallbackIsVideo = false;
                     guestSongPending = false;
                     currentlyPlayingSongId = null;
                     isLoadingSong = false;
 
-                    var nextGuest = findNextGuestSong();
+                    const nextGuest = findNextGuestSong();
                     if (nextGuest) {
                         console.log('[YT Auto-Pilot] Fallback track ending — switching to guest song');
                         playGuestSong(nextGuest);
@@ -308,7 +382,7 @@
 
         if (fallbackPlaylistId.startsWith('V:')) {
             // Single video fallback — loop it
-            var videoId = fallbackPlaylistId.substring(2);
+            const videoId = fallbackPlaylistId.substring(2);
             console.log('[YT Auto-Pilot] Queue empty, starting fallback video (loop): ' + videoId);
             player.loadVideoById({ videoId: videoId });
             fallbackIsVideo = true;
@@ -328,6 +402,8 @@
      */
     function tryAutoPlay() {
         if (!playerReady || !player || isLoadingSong) return;
+
+        pruneStaleIds(); // clean up Sets periodically (at most once per minute)
 
         const tbody = document.getElementById('song-list');
         if (!tbody) return;
@@ -372,35 +448,15 @@
     // ---- Public API ----
 
     /**
-     * Extracts a playlist ID or video ID (V:-prefixed) from a raw YouTube URL.
-     * Mirrors the server-side DjDashboardController.extractPlaylistId() logic.
-     */
-    function extractFallbackId(input) {
-        if (!input || !input.trim()) return null;
-        // Priority 1: playlist ID from URL (?list=PLxxx)
-        var m = input.match(/[?&]list=([A-Za-z0-9_-]+)/);
-        if (m) return m[1];
-        // Priority 2: video ID from watch URL (?v=xxx)
-        m = input.match(/[?&]v=([A-Za-z0-9_-]{11})/);
-        if (m) return 'V:' + m[1];
-        // Priority 3: video ID from short URL (youtu.be/xxx)
-        m = input.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
-        if (m) return 'V:' + m[1];
-        // Priority 4: raw 11-char video ID
-        var trimmed = input.trim();
-        if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return 'V:' + trimmed;
-        // Otherwise treat as raw playlist ID
-        return trimmed;
-    }
-
-    /**
      * Updates the fallback source dynamically (called after AJAX save).
      * If auto-pilot is enabled and the queue is empty, starts fallback immediately.
      *
-     * @param rawUrl the raw YouTube URL/ID entered by the DJ (null/empty = clear)
+     * @param extractedId the playlist/video ID extracted by the server (empty string = clear).
+     *                    Server handles all URL parsing in DjDashboardController.extractPlaylistId()
+     *                    — single source of truth, no client-side duplication.
      */
-    window.updateFallbackSource = function(rawUrl) {
-        var newId = extractFallbackId(rawUrl);
+    window.updateFallbackSource = function(extractedId) {
+        const newId = extractedId || null;
 
         // Stop current fallback if playing
         if (isFallbackMode && player) {

@@ -8,6 +8,7 @@ import com.scan2play.service.PartySettingsCommandService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -111,19 +112,32 @@ public class DjPartySettingsController {
     /**
      * Saves or clears the YouTube fallback playlist URL.
      * When the guest queue is empty, Auto-Pilot plays this playlist as background music.
+     * <p>
+     * Returns 200 OK with the extracted playlist/video ID in the {@code X-Fallback-Id}
+     * response header. The client-side Auto-Pilot reads this header directly — URL parsing
+     * logic lives exclusively in {@link DjDashboardController#extractPlaylistId(String)}.
+     * <p>
+     * This endpoint is YouTube-only. All YouTube dashboard forms are AJAX-intercepted,
+     * so a redirect is not needed (the AJAX handler reads the header instead).
      *
      * @param partyCode          The unique code of the party.
      * @param fallbackPlaylistUrl YouTube playlist URL or ID (blank = clear).
      */
     @PostMapping("/dashboard/fallback-playlist")
-    public String updateFallbackPlaylist(@RequestParam String partyCode,
-                                         @RequestParam(required = false) String fallbackPlaylistUrl) {
+    public ResponseEntity<Void> updateFallbackPlaylist(@RequestParam String partyCode,
+                                                       @RequestParam(required = false) String fallbackPlaylistUrl) {
         String sanitized = (fallbackPlaylistUrl != null && !fallbackPlaylistUrl.isBlank())
                 ? fallbackPlaylistUrl.trim()
                 : null;
         partySettingsCommandService.updateSettings(partyCode, s -> s.setFallbackPlaylistUrl(sanitized));
-        log.info("Party [{}]: Fallback playlist updated to: {}", partyCode, sanitized != null ? sanitized : "(cleared)");
-        return REDIRECT_DASHBOARD;
+
+        String extractedId = DjDashboardController.extractPlaylistId(sanitized);
+        log.info("Party [{}]: Fallback playlist updated to: {} (extracted: {})",
+                partyCode, sanitized != null ? sanitized : "(cleared)", extractedId);
+
+        return ResponseEntity.ok()
+                .header("X-Fallback-Id", extractedId != null ? extractedId : "")
+                .build();
     }
 
     /**

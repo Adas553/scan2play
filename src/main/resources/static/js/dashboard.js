@@ -74,7 +74,7 @@ function isYouTubeProvider() {
             headers: { [csrf.header]: csrf.token },
             body: new FormData(form),
             redirect: 'manual'
-        }).then(function() {
+        }).then(function(response) {
             // --- Party state toggle (end/start party) ---
             if (action.includes('/end-party') || action.includes('/start-party')) {
                 const isEnding = action.includes('/end-party');
@@ -87,14 +87,16 @@ function isYouTubeProvider() {
 
             // --- Fallback playlist save ---
             if (action.includes('/fallback-playlist')) {
-                const input = form.querySelector('input[name="fallbackPlaylistUrl"]');
-                if (input && typeof window.updateFallbackSource === 'function') {
-                    window.updateFallbackSource(input.value);
+                // Server returns the extracted playlist/video ID in X-Fallback-Id header
+                // so we don't need to duplicate the URL parsing logic client-side.
+                const extractedId = response.headers.get('X-Fallback-Id') || '';
+                if (typeof window.updateFallbackSource === 'function') {
+                    window.updateFallbackSource(extractedId);
                 }
-                // Show/hide the stop button based on whether a URL is set
+                // Show/hide the stop button based on whether an ID was extracted
                 const stopBtn = document.getElementById('fallbackStopBtn');
                 if (stopBtn) {
-                    stopBtn.classList.toggle('d-none', !input || !input.value.trim());
+                    stopBtn.classList.toggle('d-none', !extractedId);
                 }
             }
 
@@ -337,8 +339,7 @@ function stopFallbackPlaylist() {
         fetch('/dj/dashboard/fallback-playlist', {
             method: 'POST',
             headers: { [csrf.header]: csrf.token },
-            body: fd,
-            redirect: 'manual'
+            body: fd
         }).catch(function(err) {
             console.error('[Dashboard] Fallback clear error:', err);
         });
