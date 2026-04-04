@@ -56,6 +56,11 @@ public class PartySettingsEntity {
     @Column(nullable = false)
     private int duplicateCheckWindow = 15;
 
+    // --- YouTube Fallback Playlist ---
+    /** YouTube playlist URL played automatically when the guest queue is empty (YouTube provider only). */
+    @Column(length = 500)
+    private String fallbackPlaylistUrl;
+
     // --- Spotify OAuth2 Credentials ---
     @Column(length = 2048)
     private String spotifyAccessToken;

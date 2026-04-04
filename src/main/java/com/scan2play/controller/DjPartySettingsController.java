@@ -109,6 +109,24 @@ public class DjPartySettingsController {
     }
 
     /**
+     * Saves or clears the YouTube fallback playlist URL.
+     * When the guest queue is empty, Auto-Pilot plays this playlist as background music.
+     *
+     * @param partyCode          The unique code of the party.
+     * @param fallbackPlaylistUrl YouTube playlist URL or ID (blank = clear).
+     */
+    @PostMapping("/dashboard/fallback-playlist")
+    public String updateFallbackPlaylist(@RequestParam String partyCode,
+                                         @RequestParam(required = false) String fallbackPlaylistUrl) {
+        String sanitized = (fallbackPlaylistUrl != null && !fallbackPlaylistUrl.isBlank())
+                ? fallbackPlaylistUrl.trim()
+                : null;
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setFallbackPlaylistUrl(sanitized));
+        log.info("Party [{}]: Fallback playlist updated to: {}", partyCode, sanitized != null ? sanitized : "(cleared)");
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
      * Deletes all data associated with the currently logged-in DJ account.
      * Required by Google API Services User Data Policy — users must be able to delete their data.
      * After deletion, the session is invalidated and the user is redirected to the home page.

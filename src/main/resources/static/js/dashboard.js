@@ -85,6 +85,19 @@ function isYouTubeProvider() {
                 return; // no flash needed for these buttons
             }
 
+            // --- Fallback playlist save ---
+            if (action.includes('/fallback-playlist')) {
+                const input = form.querySelector('input[name="fallbackPlaylistUrl"]');
+                if (input && typeof window.updateFallbackSource === 'function') {
+                    window.updateFallbackSource(input.value);
+                }
+                // Show/hide the stop button based on whether a URL is set
+                const stopBtn = document.getElementById('fallbackStopBtn');
+                if (stopBtn) {
+                    stopBtn.classList.toggle('d-none', !input || !input.value.trim());
+                }
+            }
+
             // Flash the submit button green briefly as confirmation
             const btn = form.querySelector('button[type="submit"]');
             if (btn) {
@@ -292,6 +305,44 @@ function copyPartyLink() {
         input.setSelectionRange(0, 99999);
         document.execCommand('copy');
     });
+}
+
+// ==========================================================================
+// FALLBACK PLAYLIST — Stop button handler
+//
+// Clears the fallback URL server-side, stops local playback, and resets UI.
+// ==========================================================================
+
+function stopFallbackPlaylist() {
+    // Stop local playback
+    if (typeof window.stopFallback === 'function') {
+        window.stopFallback();
+    }
+
+    // Clear the input field
+    const input = document.getElementById('fallbackInput');
+    if (input) input.value = '';
+
+    // Hide the stop button
+    const stopBtn = document.getElementById('fallbackStopBtn');
+    if (stopBtn) stopBtn.classList.add('d-none');
+
+    // Clear server-side via AJAX POST
+    const partyCode = document.getElementById('partyCode');
+    if (partyCode) {
+        const csrf = getCsrf();
+        const fd = new FormData();
+        fd.append('partyCode', partyCode.value);
+        fd.append('fallbackPlaylistUrl', '');
+        fetch('/dj/dashboard/fallback-playlist', {
+            method: 'POST',
+            headers: { [csrf.header]: csrf.token },
+            body: fd,
+            redirect: 'manual'
+        }).catch(function(err) {
+            console.error('[Dashboard] Fallback clear error:', err);
+        });
+    }
 }
 
 // ==========================================================================

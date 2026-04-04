@@ -93,6 +93,25 @@
                     </div>
                 </form>
             </div>
+
+            <!-- Fallback Playlist (YouTube only) — background music when guest queue is empty -->
+            <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
+                <h6 class="text-light mb-2">🎶 <span th:text="#{dashboard.fallback.title}">Fallback Playlist</span></h6>
+                <p class="text-secondary small mb-2" th:text="#{dashboard.fallback.help}">Plays automatically when the guest queue is empty.</p>
+                <form th:action="@{/dj/dashboard/fallback-playlist}" method="POST" class="d-flex gap-2" id="fallbackForm">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <input type="text" name="fallbackPlaylistUrl" id="fallbackInput"
+                           class="form-control form-control-sm bg-black text-light border-secondary flex-grow-1"
+                           th:placeholder="#{dashboard.fallback.placeholder}"
+                           th:value="${fallbackPlaylistUrl}" autocomplete="off">
+                    <button type="submit" class="btn btn-sm btn-outline-light flex-shrink-0"
+                            th:text="#{dashboard.fallback.save}">Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                            th:classappend="${fallbackPlaylistId == null ? 'd-none' : ''}"
+                            id="fallbackStopBtn" onclick="stopFallbackPlaylist()"
+                            th:text="#{dashboard.fallback.stop}">⏹ Stop</button>
+                </form>
+            </div>
         </div>
 
         <!-- QR Code Section -->
@@ -122,7 +141,8 @@
     </div>
 
     <!-- YouTube Player (only for YouTube provider) -->
-    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm" id="yt-player-card">
+    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm" id="yt-player-card"
+         th:attr="data-fallback-playlist=${fallbackPlaylistId}">
         <h5 class="text-light mb-2">▶️ YouTube Player</h5>
         <div class="ratio ratio-16x9" style="max-width: 640px;">
             <div id="yt-player"></div>

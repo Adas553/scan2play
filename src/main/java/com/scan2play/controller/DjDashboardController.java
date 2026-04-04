@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Controller responsible for DJ dashboard views and AJAX polling endpoints.
  * <p>
@@ -37,6 +40,15 @@ import static com.scan2play.controller.ViewAttributes.*;
 @RequiredArgsConstructor
 @Slf4j
 public class DjDashboardController {
+
+    /** Extracts YouTube playlist ID from a full URL (e.g. ?list=PLxxxxxx). */
+    private static final Pattern PLAYLIST_ID_PATTERN = Pattern.compile("[?&]list=([A-Za-z0-9_-]+)");
+
+    /** Extracts YouTube video ID from watch URLs (e.g. ?v=xxxxx). */
+    private static final Pattern VIDEO_ID_V_PATTERN = Pattern.compile("[?&]v=([A-Za-z0-9_-]{11})");
+
+    /** Extracts YouTube video ID from short URLs (e.g. youtu.be/xxxxx). */
+    private static final Pattern VIDEO_ID_SHORT_PATTERN = Pattern.compile("youtu\\.be/([A-Za-z0-9_-]{11})");
 
     private final DjService djService;
     private final PartySettingsQueryService partySettingsQueryService;
@@ -83,6 +95,8 @@ public class DjDashboardController {
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
+        model.addAttribute(FALLBACK_PLAYLIST_ID, extractPlaylistId(settings.getFallbackPlaylistUrl()));
+        model.addAttribute(FALLBACK_PLAYLIST_URL, settings.getFallbackPlaylistUrl());
 
         // --- QR Code ---
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;
@@ -155,6 +169,46 @@ public class DjDashboardController {
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
+    }
+
+    /**
+     * Extracts a YouTube playlist ID or video ID from a URL or raw input.
+     * <p>
+     * Supported formats:
+     * <ul>
+     *     <li>Playlist URL: {@code https://youtube.com/playlist?list=PLxxx} → {@code PLxxx}</li>
+     *     <li>Watch URL with playlist: {@code https://youtube.com/watch?v=abc&list=PLxxx} → {@code PLxxx}</li>
+     *     <li>Watch URL (single video): {@code https://youtube.com/watch?v=KD5fLb-WgBU} → {@code V:KD5fLb-WgBU}</li>
+     *     <li>Short URL: {@code https://youtu.be/KD5fLb-WgBU?si=...} → {@code V:KD5fLb-WgBU}</li>
+     *     <li>Raw playlist ID: {@code PLxxx} → {@code PLxxx}</li>
+     *     <li>Raw video ID (11 chars): {@code KD5fLb-WgBU} → {@code V:KD5fLb-WgBU}</li>
+     * </ul>
+     * Video IDs are prefixed with {@code V:} so the frontend can distinguish them from playlist IDs
+     * and use the correct YouTube IFrame Player API method.
+     *
+     * @return extracted ID (with {@code V:} prefix for single videos), or null if input is blank.
+     */
+    static String extractPlaylistId(String input) {
+        if (input == null || input.isBlank()) return null;
+
+        // Priority 1: playlist ID from URL (?list=PLxxx)
+        Matcher playlistMatcher = PLAYLIST_ID_PATTERN.matcher(input);
+        if (playlistMatcher.find()) return playlistMatcher.group(1);
+
+        // Priority 2: video ID from watch URL (?v=xxx)
+        Matcher videoMatcher = VIDEO_ID_V_PATTERN.matcher(input);
+        if (videoMatcher.find()) return "V:" + videoMatcher.group(1);
+
+        // Priority 3: video ID from short URL (youtu.be/xxx)
+        Matcher shortMatcher = VIDEO_ID_SHORT_PATTERN.matcher(input);
+        if (shortMatcher.find()) return "V:" + shortMatcher.group(1);
+
+        // Priority 4: raw input — check if it looks like a video ID (exactly 11 chars, valid charset)
+        String trimmed = input.trim();
+        if (trimmed.matches("[A-Za-z0-9_-]{11}")) return "V:" + trimmed;
+
+        // Otherwise treat as raw playlist ID (existing behavior)
+        return trimmed;
     }
 }
 
