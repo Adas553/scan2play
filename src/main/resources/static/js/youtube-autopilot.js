@@ -195,7 +195,10 @@
 
                 if (!autoPilotOn && indexChanged && !currentlyPlayingSongId) {
                     console.log('[YT Auto-Pilot] Playlist auto-advanced with Auto-Pilot OFF — stopping');
-                    saveFallbackPosition();
+                    // Resume FROM this track when Auto-Pilot is re-enabled (don't skip it)
+                    lastFallbackIndex = currentPlaylistIndex;
+                    // Update tracked index so DJ can manually press play without re-triggering the guard
+                    fallbackTrackIndex = currentPlaylistIndex;
                     player.stopVideo();
                     playerState = -1;
                     isFallbackMode = false;
