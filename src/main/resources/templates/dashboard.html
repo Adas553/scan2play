@@ -165,10 +165,12 @@
         <form th:action="@{/dj/dashboard/dj-pick}" method="POST"
               class="d-flex gap-2 reset-on-success" id="dj-pick-form">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
-            <input type="text" name="songName"
-                   class="form-control bg-black text-light border-secondary flex-grow-1"
-                   th:placeholder="#{dashboard.djpick.placeholder}"
-                   autocomplete="off" required maxlength="200">
+            <div class="song-autocomplete-wrapper flex-grow-1">
+                <input type="text" id="djPickInput" name="songName"
+                       class="form-control bg-black text-light border-secondary w-100"
+                       th:placeholder="#{dashboard.djpick.placeholder}"
+                       data-autocomplete="songs" required maxlength="200">
+            </div>
             <button type="submit" class="btn btn-outline-danger flex-shrink-0"
                     th:text="#{dashboard.djpick.button}">Add to Queue</button>
         </form>
@@ -246,6 +248,9 @@
 
 <!-- Dashboard core JS (polling, AJAX forms, tabs, clipboard) -->
 <script src="/js/dashboard.js"></script>
+
+<!-- Song Autocomplete — DJ Pick form (iTunes Search API, no backend queries) -->
+<script src="/js/song-autocomplete.js"></script>
 
 <!-- YouTube Auto-Pilot (only loaded for YouTube provider) -->
 <th:block th:if="${activeProvider.name() == 'YOUTUBE'}">

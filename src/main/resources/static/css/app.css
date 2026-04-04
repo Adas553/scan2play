@@ -277,6 +277,79 @@ th[data-sort].sort-desc::after {
 }
 
 /* ==========================================================================
+ * 6b. SONG AUTOCOMPLETE DROPDOWN — index.html (guest page)
+ *     Floats below #songInput. Zero server involvement — iTunes API only.
+ * ========================================================================== */
+.song-autocomplete-wrapper {
+    position: relative;        /* anchor for the absolutely-positioned dropdown */
+}
+
+.song-autocomplete-dropdown {
+    display: none;               /* hidden by default; .is-open shows it */
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: #1a1a1a;
+    border: 1px solid var(--s2p-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+    max-height: 320px;
+    overflow-y: auto;
+    animation: acFadeIn 0.12s ease;
+}
+.song-autocomplete-dropdown.is-open {
+    display: block;
+}
+@keyframes acFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Thin scrollbar for overflow */
+.song-autocomplete-dropdown::-webkit-scrollbar { width: 4px; }
+.song-autocomplete-dropdown::-webkit-scrollbar-track { background: transparent; }
+.song-autocomplete-dropdown::-webkit-scrollbar-thumb { background: var(--s2p-border); border-radius: 4px; }
+
+.song-autocomplete-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.1s;
+    color: var(--s2p-text);
+}
+.song-autocomplete-item:last-child {
+    border-bottom: none;
+}
+.song-autocomplete-item:hover,
+.song-autocomplete-item.is-active {
+    background: rgba(29, 185, 84, 0.12);  /* subtle green tint */
+    color: #fff;
+}
+.song-autocomplete-item .ac-artist {
+    color: var(--s2p-text-muted);
+    font-size: 0.82rem;
+}
+.song-autocomplete-item .ac-sep {
+    color: var(--s2p-border);
+    font-size: 0.82rem;
+}
+.song-autocomplete-item .ac-title {
+    font-weight: 600;
+    color: #fff;
+}
+.song-autocomplete-item:hover .ac-artist,
+.song-autocomplete-item.is-active .ac-artist {
+    color: var(--s2p-green);
+}
+
+/* ==========================================================================
  * 7. ERROR & STATUS PAGES
  *    Body class: .page-status  (shared centering for error + party_ended)
  *                .page-error   (error.html specifics)

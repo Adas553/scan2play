@@ -44,7 +44,11 @@
 
             <div class="mb-4">
                 <label for="songInput" class="form-label fw-bold" th:text="#{home.form.input.label}">Your choice</label>
-                <input type="text" id="songInput" name="songName" class="form-control" required>
+                <div class="song-autocomplete-wrapper">
+                    <input type="text" id="songInput" name="songName" class="form-control" required
+                           data-autocomplete="songs">
+                    <!-- Dropdown injected here by song-autocomplete.js -->
+                </div>
                 <div class="form-text text-white-50 mt-2" th:text="#{home.form.input.help}">Provide a title, artist, or just describe your mood!</div>
             </div>
 
@@ -106,6 +110,8 @@
         }
     });
 </script>
+
+<script src="/js/song-autocomplete.js"></script>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 
