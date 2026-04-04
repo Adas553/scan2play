@@ -15,6 +15,21 @@
         <div class="text-center mb-4">
             <h1 class="display-4 fw-bold" th:text="#{home.title}">🎵 Scan2Play</h1>
             <p class="text-secondary" th:text="#{home.subtitle}">What do you want to hear?</p>
+
+            <!-- YouTube branding badge — required by YouTube API Terms of Service (Section 4d) -->
+            <div th:if="${activeProvider != null and activeProvider.name() == 'YOUTUBE'}"
+                 class="d-inline-flex align-items-center gap-2 mt-2 px-3 py-1 rounded-pill"
+                 style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);">
+                <!-- Official YouTube "play button" logo (SVG inline — no external dependency) -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 20" height="18" aria-label="YouTube" role="img">
+                    <rect width="28" height="20" rx="4" fill="#FF0000"/>
+                    <polygon points="11,5 22,10 11,15" fill="white"/>
+                    <text x="32" y="15"
+                          font-family="Roboto,Arial,Helvetica,sans-serif"
+                          font-size="14" font-weight="bold" fill="white">YouTube</text>
+                </svg>
+                <span style="font-size: 0.72rem; color: #999; letter-spacing: 0.03em;">Powered by YouTube</span>
+            </div>
         </div>
 
         <div th:if="${errorMessage}" class="alert alert-danger text-center shadow-sm fw-bold" role="alert">

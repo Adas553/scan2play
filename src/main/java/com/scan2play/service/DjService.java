@@ -63,15 +63,16 @@ public class DjService {
     }
 
     /**
-     * Returns the accepted songs (waiting in queue) for the dashboard.
-     * Limited to the 100 most recent entries for performance.
+     * Returns the accepted songs (waiting in queue) for the dashboard in FIFO order.
+     * Oldest request is at the top — DJ sees what will be played next immediately.
+     * Limited to the 100 oldest pending entries for performance.
      *
      * @param partyCode The unique code of the party.
-     * @return List of accepted song requests (max 100).
+     * @return List of accepted song requests (max 100), oldest first.
      */
     @Cacheable(value = "dashboardQueue", key = "#partyCode")
     public List<SongRequestEntity> getDashboardQueue(String partyCode) {
-        return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+        return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 partyCode, List.of(DECISION_ACCEPTED)
         );
     }

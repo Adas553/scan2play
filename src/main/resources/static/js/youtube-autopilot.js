@@ -133,8 +133,9 @@
         const rows = tbody.querySelectorAll('tr[data-song-id]');
         if (rows.length === 0) return;
 
-        // Iterate from oldest (last row — table is sorted DESC) to newest
-        for (let i = rows.length - 1; i >= 0; i--) {
+        // Iterate from top to bottom — table is sorted ASC (oldest first),
+        // so row[0] is the oldest request and should be played next.
+        for (let i = 0; i < rows.length; i++) {
             const row    = rows[i];
             const songId = row.getAttribute('data-song-id');
             if (!songId) continue;

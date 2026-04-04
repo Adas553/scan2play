@@ -43,6 +43,7 @@ public class GuestController {
             }
             
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
+            model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
             model.addAttribute(PUBLIC_QUEUE, djService.getPublicQueue(partyCode));
             model.addAttribute(PARTY_CODE, partyCode);
             return "index";
