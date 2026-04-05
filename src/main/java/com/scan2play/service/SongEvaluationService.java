@@ -52,9 +52,18 @@ import static com.scan2play.service.DjService.DECISION_REJECTED;
 @Slf4j
 public class SongEvaluationService {
 
-    /** Cached config for AI requests — always the same, no need to rebuild per call. */
+    /** Config for AI evaluation requests — default temperature allows creative DJ comments. */
     private static final GenerateContentConfig AI_JSON_CONFIG = GenerateContentConfig.builder()
             .responseMimeType("application/json")
+            .build();
+
+    /**
+     * Config for song name normalization — temperature 0.0 ensures deterministic output.
+     * The task is purely factual: map raw input to canonical "ARTIST - TITLE" format.
+     */
+    private static final GenerateContentConfig AI_NORMALIZE_CONFIG = GenerateContentConfig.builder()
+            .responseMimeType("application/json")
+            .temperature(0.0f)
             .build();
 
     private static final String DEFAULT_LANG = "en";
@@ -254,7 +263,7 @@ public class SongEvaluationService {
     public String normalizeSongName(String rawInput) {
         try {
             String prompt = String.format(normalizePromptTemplate, rawInput);
-            GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_JSON_CONFIG);
+            GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_NORMALIZE_CONFIG);
             JsonNode json = objectMapper.readTree(response.text());
             String normalized = json.path("songName").asText(null);
             if (normalized != null && !normalized.isBlank()) {
