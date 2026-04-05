@@ -7,6 +7,8 @@ import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
@@ -16,11 +18,21 @@ import java.util.List;
 @Configuration
 @EnableCaching
 @EnableScheduling
+@EnableAsync
 public class AppConfig {
 
+    /**
+     * Shared RestClient with connect/read timeouts.
+     * Prevents hung threads when external APIs (YouTube, Spotify) are slow or unreachable.
+     */
     @Bean
     public RestClient restClient() {
-        return RestClient.create();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        return RestClient.builder()
+                .requestFactory(factory)
+                .build();
     }
 
     /**

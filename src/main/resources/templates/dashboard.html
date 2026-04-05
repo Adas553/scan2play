@@ -51,7 +51,7 @@
                     <div class="col-md-6 d-flex justify-content-md-end align-items-center">
                         <!-- Spotify: Connect button if not yet linked -->
                         <a th:if="${activeProvider.name() == 'SPOTIFY' and !isSpotifyConnected}"
-                           th:href="@{/spotify/login(partyCode=${partyCode})}" class="btn btn-success">
+                           th:href="@{/dj/spotify/login(partyCode=${partyCode})}" class="btn btn-success">
                             Connect Spotify for Auto-Pilot
                         </a>
 

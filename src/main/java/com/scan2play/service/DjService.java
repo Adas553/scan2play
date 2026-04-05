@@ -105,12 +105,19 @@ public class DjService {
 
     /**
      * Marks a specific song request as "played" in the database.
+     * Validates that the song belongs to the given party (IDOR protection).
      *
-     * @param id The ID of the song request.
+     * @param id             The ID of the song request.
+     * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
      */
     @Transactional
-    public void markSongAsPlayed(Long id) {
+    public void markSongAsPlayed(Long id, String ownerPartyCode) {
         songRequestRepository.findById(id).ifPresent(song -> {
+            if (!song.getPartyCode().equals(ownerPartyCode)) {
+                log.warn("IDOR blocked: DJ party {} tried to mark song {} (belongs to party {})",
+                        ownerPartyCode, id, song.getPartyCode());
+                return;
+            }
             song.setDecision(DECISION_PLAYED);
             songRequestRepository.save(song);
             log.info("Marked song ID={} as PLAYED for party {}", id, song.getPartyCode());
@@ -120,12 +127,19 @@ public class DjService {
     /**
      * Pushes a specific song to the Spotify queue manually.
      * Only works if the active provider is Spotify.
+     * Validates that the song belongs to the given party (IDOR protection).
      *
-     * @param id The ID of the song request.
+     * @param id             The ID of the song request.
+     * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
      */
     @Transactional
-    public void pushToSpotify(Long id) {
+    public void pushToSpotify(Long id, String ownerPartyCode) {
         songRequestRepository.findById(id).ifPresent(song -> {
+            if (!song.getPartyCode().equals(ownerPartyCode)) {
+                log.warn("IDOR blocked: DJ party {} tried to push song {} to Spotify (belongs to party {})",
+                        ownerPartyCode, id, song.getPartyCode());
+                return;
+            }
             String partyCode = song.getPartyCode();
             PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 

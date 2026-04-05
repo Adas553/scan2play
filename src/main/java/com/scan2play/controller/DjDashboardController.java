@@ -135,7 +135,9 @@ public class DjDashboardController {
      * which preserves the YouTube IFrame player state.
      */
     @GetMapping("/history-view/fragment")
-    public String historyFragment(@RequestParam String partyCode, Model model) {
+    public String historyFragment(@RequestParam String partyCode, Model model,
+                                  OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
         model.addAttribute(HISTORY, djService.getHistory(partyCode));
         return "history :: historyTableContent";
     }
@@ -150,7 +152,9 @@ public class DjDashboardController {
      */
     @GetMapping("/dashboard/updates")
     public String getDashboardUpdates(@RequestParam String partyCode, Model model,
-                                      HttpServletRequest request, HttpServletResponse response) {
+                                      HttpServletRequest request, HttpServletResponse response,
+                                      OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
         // --- Lightweight fingerprint check (avoids full query + render) ---
         String fingerprint = djService.getQueueFingerprint(partyCode);
         String etag = "\"q-" + fingerprint + "\"";

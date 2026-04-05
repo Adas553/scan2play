@@ -68,7 +68,9 @@ public class DjPartySettingsController {
      * Updates the global music vibe/theme for the event.
      */
     @PostMapping("/dashboard/vibe")
-    public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe) {
+    public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe,
+                                   OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setGlobalVibe(newVibe));
         return REDIRECT_DASHBOARD;
     }
@@ -80,7 +82,9 @@ public class DjPartySettingsController {
     public String updateLimits(@RequestParam String partyCode,
                                @RequestParam double requestLimit,
                                @RequestParam double cooldownMinutes,
-                               @RequestParam int duplicateCheckWindow) {
+                               @RequestParam int duplicateCheckWindow,
+                               OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
 
         // Convert to integers and ensure minimum values
         int safeRequestLimit = Math.max(1, (int) Math.round(requestLimit));
@@ -99,7 +103,9 @@ public class DjPartySettingsController {
      * Toggles the playback mode between AUTO and MANUAL for the specific party.
      */
     @PostMapping("/dashboard/playback-mode")
-    public String togglePlaybackMode(@RequestParam String partyCode) {
+    public String togglePlaybackMode(@RequestParam String partyCode,
+                                     OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> {
             PlaybackMode newMode = (s.getPlaybackMode() == PlaybackMode.AUTO)
                     ? PlaybackMode.MANUAL
@@ -125,7 +131,9 @@ public class DjPartySettingsController {
      */
     @PostMapping("/dashboard/fallback-playlist")
     public ResponseEntity<Void> updateFallbackPlaylist(@RequestParam String partyCode,
-                                                       @RequestParam(required = false) String fallbackPlaylistUrl) {
+                                                       @RequestParam(required = false) String fallbackPlaylistUrl,
+                                                       OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
         String sanitized = (fallbackPlaylistUrl != null && !fallbackPlaylistUrl.isBlank())
                 ? fallbackPlaylistUrl.trim()
                 : null;
@@ -145,7 +153,9 @@ public class DjPartySettingsController {
      * Returns 200 OK with the new shuffle state in the {@code X-Fallback-Shuffle} header.
      */
     @PostMapping("/dashboard/fallback-shuffle")
-    public ResponseEntity<Void> toggleFallbackShuffle(@RequestParam String partyCode) {
+    public ResponseEntity<Void> toggleFallbackShuffle(@RequestParam String partyCode,
+                                                      OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
         PartySettingsEntity updated = partySettingsCommandService.updateSettings(partyCode,
                 s -> s.setFallbackShuffle(!s.isFallbackShuffle()));
 

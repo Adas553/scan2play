@@ -28,9 +28,7 @@ public class SecurityConfig {
                         .requestMatchers("/privacy", "/terms").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
-                        // Spotify API OAuth endpoints (custom flow for playback token)
-                        .requestMatchers("/spotify/**").permitAll()
-                        // DJ dashboard is protected
+                        // DJ dashboard is protected (includes /dj/spotify/**)
                         .requestMatchers("/dj/**").authenticated()
                         // Everything else requires authentication
                         .anyRequest().authenticated()

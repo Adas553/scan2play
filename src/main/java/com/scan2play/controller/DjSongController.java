@@ -1,7 +1,9 @@
 package com.scan2play.controller;
 
 import com.scan2play.service.DjService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,28 +30,35 @@ import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
 public class DjSongController {
 
     private final DjService djService;
+    private final DjSessionHelper sessionHelper;
 
     /**
      * Marks a specific song request as "played".
+     * Validates that the song belongs to the authenticated DJ's party (IDOR protection).
      *
      * @param id The ID of the song request to archive.
      * @return Redirects back to the dashboard.
      */
     @PostMapping("/dashboard/play")
-    public String markAsPlayed(@RequestParam Long id) {
-        djService.markSongAsPlayed(id);
+    public String markAsPlayed(@RequestParam Long id,
+                               OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        djService.markSongAsPlayed(id, ownerPartyCode);
         return REDIRECT_DASHBOARD;
     }
 
     /**
      * Pushes a specific song to the Spotify queue manually.
+     * Validates that the song belongs to the authenticated DJ's party (IDOR protection).
      *
      * @param id The ID of the song request.
      * @return Redirects back to the dashboard.
      */
     @PostMapping("/requests/{id}/push-to-spotify")
-    public String pushToSpotify(@PathVariable Long id) {
-        djService.pushToSpotify(id);
+    public String pushToSpotify(@PathVariable Long id,
+                                OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        djService.pushToSpotify(id, ownerPartyCode);
         return REDIRECT_DASHBOARD;
     }
 
@@ -63,7 +72,9 @@ public class DjSongController {
      */
     @PostMapping("/dashboard/dj-pick")
     public String addDjPick(@RequestParam String partyCode,
-                            @RequestParam String songName) {
+                            @RequestParam String songName,
+                            OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
         if (songName != null && !songName.isBlank()) {
             djService.addDjPick(partyCode, songName.trim());
         }

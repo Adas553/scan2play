@@ -14,6 +14,10 @@ import org.springframework.stereotype.Component;
  * Shared helper for resolving the current DJ's party settings from the HTTP session.
  * Caches the partyCode in the session to avoid redundant DB lookups on every request.
  * <p>
+ * Also provides ownership validation to prevent IDOR attacks — all DJ endpoints
+ * that accept a {@code partyCode} parameter should call {@link #validateOwnership}
+ * before performing any mutation.
+ * <p>
  * Used by all DJ-facing controllers that need access to the current party context.
  */
 @Component
@@ -53,6 +57,28 @@ public class DjSessionHelper {
         PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider);
         session.setAttribute(SESSION_PARTY_CODE, settings.getPartyCode());
         return settings;
+    }
+
+    /**
+     * Validates that the given {@code partyCode} belongs to the currently authenticated DJ.
+     * Compares against the session-cached partyCode (set during {@link #getPartySettings}).
+     * <p>
+     * <b>Must be called in every DJ endpoint that accepts {@code partyCode} as a request parameter</b>
+     * to prevent IDOR attacks (an attacker guessing/brute-forcing a 5-char code).
+     *
+     * @param partyCode      The partyCode from the incoming request.
+     * @param authentication The current DJ's OAuth2 token.
+     * @param session        The current HTTP session.
+     * @throws org.springframework.security.access.AccessDeniedException if the partyCode does not belong to this DJ.
+     */
+    public void validateOwnership(String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartySettingsEntity settings = getPartySettings(authentication, session);
+        if (!settings.getPartyCode().equals(partyCode)) {
+            log.warn("IDOR attempt: DJ {} tried to access party {} (owns {})",
+                    authentication.getName(), partyCode, settings.getPartyCode());
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "You do not own party: " + partyCode);
+        }
     }
 
     /**

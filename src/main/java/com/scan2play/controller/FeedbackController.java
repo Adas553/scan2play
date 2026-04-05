@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.FeedbackEntity;
 import com.scan2play.repository.FeedbackRepository;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class FeedbackController {
 
     private final FeedbackRepository feedbackRepository;
+    private final DjSessionHelper sessionHelper;
 
     /**
      * Accepts a feedback submission from a DJ and persists it.
@@ -35,7 +37,10 @@ public class FeedbackController {
     public ResponseEntity<Map<String, String>> submitFeedback(
             @RequestParam String partyCode,
             @RequestParam String message,
-            OAuth2AuthenticationToken authentication) {
+            OAuth2AuthenticationToken authentication,
+            HttpSession session) {
+
+        sessionHelper.validateOwnership(partyCode, authentication, session);
 
         if (message == null || message.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Message cannot be empty"));

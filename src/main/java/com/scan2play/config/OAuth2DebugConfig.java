@@ -4,10 +4,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 
+/**
+ * Diagnostic configuration that logs registered OAuth2 client registrations at startup.
+ * <b>Active only with the "dev" profile</b> to avoid leaking client IDs in production logs.
+ */
 @Configuration
+@Profile("dev")
 @Slf4j
 public class OAuth2DebugConfig {
 

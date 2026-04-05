@@ -133,7 +133,11 @@ public class SpotifyAuthService {
         }
 
         log.info("Party [{}]: Access token expired or about to expire. Refreshing...", partyCode);
-        return refreshAccessToken(settings);
+        String refreshedToken = refreshAccessToken(settings);
+        if (refreshedToken == null) {
+            throw new IllegalStateException("Failed to refresh Spotify token for party: " + partyCode);
+        }
+        return refreshedToken;
     }
 
     /**

@@ -73,7 +73,7 @@ class DjServiceTest {
 
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
 
-        djService.markSongAsPlayed(1L);
+        djService.markSongAsPlayed(1L, PARTY_CODE);
 
         assertThat(song.getDecision()).isEqualTo(DECISION_PLAYED);
         verify(songRequestRepository).save(song);
@@ -83,8 +83,25 @@ class DjServiceTest {
     void markSongAsPlayed_shouldDoNothing_whenSongNotFound() {
         when(songRequestRepository.findById(999L)).thenReturn(Optional.empty());
 
-        djService.markSongAsPlayed(999L);
+        djService.markSongAsPlayed(999L, PARTY_CODE);
 
+        verify(songRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void markSongAsPlayed_shouldBlock_whenPartyCodeDoesNotMatch() {
+        SongRequestEntity song = SongRequestEntity.builder()
+                .id(1L)
+                .partyCode("OTHER")
+                .songName("Test Song")
+                .decision(DECISION_ACCEPTED)
+                .build();
+
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+
+        djService.markSongAsPlayed(1L, PARTY_CODE);
+
+        assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED); // unchanged
         verify(songRequestRepository, never()).save(any());
     }
 
@@ -108,7 +125,7 @@ class DjServiceTest {
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
 
-        djService.pushToSpotify(1L);
+        djService.pushToSpotify(1L, PARTY_CODE);
 
         verify(queueService).addToQueue(PARTY_CODE, "spotify:track:abc123", MusicProviderType.SPOTIFY);
         assertThat(song.getDecision()).isEqualTo(DECISION_PLAYED);
@@ -133,7 +150,7 @@ class DjServiceTest {
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
 
-        djService.pushToSpotify(1L);
+        djService.pushToSpotify(1L, PARTY_CODE);
 
         verify(queueService, never()).addToQueue(any(), any(), any());
         assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED); // unchanged
@@ -157,9 +174,27 @@ class DjServiceTest {
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
 
-        djService.pushToSpotify(1L);
+        djService.pushToSpotify(1L, PARTY_CODE);
 
         verify(queueService, never()).addToQueue(any(), any(), any());
+    }
+
+    @Test
+    void pushToSpotify_shouldBlock_whenPartyCodeDoesNotMatch() {
+        SongRequestEntity song = SongRequestEntity.builder()
+                .id(1L)
+                .partyCode("OTHER")
+                .songName("Test Song")
+                .decision(DECISION_ACCEPTED)
+                .trackUrl("spotify:track:abc123")
+                .build();
+
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+
+        djService.pushToSpotify(1L, PARTY_CODE);
+
+        verify(queueService, never()).addToQueue(any(), any(), any());
+        verify(songRequestRepository, never()).save(any());
     }
 
     // ---- addDjPick ----
