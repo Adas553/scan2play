@@ -154,6 +154,10 @@ function submitAutoPilotToggle(checkbox) {
             if (newMode === 'AUTO' && typeof checkYouTubeAutoPlay === 'function') {
                 checkYouTubeAutoPlay();
             }
+            // Keep screen awake while Auto-Pilot is running (wake-lock.js)
+            if (typeof window.syncWakeLock === 'function') {
+                window.syncWakeLock(newMode === 'AUTO');
+            }
         }
     }).catch(function(err) {
         console.error('[Auto-Pilot] Toggle error:', err);
