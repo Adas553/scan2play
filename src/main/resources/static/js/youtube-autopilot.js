@@ -356,10 +356,16 @@
                     // vanished since the watcher started.
                     const nextGuest = findNextGuestSong();
                     if (nextGuest) {
-                        // Do NOT call player.stopVideo() here — loadVideoById()
-                        // in playGuestSong() implicitly stops current playback.
-                        // An explicit stopVideo() fires a stale ENDED event that
-                        // races with the new video load and can kill the player.
+                        // stopVideo() is REQUIRED to clear the active playlist
+                        // context.  Without it, the playlist auto-advances when
+                        // the current track ends (~1.5s from now) and overrides
+                        // the loadVideoById() call in playGuestSong().
+                        //
+                        // stopVideo() fires a stale ENDED event, but it always
+                        // arrives BEFORE the guest song reaches PLAYING, so the
+                        // isLoadingSong guard in onPlayerStateChange catches it.
+                        player.stopVideo();
+                        playerState = -1;
                         isFallbackMode = false;
                         fallbackIsVideo = false;
                         guestSongPending = false;
