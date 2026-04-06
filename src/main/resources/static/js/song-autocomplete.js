@@ -72,6 +72,7 @@
         let dropdown          = null;
         let activeIndex       = -1;
         let currentController = null;
+        let touchingDropdown  = false; // true while a touch sequence is on the dropdown
 
         // --- Build dropdown element and append into input's wrapper ---
         function buildDropdown() {
@@ -142,16 +143,16 @@
                     `<span class="ac-sep"> \u2013 </span>` +
                     `<span class="ac-title">${escapeHtml(title)}</span>`;
 
-                // Fix: handle both mousedown (desktop) and touchstart (mobile).
-                // mousedown alone is unreliable on iOS/Android — touchstart fires
-                // before the synthetic mousedown, and blur can close the dropdown
-                // before mousedown is processed.
-                function pick(e) {
-                    e.preventDefault(); // prevent blur before selection
+                // Desktop: mousedown fires before blur — preventDefault keeps focus
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
                     selectItem(label);
-                }
-                item.addEventListener('mousedown', pick);
-                item.addEventListener('touchstart', pick, { passive: false });
+                });
+
+                // Mobile: click fires after blur, but the touchingDropdown flag
+                // (set on the dropdown container) prevents closeDropdown during
+                // the touch sequence, so click still finds the dropdown open.
+                item.addEventListener('click', () => selectItem(label));
 
                 dropdown.appendChild(item);
             });
@@ -238,6 +239,14 @@
         // --- Wire up ---
         buildDropdown();
 
+        // Mobile: track whether a touch is happening inside the dropdown.
+        // This prevents the blur handler from closing the dropdown before
+        // the click event on the item fires.  Does NOT call preventDefault(),
+        // so native scrolling inside the dropdown works normally.
+        dropdown.addEventListener('touchstart', () => { touchingDropdown = true; }, { passive: true });
+        dropdown.addEventListener('touchend',   () => { touchingDropdown = false; }, { passive: true });
+        dropdown.addEventListener('touchcancel',() => { touchingDropdown = false; }, { passive: true });
+
         input.setAttribute('autocomplete',      'off');
         input.setAttribute('aria-autocomplete', 'list');
         input.setAttribute('aria-haspopup',     'listbox');
@@ -245,7 +254,12 @@
 
         input.addEventListener('input',   onInput);
         input.addEventListener('keydown', handleKeydown);
-        input.addEventListener('blur',    () => setTimeout(closeDropdown, 150));
+        input.addEventListener('blur',    () => {
+            // Delay close so that click/mousedown on an item can fire first.
+            // If a touch sequence is active on the dropdown, wait longer for
+            // the click event to complete (touchend → click).
+            setTimeout(closeDropdown, touchingDropdown ? 300 : 150);
+        });
         document.addEventListener('click', onDocumentClick);
     }
 
