@@ -198,10 +198,7 @@
     }
 
     function handleGuestSongEnded() {
-        // Stale ENDED from a stopVideo() during transition — ignore
-        if (isLoadingSong) return;
-
-        player.stopVideo();
+        if (isLoadingSong) return; // stale ENDED during transition
         currentlyPlayingSongId = null;
         isLoadingSong = false;
         tryAutoPlay();
@@ -236,18 +233,12 @@
 
                     var nextGuest = findNextGuestSong();
                     if (nextGuest) {
-                        // stopVideo() clears playlist context so it doesn't
-                        // auto-advance and override loadVideoById().
-                        // Stale ENDED is caught by the isLoadingSong guard.
-                        player.stopVideo();
-                        playerState = -1;
+                        // pauseVideo() prevents playlist auto-advance without
+                        // the heavy teardown of stopVideo(). loadVideoById()
+                        // in playGuestSong() overrides the paused state.
+                        player.pauseVideo();
                         exitFallback();
-                        isLoadingSong = true; // BEFORE deferred call — for ENDED guard
-
-                        // Defer to next tick — avoids "page not responding" from
-                        // back-to-back heavy cross-iframe operations.
-                        var row = nextGuest;
-                        setTimeout(function () { playGuestSong(row); }, 50);
+                        playGuestSong(nextGuest);
                     } else {
                         guestSongPending = false;
                     }
@@ -313,12 +304,8 @@
                 if (nextGuest) {
                     // Paused fallback — switch immediately
                     if (playerState === YT.PlayerState.PAUSED) {
-                        player.stopVideo();
-                        playerState = -1;
                         exitFallback();
-                        isLoadingSong = true;
-                        var row = nextGuest;
-                        setTimeout(function () { playGuestSong(row); }, 50);
+                        playGuestSong(nextGuest);
                         return;
                     }
                     // Playing fallback — start watcher for graceful switch
@@ -331,9 +318,8 @@
             }
             if (currentlyPlayingSongId) return; // guest song playing
 
-            // Orphaned playback — Auto-Pilot takes over
-            player.stopVideo();
-            playerState = -1;
+            // Orphaned playback — pause it, Auto-Pilot takes over below
+            player.pauseVideo();
             isFallbackMode = false;
         }
 
