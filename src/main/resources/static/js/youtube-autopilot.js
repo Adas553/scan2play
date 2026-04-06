@@ -364,9 +364,22 @@
                         fallbackIsVideo = false;
                         guestSongPending = false;
                         currentlyPlayingSongId = null;
-                        isLoadingSong = false;
+
+                        // Set isLoadingSong BEFORE the deferred call so the stale
+                        // ENDED event from stopVideo() is caught by the guard.
+                        isLoadingSong = true;
+
                         console.log('[YT Auto-Pilot] Fallback track ending — switching to guest song');
-                        playGuestSong(nextGuest);
+
+                        // Defer loadVideoById to the next event loop tick.
+                        // stopVideo() and loadVideoById() are both heavy
+                        // cross-iframe (postMessage) operations.  Running them
+                        // back-to-back in the same tick can block the main
+                        // thread long enough to trigger "page not responding".
+                        // The short delay lets the browser process stopVideo(),
+                        // handle pending paints, and then start the new video.
+                        var pendingGuest = nextGuest;
+                        setTimeout(function() { playGuestSong(pendingGuest); }, 50);
                     } else {
                         // Guest song vanished — stay in fallback mode.
                         // The track is about to end; ENDED handler will loop
@@ -469,8 +482,9 @@
                         fallbackIsVideo = false;
                         guestSongPending = false;
                         currentlyPlayingSongId = null;
-                        isLoadingSong = false;
-                        playGuestSong(nextGuest);
+                        isLoadingSong = true;
+                        var pendingGuest = nextGuest;
+                        setTimeout(function() { playGuestSong(pendingGuest); }, 50);
                         return;
                     }
                     // Fallback is actively playing — start the watcher to wait
