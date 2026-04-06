@@ -17,25 +17,25 @@
     'use strict';
 
     // ---- State ----
-    var player = null, playerReady = false, playerState = -1;
-    var currentlyPlayingSongId = null, isLoadingSong = false;
-    var isFallbackMode = false, fallbackIsVideo = false;
-    var guestSongPending = false;
-    var lastFallbackIndex = 0, fallbackTrackIndex = -1;
-    var pendingPlaylistSetup = false;
-    var markedAsPlayedIds = new Set(), skippedSongIds = new Set();
+    let player = null, playerReady = false, playerState = -1;
+    let currentlyPlayingSongId = null, isLoadingSong = false;
+    let isFallbackMode = false, fallbackIsVideo = false;
+    let guestSongPending = false;
+    let lastFallbackIndex = 0, fallbackTrackIndex = -1;
+    let pendingPlaylistSetup = false;
+    const markedAsPlayedIds = new Set(), skippedSongIds = new Set();
 
-    var playerCard = document.getElementById('yt-player-card');
-    var fallbackPlaylistId = playerCard ? (playerCard.getAttribute('data-fallback-playlist') || null) : null;
-    var shuffleEnabled = playerCard ? playerCard.getAttribute('data-fallback-shuffle') === 'true' : true;
+    const playerCard = document.getElementById('yt-player-card');
+    let fallbackPlaylistId = playerCard ? (playerCard.getAttribute('data-fallback-playlist') || null) : null;
+    let shuffleEnabled = playerCard ? playerCard.getAttribute('data-fallback-shuffle') === 'true' : true;
 
-    var csrf = {
+    const csrf = {
         token:  document.querySelector('meta[name="_csrf"]').getAttribute('content'),
         header: document.querySelector('meta[name="_csrf_header"]').getAttribute('content')
     };
 
     // ---- YouTube IFrame API ----
-    var tag = document.createElement('script');
+    const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
     document.head.appendChild(tag);
 
@@ -54,7 +54,7 @@
 
     function extractVideoId(url) {
         if (!url) return null;
-        var m = url.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+        const m = url.match(/[?&]v=([A-Za-z0-9_-]{11})/);
         return m ? m[1] : null;
     }
 
@@ -79,33 +79,33 @@
         isLoadingSong = false;
     }
 
-    var lastPruneTime = 0;
+    let lastPruneTime = 0;
     function pruneStaleIds() {
-        var now = Date.now();
+        const now = Date.now();
         if (now - lastPruneTime < 60000) return;
         lastPruneTime = now;
-        var tbody = document.getElementById('song-list');
+        const tbody = document.getElementById('song-list');
         if (!tbody) return;
-        var liveIds = new Set();
-        tbody.querySelectorAll('tr[data-song-id]').forEach(function (r) { liveIds.add(r.getAttribute('data-song-id')); });
-        markedAsPlayedIds.forEach(function (id) { if (!liveIds.has(id)) markedAsPlayedIds.delete(id); });
-        skippedSongIds.forEach(function (id) { if (!liveIds.has(id)) skippedSongIds.delete(id); });
+        const liveIds = new Set();
+        tbody.querySelectorAll('tr[data-song-id]').forEach(r => liveIds.add(r.getAttribute('data-song-id')));
+        markedAsPlayedIds.forEach(id => { if (!liveIds.has(id)) markedAsPlayedIds.delete(id); });
+        skippedSongIds.forEach(id => { if (!liveIds.has(id)) skippedSongIds.delete(id); });
     }
 
     function markAsPlayed(songId) {
-        var fd = new FormData();
+        const fd = new FormData();
         fd.append('id', songId);
         fetch('/dj/dashboard/play', {
             method: 'POST', headers: { [csrf.header]: csrf.token }, body: fd, redirect: 'manual'
-        }).catch(function (e) { console.error('[YT] markAsPlayed error:', e); });
+        }).catch(e => console.error('[YT] markAsPlayed error:', e));
     }
 
     function findNextGuestSong() {
-        var tbody = document.getElementById('song-list');
+        const tbody = document.getElementById('song-list');
         if (!tbody) return null;
-        var rows = tbody.querySelectorAll('tr[data-song-id]');
-        for (var i = 0; i < rows.length; i++) {
-            var songId = rows[i].getAttribute('data-song-id');
+        const rows = tbody.querySelectorAll('tr[data-song-id]');
+        for (let i = 0; i < rows.length; i++) {
+            const songId = rows[i].getAttribute('data-song-id');
             if (!songId || markedAsPlayedIds.has(songId) || skippedSongIds.has(songId)) continue;
             if (!extractVideoId(rows[i].getAttribute('data-track-url'))) { skippedSongIds.add(songId); continue; }
             return rows[i];
@@ -114,7 +114,7 @@
     }
 
     function isAutoPilotOn() {
-        var tbody = document.getElementById('song-list');
+        const tbody = document.getElementById('song-list');
         return tbody && tbody.getAttribute('data-playback-mode') === 'AUTO';
     }
 
@@ -122,6 +122,22 @@
 
     function onPlayerStateChange(event) {
         playerState = event.data;
+
+        // ---- BUFFERING: early detection of playlist auto-advance ----
+        if (event.data === YT.PlayerState.BUFFERING
+                && isFallbackMode && !fallbackIsVideo
+                && guestSongPending && isAutoPilotOn()) {
+            const bufIdx = player.getPlaylistIndex();
+            if (bufIdx >= 0 && fallbackTrackIndex >= 0 && bufIdx !== fallbackTrackIndex) {
+                const earlyGuest = findNextGuestSong();
+                if (earlyGuest) {
+                    exitFallback();
+                    playGuestSong(earlyGuest);
+                    return;
+                }
+                guestSongPending = false;
+            }
+        }
 
         if (event.data === YT.PlayerState.PLAYING) {
             isLoadingSong = false;
@@ -134,9 +150,9 @@
 
             // ---- Fallback playlist: track index + guest-song switch ----
             if (isFallbackMode && !fallbackIsVideo) {
-                var plIdx = player.getPlaylistIndex();
+                const plIdx = player.getPlaylistIndex();
                 if (plIdx >= 0) {
-                    var trackChanged = fallbackTrackIndex >= 0 && plIdx !== fallbackTrackIndex;
+                    const trackChanged = fallbackTrackIndex >= 0 && plIdx !== fallbackTrackIndex;
 
                     // Auto-Pilot OFF: just track position, let playlist play
                     if (!isAutoPilotOn() && trackChanged) {
@@ -149,7 +165,7 @@
                     // down a barely-initialized video (fast) instead of a fully
                     // loaded one (heavy).
                     if (isAutoPilotOn() && guestSongPending && trackChanged) {
-                        var nextGuest = findNextGuestSong();
+                        const nextGuest = findNextGuestSong();
                         if (nextGuest) {
                             exitFallback();
                             playGuestSong(nextGuest);
@@ -177,7 +193,7 @@
     }
 
     function handleFallbackEnded() {
-        var nextGuest = isAutoPilotOn() ? findNextGuestSong() : null;
+        const nextGuest = isAutoPilotOn() ? findNextGuestSong() : null;
 
         if (nextGuest) {
             exitFallback();
@@ -211,8 +227,8 @@
     // ---- Core Playback ----
 
     function playGuestSong(row) {
-        var songId = row.getAttribute('data-song-id');
-        var videoId = extractVideoId(row.getAttribute('data-track-url'));
+        const songId = row.getAttribute('data-song-id');
+        const videoId = extractVideoId(row.getAttribute('data-track-url'));
         if (!videoId) return;
 
         isLoadingSong = true;
@@ -245,21 +261,21 @@
         pruneStaleIds();
         if (!isAutoPilotOn()) return;
 
-        var isActive = playerState === YT.PlayerState.PLAYING
-                    || playerState === YT.PlayerState.BUFFERING
-                    || playerState === YT.PlayerState.PAUSED;
+        const isActive = playerState === YT.PlayerState.PLAYING
+                      || playerState === YT.PlayerState.BUFFERING
+                      || playerState === YT.PlayerState.PAUSED;
 
         if (isActive) {
             if (isFallbackMode) {
-                var nextGuest = findNextGuestSong();
+                const nextGuest = findNextGuestSong();
                 if (nextGuest) {
                     if (!guestSongPending) guestSongPending = true;
-                    // Paused fallback — switch immediately (no track boundary needed)
+                    // Paused fallback → switch immediately (no track boundary needed)
                     if (playerState === YT.PlayerState.PAUSED) {
                         exitFallback();
                         playGuestSong(nextGuest);
                     }
-                    // Playing/buffering — guestSongPending flag is set;
+                    // Playing/buffering → guestSongPending flag is set;
                     // PLAYING handler switches at the next track boundary.
                 }
                 return;
@@ -271,7 +287,7 @@
             isFallbackMode = false;
         }
 
-        var guest = findNextGuestSong();
+        const guest = findNextGuestSong();
         if (guest) {
             if (isFallbackMode) isFallbackMode = false;
             playGuestSong(guest);
@@ -285,7 +301,7 @@
     window.checkYouTubeAutoPlay = tryAutoPlay;
 
     window.updateFallbackSource = function (extractedId) {
-        var newId = extractedId || null;
+        const newId = extractedId || null;
         if (isFallbackMode && player) { player.stopVideo(); playerState = -1; }
         resetPlayback();
         lastFallbackIndex = 0;
@@ -313,7 +329,7 @@
 
     window.playInEmbeddedPlayer = function (trackUrl) {
         if (!playerReady || !player) return false;
-        var videoId = extractVideoId(trackUrl);
+        const videoId = extractVideoId(trackUrl);
         if (!videoId) return false;
         if (isFallbackMode && !fallbackIsVideo && fallbackTrackIndex >= 0) lastFallbackIndex = fallbackTrackIndex + 1;
         resetPlayback();
@@ -325,9 +341,9 @@
 
 // ---- Click handler: ▶ YOUTUBE links play in embedded player ----
 document.addEventListener('click', function (e) {
-    var link = e.target.closest('a.play-link');
+    const link = e.target.closest('a.play-link');
     if (!link) return;
-    var url = link.getAttribute('data-track-url');
+    const url = link.getAttribute('data-track-url');
     if (!url || url.indexOf('youtube.com') < 0) return;
     if (typeof window.playInEmbeddedPlayer === 'function' && window.playInEmbeddedPlayer(url)) {
         e.preventDefault();
