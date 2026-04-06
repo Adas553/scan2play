@@ -6,8 +6,9 @@
  *       → on ENDED resets and checks next.
  *
  * Fallback: when queue is empty and a fallback playlist/video is set, loads it via
- *           loadPlaylist(). Guest songs arriving during fallback are queued and played
- *           when the current fallback track ends (1.5s lookahead via 500ms watcher).
+ *           loadPlaylist(). Guest songs arriving during fallback are detected at natural
+ *           track boundaries (ENDED for single videos, PLAYING for playlist auto-advance)
+ *           and the player switches to the guest song — no polling watcher needed.
  *
  * Exposes: checkYouTubeAutoPlay, playInEmbeddedPlayer, updateFallbackSource,
  *          updateFallbackShuffle, stopFallback
@@ -19,7 +20,7 @@
     var player = null, playerReady = false, playerState = -1;
     var currentlyPlayingSongId = null, isLoadingSong = false;
     var isFallbackMode = false, fallbackIsVideo = false;
-    var guestSongPending = false, guestSongCheckInterval = null;
+    var guestSongPending = false;
     var lastFallbackIndex = 0, fallbackTrackIndex = -1;
     var pendingPlaylistSetup = false;
     var markedAsPlayedIds = new Set(), skippedSongIds = new Set();
@@ -57,7 +58,6 @@
         return m ? m[1] : null;
     }
 
-    /** Resets all playback flags to idle. Call before starting new playback or on error. */
     function resetPlayback() {
         isFallbackMode = false;
         fallbackIsVideo = false;
@@ -65,13 +65,13 @@
         currentlyPlayingSongId = null;
         isLoadingSong = false;
         pendingPlaylistSetup = false;
-        stopGuestSongWatcher();
     }
 
-    /** Saves fallback position, stops watcher, resets flags. */
+    /** Saves resume position from cached index (no API call), resets flags. */
     function exitFallback() {
-        saveFallbackPosition();
-        stopGuestSongWatcher();
+        if (!fallbackIsVideo && fallbackTrackIndex >= 0) {
+            lastFallbackIndex = fallbackTrackIndex + 1;
+        }
         isFallbackMode = false;
         fallbackIsVideo = false;
         guestSongPending = false;
@@ -79,7 +79,6 @@
         isLoadingSong = false;
     }
 
-    /** Prunes stale IDs from tracking Sets (max once/min). */
     var lastPruneTime = 0;
     function pruneStaleIds() {
         var now = Date.now();
@@ -101,7 +100,6 @@
         }).catch(function (e) { console.error('[YT] markAsPlayed error:', e); });
     }
 
-    /** Returns the first playable guest-song <tr>, or null. */
     function findNextGuestSong() {
         var tbody = document.getElementById('song-list');
         if (!tbody) return null;
@@ -120,23 +118,11 @@
         return tbody && tbody.getAttribute('data-playback-mode') === 'AUTO';
     }
 
-    function saveFallbackPosition() {
-        if (!fallbackIsVideo && player) {
-            var idx = player.getPlaylistIndex();
-            if (idx >= 0) lastFallbackIndex = idx + 1;
-        }
-    }
-
-    function stopGuestSongWatcher() {
-        if (guestSongCheckInterval) { clearInterval(guestSongCheckInterval); guestSongCheckInterval = null; }
-    }
-
     // ---- Event Handlers ----
 
     function onPlayerStateChange(event) {
         playerState = event.data;
 
-        // ---- PLAYING ----
         if (event.data === YT.PlayerState.PLAYING) {
             isLoadingSong = false;
 
@@ -146,14 +132,34 @@
                 markAsPlayed(currentlyPlayingSongId);
             }
 
-            // Track playlist index for resume position
-            var plIdx = player.getPlaylistIndex();
-            if (plIdx >= 0 && !fallbackIsVideo) {
-                if (!isAutoPilotOn() && fallbackTrackIndex >= 0 && plIdx !== fallbackTrackIndex && !currentlyPlayingSongId) {
+            // ---- Fallback playlist: track index + guest-song switch ----
+            if (isFallbackMode && !fallbackIsVideo) {
+                var plIdx = player.getPlaylistIndex();
+                if (plIdx >= 0) {
+                    var trackChanged = fallbackTrackIndex >= 0 && plIdx !== fallbackTrackIndex;
+
                     // Auto-Pilot OFF: just track position, let playlist play
-                    lastFallbackIndex = plIdx;
+                    if (!isAutoPilotOn() && trackChanged) {
+                        lastFallbackIndex = plIdx;
+                    }
+
+                    // Guest song pending + natural track boundary → switch now.
+                    // The new playlist track just started — loadVideoById() overrides
+                    // it immediately. No stopVideo/pauseVideo needed: YouTube tears
+                    // down a barely-initialized video (fast) instead of a fully
+                    // loaded one (heavy).
+                    if (isAutoPilotOn() && guestSongPending && trackChanged) {
+                        var nextGuest = findNextGuestSong();
+                        if (nextGuest) {
+                            exitFallback();
+                            playGuestSong(nextGuest);
+                            return;
+                        }
+                        guestSongPending = false;
+                    }
+
+                    fallbackTrackIndex = plIdx;
                 }
-                fallbackTrackIndex = plIdx;
             }
 
             // Apply shuffle + loop on first PLAYING after loadPlaylist()
@@ -164,13 +170,9 @@
             }
         }
 
-        // ---- ENDED ----
         if (event.data === YT.PlayerState.ENDED) {
-            if (isFallbackMode) {
-                handleFallbackEnded();
-            } else {
-                handleGuestSongEnded();
-            }
+            if (isFallbackMode) handleFallbackEnded();
+            else                handleGuestSongEnded();
         }
     }
 
@@ -181,16 +183,12 @@
             exitFallback();
             playGuestSong(nextGuest);
         } else if (!isAutoPilotOn()) {
-            // Auto-Pilot OFF — stop, don't auto-advance
-            saveFallbackPosition();
-            stopGuestSongWatcher();
             player.stopVideo();
             playerState = -1;
             isFallbackMode = false;
             fallbackIsVideo = false;
             guestSongPending = false;
         } else if (fallbackIsVideo) {
-            // Single video — loop
             player.seekTo(0);
             player.playVideo();
         }
@@ -212,44 +210,6 @@
 
     // ---- Core Playback ----
 
-    /**
-     * Watcher: polls every 500ms, switches to guest song when the current
-     * fallback track is within 1.5s of ending. YouTube playlists don't fire
-     * ENDED between tracks, so active polling is required.
-     */
-    function startGuestSongWatcher() {
-        if (guestSongCheckInterval) return;
-        guestSongCheckInterval = setInterval(function () {
-            if (!guestSongPending || !isFallbackMode || !player || !isAutoPilotOn()) {
-                guestSongPending = false;
-                stopGuestSongWatcher();
-                return;
-            }
-            try {
-                var t = player.getCurrentTime(), d = player.getDuration();
-                if (d > 0 && t >= d - 1.5) {
-                    stopGuestSongWatcher();
-                    saveFallbackPosition();
-
-                    var nextGuest = findNextGuestSong();
-                    if (nextGuest) {
-                        // pauseVideo() prevents playlist auto-advance without
-                        // the heavy teardown of stopVideo(). loadVideoById()
-                        // in playGuestSong() overrides the paused state.
-                        player.pauseVideo();
-                        exitFallback();
-                        playGuestSong(nextGuest);
-                    } else {
-                        guestSongPending = false;
-                    }
-                }
-            } catch (e) {
-                console.error('[YT] Watcher error:', e);
-                stopGuestSongWatcher();
-            }
-        }, 500);
-    }
-
     function playGuestSong(row) {
         var songId = row.getAttribute('data-song-id');
         var videoId = extractVideoId(row.getAttribute('data-track-url'));
@@ -259,14 +219,6 @@
         currentlyPlayingSongId = songId;
         isFallbackMode = false;
         player.loadVideoById(videoId);
-
-        // Safety: reset if playback doesn't start within 15s
-        setTimeout(function () {
-            if (isLoadingSong && currentlyPlayingSongId === songId) {
-                currentlyPlayingSongId = null;
-                isLoadingSong = false;
-            }
-        }, 15000);
     }
 
     function startFallbackPlaylist() {
@@ -291,7 +243,6 @@
     function tryAutoPlay() {
         if (!playerReady || !player || isLoadingSong) return;
         pruneStaleIds();
-
         if (!isAutoPilotOn()) return;
 
         var isActive = playerState === YT.PlayerState.PLAYING
@@ -302,28 +253,24 @@
             if (isFallbackMode) {
                 var nextGuest = findNextGuestSong();
                 if (nextGuest) {
-                    // Paused fallback — switch immediately
+                    if (!guestSongPending) guestSongPending = true;
+                    // Paused fallback — switch immediately (no track boundary needed)
                     if (playerState === YT.PlayerState.PAUSED) {
                         exitFallback();
                         playGuestSong(nextGuest);
-                        return;
                     }
-                    // Playing fallback — start watcher for graceful switch
-                    if (!guestSongPending) {
-                        guestSongPending = true;
-                        startGuestSongWatcher();
-                    }
+                    // Playing/buffering — guestSongPending flag is set;
+                    // PLAYING handler switches at the next track boundary.
                 }
                 return;
             }
             if (currentlyPlayingSongId) return; // guest song playing
 
-            // Orphaned playback — pause it, Auto-Pilot takes over below
+            // Orphaned playback — pause it, fall through to find next song
             player.pauseVideo();
             isFallbackMode = false;
         }
 
-        // Find a guest song or start fallback
         var guest = findNextGuestSong();
         if (guest) {
             if (isFallbackMode) isFallbackMode = false;
@@ -368,7 +315,7 @@
         if (!playerReady || !player) return false;
         var videoId = extractVideoId(trackUrl);
         if (!videoId) return false;
-        if (isFallbackMode) saveFallbackPosition();
+        if (isFallbackMode && !fallbackIsVideo && fallbackTrackIndex >= 0) lastFallbackIndex = fallbackTrackIndex + 1;
         resetPlayback();
         player.loadVideoById(videoId);
         return true;
