@@ -185,12 +185,10 @@
                 console.log('[YT Auto-Pilot] Now playing, marked ID=' + currentlyPlayingSongId + ' as PLAYED');
             }
 
-            // ---- Playlist auto-advance guard ----
-            // YouTube keeps a playlist loaded even after stopVideo(), so if the DJ
-            // clicks the native play button the playlist resumes and auto-advances
-            // between tracks. This guard runs REGARDLESS of isFallbackMode to catch
-            // unmanaged playlist playback when Auto-Pilot is OFF.
-            // It also handles the original case when isFallbackMode is still true.
+            // ---- Playlist auto-advance tracking ----
+            // YouTube keeps a playlist loaded even after stopVideo(), so when
+            // the DJ clicks the native play button the playlist resumes.
+            // We track the playlist index for resume position.
             const currentPlaylistIndex = (typeof player.getPlaylistIndex === 'function')
                     ? player.getPlaylistIndex() : -1;
 
@@ -200,18 +198,14 @@
                 const indexChanged = fallbackTrackIndex >= 0 && currentPlaylistIndex !== fallbackTrackIndex;
 
                 if (!autoPilotOn && indexChanged && !currentlyPlayingSongId) {
-                    console.log('[YT Auto-Pilot] Playlist auto-advanced with Auto-Pilot OFF — stopping');
-                    // Resume FROM this track when Auto-Pilot is re-enabled (don't skip it)
+                    // Auto-Pilot OFF: playlist auto-advanced to a new track.
+                    // Just track the position — don't stop the video.
+                    // The DJ has manual control and expects the playlist to
+                    // keep playing.  isFallbackMode stays true so that when
+                    // Auto-Pilot is re-enabled, the system can manage the
+                    // transition to guest songs via the watcher.
                     lastFallbackIndex = currentPlaylistIndex;
-                    // Update tracked index so DJ can manually press play without re-triggering the guard
-                    fallbackTrackIndex = currentPlaylistIndex;
-                    player.stopVideo();
-                    playerState = -1;
-                    isFallbackMode = false;
-                    fallbackIsVideo = false;
-                    guestSongPending = false;
-                    stopGuestSongWatcher();
-                    return;
+                    console.log('[YT Auto-Pilot] Playlist auto-advanced (Auto-Pilot OFF) — tracking index ' + currentPlaylistIndex);
                 }
 
                 // Track playlist index for next auto-advance detection
@@ -460,18 +454,50 @@
                 || playerState === YT.PlayerState.BUFFERING
                 || playerState === YT.PlayerState.PAUSED) {
 
-            // If in fallback mode and a guest song arrived, flag it and start
-            // the watcher interval. The watcher polls getCurrentTime/getDuration
-            // every 500ms and switches to the guest song when the current
-            // fallback track is within 1.5s of ending — no mid-song interrupt.
-            if (isFallbackMode && findNextGuestSong()) {
-                if (!guestSongPending) {
-                    guestSongPending = true;
-                    console.log('[YT Auto-Pilot] Guest song detected during fallback — waiting for current track to end');
-                    startGuestSongWatcher();
+            if (isFallbackMode) {
+                const nextGuest = findNextGuestSong();
+                if (nextGuest) {
+                    // Fallback is paused — switch to guest song immediately
+                    // (no need to wait for track end; DJ already paused it)
+                    if (playerState === YT.PlayerState.PAUSED) {
+                        console.log('[YT Auto-Pilot] Fallback paused, guest song available — switching immediately');
+                        saveFallbackPosition();
+                        stopGuestSongWatcher();
+                        player.stopVideo();
+                        playerState = -1;
+                        isFallbackMode = false;
+                        fallbackIsVideo = false;
+                        guestSongPending = false;
+                        currentlyPlayingSongId = null;
+                        isLoadingSong = false;
+                        playGuestSong(nextGuest);
+                        return;
+                    }
+                    // Fallback is actively playing — start the watcher to wait
+                    // for the current track to end naturally (within 1.5s)
+                    if (!guestSongPending) {
+                        guestSongPending = true;
+                        console.log('[YT Auto-Pilot] Guest song detected during fallback — waiting for current track to end');
+                        startGuestSongWatcher();
+                    }
                 }
+                return;
             }
-            return;
+
+            // Guest song actively playing — don't interrupt
+            if (currentlyPlayingSongId) {
+                return;
+            }
+
+            // Player is active but nothing is managed by Auto-Pilot
+            // (e.g., DJ manually played something while Auto-Pilot was off,
+            // or state was orphaned after a toggle cycle).
+            // Stop the orphaned playback so Auto-Pilot can take over.
+            console.log('[YT Auto-Pilot] Orphaned playback detected — stopping to let Auto-Pilot take over');
+            player.stopVideo();
+            playerState = -1;
+            isFallbackMode = false;
+            // Fall through to find next song or start fallback below
         }
 
         // Try to find a guest song to play
