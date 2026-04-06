@@ -81,6 +81,15 @@ body {
 /* --- Table border --- */
 .table { border-color: var(--s2p-border); }
 
+/* --- YouTube IFrame Player — force dimensions so the IFrame stays visible
+       even if YouTube API internally resets width/height during rapid
+       video ↔ playlist transitions (known IFrame API quirk) --- */
+#yt-player,
+#yt-player iframe {
+    width:  100% !important;
+    height: 100% !important;
+}
+
 /* --- Table header — distinct background so it doesn't blend with rows (especially on mobile) --- */
 .page-dj .table-dark thead th {
     background-color: #1a1a2e;

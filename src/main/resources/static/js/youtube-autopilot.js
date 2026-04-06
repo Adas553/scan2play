@@ -242,11 +242,12 @@
 
                 const nextGuest = autoPilotOn ? findNextGuestSong() : null;
                 if (nextGuest) {
-                    // Guest song arrived! Save position, exit fallback, play guest
+                    // Guest song arrived! Save position, exit fallback, play guest.
+                    // No stopVideo() needed — video already ended, and loadVideoById()
+                    // in playGuestSong() handles the transition.
                     console.log('[YT Auto-Pilot] Fallback song ended, guest song waiting — switching to guest queue');
                     saveFallbackPosition();
                     stopGuestSongWatcher();
-                    player.stopVideo();
                     isFallbackMode = false;
                     fallbackIsVideo = false;
                     guestSongPending = false;
@@ -273,6 +274,14 @@
                     console.log('[YT Auto-Pilot] Fallback song ended, queue still empty — continuing playlist');
                 }
             } else {
+                // Guard: if a new song is already loading (e.g. the watcher just
+                // called playGuestSong and this ENDED is a stale event from the
+                // preceding stopVideo/transition), ignore — the new playback will
+                // manage itself.  Without this guard, stopVideo() here kills the
+                // newly loaded video, creating a destructive stop→load→stop cycle
+                // that can corrupt the YouTube IFrame (invisible player).
+                if (isLoadingSong) return;
+
                 // Guest song ended — reset and try next immediately
                 player.stopVideo();
                 currentlyPlayingSongId = null;
@@ -343,18 +352,26 @@
                     stopGuestSongWatcher();
                     saveFallbackPosition();
 
-                    player.stopVideo();
-                    playerState = -1; // prevent stale state before async onStateChange fires
-                    isFallbackMode = false;
-                    fallbackIsVideo = false;
-                    guestSongPending = false;
-                    currentlyPlayingSongId = null;
-                    isLoadingSong = false;
-
+                    // Find guest song BEFORE mutating state — it may have
+                    // vanished since the watcher started.
                     const nextGuest = findNextGuestSong();
                     if (nextGuest) {
+                        // Do NOT call player.stopVideo() here — loadVideoById()
+                        // in playGuestSong() implicitly stops current playback.
+                        // An explicit stopVideo() fires a stale ENDED event that
+                        // races with the new video load and can kill the player.
+                        isFallbackMode = false;
+                        fallbackIsVideo = false;
+                        guestSongPending = false;
+                        currentlyPlayingSongId = null;
+                        isLoadingSong = false;
                         console.log('[YT Auto-Pilot] Fallback track ending — switching to guest song');
                         playGuestSong(nextGuest);
+                    } else {
+                        // Guest song vanished — stay in fallback mode.
+                        // The track is about to end; ENDED handler will loop
+                        // or continue the playlist as normal.
+                        guestSongPending = false;
                     }
                 }
             } catch (e) {
