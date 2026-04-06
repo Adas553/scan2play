@@ -163,15 +163,15 @@
     <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
         <h5 class="text-light mb-3">➕ <span th:text="#{dashboard.djpick.title}">Add DJ Pick</span></h5>
         <form th:action="@{/dj/dashboard/dj-pick}" method="POST"
-              class="d-flex gap-2 reset-on-success" id="dj-pick-form">
+              class="d-flex flex-column flex-sm-row gap-2 reset-on-success" id="dj-pick-form">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
             <div class="song-autocomplete-wrapper flex-grow-1">
                 <input type="text" id="djPickInput" name="songName"
-                       class="form-control bg-black text-light border-secondary w-100"
+                       class="form-control form-control-lg bg-black text-light border-secondary w-100"
                        th:placeholder="#{dashboard.djpick.placeholder}"
                        data-autocomplete="songs" required maxlength="200">
             </div>
-            <button type="submit" class="btn btn-outline-danger flex-shrink-0"
+            <button type="submit" class="btn btn-outline-danger btn-lg flex-shrink-0"
                     th:text="#{dashboard.djpick.button}">Add to Queue</button>
         </form>
     </div>

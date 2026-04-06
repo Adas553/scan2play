@@ -349,6 +349,32 @@ th[data-sort].sort-desc::after {
     color: var(--s2p-green);
 }
 
+/* --- Mobile overrides: larger touch targets & wrapping text --- */
+@media (max-width: 576px) {
+    .song-autocomplete-dropdown {
+        max-height: 260px;
+    }
+    .song-autocomplete-item {
+        padding: 14px 16px;
+        font-size: 1rem;
+        white-space: normal;        /* allow full text to wrap instead of being clipped */
+        overflow: visible;
+        text-overflow: unset;
+        line-height: 1.4;
+    }
+    .song-autocomplete-item .ac-artist {
+        font-size: 0.88rem;
+        display: block;             /* artist on its own line for clarity */
+    }
+    .song-autocomplete-item .ac-sep {
+        display: none;              /* hide dash separator — artist is already on its own line */
+    }
+    .song-autocomplete-item .ac-title {
+        font-size: 1rem;
+        display: block;
+    }
+}
+
 /* ==========================================================================
  * 7. ERROR & STATUS PAGES
  *    Body class: .page-status  (shared centering for error + party_ended)

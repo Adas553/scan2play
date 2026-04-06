@@ -2,7 +2,7 @@
  * Song Autocomplete / Typeahead
  *
  * Queries the public Apple iTunes Search API (no server involvement, no YouTube quota).
- * Debounced at 300ms to avoid API spam.
+ * Debounced at 300ms to avoid API spam. Results are cached per query to avoid redundant calls.
  *
  * Usage: add  data-autocomplete="songs"  to any <input> that should get suggestions.
  * The script auto-discovers all matching inputs on DOMContentLoaded.
@@ -19,10 +19,38 @@
     // -------------------------------------------------------------------------
     // Constants
     // -------------------------------------------------------------------------
-    const ITUNES_API  = 'https://itunes.apple.com/search';
-    const DEBOUNCE_MS = 300;
-    const MAX_RESULTS = 8;
-    const MIN_CHARS   = 2;
+    const ITUNES_API    = 'https://itunes.apple.com/search';
+    const DEBOUNCE_MS   = 300;
+    const MAX_RESULTS   = 8;
+    const MIN_CHARS     = 2;
+    const CACHE_MAX_SIZE = 50;  // evict oldest entries beyond this limit
+
+    // -------------------------------------------------------------------------
+    // Module-level result cache  (query string → results array)
+    // Shared across all instances — if two inputs ask for the same query the
+    // second one gets the cached answer instantly without a network round-trip.
+    // -------------------------------------------------------------------------
+    const resultCache = new Map();
+
+    function cacheSet(key, value) {
+        if (resultCache.size >= CACHE_MAX_SIZE) {
+            // Evict the oldest (first-inserted) entry
+            resultCache.delete(resultCache.keys().next().value);
+        }
+        resultCache.set(key, value);
+    }
+
+    // -------------------------------------------------------------------------
+    // Module-level debounce utility — standard pattern with own timer closure.
+    // Fix: previously defined inside createInstance and mutated outer-scope state.
+    // -------------------------------------------------------------------------
+    function debounce(fn, ms) {
+        let timer = null;
+        return function (...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), ms);
+        };
+    }
 
     // -------------------------------------------------------------------------
     // Utility: XSS-safe HTML escaping
@@ -41,34 +69,29 @@
     function createInstance(input) {
         const dropdownId = (input.id || 'ac-' + Math.random().toString(36).slice(2)) + '-dropdown';
 
-        let dropdown        = null;
-        let activeIndex     = -1;
-        let debounceTimer   = null;
+        let dropdown          = null;
+        let activeIndex       = -1;
         let currentController = null;
 
         // --- Build dropdown element and append into input's wrapper ---
         function buildDropdown() {
-            const wrapper = input.parentElement;
-            wrapper.style.position = 'relative';
-
+            // Fix: removed redundant wrapper.style.position = 'relative' —
+            // already handled by .song-autocomplete-wrapper CSS class.
             dropdown = document.createElement('div');
             dropdown.id        = dropdownId;
             dropdown.className = 'song-autocomplete-dropdown';
             dropdown.setAttribute('role', 'listbox');
             dropdown.setAttribute('aria-label', 'Song suggestions');
-            wrapper.appendChild(dropdown);
+            input.parentElement.appendChild(dropdown);
         }
 
-        // --- Debounce helper ---
-        function debounce(fn, ms) {
-            return function (...args) {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => fn.apply(this, args), ms);
-            };
-        }
-
-        // --- Fetch from iTunes ---
+        // --- Fetch from iTunes (with cache) ---
         async function fetchSuggestions(query) {
+            // Serve from cache when available — avoids redundant API calls
+            if (resultCache.has(query)) {
+                return resultCache.get(query);
+            }
+
             if (currentController) currentController.abort();
             currentController = new AbortController();
 
@@ -79,10 +102,13 @@
             url.searchParams.set('limit',  String(MAX_RESULTS));
 
             try {
-                const response = await fetch(url.toString(), { signal: currentController.signal });
+                // Fix: fetch() accepts URL objects natively — .toString() is redundant
+                const response = await fetch(url, { signal: currentController.signal });
                 if (!response.ok) return [];
                 const data = await response.json();
-                return data.results || [];
+                const results = data.results || [];
+                cacheSet(query, results);
+                return results;
             } catch (err) {
                 if (err.name === 'AbortError') return null; // cancelled — ignore
                 console.warn('[Autocomplete] iTunes API error:', err);
@@ -100,26 +126,32 @@
                 return;
             }
 
-            results.forEach((track, idx) => {
+            results.forEach((track) => {
                 const artist = track.artistName || '';
                 const title  = track.trackName  || '';
                 const label  = artist && title ? `${artist} \u2013 ${title}` : (title || artist);
 
                 const item = document.createElement('div');
                 item.className = 'song-autocomplete-item';
-                item.setAttribute('role', 'option');
+                item.setAttribute('role',       'option');
                 item.setAttribute('data-label', label);
-                item.setAttribute('data-index', String(idx));
+                // Fix: removed unused data-index attribute (dead code)
 
                 item.innerHTML =
                     `<span class="ac-artist">${escapeHtml(artist)}</span>` +
                     `<span class="ac-sep"> \u2013 </span>` +
                     `<span class="ac-title">${escapeHtml(title)}</span>`;
 
-                item.addEventListener('mousedown', (e) => {
-                    e.preventDefault(); // prevent blur before click
+                // Fix: handle both mousedown (desktop) and touchstart (mobile).
+                // mousedown alone is unreliable on iOS/Android — touchstart fires
+                // before the synthetic mousedown, and blur can close the dropdown
+                // before mousedown is processed.
+                function pick(e) {
+                    e.preventDefault(); // prevent blur before selection
                     selectItem(label);
-                });
+                }
+                item.addEventListener('mousedown', pick);
+                item.addEventListener('touchstart', pick, { passive: false });
 
                 dropdown.appendChild(item);
             });
@@ -182,24 +214,34 @@
             const query = input.value.trim();
             if (query.length < MIN_CHARS) { closeDropdown(); return; }
             const results = await fetchSuggestions(query);
-            if (results === null) return;
+            if (results === null) return; // aborted request — keep current dropdown
             renderDropdown(results);
         }, DEBOUNCE_MS);
 
-        // --- Close on outside click ---
+        // --- Close on outside click/touch ---
+        // Fix: store reference so it can be removed when input is removed from DOM.
         function onDocumentClick(e) {
             if (dropdown && !dropdown.contains(e.target) && e.target !== input) {
                 closeDropdown();
             }
         }
 
+        // Cleanup: remove global listener when input is detached (MutationObserver)
+        const observer = new MutationObserver(() => {
+            if (!document.contains(input)) {
+                document.removeEventListener('click', onDocumentClick);
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
         // --- Wire up ---
         buildDropdown();
 
-        input.setAttribute('autocomplete',     'off');
-        input.setAttribute('aria-autocomplete','list');
-        input.setAttribute('aria-haspopup',    'listbox');
-        input.setAttribute('aria-owns',        dropdownId);
+        input.setAttribute('autocomplete',      'off');
+        input.setAttribute('aria-autocomplete', 'list');
+        input.setAttribute('aria-haspopup',     'listbox');
+        input.setAttribute('aria-owns',         dropdownId);
 
         input.addEventListener('input',   onInput);
         input.addEventListener('keydown', handleKeydown);
