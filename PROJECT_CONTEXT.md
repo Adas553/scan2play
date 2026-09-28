@@ -28,6 +28,7 @@ The platform targets parties, clubs, weddings, corporate events, and any scenari
 | Web              | Spring MVC + Thymeleaf + Bootstrap 5             |
 | Security         | Spring Security + OAuth2 Client                  |
 | Database         | PostgreSQL (Spring Data JPA / Hibernate)          |
+| DB migrations    | Flyway (`src/main/resources/db/migration/V<n>__*.sql`) — see "Database migrations" in Section 10 |
 | AI               | Google Gemini API (`google-genai` SDK 1.38.0)    |
 | Music: Spotify   | `spotify-web-api-java` 8.4.1 + custom OAuth2    |
 | Music: YouTube   | YouTube Data API v3 (REST via RestClient) + IFrame Player API (client-side) |
@@ -468,7 +469,7 @@ Additional caching: DJ's `partyCode` is cached in `HttpSession` to avoid repeate
 - **IDOR protection** on all DJ endpoints (`DjSessionHelper.validateOwnership()`)
 - **`@EnableAsync`** added — `@Async` in `QueueService` was previously a no-op (ran synchronously)
 - **Database password externalized** to `${DB_PASSWORD}` env variable (was hardcoded)
-- **`ddl-auto` changed to `validate`** — Hibernate no longer auto-modifies schema (use Flyway for migrations)
+- **`ddl-auto` changed to `validate`** — Hibernate no longer auto-modifies schema (Flyway migrations were adopted on 2026-09-28, see "Database migrations" above)
 - **Graceful shutdown** enabled (30s timeout for in-flight Callable requests)
 - **HikariCP pool** configured (15 max, 5 idle, 5s connect timeout)
 - **RestClient timeouts** (5s connect, 10s read) — prevents hung threads on external API calls
@@ -496,6 +497,26 @@ DjPartySettingsController
     ├── PartySettingsCommandService
     ├── AccountDeletionService
     └── DjSessionHelper
+
+### Database migrations (Flyway)
+
+The schema is owned by Flyway, not Hibernate (`ddl-auto=validate` only checks that entities match the
+schema). Every schema change is a new file `src/main/resources/db/migration/V<n>__<what>.sql`;
+Flyway applies pending files in order at startup, before Hibernate validates, and records them in the
+`flyway_schema_history` table.
+
+- **Never edit an applied migration** — add the next version instead. Adding a column/table to an entity
+  now also means adding its migration in the same change, otherwise startup fails validation.
+- `V1__baseline.sql` is the schema as of 2026-09-28 (taken from a dump of the working database).
+- **`spring.flyway.baseline-on-migrate=true`**: a database that already has tables but no history table
+  (every database created before Flyway, including production) is recorded as version 1 *without running
+  V1*, and only V2+ are applied. An empty database gets V1 applied in full. Both paths were verified
+  against a real PostgreSQL 18 (empty DB: V1 creates a schema identical to the working DB; existing DB:
+  baselined, app starts, Hibernate validation passes).
+- **First production deploy checklist:** (1) take a database backup, (2) dump the production schema
+  (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — they must describe the same
+  tables/columns (e.g. `party_settings.fallback_*` columns added by hand), otherwise Hibernate's
+  validation will refuse to start; (3) deploy — Flyway creates `flyway_schema_history` and baselines it.
 
 DjSongController
     ├── DjService
@@ -610,7 +631,7 @@ PartySettingsQueryService
 - **No User entity** — DJ is identified by `ownerId` (OAuth2 provider ID) stored directly on `PartySettingsEntity`. There is no separate `User` table.
 - **One party per DJ** — `ownerId` has UNIQUE constraint. A DJ cannot run multiple parties simultaneously.
 - **No party cleanup** — Old parties and song requests accumulate. Consider adding a scheduled task to archive/delete parties inactive for >N days.
-- **No database migration tool** — Uses `ddl-auto=validate` (Hibernate validates schema). Flyway/Liquibase recommended for future schema changes. Initial schema must be created manually or via a baseline migration.
+- **Schema changes need a Flyway migration** — the schema is managed by Flyway (Section 10, "Database migrations"). Entity changes without a matching `V<n>__*.sql` fail Hibernate validation at startup. Flyway's schema history exists only in databases that have started with this version at least once.
 
 ### Security
 - Spotify tokens are stored as plain text in the database (no encryption at rest).

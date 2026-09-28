@@ -81,6 +81,15 @@ change architecture, entities, or endpoints, update `PROJECT_CONTEXT.md` in the 
 it goes stale otherwise (it did once already: Section 5.4 described a polling watcher that
 had already been removed from the code by the time anyone re-read it).
 
+## Database migrations
+
+The schema is managed by **Flyway** (`src/main/resources/db/migration/V<n>__<what>.sql`);
+Hibernate only validates it (`ddl-auto=validate`). Any change to an `@Entity` that touches the
+schema (new table/column/index/constraint) needs a new migration file in the same change —
+otherwise the app fails to start. Never edit a migration that has already been applied (add the
+next version instead), and never point ad-hoc SQL or `ddl-auto=update` at a shared database.
+Details and the production first-deploy checklist: `PROJECT_CONTEXT.md`, Section 10.
+
 ## Branches
 
 - `main` — was previously auto-deployed to Railway. Railway is currently paused (not
