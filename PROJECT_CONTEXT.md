@@ -447,6 +447,7 @@ Additional caching: DJ's `partyCode` is cached in `HttpSession` to avoid repeate
 | `GOOGLE_AI_API_KEY`    | Google Gemini API key            |
 | `YOUTUBE_API_KEY`      | YouTube Data API v3 key (optional — fallback to search URL if missing) |
 | `DB_PASSWORD`          | PostgreSQL database password     |
+| `SCAN2PLAY_GUEST_URL`  | Optional. Overrides `scan2play.guest-url` (default `https://www.scan2play.com.pl/`) — the base URL encoded in the dashboard QR code and "Party Link". Set it to the machine's LAN IP (`http://<lan-ip>:8080/`) to test the guest flow from a phone locally; `localhost` is not reachable from a phone. |
 
 ### Key Application Properties
 
