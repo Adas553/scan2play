@@ -149,8 +149,7 @@
     </div>
 
     <!-- YouTube Player (only for YouTube provider) -->
-    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm" id="yt-player-card"
-         th:attr="data-fallback-playlist=${fallbackPlaylistId},data-fallback-shuffle=${fallbackShuffle}">
+    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm" id="yt-player-card">
         <h5 class="text-light mb-2">▶️ YouTube Player</h5>
         <div class="ratio ratio-16x9" style="max-width: 640px;">
             <div id="yt-player"></div>

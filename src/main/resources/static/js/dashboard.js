@@ -91,7 +91,7 @@ function isYouTubeProvider() {
                 // so we don't need to duplicate the URL parsing logic client-side.
                 const extractedId = response.headers.get('X-Fallback-Id') || '';
                 if (typeof window.updateFallbackSource === 'function') {
-                    window.updateFallbackSource(extractedId);
+                    window.updateFallbackSource();
                 }
                 // Show/hide the stop button based on whether an ID was extracted
                 const stopBtn = document.getElementById('fallbackStopBtn');
@@ -316,10 +316,14 @@ function copyPartyLink() {
 // ==========================================================================
 
 function stopFallbackPlaylist() {
-    // Stop local playback
-    if (typeof window.stopFallback === 'function') {
-        window.stopFallback();
-    }
+    // Stop local playback — only after the server has dropped the playlist: Auto-Pilot asks the
+    // server for the next track whenever the player is idle, so stopping first could let it start
+    // another background track right away.
+    const stopPlayback = function() {
+        if (typeof window.stopFallback === 'function') {
+            window.stopFallback();
+        }
+    };
 
     // Clear the input field
     const input = document.getElementById('fallbackInput');
@@ -342,14 +346,17 @@ function stopFallbackPlaylist() {
             body: fd
         }).catch(function(err) {
             console.error('[Dashboard] Fallback clear error:', err);
-        });
+        }).then(stopPlayback);
+    } else {
+        stopPlayback();
     }
 }
 
 // ==========================================================================
 // FALLBACK PLAYLIST — Shuffle toggle handler
 //
-// Toggles shuffle on/off server-side and updates the YouTube player live.
+// Toggles shuffle on/off server-side. The server reads the flag whenever it picks the
+// next background track, so the player needs no update — it applies from the next track on.
 // ==========================================================================
 
 function toggleFallbackShuffle() {
@@ -371,9 +378,6 @@ function toggleFallbackShuffle() {
         if (response.ok) {
             const newState = response.headers.get('X-Fallback-Shuffle') === 'true';
             checkbox.checked = newState;
-            if (typeof window.updateFallbackShuffle === 'function') {
-                window.updateFallbackShuffle(newState);
-            }
         }
     }).catch(function(err) {
         console.error('[Dashboard] Fallback shuffle toggle error:', err);
