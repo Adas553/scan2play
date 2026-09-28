@@ -33,26 +33,35 @@ public class PartySettingsEntity {
     @Column(nullable = false, unique = true)
     private String ownerId;
 
+    // NOTE: every field with an initializer needs @Builder.Default — without it Lombok's
+    // @Builder silently ignores the initializer and PartySettingsEntity.builder().build()
+    // yields 0 / false / null instead of the defaults below.
+    @Builder.Default
     @Column(nullable = false)
     private boolean active = true;
 
     @Enumerated(EnumType.STRING)
     private VibeType globalVibe;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     private MusicProviderType activeProvider = MusicProviderType.SPOTIFY;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     private PlaybackMode playbackMode = PlaybackMode.MANUAL;
 
     // --- Rate Limiting ---
+    @Builder.Default
     @Column(nullable = false)
     private int requestLimit = 2;
 
+    @Builder.Default
     @Column(nullable = false)
     private int cooldownMinutes = 3;
 
     // --- Duplicate Filtering ---
+    @Builder.Default
     @Column(nullable = false)
     private int duplicateCheckWindow = 15;
 
@@ -62,6 +71,7 @@ public class PartySettingsEntity {
     private String fallbackPlaylistUrl;
 
     /** Whether the fallback playlist should play in shuffled order. Default: true. */
+    @Builder.Default
     @Column(nullable = false)
     private boolean fallbackShuffle = true;
 
