@@ -507,7 +507,10 @@ Flyway applies pending files in order at startup, before Hibernate validates, an
 
 - **Never edit an applied migration** — add the next version instead. Adding a column/table to an entity
   now also means adding its migration in the same change, otherwise startup fails validation.
-- `V1__baseline.sql` is the schema as of 2026-09-28 (taken from a dump of the working database).
+- Migrations so far: `V1__baseline` (schema as of 2026-09-28, taken from a dump of the working database),
+  `V2__create_fallback_track` (Phase 2 tracks), `V3__default_request_limits` (data fix: parties created while
+  `@Builder` ignored the field defaults have `request_limit`/`cooldown_minutes` = 0, which switches guest rate
+  limiting off; sets them to 2 / 3 where < 1 — `duplicate_check_window` is left alone because 0 is valid there).
 - **`spring.flyway.baseline-on-migrate=true`**: a database that already has tables but no history table
   (every database created before Flyway, including production) is recorded as version 1 *without running
   V1*, and only V2+ are applied. An empty database gets V1 applied in full. Both paths were verified
