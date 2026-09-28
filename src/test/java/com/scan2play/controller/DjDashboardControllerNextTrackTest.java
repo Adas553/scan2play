@@ -1,0 +1,143 @@
+package com.scan2play.controller;
+
+import com.scan2play.model.NextTrackResponse;
+import com.scan2play.model.NextTrackResponse.Source;
+import com.scan2play.service.DjService;
+import com.scan2play.service.NextTrackService;
+import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.QrCodeService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Tests {@code POST /dj/dashboard/next-track} — the combined "guest song first, else background track"
+ * answer for YouTube Auto-Pilot (PROJECT_CONTEXT.md Section 14, Phase 2 stage 3).
+ */
+class DjDashboardControllerNextTrackTest {
+
+    private static final String PARTY = "ABC12";
+
+    private NextTrackService nextTrackService;
+    private DjSessionHelper sessionHelper;
+    private MockMvc mockMvc;
+    private OAuth2AuthenticationToken token;
+    private MockHttpSession session;
+
+    @BeforeEach
+    void setUp() {
+        nextTrackService = mock(NextTrackService.class);
+        sessionHelper = mock(DjSessionHelper.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
+                mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class),
+                sessionHelper, nextTrackService)).build();
+        token = new OAuth2AuthenticationToken(
+                new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
+                AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
+        session = new MockHttpSession();
+    }
+
+    @Test
+    @DisplayName("200 with source GUEST, the song id and the video ID")
+    void shouldReturnGuestTrack() throws Exception {
+        when(nextTrackService.findNextTrack(PARTY, Set.of()))
+                .thenReturn(Optional.of(new NextTrackResponse(Source.GUEST, 42L, "hTWKbfoikeg")));
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source").value("GUEST"))
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.videoId").value("hTWKbfoikeg"));
+    }
+
+    @Test
+    @DisplayName("200 with source BACKGROUND when only the fallback playlist has something to play")
+    void shouldReturnBackgroundTrack() throws Exception {
+        when(nextTrackService.findNextTrack(PARTY, Set.of()))
+                .thenReturn(Optional.of(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ")));
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source").value("BACKGROUND"))
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.videoId").value("dQw4w9WgXcQ"));
+    }
+
+    @Test
+    @DisplayName("204 No Content with an empty body when there is nothing to play")
+    void shouldReturnNoContent_whenNothingToPlay() throws Exception {
+        when(nextTrackService.findNextTrack(anyString(), any())).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+    }
+
+    @Test
+    @DisplayName("exclude is parsed into guest song IDs; blank and malformed entries are ignored")
+    void shouldParseExcludeParameter() throws Exception {
+        when(nextTrackService.findNextTrack(anyString(), any())).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY)
+                .param("exclude", "5, 7,abc,,9").principal(token).session(session));
+
+        verify(nextTrackService).findNextTrack(PARTY, Set.of(5L, 7L, 9L));
+    }
+
+    @Test
+    @DisplayName("it changes state (marks a background track played), so it is POST-only — GET is rejected")
+    void shouldRejectGet() throws Exception {
+        mockMvc.perform(get("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(status().isMethodNotAllowed());
+
+        verifyNoInteractions(nextTrackService);
+    }
+
+    @Test
+    @DisplayName("validates that the party belongs to the logged-in DJ before answering (IDOR protection)")
+    void shouldValidateOwnership() throws Exception {
+        when(nextTrackService.findNextTrack(anyString(), any())).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session));
+
+        verify(sessionHelper).validateOwnership(PARTY, token, session);
+    }
+
+    @Test
+    @DisplayName("a party owned by someone else is rejected and nothing is handed out or marked played")
+    void shouldNotHandOutAnything_whenPartyBelongsToSomeoneElse() {
+        doThrow(new AccessDeniedException("You do not own party: OTHER"))
+                .when(sessionHelper).validateOwnership(any(), any(), any());
+
+        assertThatThrownBy(() -> mockMvc.perform(post("/dj/dashboard/next-track")
+                        .param("partyCode", "OTHER").principal(token).session(session)))
+                .hasRootCauseInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(nextTrackService);
+    }
+}

@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.service.FallbackImportException.Reason;
+import com.scan2play.util.YouTubeUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,15 +21,14 @@ import java.util.List;
 @Slf4j
 public class FallbackPlaylistService {
 
-    /** Prefix used by {@code DjDashboardController#extractPlaylistId} to mark a single video. */
-    private static final String SINGLE_VIDEO_PREFIX = "V:";
+    private static final String SINGLE_VIDEO_PREFIX = YouTubeUrls.SINGLE_VIDEO_PREFIX;
 
     private final YouTubePlaylistClient playlistClient;
     private final FallbackTrackCommandService trackCommandService;
 
     /**
      * @param partyCode  the party
-     * @param playlistId what {@code DjDashboardController#extractPlaylistId} returned: a playlist ID,
+     * @param playlistId what {@link YouTubeUrls#extractPlaylistId} returned: a playlist ID,
      *                   {@code V:<videoId>} for a single video, or {@code null}/blank when cleared
      * @return number of tracks now queued (0 when the playlist was cleared)
      * @throws FallbackImportException if the playlist could not be imported; existing tracks are untouched

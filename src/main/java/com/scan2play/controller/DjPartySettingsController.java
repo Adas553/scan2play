@@ -7,6 +7,7 @@ import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.FallbackImportException;
 import com.scan2play.service.FallbackPlaylistService;
 import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.util.YouTubeUrls;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -124,7 +125,7 @@ public class DjPartySettingsController {
      * <p>
      * Returns 200 OK with the extracted playlist/video ID in the {@code X-Fallback-Id}
      * response header. The client-side Auto-Pilot reads this header directly — URL parsing
-     * logic lives exclusively in {@link DjDashboardController#extractPlaylistId(String)}.
+     * logic lives exclusively in {@link YouTubeUrls#extractPlaylistId(String)}.
      * <p>
      * This endpoint is YouTube-only. All YouTube dashboard forms are AJAX-intercepted,
      * so a redirect is not needed (the AJAX handler reads the header instead).
@@ -142,7 +143,7 @@ public class DjPartySettingsController {
                 : null;
         partySettingsCommandService.updateSettings(partyCode, s -> s.setFallbackPlaylistUrl(sanitized));
 
-        String extractedId = DjDashboardController.extractPlaylistId(sanitized);
+        String extractedId = YouTubeUrls.extractPlaylistId(sanitized);
         log.info("Party [{}]: Fallback playlist updated to: {} (extracted: {})",
                 partyCode, sanitized != null ? sanitized : "(cleared)", extractedId);
 

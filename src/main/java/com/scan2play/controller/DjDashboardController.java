@@ -2,9 +2,12 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.NextGuestTrackResponse;
+import com.scan2play.model.NextTrackResponse;
 import com.scan2play.service.DjService;
+import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
+import com.scan2play.util.YouTubeUrls;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +20,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -25,8 +29,6 @@ import static com.scan2play.controller.ViewAttributes.*;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Controller responsible for DJ dashboard views and AJAX polling endpoints.
@@ -46,19 +48,11 @@ import java.util.regex.Pattern;
 @Slf4j
 public class DjDashboardController {
 
-    /** Extracts YouTube playlist ID from a full URL (e.g. ?list=PLxxxxxx). */
-    private static final Pattern PLAYLIST_ID_PATTERN = Pattern.compile("[?&]list=([A-Za-z0-9_-]+)");
-
-    /** Extracts YouTube video ID from watch URLs (e.g. ?v=xxxxx). */
-    private static final Pattern VIDEO_ID_V_PATTERN = Pattern.compile("[?&]v=([A-Za-z0-9_-]{11})");
-
-    /** Extracts YouTube video ID from short URLs (e.g. youtu.be/xxxxx). */
-    private static final Pattern VIDEO_ID_SHORT_PATTERN = Pattern.compile("youtu\\.be/([A-Za-z0-9_-]{11})");
-
     private final DjService djService;
     private final PartySettingsQueryService partySettingsQueryService;
     private final QrCodeService qrCodeService;
     private final DjSessionHelper sessionHelper;
+    private final NextTrackService nextTrackService;
 
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
@@ -205,6 +199,31 @@ public class DjDashboardController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    /**
+     * Server-side "what plays next?" for YouTube Auto-Pilot: a waiting guest song first, otherwise the next
+     * track of the party's fallback (background music) playlist — see {@link NextTrackService}.
+     * <p>
+     * A POST because it is <b>not</b> read-only: a background track is marked as played the moment it is
+     * handed out (a guest song is still confirmed later via {@code POST /dj/dashboard/play}). Ask for it only
+     * when a track is actually about to be loaded, not to poll.
+     * <p>
+     * Returns 204 No Content when there is neither a guest song nor a background track.
+     *
+     * @param exclude Optional comma-separated guest song IDs the client already knows are broken (the YouTube
+     *                player itself errored on them) and wants skipped.
+     */
+    @PostMapping("/dashboard/next-track")
+    @ResponseBody
+    public ResponseEntity<NextTrackResponse> nextTrack(@RequestParam String partyCode,
+                                                       @RequestParam(required = false) String exclude,
+                                                       OAuth2AuthenticationToken authentication,
+                                                       HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        return nextTrackService.findNextTrack(partyCode, parseExcludeIds(exclude))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     private static Set<Long> parseExcludeIds(String exclude) {
         if (exclude == null || exclude.isBlank()) {
             return Set.of();
@@ -238,26 +257,7 @@ public class DjDashboardController {
      * @return extracted ID (with {@code V:} prefix for single videos), or null if input is blank.
      */
     static String extractPlaylistId(String input) {
-        if (input == null || input.isBlank()) return null;
-
-        // Priority 1: playlist ID from URL (?list=PLxxx)
-        Matcher playlistMatcher = PLAYLIST_ID_PATTERN.matcher(input);
-        if (playlistMatcher.find()) return playlistMatcher.group(1);
-
-        // Priority 2: video ID from watch URL (?v=xxx)
-        Matcher videoMatcher = VIDEO_ID_V_PATTERN.matcher(input);
-        if (videoMatcher.find()) return "V:" + videoMatcher.group(1);
-
-        // Priority 3: video ID from short URL (youtu.be/xxx)
-        Matcher shortMatcher = VIDEO_ID_SHORT_PATTERN.matcher(input);
-        if (shortMatcher.find()) return "V:" + shortMatcher.group(1);
-
-        // Priority 4: raw input — check if it looks like a video ID (exactly 11 chars, valid charset)
-        String trimmed = input.trim();
-        if (trimmed.matches("[A-Za-z0-9_-]{11}")) return "V:" + trimmed;
-
-        // Otherwise treat as raw playlist ID (existing behavior)
-        return trimmed;
+        return YouTubeUrls.extractPlaylistId(input);
     }
 }
 

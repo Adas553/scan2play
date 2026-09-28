@@ -135,7 +135,8 @@ Stores bug reports and feature ideas submitted by DJs from the dashboard.
 #### `FallbackTrackEntity` → table: `fallback_track` (Flyway `V2`)
 
 Server-side copy of a party's fallback ("background music") playlist — Section 14, Phase 2. Written when the DJ
-sets the playlist; **not yet read by playback** (the client still runs `loadPlaylist()` until Phase 2 stage 3/4).
+sets the playlist. Served by `POST /dj/dashboard/next-track` (stage 3); **the client does not use that endpoint yet**
+(it still runs `loadPlaylist()` until stage 4).
 
 | Field              | Type                    | Notes                                                             |
 |--------------------|-------------------------|-------------------------------------------------------------------|
@@ -317,7 +318,8 @@ Supported fallback URL formats (resolved client-side and server-side):
 | `AccountDeletionService`     | 65    | Deletes all DJ data (songs, fallback tracks, feedback, settings) — required by Google API data deletion policy |
 | `YouTubePlaylistClient`      | 156   | Reads a playlist via YouTube Data API (`playlistItems.list` + `videos.list`): max 500 items, drops private/deleted/non-embeddable videos; API key never appears in errors |
 | `FallbackPlaylistService`    | 53    | Syncs the party's server-side fallback tracks with the DJ's playlist (playlist / single video / cleared). API first, DB only after a complete non-empty result |
-| `FallbackTrackCommandService`| 82    | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new), cancel, daily 30-day purge |
+| `FallbackTrackCommandService`| 164   | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new), cancel, daily 30-day purge, and `takeNextTrack` — picks the next track of the *current* playlist (playlist order or random), claims it QUEUED → PLAYED with one conditional UPDATE (concurrent callers never get the same track), loops the playlist by re-queuing the party's newest import when exhausted |
+| `NextTrackService`           | 120   | "What plays next?": a waiting guest song first, else a background track. Imports lazily when there is nothing to play or the tracks are ≥ 29 days old; per party+playlist single-flight and a 5-minute pause after a failed import |
 
 ### 6.3 Configuration
 
@@ -644,6 +646,7 @@ PartySettingsQueryService
 | GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated |
 | GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
 | GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1) |
+| POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId}` or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Section 14 Phase 2 stage 3 — the client does not call it yet |
 | POST   | `/dj/dashboard/vibe`              | `DjPartySettingsController.updateGlobalVibe()`   | ownership-validated |
 | POST   | `/dj/dashboard/limits`            | `DjPartySettingsController.updateLimits()`       | ownership-validated |
 | POST   | `/dj/dashboard/play`              | `DjSongController.markAsPlayed()`                | song-level ownership check |
@@ -742,7 +745,7 @@ Flyway) and effort/regression risk in a live product, hence the stages:
 |-------|------|--------|
 | 1 | Adopt Flyway; baseline `V1` (Section 10, "Database migrations") | **done** |
 | 2 | `V2__create_fallback_track`, `FallbackTrackEntity`, `YouTubePlaylistClient` (import, max 500 tracks), `FallbackPlaylistService`; the fallback-playlist endpoint imports best-effort (headers); account deletion + 30-day purge; unit tests | **done** — data is written, **nothing reads it yet** |
-| 3 | Extend the "what's next" endpoint: guest song first, else next `QUEUED` fallback track (server-side shuffle, mark `PLAYED`); lazy import for parties whose playlist was set before Stage 2 or whose rows are >29 days old | todo |
+| 3 | `POST /dj/dashboard/next-track` (`NextTrackService`): guest song first, else the next `QUEUED` fallback track of the current playlist (playlist order or server-side shuffle, marked `PLAYED` when handed out, loops when exhausted); lazy/refresh import (nothing to play, or rows ≥ 29 days old); also `V3` limits fix and `YouTubeUrls` extracted from the controller | **done** — the endpoint works, **the client does not call it yet** |
 | 4 | Simplify `youtube-autopilot.js` to "on `ENDED`/error ask the server, `loadVideoById`" — drops `loadPlaylist`, playlist-index tracking, `guestSongPending`, `fallbackTrackChanged` | todo |
 | 5 | Docs cleanup (this section, 5.4) | todo |
 
