@@ -4,6 +4,8 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
+import com.scan2play.service.FallbackImportException;
+import com.scan2play.service.FallbackPlaylistService;
 import com.scan2play.service.PartySettingsCommandService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class DjPartySettingsController {
     private final PartySettingsCommandService partySettingsCommandService;
     private final AccountDeletionService accountDeletionService;
     private final DjSessionHelper sessionHelper;
+    private final FallbackPlaylistService fallbackPlaylistService;
 
     /**
      * Re-activates the party session.
@@ -143,9 +146,21 @@ public class DjPartySettingsController {
         log.info("Party [{}]: Fallback playlist updated to: {} (extracted: {})",
                 partyCode, sanitized != null ? sanitized : "(cleared)", extractedId);
 
-        return ResponseEntity.ok()
-                .header("X-Fallback-Id", extractedId != null ? extractedId : "")
-                .build();
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok()
+                .header("X-Fallback-Id", extractedId != null ? extractedId : "");
+
+        // Server-side copy of the playlist (Section 14, Phase 2). Best-effort for now: playback still
+        // runs from the client-side playlist, so a failed import must not fail saving the setting.
+        try {
+            int tracks = fallbackPlaylistService.syncFallbackTracks(partyCode, extractedId);
+            response.header("X-Fallback-Import", "ok")
+                    .header("X-Fallback-Tracks", String.valueOf(tracks));
+        } catch (FallbackImportException e) {
+            log.warn("Party [{}]: fallback playlist import failed ({}): {}", partyCode, e.getReason(), e.getMessage());
+            response.header("X-Fallback-Import", "failed")
+                    .header("X-Fallback-Import-Reason", e.getReason().name());
+        }
+        return response.build();
     }
 
     /**

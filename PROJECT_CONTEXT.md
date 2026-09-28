@@ -132,12 +132,34 @@ Stores bug reports and feature ideas submitted by DJs from the dashboard.
 
 **Indexes:** `idx_feedback_submitted_at` on `submittedAt`, `idx_feedback_owner_id` on `ownerId`.
 
+#### `FallbackTrackEntity` → table: `fallback_track` (Flyway `V2`)
+
+Server-side copy of a party's fallback ("background music") playlist — Section 14, Phase 2. Written when the DJ
+sets the playlist; **not yet read by playback** (the client still runs `loadPlaylist()` until Phase 2 stage 3/4).
+
+| Field              | Type                    | Notes                                                             |
+|--------------------|-------------------------|-------------------------------------------------------------------|
+| `id`               | Long (PK, auto)         |                                                                   |
+| `partyCode`        | String(5)               | Owning party (no FK, like `song_requests`)                        |
+| `playlistId`       | String(64)              | Source: playlist ID, or `V:<videoId>` for a single video          |
+| `videoId`          | String(20)              | 11-char YouTube video ID (no titles stored — ToS minimisation)    |
+| `playlistPosition` | int                     | 0-based order within the source playlist                          |
+| `status`           | FallbackTrackStatus     | `QUEUED` → `PLAYED`, or `CANCELLED` (playlist changed/cleared)    |
+| `fetchedAt`        | LocalDateTime           | When fetched from the YouTube API — basis of the 30-day retention |
+| `playedAt`         | LocalDateTime (nullable)|                                                                   |
+
+**Soft invalidation:** changing/clearing the playlist flips still-`QUEUED` rows to `CANCELLED` (never deletes); `PLAYED`
+rows stay as history. **Retention:** rows older than 30 days are purged daily at 04:30
+(`FallbackTrackCommandService.purgeStaleTracks`) and on account deletion. **Index:** `idx_fallback_track_party_status`
+on `(partyCode, status)`.
+
 ### 4.2 Enums
 
 | Enum                | Values |
 |---------------------|--------|
 | `MusicProviderType` | `SPOTIFY`, `YOUTUBE` |
 | `PlaybackMode`      | `MANUAL`, `AUTO` |
+| `FallbackTrackStatus` | `QUEUED`, `PLAYED`, `CANCELLED` |
 | `VibeType`          | `ANY`, `BACHATA_AND_KIZOMBA`, `CLASSICAL_MUSIC`, `CHILLOUT_AND_LOUNGE`, `CLUB_AND_EDM`, `DISCO_POLO`, `HIP_HOP_AND_RAP`, `JAZZ`, `REGGAETON_AND_DANCEHALL`, `POP_AND_DANCE`, `RETRO_80S_90S`, `ROCK_AND_METAL`, `SALSA_AND_TIMBA`, `WEDDING_CLASSICS` |
 
 ### 4.3 Records
@@ -292,7 +314,10 @@ Supported fallback URL formats (resolved client-side and server-side):
 | `SpotifyAuthService`         | 188   | Spotify OAuth2 token management (exchange, refresh, store) — null-safe refresh with explicit exception |
 | `GuestSessionService`        | 73    | Session-based rate limiting for guests (token bucket) |
 | `QrCodeService`              | 50    | QR code generation (ZXing, `@Cacheable`) |
-| `AccountDeletionService`     | 60    | Deletes all DJ data (songs, feedback, settings) — required by Google API data deletion policy |
+| `AccountDeletionService`     | 65    | Deletes all DJ data (songs, fallback tracks, feedback, settings) — required by Google API data deletion policy |
+| `YouTubePlaylistClient`      | 156   | Reads a playlist via YouTube Data API (`playlistItems.list` + `videos.list`): max 500 items, drops private/deleted/non-embeddable videos; API key never appears in errors |
+| `FallbackPlaylistService`    | 53    | Syncs the party's server-side fallback tracks with the DJ's playlist (playlist / single video / cleared). API first, DB only after a complete non-empty result |
+| `FallbackTrackCommandService`| 82    | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new), cancel, daily 30-day purge |
 
 ### 6.3 Configuration
 
@@ -392,7 +417,16 @@ Two separate authentication flows:
   - **L3 — YouTube Data API (100 quota/search):** only called on L1+L2 miss or L2 entry expired
 - **ToS compliance:** Expired entries (>30 days) are refreshed on next access and cleaned up daily at 04:00 via `@Scheduled` task
 - **Fallback:** If API key is missing or search fails → returns YouTube search results URL (manual play only, Auto-Pilot won't work with search URLs)
-- **Auto-Pilot:** Handled entirely client-side via YouTube IFrame Player API (`youtube-autopilot.js`)
+- **Auto-Pilot:** Handled client-side via YouTube IFrame Player API (`youtube-autopilot.js`); the "which guest song next" decision is server-side (Section 14)
+- **Quota (per Google's "Quota costs" page, checked 2026-09-28):** `search.list` has its **own** default limit of 100
+  calls/day; every other endpoint shares **10,000 units/day**. `playlistItems.list` and `videos.list` cost 1 unit per call.
+  (The older wording "100 units per search" gives the same ~100 unique searches/day.) Verify your project's actual
+  quota in Google Cloud Console → APIs & Services → YouTube Data API v3 → Quotas.
+- **Playlist import (`YouTubePlaylistClient`, Phase 2):** when the DJ sets a fallback playlist the backend reads it once —
+  at most 500 items = ≤ 10 `playlistItems` + ≤ 10 `videos` calls (≈ 20 units from the general pool, none from `search.list`).
+  Requires `youtube.api-key`; a single video needs no API call. Failures (`NO_API_KEY`, `INVALID_PLAYLIST`, `API_ERROR`,
+  `NO_PLAYABLE_TRACKS`) are thrown as `FallbackImportException` **before** any DB write, so existing tracks stay intact.
+  The API key is part of the request URL, so exceptions are scrubbed of it and carry no cause.
 
 ---
 
@@ -446,7 +480,7 @@ Additional caching: DJ's `partyCode` is cached in `HttpSession` to avoid repeate
 | `GOOGLE_CLIENT_ID`     | Google OAuth2 client ID          |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth2 client secret      |
 | `GOOGLE_AI_API_KEY`    | Google Gemini API key            |
-| `YOUTUBE_API_KEY`      | YouTube Data API v3 key (optional — fallback to search URL if missing) |
+| `YOUTUBE_API_KEY`      | YouTube Data API v3 key (optional — without it songs fall back to search URLs, and the fallback playlist cannot be imported server-side). **The variable name must have no trailing characters** (a stray `:` in the IDE run configuration silently disables it) |
 | `DB_PASSWORD`          | PostgreSQL database password     |
 | `SCAN2PLAY_GUEST_URL`  | Optional. Overrides `scan2play.guest-url` (default `https://www.scan2play.com.pl/`) — the base URL encoded in the dashboard QR code and "Party Link". Set it to the machine's LAN IP (`http://<lan-ip>:8080/`) to test the guest flow from a phone locally; `localhost` is not reachable from a phone. |
 
@@ -463,6 +497,26 @@ Additional caching: DJ's `partyCode` is cached in `HttpSession` to avoid repeate
 | `server.tomcat.max-http-form-post-size` | `10KB`                             |
 | `spring.datasource.hikari.maximum-pool-size` | `15`                          |
 | `spring.datasource.hikari.minimum-idle` | `5`                                |
+
+### Database migrations (Flyway)
+
+The schema is owned by Flyway, not Hibernate (`ddl-auto=validate` only checks that entities match the
+schema). Every schema change is a new file `src/main/resources/db/migration/V<n>__<what>.sql`;
+Flyway applies pending files in order at startup, before Hibernate validates, and records them in the
+`flyway_schema_history` table.
+
+- **Never edit an applied migration** — add the next version instead. Adding a column/table to an entity
+  now also means adding its migration in the same change, otherwise startup fails validation.
+- `V1__baseline.sql` is the schema as of 2026-09-28 (taken from a dump of the working database).
+- **`spring.flyway.baseline-on-migrate=true`**: a database that already has tables but no history table
+  (every database created before Flyway, including production) is recorded as version 1 *without running
+  V1*, and only V2+ are applied. An empty database gets V1 applied in full. Both paths were verified
+  against a real PostgreSQL 18 (empty DB: V1 creates a schema identical to the working DB; existing DB:
+  baselined, app starts, Hibernate validation passes).
+- **First production deploy checklist:** (1) take a database backup, (2) dump the production schema
+  (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — they must describe the same
+  tables/columns (e.g. `party_settings.fallback_*` columns added by hand), otherwise Hibernate's
+  validation will refuse to start; (3) deploy — Flyway creates `flyway_schema_history` and baselines it.
 
 ### Production Hardening (applied 2026-04-05)
 
@@ -497,26 +551,6 @@ DjPartySettingsController
     ├── PartySettingsCommandService
     ├── AccountDeletionService
     └── DjSessionHelper
-
-### Database migrations (Flyway)
-
-The schema is owned by Flyway, not Hibernate (`ddl-auto=validate` only checks that entities match the
-schema). Every schema change is a new file `src/main/resources/db/migration/V<n>__<what>.sql`;
-Flyway applies pending files in order at startup, before Hibernate validates, and records them in the
-`flyway_schema_history` table.
-
-- **Never edit an applied migration** — add the next version instead. Adding a column/table to an entity
-  now also means adding its migration in the same change, otherwise startup fails validation.
-- `V1__baseline.sql` is the schema as of 2026-09-28 (taken from a dump of the working database).
-- **`spring.flyway.baseline-on-migrate=true`**: a database that already has tables but no history table
-  (every database created before Flyway, including production) is recorded as version 1 *without running
-  V1*, and only V2+ are applied. An empty database gets V1 applied in full. Both paths were verified
-  against a real PostgreSQL 18 (empty DB: V1 creates a schema identical to the working DB; existing DB:
-  baselined, app starts, Hibernate validation passes).
-- **First production deploy checklist:** (1) take a database backup, (2) dump the production schema
-  (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — they must describe the same
-  tables/columns (e.g. `party_settings.fallback_*` columns added by hand), otherwise Hibernate's
-  validation will refuse to start; (3) deploy — Flyway creates `flyway_schema_history` and baselines it.
 
 DjSongController
     ├── DjService
@@ -611,7 +645,7 @@ PartySettingsQueryService
 | POST   | `/dj/dashboard/limits`            | `DjPartySettingsController.updateLimits()`       | ownership-validated |
 | POST   | `/dj/dashboard/play`              | `DjSongController.markAsPlayed()`                | song-level ownership check |
 | POST   | `/dj/dashboard/playback-mode`     | `DjPartySettingsController.togglePlaybackMode()` | ownership-validated |
-| POST   | `/dj/dashboard/fallback-playlist` | `DjPartySettingsController.updateFallbackPlaylist()` | YouTube only, ownership-validated |
+| POST   | `/dj/dashboard/fallback-playlist` | `DjPartySettingsController.updateFallbackPlaylist()` | YouTube only, ownership-validated. Always saves the URL; also imports the playlist into `fallback_track` (best-effort) and reports it in headers: `X-Fallback-Id`, `X-Fallback-Import: ok\|failed`, `X-Fallback-Tracks: <n>` or `X-Fallback-Import-Reason: NO_API_KEY\|INVALID_PLAYLIST\|API_ERROR\|NO_PLAYABLE_TRACKS` |
 | POST   | `/dj/dashboard/fallback-shuffle`  | `DjPartySettingsController.toggleFallbackShuffle()` | ownership-validated |
 | POST   | `/dj/dashboard/dj-pick`           | `DjSongController.addDjPick()`                   | YouTube only, bypasses AI, ownership-validated |
 | POST   | `/dj/requests/{id}/push-to-spotify`| `DjSongController.pushToSpotify()`              | song-level ownership check |
@@ -695,7 +729,25 @@ Moved just the "which guest song is next" decision server-side:
 never existed, so nothing to preserve), no pre-fetching, fallback/background-playlist
 handling untouched.
 
-### Phase 2 — NOT implemented (background tracks + pre-fetching)
+### Phase 2 — IN PROGRESS (staged; dev branch)
+
+Decision (2026-09-28): do it, in stages — quota turned out not to be a concern (see Section 7.3: playlist import ≈ 20
+units from the general pool, `search.list` untouched). The remaining costs are schema management (solved by adopting
+Flyway) and effort/regression risk in a live product, hence the stages:
+
+| Stage | What | Status |
+|-------|------|--------|
+| 1 | Adopt Flyway; baseline `V1` (Section 10, "Database migrations") | **done** |
+| 2 | `V2__create_fallback_track`, `FallbackTrackEntity`, `YouTubePlaylistClient` (import, max 500 tracks), `FallbackPlaylistService`; the fallback-playlist endpoint imports best-effort (headers); account deletion + 30-day purge; unit tests | **done** — data is written, **nothing reads it yet** |
+| 3 | Extend the "what's next" endpoint: guest song first, else next `QUEUED` fallback track (server-side shuffle, mark `PLAYED`); lazy import for parties whose playlist was set before Stage 2 or whose rows are >29 days old | todo |
+| 4 | Simplify `youtube-autopilot.js` to "on `ENDED`/error ask the server, `loadVideoById`" — drops `loadPlaylist`, playlist-index tracking, `guestSongPending`, `fallbackTrackChanged` | todo |
+| 5 | Docs cleanup (this section, 5.4) | todo |
+
+**Deviations from the original plan below:** the tracks live in a dedicated `fallback_track` table (statuses `QUEUED` /
+`PLAYED` / `CANCELLED`, no `type` column) instead of a unified `party_queue` — guest requests stay in `song_requests`
+and the `PENDING` approval gate never existed. Only video IDs are stored (no titles), retained ≤ 30 days.
+
+Original Phase 2 notes (written before the decision above):
 
 1. **Background tracks server-side.** Today the fallback playlist is 100% client-side —
    `player.loadPlaylist(list: playlistId)` — YouTube's own IFrame player iterates/shuffles
