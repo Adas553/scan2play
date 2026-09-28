@@ -135,8 +135,8 @@ Stores bug reports and feature ideas submitted by DJs from the dashboard.
 #### `FallbackTrackEntity` → table: `fallback_track` (Flyway `V2`)
 
 Server-side copy of a party's fallback ("background music") playlist — Section 14, Phase 2. Written when the DJ
-sets the playlist. Served by `POST /dj/dashboard/next-track` (stage 3); **the client does not use that endpoint yet**
-(it still runs `loadPlaylist()` until stage 4).
+sets the playlist. Served by `POST /dj/dashboard/next-track` (stage 3), which `youtube-autopilot.js` has called since
+stage 4 — the client no longer plays the playlist itself (no `loadPlaylist()`).
 
 | Field              | Type                    | Notes                                                             |
 |--------------------|-------------------------|-------------------------------------------------------------------|
@@ -193,7 +193,7 @@ On the dashboard, the DJ can:
 - Connect Spotify for playback control (separate OAuth2 flow via `/dj/spotify/login`)
 - Toggle Auto-Pilot mode (auto-queues accepted songs)
   - **Spotify:** Server-side — songs pushed to Spotify queue via API
-  - **YouTube:** Client-side — embedded IFrame Player auto-plays accepted songs
+  - **YouTube:** the embedded IFrame Player plays whatever the server says is next (guest song first, else a background track — Section 5.4)
 - **Set fallback playlist** (YouTube only) — background music from a YouTube playlist or single video when queue is empty; saves without page reload, includes Stop button to clear playback; **shuffle toggle** to randomize playlist order
 - Manually push songs to Spotify queue
 - Mark songs as "played"
@@ -230,57 +230,85 @@ This is a **separate** OAuth2 flow from the login. The login OAuth2 identifies t
 
 **Security:** Both endpoints require DJ authentication and validate partyCode ownership (IDOR protection).
 
-### 5.4 YouTube Auto-Pilot (Client-Side, guest-track decision now server-side)
+### 5.4 YouTube Auto-Pilot (the server decides what plays next, the browser plays it)
 
-> **Note (2026-09-28):** rewritten below to match `main` @ 5314006. The polling-watcher
-> design (500ms `setInterval` comparing `getCurrentTime()`/`getDuration()`) described in
-> earlier versions of this doc was removed on 2026-04-06 (`68e84c9`) in favor of purely
-> event-driven transitions. Do not reintroduce a polling watcher.
->
-> **Update (dev branch, this session):** "which guest song is next" no longer scans the
-> DOM — `checkYouTubeAutoPlay()` now calls `GET /dj/dashboard/next-guest-track`
-> (`DjService.findNextPlayableGuestTrack`), which is Phase 1 of the Section 14 Master
-> Queue plan. Everything else below (fallback playlist, shuffle, natural-boundary
-> guest-song handover) is still exactly as described — only the "find the next guest
-> song" step moved. See Section 14 for what's done vs. still client-side.
+> **History — do not reintroduce:** a 500 ms polling watcher (`setInterval` comparing
+> `getCurrentTime()`/`getDuration()`) was removed on 2026-04-06 (`68e84c9`) in favour of purely event-driven
+> transitions. Until 2026-09 the browser also decided *what* to play (a DOM scan of the queue table, then
+> `loadPlaylist()` for the background playlist). Since Section 14, Phase 2 stage 4, `youtube-autopilot.js` is a
+> "dumb player" and knows nothing about playlists, their order or shuffle.
 
 ```
-Dashboard (YouTube provider, Auto-Pilot ON)
-    → youtube-autopilot.js loads YouTube IFrame Player API
-    → dashboard.js polling refreshes #song-list every 3s (ETag/304) — DJ's visual queue only,
-       no longer read by Auto-Pilot's decision logic
-    → checkYouTubeAutoPlay() asks the server (GET /dj/dashboard/next-guest-track) for the
-       oldest accepted song with a valid video URL — same FIFO+eligibility rule as before,
-       just server-side now
-    → Loads video via loadVideoById()
-    → On PLAYING: marks song as PLAYED via fetch POST
-    → On ENDED: resets, tries next song immediately
-    → On PAUSED: does nothing (respects manual pause)
+Dashboard (YouTube provider)
+    → youtube-autopilot.js loads the YouTube IFrame Player API
+    → dashboard.js polls #song-list every 3s (ETag/304) — the DJ's visual queue; each poll also calls
+       checkYouTubeAutoPlay()
 
-Fallback Playlist (queue empty):
-    → If queue is empty and fallbackPlaylistId is configured:
-      → Loads YouTube playlist via player.loadPlaylist() (or loops single video)
-      → YouTube auto-advances through playlist tracks
-    → If guest song arrives during fallback:
-      → Does NOT interrupt current track mid-song (graceful handover)
-      → Detected at natural track boundaries only — ENDED for a single looped video,
-         or PLAYING with a trackChanged/BUFFERING signal for playlist auto-advance —
-         no polling watcher; the player switches to the guest song at that boundary
-      → Local `fallbackTrackIndex` is tracked synchronously (no `getPlaylistIndex()`
-         round-trip) and restored on resume — fallback never restarts from the same
-         song each time
-    → When guest queue empties again, fallback resumes from saved position
-    → Save without reload: DJ pastes URL → AJAX POST → updateFallbackSource()
-       updates Auto-Pilot in-memory state immediately, no page refresh needed
-    → Stop button: clears fallback URL server-side and stops playback instantly
+The client asks the server only when a track is about to be loaded — Auto-Pilot ON and:
+    → the player is idle (UNSTARTED / ENDED / CUED): page load, Auto-Pilot switched on, a poll
+    → on ENDED
+    → after a player error (the first 5 in a row at once, then one ask per poll)
+  → POST /dj/dashboard/next-track?partyCode=…[&exclude=<guest song ids the player failed on>]
+       200 {source: GUEST | BACKGROUND, id, videoId}     204 = nothing to play
+  → player.loadVideoById(videoId)
+
+The server (NextTrackService) answers with, in this order:
+    1. the oldest accepted guest song with a resolvable video ID, minus `exclude`
+       (DjService.findNextPlayableGuestTrack — reads only; the client confirms it)
+    2. else the next QUEUED track of the DJ's current fallback playlist: playlist order, or a server-side
+       random pick when shuffle is on; marked PLAYED as it is handed out; the playlist loops when exhausted
+    3. else 204 (no fallback playlist, or nothing could be imported)
+
+Confirmation:
+    → GUEST: on PLAYING the client calls POST /dj/dashboard/play (once per song) — the song leaves the queue
+    → BACKGROUND: nothing to confirm; a track that fails to play is already PLAYED, the client just asks again
 ```
 
-Supported fallback URL formats (resolved client-side and server-side):
+**Rules of the player** (deliberate, agreed with the owner 2026-09-29):
+- A running track is never interrupted: a guest song that arrives while a background track plays waits for it
+  to end. No request is sent while a track plays or is paused — `POST next-track` is **not read-only**, so it is
+  never used to poll.
+- A paused player is left alone — a pause is the DJ's choice.
+- Auto-Pilot **off**: nothing starts by itself when a track ends; the DJ picks tracks by hand (the ▶ links call
+  `playInEmbeddedPlayer`). A hand-picked track is not overridden even with Auto-Pilot on; Auto-Pilot carries on
+  when it ends.
+- If the answer to a lookup arrives after the DJ has started a track or switched Auto-Pilot off, it is dropped
+  (a background track handed out for it is skipped for that round; a guest song is not consumed until it plays).
+
+**DJ actions on the fallback playlist**
+- *Save:* AJAX `POST /dj/dashboard/fallback-playlist` → the server saves the URL and imports the tracks (best
+  effort; response headers `X-Fallback-Id`, `X-Fallback-Import: ok|failed`, `X-Fallback-Tracks` /
+  `X-Fallback-Import-Reason`) → `updateFallbackSource()` drops a running *background* track and Auto-Pilot starts
+  from the new playlist. When there is nothing to play (import failed, playlist set before server-side import
+  existed, tracks close to the 30-day limit), `next-track` imports lazily; after a failed attempt it does not try
+  again for 5 min per party + playlist. The dashboard does not show the import result yet — the button always
+  flashes green.
+- *Stop:* `dashboard.js` posts an empty URL; only after the server has cleared it does `stopFallback()` stop a
+  running background track (a playing guest song keeps playing).
+- *Shuffle:* `POST /dj/dashboard/fallback-shuffle`; the server reads the flag on every `next-track`, so it
+  applies from the next track on.
+
+**Timing:** ENDED → next track PLAYING took 230–250 ms with the server stubbed (2026-09-29) — that is YouTube's
+own load time (each track is a fresh `loadVideoById`). No pre-fetching was built (Section 14).
+
+Supported fallback URL formats — parsed **server-side only** (`YouTubeUrls.extractPlaylistId`; the browser just
+reads the result from the `X-Fallback-Id` header to show/hide the Stop button):
 - `https://youtube.com/playlist?list=PLxxx` → playlist ID
 - `https://youtube.com/watch?v=abc&list=PLxxx` → playlist ID (prefers `list=`)
-- `https://youtube.com/watch?v=KD5fLb-WgBU` → single video (looped)
-- `https://youtu.be/KD5fLb-WgBU?si=...` → single video (looped)
+- `https://youtube.com/watch?v=KD5fLb-WgBU` → single video
+- `https://youtu.be/KD5fLb-WgBU?si=...` → single video
 - Raw playlist ID (`PLxxx`) or raw 11-char video ID → resolved automatically
+
+A single video is stored as one `fallback_track` row (`playlist_id` = `V:<videoId>`, no API call and no API key
+needed); when it has been played the playlist loops, so it simply repeats.
+
+**Testing:** `youtube-autopilot.js` has no automated tests. It was verified against the real YouTube player (no
+login needed) with a throw-away static page: the real script, `window.fetch` stubbed for `/dj/dashboard/*`,
+`YT.Player` wrapped to log every `onStateChange`, served by `python -m http.server` and opened in the built-in
+browser. Gotchas: the page needs a real click first (user activation) or YouTube stays on the play button; wrap
+the player's methods in `onReady` (they do not exist before); mute it (`mute()`) or it pauses itself after a few
+seconds; many well-known videos have embedding disabled and fail with error 150 — `M7lc1UVf-VE` and
+`aqz-KE-bpKQ` play fine.
 
 ---
 
@@ -360,7 +388,7 @@ Supported fallback URL formats (resolved client-side and server-side):
 |-------------------------|---------|
 | `css/app.css`           | Shared stylesheet with design tokens, page-scoped rules (`.page-dj`, `.page-guest`, etc.) |
 | `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), AJAX tab switching, table polling (3s, ETag/304), clipboard, client-side table sorting |
-| `js/youtube-autopilot.js` | YouTube Auto-Pilot: IFrame Player state machine, auto-plays accepted songs, respects pause; fallback playlist state machine (start/resume/stop), 500ms watcher for graceful guest song handover, playlist position tracking |
+| `js/youtube-autopilot.js` | YouTube Auto-Pilot, a "dumb player" (Section 14, stage 4): when the player is idle / on `ENDED` / after a player error it asks `POST /dj/dashboard/next-track` and `loadVideoById()`s the answer; confirms guest songs via `/dj/dashboard/play`; never touches a paused or playing track |
 | `js/song-autocomplete.js` | Song autocomplete / typeahead via public iTunes Search API (client-side, debounced at 300ms, no server involvement, no YouTube quota) |
 
 ### 6.7 Resources
@@ -419,7 +447,7 @@ Two separate authentication flows:
   - **L3 — YouTube Data API (100 quota/search):** only called on L1+L2 miss or L2 entry expired
 - **ToS compliance:** Expired entries (>30 days) are refreshed on next access and cleaned up daily at 04:00 via `@Scheduled` task
 - **Fallback:** If API key is missing or search fails → returns YouTube search results URL (manual play only, Auto-Pilot won't work with search URLs)
-- **Auto-Pilot:** Handled client-side via YouTube IFrame Player API (`youtube-autopilot.js`); the "which guest song next" decision is server-side (Section 14)
+- **Auto-Pilot:** Playback runs in the browser via the YouTube IFrame Player API (`youtube-autopilot.js`); the "what plays next" decision (guest song or background track) is server-side (Section 14)
 - **Quota (per Google's "Quota costs" page, checked 2026-09-28):** `search.list` has its **own** default limit of 100
   calls/day; every other endpoint shares **10,000 units/day**. `playlistItems.list` and `videos.list` cost 1 unit per call.
   (The older wording "100 units per search" gives the same ~100 unique searches/day.) Verify your project's actual
@@ -645,8 +673,8 @@ PartySettingsQueryService
 | GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            |       |
 | GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated |
 | GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
-| GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1) |
-| POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId}` or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Section 14 Phase 2 stage 3 — the client does not call it yet |
+| GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1). Not called by the client since stage 4 (superseded by `next-track`); kept as the read-only "is a guest waiting?" peek |
+| POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId}` or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Section 14 Phase 2 stage 3; called by `youtube-autopilot.js` since stage 4 |
 | POST   | `/dj/dashboard/vibe`              | `DjPartySettingsController.updateGlobalVibe()`   | ownership-validated |
 | POST   | `/dj/dashboard/limits`            | `DjPartySettingsController.updateLimits()`       | ownership-validated |
 | POST   | `/dj/dashboard/play`              | `DjSongController.markAsPlayed()`                | song-level ownership check |
@@ -689,9 +717,9 @@ PartySettingsQueryService
 
 ### Testing
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
-- **Unit tests (68 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction.
+- **Unit tests (139 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import, the server-side next-track decision (`NextTrackService`, shuffle, looping).
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 75 tests.** No integration tests.
+- **Total: 146 tests** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, counted 2026-09-29). No integration tests, and no tests for the browser code (`youtube-autopilot.js`, `dashboard.js`).
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
@@ -705,7 +733,11 @@ PartySettingsQueryService
 
 ## 14. Roadmap — V2.0 "Master Queue"
 
-Design discussion (2026-09) concluded the client-side Auto-Pilot logic (Section 5.4) is a
+**Status (2026-09-29): Phases 1 and 2 are done on `dev`** — the target architecture is in place and Section 5.4
+describes it. What is left is optional (see "Follow-ups" at the end of Phase 2). The rest of this section is the
+record of how it got there.
+
+Design discussion (2026-09) concluded the client-side Auto-Pilot logic (as it was until then) is a
 "Fat Client" anti-pattern: the browser holds playback state, juggles the DJ's fallback
 playlist against guest requests, and listens for flaky YouTube IFrame events. Target
 architecture: "Dumb Client, Smart Server". Splitting into phases turned out to matter —
@@ -716,7 +748,7 @@ songs manually — every Gemini-accepted song has always gone straight to `accep
 Anyone continuing this: verify each phase against the actual code before building on it,
 the way this note had to.
 
-### Phase 1 — DONE (dev branch, this session)
+### Phase 1 — DONE (dev branch)
 
 Moved just the "which guest song is next" decision server-side:
 - `DjService.findNextPlayableGuestTrack(partyCode, excludeIds)` — oldest `accepted` song
@@ -730,12 +762,15 @@ Moved just the "which guest song is next" decision server-side:
   unlike a missing video ID, the server can't know this), sent back as `?exclude=`.
 - Added a `stateVersion` counter + a `tryAutoPlayInFlight` guard so the now-`async` player
   event handlers don't act on a stale lookup if a newer event fires while one is in flight.
+- *Superseded by Phase 2 stage 4:* the client now calls `POST /dj/dashboard/next-track`, and `stateVersion` is gone
+  (`tryAutoPlayInFlight` plus a re-check after the lookup do the job). `next-guest-track` remains as a read-only
+  "is a guest waiting?" endpoint that the client no longer calls.
 
 **Deliberately NOT done in Phase 1** (see rationale below): no `PENDING` approval gate (it
 never existed, so nothing to preserve), no pre-fetching, fallback/background-playlist
 handling untouched.
 
-### Phase 2 — IN PROGRESS (staged; dev branch)
+### Phase 2 — DONE (2026-09-29; staged; dev branch)
 
 Decision (2026-09-28): do it, in stages — quota turned out not to be a concern (see Section 7.3: playlist import ≈ 20
 units from the general pool, `search.list` untouched). The remaining costs are schema management (solved by adopting
@@ -744,16 +779,16 @@ Flyway) and effort/regression risk in a live product, hence the stages:
 | Stage | What | Status |
 |-------|------|--------|
 | 1 | Adopt Flyway; baseline `V1` (Section 10, "Database migrations") | **done** |
-| 2 | `V2__create_fallback_track`, `FallbackTrackEntity`, `YouTubePlaylistClient` (import, max 500 tracks), `FallbackPlaylistService`; the fallback-playlist endpoint imports best-effort (headers); account deletion + 30-day purge; unit tests | **done** — data is written, **nothing reads it yet** |
-| 3 | `POST /dj/dashboard/next-track` (`NextTrackService`): guest song first, else the next `QUEUED` fallback track of the current playlist (playlist order or server-side shuffle, marked `PLAYED` when handed out, loops when exhausted); lazy/refresh import (nothing to play, or rows ≥ 29 days old); also `V3` limits fix and `YouTubeUrls` extracted from the controller | **done** — the endpoint works, **the client does not call it yet** |
-| 4 | Simplify `youtube-autopilot.js` to "on `ENDED`/error ask the server, `loadVideoById`" — drops `loadPlaylist`, playlist-index tracking, `guestSongPending`, `fallbackTrackChanged` | todo |
-| 5 | Docs cleanup (this section, 5.4) | todo |
+| 2 | `V2__create_fallback_track`, `FallbackTrackEntity`, `YouTubePlaylistClient` (import, max 500 tracks), `FallbackPlaylistService`; the fallback-playlist endpoint imports best-effort (headers); account deletion + 30-day purge; unit tests | **done** |
+| 3 | `POST /dj/dashboard/next-track` (`NextTrackService`): guest song first, else the next `QUEUED` fallback track of the current playlist (playlist order or server-side shuffle, marked `PLAYED` when handed out, loops when exhausted); lazy/refresh import (nothing to play, or rows ≥ 29 days old); also `V3` limits fix and `YouTubeUrls` extracted from the controller | **done** |
+| 4 | Simplify `youtube-autopilot.js` to "when idle / on `ENDED` / on error ask the server, `loadVideoById`" — drops `loadPlaylist`, playlist-index tracking, `guestSongPending`, `fallbackTrackChanged`, `setShuffle`/`setLoop`; also drops the `data-fallback-*` attributes and `updateFallbackShuffle`. Decided with the owner: a guest song waits until the running background track ends; a paused player is never touched (a pause is the DJ's choice); with Auto-Pilot off nothing starts by itself. A track the DJ picks by hand is no longer overridden by Auto-Pilot | **done** (2026-09-29) — verified against the real YouTube player, no automated tests for the JS |
+| 5 | Docs cleanup: this section, 5.4 (rewritten), 5.1, `AGENTS.md` / `.github/copilot-instructions.md`, stale code comments | **done** (2026-09-29) |
 
 **Deviations from the original plan below:** the tracks live in a dedicated `fallback_track` table (statuses `QUEUED` /
 `PLAYED` / `CANCELLED`, no `type` column) instead of a unified `party_queue` — guest requests stay in `song_requests`
 and the `PENDING` approval gate never existed. Only video IDs are stored (no titles), retained ≤ 30 days.
 
-Original Phase 2 notes (written before the decision above):
+Original Phase 2 notes (written before the decision above — "today" means before stage 4):
 
 1. **Background tracks server-side.** Today the fallback playlist is 100% client-side —
    `player.loadPlaylist(list: playlistId)` — YouTube's own IFrame player iterates/shuffles
@@ -768,6 +803,15 @@ Original Phase 2 notes (written before the decision above):
    playing reopens exactly the kind of "mark played too early" risk Phase 1 was careful to
    avoid (see `findNextPlayableGuestTrack`'s doc comment — it deliberately does *not* mark
    played). Only worth it if the plain fetch-on-`ENDED` gap turns out to be audible.
+   **Outcome (stage 4):** measured ENDED → next track PLAYING = 230–250 ms with the server stubbed, i.e. YouTube's
+   own load time. No pre-fetching was built; revisit only if a gap is audible at a real party.
+
+**Follow-ups after Phase 2** (none is needed for the feature to work):
+- Show the import result on the dashboard (`X-Fallback-Import: ok|failed`, `X-Fallback-Import-Reason`) instead of
+  always flashing the Save button green.
+- `GET /dj/dashboard/next-guest-track` and its tests are no longer used by the client; remove them if no other
+  consumer appears.
+- `youtube-autopilot.js` has no automated tests (Section 5.4, "Testing").
 
 ### Original one-shot plan (kept for reference — see caveat above)
 

@@ -124,7 +124,7 @@ public class DjPartySettingsController {
      * When the guest queue is empty, Auto-Pilot plays this playlist as background music.
      * <p>
      * Returns 200 OK with the extracted playlist/video ID in the {@code X-Fallback-Id}
-     * response header. The client-side Auto-Pilot reads this header directly — URL parsing
+     * response header (the dashboard uses it to show or hide the Stop button) — URL parsing
      * logic lives exclusively in {@link YouTubeUrls#extractPlaylistId(String)}.
      * <p>
      * This endpoint is YouTube-only. All YouTube dashboard forms are AJAX-intercepted,
@@ -150,8 +150,9 @@ public class DjPartySettingsController {
         ResponseEntity.BodyBuilder response = ResponseEntity.ok()
                 .header("X-Fallback-Id", extractedId != null ? extractedId : "");
 
-        // Server-side copy of the playlist (Section 14, Phase 2). Best-effort for now: playback still
-        // runs from the client-side playlist, so a failed import must not fail saving the setting.
+        // Server-side copy of the playlist (Section 14, Phase 2) — Auto-Pilot plays from it via NextTrackService.
+        // Best-effort here: a failed import must not fail saving the setting; NextTrackService imports lazily
+        // when it has nothing to play, and the outcome is reported in the X-Fallback-Import headers.
         try {
             int tracks = fallbackPlaylistService.syncFallbackTracks(partyCode, extractedId);
             response.header("X-Fallback-Import", "ok")

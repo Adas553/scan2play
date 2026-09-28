@@ -75,8 +75,8 @@ Your goal is to act like a pragmatic senior engineer building a production-quali
 ## Project context
 
 Read `PROJECT_CONTEXT.md` at the repo root before making architectural decisions — it has
-the full domain model, file inventory, endpoints, and a Section 14 roadmap for the planned
-V2.0 backend-driven playback queue (frontend Auto-Pilot logic moving server-side). If you
+the full domain model, file inventory, endpoints, and the Section 14 roadmap of the V2.0
+backend-driven playback queue (done: the server decides what plays next, the YouTube client is a "dumb player"). If you
 change architecture, entities, or endpoints, update `PROJECT_CONTEXT.md` in the same PR —
 it goes stale otherwise (it did once already: Section 5.4 described a polling watcher that
 had already been removed from the code by the time anyone re-read it).

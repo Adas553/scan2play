@@ -176,13 +176,13 @@ public class DjDashboardController {
     }
 
     /**
-     * Server-side "what's next" decision for the YouTube Auto-Pilot client.
+     * Read-only "is a guest song waiting?" peek (Section 14, Phase 1).
      * <p>
      * Returns the oldest accepted guest song with a playable video ID, or 204 No Content
-     * when none is ready (the client then falls back to the background playlist). This
-     * replaces the old client-side DOM scan of the queue table — see PROJECT_CONTEXT.md
-     * Section 14. Read-only: the client still confirms playback via the existing
-     * {@code POST /dj/dashboard/play} once the video actually starts.
+     * when none is ready. It replaced the old client-side DOM scan of the queue table; since
+     * Phase 2 stage 4 the Auto-Pilot client asks {@link #nextTrack} instead (guest song or
+     * background track), so nothing calls this endpoint any more. Read-only: guest playback is
+     * confirmed via the existing {@code POST /dj/dashboard/play} once the video actually starts.
      *
      * @param exclude Optional comma-separated song IDs the client already knows are
      *                broken (the YouTube player itself errored on them) and wants skipped.
