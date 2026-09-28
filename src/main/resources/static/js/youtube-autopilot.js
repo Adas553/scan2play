@@ -28,6 +28,8 @@
     let isFallbackMode = false, fallbackIsVideo = false;
     let guestSongPending = false;
     let lastFallbackIndex = 0, fallbackTrackIndex = -1;
+    // Video ID of the fallback track that is currently playing (see fallbackTrackChanged()).
+    let fallbackVideoId = null;
     let pendingPlaylistSetup = false;
     let tryAutoPlayInFlight = false;
     // Guards against calling markAsPlayed() again if PLAYING re-fires for the same video
@@ -81,6 +83,26 @@
         if (!url) return null;
         const m = url.match(/[?&]v=([A-Za-z0-9_-]{11})/);
         return m ? m[1] : null;
+    }
+
+    /** Video ID currently loaded in the player, or null while a new video is still loading. */
+    function currentVideoId() {
+        const data = player && player.getVideoData ? player.getVideoData() : null;
+        return (data && data.video_id) || null;
+    }
+
+    /**
+     * True when the fallback playlist has moved on to a different track.
+     * getPlaylistIndex() alone is not reliable: with shuffle on it can change for the SAME video
+     * (e.g. after the DJ seeks, once the shuffled order has been applied). Treating that as a
+     * track change switched to the waiting guest song mid-track. A real change also changes the
+     * video ID — or leaves it momentarily empty while the next video loads, which is what
+     * UNSTARTED/BUFFERING report at a natural track boundary.
+     */
+    function fallbackTrackChanged(plIdx) {
+        return fallbackTrackIndex >= 0
+            && plIdx !== fallbackTrackIndex
+            && (fallbackVideoId === null || currentVideoId() !== fallbackVideoId);
     }
 
     function resetPlayback() {
@@ -154,7 +176,7 @@
                 && isFallbackMode && !fallbackIsVideo
                 && guestSongPending && isAutoPilotOn()) {
             const bufIdx = player.getPlaylistIndex();
-            if (bufIdx >= 0 && fallbackTrackIndex >= 0 && bufIdx !== fallbackTrackIndex) {
+            if (bufIdx >= 0 && fallbackTrackChanged(bufIdx)) {
                 const earlyGuest = await fetchNextGuestTrack();
                 if (myVersion !== stateVersion) return; // superseded by a newer event
                 if (earlyGuest) {
@@ -179,7 +201,7 @@
             if (isFallbackMode && !fallbackIsVideo) {
                 const plIdx = player.getPlaylistIndex();
                 if (plIdx >= 0) {
-                    const trackChanged = fallbackTrackIndex >= 0 && plIdx !== fallbackTrackIndex;
+                    const trackChanged = fallbackTrackChanged(plIdx);
 
                     // Auto-Pilot OFF: just track position, let playlist play
                     if (!isAutoPilotOn() && trackChanged) {
@@ -203,6 +225,7 @@
                     }
 
                     fallbackTrackIndex = plIdx;
+                    fallbackVideoId = currentVideoId() || fallbackVideoId;
                 }
             }
 
@@ -277,6 +300,10 @@
             fallbackIsVideo = true;
             pendingPlaylistSetup = false;
         } else {
+            // Forget the previous playlist session's track, so the first PLAYING after this
+            // load is not compared against a stale index/video from before the guest song.
+            fallbackTrackIndex = -1;
+            fallbackVideoId = null;
             player.loadPlaylist({ list: fallbackPlaylistId, listType: 'playlist', index: lastFallbackIndex });
             fallbackIsVideo = false;
             pendingPlaylistSetup = true;
