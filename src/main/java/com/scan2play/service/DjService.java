@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.MusicProviderType;
+import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Service responsible for song queue management and direct song actions.
@@ -41,6 +46,15 @@ public class DjService {
 
     /** Default comment attached to manually added DJ picks. */
     private static final String DJ_PICK_COMMENT = "DJ's Choice 🎧";
+
+    /**
+     * Extracts a YouTube video ID from a watch URL (e.g. {@code ?v=xxxxx}).
+     * Mirrors {@code DjDashboardController.VIDEO_ID_V_PATTERN} — a song's trackUrl can also
+     * be a YouTube *search-results* URL (no {@code v=} param) when the Data API had no key
+     * or failed to resolve it (see PROJECT_CONTEXT.md Section 7.3); those are unplayable by
+     * Auto-Pilot and must be skipped, same as the client used to do.
+     */
+    private static final Pattern VIDEO_ID_PATTERN = Pattern.compile("[?&]v=([A-Za-z0-9_-]{11})");
 
     private final SongRequestRepository songRequestRepository;
     private final PartySettingsQueryService partySettingsQueryService;
@@ -99,6 +113,42 @@ public class DjService {
     @Cacheable(value = "publicQueue", key = "#partyCode")
     public List<SongRequestEntity> getPublicQueue(String partyCode) {
         return songRequestRepository.findTop5ByPartyCodeAndDecisionOrderByRequestedAtDesc(partyCode, DECISION_ACCEPTED);
+    }
+
+    /**
+     * Finds the oldest accepted, not-yet-played guest song that has a playable YouTube
+     * video ID — the server-side replacement for the YouTube Auto-Pilot's old client-side
+     * DOM scan of the queue table (see PROJECT_CONTEXT.md Section 14).
+     * <p>
+     * Does <b>not</b> mark anything as played — the client still confirms that via the
+     * existing {@link #markSongAsPlayed} once the video actually starts. That keeps this
+     * method a safe, repeatable read: Auto-Pilot polls it every few seconds while idle or
+     * running the fallback playlist, and it reuses {@link #getDashboardQueue} (already
+     * {@code @Cacheable}, 3s TTL) so most calls are a cache hit rather than a fresh query.
+     *
+     * @param partyCode The unique code of the party.
+     * @param excludeIds Song IDs to skip even though they're accepted+resolvable — the
+     *                   client adds one here when {@code loadVideoById} itself errors on
+     *                   it (video removed/private/region-blocked), so Auto-Pilot doesn't
+     *                   retry the same broken video forever. Session-only on the client,
+     *                   not persisted: a page reload will offer it again.
+     * @return The next playable guest track, if one is waiting.
+     */
+    public Optional<NextGuestTrackResponse> findNextPlayableGuestTrack(String partyCode, Set<Long> excludeIds) {
+        return getDashboardQueue(partyCode).stream()
+                .filter(song -> !excludeIds.contains(song.getId()))
+                .flatMap(song -> extractVideoId(song.getTrackUrl())
+                        .map(videoId -> new NextGuestTrackResponse(song.getId(), videoId))
+                        .stream())
+                .findFirst();
+    }
+
+    private static Optional<String> extractVideoId(String trackUrl) {
+        if (trackUrl == null) {
+            return Optional.empty();
+        }
+        Matcher matcher = VIDEO_ID_PATTERN.matcher(trackUrl);
+        return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
 
     // ---- Song Actions ----

@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
@@ -11,15 +12,19 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -174,6 +179,45 @@ public class DjDashboardController {
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
+    }
+
+    /**
+     * Server-side "what's next" decision for the YouTube Auto-Pilot client.
+     * <p>
+     * Returns the oldest accepted guest song with a playable video ID, or 204 No Content
+     * when none is ready (the client then falls back to the background playlist). This
+     * replaces the old client-side DOM scan of the queue table — see PROJECT_CONTEXT.md
+     * Section 14. Read-only: the client still confirms playback via the existing
+     * {@code POST /dj/dashboard/play} once the video actually starts.
+     *
+     * @param exclude Optional comma-separated song IDs the client already knows are
+     *                broken (the YouTube player itself errored on them) and wants skipped.
+     */
+    @GetMapping("/dashboard/next-guest-track")
+    @ResponseBody
+    public ResponseEntity<NextGuestTrackResponse> nextGuestTrack(@RequestParam String partyCode,
+                                                                  @RequestParam(required = false) String exclude,
+                                                                  OAuth2AuthenticationToken authentication,
+                                                                  HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        return djService.findNextPlayableGuestTrack(partyCode, parseExcludeIds(exclude))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    private static Set<Long> parseExcludeIds(String exclude) {
+        if (exclude == null || exclude.isBlank()) {
+            return Set.of();
+        }
+        Set<Long> ids = new HashSet<>();
+        for (String part : exclude.split(",")) {
+            try {
+                ids.add(Long.parseLong(part.trim()));
+            } catch (NumberFormatException ignored) {
+                // malformed id from the client — ignore it rather than fail the whole lookup
+            }
+        }
+        return ids;
     }
 
     /**

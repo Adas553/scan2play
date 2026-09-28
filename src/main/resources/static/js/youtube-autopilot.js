@@ -1,14 +1,20 @@
 /**
  * YouTube Auto-Pilot — automatic playback via YouTube IFrame Player API.
  *
- * Flow: polling (dashboard.js, 3s) refreshes #song-list → checkYouTubeAutoPlay()
- *       scans for accepted songs → plays via loadVideoById() → marks PLAYED on PLAYING
- *       → on ENDED resets and checks next.
+ * Flow: on ENDED / at natural track boundaries, asks the backend "what's next?"
+ *       (GET /dj/dashboard/next-guest-track) instead of scanning the queue table's DOM.
+ *       The server is now the single source of truth for song ordering/eligibility
+ *       (oldest accepted request with a resolvable YouTube video ID) — see
+ *       PROJECT_CONTEXT.md Section 14. The client stays "dumb": it plays whatever video
+ *       ID it's given via loadVideoById(), and still confirms playback itself via the
+ *       existing POST /dj/dashboard/play once the video actually reaches PLAYING.
  *
- * Fallback: when queue is empty and a fallback playlist/video is set, loads it via
- *           loadPlaylist(). Guest songs arriving during fallback are detected at natural
- *           track boundaries (ENDED for single videos, PLAYING for playlist auto-advance)
- *           and the player switches to the guest song — no polling watcher needed.
+ * Fallback: when the queue is empty and a fallback playlist/video is set, loads it via
+ *           loadPlaylist(). This part is still client-side (Phase 2 in the roadmap moves
+ *           it server-side too) — YouTube iterates/shuffles the playlist natively here,
+ *           at zero YouTube Data API quota cost. Guest songs arriving during fallback are
+ *           detected at natural track boundaries (ENDED for single videos, PLAYING for
+ *           playlist auto-advance) and the player switches over — no polling watcher.
  *
  * Exposes: checkYouTubeAutoPlay, playInEmbeddedPlayer, updateFallbackSource,
  *          updateFallbackShuffle, stopFallback
@@ -23,11 +29,30 @@
     let guestSongPending = false;
     let lastFallbackIndex = 0, fallbackTrackIndex = -1;
     let pendingPlaylistSetup = false;
-    const markedAsPlayedIds = new Set(), skippedSongIds = new Set();
+    let tryAutoPlayInFlight = false;
+    // Guards against calling markAsPlayed() again if PLAYING re-fires for the same video
+    // (e.g. a brief buffering stall, or the DJ manually pausing/resuming) without a new
+    // song having been loaded in between.
+    let lastMarkedPlayedId = null;
+    // Songs the YouTube player itself errored on (video removed/private/region-blocked).
+    // Session-only — passed to the server so it skips them too, otherwise it would keep
+    // handing back the same broken "next" track forever (it still looks valid: accepted,
+    // with a resolvable video ID — the player is what failed, not the URL shape).
+    const erroredSongIds = new Set();
+
+    // Bumped on every player state change; an async lookup checks it after
+    // awaiting to detect that a newer event has already moved playback on
+    // (e.g. the track ended naturally while we were still asking the server
+    // about an early/BUFFERING-triggered guest-song switch) and bails out
+    // instead of acting on a now-stale answer.
+    let stateVersion = 0;
 
     const playerCard = document.getElementById('yt-player-card');
     let fallbackPlaylistId = playerCard ? (playerCard.getAttribute('data-fallback-playlist') || null) : null;
     let shuffleEnabled = playerCard ? playerCard.getAttribute('data-fallback-shuffle') === 'true' : true;
+
+    const partyCodeEl = document.getElementById('partyCode');
+    const partyCodeValue = partyCodeEl ? partyCodeEl.value : null;
 
     const csrf = {
         token:  document.querySelector('meta[name="_csrf"]').getAttribute('content'),
@@ -79,19 +104,6 @@
         isLoadingSong = false;
     }
 
-    let lastPruneTime = 0;
-    function pruneStaleIds() {
-        const now = Date.now();
-        if (now - lastPruneTime < 60000) return;
-        lastPruneTime = now;
-        const tbody = document.getElementById('song-list');
-        if (!tbody) return;
-        const liveIds = new Set();
-        tbody.querySelectorAll('tr[data-song-id]').forEach(r => liveIds.add(r.getAttribute('data-song-id')));
-        markedAsPlayedIds.forEach(id => { if (!liveIds.has(id)) markedAsPlayedIds.delete(id); });
-        skippedSongIds.forEach(id => { if (!liveIds.has(id)) skippedSongIds.delete(id); });
-    }
-
     function markAsPlayed(songId) {
         const fd = new FormData();
         fd.append('id', songId);
@@ -100,17 +112,30 @@
         }).catch(e => console.error('[YT] markAsPlayed error:', e));
     }
 
-    function findNextGuestSong() {
-        const tbody = document.getElementById('song-list');
-        if (!tbody) return null;
-        const rows = tbody.querySelectorAll('tr[data-song-id]');
-        for (let i = 0; i < rows.length; i++) {
-            const songId = rows[i].getAttribute('data-song-id');
-            if (!songId || markedAsPlayedIds.has(songId) || skippedSongIds.has(songId)) continue;
-            if (!extractVideoId(rows[i].getAttribute('data-track-url'))) { skippedSongIds.add(songId); continue; }
-            return rows[i];
+    /**
+     * Asks the backend for the next playable guest track. Read-only (see
+     * DjService.findNextPlayableGuestTrack) — the client still confirms playback itself,
+     * so calling this repeatedly (e.g. every few seconds while idle in fallback mode) is
+     * safe. Returns null on "nothing waiting", on a network error, or when the server's
+     * answer is the song we're already loading/playing (guards against two overlapping
+     * lookups both trying to hand back the same not-yet-confirmed track).
+     */
+    async function fetchNextGuestTrack() {
+        if (!partyCodeValue) return null;
+        try {
+            let url = '/dj/dashboard/next-guest-track?partyCode=' + encodeURIComponent(partyCodeValue);
+            if (erroredSongIds.size > 0) {
+                url += '&exclude=' + Array.from(erroredSongIds).join(',');
+            }
+            const response = await fetch(url, { headers: { [csrf.header]: csrf.token } });
+            if (response.status === 204 || !response.ok) return null;
+            const track = await response.json();
+            if (!track || !track.videoId || track.songId === currentlyPlayingSongId) return null;
+            return track;
+        } catch (e) {
+            console.error('[YT] fetchNextGuestTrack error:', e);
+            return null;
         }
-        return null;
     }
 
     function isAutoPilotOn() {
@@ -120,8 +145,9 @@
 
     // ---- Event Handlers ----
 
-    function onPlayerStateChange(event) {
+    async function onPlayerStateChange(event) {
         playerState = event.data;
+        const myVersion = ++stateVersion;
 
         // ---- BUFFERING: early detection of playlist auto-advance ----
         if (event.data === YT.PlayerState.BUFFERING
@@ -129,7 +155,8 @@
                 && guestSongPending && isAutoPilotOn()) {
             const bufIdx = player.getPlaylistIndex();
             if (bufIdx >= 0 && fallbackTrackIndex >= 0 && bufIdx !== fallbackTrackIndex) {
-                const earlyGuest = findNextGuestSong();
+                const earlyGuest = await fetchNextGuestTrack();
+                if (myVersion !== stateVersion) return; // superseded by a newer event
                 if (earlyGuest) {
                     exitFallback();
                     playGuestSong(earlyGuest);
@@ -142,9 +169,9 @@
         if (event.data === YT.PlayerState.PLAYING) {
             isLoadingSong = false;
 
-            // Mark guest songs as played
-            if (!isFallbackMode && currentlyPlayingSongId && !markedAsPlayedIds.has(currentlyPlayingSongId)) {
-                markedAsPlayedIds.add(currentlyPlayingSongId);
+            // Mark guest songs as played (once per song, see lastMarkedPlayedId above)
+            if (!isFallbackMode && currentlyPlayingSongId && currentlyPlayingSongId !== lastMarkedPlayedId) {
+                lastMarkedPlayedId = currentlyPlayingSongId;
                 markAsPlayed(currentlyPlayingSongId);
             }
 
@@ -165,7 +192,8 @@
                     // down a barely-initialized video (fast) instead of a fully
                     // loaded one (heavy).
                     if (isAutoPilotOn() && guestSongPending && trackChanged) {
-                        const nextGuest = findNextGuestSong();
+                        const nextGuest = await fetchNextGuestTrack();
+                        if (myVersion !== stateVersion) return; // superseded by a newer event
                         if (nextGuest) {
                             exitFallback();
                             playGuestSong(nextGuest);
@@ -187,13 +215,14 @@
         }
 
         if (event.data === YT.PlayerState.ENDED) {
-            if (isFallbackMode) handleFallbackEnded();
-            else                handleGuestSongEnded();
+            if (isFallbackMode) await handleFallbackEnded(myVersion);
+            else                 handleGuestSongEnded();
         }
     }
 
-    function handleFallbackEnded() {
-        const nextGuest = isAutoPilotOn() ? findNextGuestSong() : null;
+    async function handleFallbackEnded(myVersion) {
+        const nextGuest = isAutoPilotOn() ? await fetchNextGuestTrack() : null;
+        if (myVersion !== stateVersion) return; // superseded by a newer event
 
         if (nextGuest) {
             exitFallback();
@@ -220,21 +249,20 @@
 
     function onPlayerError(event) {
         console.error('[YT] Player error ' + event.data + ' for ID=' + currentlyPlayingSongId);
-        if (currentlyPlayingSongId) skippedSongIds.add(currentlyPlayingSongId);
+        if (currentlyPlayingSongId) erroredSongIds.add(currentlyPlayingSongId);
         resetPlayback();
     }
 
     // ---- Core Playback ----
 
-    function playGuestSong(row) {
-        const songId = row.getAttribute('data-song-id');
-        const videoId = extractVideoId(row.getAttribute('data-track-url'));
-        if (!videoId) return;
+    /** @param track {{songId: number, videoId: string}} */
+    function playGuestSong(track) {
+        if (!track || !track.videoId) return;
 
         isLoadingSong = true;
-        currentlyPlayingSongId = songId;
+        currentlyPlayingSongId = track.songId;
         isFallbackMode = false;
-        player.loadVideoById(videoId);
+        player.loadVideoById(track.videoId);
     }
 
     function startFallbackPlaylist() {
@@ -256,43 +284,49 @@
     }
 
     /** Main entry point — called by polling and on player ready. */
-    function tryAutoPlay() {
-        if (!playerReady || !player || isLoadingSong) return;
-        pruneStaleIds();
+    async function tryAutoPlay() {
+        if (!playerReady || !player || isLoadingSong || tryAutoPlayInFlight) return;
         if (!isAutoPilotOn()) return;
+        tryAutoPlayInFlight = true;
 
-        const isActive = playerState === YT.PlayerState.PLAYING
-                      || playerState === YT.PlayerState.BUFFERING
-                      || playerState === YT.PlayerState.PAUSED;
+        try {
+            const isActive = playerState === YT.PlayerState.PLAYING
+                          || playerState === YT.PlayerState.BUFFERING
+                          || playerState === YT.PlayerState.PAUSED;
 
-        if (isActive) {
-            if (isFallbackMode) {
-                const nextGuest = findNextGuestSong();
-                if (nextGuest) {
-                    if (!guestSongPending) guestSongPending = true;
-                    // Paused fallback → switch immediately (no track boundary needed)
-                    if (playerState === YT.PlayerState.PAUSED) {
-                        exitFallback();
-                        playGuestSong(nextGuest);
+            if (isActive) {
+                if (isFallbackMode) {
+                    const nextGuest = await fetchNextGuestTrack();
+                    if (!isFallbackMode) return; // a player-state event already moved us on
+                    if (nextGuest) {
+                        if (!guestSongPending) guestSongPending = true;
+                        // Paused fallback → switch immediately (no track boundary needed)
+                        if (playerState === YT.PlayerState.PAUSED) {
+                            exitFallback();
+                            playGuestSong(nextGuest);
+                        }
+                        // Playing/buffering → guestSongPending flag is set;
+                        // PLAYING handler switches at the next track boundary.
                     }
-                    // Playing/buffering → guestSongPending flag is set;
-                    // PLAYING handler switches at the next track boundary.
+                    return;
                 }
-                return;
+                if (currentlyPlayingSongId) return; // guest song playing
+
+                // Orphaned playback — pause it, fall through to find next song
+                player.pauseVideo();
+                isFallbackMode = false;
             }
-            if (currentlyPlayingSongId) return; // guest song playing
 
-            // Orphaned playback — pause it, fall through to find next song
-            player.pauseVideo();
-            isFallbackMode = false;
-        }
-
-        const guest = findNextGuestSong();
-        if (guest) {
-            if (isFallbackMode) isFallbackMode = false;
-            playGuestSong(guest);
-        } else if (fallbackPlaylistId && !isFallbackMode) {
-            startFallbackPlaylist();
+            const guest = await fetchNextGuestTrack();
+            if (isLoadingSong || currentlyPlayingSongId) return; // superseded meanwhile
+            if (guest) {
+                if (isFallbackMode) isFallbackMode = false;
+                playGuestSong(guest);
+            } else if (fallbackPlaylistId && !isFallbackMode) {
+                startFallbackPlaylist();
+            }
+        } finally {
+            tryAutoPlayInFlight = false;
         }
     }
 

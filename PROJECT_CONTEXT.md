@@ -206,19 +206,28 @@ This is a **separate** OAuth2 flow from the login. The login OAuth2 identifies t
 
 **Security:** Both endpoints require DJ authentication and validate partyCode ownership (IDOR protection).
 
-### 5.4 YouTube Auto-Pilot (Client-Side)
+### 5.4 YouTube Auto-Pilot (Client-Side, guest-track decision now server-side)
 
 > **Note (2026-09-28):** rewritten below to match `main` @ 5314006. The polling-watcher
 > design (500ms `setInterval` comparing `getCurrentTime()`/`getDuration()`) described in
 > earlier versions of this doc was removed on 2026-04-06 (`68e84c9`) in favor of purely
-> event-driven transitions. Do not reintroduce a polling watcher — see Section 14 for
-> where this logic is headed next (server-side Master Queue).
+> event-driven transitions. Do not reintroduce a polling watcher.
+>
+> **Update (dev branch, this session):** "which guest song is next" no longer scans the
+> DOM — `checkYouTubeAutoPlay()` now calls `GET /dj/dashboard/next-guest-track`
+> (`DjService.findNextPlayableGuestTrack`), which is Phase 1 of the Section 14 Master
+> Queue plan. Everything else below (fallback playlist, shuffle, natural-boundary
+> guest-song handover) is still exactly as described — only the "find the next guest
+> song" step moved. See Section 14 for what's done vs. still client-side.
 
 ```
 Dashboard (YouTube provider, Auto-Pilot ON)
     → youtube-autopilot.js loads YouTube IFrame Player API
-    → dashboard.js polling refreshes #song-list every 3s (ETag/304)
-    → checkYouTubeAutoPlay() scans the list for the oldest accepted song with a valid video URL
+    → dashboard.js polling refreshes #song-list every 3s (ETag/304) — DJ's visual queue only,
+       no longer read by Auto-Pilot's decision logic
+    → checkYouTubeAutoPlay() asks the server (GET /dj/dashboard/next-guest-track) for the
+       oldest accepted song with a valid video URL — same FIFO+eligibility rule as before,
+       just server-side now
     → Loads video via loadVideoById()
     → On PLAYING: marks song as PLAYED via fetch POST
     → On ENDED: resets, tries next song immediately
@@ -575,6 +584,7 @@ PartySettingsQueryService
 | GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            |       |
 | GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated |
 | GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
+| GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1) |
 | POST   | `/dj/dashboard/vibe`              | `DjPartySettingsController.updateGlobalVibe()`   | ownership-validated |
 | POST   | `/dj/dashboard/limits`            | `DjPartySettingsController.updateLimits()`       | ownership-validated |
 | POST   | `/dj/dashboard/play`              | `DjSongController.markAsPlayed()`                | song-level ownership check |
@@ -631,13 +641,55 @@ PartySettingsQueryService
 
 ---
 
-## 14. Roadmap — V2.0 "Master Queue" (Planned, NOT Implemented Yet)
+## 14. Roadmap — V2.0 "Master Queue"
 
 Design discussion (2026-09) concluded the client-side Auto-Pilot logic (Section 5.4) is a
 "Fat Client" anti-pattern: the browser holds playback state, juggles the DJ's fallback
-playlist against guest requests, and listens for flaky YouTube IFrame events. The agreed
-target architecture — **not yet built, do not assume it exists** — is "Dumb Client, Smart
-Server":
+playlist against guest requests, and listens for flaky YouTube IFrame events. Target
+architecture: "Dumb Client, Smart Server". Splitting into phases turned out to matter —
+the original one-shot plan (below, kept for reference) assumed a `PENDING`/`APPROVED`
+guest-song approval gate tied to Auto-Pilot that **does not actually exist in the code**
+(Auto-Pilot ON/OFF only ever controlled whether the client auto-advanced or the DJ clicked
+songs manually — every Gemini-accepted song has always gone straight to `accepted`).
+Anyone continuing this: verify each phase against the actual code before building on it,
+the way this note had to.
+
+### Phase 1 — DONE (dev branch, this session)
+
+Moved just the "which guest song is next" decision server-side:
+- `DjService.findNextPlayableGuestTrack(partyCode, excludeIds)` — oldest `accepted` song
+  with an extractable video ID, reusing the existing `getDashboardQueue` cache (3s TTL).
+- `GET /dj/dashboard/next-guest-track` — read-only, IDOR-checked, 204 when nothing's ready.
+- `youtube-autopilot.js`: `findNextGuestSong()` (DOM scan of `#song-list`) replaced by an
+  async call to that endpoint. Dropped the client-side `markedAsPlayedIds`/`skippedSongIds`
+  bookkeeping — the server is now the source of truth for "already played" (its query only
+  ever returns `accepted` rows) and for "no valid video ID". Kept a small `erroredSongIds`
+  set client-side for videos the *player itself* rejects (removed/private/region-blocked —
+  unlike a missing video ID, the server can't know this), sent back as `?exclude=`.
+- Added a `stateVersion` counter + a `tryAutoPlayInFlight` guard so the now-`async` player
+  event handlers don't act on a stale lookup if a newer event fires while one is in flight.
+
+**Deliberately NOT done in Phase 1** (see rationale below): no `PENDING` approval gate (it
+never existed, so nothing to preserve), no pre-fetching, fallback/background-playlist
+handling untouched.
+
+### Phase 2 — NOT implemented (background tracks + pre-fetching)
+
+1. **Background tracks server-side.** Today the fallback playlist is 100% client-side —
+   `player.loadPlaylist(list: playlistId)` — YouTube's own IFrame player iterates/shuffles
+   it, at **zero** YouTube Data API quota cost. Moving this server-side (as originally
+   planned below: fetch 50 items via `playlistItems`, store as rows, decide server-side)
+   is a real feature add, not a pure refactor — it introduces quota usage and DB storage
+   that don't exist today, in exchange for a single unified `next-track` decision. Worth
+   doing, but weigh it deliberately rather than assuming it's free.
+2. **Pre-fetching** (~15s before track end, cache the next video ID client-side). Skipped
+   in Phase 1: the endpoint call is same-origin and cheap (not an external API), so the
+   gap it would close is small, while committing to a track *before* it's confirmed
+   playing reopens exactly the kind of "mark played too early" risk Phase 1 was careful to
+   avoid (see `findNextPlayableGuestTrack`'s doc comment — it deliberately does *not* mark
+   played). Only worth it if the plain fetch-on-`ENDED` gap turns out to be audible.
+
+### Original one-shot plan (kept for reference — see caveat above)
 
 1. **Single source of truth on the backend.** A unified `party_queue` table replaces the
    current split between DB-stored `SongRequestEntity` rows and the client-side fallback
@@ -652,8 +704,10 @@ Server":
    - Loads whatever video ID comes back.
    - **Pre-fetching:** ~15s before the current track ends, fetch the next track ID in the
      background and cache it, so the switch at track-end is instant (no network wait).
-3. **Backend `NextTrackStrategy` decision tree**, mirroring the existing Auto-Pilot rules
-   in `SongEvaluationService`/`DjService`:
+3. **Backend `NextTrackStrategy` decision tree** — as written up-front this assumed a
+   `PENDING`/`APPROVED` gate keyed on Auto-Pilot that isn't real (see caveat above); a
+   faithful version of this phase would need its own approval-workflow design, not just a
+   port of existing behavior:
    - Auto-Pilot ON → Gemini-accepted guest song → `APPROVED` immediately.
    - Auto-Pilot OFF → Gemini-accepted guest song → `PENDING` until DJ clicks Accept on the
      dashboard, then → `APPROVED`.
@@ -673,11 +727,7 @@ Server":
    The currently-playing video finishes undisturbed either way, because the dumb
    client never sees this happen — it just asks `next-track` again when the track ends.
 
-**Why this matters for whoever picks up this repo next:** Section 5.4 above describes the
-*current* client-heavy implementation. Don't extend it further (e.g. don't add more
-client-side state machines for edge cases) — new Auto-Pilot/fallback work should move
-towards the `next-track` endpoint design above instead of deepening the JS state machine.
-Existing pieces that carry over largely unchanged: Gemini evaluation
+Existing pieces that carry over unchanged regardless of phase: Gemini evaluation
 (`SongEvaluationService`), the two-level YouTube cache (Section 7.3, unrelated — that
 caches *search-by-name → video ID* lookups, not the fallback playlist), and IDOR
 ownership checks (`DjSessionHelper`).
