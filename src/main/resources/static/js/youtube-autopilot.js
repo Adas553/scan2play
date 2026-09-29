@@ -30,7 +30,9 @@
  * is the same whichever window played the tracks); pressed again, the one before that. A second press within 10 s of a
  * restart that ⏮ caused goes back a track as well (from another window the presses are always more than 3 s apart, so
  * without that the previous track could not be reached from there). It works from any window in the
- * same way as ⏭, and when a track that came back ends Auto-Pilot carries on with the queue.
+ * same way as ⏭, and when a track that came back ends Auto-Pilot carries on with the queue. ⏭ pressed on a track that
+ * came back goes forward along the same timeline (to the entry one newer) instead of asking for a new track, until it is
+ * back at the newest entry: ⏮ then ⏭ returns to where the DJ was, guest song included.
  * The ⏯ button pauses and resumes the music, also from any window: the window that plays says in its lease reports
  * whether its player makes sound, the answers tell that to the others, and a window that does not play shows "pause" or
  * "resume" accordingly and sends the explicit command PAUSE or RESUME (a no-op if the state has changed meanwhile).
@@ -83,6 +85,10 @@
     // The key of the track that plays ('G:<request id>' or 'B:<track id>', the same keys the server's list of recently
     // played tracks uses), or null for a track the DJ picked by hand — "back" finds its place in that list by it.
     let nowPlayingKey = null;
+    // True while the track that plays came back through ⏮ (replayTrack): ⏭ then retraces the steps — it goes forward through
+    // what played, up to the newest entry — instead of asking the server for a new track (skipToNext). Any track the server
+    // hands out (playTrack) or the DJ picks by hand, and losing the lease, end it.
+    let playingFromHistory = false;
     // The version of the "up next" list this window last saw (from the list itself or from a lease answer): when the
     // server reports another one, the list was changed elsewhere and is fetched again. null = not seen yet.
     let lastQueueVersion = null;
@@ -235,6 +241,7 @@
         currentlyPlayingSongId = track.source === 'GUEST' ? track.id : null;
         playingPlaylistId = isBackgroundTrack ? (track.playlistId || null) : null;
         nowPlayingKey = (track.source === 'GUEST' ? 'G:' : 'B:') + track.id;
+        playingFromHistory = false;
         trackLoadedAtLeaseSeq = leaseRequestSeq;
         loadIntoPlayer(track.videoId);
         // The server has just taken a background track off the queue — let the dashboard show what comes next.
@@ -322,6 +329,7 @@
         currentlyPlayingSongId = null;
         isBackgroundTrack = false;
         isLoadingSong = false;
+        playingFromHistory = false;
     }
 
     /** The server says who plays: the answer of every lease report, and a 409 from next-track. */
@@ -357,11 +365,26 @@
      * Skips to whatever next-track hands out now — whatever the player is doing, and with Auto-Pilot off too: it is a
      * deliberate act of the DJ. Only the window that plays can do it; a window that does not sends the command to it
      * (onControlClick). When there is nothing to play (204) the track that plays now carries on.
+     *
+     * After ⏮ it retraces the steps instead (playingFromHistory): the track that came back is followed by the entry of the
+     * server's timeline that is one *newer* — so ⏮ then ⏭ returns to where the DJ was, guest song included (a guest song
+     * that has played is no longer in the queue, so next-track would never hand it out again). Only at the newest entry
+     * — or with a track the DJ picked by hand, which is not in the timeline — it asks next-track as usual. Like ⏮, it does
+     * nothing when the server cannot say what played.
      */
     async function skipToNext() {
         if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
         tryAutoPlayInFlight = true;
         try {
+            if (playingFromHistory) {
+                const recent = await fetchRecentTracks();
+                if (!recent || isPlayerDevice !== true) return; // the server could not say, or the lease moved while we asked
+                const position = nowPlayingKey ? recent.findIndex(function (t) { return t.key === nowPlayingKey; }) : -1;
+                if (position > 0) {   // newest first: the entry before this one is the newer one
+                    replayTrack(recent[position - 1]);
+                    return;
+                }
+            }
             const track = await fetchNextTrack();
             if (!track || isPlayerDevice !== true) return; // nothing to play, or the lease moved while we asked
             playTrack(track);
@@ -417,6 +440,7 @@
         currentlyPlayingSongId = null;
         playingPlaylistId = null;
         nowPlayingKey = track.key;
+        playingFromHistory = true;
         trackLoadedAtLeaseSeq = leaseRequestSeq;
         loadIntoPlayer(track.videoId);
     }
@@ -430,8 +454,9 @@
      * timeline of what played (guest songs and background tracks), so it is the same whichever window played them; the
      * track that plays now is found in it by its key, and one the DJ picked by hand is not in it — then the newest entry
      * is the one to go back to. When nothing plays (the track ended), the track that ended is the one that comes back.
-     * A track that comes back is not marked as played again, and when it ends Auto-Pilot carries on with the queue (as
-     * after ⏭): back is a step into the past, not a new queue. With nothing older to go back to the track starts again.
+     * A track that comes back is not marked as played again, and when it ends Auto-Pilot carries on with the queue, so a
+     * party does not hear the tracks in between twice by accident; ⏭ on the other hand retraces the steps (skipToNext).
+     * With nothing older to go back to the track starts again.
      */
     async function skipToPrevious() {
         if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
@@ -646,6 +671,7 @@
         currentlyPlayingSongId = null;
         isBackgroundTrack = false;
         nowPlayingKey = null;
+        playingFromHistory = false;
         isLoadingSong = true;
         loadIntoPlayer(videoId);
         return true;

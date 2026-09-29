@@ -66,6 +66,13 @@ class PlayerControlsFragmentTest {
     }
 
     @Test
+    @DisplayName("the tooltip of Next says that after Back it goes forward again through the tracks that played (skipToNext in youtube-autopilot.js)")
+    void shouldExplainInTheTooltipOfNextThatItRetracesTheStepsAfterBack() {
+        assertThat(render(Locale.ENGLISH)).contains("After going back with ⏮ it goes forward again through the tracks that played");
+        assertThat(render(PL)).contains("Po cofnięciu przyciskiem ⏮ przechodzi z powrotem do przodu przez utwory, które grały");
+    }
+
+    @Test
     @DisplayName("the pause button carries both of its labels (pause while it plays, resume while it is paused), and starts as \"Pause\"")
     void shouldCarryBothLabelsOfThePauseButton() {
         String html = render(Locale.ENGLISH);
