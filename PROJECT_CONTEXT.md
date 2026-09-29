@@ -438,8 +438,17 @@ the `n` newest of the union are among the `n` newest of each side) and merged in
 by hand, or the video would not play) is in the history too. The rows are `HistoryEntry` records: a background row has a
 "🎶 Playlist" badge in the vibe column (and a 🎶 before the title, because a phone hides that column), a link to the video,
 "—" instead of the energy and no comment; a track without a stored title reads `youtu.be/<id>`. The "Time" column is the
-time of the event (played / rejected), not of the request, and sorts by it. The Played filter includes the background
-tracks. A Spotify party has no background tracks, so its history is just its guests' songs, by time played. Not built: an
+time of the event (played / rejected), not of the request, and sorts by it. **The filter buttons are applied by the
+server** (`HistoryFilter`, `?filter=all|guest|background|played|rejected`; `PlayHistoryService.getHistory(partyCode, limit,
+filter)`): only the tables the filter needs are read — Guests: the requests (played and rejected), Playlist: the tracks,
+Played: the requests that played and the tracks, Rejected: the rejected requests — each with its own bound, so the limit
+counts entries **of the chosen kind**: with a 120-track playlist between the guests' songs, "Guests" still shows the last 50
+guests' requests, which a filter applied to the 50 rows on the page could not (those hold a handful of them). The Played
+filter includes the background tracks. A tracks-of-the-playlist row stays in the history only for the current round of the
+playlist: when the last queued track is handed out, `requeuePlayedTracks` puts the played ones back in the queue and clears
+their `played_at` (`FallbackTrackCommandService.startNewRound`), so the history of the playlist is at most one round (≤ 500
+tracks) and starts over with each — a short playlist that loops during a party loses its older rows (and ⏮ its way back
+along them). A Spotify party has no background tracks, so its history is just its guests' songs, by time played. Not built: an
 expression index for the ordering (`party_code, COALESCE(played_at, requested_at)`) — the query sorts one party's played
 and rejected rows, which is cheap next to the bound; add it if a party ever has tens of thousands of requests.
 
@@ -457,11 +466,18 @@ already holds the new version, so nothing is fetched twice. The version does not
 search box and a list of fixed height (`.list-scroll`, 60 % of the viewport) with its own scrollbar and a sticky header;
 the scroll box is the wrapper, outside the polled `<tbody>`, so a poll (every 3 s) keeps the scroll position, and the
 search is applied again after each refresh (`applyListFilters`, called from the poll). The search ignores case and
-accents ("zolc" finds "Żółć"); while filtering the count reads "3 / 60". The history also has a **Played / Rejected**
-filter and **"Show more"**: `GET /dj/history-view[/fragment]?limit=` (50 at first, +50 each time, at most 300 — the query
+accents ("zolc" finds "Żółć"); while searching the count reads "3 / 60" (the search works on the rows that are loaded).
+The history also has five **filter buttons** — All / Guests / Playlist / Played / Rejected (the server filters, above) — and
+**"Show more"**: `GET /dj/history-view[/fragment]?limit=&filter=` (50 at first, +50 each time, at most 300 — the query
 is always bounded, and reads one row more than asked for to know whether older ones exist; the count shows "50+" while
-they do). In the dashboard's History tab "Show more" replaces the fragment in place and keeps the search text, the filter
-and the scroll position; on the standalone history page it reloads the page with the new limit. `data-list*` attributes
+they do; a filter or a limit that is not understood is the default, a limit that is not a number is a 400). A click on a
+filter button asks for the list again: in the dashboard's History tab `reloadHistory(limit, filter)` replaces the fragment
+in place (the button lights at once and goes back if the request fails; only the newest answer is used; the search text
+stays, the scroll position stays for "Show more" and goes to the top for another filter), on the standalone history page it
+is a page load (`/dj/history-view?filter=`). "Show more" carries the chosen filter. Opening the History tab always starts at
+All. The cost of a long party: nothing grows with the number of songs a party has had — every read is bounded by the limit
+(≤ 301 rows a side), one row of the fragment is ≈ 1.8 KB (HTML, not compressed: ≤ 300 rows ≈ 0.5 MB, only when the DJ opens the
+tab or asks for more — the history is not polled) and the browser holds at most 300 rows. `data-list*` attributes
 tie a list to its search box, filter buttons, count and "nothing matches" row (`initListTools` in `dashboard.js`, delegated
 listeners, so an AJAX-loaded list needs no set-up). Rows are `table-sm` — a little more compact on a phone.
 
@@ -566,7 +582,7 @@ PostgreSQL 18 with a throw-away database (see Section 10).
 | Class                       | Mapping                 | Purpose |
 |-----------------------------|-------------------------|---------|
 | `HomeController`            | `GET /`                 | Landing page or redirect to dashboard if authenticated |
-| `DjDashboardController`     | `/dj/dashboard`, `/dj/history-view` | DJ dashboard view, AJAX polling updates (ETag), history view/fragment (`limit`: 50 at first, up to 300, "Show more"); `extractPlaylistId()` resolves YouTube URLs to playlist/video IDs |
+| `DjDashboardController`     | `/dj/dashboard`, `/dj/history-view` | DJ dashboard view, AJAX polling updates (ETag), history view/fragment (`limit`: 50 at first, up to 300, "Show more"; `filter`: all / guest / background / played / rejected); `extractPlaylistId()` resolves YouTube URLs to playlist/video IDs |
 | `DjPartySettingsController` | `/dj/**`                | Start/end party, vibe, rate limits, playback mode, fallback playlist and shuffle (a shuffle switch re-orders the queue), account deletion |
 | `DjFallbackQueueController` | `/dj/dashboard/fallback-queue`, `POST .../move`, `POST .../place` | The DJ's "up next" list of the fallback playlist as an HTML fragment (`fragments/fallback-queue.html`), and the DJ's moves of a track (up / down / play next, or dragged to a place) |
 | `DjPlayerLeaseController`   | `POST /dj/dashboard/player-lease`, `POST .../release`, `POST /dj/dashboard/player-command`, `GET /dj/dashboard/recent-tracks` | Which dashboard window plays (Section 5.4, "One window plays"): a window reports in and learns whether it is the holder (and gets the current playlist, the version of the "up next" list and a waiting command); the holder gives the lease up when it leaves the page; any window can give the one that plays a command (⏭ Next, ⏮ Back, ⏯ pause / resume); the tracks that played recently, for ⏮ |
@@ -598,7 +614,7 @@ PostgreSQL 18 with a throw-away database (see Section 10).
 | `FallbackTrackCommandService`| ~360  | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new in playlist or shuffled order), cancel, daily 30-day purge, `applyShuffleSetting` (on: fresh random order; off: playlist order continuing after the last played track), `moveTrack` (the DJ's up / down / play next), `placeTrack` (a drag: in front of another track or to the end; a moved track is flagged `manualMove`) and `takeNextTrack` — takes the queued track with the lowest `playOrder`, claims it QUEUED → PLAYED with one conditional UPDATE (concurrent callers never get the same track), and when that was the last one starts the next round at once (re-queues the party's newest import in playlist order or freshly shuffled; a shuffled round never opens with the track that is still playing); every method that changes the queue first takes a per-party PostgreSQL advisory lock — a stress test with concurrent moves and takes deadlocked without it |
 | `FallbackQueueService`       | ~55   | Read side for the dashboard: the queued tracks of the round (up to 500) in exactly the order `takeNextTrack` serves them, plus how many are left and whether the DJ has moved tracks by hand; `moveTrack` / `placeTrack` resolve the party's current playlist and delegate; `getVersion` / `versionOf` — a hash of the whole view, so that a window can tell that the list changed elsewhere |
 | `NextTrackService`           | 120   | "What plays next?": a waiting guest song first, else a background track. Imports lazily when there is nothing to play or the tracks are ≥ 29 days old; per party+playlist single-flight and a 5-minute pause after a failed import |
-| `PlayHistoryService`         | ~110  | The timeline of what played (Section 5.4, "The history is one timeline"): guest requests (`song_requests`, by play time) and background tracks (`fallback_track`) merged newest first, each side read with its own bounded query; `getHistory(partyCode, limit)` → `Page(entries, hasMore)` for the history page, `getRecentlyPlayed` → what the embedded player can play again (has a YouTube video ID) for ⏮ |
+| `PlayHistoryService`         | ~110  | The timeline of what played (Section 5.4, "The history is one timeline"): guest requests (`song_requests`, by play time) and background tracks (`fallback_track`) merged newest first, each side read with its own bounded query; `getHistory(partyCode, limit, HistoryFilter)` → `Page(entries, hasMore)` for the history page (the filter decides which tables are read), `getRecentlyPlayed` → what the embedded player can play again (has a YouTube video ID) for ⏮ |
 | `PlayerLeaseService`         | ~140  | Which dashboard window plays: one in-memory lease per party (a window id + the time it last reported, 10 s timeout), `report` (`CLAIM` / `WATCH` / `TAKE_OVER`; the holder also collects the command waiting for it and says whether its player makes sound, which every answer tells back), `sendCommand` (⏭ Next / ⏮ Back / ⏯ pause and resume from any window; refused when nobody plays; one command per party, the last one wins, dropped when the lease changes hands), `mayPlay` (used by `next-track`, answers 409 to another window) and `release`; takes a `Clock` in a package-private constructor so that tests move time by hand |
 
 ### 6.3 Configuration
@@ -623,7 +639,7 @@ PostgreSQL 18 with a throw-away database (see Section 10).
 |------------------------|---------|
 | `landing.html`         | Public landing page — two provider cards (Spotify / YouTube) + "How It Works" guide |
 | `dashboard.html`       | DJ control panel: queue, settings, QR code, playback controls, DJ Pick form, YouTube player |
-| `history.html`         | DJ history view: played and rejected songs; the `historyTableContent` fragment (count, Played / Rejected filter, search, list of fixed height, "Show more") serves both this page and the dashboard's History tab |
+| `history.html`         | DJ history view: played and rejected songs; the `historyTableContent` fragment (count, five filter buttons — All / Guests / Playlist / Played / Rejected —, search, list of fixed height, "Show more") serves both this page and the dashboard's History tab |
 | `index.html`           | Guest song request form |
 | `result.html`          | Guest view: AI decision result |
 | `party_ended.html`     | Guest view when party is inactive |
@@ -642,7 +658,7 @@ PostgreSQL 18 with a throw-away database (see Section 10).
 | File                    | Purpose |
 |-------------------------|---------|
 | `css/app.css`           | Shared stylesheet with design tokens, page-scoped rules (`.page-dj`, `.page-guest`, etc.), `.list-scroll` (a long list in a box of fixed height with a sticky header), `.dj-tabbar` (the tab bar that stays in view) |
-| `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), the tabs (`initTabs`: Panel / Queue / History, the lit tab follows the scroll, the history loaded by AJAX with YouTube), table polling (3s, ETag/304), clipboard, client-side table sorting, search / filter / "Show more" of the long lists (`initListTools`) |
+| `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), the tabs (`initTabs`: Panel / Queue / History, the lit tab follows the scroll, the history loaded by AJAX with YouTube), table polling (3s, ETag/304), clipboard, client-side table sorting, search of the long lists and the history's filter buttons and "Show more" (`initListTools`; the buttons and "Show more" ask the server again: `reloadHistory`) |
 | `js/youtube-autopilot.js` | YouTube Auto-Pilot, a "dumb player" (Section 14, stage 4): when the player is idle / on `ENDED` / after a player error it asks `POST /dj/dashboard/next-track` and `loadVideoById()`s the answer; confirms guest songs via `/dj/dashboard/play`; never touches a paused or playing track; asks only while its window holds the player lease (`POST /dj/dashboard/player-lease` every 3 s), otherwise shows the banner |
 | `js/song-autocomplete.js` | Song autocomplete / typeahead via public iTunes Search API (client-side, debounced at 300ms, no server involvement, no YouTube quota) |
 
@@ -939,8 +955,8 @@ PartySettingsQueryService
 | Method | Path                              | Handler                                          | Notes |
 |--------|-----------------------------------|--------------------------------------------------|-------|
 | GET    | `/dj/dashboard`                   | `DjDashboardController.dashboard()`              |       |
-| GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            | Optional `limit` (default 50, raised to 50 at least, capped at 300; not a number → 400): the last `limit` entries of the timeline of what played or was rejected — guests' songs and background tracks (`HistoryEntry`), newest event first; the model also has `historyHasMore` and `historyNextLimit` for "Show more" |
-| GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated; the same `limit` |
+| GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            | Optional `limit` (default 50, raised to 50 at least, capped at 300; not a number → 400) and `filter` (`all` \| `guest` \| `background` \| `played` \| `rejected`; missing or unknown → `all`): the last `limit` entries of that kind from the timeline of what played or was rejected — guests' songs and background tracks (`HistoryEntry`), newest event first; the model also has `historyFilter` (the lit button), `historyHasMore` and `historyNextLimit` for "Show more" |
+| GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated; the same `limit` and `filter` |
 | GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
 | GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1). Not called by the client since stage 4 (superseded by `next-track`); kept as the read-only "is a guest waiting?" peek |
 | POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId, playlistId}` (`playlistId` = the playlist a BACKGROUND track came from, null for a guest song) or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Optional `deviceId` (the asking window's id): **409** when another window holds the party's player lease (see below) — nothing is handed out; a request without an id counts as another window while a lease is live. Section 14 Phase 2 stage 3; called by `youtube-autopilot.js` since stage 4 |
@@ -1162,7 +1178,9 @@ anywhere on a long page. Choices nobody was asked about: the account buttons mov
 stay in view), the lit tab follows the scroll position, and the tabs are plain links where there is no AJAX (Spotify, the
 standalone history page). Right after stage 4 was pushed the owner noticed that ⏭ after ⏮ lost a guest song (⏮ from a guest
 song, then ⏭, went to the next playlist track instead of back to the guest song), so ⏭ now retraces the steps after ⏮ — Section
-5.4, "Back ⏮". With this Phase 4 is complete; what remains are the optional follow-ups in `SESSION_HANDOFF.md`.
+5.4, "Back ⏮". Asked next whether playlist tracks belong in the history, the owner had two more filter buttons built — Guests and
+Playlist next to All / Played / Rejected — applied by the server, so that the limit counts the entries of the chosen kind
+(Section 5.4, "The history is one timeline"). With this Phase 4 is complete; what remains are the optional follow-ups in `SESSION_HANDOFF.md`.
 
 ### Original one-shot plan (kept for reference — see caveat above)
 

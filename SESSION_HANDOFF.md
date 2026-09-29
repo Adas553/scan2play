@@ -31,7 +31,12 @@ first session (2026-09-28, remote) is summarised at the bottom.
   `git status` showed a clean `dev...origin/dev` and the commits `0a87a41` / `1ce76ec` / `36c76a9`, so there was nothing to
   commit and the question about it was moot.) **Right after the push the owner asked about ⏭ after ⏮ skipping the guest song that
   played just before; on "zbuduj" it was built — ⏭ retraces the steps after ⏮ — and, on "możesz commitować", COMMITTED (a pair,
-  code then docs, on top of `74d1e05`; NOT pushed yet)**: see "Phase 4, stage 4", "Follow-up".
+  code then docs, on top of `74d1e05`; NOT pushed yet)**: see "Phase 4, stage 4", "Follow-up". **Then the owner asked whether the
+  history should keep the playlist tracks and what a history of 1000 songs would cost; on the answer ("ok, zrób to") history
+  filters — Guests / Playlist next to the old ones, applied by the server — were built and, on "commituj", COMMITTED (another pair,
+  code then docs, on top of `def4991`; NOT pushed yet — `dev` is 4 ahead of `origin/dev`)**: see "Phase 4, stage 4", "Follow-up 2".
+  **The owner decided that the round-reset finding at the end of that section ("the history of the playlist starts over when the
+  playlist loops") is to be handled in a NEW session — it is the first task, see "Next", item 1a.**
 - Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them and says to commit, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
 
@@ -89,9 +94,9 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: 366 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
+- Tests: 380 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
   run them without disturbing the app running from IntelliJ) — run on 2026-09-29 in a scratch copy of the working
-  tree with Phase 3 and Phase 4 stages 0, 1, 2, 3 and 4 and its follow-up (`BUILD SUCCESS`; 365 before the follow-up, 360 before stage 4, 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
+  tree with Phase 3 and Phase 4 stages 0, 1, 2, 3 and 4 and its two follow-ups (`BUILD SUCCESS`; 366 before the history filters, 365 before the first follow-up, 360 before stage 4, 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
   146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
   has automated tests; stage 4 was verified against the real YouTube player, Phase 3 against a real PostgreSQL and the
   real JS on stub endpoints (see below).
@@ -611,6 +616,58 @@ stage 2; the owner found it confusing and, on the recommendation, said "zbuduj".
   entry, and ⏭ walking forward would replay it. (The stage 2 text above, "⏭ after ⏮ asks `next-track`", describes what was
   built and verified then; this follow-up changed it.)
 
+### Follow-up 2 of stage 4: history filters, Guests and Playlist (done, committed, not pushed)
+
+The owner asked (2026-09-29) whether playlist tracks belong in the history at all. Answer given: yes — the timeline is what ⏮ / ⏭
+walk along and the history should tell the whole night — but the list needs a way to see only the guests' requests, because a
+playlist track every ~3 minutes drowns them (the old filters were All / Played / Rejected, and Played includes the playlist). Asked
+"ok, zrób to". Then, mid-work, the owner asked what a history of 1000 songs would cost; the honest answer led to changing the design
+(below). Section 5.4 ("The history is one timeline", "Long lists") has the rules.
+- **Cost of a long history: nothing grows with the number of songs.** Every read is bounded by the limit (`HISTORY_PAGE_SIZE` 50,
+  `HISTORY_MAX_LIMIT` 300; `limit + 1` rows from each of the two tables), the history is fetched only when the DJ opens the tab or
+  presses "Show more" (never polled), the browser holds at most 300 rows, and a row of the fragment is ≈ 1.8 KB (measured on
+  the rendered fragments: 50 rows = 90 KB, 100 rows = 178 KB; so ≤ 300 rows ≈ 0.5 MB, uncompressed — `server.compression` is off).
+  The request query sorts one party's played and rejected rows by `COALESCE(played_at, requested_at)` (no index for the
+  expression, documented in 5.4) — negligible next to the bound for a party of a thousand requests.
+- **But a filter applied on the page would have been wrong for a long party.** My first version filtered the loaded rows in the
+  browser (a `data-source` attribute on each row; 367 tests green, its browser scenario written but never run); the 1000-songs question showed its flaw: the
+  page holds the last 50 (up to 300) *mixed* entries, so "Guests" would show the handful of requests among them and miss the older
+  ones. **Now the server filters, inside the bounded queries:** `HistoryFilter` (new enum: `ALL`, `GUEST`, `BACKGROUND`, `PLAYED`,
+  `REJECTED`; `param()`, `fromParam()` — anything unknown is `ALL`), `PlayHistoryService.getHistory(partyCode, limit, filter)`
+  (the 2-argument form is `ALL`; only the tables the filter needs are read, so `BACKGROUND` never touches `song_requests` and
+  `GUEST` / `REJECTED` never touch `fallback_track`; `getRecentlyPlayed` for ⏮ / ⏭ is unchanged), `DjDashboardController`
+  (`?filter=` on `/dj/history-view` and `/dj/history-view/fragment`, model attribute `historyFilter` = the lit button), `history.html`
+  (the lit button comes from the model; the five buttons are separate `btn-sm` buttons in a `flex-wrap` row — a joined
+  `btn-group` of five stuck out 13 px past the card on a 375 px phone), `dashboard.js`
+  (`matchesFilter` is gone, `applyFilters` is search only; a filter button → `reloadHistory(limit, filter)` in the History tab — the
+  button lights at once, goes back if the request fails, only the newest answer is used, the search text stays, the scroll goes to
+  the top; on the standalone page a page load of `/dj/history-view?filter=`; "Show more" carries the chosen filter in both).
+  Opening the History tab always starts at All. Messages: `history.filter.guest` ("Guests" / "Goście"), `history.filter.background`
+  ("Playlist" / "Playlista").
+- **Tests: 380 pass** (366 before; run in a scratch copy: 381 with the scratch renderer, `BUILD SUCCESS`): `HistoryFilterTest` (3, new),
+  `PlayHistoryServiceTest` +6 (each filter reads only its tables, the limit counts the chosen kind, no filter = all),
+  `DjDashboardControllerHistoryTest` +4 (the filter is passed on, with the limit, unknown → all, the standalone page),
+  `HistoryFragmentTest` +1 (only the filter's button is lit; five buttons in order).
+- **Verified in the browser** (the harness of the follow-up above: page-driven scenarios, a stand-in server that serves a
+  rendered fragment per filter and limit — 400 entries, a guest every 6th, 67 guests of which 16 rejected): 12 steps, all as expected —
+  All: 50 mixed (9 guests); **Guests: 50 guests reaching back to "Gość 294"** while the All page ends at entry 49; Playlist: 50 tracks;
+  Played: 50, none rejected; Rejected: 16, no "Show more", no "+"; a click on the lit button sends no request; search with a filter
+  (1 of 50) and the search text kept across a change of filter; **"Show more" with Guests asks `limit=100&filter=guest`** and gets
+  all 67; a failed request puts the previous button back and it works afterwards; two quick clicks — the newest answer stays. The
+  standalone page: the buttons navigate to `?filter=guest`, "Show more" to `?limit=100&filter=guest` (seen in the server log; the
+  page is not re-rendered by the stand-in); on 375 px the buttons wrap into two rows and stay inside the card (screenshot).
+- **Not done:** real devices; a real PostgreSQL run (the queries are the ones that already existed — only which of them run
+  changed — so it was not run); the smooth scroll and the hidden-pane limits of stage 4 apply.
+- **A finding, not fixed — the history of the playlist starts over with each round.** When the last queued track of the playlist is
+  handed out, `FallbackTrackCommandService.startNewRound` → `FallbackTrackRepository.requeuePlayedTracks` puts every played track
+  back in the queue and sets its `played_at` to null (including the one that is playing, which then sits at the end of the new
+  round). So the "Playlist" rows of the history are at most one round (≤ 500 tracks), and a short playlist that loops during a party
+  loses its older rows — and `recent-tracks` loses them too, so ⏮ right after a new round starts has no playlist track to go back to.
+  Before this question I described the history as the whole night; that is true only until the playlist loops (120 tracks × ~3.5 min ≈ 7 h,
+  so rare with a long playlist, common with a short one). A fix would keep a separate record of plays (a play log, or a `last_played_at`
+  that a new round does not clear) — a migration. **Owner (2026-09-29): "zróbmy w nowej sesji"** — see "Next", item 1a, for
+  the sketch.
+
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
 **How it works now (2026-09-29):** the owner opens the local app, on the phone and on the computer, through
@@ -638,7 +695,34 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 1. **Push** the two commits of the follow-up (⏭ after ⏮ retraces the steps — "Phase 4, stage 4", "Follow-up"; built on the
    owner's "zbuduj", committed on their "możesz commitować", on top of `74d1e05`) when the owner says so, and let them try it on the
-   phone: a guest song plays, ⏮ → the playlist track, ⏭ → the guest song again, ⏭ → the queue.
+   phone: a guest song plays, ⏮ → the playlist track, ⏭ → the guest song again, ⏭ → the queue. Those two commits are
+   local (`dev` is 2 ahead of `origin/dev` — check with `git status -sb`).
+   The history filters ("Phase 4, stage 4", "Follow-up 2") are committed too, as another pair on top (`git log --oneline -4`);
+   `dev` is 4 commits ahead of `origin/dev` — all four wait for the owner's word to push.
+1a. **NEXT SESSION, first task (the owner's decision, 2026-09-29): the history of the playlist must not start over when the
+   playlist loops.** The problem is written up at the end of "Follow-up 2" (`startNewRound` → `requeuePlayedTracks` sets the played
+   tracks back to `QUEUED` and clears `played_at`, so the "Playlist" rows of the history — and what ⏮ / ⏭ walk along — are at most
+   one round). A first sketch, to be checked against the code and the owner before building (it needs a Flyway migration, `V7`,
+   so read Section 10 of `PROJECT_CONTEXT.md` and `AGENTS.md`, "Database migrations", first):
+   - **A play log**, e.g. `fallback_play` (`id`, `party_code`, `video_id`, `title` — a snapshot, so the row survives the playlist
+     being replaced —, `played_at`), one row written by `takeNextTrack` when a track is claimed (inside the party's advisory lock,
+     where `claimQueuedTrack` already runs). `PlayHistoryService.getHistory` / `getRecentlyPlayed` then read the log instead of
+     `fallback_track` (`findPlayedTracks` goes away; `HistoryFilter` and the bounded `limit + 1` reads stay the same). Index
+     `(party_code, played_at DESC, id DESC)`.
+   - **Retention:** the log is personal-ish data like `fallback_track` — same 30-day rule (`deleteFetchedBefore` is the purge; add the
+     log to it), removed with the account (`deleteByPartyCode` / `AccountDeletionService`). Decide whether replacing the playlist
+     should clear the log (today it deletes the tracks and with them the history) — the owner may prefer to keep it.
+   - **Keys:** `HistoryEntry.key()` is `B:<fallback_track id>` and `nowPlayingKey` in `youtube-autopilot.js` comes from
+     `next-track` (`NextTrackResponse.id` = the track id). If the log has its own ids the key and the answer have to agree (either
+     `next-track` also returns the log id, or the log row keeps the track id in a column and the key stays `B:<track id>` — but a
+     track that plays twice in different rounds then has one key for two entries, and ⏮ / ⏭ find the first: check). This is the
+     part that needs the most thought.
+   - **Existing data:** tracks that are `PLAYED` with a `played_at` today could be copied into the log by the migration.
+   - **Tests:** unit tests for the service and repository calls; and — `CLAUDE.md` — a run against a throw-away PostgreSQL 18
+     database (`s2p_*`): V1–V7 on an empty database with Hibernate validation, V6 → V7 on existing data, the two reads, and the
+     concurrency of `takeNextTrack` writing the log (the advisory lock is why the deadlock was avoided before). Browser
+     harness for ⏮ / ⏭ across a round boundary (a short playlist that loops).
+   - Ask the owner first: the log's retention and whether replacing the playlist clears it.
 2. **The owner tries stage 4 on the phone** (⏮ twice with the computer playing; the buttons row above the tabs; the bar over a
    list) and says what to change. The migration `V6` is applied at the next restart of the app (the owner's `scan2play` database
    was at `V5`; the owner has already restarted and tried stages 2 and 3). With stage 4 Phase 4 is complete.
