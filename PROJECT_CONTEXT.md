@@ -724,6 +724,7 @@ problem.
 | `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), the tabs (`initTabs`: Panel / Queue / History, the lit tab follows the scroll, the history loaded by AJAX with YouTube), table polling (3s, ETag/304), clipboard, client-side table sorting, search of the long lists and the history's filter buttons and "Show more" (`initListTools`; the buttons and "Show more" ask the server again: `reloadHistory`) |
 | `js/youtube-autopilot.js` | YouTube Auto-Pilot, a "dumb player" (Section 14, stage 4): when the player is idle / on `ENDED` / after a player error it asks `POST /dj/dashboard/next-track` and `loadVideoById()`s the answer; confirms guest songs via `/dj/dashboard/play`; never touches a paused or playing track; asks only while its window holds the player lease (`POST /dj/dashboard/player-lease` every 3 s), otherwise shows the banner |
 | `js/song-autocomplete.js` | Song autocomplete / typeahead via public iTunes Search API (client-side, debounced at 300ms, no server involvement, no YouTube quota) |
+| `js/wake-lock.js`       | Screen Wake Lock: keeps the display on while Auto-Pilot is on (`window.syncWakeLock(isOn)`, called by `dashboard.js` after every Auto-Pilot toggle; the lock is re-acquired on `visibilitychange`; silent no-op stubs where the API is unavailable or the context is not secure). From the owner's commit `33eef2a` of 2026-04-06 |
 
 ### 6.7 Resources
 

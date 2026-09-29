@@ -38,7 +38,7 @@ first session (2026-09-28, remote) is summarised at the bottom.
   **The owner decided that the round-reset finding at the end of that section ("the history of the playlist starts over when the
   playlist loops") is to be handled in a NEW session. That session (2026-09-29, a fourth one) BUILT it — a play log, `V7`
   (`fallback_play`) — reviewed by the owner in IntelliJ and, on their "ok, commituj", COMMITTED as one more pair (code, then docs) on top of
-  `0feabec`; NOT pushed yet — `dev` is 6 ahead of `origin/dev`: see "Phase 4, stage 4", "Follow-up 3", and "Next", items 1 and 1a. The
+  `0feabec`; NOT pushed yet — `dev` is 8 ahead of `origin/dev` (these three pairs of commits, then the wake lock and the docs of the session that followed): see "Phase 4, stage 4", "Follow-up 3", and "Next", items 1 and 1a. The
   history of the playlist is now the whole party (30 days at most), not one round.**
 - Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them and says to commit, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
@@ -676,7 +676,7 @@ playlist track every ~3 minutes drowns them (the old filters were All / Played /
 ### Follow-up 3 of stage 4: the play log — the history of the playlist survives a loop (done, committed, not pushed)
 
 The task the owner left for a new session (2026-09-29, "zróbmy w nowej sesji"). Built on `dev` on top of `0feabec`, left uncommitted for
-the owner's review in IntelliJ, and committed on their "ok, commituj" as a pair (code, then docs; `git log --oneline -2`) — not pushed (`dev` is 6 ahead of `origin/dev`).
+the owner's review in IntelliJ, and committed on their "ok, commituj" as a pair (code, then docs; `git log --oneline -2`) — not pushed (`dev` is 8 ahead of `origin/dev` after the two commits that followed: the wake lock and the docs).
 Section 4.1 (`fallback_play`), 5.4 ("The history is one timeline", "The history of the playlist does not start over…"), 10 (`V7`),
 6.2, 11, 12, 13 and 14 of `PROJECT_CONTEXT.md` describe the result; the short version:
 
@@ -756,67 +756,93 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-1. **Push** the two commits of the follow-up (⏭ after ⏮ retraces the steps — "Phase 4, stage 4", "Follow-up"; built on the
-   owner's "zbuduj", committed on their "możesz commitować", on top of `74d1e05`) when the owner says so, and let them try it on the
-   phone: a guest song plays, ⏮ → the playlist track, ⏭ → the guest song again, ⏭ → the queue. Those two commits are
-   local (`dev` is 2 ahead of `origin/dev` — check with `git status -sb`).
-   The history filters ("Phase 4, stage 4", "Follow-up 2") are committed too, as another pair on top (`git log --oneline -4`);
-   The play log ("Follow-up 3") is committed as a pair on top of those — `dev` is 6 commits ahead of `origin/dev`, and all six wait for the
-   owner's word to push.
-1a. **DONE, committed and not pushed (2026-09-29, a fourth session): the history of the playlist no longer starts over when the playlist loops** —
-   the play log, `V7__fallback_play_log.sql`; everything is in "Phase 4, stage 4", "Follow-up 3" (the sketch that stood here was checked
-   against the code and corrected: the key of a background track is `B:<play id>`, not `B:<track id>`; the log copies `fetched_at`; the owner's
-   two decisions — 30 days from the fetch, and replacing / clearing the playlist keeps the log). The code commit holds 14 changed files and 3 new ones (`V7__fallback_play_log.sql`,
-   `FallbackPlayEntity`, `FallbackPlayRepository`), the docs commit `PROJECT_CONTEXT.md` and this file. What is left for the owner: say
-   whether to push, and **try ⏮ / ⏭ on the phone after a short (2–3 track) playlist has looped**. The migration `V7` is applied at the next restart of the app on the owner's `scan2play` database (additive; it copies the
-   tracks that are `PLAYED` at that moment into the log).
-2. **The owner tries stage 4 on the phone** (⏮ twice with the computer playing; the buttons row above the tabs; the bar over a
-   list) and says what to change. The migration `V6` is applied at the next restart of the app (the owner's `scan2play` database
-   was at `V5`; the owner has already restarted and tried stages 2 and 3). With stage 4 Phase 4 is complete.
-3. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
-   saying how many guest songs wait ("Czeka 2 piosenki gości" — they play first; the owner asked about showing both lists
-   together and agreed to keep the guest table separate), and a note in the panel when Auto-Pilot is off (nothing plays
-   by itself then). **That note is now worth doing** (2026-09-29): the owner sent `https://dev.scan2play.com.pl/` to a friend who
-   pasted a playlist and the player did not start, while it starts at the owner's. Cause, from the code and her screenshot: a new
-   party starts with `PlaybackMode.MANUAL` (`PartySettingsCommandService`, the builder) — Auto-Pilot off — and with it off nothing
-   starts by itself (stage 4 of Phase 2); the screenshot showed the first playlist track still marked "Następny" with 120 left in
-   the round, i.e. the window had never asked `next-track`. She should switch "Auto-Pilot (Queue)" on (or press ⏭). Proposed, not
-   built (the owner was asked): a hint next to the player while Auto-Pilot is off, with a button to switch it on, and a message when
-   the YouTube IFrame API does not load (an ad blocker, Brave shields, a school network — the screenshot showed no black player
-   rectangle, which was not certain; today that failure is silent). Not proposed: making AUTO the default — it also applies to
-   Spotify parties, where AUTO puts accepted songs straight into the Spotify queue.
-   **Status (2026-09-29, the play-log session): NOT started.** The owner's prompt made it optional — "only after the play log, and only with
-   my consent" — and the play log is not even reviewed yet, so the hint and the IFrame-API message wait for the owner's word.
-4. Optional (Section 14): show the import result on the dashboard (`X-Fallback-Import: ok|failed`,
-   `X-Fallback-Import-Reason`) — the new panel is a natural place — instead of always flashing the Save button green;
-   remove `GET /dj/dashboard/next-guest-track` and its tests, which nothing calls any more; browser-level tests for the JS
-   (every stage of Phase 4 was checked by hand in a throw-away harness that is not kept — a Playwright / similar suite in the repo
-   would replace it; see "Phase 4, stage 4", "How it was verified", for what such a harness needs).
-5. `dev` → `main` is the next real decision (open items 1 and 3 below), but the owner said on 2026-09-29 that they do
-   **not** want to merge yet — they want a polished `dev` first. Leave `main` alone until they bring it up.
+Updated 2026-09-29, after the owner answered the suggestions made at the end of the play-log session.
+
+1. **The owner's own small steps**
+   - **Push.** `dev` is 8 commits ahead of `origin/dev` (the two of "Follow-up", the two of "Follow-up 2", the two of "Follow-up 3", the wake lock and the docs of the session that followed); they wait for the
+     owner's word. The owner has tried the play log on the phone (2026-09-29): ⏮ / ⏭ across a loop works — see item 2 for the two remarks.
+   - **`YOUTUBE_API_KEY`: rotated by the owner on 2026-09-29** (a new key put in the IntelliJ run configuration and in Railway). Still to do: **delete the old key** in Google
+     Cloud Console → APIs & Services → Credentials → *API keys* once nothing uses it, and check that the new one is restricted to the YouTube Data API v3. A restriction alone would not have
+     helped: a key that was pasted into a chat can still spend the YouTube quota. The page the owner showed on 2026-09-29 was a different thing — the *OAuth client secrets* (`GOOGLE_CLIENT_SECRET`; `****pfTe` enabled,
+     created 10.03.2026, and `****IgiS` disabled, created 31.03.2026): nothing is known to have leaked there; the disabled one cannot authenticate, so it can be deleted
+     to silence Google's "more than one secret" warning, but the enabled one must stay the one the app uses.
+   - **Local `main` and the wake lock:** see "Open items", 1.
+2. **The next session with code** (proposed order; the owner agreed to all of it, except where it says otherwise):
+   - **Two remarks from trying ⏮ / ⏭ on the phone.** (a) After ⏮ there is very little time to press it a second time so that the song goes back to the previous track: the
+     window is `DOUBLE_PRESS_MS` = 10 s in `youtube-autopilot.js`, and from another window two presses are at least ~3.5 s apart because of the disabled button and the report
+     interval. **Decided by the owner: 20 s** (30 s was suggested) — to be changed in the places that must stay equal: the constant, the tooltip `dashboard.player.previous.title` (PL and EN, "10 seconds" —
+     the message files are edited by script, see `CLAUDE.md`), `PlayerControlsFragmentTest`, and the mentions of 10 s in `PROJECT_CONTEXT.md` Section 5.4 and Section 14, stage 4. (b) When the rewind takes longer the pause
+     button sometimes says "Wznów" instead of "Pauza": most likely the window that plays reports `playing = false` while the player is between two videos (`isPlaying()` counts
+     only PLAYING and BUFFERING; after `loadVideoById` the state can be UNSTARTED / CUED for a moment). A fix would count "a track is being loaded" (`isLoadingSong`) as playing, both for the
+     button of the window that plays and in the `playing` value of its lease reports. The owner: a small fix, do it. The fake player of the browser harness must be able to stay in UNSTARTED / CUED
+     for a while, otherwise the check proves nothing.
+     (c) **A rough edge the owner noticed (2026-09-29; "not sure it is a problem"):** with one playlist, ⏮ several tracks back, then the playlist is changed — ⏭ has to be pressed through all the old tracks
+     before the new playlist starts. It is the designed "⏭ retraces the steps" (`playingFromHistory`, "Follow-up") and nothing clears it when the playlist changes: `updateFallbackSource()` and the lease
+     check (`dropStaleBackgroundTrack`) only touch a *background* track, and a track that came back through ⏮ is deliberately not one. The retrace makes sense for a guest song that was never
+     re-queued, not for the tracks of a playlist the DJ has just left. Suggested: when the current playlist changes (the window where the DJ saved it: `updateFallbackSource`; other windows: a new
+     `fallbackPlaylistId` in a lease answer, so remember the last one seen) clear `playingFromHistory`, so that ⏭ asks `next-track` at once and the new playlist starts; the running old track is not
+     interrupted (like a guest song). The old playlist's plays stay in the history (the owner's decision), so ⏮ from the new playlist still goes back into the old one. Confirm with the owner.
+   - **The Auto-Pilot hint and the IFrame-API message — first reproduce, then build.** The owner: it needs testing, because the friend clicked many things. The cause below is a
+     hypothesis from her screenshot; do not build on it before her steps are reproduced on a fresh party (a phone through `https://dev.scan2play.com.pl`): Auto-Pilot off (a new party
+     starts with `PlaybackMode.MANUAL`), the YouTube IFrame API blocked (ad blocker, Brave shields), and the player lease held by another window (the banner). Background: a new
+     party starts with Auto-Pilot off and with it off nothing starts by itself (stage 4 of Phase 2); her screenshot showed the first playlist track still marked "Następny" with 120 left in
+     the round, i.e. the window had never asked `next-track` — which fits all three. Proposed: a hint next to the player while Auto-Pilot is off, with a button to switch it on, and a
+     message when the IFrame API does not load (today that failure is silent). Not proposed: making AUTO the default — it also applies to Spotify parties, where AUTO puts accepted
+     songs straight into the Spotify queue.
+   - **Purge `song_requests` by age** — the owner: "możemy czyścić". Open item 5 has the reason. Proposal to confirm with the owner: 30 days from `requested_at` (the table has no
+     fetch time), a scheduled job in the style of `purgeStaleTracks`, and the "Data Retention" of `privacy.html` / `privacy_pl.html` saying 30 days instead of "the duration of the party
+     session". It also means the guests' part of the history reaches back 30 days at most, like the playlist's.
+   - **Browser tests into the repo** — the owner: "możesz dać do repo". What existed (built twice by now, kept only in a scratch directory each time): a scratch JUnit test that renders the real
+     `dashboard.html`; a Python stand-in server (standard library only) that serves it with the real `static/js` and `static/css` and replays answers; a fake `YT.Player` that also keeps the real
+     `iframe_api` script from loading (it intercepts `document.head.appendChild`); scenarios that run inside the page (`?scenario=NAME&mode=...`) and POST their verdict to the stand-in,
+     which writes a file; and, for the play log, a fixture of the *real* `next-track` / `recent-tracks` answers recorded from the real services on a real PostgreSQL. Proposed shape: a
+     directory under `src/test` with the stand-in, the fake, the scenarios and the fixture (with a note how to record it again), the render test as an ordinary unit test that writes into
+     `target/`, and a small runner that copies the repo to a scratch directory (`CLAUDE.md`: never `mvnw` inside the repo), renders, starts the stand-in and opens the scenarios in a headless system
+     Chrome — no new dependency, no Node. Check first that headless Chrome runs on the owner's machine and that the page's Bootstrap from the CDN is not needed offline. Scenarios worth keeping:
+     ⏮ / ⏭ across a loop (with the old-style-keys control, which must fail), the lease, pause, the tabs — and one for each small JS fix above (the 20 s window, "Wznów" while a track loads,
+     ⏭ after the playlist changed), so it is best to build the suite first or together with them.
+3. **Polish — the owner wants it in the next session (2026-09-29):** the three items below; do (c) — the import result — first, it is the most useful.
+   (Explained to the owner on 2026-09-29:) (a) skip / remove a track from the "up next" list (today it can only be moved; a design point: for this round only, or
+   from the playlist for good); (b) a line "Czeka N piosenek gości" — the first playlist track is badged "Następny" although waiting guest songs play first; (c) show the result of the playlist import
+   (`X-Fallback-Import: ok|failed` and `X-Fallback-Import-Reason` are sent, the dashboard ignores them and always flashes the Save button green — so a private or wrong playlist ends in an
+   empty list without a word; the most useful of the three, and the same kind of silent failure as the Auto-Pilot one). Also optional: remove `GET /dj/dashboard/next-guest-track` and its tests,
+   which nothing calls any more.
+4. **Production.** The owner: at the next go-live. Then the Flyway checklist ("Open items", 3) comes first, and `dev` → `main` is the next real decision — the owner does **not** want to merge yet (2026-09-29).
+5. **Parked idea: a "music only" checkbox that skips the intro of a music video** (asked 2026-09-29, checked, the owner decided not to build it now). Feasible, not free: no library derives it from the
+   audio — the IFrame API gives no access to it and downloading it is against the API policy (III.I.7) — but **SponsorBlock** has a category `music_offtopic` ("Non-Music Section", music videos only)
+   and a public API: `GET https://sponsor.ajay.app/api/skipSegments?videoID=<id>&category=music_offtopic` answers a list of `{segment: [start, end], votes, locked, ...}` and 404 for a video without data. Six
+   well-known videos were tried: four had a segment at the start (Despacito 0–21.8 s, Gangnam Style 0–4.0 s, Shape of You 0–6.05 s, Bohemian Rhapsody 0–1.9 s), two returned 404 — most intros are a few seconds,
+   coverage is patchy, and 404 means "nobody marked it", not "no intro". The player can start at a second: `loadVideoById({videoId, startSeconds})` (documented; all loads go through
+   `loadIntoPlayer`). **The blocker is the licence:** the API and the database are CC BY-NC-SA 4.0 — attribution, and no commercial use without the maintainer's permission (who says they may grant another
+   licence on request). Scan2Play is used only by the owner for now; if it grows or earns money, ask first. If it is ever built: one client class behind a property such as
+   `scan2play.sponsorblock.enabled`, a short timeout and a cache (also for 404) so that `next-track` is never slowed, always fall back to starting at 0, `startSeconds` in the `next-track` answer and in
+   `recent-tracks` (⏮ and the restart of ⏮ must use it too), attribution, a line in the privacy page (video IDs go to a third party), and only the intro through `startSeconds` — no `endSeconds` (its
+   effect on `ENDED`, which Auto-Pilot relies on, is not documented), no seek loops, no audio-only mode (III.I.6 and III.I.7). The wiki of SponsorBlock is behind bot protection, so its rate limits were not read.
 
 ## Open items for the owner
 
-1. **`main`**: `origin/main` is still the old pre-session state (`5314006`). Merging `dev` into `main` is a deliberate step
-   (see `AGENTS.md`): the production database has never been checked against `V1` (item 3) and the client still has no
-   browser-level tests. **Local `main` also holds two commits of the owner's from 2026-04-06/07 that exist only on this
-   computer** — `33eef2a` (Screen Wake Lock, so the display does not sleep during DJ sessions) and `b3870d6` (an
-   environment-agnostic configuration: `{baseUrl}` placeholders for the Spotify/Google redirects, `scan2play.guest-url` from
-   `${BASE_URL}`) — found on 2026-09-29 while pushing; they are not on `origin/main` and not on `dev` (`main` is not an
-   ancestor of `dev`), and were left alone. The redirect change overlaps with what `dev` already did (`{baseUrl}`), so
-   expect conflicts when merging. Push `main` or otherwise keep those two commits before anything is done to that branch.
-2. **`YOUTUBE_API_KEY`**: the production key was pasted into a chat/screenshot on 2026-09-28 — rotate or restrict it
-   (Google Cloud Console → Credentials: restrict to the YouTube Data API v3). Local run configuration: the variable
-   name must have no stray characters (it had a trailing `:`, which silently disabled the key).
+1. **Local `main` (tidied up 2026-09-29).** `origin/main` is still the old pre-session state (`5314006`). Local `main` holds two commits of the owner's from
+   2026-04-06/07 that exist only on this computer; what was done with them:
+   - `33eef2a` **Screen Wake Lock** (`wake-lock.js`, four lines in `dashboard.js`, a `<script>` in `dashboard.html`; keeps the display on while Auto-Pilot is on). It cherry-picks onto `dev`
+     without conflicts (the hook it uses, `submitAutoPilotToggle`, still exists), so it was **cherry-picked onto `dev` and committed** on the owner's word (2026-09-29; `git cherry-pick --no-commit`, then `git commit -C 33eef2a`, so the original author,
+     date and message are kept). Not exercised in a browser (no Node here to even syntax-check it; the hidden browser pane
+     never reports the page as visible, and the API refuses a lock for a hidden page) — try it on the phone: Auto-Pilot on, leave the screen alone, it should not dim.
+   - `b3870d6` **environment-agnostic configuration** was **not** brought over: its `{baseUrl}` redirects for the Spotify and Google login are on `dev` already, and its remaining change,
+     `scan2play.guest-url=${BASE_URL:http://localhost:8080/}`, is another design than `dev`'s (default `https://www.scan2play.com.pl/`, overridden by `SCAN2PLAY_GUEST_URL`, `PROJECT_CONTEXT.md` Section 10)
+     — with it the QR code would point at `localhost` in production wherever `BASE_URL` is not set.
+   - **Done on the owner's OK (2026-09-29):** both commits were pushed to the branch `origin/backup/local-main-2026-04` (checked on the remote: it contains `33eef2a` and `b3870d6`), and
+     local `main` was set back to `origin/main` (`5314006`), so nothing is left only on this computer and `main` cannot publish `b3870d6` by accident. Do **not** push `main` from that branch:
+     it would publish `b3870d6` on the production branch. The backup branch can be deleted once the wake lock is committed on `dev` and the owner has decided about the `guest-url` design.
+2. **`YOUTUBE_API_KEY`**: the production key was pasted into a chat/screenshot on 2026-09-28. **Rotated by the owner on 2026-09-29** (IntelliJ and Railway); the old key is still to be deleted
+   in Google Cloud Console (see "Next", 1).
+   Local run configuration: the variable name must have no stray characters (it had a trailing `:`, which silently disabled the key).
 3. **First production deploy** of Flyway: backup, compare `pg_dump --schema-only` with `V1__baseline.sql`
-   (checklist in `PROJECT_CONTEXT.md`, Section 10). The production schema has never been checked against `V1`.
+   (checklist in `PROJECT_CONTEXT.md`, Section 10). The production schema has never been checked against `V1`. The owner: when going to production again.
 4. Spotify locally: see the stash above; the Spotify Developer Dashboard also needs the redirect URIs.
-5. **`song_requests` has no retention by age** (found 2026-09-29, while deciding the retention of the play log; not touched). Only the account
+5. **`song_requests` has no retention by age** (found 2026-09-29, while deciding the retention of the play log). Only the account
    deletion removes them, while `privacy.html` says "Song requests: stored for the duration of the party session" — the text and the code
    disagree. And `song_requests.track_url` holds YouTube URLs with video IDs that came from the search API (YouTube API data, at most 30
-   calendar days by the API Services Developer Policies III.E.4.d, see "Follow-up 3"), so the history of the guests' songs may need the same
-   purge as `fallback_track` / `youtube_cache`, or the privacy page needs to say what really happens. A decision for the owner (it also touches
-   what the history shows after 30 days); there is no purge job for it yet.
+   calendar days by the API Services Developer Policies III.E.4.d, see "Follow-up 3"). **Decided by the owner (2026-09-29): purge them** — see "Next", 2, for the proposal; not built yet.
 
 ## History — first session (2026-09-28, remote Claude Code)
 
