@@ -17,9 +17,17 @@ first session (2026-09-28, remote) is summarised at the bottom.
   active queue and the history readable when they hold many songs. Agreed plan = Section 14, **Phase 4**, three stages.
   **Stage 0 ("one window plays") is done and committed** (the owner tried it on the computer and the phone: "works well") —
   see "Phase 4, stage 0" below. **Stage 1 (⏭ Next as a remote control, readable lists, the "up next" list refreshed across
-  windows) is done and committed** (the owner tried it: "działa"); see "Phase 4, stage 1" below. **Stage 2 is not started**
-  (`V6`, history by play time, ⏮ Previous) — ask the owner first.
-- Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them, never touch the
+  windows) is done and committed** (the owner tried it: "działa"); see "Phase 4, stage 1" below. **Stage 2 (`V6`, the
+  history as one timeline by play time, ⏮ Back) and stage 3 (⏯ pause from any window, the History tab scrolling into view)
+  are DONE AND COMMITTED** (2026-09-29, on the owner's "zrób to"; the owner had tried them — ⏮ and the History tab on the phone —
+  and asked for the two follow-ups below): one pair of commits for both stages (code, then docs) on top of `b7c0035`, because
+  the two stages touch the same files; see "Phase 4, stage 2" and "Phase 4, stage 3" below: 360 unit tests, V6 and the history
+  queries run against a real PostgreSQL 18, ⏮ and ⏯ checked on the real dashboard page in two browser tabs. **Two decisions of
+  the owner are NOT BUILT yet** (2026-09-29, at the very end of the session): ⏮ from the phone becomes option B, and the
+  navigation gets three tabs with a sticky bar — see "Decided, not built" at the end of the stage 3 section; they are the first
+  two items of "Next", and should be a separate pair of commits on top. `dev` is pushed up to stage 1 (`b7c0035`); the two
+  commits of stages 2 and 3 are local only (push only when the owner says so).
+- Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them and says to commit, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
 
 ## Where things stand
@@ -53,13 +61,27 @@ first session (2026-09-28, remote) is summarised at the bottom.
   `findTop50…` is gone), `dashboard.html`, `history.html`, `app.css` (`.list-scroll`), `dashboard.js` (`initListTools`,
   "Show more", the version), `youtube-autopilot.js` (⏭ Next, commands, the version), the PL/EN messages, tests (313 pass)
   and `PROJECT_CONTEXT.md` (Sections 5.4, 6, 13, 14) and this file. No migration.
+- **Phase 4, stage 2 is committed** (together with stage 3, below): **migration `V6`**
+  (`song_requests.played_at`), `SongRequestEntity.playedAt`, `DjService.markPlayed` (also used by `SongEvaluationService`),
+  new `PlayHistoryService` / `HistoryEntry` / `RecentTrack`, `YouTubeUrls.extractVideoId`, `SongRequestRepository.findHistory`,
+  `FallbackTrackRepository.findPlayedTracks`, `PlayerCommand.PREVIOUS`, `GET /dj/dashboard/recent-tracks` in
+  `DjPlayerLeaseController`, `DjDashboardController` (uses `PlayHistoryService`), `history.html`, `fragments/player-controls.html`
+  (⏮ and ⏭), `youtube-autopilot.js` (⏮), the PL/EN messages, tests (344 pass) and `PROJECT_CONTEXT.md` (Sections 4.1, 5.4, 6, 10,
+  13, 14) and this file.
+- **Phase 4, stage 3 is committed** (in the same pair of commits, on top of stage 2's changes, same files): `PlayerCommand.PAUSE` / `RESUME`,
+  `PlayerLeaseService` (the holder's `playing` state, `Status.playing`, a 4-argument `report`), `PlayerLeaseResponse.playing`,
+  `DjPlayerLeaseController` (optional `playing` parameter), the ⏯ button in `fragments/player-controls.html`,
+  `youtube-autopilot.js` (pause / resume, an extra report on PLAYING / PAUSED), `dashboard.js` (`revealContent`), `history.html`
+  (a heading in the tab), `DjDashboardController` / `ViewAttributes` (`historyHeading`), the PL/EN messages, tests (360 pass) and
+  `PROJECT_CONTEXT.md`.
 - One stash, deliberately parked: *"Spotify playback redirect-uri as {baseUrl} template (parked: Spotify rejects
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: 313 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
+- Tests: 360 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
   run them without disturbing the app running from IntelliJ) — run on 2026-09-29 in a scratch copy of the working
-  tree with Phase 3 and Phase 4 stages 0 and 1 (`BUILD SUCCESS`; 266 before stage 1, 232 before stage 0, 146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
+  tree with Phase 3 and Phase 4 stages 0, 1, 2 and 3 (`BUILD SUCCESS`; 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
+  146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
   has automated tests; stage 4 was verified against the real YouTube player, Phase 3 against a real PostgreSQL and the
   real JS on stub endpoints (see below).
 
@@ -315,6 +337,171 @@ the real Spring Security chain for `sendBeacon`; the standalone history page's "
 Gotcha of the harness: the rendered `dashboard.html` needs the fake `YT` loaded first (the stand-in injects it at the start of
 `<head>`), and Python's `parse_qs` drops empty values (`?playlist=` did nothing — use a word such as `NONE`).
 
+## Phase 4, stage 2 — the timeline of what played, and ⏮ Back (done, committed)
+
+The owner said "zaczynaj" (2026-09-29) after stage 1 was pushed, and had said that the remote ⏭ "works very well". The stage was
+started, interrupted, and finished in a second session the same day. **It is in the working tree only** (`git status`),
+nothing of it is committed or pushed. Section 5.4 of `PROJECT_CONTEXT.md` ("Back ⏮", "The history is one timeline") has the
+full rules; the decisions below are the ones nobody was asked about.
+
+**Decisions I took (the owner was not asked; all easy to change — they are listed in the report to the owner):**
+- `V6__song_request_played_at.sql` adds `song_requests.played_at` (nullable). **No back-fill**: rows played before V6
+  keep `NULL` and the history places them by `requested_at` (`COALESCE(played_at, requested_at)`); a rejected request is
+  placed by `requested_at` too. No expression index — the query is bounded by the pageable and one party's rows.
+- A request becomes "played" in exactly one place, `DjService.markPlayed(song, now)` (package-private): sets the
+  decision and `playedAt` (kept if already set, so a second confirmation does not move it). Used by `markSongAsPlayed`
+  (the YouTube player's confirmation and the "Mark Played" button), `pushToSpotify` and
+  `SongEvaluationService.handleAutoQueue` (Spotify auto-queue).
+- **History = one timeline** (`PlayHistoryService`, new): guest requests (`findHistory`: played + rejected, ordered by
+  `COALESCE(played_at, requested_at) DESC, id DESC`) and background tracks (`findPlayedTracks`: status PLAYED,
+  `played_at IS NOT NULL`, newest first), each read with a bound of `limit + 1`, merged in Java (the n newest of the
+  union are among the n newest of each side), ties by id then source. `DjService.getHistory` / `HistoryPage` are gone;
+  `DjDashboardController` (constructor +`PlayHistoryService`) uses `PlayHistoryService.Page(entries, hasMore)`.
+  The model attribute `history` of the history page/fragment is now a list of `HistoryEntry` (record in `model`:
+  source GUEST|BACKGROUND, id, at, title, trackUrl, videoId, style, decision, djComment, energyLevel; `key()` = `G:<id>` /
+  `B:<id>`), so `history.html` reads `req.title` and `req.at`; a background row shows a "🎶 Playlist" badge in the vibe
+  column and a 🎶 before the title (the vibe column is hidden on a phone), "—" for the energy; the "Time" column is now the
+  time of the event (played / rejected), not of the request. A background track counts as played when the player *takes*
+  it (that is when `played_at` is set), so a track handed out but never heard is in the history too (documented in the
+  class comment). A background track without a title is shown as `youtu.be/<id>`.
+- `YouTubeUrls.extractVideoId(url)` (new, public, `Optional`): a watch URL or `youtu.be/…`; a search URL / Spotify URI /
+  null give empty. `DjService.findNextPlayableGuestTrack` now uses it (its private copy is gone; behaviour the same for
+  the URLs the app stores).
+- **⏮ Previous** — `PlayerCommand.PREVIOUS` (same channel as NEXT: one command per party, the last press wins),
+  `GET /dj/dashboard/recent-tracks?partyCode=` in `DjPlayerLeaseController` (read-only, ownership-validated; the last
+  `RECENT_TRACKS_LIMIT = 30` tracks that played and are playable — `PlayHistoryService.getRecentlyPlayed` drops entries
+  without a video ID — as `RecentTrack(key, source, id, videoId, title)` JSON, newest first). Client (`skipToPrevious` in
+  `youtube-autopilot.js`), like a normal player: playing/paused/buffering and `getCurrentTime() > 3` → `seekTo(0)`;
+  otherwise fetch the list, find the running track by `nowPlayingKey` (`G:<id>`/`B:<id>`, set in `playTrack`, `replayTrack`,
+  null for a hand-picked ▶ track) and play the entry *after* it (older); an unknown key → the newest entry; when the player
+  is idle (the track ended) and the track is in the list → replay that one; nothing older → `seekTo(0)`. A replayed track is
+  **not** marked played again, is not a "background track" (no playlist check), and when it ends Auto-Pilot carries on with
+  the queue — **⏭ after ⏮ goes to `next-track`, it does not walk forward through the history** (a deliberate simplification;
+  repeated ⏮ does walk further back). Remote: `onControlClick(command, button)` handles both buttons (pending state per
+  button, `COMMAND_PENDING_MS = 3500`); the lease answer's `command` runs `skipToPrevious()`.
+- `fragments/player-controls.html`: the fragment is now `controls` (both buttons: `#playerPreviousBtn` before
+  `#playerNextBtn`); messages `dashboard.player.previous(.title)`, `history.source.background` (PL/EN, the escapes made with a
+  script as always). The tooltip text says "3 seconds" — keep it equal to `RESTART_AFTER_SECONDS` in the script.
+
+**Tests (344 pass in the scratch copy: 313 before, +31):** `PlayHistoryServiceTest` (13: merge order, play time vs request
+time, the fallbacks, ties, mapping, the `limit + 1` bound and `hasMore`, recently-played filtering), `YouTubeUrlsTest`,
+`DjServiceTest` (play time recorded / kept / not set for another party / Spotify push; `markPlayed`),
+`DjDashboardControllerHistoryTest` (rewritten for `PlayHistoryService`), `DjPlayerLeaseControllerTest` (PREVIOUS,
+`recent-tracks`), `PlayerLeaseServiceTest` (PREVIOUS, last press wins), `HistoryFragmentTest` (rewritten for
+`HistoryEntry`, background rows), `PlayerControlsFragmentTest` (both buttons). The three tests that build
+`DjDashboardController` got the extra constructor argument.
+
+**How it was verified:**
+- **A real PostgreSQL 18** — throw-away databases `s2p_stage2` and `s2p_stage2_up` (created and dropped by hand and by the test;
+  the owner's `scan2play` was not touched), a `@SpringBootTest` that lived only in the scratch copy: Flyway V1–V6 on an empty
+  database plus Hibernate validation of `played_at`; **V5 → V6 on data that already existed** (both rows kept, `played_at` NULL,
+  exactly one migration executed); the timeline over both tables with the real JPQL — the order (a background track 12:30, a guest
+  song played 12:10, a rejected one 11:30, a background track without a title, a guest song played before V6 placed by its
+  request time, a Spotify song), another party's rows and QUEUED / CANCELLED tracks left out, `hasMore` at the limits 3 / 5 / 6,
+  `getRecentlyPlayed` (played only, no Spotify link, no rejected one); `markSongAsPlayed` persisting `played_at` and a second
+  confirmation leaving it unchanged. (The first run failed on the test's own data — a row played "now" in the same party as the
+  timeline test — not on the code; fixed by giving it a party of its own.)
+- **The real dashboard in a browser** — the harness of stage 1, extended (the scratch renderer now builds `HistoryEntry` rows,
+  every third a background track; the stand-in server keeps the timeline of what played, answers `recent-tracks`, accepts
+  `PREVIOUS`, turns a background hand-out into a timeline entry and a confirmed guest song too; the fake player has
+  `getCurrentTime` and `seekTo` and lets a test fire its events). ⏮ within the first seconds → the track before, again → the one
+  before that (a background track, then a guest song, then a background track); after 3 s → only `seekTo(0)`; nothing older →
+  `seekTo(0)`; a replayed guest song is not confirmed again (0 confirmations); a replayed track that ends is followed by a
+  `next-track` track; ⏭ after ⏮ asks `next-track`; a hand-picked ▶ track → ⏮ goes to the newest entry; after an end with
+  Auto-Pilot off ⏮ replays the track that ended and nothing loads by itself; a new guest song is confirmed once, joins the
+  timeline, and ⏮ from it goes to the track before it; ⏮ from the second tab: "Wysłano…", disabled, one command, carried out by
+  the playing tab within a report, its own player silent, 409 and "no device is playing" when nobody plays, the button not stuck;
+  the history tab of the real page: 16 background rows of 50 (badge, 🎶 marker, "—" for the energy, the video link), the Played
+  filter (42) includes them.
+**Not done:** real devices (the owner should try ⏮ from the phone with the computer playing, and look at the history with
+background tracks in it); the look of the buttons and the history on a phone was not seen by eye (the built-in browser pane was not
+visible, checked through computed styles and text only); the real Spring Security chain for `sendBeacon` (from stage 0);
+`⏮` while the window that plays is in the middle of a lookup is ignored (press again).
+
+Things to look at on the way: a Spotify party's history page renders only its guests' songs (no background tracks there), which
+was not looked at in a browser; an expression index `(party_code, COALESCE(played_at, requested_at))` would remove the sort of one
+party's played and rejected rows in the history query — not added, see Section 5.4.
+Gotchas of the tools: the Bash tool rejects a long Python heredoc (write the script to a file and run it — CLAUDE.md says so
+too); the PowerShell tool refused a command that used `Remove-Item Env:…` (use `$env:NAME = $null`); `Select-Object -First N` on
+the output of `mvnw` kills the build (exit 255) — use `-Last`; `psql` is `C:\Program Files\PostgreSQL\18\bin\psql.exe` (set
+`PGPASSWORD` for the session); Python's `parse_qs` drops empty values in the stand-in server.
+
+## Phase 4, stage 3 — pause from any window, and the History tab scrolling into view (done, committed)
+
+Two requests of the owner, made while trying stage 2 on the phone (2026-09-29): "maybe we add the option to pause on the device
+that does not play", and "when I click History on the phone it is hard to read, I have to go to the very end to notice that
+anything changed". Section 5.4 of `PROJECT_CONTEXT.md` ("Pause ⏯", "The History tab scrolls into view") has the rules.
+
+**Pause ⏯.** Explicit commands `PAUSE` and `RESUME` (not a toggle, so a stale button cannot invert the state), same channel as
+⏭ / ⏮ (one command per party, the last press wins, 409 when nobody plays). The window that plays says in every lease report
+whether its player makes sound (`playing`; `PlayerLeaseService` keeps it in the `Lease` and only the holder is believed; a
+report without it leaves the last state; nobody plays → null), every answer tells it back, and the pause button in every window
+shows "⏸ Pauza" or "▶ Wznów" by it (the window that plays looks at its own player). Two details that came out of the browser
+check: the window that plays reports a change at once (on PLAYING / PAUSED — one extra report), and a window that sent a pause
+or resume keeps "Wysłano…" until the state has really changed (or 9 s) — before that the label flipped back to the old text for a
+moment and took up to ~9 s to be right. Measured 4–5 s from the press to the new label. A pause made at the computer itself shows
+on the phone within a report. A paused player is left alone by Auto-Pilot (unchanged rule). Caveat: a browser may refuse to start
+sound in a window nobody has touched, so a remote *resume* can fail on a page that was never clicked.
+
+**History tab.** The cause was plain: the tab swaps the list in *below* the settings, the QR code and the player, so on a phone
+nothing changed where the DJ was looking (in the harness the list started at 2194 px of a 3188 px page, on an 812 px screen).
+Now `revealContent` (`dashboard.js`) scrolls the new content to the top of the screen after the switch (and after going back to
+the queue), unless it is already in the upper 40 % of the screen; the fragment has a heading ("📜 Historia imprezy", the existing
+`history.title`) when it comes as the tab (`historyHeading`; the standalone page has its own h1). The tab bar stays at the top,
+so going back means scrolling up — a sticky tab bar would fix that, not built (ask the owner).
+
+**How it was verified:** 360 unit tests (16 new: the state and the commands in `PlayerLeaseServiceTest` /
+`DjPlayerLeaseControllerTest`, the three buttons in `PlayerControlsFragmentTest`, the heading in `HistoryFragmentTest` and
+`DjDashboardControllerHistoryTest`). The stage 1 / 2 browser harness (real rendered dashboard, real scripts, a stand-in server, a
+fake player that now has `pauseVideo` / `playVideo` firing the player's state events): local pause and resume with the label
+following and no track started by Auto-Pilot while paused; the server learning `playing` false / true; remote pause and resume
+from the second tab ("Wysłano…", one command for two presses, the playing tab paused / played, its own player silent, the label
+following after 4.6 s and 5.2 s); a pause made in the playing tab showing on the other tab within a report; 409 with the banner
+and a button that does not stay disabled when nobody plays. History: on a 375×812 viewport the click scrolled the page from 0 to
+2186 with the heading at 8 px and the filter buttons and the first rows (three of them background tracks) in view; going back to
+the queue kept the queue in view.
+**Not done:** the **smooth** scroll — the built-in browser pane was not visible, so animation frames do not run and even a plain
+`scrollTo` (which follows Bootstrap's `scroll-behavior: smooth`) never moved; the check used the "reduce motion" path, which is
+`behavior: 'instant'` (the smooth path is the standard browser behaviour but was not seen); real devices (the owner should try ⏯
+from the phone with the computer playing, and the History tab on the phone); the look of the three buttons on a narrow screen.
+Gotcha for the next harness: `window.scrollTo` in that pane does not move unless the behaviour is `'instant'`; set
+`window.matchMedia` to report "reduce motion" to take that path.
+
+**Decided, not built (owner, 2026-09-29, the last message of the session):**
+
+1. **⏮ from the phone — option B.** The owner saw that ⏮ pressed on the phone, when the song on the computer has played a while,
+   restarts it (the intended rule: a normal player does the same after ~3 s). Reading the code showed that from the phone the
+   previous track can practically never be reached: a remote press is disabled for 3.5 s (`COMMAND_PENDING_MS`) and reaches the
+   playing window at the next lease report (every 3 s), so two presses are collected exactly 3 s or 6 s apart — the track has
+   always played longer than `RESTART_AFTER_SECONDS` (3) by then and restarts again. **Chosen: a second ⏮ within ~10 s after a
+   restart that ⏮ itself caused goes to the previous track.** Single press unchanged; works locally and remotely. Sketch, all in
+   `skipToPrevious` of `youtube-autopilot.js`: remember `{loadNumber, at}` when ⏮ restarts a track (a counter that
+   `playTrack` / `replayTrack` / `playInEmbeddedPlayer` bump whenever a track is loaded, so a record is only valid for the track
+   that was restarted); in `hasPlayedForAWhile()`'s branch, if the record is for the running track and `Date.now() - at < 10000`
+   (a constant, say `DOUBLE_PRESS_MS`), skip the restart and go on to the "previous track" part; otherwise restart and record.
+   Update the tooltip `dashboard.player.previous.title` (PL/EN, escapes by script) to say that pressing twice goes back a track,
+   and Section 5.4 "Back ⏮" of `PROJECT_CONTEXT.md`. Verify with the harness (below): a second press ~3.5–6 s after a restart
+   goes to the previous track, a second press after 12 s restarts again, a new track resets it, remote and local.
+2. **Three navigation tabs: "Panel DJ-a", "Kolejka", "Historia"** (the owner's idea; they asked what I think — I think it is
+   right). Today the first tab is "Kolejka (Panel DJ-a)" and it is one thing: the page top (settings, QR code, YouTube player) and
+   the queue below it, so since stage 3 a click on it scrolls to the queue and the DJ has no way to jump to the top except by
+   scrolling. Proposal: **Panel DJ-a** scrolls to the top of the page (settings, QR, player — the player controls live there);
+   **Kolejka** shows the queue and scrolls to it; **Historia** shows the history and scrolls to it (as now). Make the tab bar
+   **sticky** (`position: sticky; top: 0`, opaque dark background, a `z-index` above the sticky list headers, and
+   `scroll-margin-top` on the targets so they are not hidden under the bar), so that from anywhere on a long page the DJ can jump
+   to any of the three — that also removes the problem of stage 3 that the tab bar stays behind at the top. Highlighting: "Panel"
+   while the top area is in view (scroll position above the lists), otherwise the list that is showing (Kolejka / Historia) — a
+   simple scroll listener or an `IntersectionObserver`; the queue / history swap itself stays as it is (AJAX, the player stays
+   alive). Things to check before starting: the nav is `fragments/components.html :: dj-nav`, shared with `history.html` and used
+   with `activeTab` (queue / history) — tabs and the right-hand buttons (feedback, end party …) are in one flex row, so only the
+   tabs can be made sticky if they get their own container; **Spotify parties** and the standalone history page use plain links
+   (no AJAX tabs): there "Panel" = `/dj/dashboard`, "Kolejka" = `/dj/dashboard#queue-content` (an anchor), "Historia" =
+   `/dj/history-view`; the JS in `dashboard.js` (`initTabSwitching`) finds the links by `href`, so the new "Panel" link needs an
+   `href` it can recognise (for example `/dj/dashboard#top`) and the "Kolejka" link must keep working. Messages: today
+   `dashboard.nav.queue` is "Queue (Dashboard)" / "Kolejka (Panel DJ-a)" — split it into `dashboard.nav.panel` ("DJ Panel" /
+   "Panel DJ-a") and `dashboard.nav.queue` ("Queue" / "Kolejka"); `history.nav.queue` in `messages*.properties` is the same text
+   for the standalone page. Phone: three tabs in a row plus the right-hand buttons must fit 375 px — look at it.
+
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
 **How it works now (2026-09-29):** the owner opens the local app, on the phone and on the computer, through
@@ -340,19 +527,21 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-1. **Phase 4, stage 2 (Section 14)** — ask the owner before starting (the owner said on 2026-09-29 that the remote ⏭
-   "works very well", which is the channel ⏮ would use): `V6` `song_requests.played_at`, history ordered by
-   play time and merged with the background tracks (their `fallback_track.played_at` and titles exist), then ⏮ *Previous*
-   on top of that, through the same command channel (`PlayerCommand` gets `PREVIOUS`; "restart the track when it has played
-   more than ~3 s" is a client decision).
-2. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
+1. **Build ⏮ option B** — decided, see "Decided, not built" (1) in the stage 3 section. Small; verify with the harness.
+2. **Build the three tabs "Panel DJ-a" / "Kolejka" / "Historia" with a sticky bar** — decided, see "Decided, not built" (2). Stages 2 and
+   3 are already committed, so items 1 and 2 become their own pair of commits (code, then docs) — leave them uncommitted for the
+   owner's review in IntelliJ first.
+3. **Push** the two local commits of stages 2 and 3 (and, later, the ones of the two items above) when the owner says so. The
+   migration `V6` is applied at the next restart of the app (the owner's `scan2play` database is at `V5`; the owner has already
+   restarted and tried stages 2 and 3). After the two items above Phase 4 is complete.
+4. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
    saying how many guest songs wait ("Czeka 2 piosenki gości" — they play first; the owner asked about showing both lists
    together and agreed to keep the guest table separate), and a note in the panel when Auto-Pilot is off (nothing plays
    by itself then).
-3. Optional (Section 14): show the import result on the dashboard (`X-Fallback-Import: ok|failed`,
+5. Optional (Section 14): show the import result on the dashboard (`X-Fallback-Import: ok|failed`,
    `X-Fallback-Import-Reason`) — the new panel is a natural place — instead of always flashing the Save button green;
    remove `GET /dj/dashboard/next-guest-track` and its tests, which nothing calls any more; browser-level tests for the JS.
-4. `dev` → `main` is the next real decision (open items 1 and 3 below), but the owner said on 2026-09-29 that they do
+6. `dev` → `main` is the next real decision (open items 1 and 3 below), but the owner said on 2026-09-29 that they do
    **not** want to merge yet — they want a polished `dev` first. Leave `main` alone until they bring it up.
 
 ## Open items for the owner
