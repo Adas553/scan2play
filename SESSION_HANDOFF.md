@@ -36,7 +36,10 @@ first session (2026-09-28, remote) is summarised at the bottom.
   filters — Guests / Playlist next to the old ones, applied by the server — were built and, on "commituj", COMMITTED (another pair,
   code then docs, on top of `def4991`; NOT pushed yet — `dev` is 4 ahead of `origin/dev`)**: see "Phase 4, stage 4", "Follow-up 2".
   **The owner decided that the round-reset finding at the end of that section ("the history of the playlist starts over when the
-  playlist loops") is to be handled in a NEW session — it is the first task, see "Next", item 1a.**
+  playlist loops") is to be handled in a NEW session. That session (2026-09-29, a fourth one) BUILT it — a play log, `V7`
+  (`fallback_play`) — reviewed by the owner in IntelliJ and, on their "ok, commituj", COMMITTED as one more pair (code, then docs) on top of
+  `0feabec`; NOT pushed yet — `dev` is 6 ahead of `origin/dev`: see "Phase 4, stage 4", "Follow-up 3", and "Next", items 1 and 1a. The
+  history of the playlist is now the whole party (30 days at most), not one round.**
 - Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them and says to commit, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
 
@@ -94,7 +97,8 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: 380 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
+- Tests: **386** tests pass with the play log (380 before it; the rest of this bullet describes the earlier runs)
+  (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
   run them without disturbing the app running from IntelliJ) — run on 2026-09-29 in a scratch copy of the working
   tree with Phase 3 and Phase 4 stages 0, 1, 2, 3 and 4 and its two follow-ups (`BUILD SUCCESS`; 366 before the history filters, 365 before the first follow-up, 360 before stage 4, 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
   146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
@@ -370,7 +374,7 @@ full rules; the decisions below are the ones nobody was asked about.
   `SongEvaluationService.handleAutoQueue` (Spotify auto-queue).
 - **History = one timeline** (`PlayHistoryService`, new): guest requests (`findHistory`: played + rejected, ordered by
   `COALESCE(played_at, requested_at) DESC, id DESC`) and background tracks (`findPlayedTracks`: status PLAYED,
-  `played_at IS NOT NULL`, newest first), each read with a bound of `limit + 1`, merged in Java (the n newest of the
+  `played_at IS NOT NULL`, newest first — **replaced by the play log, `FallbackPlayRepository.findRecent`, in Follow-up 3**), each read with a bound of `limit + 1`, merged in Java (the n newest of the
   union are among the n newest of each side), ties by id then source. `DjService.getHistory` / `HistoryPage` are gone;
   `DjDashboardController` (constructor +`PlayHistoryService`) uses `PlayHistoryService.Page(entries, hasMore)`.
   The model attribute `history` of the history page/fragment is now a list of `HistoryEntry` (record in `model`:
@@ -658,7 +662,8 @@ playlist track every ~3 minutes drowns them (the old filters were All / Played /
   page is not re-rendered by the stand-in); on 375 px the buttons wrap into two rows and stay inside the card (screenshot).
 - **Not done:** real devices; a real PostgreSQL run (the queries are the ones that already existed — only which of them run
   changed — so it was not run); the smooth scroll and the hidden-pane limits of stage 4 apply.
-- **A finding, not fixed — the history of the playlist starts over with each round.** When the last queued track of the playlist is
+- **A finding — the history of the playlist starts over with each round. FIXED afterwards, by the play log (`V7`): see "Follow-up 3"
+  below; what follows is what was found at the time.** When the last queued track of the playlist is
   handed out, `FallbackTrackCommandService.startNewRound` → `FallbackTrackRepository.requeuePlayedTracks` puts every played track
   back in the queue and sets its `played_at` to null (including the one that is playing, which then sits at the end of the new
   round). So the "Playlist" rows of the history are at most one round (≤ 500 tracks), and a short playlist that loops during a party
@@ -667,6 +672,64 @@ playlist track every ~3 minutes drowns them (the old filters were All / Played /
   so rare with a long playlist, common with a short one). A fix would keep a separate record of plays (a play log, or a `last_played_at`
   that a new round does not clear) — a migration. **Owner (2026-09-29): "zróbmy w nowej sesji"** — see "Next", item 1a, for
   the sketch.
+
+### Follow-up 3 of stage 4: the play log — the history of the playlist survives a loop (done, committed, not pushed)
+
+The task the owner left for a new session (2026-09-29, "zróbmy w nowej sesji"). Built on `dev` on top of `0feabec`, left uncommitted for
+the owner's review in IntelliJ, and committed on their "ok, commituj" as a pair (code, then docs; `git log --oneline -2`) — not pushed (`dev` is 6 ahead of `origin/dev`).
+Section 4.1 (`fallback_play`), 5.4 ("The history is one timeline", "The history of the playlist does not start over…"), 10 (`V7`),
+6.2, 11, 12, 13 and 14 of `PROJECT_CONTEXT.md` describe the result; the short version:
+
+- **What was built.** `V7__fallback_play_log.sql`: the table `fallback_play` (`id` identity, `party_code`, `video_id`, `title`, `fetched_at`,
+  `played_at`), the index `(party_code, played_at DESC, id DESC)`, and a copy of the tracks that are `PLAYED` with a `played_at` at that moment.
+  New `FallbackPlayEntity`, `FallbackPlayRepository` (`findRecent`, `deleteByPartyCode`, `deleteFetchedBefore`). `FallbackTrackCommandService.takeNextTrack`
+  writes one row per hand-out right after the claim (same transaction, same advisory lock; `now` is shared by the claim and the row) and now
+  **returns the log row** (`Optional<FallbackPlayEntity>`); `NextTrackService` answers with its id; `PlayHistoryService` reads `findRecent`
+  (`FallbackTrackRepository.findPlayedTracks` is gone); `purgeStaleTracks` purges the log by `fetched_at` with the tracks;
+  `AccountDeletionService` deletes it. `youtube-autopilot.js`: **a comment only** (`B:<play id>`) — `'B:' + track.id` was already right once the id is the play's.
+- **The sketch of the handoff, checked against the code, and what was wrong with it:** (1) "keep the track id in the log and leave the key `B:<track id>`" —
+  **wrong**: with a loop `[A, C, B, A]` has one key on both A's, ⏮ from the older A finds the newer (`findIndex` = first match) and goes round in circles
+  (reproduced in the browser, below), ⏭ skips entries; so the key is the id of the *play* and `next-track` returns it. (2) The sketch had no `fetched_at`, but
+  "purged with `fallback_track`" means by `fetched_at`, so the row copies it. (3) Not in the sketch: the track handed out *at* the boundary was re-queued in the same
+  transaction (`requeuePlayedTracks` re-queues every played track, the one just claimed included) and was in the history nowhere — the log fixes that as well.
+- **The owner's two decisions** (asked at the start, `AskUserQuestion`). *Replacing/clearing the playlist:* **the log stays.** The prompt assumed that today a change
+  of playlist deletes the tracks "and the history with them"; the code says otherwise (`replaceTracks` / `cancelQueuedTracks` only flip `QUEUED → CANCELLED`, `PLAYED`
+  rows stay; only the account deletion deletes) — so "keep" is what the code already did, and "clear" would have been a new deletion. *Retention:* the owner
+  asked whether the 30 days applies to a history that is "only text" and, after the answer, tentatively picked "until the account is deleted, like the requests" **only
+  if the titles are not covered**. I read the policy (WebFetch of developers.google.com/youtube/terms/developer-policies, III.E.4): API Data = data provided through the API;
+  **Non-Authorized Data** = accessible without user credentials — the import uses the API key only — "not longer than 30 calendar days" (III.E.4.d); the
+  exception of III.E.4.b is for statistics and Authorized Data. Nothing exempts titles, so **30 days from the fetch** was implemented (the owner's own condition for the
+  other option was not met). It is my reading of the text, not legal advice, and it is easy to relax (the purge query and one column) if the owner decides
+  otherwise — **say so if the pick should have been another one.**
+- **Found on the way, not touched:** `song_requests` has **no purge by age** (only the account deletion), while the privacy page says "Song requests: stored for the duration of
+  the party session"; and `song_requests.track_url` holds YouTube URLs (video IDs from the search API), i.e. API data too. Worth a look by the owner, separately (see "Open items", 5).
+- **Tests:** **386 unit tests pass** in a scratch copy (380 before; +5 in `FallbackTrackCommandServiceTest` — the log row is a snapshot with the claim's time, written under the lock after
+  the claim, the same video in two rounds = two ids, nothing written when nothing was claimed, replace/cancel leave the log alone, the purge uses one cutoff for both tables —
+  and +1 in `PlayHistoryServiceTest`, the same video in two rounds = two keys; `NextTrackServiceTest`, `AccountDeletionServiceTest` adapted).
+- **Verified against a real PostgreSQL 18** (throw-away databases `s2p_play` and `s2p_play_up`, dropped afterwards; the owner's `scan2play` untouched; a `@SpringBootTest` and a plain
+  Flyway test that lived only in the scratch copy, dummy API keys in the environment): Flyway V1–V7 on an empty database plus Hibernate validation; **V6 → V7 on existing data** through
+  the Flyway API (exactly one migration executed; the four `PLAYED` rows with a time copied in play-time order with title, `fetched_at` and `played_at`; a `PLAYED` row without a time,
+  `QUEUED` and `CANCELLED` rows not copied; `fallback_track` unchanged); a 3-track playlist that loops — 8 hand-outs through the real `NextTrackService`: after each the newest entry of
+  `recent-tracks`' source has the key `B:<id from next-track>`, 8 distinct keys, `fallback_track` remembers only 2 `PLAYED` rows while the log has 8, and a port of the client's
+  ⏮ / ⏭ walk visits every entry once and comes back; the track that opens a new round is in the history; 100 hand-outs of a shuffled 4-track playlist (no repeat in a row, ids in
+  hand-out order, all 100 in the history); replacing and clearing the playlist keep the log; the purge (a row fetched 31 days ago goes, 29 stays) and the account deletion (another
+  party's log stays); `EXPLAIN` of the history read on 60 000 rows uses the index and no sort; **concurrency:** 3 parties × 4 threads taking 40 tracks each plus the DJ's moves, drops
+  and shuffle flips plus the nightly purge in a loop — 480 hand-outs, 480 log rows, no errors, no deadlock; the whole class was run **three times on fresh databases** (and once more when the
+  recording for the browser was made). (Two of my own scripting slips turned up on the way and are not code problems: `psql` inherits `PGDATABASE`, so `DROP DATABASE` needs `-d postgres`;
+  and the PowerShell tool does not keep environment variables between calls, so every call that runs a Spring test needs the dummy keys again.)
+- **Verified in the browser** (harness recreated — **not in the repo**, kept in the scratch directory: a scratch JUnit test renders the real `dashboard.html`; a Python stand-in server serves it with the
+  real `static/js` and `static/css`; a fake `YT.Player` replaces the IFrame API — the fake keeps the real `iframe_api` script from loading by intercepting `document.head.appendChild`; scenarios run
+  inside the page (`?scenario=NAME&mode=play|old`) and POST their verdict to the stand-in, which writes a file that is read afterwards, no JS tool needed). The stand-in **does not compute anything**: it
+  replays the *real* answers of `next-track` and `recent-tracks` recorded from the real services on the real PostgreSQL (10 hand-outs of A B C looping, the 3rd already opening round 2). Scenario
+  `boundary`, mode `play`: Auto-Pilot runs A B C A B; ⏮ after 30 s restarts only; then ⏮ ×6 loads **A4, C3 (across the boundary), B2, A1** and twice "nothing older" (restart); ⏭ ×5 loads **B2, C3, A4, B5**
+  (retracing) and then a new track from `next-track`; `next-track` asked exactly 6 times, no `POST /play`. All 6 steps pass. **Negative control**, mode `old` (the same plays keyed by the queue's track id, i.e. what the
+  code answered before): the same scenario fails as predicted — ⏮ ×6 gives `a c b a c b` (it circles, never "nothing older"), ⏭ ×5 gives `c a b c a`, and `next-track` is asked 10 times instead of 6 — so the check
+  does see the problem. The pane was closed and the stand-in stopped afterwards.
+- **Not done:** real devices (the owner should try ⏮ / ⏭ on a phone after a short playlist has looped — best with a 2–3 track playlist); the real Spring Security chain and `DjPlayerLeaseController.recentTracks`
+  itself (the test called `PlayHistoryService` and copied the three-line mapping into the recording — the mapping was not run through the controller); the History *page* with background rows from the log was not looked at in a
+  browser (the fragment is unchanged, `HistoryFragmentTest` still renders it; only the source of the entries changed); the production first-deploy with `V7` (Section 10's checklist is unchanged, the migration is
+  additive); a dashboard window that is open across the deployment holds an old-style key for its running track (one wrong ⏮ at worst, documented in 5.4).
+- **Not built, on purpose:** any "clear history" button for the DJ (today only the 30-day purge and "Delete account"), an index on `fetched_at` for the purge (a daily delete on a small table; `fallback_track` has none either).
 
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
@@ -698,31 +761,15 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
    phone: a guest song plays, ⏮ → the playlist track, ⏭ → the guest song again, ⏭ → the queue. Those two commits are
    local (`dev` is 2 ahead of `origin/dev` — check with `git status -sb`).
    The history filters ("Phase 4, stage 4", "Follow-up 2") are committed too, as another pair on top (`git log --oneline -4`);
-   `dev` is 4 commits ahead of `origin/dev` — all four wait for the owner's word to push.
-1a. **NEXT SESSION, first task (the owner's decision, 2026-09-29): the history of the playlist must not start over when the
-   playlist loops.** The problem is written up at the end of "Follow-up 2" (`startNewRound` → `requeuePlayedTracks` sets the played
-   tracks back to `QUEUED` and clears `played_at`, so the "Playlist" rows of the history — and what ⏮ / ⏭ walk along — are at most
-   one round). A first sketch, to be checked against the code and the owner before building (it needs a Flyway migration, `V7`,
-   so read Section 10 of `PROJECT_CONTEXT.md` and `AGENTS.md`, "Database migrations", first):
-   - **A play log**, e.g. `fallback_play` (`id`, `party_code`, `video_id`, `title` — a snapshot, so the row survives the playlist
-     being replaced —, `played_at`), one row written by `takeNextTrack` when a track is claimed (inside the party's advisory lock,
-     where `claimQueuedTrack` already runs). `PlayHistoryService.getHistory` / `getRecentlyPlayed` then read the log instead of
-     `fallback_track` (`findPlayedTracks` goes away; `HistoryFilter` and the bounded `limit + 1` reads stay the same). Index
-     `(party_code, played_at DESC, id DESC)`.
-   - **Retention:** the log is personal-ish data like `fallback_track` — same 30-day rule (`deleteFetchedBefore` is the purge; add the
-     log to it), removed with the account (`deleteByPartyCode` / `AccountDeletionService`). Decide whether replacing the playlist
-     should clear the log (today it deletes the tracks and with them the history) — the owner may prefer to keep it.
-   - **Keys:** `HistoryEntry.key()` is `B:<fallback_track id>` and `nowPlayingKey` in `youtube-autopilot.js` comes from
-     `next-track` (`NextTrackResponse.id` = the track id). If the log has its own ids the key and the answer have to agree (either
-     `next-track` also returns the log id, or the log row keeps the track id in a column and the key stays `B:<track id>` — but a
-     track that plays twice in different rounds then has one key for two entries, and ⏮ / ⏭ find the first: check). This is the
-     part that needs the most thought.
-   - **Existing data:** tracks that are `PLAYED` with a `played_at` today could be copied into the log by the migration.
-   - **Tests:** unit tests for the service and repository calls; and — `CLAUDE.md` — a run against a throw-away PostgreSQL 18
-     database (`s2p_*`): V1–V7 on an empty database with Hibernate validation, V6 → V7 on existing data, the two reads, and the
-     concurrency of `takeNextTrack` writing the log (the advisory lock is why the deadlock was avoided before). Browser
-     harness for ⏮ / ⏭ across a round boundary (a short playlist that loops).
-   - Ask the owner first: the log's retention and whether replacing the playlist clears it.
+   The play log ("Follow-up 3") is committed as a pair on top of those — `dev` is 6 commits ahead of `origin/dev`, and all six wait for the
+   owner's word to push.
+1a. **DONE, committed and not pushed (2026-09-29, a fourth session): the history of the playlist no longer starts over when the playlist loops** —
+   the play log, `V7__fallback_play_log.sql`; everything is in "Phase 4, stage 4", "Follow-up 3" (the sketch that stood here was checked
+   against the code and corrected: the key of a background track is `B:<play id>`, not `B:<track id>`; the log copies `fetched_at`; the owner's
+   two decisions — 30 days from the fetch, and replacing / clearing the playlist keeps the log). The code commit holds 14 changed files and 3 new ones (`V7__fallback_play_log.sql`,
+   `FallbackPlayEntity`, `FallbackPlayRepository`), the docs commit `PROJECT_CONTEXT.md` and this file. What is left for the owner: say
+   whether to push, and **try ⏮ / ⏭ on the phone after a short (2–3 track) playlist has looped**. The migration `V7` is applied at the next restart of the app on the owner's `scan2play` database (additive; it copies the
+   tracks that are `PLAYED` at that moment into the log).
 2. **The owner tries stage 4 on the phone** (⏮ twice with the computer playing; the buttons row above the tabs; the bar over a
    list) and says what to change. The migration `V6` is applied at the next restart of the app (the owner's `scan2play` database
    was at `V5`; the owner has already restarted and tried stages 2 and 3). With stage 4 Phase 4 is complete.
@@ -738,6 +785,8 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
    the YouTube IFrame API does not load (an ad blocker, Brave shields, a school network — the screenshot showed no black player
    rectangle, which was not certain; today that failure is silent). Not proposed: making AUTO the default — it also applies to
    Spotify parties, where AUTO puts accepted songs straight into the Spotify queue.
+   **Status (2026-09-29, the play-log session): NOT started.** The owner's prompt made it optional — "only after the play log, and only with
+   my consent" — and the play log is not even reviewed yet, so the hint and the IFrame-API message wait for the owner's word.
 4. Optional (Section 14): show the import result on the dashboard (`X-Fallback-Import: ok|failed`,
    `X-Fallback-Import-Reason`) — the new panel is a natural place — instead of always flashing the Save button green;
    remove `GET /dj/dashboard/next-guest-track` and its tests, which nothing calls any more; browser-level tests for the JS
@@ -762,6 +811,12 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 3. **First production deploy** of Flyway: backup, compare `pg_dump --schema-only` with `V1__baseline.sql`
    (checklist in `PROJECT_CONTEXT.md`, Section 10). The production schema has never been checked against `V1`.
 4. Spotify locally: see the stash above; the Spotify Developer Dashboard also needs the redirect URIs.
+5. **`song_requests` has no retention by age** (found 2026-09-29, while deciding the retention of the play log; not touched). Only the account
+   deletion removes them, while `privacy.html` says "Song requests: stored for the duration of the party session" — the text and the code
+   disagree. And `song_requests.track_url` holds YouTube URLs with video IDs that came from the search API (YouTube API data, at most 30
+   calendar days by the API Services Developer Policies III.E.4.d, see "Follow-up 3"), so the history of the guests' songs may need the same
+   purge as `fallback_track` / `youtube_cache`, or the privacy page needs to say what really happens. A decision for the owner (it also touches
+   what the history shows after 30 days); there is no purge job for it yet.
 
 ## History — first session (2026-09-28, remote Claude Code)
 

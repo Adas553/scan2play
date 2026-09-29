@@ -151,12 +151,44 @@ stage 4 — the client no longer plays the playlist itself (no `loadPlaylist()`)
 | `manualMove`       | boolean                 | True while the DJ has moved this track by hand within the current order (V5); cleared by every statement that gives the queued tracks a new order (import, shuffle, a new round, the shuffle switch) |
 | `status`           | FallbackTrackStatus     | `QUEUED` → `PLAYED`, or `CANCELLED` (playlist changed/cleared)    |
 | `fetchedAt`        | LocalDateTime           | When fetched from the YouTube API — basis of the 30-day retention |
-| `playedAt`         | LocalDateTime (nullable)|                                                                   |
+| `playedAt`         | LocalDateTime (nullable)| When the player took the track **in the current round** — cleared when the playlist starts a new round, so it is not the history (that is `fallback_play`, below) |
 
 **Soft invalidation:** changing/clearing the playlist flips still-`QUEUED` rows to `CANCELLED` (never deletes); `PLAYED`
-rows stay as history. **Retention:** rows older than 30 days are purged daily at 04:30
+rows stay until the round ends (a new round puts them back in the queue) — the history of what played is no longer kept
+here but in `fallback_play`. **Retention:** rows older than 30 days are purged daily at 04:30
 (`FallbackTrackCommandService.purgeStaleTracks`) and on account deletion. **Index:** `idx_fallback_track_party_status`
 on `(partyCode, status)`.
+
+#### `FallbackPlayEntity` → table: `fallback_play` (Flyway `V7`)
+
+The play log: one row each time the player takes a track from the party's background playlist — what the DJ history's
+"Playlist" rows and ⏮ / ⏭ read (Section 5.4, "The history is one timeline"). It exists because `fallback_track` cannot
+be the history: when the playlist starts a new round its played tracks go back in the queue and lose `playedAt`, so a
+short playlist that looped during a party used to lose its older history. A row is written by
+`FallbackTrackCommandService.takeNextTrack` in the same transaction — and under the same per-party advisory lock — as the
+claim of the track, and never changes afterwards; rounds, the queue, moves and a replaced or cleared playlist do not touch
+it.
+
+| Field       | Type                     | Notes                                                                                        |
+|-------------|--------------------------|----------------------------------------------------------------------------------------------|
+| `id`        | Long (PK, identity)      | The identity of **one play**, not of the track: `next-track` answers with it for a background track and the dashboard knows the track as `B:<id>` (`HistoryEntry.key()`) — the same video in two rounds of a playlist is two rows, two ids, two history entries |
+| `partyCode` | String(5)                | Owning party (no FK, like `song_requests`)                                                   |
+| `videoId`   | String(20)               | 11-char YouTube video ID (a snapshot — the row does not depend on `fallback_track`)          |
+| `title`     | String(255, nullable)    | The title at import; `null` when it was unknown (the history then shows `youtu.be/<id>`)     |
+| `fetchedAt` | LocalDateTime            | When the track was fetched from the YouTube API, copied from the track — basis of the 30-day retention |
+| `playedAt`  | LocalDateTime            | When the player took the track (the same instant as the track's own `playedAt`)              |
+
+**Index:** `idx_fallback_play_party_played` on `(partyCode, playedAt DESC, id DESC)` — serves exactly the bounded history
+read (`FallbackPlayRepository.findRecent`; checked with `EXPLAIN` on 60 000 rows: an index scan, no sort).
+**Retention:** the video ID and title are YouTube API data obtained with the API key alone (*Non-Authorized Data*), which
+the API Services Developer Policies (III.E.4.d) allow to be stored for at most 30 calendar days — the owner asked whether
+titles in a history are covered, and the policy text says nothing that exempts them — so the log is purged **by
+`fetchedAt`**, in the same daily job as `fallback_track` (`purgeStaleTracks`), and removed with the account
+(`AccountDeletionService`). A row therefore never lives longer than the track it copied; a party that keeps one playlist for
+more than ~30 days loses the plays of the older import all at once (the same thing happened to the `PLAYED` tracks before).
+Changing or clearing the playlist does **not** clear the log (owner's decision 2026-09-29): what played stays in the
+history. The migration copies the tracks that were `PLAYED` with a `played_at` at that moment; plays of earlier rounds
+were already lost and cannot be recovered.
 
 ### 4.2 Enums
 
@@ -255,6 +287,8 @@ player lease (see "One window plays" below), and:
     → after a player error (the first 5 in a row at once, then one ask per poll)
   → POST /dj/dashboard/next-track?partyCode=…&deviceId=…[&exclude=<guest song ids the player failed on>]
        200 {source: GUEST | BACKGROUND, id, videoId}     204 = nothing to play
+           id = the request id (GUEST), or the id of the play log row that this hand-out wrote (BACKGROUND, table
+           fallback_play) — not the queue's track id: the client keeps it as its key B:<id> in the history
        409 = another window holds the player lease (nothing was handed out)
   → player.loadVideoById(videoId)
 
@@ -263,7 +297,8 @@ The server (NextTrackService) answers with, in this order:
        (DjService.findNextPlayableGuestTrack — reads only; the client confirms it)
     2. else the next QUEUED track of the DJ's current fallback playlist — the one with the lowest `playOrder`
        (fixed in advance: playlist order or a random order, so the DJ can be shown what comes next); marked
-       PLAYED as it is handed out; the playlist loops (the next round is prepared as soon as the last track is taken)
+       PLAYED and written to the play log as it is handed out; the playlist loops (the next round is prepared as soon as
+       the last track is taken)
     3. else 204 (no fallback playlist, or nothing could be imported)
 
 Confirmation:
@@ -357,9 +392,10 @@ the last press wins). `skipToPrevious` in `youtube-autopilot.js`:
   "10 seconds" — keep it equal to `DOUBLE_PRESS_MS`);
 - otherwise the track that played **before** it comes back. The list is the server's timeline of what played
   (`GET /dj/dashboard/recent-tracks`, below — the same whichever window played the tracks, so a reload or a switch of device
-  loses nothing). The running track is found in it by its **key** (`G:<request id>` for a guest song, `B:<track id>` for a
-  background track; `nowPlayingKey` is set when the server hands a track out and when a track comes back, and is `null` for
-  a track the DJ picked by hand with a ▶ link): the entry after it (older) is played; a track not in the list gets the newest
+  loses nothing). The running track is found in it by its **key** (`G:<request id>` for a guest song, `B:<play id>` for a
+  background track — the id of the play log row, so a video that plays in two rounds of a short playlist has two keys and
+  "back" cannot land on the wrong one; `nowPlayingKey` is set when the server hands a track out and when a track comes
+  back, and is `null` for a track the DJ picked by hand with a ▶ link): the entry after it (older) is played; a track not in the list gets the newest
   entry; when nothing plays (the track ended) and the track is in the list, that same track plays again ("the track that
   ended is what back goes to"); with nothing older the track starts again. Pressed again, back walks further into the past;
 - a track that comes back is **not** marked as played again (no `POST /dj/dashboard/play`, so it does not move in the
@@ -430,12 +466,12 @@ standalone page has its own h1), using the existing `history.title`, so the DJ s
 
 **The history is one timeline** (stage 2): `PlayHistoryService` merges the guests' requests that played or were rejected
 (`song_requests`, ordered by `COALESCE(played_at, requested_at)` — a rejected request and one played before V6 are placed by
-when they were requested) with the tracks the player took from the background playlist (`fallback_track`, status PLAYED,
-by `played_at`), newest event first. Each side is read with its own bounded query (`limit + 1`, one party, one page —
-the `n` newest of the union are among the `n` newest of each side) and merged in Java; one entry more than asked for tells
-"Show more" whether older ones exist. A background track counts as played when the player *takes* it (that is when its
-`played_at` is set), so a track that was handed out but never sounded (the answer arrived after the DJ had picked something
-by hand, or the video would not play) is in the history too. The rows are `HistoryEntry` records: a background row has a
+when they were requested) with the tracks the player took from the background playlist (the **play log**, `fallback_play`,
+by `played_at` — Section 4.1), newest event first. Each side is read with its own bounded query (`limit + 1`, one party,
+one page — the `n` newest of the union are among the `n` newest of each side) and merged in Java; one entry more than asked
+for tells "Show more" whether older ones exist. A background track counts as played when the player *takes* it (that is when
+its log row is written), so a track that was handed out but never sounded (the answer arrived after the DJ had picked
+something by hand, or the video would not play) is in the history too. The rows are `HistoryEntry` records: a background row has a
 "🎶 Playlist" badge in the vibe column (and a 🎶 before the title, because a phone hides that column), a link to the video,
 "—" instead of the energy and no comment; a track without a stored title reads `youtu.be/<id>`. The "Time" column is the
 time of the event (played / rejected), not of the request, and sorts by it. **The filter buttons are applied by the
@@ -444,11 +480,32 @@ filter)`): only the tables the filter needs are read — Guests: the requests (p
 Played: the requests that played and the tracks, Rejected: the rejected requests — each with its own bound, so the limit
 counts entries **of the chosen kind**: with a 120-track playlist between the guests' songs, "Guests" still shows the last 50
 guests' requests, which a filter applied to the 50 rows on the page could not (those hold a handful of them). The Played
-filter includes the background tracks. A tracks-of-the-playlist row stays in the history only for the current round of the
-playlist: when the last queued track is handed out, `requeuePlayedTracks` puts the played ones back in the queue and clears
-their `played_at` (`FallbackTrackCommandService.startNewRound`), so the history of the playlist is at most one round (≤ 500
-tracks) and starts over with each — a short playlist that loops during a party loses its older rows (and ⏮ its way back
-along them). A Spotify party has no background tracks, so its history is just its guests' songs, by time played. Not built: an
+filter includes the background tracks.
+
+**The history of the playlist does not start over when the playlist loops** (V7, owner's decision 2026-09-29). Until then
+the background rows were read from `fallback_track` (status PLAYED, by `played_at`), and when the last queued track is handed
+out `requeuePlayedTracks` puts the played ones back in the queue and clears their `played_at`
+(`FallbackTrackCommandService.startNewRound`) — so the history of the playlist was at most one round (≤ 500 tracks): a short
+playlist that looped during a party lost its older rows, ⏮ / ⏭ had nothing to walk along right after a new round began, and
+the track that was handed out *at* the boundary — re-queued in the same transaction — was in the history nowhere. Now every
+hand-out is also written to `fallback_play` (`takeNextTrack`, inside the party's advisory lock and the same transaction as the
+claim), the history and `recent-tracks` read that log, and rounds do not touch it. What the log keeps, and for how long: Section 4.1
+(30 days from the fetch of the data, removed with the account; **replacing or clearing the playlist does not clear it**).
+- **Keys** (`HistoryEntry.key()`, and `nowPlayingKey` in `youtube-autopilot.js`): `B:<id of the log row>`. `next-track` answers with
+  that same id for a background track (`FallbackTrackCommandService.takeNextTrack` returns the log row), so the key the player
+  keeps for what it plays is the key of that very entry in `recent-tracks`, and the same video playing in two rounds is two
+  entries with two keys. The obvious alternative — the log row remembers the queue's track id and the key stays `B:<track id>` —
+  is **wrong**: a playlist A B C that has looped gives `[A, C, B, A]` newest first, with the same key on both A's; ⏮ from the older A
+  finds the newer one (`findIndex` takes the first match), goes to C and round again, never reaching "nothing older", and ⏭
+  skips entries. That was reproduced in the browser with the old-style keys (below) and is why the id of the play is what the
+  client is told. The script itself needed no change (`'B:' + track.id` already did the right thing once the id is the play's).
+  A dashboard window that was open across the deployment and plays a track handed out before it still holds an old-style key: ⏮ from
+  that one track may go to the wrong entry once (it finds no key, or a colliding one); the next track is fine.
+- **Existing data:** `V7` copies the tracks that are `PLAYED` with a `played_at` into the log, ordered by play time, so the history of
+  the current round survives the deploy; earlier rounds were lost by the old design and are not recoverable.
+- **Verification:** Section 5.4, "Testing", and `SESSION_HANDOFF.md`.
+
+A Spotify party has no background tracks, so its history is just its guests' songs, by time played. Not built: an
 expression index for the ordering (`party_code, COALESCE(played_at, requested_at)`) — the query sorts one party's played
 and rejected rows, which is cheap next to the bound; add it if a party ever has tens of thousands of requests.
 
@@ -571,7 +628,13 @@ the newest entry, after an end with Auto-Pilot off ⏮ replays the track that en
 when confirmed and ⏮ from it goes to the track before; ⏮ from the other window ("Sent…", one command, carried out
 within a report, its own player silent, 409 and the banner when nobody plays); the history tab with background rows (badge,
 marker, dash for the energy, link, included by the Played filter). V6 and the two history queries were run against a real
-PostgreSQL 18 with a throw-away database (see Section 10).
+PostgreSQL 18 with a throw-away database (see Section 10). The play log (V7) the same way — and its client side across a
+round boundary: the real `next-track` and `recent-tracks` answers of a 3-track playlist that loops (10 hand-outs, recorded from
+the real services on a real PostgreSQL) replayed to the real `youtube-autopilot.js` on the real rendered dashboard, with a fake
+`YT.Player` and scenarios run by the page itself (`?scenario=`, the verdict POSTed to the stand-in server, which writes it to a
+file): ⏮ from B5 goes A4, C3, B2, A1 and then has nothing older; ⏭ from A1 retraces B2, C3, A4, B5 and then asks `next-track` — and
+the same scenario with the keys of the old scheme (the queue's track id) fails as described above, so the check does detect the
+problem.
 
 ---
 
@@ -608,13 +671,13 @@ PostgreSQL 18 with a throw-away database (see Section 10).
 | `SpotifyAuthService`         | 188   | Spotify OAuth2 token management (exchange, refresh, store) — null-safe refresh with explicit exception |
 | `GuestSessionService`        | 73    | Session-based rate limiting for guests (token bucket) |
 | `QrCodeService`              | 50    | QR code generation (ZXing, `@Cacheable`) |
-| `AccountDeletionService`     | 65    | Deletes all DJ data (songs, fallback tracks, feedback, settings) — required by Google API data deletion policy |
+| `AccountDeletionService`     | 70    | Deletes all DJ data (songs, fallback tracks and their play log, feedback, settings) — required by Google API data deletion policy |
 | `YouTubePlaylistClient`      | ~190  | Reads a playlist via YouTube Data API (`playlistItems.list` + `videos.list`): max 500 items, drops private/deleted/non-embeddable videos, returns each video's title too (same `videos.list` call); `findTitle` for a single video (best-effort); API key never appears in errors |
 | `FallbackPlaylistService`    | ~65   | Syncs the party's server-side fallback tracks with the DJ's playlist (playlist / single video / cleared), in the DJ's shuffle setting. API first, DB only after a complete non-empty result; `applyShuffleSetting` re-orders the queue without any API call |
-| `FallbackTrackCommandService`| ~360  | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new in playlist or shuffled order), cancel, daily 30-day purge, `applyShuffleSetting` (on: fresh random order; off: playlist order continuing after the last played track), `moveTrack` (the DJ's up / down / play next), `placeTrack` (a drag: in front of another track or to the end; a moved track is flagged `manualMove`) and `takeNextTrack` — takes the queued track with the lowest `playOrder`, claims it QUEUED → PLAYED with one conditional UPDATE (concurrent callers never get the same track), and when that was the last one starts the next round at once (re-queues the party's newest import in playlist order or freshly shuffled; a shuffled round never opens with the track that is still playing); every method that changes the queue first takes a per-party PostgreSQL advisory lock — a stress test with concurrent moves and takes deadlocked without it |
+| `FallbackTrackCommandService`| ~385  | Transactional writes for `fallback_track` and the play log `fallback_play`: replace (soft-invalidate QUEUED → CANCELLED, insert new in playlist or shuffled order), cancel, daily 30-day purge (of the tracks and of the play log rows fetched before the cutoff), `applyShuffleSetting` (on: fresh random order; off: playlist order continuing after the last played track), `moveTrack` (the DJ's up / down / play next), `placeTrack` (a drag: in front of another track or to the end; a moved track is flagged `manualMove`) and `takeNextTrack` — takes the queued track with the lowest `playOrder`, claims it QUEUED → PLAYED with one conditional UPDATE (concurrent callers never get the same track), writes the hand-out to the play log in the same transaction and returns that log row (its id is what `next-track` answers with — the key `B:<id>` of the history), and when that was the last one starts the next round at once (re-queues the party's newest import in playlist order or freshly shuffled; a shuffled round never opens with the track that is still playing); every method that changes the queue first takes a per-party PostgreSQL advisory lock — a stress test with concurrent moves and takes deadlocked without it |
 | `FallbackQueueService`       | ~55   | Read side for the dashboard: the queued tracks of the round (up to 500) in exactly the order `takeNextTrack` serves them, plus how many are left and whether the DJ has moved tracks by hand; `moveTrack` / `placeTrack` resolve the party's current playlist and delegate; `getVersion` / `versionOf` — a hash of the whole view, so that a window can tell that the list changed elsewhere |
 | `NextTrackService`           | 120   | "What plays next?": a waiting guest song first, else a background track. Imports lazily when there is nothing to play or the tracks are ≥ 29 days old; per party+playlist single-flight and a 5-minute pause after a failed import |
-| `PlayHistoryService`         | ~110  | The timeline of what played (Section 5.4, "The history is one timeline"): guest requests (`song_requests`, by play time) and background tracks (`fallback_track`) merged newest first, each side read with its own bounded query; `getHistory(partyCode, limit, HistoryFilter)` → `Page(entries, hasMore)` for the history page (the filter decides which tables are read), `getRecentlyPlayed` → what the embedded player can play again (has a YouTube video ID) for ⏮ |
+| `PlayHistoryService`         | ~110  | The timeline of what played (Section 5.4, "The history is one timeline"): guest requests (`song_requests`, by play time) and background tracks (the play log, `fallback_play`) merged newest first, each side read with its own bounded query; `getHistory(partyCode, limit, HistoryFilter)` → `Page(entries, hasMore)` for the history page (the filter decides which tables are read), `getRecentlyPlayed` → what the embedded player can play again (has a YouTube video ID) for ⏮ |
 | `PlayerLeaseService`         | ~140  | Which dashboard window plays: one in-memory lease per party (a window id + the time it last reported, 10 s timeout), `report` (`CLAIM` / `WATCH` / `TAKE_OVER`; the holder also collects the command waiting for it and says whether its player makes sound, which every answer tells back), `sendCommand` (⏭ Next / ⏮ Back / ⏯ pause and resume from any window; refused when nobody plays; one command per party, the last one wins, dropped when the lease changes hands), `mayPlay` (used by `next-track`, answers 409 to another window) and `release`; takes a `Clock` in a package-private constructor so that tests move time by hand |
 
 ### 6.3 Configuration
@@ -825,7 +888,16 @@ Flyway applies pending files in order at startup, before Hibernate validates, an
   with shuffle on, playlist order otherwise — and `title`), `V5__fallback_track_manual_move` (`manual_move` flag:
   which queued tracks the DJ has moved by hand), `V6__song_request_played_at` (`song_requests.played_at`, nullable, no
   back-fill: requests played before V6 keep NULL and the history orders them by `requested_at`; verified against a real
-  PostgreSQL 18 — V1–V6 on an empty database with Hibernate validation, and V5 → V6 on data that already existed).
+  PostgreSQL 18 — V1–V6 on an empty database with Hibernate validation, and V5 → V6 on data that already existed),
+  `V7__fallback_play_log` (the table `fallback_play` — one row per background track handed out: `video_id` and `title` as a
+  snapshot, `fetched_at` copied from the track for the 30-day retention, `played_at`, an identity `id` that is the key of the
+  play — and the index `(party_code, played_at DESC, id DESC)`; the migration also copies the tracks that are `PLAYED` with a
+  `played_at` at that moment, ordered by play time, and nothing else; verified against a real PostgreSQL 18 — V1–V7 on an empty
+  database with Hibernate validation, **V6 → V7 on data that already existed** through the Flyway API (exactly one migration
+  executed; a `PLAYED` row without a time, `QUEUED` and `CANCELLED` rows are not copied; `fallback_track` untouched), the
+  history reads, the boundary of a round, the retention purge and the account deletion, and 480 hand-outs from three parties
+  together with the DJ's moves, drops and shuffle flips and the nightly purge — three runs on fresh databases, no deadlock, one log
+  row per hand-out).
 - **`spring.flyway.baseline-on-migrate=true`**: a database that already has tables but no history table
   (every database created before Flyway, including production) is recorded as version 1 *without running
   V1*, and only V2+ are applied. An empty database gets V1 applied in full. Both paths were verified
@@ -927,6 +999,8 @@ SpotifyAuthService
 AccountDeletionService
     ├── PartySettingsRepository
     ├── SongRequestRepository
+    ├── FallbackTrackRepository
+    ├── FallbackPlayRepository
     └── FeedbackRepository
 
 PartySettingsCommandService
@@ -959,10 +1033,10 @@ PartySettingsQueryService
 | GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated; the same `limit` and `filter` |
 | GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
 | GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1). Not called by the client since stage 4 (superseded by `next-track`); kept as the read-only "is a guest waiting?" peek |
-| POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId, playlistId}` (`playlistId` = the playlist a BACKGROUND track came from, null for a guest song) or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Optional `deviceId` (the asking window's id): **409** when another window holds the party's player lease (see below) — nothing is handed out; a request without an id counts as another window while a lease is live. Section 14 Phase 2 stage 3; called by `youtube-autopilot.js` since stage 4 |
+| POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId, playlistId}` (`playlistId` = the playlist a BACKGROUND track came from, null for a guest song; `id` = the request id of a guest song, or the id of the play log row — table `fallback_play` — that this hand-out wrote for a BACKGROUND track, the same id `recent-tracks` uses in its `B:<id>` key) or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` and written to the play log as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Optional `deviceId` (the asking window's id): **409** when another window holds the party's player lease (see below) — nothing is handed out; a request without an id counts as another window while a lease is live. Section 14 Phase 2 stage 3; called by `youtube-autopilot.js` since stage 4 |
 | POST   | `/dj/dashboard/player-lease`      | `DjPlayerLeaseController.report()`               | JSON `{holder, free, fallbackPlaylistId, queueVersion, command, playing}` (`playing` is whether the player of the window that plays makes sound — true / false, null when nobody plays or it has not said; `fallbackPlaylistId` is the party's current fallback playlist, so the window that plays can stop a track of a playlist the DJ has replaced or cleared elsewhere; `queueVersion` changes whenever the "up next" list would look different, so every window can tell that it was changed in another one; `command` is `NEXT` when the DJ pressed ⏭ in another window — only ever for the holder, handed out once), ownership-validated. Params `partyCode`, `deviceId` (random id of the window, `[A-Za-z0-9_-]{8,64}`), `mode` = `CLAIM` / `WATCH` / `TAKE_OVER`, optional `playing` = `true` / `false` (whether the window's own player makes sound — only the holder's is kept; anything else → 400). **Not read-only**: the report renews the window's lease (10 s timeout), `TAKE_OVER` moves it. 400 for a bad id or mode. Called by `youtube-autopilot.js` every 3 s — Section 5.4, "One window plays" |
 | POST   | `/dj/dashboard/player-command`    | `DjPlayerLeaseController.sendCommand()`          | ownership-validated. Params `partyCode`, `command` = `NEXT`, `PREVIOUS`, `PAUSE` or `RESUME`. The DJ gives the window that plays a command from any window (the phone as a remote control); it is carried out when that window's next lease report brings it (≤ ~3 s); one command waits per party, the last one pressed. 204 when it is waiting, **409** when no window holds a live lease (nobody would carry it out), 400 for an unknown command — Section 5.4, "Next ⏭" and "Back ⏮" |
-| GET    | `/dj/dashboard/recent-tracks`     | `DjPlayerLeaseController.recentTracks()`         | JSON list (at most 30, newest first) of `{key, source, id, videoId, title}` — the tracks that played most recently and can be played again (guests' songs with a YouTube video ID, background tracks); `key` is `G:<request id>` / `B:<track id>`. Read-only, ownership-validated. The window that plays walks back along it for ⏮ — Section 5.4, "Back ⏮" |
+| GET    | `/dj/dashboard/recent-tracks`     | `DjPlayerLeaseController.recentTracks()`         | JSON list (at most 30, newest first) of `{key, source, id, videoId, title}` — the tracks that played most recently and can be played again (guests' songs with a YouTube video ID, background tracks); `key` is `G:<request id>` / `B:<play id>` (`id` of a background track = the id of its play log row, one per play, so a video that played in two rounds appears twice with two keys). Read-only, ownership-validated. The window that plays walks back along it for ⏮ — Section 5.4, "Back ⏮" |
 | POST   | `/dj/dashboard/player-lease/release` | `DjPlayerLeaseController.release()`           | ownership-validated. Params `partyCode`, `deviceId`. The holder gives the lease up when its page is left (`sendBeacon`, CSRF token in the body as `_csrf`); ignored when the window does not hold it. 204, or 400 for a bad id |
 | POST   | `/dj/dashboard/vibe`              | `DjPartySettingsController.updateGlobalVibe()`   | ownership-validated |
 | POST   | `/dj/dashboard/limits`            | `DjPartySettingsController.updateLimits()`       | ownership-validated |
@@ -1009,9 +1083,9 @@ PartySettingsQueryService
 
 ### Testing
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
-- **Unit tests (353 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the timeline of what played (`PlayHistoryService`: the merge, play time vs request time, the bound and `hasMore`, what ⏮ can play again; `DjService.markPlayed`; `YouTubeUrls`), the `limit` of the history endpoints, `recent-tracks` and the `PREVIOUS` command, the state of the player and the `PAUSE` / `RESUME` commands (`PlayerLeaseService`, `DjPlayerLeaseController`), and the rendering of `fragments/fallback-queue.html`, `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles.
+- **Unit tests (379 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch) and the play log it writes (a row per hand-out, under the party lock, one id per play; the purge; the account deletion), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the timeline of what played (`PlayHistoryService`: the merge, play time vs request time, the bound and `hasMore`, what ⏮ can play again; `DjService.markPlayed`; `YouTubeUrls`), the `limit` of the history endpoints, `recent-tracks` and the `PREVIOUS` command, the state of the player and the `PAUSE` / `RESUME` commands (`PlayerLeaseService`, `DjPlayerLeaseController`), and the rendering of `fragments/fallback-queue.html`, `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles.
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 360 tests** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, counted 2026-09-29). No integration tests in the repo — the queue SQL of Phase 3 and the history queries and V6 of Phase 4 stage 2 were checked once against a throw-away PostgreSQL database, not by a test that stays — and no tests for the browser code (`youtube-autopilot.js`, `dashboard.js`).
+- **Total: 386 tests** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, counted 2026-09-29). No integration tests in the repo — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, and the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs) were checked against a throw-away PostgreSQL database, not by a test that stays — and no tests for the browser code (`youtube-autopilot.js`, `dashboard.js`).
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
@@ -1181,6 +1255,21 @@ song, then ⏭, went to the next playlist track instead of back to the guest son
 5.4, "Back ⏮". Asked next whether playlist tracks belong in the history, the owner had two more filter buttons built — Guests and
 Playlist next to All / Played / Rejected — applied by the server, so that the limit counts the entries of the chosen kind
 (Section 5.4, "The history is one timeline"). With this Phase 4 is complete; what remains are the optional follow-ups in `SESSION_HANDOFF.md`.
+
+**Follow-up of stage 4 — the history of the playlist survives a loop** (`V7`, owner's decision 2026-09-29, built in a new
+session). The follow-up filters raised the question whether the history keeps the whole night, and the answer was "only until the
+playlist loops": a new round re-queues the played tracks and clears their `played_at`, so the "Playlist" rows — and what ⏮ / ⏭
+walk along — were at most one round long, and the track handed out at the boundary was in the history nowhere. Built as a
+**play log**: the table `fallback_play` (Section 4.1), one row per hand-out, written by `takeNextTrack` inside the queue lock and the
+same transaction; `PlayHistoryService` reads it instead of `fallback_track`; `next-track` answers with the log row's id, so the
+client's key `B:<id>` is the key of exactly that history entry — a video that plays in two rounds is two entries (with the
+track's own id as the key ⏮ would go round in circles, Section 5.4). Decisions: the log is kept **30 days from the fetch of the
+data** (the video ID and title are YouTube API data, Non-Authorized, at most 30 calendar days by III.E.4.d; the row copies
+`fetched_at`, purged with `fallback_track` and removed with the account); **replacing or clearing the playlist does not clear
+it** (that is also what happened to the `PLAYED` tracks before — the owner's question assumed otherwise, the code was checked
+first). Checked: 386 unit tests; V7 against a real PostgreSQL 18 (empty database, and V6 → V7 on existing data), the round
+boundary with real answers replayed to the real script in the browser, the retention purge, the account deletion and 480
+concurrent hand-outs together with moves, drops and the purge (Section 10). No change to `youtube-autopilot.js` beyond a comment.
 
 ### Original one-shot plan (kept for reference — see caveat above)
 
