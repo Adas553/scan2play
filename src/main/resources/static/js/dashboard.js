@@ -181,6 +181,19 @@ function submitAutoPilotToggle(checkbox) {
     const historyContent = document.getElementById('history-content');
     let activeTab = 'queue';
 
+    /**
+     * After a tab switch the new list is not where the DJ is looking: on a phone it sits below the settings, the QR code
+     * and the player, so nothing seems to happen unless the DJ scrolls all the way down. Bring the top of the new
+     * content into view — unless it already is (a wide screen shows it without any scrolling).
+     */
+    function revealContent(element) {
+        const top = element.getBoundingClientRect().top;
+        if (top >= 0 && top < window.innerHeight * 0.4) return;
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // 'instant', not 'auto': Bootstrap sets scroll-behavior: smooth on the page, which 'auto' would inherit
+        window.scrollTo({ top: window.scrollY + top - 8, behavior: reduced ? 'instant' : 'smooth' });
+    }
+
     /** The history fragment: the last page of requests, or — "Show more" — the last {@code limit} of them. */
     function fetchHistory(limit) {
         const partyCode = document.getElementById('partyCode').value;
@@ -238,6 +251,7 @@ function submitAutoPilotToggle(checkbox) {
             if (typeof window.initSortableHeaders === 'function') {
                 window.initSortableHeaders(historyContent);
             }
+            revealContent(historyContent);
         })
         .catch(function(err) { console.error('[Tabs] History load error:', err); });
     });
@@ -250,6 +264,7 @@ function submitAutoPilotToggle(checkbox) {
         queueLink.classList.add('active');
         historyLink.classList.remove('active');
         activeTab = 'queue';
+        revealContent(queueContent);
     });
 })();
 

@@ -11,8 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
-
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -352,49 +351,70 @@ class DjServiceTest {
         verifyNoMoreInteractions(songRequestRepository);
     }
 
-    // ---- getHistory ----
+    // ---- the moment a request was played (V6): the history and "previous track" order by it ----
 
-    private static List<SongRequestEntity> played(int count) {
-        return java.util.stream.IntStream.range(0, count)
-                .mapToObj(i -> SongRequestEntity.builder().id((long) i).partyCode(PARTY_CODE)
-                        .songName("Song " + i).decision(DECISION_PLAYED).build())
-                .toList();
+    @Test
+    void markSongAsPlayed_shouldRecordWhenTheSongWasPlayed() {
+        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
+                .decision(DECISION_ACCEPTED).build();
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+        LocalDateTime before = LocalDateTime.now();
+
+        djService.markSongAsPlayed(1L, PARTY_CODE);
+
+        assertThat(song.getPlayedAt()).isBetween(before, LocalDateTime.now());
     }
 
     @Test
-    void getHistory_shouldReadOneRowMoreThanAsked_toTellWhetherThereAreOlderOnes() {
-        when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
-                eq(PARTY_CODE), eq(List.of(DECISION_PLAYED, DECISION_REJECTED)), eq(PageRequest.of(0, 51))))
-                .thenReturn(played(51));
+    void markSongAsPlayed_shouldKeepTheFirstPlayTime_whenConfirmedAgain() {
+        // the player confirms once per song, and the DJ may press "Mark Played" as well: the second one must not move it
+        LocalDateTime first = LocalDateTime.of(2026, 9, 29, 20, 0);
+        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
+                .decision(DECISION_PLAYED).playedAt(first).build();
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
 
-        DjService.HistoryPage page = djService.getHistory(PARTY_CODE, 50);
+        djService.markSongAsPlayed(1L, PARTY_CODE);
 
-        assertThat(page.hasMore()).isTrue();
-        assertThat(page.rows()).hasSize(50);
-        assertThat(page.rows().getLast().getSongName()).isEqualTo("Song 49");   // the extra row is not shown
+        assertThat(song.getPlayedAt()).isEqualTo(first);
     }
 
     @Test
-    void getHistory_shouldReportNoOlderRows_whenTheQueryReturnsNoMoreThanAsked() {
-        when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
-                eq(PARTY_CODE), any(), eq(PageRequest.of(0, 51))))
-                .thenReturn(played(50));
+    void markSongAsPlayed_shouldNotSetAPlayTime_whenThePartyDoesNotMatch() {
+        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode("OTHER").songName("Test Song")
+                .decision(DECISION_ACCEPTED).build();
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
 
-        DjService.HistoryPage page = djService.getHistory(PARTY_CODE, 50);
+        djService.markSongAsPlayed(1L, PARTY_CODE);
 
-        assertThat(page.hasMore()).isFalse();
-        assertThat(page.rows()).hasSize(50);
+        assertThat(song.getPlayedAt()).isNull();
     }
 
     @Test
-    void getHistory_shouldWorkForAnEmptyHistory() {
-        when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(eq(PARTY_CODE), any(), any()))
-                .thenReturn(List.of());
+    void pushToSpotify_shouldRecordWhenTheSongWasPlayed() {
+        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
+                .decision(DECISION_ACCEPTED).trackUrl("spotify:track:abc123").build();
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+        when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(
+                PartySettingsEntity.builder().partyCode(PARTY_CODE).activeProvider(MusicProviderType.SPOTIFY).build());
 
-        DjService.HistoryPage page = djService.getHistory(PARTY_CODE, 50);
+        djService.pushToSpotify(1L, PARTY_CODE);
 
-        assertThat(page.hasMore()).isFalse();
-        assertThat(page.rows()).isEmpty();
+        assertThat(song.getPlayedAt()).isNotNull();
+    }
+
+    @Test
+    void markPlayed_shouldSetTheDecisionAndTheMoment_andKeepAMomentThatIsAlreadySet() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 29, 21, 0);
+        SongRequestEntity fresh = SongRequestEntity.builder().decision(DECISION_ACCEPTED).build();
+        SongRequestEntity replayed = SongRequestEntity.builder().decision(DECISION_PLAYED)
+                .playedAt(now.minusHours(1)).build();
+
+        DjService.markPlayed(fresh, now);
+        DjService.markPlayed(replayed, now);
+
+        assertThat(fresh.getDecision()).isEqualTo(DECISION_PLAYED);
+        assertThat(fresh.getPlayedAt()).isEqualTo(now);
+        assertThat(replayed.getPlayedAt()).isEqualTo(now.minusHours(1));
     }
 }
 

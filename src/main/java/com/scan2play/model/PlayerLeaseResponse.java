@@ -14,7 +14,10 @@ package com.scan2play.model;
  *                           list again — the DJ may have changed the queue in another window, and no timer refreshes it.
  * @param command            a command the DJ gave from another window, for the window that plays ({@code null} for
  *                           everyone else, and when there is none). It is handed out once.
+ * @param playing            whether the player of the window that plays is making sound ({@code true}) or is paused
+ *                           ({@code false}), as that window last said; {@code null} when nobody plays or it has not
+ *                           said. A window that does not play shows "pause" or "resume" by it.
  */
 public record PlayerLeaseResponse(boolean holder, boolean free, String fallbackPlaylistId, String queueVersion,
-                                  PlayerCommand command) {
+                                  PlayerCommand command, Boolean playing) {
 }

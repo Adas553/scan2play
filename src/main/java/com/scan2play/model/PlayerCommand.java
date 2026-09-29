@@ -6,5 +6,14 @@ package com.scan2play.model;
  */
 public enum PlayerCommand {
     /** Skip to the next track: what {@code next-track} hands out now, whatever the player is doing. */
-    NEXT
+    NEXT,
+    /**
+     * Back, like a normal player: restart the track that has played for more than a few seconds, otherwise play the
+     * track that played before it (and, pressed again, the one before that).
+     */
+    PREVIOUS,
+    /** Pause the music (a no-op when it is paused already). Explicit rather than a toggle, so a stale button cannot invert it. */
+    PAUSE,
+    /** Carry on after a pause (a no-op when the music is playing). */
+    RESUME
 }

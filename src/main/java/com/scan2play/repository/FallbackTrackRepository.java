@@ -169,6 +169,17 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
     /** A track by ID, but only if it belongs to the party (a DJ must never reach another party's tracks). */
     Optional<FallbackTrackEntity> findByIdAndPartyCode(Long id, String partyCode);
 
+    /**
+     * The tracks the player has taken (status PLAYED), the most recent first — for the DJ history
+     * ({@code PlayHistoryService}). A PLAYED track always has a play time (it is set when the track is claimed); the
+     * null guard only keeps a damaged row from floating to the top. Bounded by the pageable, one party.
+     */
+    @Query("SELECT t FROM FallbackTrackEntity t WHERE t.partyCode = :partyCode AND t.status = :status "
+            + "AND t.playedAt IS NOT NULL ORDER BY t.playedAt DESC, t.id DESC")
+    List<FallbackTrackEntity> findPlayedTracks(@Param("partyCode") String partyCode,
+                                               @Param("status") FallbackTrackStatus status,
+                                               Pageable pageable);
+
     /** When the newest import of this playlist for the party was fetched (empty if it was never imported). */
     @Query("SELECT MAX(t.fetchedAt) FROM FallbackTrackEntity t WHERE t.partyCode = :partyCode AND t.playlistId = :playlistId")
     Optional<LocalDateTime> findLatestFetchedAt(@Param("partyCode") String partyCode,

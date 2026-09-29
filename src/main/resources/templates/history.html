@@ -32,6 +32,9 @@
          and, as an AJAX fragment, by the dashboard's History tab. dashboard.js (initListTools) does the filtering
          and "Show more"; the count carries the "+" that says there are older requests in data-suffix. */-->
     <div th:fragment="historyTableContent" class="mb-4" data-list>
+        <!--/* A heading only where the list arrives by itself under the dashboard's other panels (the History tab, model
+             attribute historyHeading): the standalone page has its own h1 above. It tells the DJ what has just appeared. */-->
+        <h4 th:if="${historyHeading}" class="text-white mb-2" th:text="#{history.title}">📜 Party History</h4>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <span class="badge text-bg-secondary" data-list-count
@@ -65,11 +68,14 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="req : ${history}" th:attr="data-song-name=${req.songName},data-decision=${req.decision}">
-                <td class="text-secondary d-none d-md-table-cell" data-sort-value="time" th:attr="data-val=${req.requestedAt}" th:text="${#temporals.format(req.requestedAt, 'dd.MM.yyyy HH:mm:ss')}">12:00</td>
-                <td data-sort-value="song" th:attr="data-val=${req.songName}">
+            <tr th:each="req : ${history}" th:attr="data-song-name=${req.title},data-decision=${req.decision}">
+                <td class="text-secondary d-none d-md-table-cell" data-sort-value="time" th:attr="data-val=${req.at}" th:text="${#temporals.format(req.at, 'dd.MM.yyyy HH:mm:ss')}">12:00</td>
+                <td data-sort-value="song" th:attr="data-val=${req.title}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-                        <span class="fw-bold text-break" th:text="${req.songName}">Song</span>
+                        <span class="fw-bold text-break">
+                            <span th:if="${req.source.name() != 'GUEST'}" th:title="#{history.source.background}">🎶</span>
+                            <span th:text="${req.title}">Song</span>
+                        </span>
                         <a th:if="${req.trackUrl != null}"
                            th:href="${req.trackUrl}"
                            target="_blank"
@@ -79,13 +85,20 @@
                         </a>
                     </div>
                 </td>
-                <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
+                <td class="d-none d-md-table-cell">
+                    <span th:if="${req.source.name() == 'GUEST'}" class="badge text-bg-secondary" th:text="${req.style}">Style</span>
+                    <span th:unless="${req.source.name() == 'GUEST'}" class="badge text-bg-dark border border-secondary"
+                          th:text="#{history.source.background}">Playlist</span>
+                </td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}">
                     <span class="d-none d-md-inline" th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</span>
                     <span class="d-inline d-md-none" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}" style="font-size: 1.2rem;"></span>
                 </td>
                 <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
-                <td class="d-none d-md-table-cell" data-sort-value="energy" th:attr="data-val=${req.energyLevel}"><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
+                <td class="d-none d-md-table-cell" data-sort-value="energy" th:attr="data-val=${req.energyLevel != null ? req.energyLevel : 0}">
+                    <span th:if="${req.energyLevel != null}" class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span>
+                    <span th:if="${req.energyLevel == null}" class="text-secondary">—</span>
+                </td>
             </tr>
             <tr th:if="${#lists.isEmpty(history)}">
                 <td colspan="6" class="text-center text-light py-4" style="background: #232323;" th:text="#{history.empty}">History is empty.</td>

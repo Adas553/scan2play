@@ -25,6 +25,13 @@
  * that plays; in another window — the phone as a remote control — it sends POST /dj/dashboard/player-command, and the
  * window that plays carries it out when its next lease report brings it (within ~3 s). The reports also carry a version
  * of the "up next" list, so a window that did not change the list itself fetches it again when it changed elsewhere.
+ * The ⏮ button goes back like a normal player: a track that has played for more than 3 s starts again, otherwise the
+ * track that played before it comes back (GET /dj/dashboard/recent-tracks — the server's timeline of what played, so it
+ * is the same whichever window played the tracks); pressed again, the one before that. It works from any window in the
+ * same way as ⏭, and when a track that came back ends Auto-Pilot carries on with the queue.
+ * The ⏯ button pauses and resumes the music, also from any window: the window that plays says in its lease reports
+ * whether its player makes sound, the answers tell that to the others, and a window that does not play shows "pause" or
+ * "resume" accordingly and sends the explicit command PAUSE or RESUME (a no-op if the state has changed meanwhile).
  *
  * Guest songs are still confirmed by the client via POST /dj/dashboard/play once the video
  * actually reaches PLAYING. Background tracks need no confirmation and no error report: a track
@@ -68,6 +75,12 @@
     // The playlist the running background track came from (null: unknown, or not a background track), and the number
     // of the last lease report sent before that track was loaded: only a report sent after it says anything about it.
     let playingPlaylistId = null, trackLoadedAtLeaseSeq = 0;
+    // Whether the window that plays says its player makes sound (true) or is paused (false), from the lease answers;
+    // null = unknown. A window that does not play shows "pause" or "resume" by it (the window that plays looks at its own player).
+    let holderPlaying = null;
+    // The key of the track that plays ('G:<request id>' or 'B:<track id>', the same keys the server's list of recently
+    // played tracks uses), or null for a track the DJ picked by hand — "back" finds its place in that list by it.
+    let nowPlayingKey = null;
     // The version of the "up next" list this window last saw (from the list itself or from a lease answer): when the
     // server reports another one, the list was changed elsewhere and is fetched again. null = not seen yet.
     let lastQueueVersion = null;
@@ -155,10 +168,23 @@
             || playerState === YT.PlayerState.CUED;
     }
 
+    /** The player is making sound: playing, or buffering on its way to it. */
+    function isPlaying() {
+        return typeof YT !== 'undefined'
+            && (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.BUFFERING);
+    }
+
     // ---- Event Handlers ----
 
     function onPlayerStateChange(event) {
         playerState = event.data;
+        updatePauseButton();
+        // Say at once that the music started or stopped, instead of at the next 3 s report: a window that does not
+        // play shows "pause" / "resume" by it, and would otherwise be up to two report intervals behind.
+        if (isPlayerDevice === true
+                && (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED)) {
+            reportLease('CLAIM');
+        }
 
         if (event.data === YT.PlayerState.PLAYING) {
             isLoadingSong = false;
@@ -197,6 +223,7 @@
         isBackgroundTrack = track.source === 'BACKGROUND';
         currentlyPlayingSongId = track.source === 'GUEST' ? track.id : null;
         playingPlaylistId = isBackgroundTrack ? (track.playlistId || null) : null;
+        nowPlayingKey = (track.source === 'GUEST' ? 'G:' : 'B:') + track.id;
         trackLoadedAtLeaseSeq = leaseRequestSeq;
         player.loadVideoById(track.videoId);
         // The server has just taken a background track off the queue — let the dashboard show what comes next.
@@ -292,6 +319,7 @@
         isPlayerDevice = holder;
         leaseFree = !holder && free;
         renderLeaseBanner();
+        updatePauseButton();
         if (holder && !wasPlayer) {
             tryAutoPlay();
         } else if (!holder && wasPlayer) {
@@ -317,7 +345,7 @@
     /**
      * Skips to whatever next-track hands out now — whatever the player is doing, and with Auto-Pilot off too: it is a
      * deliberate act of the DJ. Only the window that plays can do it; a window that does not sends the command to it
-     * (onNextClick). When there is nothing to play (204) the track that plays now carries on.
+     * (onControlClick). When there is nothing to play (204) the track that plays now carries on.
      */
     async function skipToNext() {
         if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
@@ -331,63 +359,192 @@
         }
     }
 
-    // A little longer than one lease report interval: the time the command needs to reach the window that plays.
-    const NEXT_PENDING_MS = 3500;
+    // ---- Back: like a normal player, along the server's timeline of what played ----
 
-    function setNextPending(pending) {
-        const button = document.getElementById('playerNextBtn');
+    // A track that has played for more than this many seconds starts again first. (The button's tooltip in the message
+    // bundles says "3 seconds".)
+    const RESTART_AFTER_SECONDS = 3;
+
+    /** The tracks that played most recently and can be played again, newest first — null when the server could not say. */
+    async function fetchRecentTracks() {
+        if (!partyCodeValue) return null;
+        try {
+            const response = await fetch('/dj/dashboard/recent-tracks?partyCode=' + encodeURIComponent(partyCodeValue));
+            if (!response.ok || response.redirected) return null;
+            return await response.json();
+        } catch (e) {
+            console.error('[YT] fetchRecentTracks error:', e);
+            return null;
+        }
+    }
+
+    /** True while the player is on a track that has been running for a while (playing, paused or buffering). */
+    function hasPlayedForAWhile() {
+        const running = playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.PAUSED
+            || playerState === YT.PlayerState.BUFFERING;
+        return running && typeof player.getCurrentTime === 'function' && player.getCurrentTime() > RESTART_AFTER_SECONDS;
+    }
+
+    /** Plays a track that has played before: nothing to confirm, not a background track, Auto-Pilot carries on when it ends. */
+    function replayTrack(track) {
+        isLoadingSong = true;
+        isBackgroundTrack = false;
+        currentlyPlayingSongId = null;
+        playingPlaylistId = null;
+        nowPlayingKey = track.key;
+        trackLoadedAtLeaseSeq = leaseRequestSeq;
+        player.loadVideoById(track.videoId);
+    }
+
+    /**
+     * Back, like a normal player: a track that has played for more than a few seconds starts again; otherwise the
+     * track that played before it comes back — and, pressed again, the one before that. The list is the server's
+     * timeline of what played (guest songs and background tracks), so it is the same whichever window played them; the
+     * track that plays now is found in it by its key, and one the DJ picked by hand is not in it — then the newest entry
+     * is the one to go back to. When nothing plays (the track ended), the track that ended is the one that comes back.
+     * A track that comes back is not marked as played again, and when it ends Auto-Pilot carries on with the queue (as
+     * after ⏭): back is a step into the past, not a new queue. With nothing older to go back to the track starts again.
+     */
+    async function skipToPrevious() {
+        if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
+        if (hasPlayedForAWhile()) {
+            player.seekTo(0, true);
+            return;
+        }
+        tryAutoPlayInFlight = true;
+        try {
+            const recent = await fetchRecentTracks();
+            if (!recent || isPlayerDevice !== true) return; // the server could not say, or the lease moved while we asked
+            const position = nowPlayingKey ? recent.findIndex(function (t) { return t.key === nowPlayingKey; }) : -1;
+            const target = recent[isPlayerIdle() && position >= 0 ? position : position + 1];
+            if (target) replayTrack(target);
+            else player.seekTo(0, true);
+        } finally {
+            tryAutoPlayInFlight = false;
+        }
+    }
+
+    // A little longer than one lease report interval: the time a command needs to reach the window that plays.
+    const COMMAND_PENDING_MS = 3500;
+
+    function setCommandPending(button, pending) {
         if (!button) return;
         button.disabled = pending;
         const label = button.querySelector('[data-role="label"]');
         if (label) label.textContent = pending ? button.dataset.textSent : button.dataset.textLabel;
+        if (!pending && button.id === 'playerPauseBtn') updatePauseButton(); // its label follows the player, not a fixed text
+    }
+
+    // ---- Pause / resume, from any window ----
+
+    /** Pauses the music here (nothing to do when it is paused already). A pause is the DJ's choice: Auto-Pilot leaves a paused player alone. */
+    function pauseHere() {
+        if (player && playerReady && typeof player.pauseVideo === 'function') player.pauseVideo();
+    }
+
+    /** Carries on after a pause. (A browser may refuse to start sound in a window nobody has touched — then it stays paused.) */
+    function resumeHere() {
+        if (player && playerReady && typeof player.playVideo === 'function') player.playVideo();
     }
 
     /**
-     * The ⏭ button. In the window that plays it acts at once; in another window it sends the command to the one
-     * that plays (it carries it out with its next report, so within a few seconds) and stays disabled meanwhile — a
-     * second press would not skip twice, only one command waits.
+     * What a press of the pause button would do: pause while the music plays, resume while it is paused. In the window
+     * that plays that is its own player; in another window it is what the window that plays last reported (unknown →
+     * "pause", the usual case). Explicit commands rather than a toggle: a stale button cannot invert the state.
      */
-    async function onNextClick() {
+    function pauseButtonShowsPause() {
+        const playing = isPlayerDevice === true ? isPlaying() : holderPlaying;
+        return playing !== false;
+    }
+
+    // After a remote pause or resume the button keeps saying "Sent…" until the window that plays reports that its player
+    // has changed — or a while has passed — instead of showing the old label again for a moment.
+    const PAUSE_PENDING_MAX_MS = 9000;
+    let pausePendingTarget = null, pausePendingTimer = null;
+
+    function finishPausePending() {
+        clearTimeout(pausePendingTimer);
+        pausePendingTimer = null;
+        pausePendingTarget = null;
+        setCommandPending(document.getElementById('playerPauseBtn'), false);
+    }
+
+    function updatePauseButton() {
+        const button = document.getElementById('playerPauseBtn');
+        if (!button) return;
+        if (pausePendingTarget !== null && holderPlaying === pausePendingTarget) {
+            finishPausePending(); // the player did what was asked; this call comes back through setCommandPending
+            return;
+        }
+        button.dataset.textLabel = pauseButtonShowsPause() ? button.dataset.textPause : button.dataset.textResume;
+        if (button.disabled) return; // "Sent…" is showing; the label comes back when that is over
+        const label = button.querySelector('[data-role="label"]');
+        if (label) label.textContent = button.dataset.textLabel;
+    }
+
+    /**
+     * The ⏮, ⏯ and ⏭ buttons. In the window that plays a button acts at once; in another window it sends the command
+     * to the one that plays (it carries it out with its next report, so within a few seconds) and stays disabled
+     * meanwhile — a second press would not act twice: only one command waits, the last one pressed.
+     */
+    async function onControlClick(command, button) {
         if (isPlayerDevice === true) {
-            skipToNext();
+            if (command === 'NEXT') skipToNext();
+            else if (command === 'PREVIOUS') skipToPrevious();
+            else if (command === 'PAUSE') pauseHere();
+            else resumeHere();
             return;
         }
         if (isPlayerDevice !== false || !partyCodeValue) return; // the server has not said who plays yet
-        setNextPending(true);
+        setCommandPending(button, true);
         try {
             const response = await fetch('/dj/dashboard/player-command', {
                 method: 'POST',
                 headers: { [csrf.header]: csrf.token },
-                body: new URLSearchParams({ partyCode: partyCodeValue, command: 'NEXT' })
+                body: new URLSearchParams({ partyCode: partyCodeValue, command: command })
             });
             if (response.status === 409) { // nobody plays: the banner says so and offers to play here
                 applyLease(false, true);
-                setNextPending(false);
+                setCommandPending(button, false);
                 return;
             }
             if (!response.ok || response.redirected) {
-                setNextPending(false);
+                setCommandPending(button, false);
                 return;
             }
-            setTimeout(function () { setNextPending(false); }, NEXT_PENDING_MS);
+            if (command === 'PAUSE' || command === 'RESUME') {
+                pausePendingTarget = command === 'RESUME';   // the state the player should end up in: playing after RESUME
+                pausePendingTimer = setTimeout(finishPausePending, PAUSE_PENDING_MAX_MS);
+            } else {
+                setTimeout(function () { setCommandPending(button, false); }, COMMAND_PENDING_MS);
+            }
         } catch (e) {
             console.error('[YT] player-command error:', e);
-            setNextPending(false);
+            setCommandPending(button, false);
         }
     }
 
+    const previousButton = document.getElementById('playerPreviousBtn');
+    if (previousButton) previousButton.addEventListener('click', function () { onControlClick('PREVIOUS', previousButton); });
+    const pauseButton = document.getElementById('playerPauseBtn');
+    if (pauseButton) pauseButton.addEventListener('click', function () {
+        onControlClick(pauseButtonShowsPause() ? 'PAUSE' : 'RESUME', pauseButton);
+    });
     const nextButton = document.getElementById('playerNextBtn');
-    if (nextButton) nextButton.addEventListener('click', onNextClick);
+    if (nextButton) nextButton.addEventListener('click', function () { onControlClick('NEXT', nextButton); });
 
     /** @param {'CLAIM'|'WATCH'|'TAKE_OVER'} mode see PlayerLeaseMode on the server */
     async function reportLease(mode) {
         if (!partyCodeValue) return;
         const seq = ++leaseRequestSeq;
         try {
+            const params = { partyCode: partyCodeValue, deviceId: deviceId, mode: mode };
+            // Whether this window's player makes sound — only the window that plays is believed, so a watcher says nothing.
+            if (mode !== 'WATCH') params.playing = String(isPlaying());
             const response = await fetch('/dj/dashboard/player-lease', {
                 method: 'POST',
                 headers: { [csrf.header]: csrf.token },
-                body: new URLSearchParams({ partyCode: partyCodeValue, deviceId: deviceId, mode: mode })
+                body: new URLSearchParams(params)
             });
             // A hiccup (server error, login redirect) keeps the current role: it must neither silence the
             // window that plays nor make another one start.
@@ -398,8 +555,15 @@
             applyLease(lease.holder === true, lease.free === true);
             if (lease.holder === true) dropStaleBackgroundTrack(lease.fallbackPlaylistId || null, seq);
             if (lease.queueVersion) noteQueueVersion(lease.queueVersion);
+            holderPlaying = typeof lease.playing === 'boolean' ? lease.playing : null;
+            updatePauseButton();
             // A command the DJ gave from another window (the phone as a remote control), handed out once.
-            if (lease.holder === true && lease.command === 'NEXT') skipToNext();
+            if (lease.holder === true) {
+                if (lease.command === 'NEXT') skipToNext();
+                else if (lease.command === 'PREVIOUS') skipToPrevious();
+                else if (lease.command === 'PAUSE') pauseHere();
+                else if (lease.command === 'RESUME') resumeHere();
+            }
         } catch (e) {
             console.error('[YT] reportLease error:', e);
         }
@@ -452,6 +616,7 @@
         // Picked by hand: nothing to confirm, not a background track. Auto-Pilot carries on when it ends.
         currentlyPlayingSongId = null;
         isBackgroundTrack = false;
+        nowPlayingKey = null;
         isLoadingSong = true;
         player.loadVideoById(videoId);
         return true;

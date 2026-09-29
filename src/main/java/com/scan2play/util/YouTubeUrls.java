@@ -1,5 +1,6 @@
 package com.scan2play.util;
 
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,6 +22,23 @@ public final class YouTubeUrls {
     private static final Pattern VIDEO_ID_SHORT_PATTERN = Pattern.compile("youtu\\.be/([A-Za-z0-9_-]{11})");
 
     private YouTubeUrls() {
+    }
+
+    /**
+     * The video ID of a track URL the app has stored: a watch URL ({@code ?v=xxxxxxxxxxx}) or a short one
+     * ({@code youtu.be/xxxxxxxxxxx}). Empty for anything else — notably a YouTube <em>search</em> URL, which the app
+     * stores when the Data API could not resolve a song, and which cannot be played by the embedded player.
+     */
+    public static Optional<String> extractVideoId(String trackUrl) {
+        if (trackUrl == null) {
+            return Optional.empty();
+        }
+        Matcher watch = VIDEO_ID_V_PATTERN.matcher(trackUrl);
+        if (watch.find()) {
+            return Optional.of(watch.group(1));
+        }
+        Matcher shortUrl = VIDEO_ID_SHORT_PATTERN.matcher(trackUrl);
+        return shortUrl.find() ? Optional.of(shortUrl.group(1)) : Optional.empty();
     }
 
     /**

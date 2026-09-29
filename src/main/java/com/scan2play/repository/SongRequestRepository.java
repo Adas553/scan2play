@@ -1,6 +1,7 @@
 package com.scan2play.repository;
 
 import com.scan2play.entity.SongRequestEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,14 +34,31 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
 
     /**
      * Finds song requests for a specific party filtered by one or more statuses, most recent first, dynamically
-     * paginated — the DJ history ({@code DjService.getHistory}) and the recent requests the AI looks at.
+     * paginated — the recent requests the AI looks at when it checks for duplicates.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include.
      * @param pageable  Pagination/limit constraints.
      * @return A list of matching song requests.
      */
-    List<SongRequestEntity> findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions, org.springframework.data.domain.Pageable pageable);
+    List<SongRequestEntity> findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions, Pageable pageable);
+
+    /**
+     * The party's played and/or rejected requests, the most recent event first — for the DJ history
+     * ({@code PlayHistoryService}). The moment of an event is when the request was played, or, for a rejected one or one
+     * that was played before V6 (no {@code played_at}), when it was requested. The read is bounded by the pageable and
+     * limited to one party and the given decisions; sorting the party's rows on the expression is cheap next to that.
+     *
+     * @param partyCode The unique code of the party.
+     * @param decisions The decisions to include (played, rejected).
+     * @param pageable  How many to read.
+     * @return The most recent requests, newest event first.
+     */
+    @Query("SELECT s FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN :decisions "
+            + "ORDER BY COALESCE(s.playedAt, s.requestedAt) DESC, s.id DESC")
+    List<SongRequestEntity> findHistory(@Param("partyCode") String partyCode,
+                                        @Param("decisions") Collection<String> decisions,
+                                        Pageable pageable);
 
     /**
      * Computes a lightweight fingerprint of the queue state (count + maxId).

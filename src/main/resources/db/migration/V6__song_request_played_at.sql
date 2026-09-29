@@ -1,0 +1,12 @@
+-- V6 — the moment a guest song was played.
+--
+-- Until now a request only had requested_at, so the DJ history could only be ordered by when guests asked for a
+-- song, not by when it played, and it could not be put next to the background tracks (fallback_track.played_at).
+-- Phase 4, stage 2 (PROJECT_CONTEXT.md Section 14): the history becomes one timeline of what played, and the DJ's
+-- "previous track" button walks back along it.
+--
+-- played_at is set when a request becomes 'played' (the YouTube player confirms it, the DJ presses "Mark Played",
+-- a song is pushed to Spotify). It is NULL for requests that have not played yet, for rejected ones, and for rows
+-- that were played before this migration — the history orders those by requested_at (COALESCE), which is the best
+-- that is known. Nothing is back-filled: a guessed time would look like a fact.
+ALTER TABLE public.song_requests ADD COLUMN played_at timestamp(6) without time zone;

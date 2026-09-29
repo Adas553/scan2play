@@ -58,19 +58,19 @@ class PlayerLeaseServiceTest {
     }
 
     private static PlayerLeaseService.Status holder() {
-        return new PlayerLeaseService.Status(true, false, null);
+        return new PlayerLeaseService.Status(true, false, null, null);
     }
 
     private static PlayerLeaseService.Status holderWith(PlayerCommand command) {
-        return new PlayerLeaseService.Status(true, false, command);
+        return new PlayerLeaseService.Status(true, false, command, null);
     }
 
     private static PlayerLeaseService.Status notHolder() {
-        return new PlayerLeaseService.Status(false, false, null);
+        return new PlayerLeaseService.Status(false, false, null, null);
     }
 
     private static PlayerLeaseService.Status noneHolds() {
-        return new PlayerLeaseService.Status(false, true, null);
+        return new PlayerLeaseService.Status(false, true, null, null);
     }
 
     // ---- commands: the phone as a remote control of the window that plays ----
@@ -149,6 +149,95 @@ class PlayerLeaseServiceTest {
         service.sendCommand(PARTY, PlayerCommand.NEXT);
 
         assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.NEXT));
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holder());
+    }
+
+    // ---- pause / resume: the window that plays says whether its player makes sound, everybody hears it ----
+
+    @Test
+    @DisplayName("pause and resume are handed to the window that plays like the other commands, and the last press wins")
+    void shouldHandOverPauseAndResume() {
+        service.report(PARTY, COMPUTER, CLAIM);
+
+        service.sendCommand(PARTY, PlayerCommand.PAUSE);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM).command()).isEqualTo(PlayerCommand.PAUSE);
+
+        service.sendCommand(PARTY, PlayerCommand.PAUSE);
+        service.sendCommand(PARTY, PlayerCommand.RESUME);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM).command()).isEqualTo(PlayerCommand.RESUME);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM).command()).isNull();
+    }
+
+    @Test
+    @DisplayName("what the holder says about its player is told back to every window: making sound, then paused")
+    void shouldTellEveryWindowWhetherThePlayerMakesSound() {
+        service.report(PARTY, COMPUTER, CLAIM, true);
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isTrue();
+
+        service.report(PARTY, COMPUTER, CLAIM, false);
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isFalse();
+        assertThat(service.report(PARTY, COMPUTER, CLAIM, false).playing()).isFalse();
+    }
+
+    @Test
+    @DisplayName("a report that says nothing about the player leaves the last known state alone")
+    void shouldKeepTheLastStateWhenAReportSaysNothing() {
+        service.report(PARTY, COMPUTER, CLAIM, false);
+
+        service.report(PARTY, COMPUTER, CLAIM);   // the holder renews without saying
+
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isFalse();
+    }
+
+    @Test
+    @DisplayName("only the holder is believed: a window that does not hold the lease cannot change the state")
+    void shouldIgnoreWhatAWindowThatDoesNotPlaySaysAboutThePlayer() {
+        service.report(PARTY, COMPUTER, CLAIM, true);
+
+        assertThat(service.report(PARTY, PHONE, CLAIM, false)).isEqualTo(
+                new PlayerLeaseService.Status(false, false, null, true));   // refused, and it hears the truth
+
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isTrue();
+    }
+
+    @Test
+    @DisplayName("nothing is known while nobody plays, before the holder has said anything, and once the lease has gone")
+    void shouldKnowNothingWithoutAHolder() {
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isNull();
+
+        service.report(PARTY, COMPUTER, CLAIM);                            // holds the lease, has not said yet
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isNull();
+
+        service.report(PARTY, COMPUTER, CLAIM, true);
+        service.release(PARTY, COMPUTER);
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isNull();
+
+        service.report(PARTY, COMPUTER, CLAIM, true);
+        clock.advance(PlayerLeaseService.LEASE_TTL.plusSeconds(1));
+        assertThat(service.report(PARTY, PHONE, WATCH).playing()).isNull();
+    }
+
+    @Test
+    @DisplayName("a window that takes the lease over brings its own state, not the old holder's")
+    void shouldTakeTheStateOfTheNewHolder() {
+        service.report(PARTY, COMPUTER, CLAIM, true);
+
+        service.report(PARTY, PHONE, TAKE_OVER, false);
+
+        assertThat(service.report(PARTY, COMPUTER, WATCH).playing()).isFalse();
+    }
+
+    @Test
+    @DisplayName("back is handed over like next; when both are pressed in one interval the last one pressed wins")
+    void shouldHandOverThePreviousCommand_andLetTheLastPressWin() {
+        service.report(PARTY, COMPUTER, CLAIM);
+
+        service.sendCommand(PARTY, PlayerCommand.PREVIOUS);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.PREVIOUS));
+
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+        service.sendCommand(PARTY, PlayerCommand.PREVIOUS);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.PREVIOUS));
         assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holder());
     }
 

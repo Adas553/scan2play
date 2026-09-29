@@ -43,14 +43,17 @@ public class PlayerLeaseService {
     /** A window's id is a random string it makes up itself (a UUID in practice); nothing else is accepted. */
     private static final Pattern DEVICE_ID = Pattern.compile("[A-Za-z0-9_-]{8,64}");
 
-    private record Lease(String deviceId, Instant lastSeen) {
+    /** @param playing what the holder last said about its player: making sound ({@code true}) or paused ({@code false}); null = never said */
+    private record Lease(String deviceId, Instant lastSeen, Boolean playing) {
     }
 
     /**
-     * The outcome of a report: whether the reporting window plays, whether nobody holds the lease, and the command
-     * that was waiting for the window that plays (only ever set when {@code holder} is true).
+     * The outcome of a report: whether the reporting window plays, whether nobody holds the lease, the command that
+     * was waiting for the window that plays (only ever set when {@code holder} is true), and — for every window —
+     * whether the holder's player is making sound or is paused ({@code null} when nobody holds the lease or the holder
+     * has not said), so that a window that does not play can show "pause" or "resume".
      */
-    public record Status(boolean holder, boolean free, PlayerCommand command) {
+    public record Status(boolean holder, boolean free, PlayerCommand command, Boolean playing) {
     }
 
     private final ConcurrentHashMap<String, Lease> leases = new ConcurrentHashMap<>();
@@ -69,21 +72,29 @@ public class PlayerLeaseService {
         return deviceId != null && DEVICE_ID.matcher(deviceId).matches();
     }
 
+    /** A report that says nothing about the player: what a window that only watches sends. */
+    public Status report(String partyCode, String deviceId, PlayerLeaseMode mode) {
+        return report(partyCode, deviceId, mode, null);
+    }
+
     /**
      * A window reports in. See {@link PlayerLeaseMode} for what each mode may do; a window that already holds the
-     * lease always keeps it. The window that holds it also collects the command waiting for it, if any.
+     * lease always keeps it. The window that holds it also collects the command waiting for it, if any, and tells
+     * whether its player makes sound; the report of a window that does not hold the lease never changes that.
+     *
+     * @param playing whether the reporting window's player is making sound ({@code null}: it says nothing)
      */
-    public Status report(String partyCode, String deviceId, PlayerLeaseMode mode) {
+    public Status report(String partyCode, String deviceId, PlayerLeaseMode mode, Boolean playing) {
         Instant now = clock.instant();
         Lease result = leases.compute(partyCode, (code, current) -> {
             boolean live = isLive(current, now);
             if (live && current.deviceId().equals(deviceId)) {
-                return new Lease(deviceId, now);
+                return new Lease(deviceId, now, playing != null ? playing : current.playing());
             }
             if (mode == PlayerLeaseMode.TAKE_OVER || (!live && mode == PlayerLeaseMode.CLAIM)) {
                 log.info("Party {}: player lease {} by window {}", partyCode, live ? "taken over" : "claimed", deviceId);
                 commands.remove(code); // meant for the window that played before
-                return new Lease(deviceId, now);
+                return new Lease(deviceId, now, playing);
             }
             return live ? current : null;
         });
@@ -92,7 +103,8 @@ public class PlayerLeaseService {
             commands.keySet().removeIf(code -> !isLive(leases.get(code), now));
         }
         boolean holder = result != null && result.deviceId().equals(deviceId);
-        return new Status(holder, result == null, holder ? commands.remove(partyCode) : null);
+        return new Status(holder, result == null, holder ? commands.remove(partyCode) : null,
+                result != null ? result.playing() : null);
     }
 
     /**

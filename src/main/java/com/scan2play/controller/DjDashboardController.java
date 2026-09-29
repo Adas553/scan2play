@@ -6,6 +6,7 @@ import com.scan2play.model.NextTrackResponse;
 import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.util.YouTubeUrls;
@@ -55,6 +56,7 @@ public class DjDashboardController {
     private final DjSessionHelper sessionHelper;
     private final NextTrackService nextTrackService;
     private final PlayerLeaseService playerLeaseService;
+    private final PlayHistoryService playHistoryService;
 
     /** The history shows this many requests at first, and this many more each time the DJ asks for more. */
     static final int HISTORY_PAGE_SIZE = 50;
@@ -149,18 +151,21 @@ public class DjDashboardController {
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
         addHistory(model, partyCode, limit);
+        // The fragment lands under the dashboard's other panels: it gets a heading of its own (the standalone page has one)
+        model.addAttribute(HISTORY_HEADING, true);
         return "history :: historyTableContent";
     }
 
     /**
-     * Puts the last {@code limit} requests of the history in the model — at least one page, at most
-     * {@value #HISTORY_MAX_LIMIT} (the query is always bounded) — and what the "Show more" button needs: whether
-     * there are older ones to show and the limit to ask for next.
+     * Puts the last {@code limit} entries of the history in the model — songs of guests that played or were rejected
+     * and tracks of the background playlist, on one timeline — at least one page, at most {@value #HISTORY_MAX_LIMIT}
+     * (the queries are always bounded) — and what the "Show more" button needs: whether there are older ones to show
+     * and the limit to ask for next.
      */
     private void addHistory(Model model, String partyCode, int requestedLimit) {
         int limit = Math.max(HISTORY_PAGE_SIZE, Math.min(requestedLimit, HISTORY_MAX_LIMIT));
-        DjService.HistoryPage page = djService.getHistory(partyCode, limit);
-        model.addAttribute(HISTORY, page.rows());
+        PlayHistoryService.Page page = playHistoryService.getHistory(partyCode, limit);
+        model.addAttribute(HISTORY, page.entries());
         model.addAttribute(HISTORY_HAS_MORE, page.hasMore() && limit < HISTORY_MAX_LIMIT);
         model.addAttribute(HISTORY_NEXT_LIMIT, Math.min(limit + HISTORY_PAGE_SIZE, HISTORY_MAX_LIMIT));
     }

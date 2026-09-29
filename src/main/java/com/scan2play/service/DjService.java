@@ -5,20 +5,17 @@ import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.YouTubeUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Service responsible for song queue management and direct song actions.
@@ -47,15 +44,6 @@ public class DjService {
 
     /** Default comment attached to manually added DJ picks. */
     private static final String DJ_PICK_COMMENT = "DJ's Choice 🎧";
-
-    /**
-     * Extracts a YouTube video ID from a watch URL (e.g. {@code ?v=xxxxx}).
-     * Mirrors {@code DjDashboardController.VIDEO_ID_V_PATTERN} — a song's trackUrl can also
-     * be a YouTube *search-results* URL (no {@code v=} param) when the Data API had no key
-     * or failed to resolve it (see PROJECT_CONTEXT.md Section 7.3); those are unplayable by
-     * Auto-Pilot and must be skipped, same as the client used to do.
-     */
-    private static final Pattern VIDEO_ID_PATTERN = Pattern.compile("[?&]v=([A-Za-z0-9_-]{11})");
 
     private final SongRequestRepository songRequestRepository;
     private final PartySettingsQueryService partySettingsQueryService;
@@ -93,31 +81,6 @@ public class DjService {
     }
 
     /**
-     * A page of the history: the most recent requests, and whether older ones exist.
-     *
-     * @param rows    at most the requested number of played or rejected requests, newest request first
-     * @param hasMore {@code true} when there are older ones than the last of {@code rows}
-     */
-    public record HistoryPage(List<SongRequestEntity> rows, boolean hasMore) {
-    }
-
-    /**
-     * Returns historical songs (PLAYED and REJECTED), the most recent request first. The query is bounded by
-     * {@code limit} — the caller decides how far back the DJ may look (see {@code DjDashboardController}).
-     * One row more than asked for is read, to tell whether there is anything older.
-     *
-     * @param partyCode The unique code of the party.
-     * @param limit     How many requests to return at most; at least 1.
-     * @return The most recent played or rejected song requests, and whether older ones exist.
-     */
-    public HistoryPage getHistory(String partyCode, int limit) {
-        List<SongRequestEntity> rows = songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
-                partyCode, Arrays.asList(DECISION_PLAYED, DECISION_REJECTED), PageRequest.of(0, limit + 1));
-        boolean hasMore = rows.size() > limit;
-        return new HistoryPage(hasMore ? rows.subList(0, limit) : rows, hasMore);
-    }
-
-    /**
      * Returns the public queue for guest view (top 5 accepted songs).
      *
      * @param partyCode The unique code of the party.
@@ -150,21 +113,26 @@ public class DjService {
     public Optional<NextGuestTrackResponse> findNextPlayableGuestTrack(String partyCode, Set<Long> excludeIds) {
         return getDashboardQueue(partyCode).stream()
                 .filter(song -> !excludeIds.contains(song.getId()))
-                .flatMap(song -> extractVideoId(song.getTrackUrl())
+                // A song's trackUrl can also be a YouTube *search-results* URL (no video ID) when the Data API had no
+                // key or failed to resolve it (PROJECT_CONTEXT.md Section 7.3): the player cannot play those, skip them.
+                .flatMap(song -> YouTubeUrls.extractVideoId(song.getTrackUrl())
                         .map(videoId -> new NextGuestTrackResponse(song.getId(), videoId))
                         .stream())
                 .findFirst();
     }
 
-    private static Optional<String> extractVideoId(String trackUrl) {
-        if (trackUrl == null) {
-            return Optional.empty();
-        }
-        Matcher matcher = VIDEO_ID_PATTERN.matcher(trackUrl);
-        return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
-    }
-
     // ---- Song Actions ----
+
+    /**
+     * The one place a request becomes "played": the decision, and the moment it happened (kept when it is already
+     * set, so a second confirmation does not move a song in the history).
+     */
+    static void markPlayed(SongRequestEntity song, LocalDateTime now) {
+        song.setDecision(DECISION_PLAYED);
+        if (song.getPlayedAt() == null) {
+            song.setPlayedAt(now);
+        }
+    }
 
     /**
      * Marks a specific song request as "played" in the database.
@@ -181,7 +149,7 @@ public class DjService {
                         ownerPartyCode, id, song.getPartyCode());
                 return;
             }
-            song.setDecision(DECISION_PLAYED);
+            markPlayed(song, LocalDateTime.now());
             songRequestRepository.save(song);
             log.info("Marked song ID={} as PLAYED for party {}", id, song.getPartyCode());
         });
@@ -208,7 +176,7 @@ public class DjService {
 
             if (settings.getActiveProvider() == MusicProviderType.SPOTIFY && song.getTrackUrl() != null) {
                 queueService.addToQueue(partyCode, song.getTrackUrl(), MusicProviderType.SPOTIFY);
-                song.setDecision(DECISION_PLAYED);
+                markPlayed(song, LocalDateTime.now());
                 songRequestRepository.save(song);
                 log.info("Manually pushed song ID={} to Spotify queue and marked as PLAYED", id);
             } else {

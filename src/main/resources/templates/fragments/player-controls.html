@@ -3,12 +3,23 @@
 <body>
 
 <!--/*
-    The controls under the video of the YouTube Player card (dashboard.html). Handled by youtube-autopilot.js: in the
-    window that plays the button skips to the next track at once; in another window it sends the command to the
-    window that plays (the phone as a remote control) and stays disabled for a moment. The label and the "sent"
-    text travel in data attributes so that the script needs no message bundle of its own.
+    The controls under the video of the YouTube Player card (dashboard.html): ⏮ back, ⏯ pause / resume and ⏭ next.
+    Handled by youtube-autopilot.js: in the window that plays a button acts at once; in another window it sends the
+    command to the window that plays (the phone as a remote control) and stays disabled for a moment. The labels and
+    the "sent" text travel in data attributes so that the script needs no message bundle of its own. The pause button
+    changes its label with the state of the music ("Pause" while it plays, "Resume" while it is paused).
 */-->
-<div th:fragment="next" class="mt-2">
+<div th:fragment="controls" class="mt-2 d-flex flex-wrap gap-2">
+    <button type="button" id="playerPreviousBtn" class="btn btn-sm btn-outline-light"
+            th:title="#{dashboard.player.previous.title}"
+            th:attr="data-text-label=#{dashboard.player.previous},data-text-sent=#{dashboard.player.next.sent}">
+        <span data-role="label" th:text="#{dashboard.player.previous}">⏮ Previous</span>
+    </button>
+    <button type="button" id="playerPauseBtn" class="btn btn-sm btn-outline-light"
+            th:title="#{dashboard.player.pause.title}"
+            th:attr="data-text-label=#{dashboard.player.pause},data-text-pause=#{dashboard.player.pause},data-text-resume=#{dashboard.player.resume},data-text-sent=#{dashboard.player.next.sent}">
+        <span data-role="label" th:text="#{dashboard.player.pause}">⏸ Pause</span>
+    </button>
     <button type="button" id="playerNextBtn" class="btn btn-sm btn-outline-light"
             th:title="#{dashboard.player.next.title}"
             th:attr="data-text-label=#{dashboard.player.next},data-text-sent=#{dashboard.player.next.sent}">

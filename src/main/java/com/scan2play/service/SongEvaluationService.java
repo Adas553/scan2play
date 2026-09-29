@@ -245,7 +245,7 @@ public class SongEvaluationService {
                 })
                 .thenAccept(v -> transactionTemplate.executeWithoutResult(status ->
                         songRequestRepository.findById(savedRequest.getId()).ifPresent(song ->
-                                song.setDecision(DECISION_PLAYED)
+                                DjService.markPlayed(song, LocalDateTime.now())
                         )
                 ));
     }

@@ -42,29 +42,50 @@ class PlayerControlsFragmentTest {
     }
 
     private static String render(Locale locale) {
-        return engine.process("fragments/player-controls", Set.of("next"), new Context(locale));
+        return engine.process("fragments/player-controls", Set.of("controls"), new Context(locale));
     }
 
     @Test
-    @DisplayName("the button has the id and the label element the script looks for, and its label and \"sent\" text in English")
-    void shouldRenderTheNextButton() {
+    @DisplayName("the three buttons have the id and the label element the script looks for, and their labels and the \"sent\" text in English")
+    void shouldRenderTheButtons() {
         String html = render(Locale.ENGLISH);
 
-        assertThat(html).contains("id=\"playerNextBtn\"", "data-role=\"label\"");
-        assertThat(html).contains("data-text-label=\"⏭ Next\"", "data-text-sent=\"Sent…\"");
-        assertThat(html).contains(">⏭ Next</span>");
-        assertThat(html).contains("title=\"Skip to the next track.");
+        assertThat(html).contains("id=\"playerNextBtn\"", "id=\"playerPreviousBtn\"", "id=\"playerPauseBtn\"");
+        assertThat(html.split("data-role=\"label\"", -1)).hasSize(4);       // one label element per button
+        assertThat(html).contains("data-text-label=\"⏭ Next\"", "data-text-label=\"⏮ Previous\"", "data-text-sent=\"Sent…\"");
+        assertThat(html).contains(">⏭ Next</span>", ">⏮ Previous</span>");
+        assertThat(html).contains("title=\"Skip to the next track.", "title=\"Back. A track that has played for more than 3 seconds");
         assertThat(html).doesNotContain("??", "<html", "<body");
     }
 
     @Test
-    @DisplayName("the button in Polish, with every message key resolved")
+    @DisplayName("the pause button carries both of its labels (pause while it plays, resume while it is paused), and starts as \"Pause\"")
+    void shouldCarryBothLabelsOfThePauseButton() {
+        String html = render(Locale.ENGLISH);
+
+        assertThat(html).contains("data-text-pause=\"⏸ Pause\"", "data-text-resume=\"▶ Resume\"", "data-text-label=\"⏸ Pause\"");
+        assertThat(html).contains(">⏸ Pause</span>");
+        assertThat(html).contains("title=\"Pause the music, or carry on after a pause.");
+    }
+
+    @Test
+    @DisplayName("back, pause, next — the order of a normal player")
+    void shouldKeepTheOrderOfANormalPlayer() {
+        String html = render(Locale.ENGLISH);
+
+        assertThat(html.indexOf("playerPreviousBtn")).isLessThan(html.indexOf("playerPauseBtn"));
+        assertThat(html.indexOf("playerPauseBtn")).isLessThan(html.indexOf("playerNextBtn"));
+    }
+
+    @Test
+    @DisplayName("the buttons in Polish, with every message key resolved")
     void shouldRenderInPolish() {
         String html = render(PL);
 
-        assertThat(html).contains("data-text-label=\"⏭ Dalej\"", "data-text-sent=\"Wysłano…\"");
-        assertThat(html).contains(">⏭ Dalej</span>");
-        assertThat(html).contains("title=\"Przejdź do następnego utworu.");
+        assertThat(html).contains("data-text-label=\"⏭ Dalej\"", "data-text-label=\"⏮ Wstecz\"", "data-text-sent=\"Wysłano…\"");
+        assertThat(html).contains(">⏭ Dalej</span>", ">⏮ Wstecz</span>", ">⏸ Pauza</span>");
+        assertThat(html).contains("data-text-pause=\"⏸ Pauza\"", "data-text-resume=\"▶ Wznów\"");
+        assertThat(html).contains("title=\"Przejdź do następnego utworu.", "title=\"Wstecz. Utwór, który gra dłużej niż 3 sekundy");
         assertThat(html).doesNotContain("??");
     }
 }
