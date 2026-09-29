@@ -27,7 +27,9 @@
  * of the "up next" list, so a window that did not change the list itself fetches it again when it changed elsewhere.
  * The ⏮ button goes back like a normal player: a track that has played for more than 3 s starts again, otherwise the
  * track that played before it comes back (GET /dj/dashboard/recent-tracks — the server's timeline of what played, so it
- * is the same whichever window played the tracks); pressed again, the one before that. It works from any window in the
+ * is the same whichever window played the tracks); pressed again, the one before that. A second press within 10 s of a
+ * restart that ⏮ caused goes back a track as well (from another window the presses are always more than 3 s apart, so
+ * without that the previous track could not be reached from there). It works from any window in the
  * same way as ⏭, and when a track that came back ends Auto-Pilot carries on with the queue.
  * The ⏯ button pauses and resumes the music, also from any window: the window that plays says in its lease reports
  * whether its player makes sound, the answers tell that to the others, and a window that does not play shows "pause" or
@@ -218,6 +220,15 @@
 
     // ---- Core Playback ----
 
+    // How many tracks have been loaded into the player. Every track goes in through loadIntoPlayer, so the number says
+    // which track is running: a note made about one track ("⏮ restarted it") stops being valid as soon as another loads.
+    let trackLoads = 0;
+
+    function loadIntoPlayer(videoId) {
+        trackLoads++;
+        player.loadVideoById(videoId);
+    }
+
     function playTrack(track) {
         isLoadingSong = true;
         isBackgroundTrack = track.source === 'BACKGROUND';
@@ -225,7 +236,7 @@
         playingPlaylistId = isBackgroundTrack ? (track.playlistId || null) : null;
         nowPlayingKey = (track.source === 'GUEST' ? 'G:' : 'B:') + track.id;
         trackLoadedAtLeaseSeq = leaseRequestSeq;
-        player.loadVideoById(track.videoId);
+        loadIntoPlayer(track.videoId);
         // The server has just taken a background track off the queue — let the dashboard show what comes next.
         if (isBackgroundTrack && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
     }
@@ -365,6 +376,15 @@
     // bundles says "3 seconds".)
     const RESTART_AFTER_SECONDS = 3;
 
+    // A second ⏮ within this long after a restart that ⏮ itself caused goes back a track instead of restarting the
+    // track again. Needed because a press from another window reaches the window that plays only with its next report
+    // (every 3 s, and the button is disabled for 3.5 s), so two presses are always more than RESTART_AFTER_SECONDS
+    // apart — without this the previous track could never be reached from the phone. (The tooltip says "10 seconds".)
+    const DOUBLE_PRESS_MS = 10000;
+
+    // The restart ⏮ caused last: the value of trackLoads then (so it counts only for that track) and the time.
+    let lastRestart = null;
+
     /** The tracks that played most recently and can be played again, newest first — null when the server could not say. */
     async function fetchRecentTracks() {
         if (!partyCodeValue) return null;
@@ -385,6 +405,11 @@
         return running && typeof player.getCurrentTime === 'function' && player.getCurrentTime() > RESTART_AFTER_SECONDS;
     }
 
+    /** True when the track that runs now was restarted by ⏮ a moment ago (less than DOUBLE_PRESS_MS): a second ⏮ then goes back a track. */
+    function restartedByBackJustNow() {
+        return lastRestart !== null && lastRestart.loads === trackLoads && Date.now() - lastRestart.at < DOUBLE_PRESS_MS;
+    }
+
     /** Plays a track that has played before: nothing to confirm, not a background track, Auto-Pilot carries on when it ends. */
     function replayTrack(track) {
         isLoadingSong = true;
@@ -393,12 +418,15 @@
         playingPlaylistId = null;
         nowPlayingKey = track.key;
         trackLoadedAtLeaseSeq = leaseRequestSeq;
-        player.loadVideoById(track.videoId);
+        loadIntoPlayer(track.videoId);
     }
 
     /**
      * Back, like a normal player: a track that has played for more than a few seconds starts again; otherwise the
-     * track that played before it comes back — and, pressed again, the one before that. The list is the server's
+     * track that played before it comes back — and, pressed again, the one before that. A second press soon after a
+     * restart that ⏮ caused (DOUBLE_PRESS_MS) counts as "otherwise": it goes back a track at once, however long the
+     * restarted track has played by then (from another window the presses are always more than a few seconds apart).
+     * The list is the server's
      * timeline of what played (guest songs and background tracks), so it is the same whichever window played them; the
      * track that plays now is found in it by its key, and one the DJ picked by hand is not in it — then the newest entry
      * is the one to go back to. When nothing plays (the track ended), the track that ended is the one that comes back.
@@ -407,7 +435,8 @@
      */
     async function skipToPrevious() {
         if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
-        if (hasPlayedForAWhile()) {
+        if (hasPlayedForAWhile() && !restartedByBackJustNow()) {
+            lastRestart = { loads: trackLoads, at: Date.now() };
             player.seekTo(0, true);
             return;
         }
@@ -618,7 +647,7 @@
         isBackgroundTrack = false;
         nowPlayingKey = null;
         isLoadingSong = true;
-        player.loadVideoById(videoId);
+        loadIntoPlayer(videoId);
         return true;
     };
 

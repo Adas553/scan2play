@@ -78,6 +78,24 @@ body {
     border-radius: 8px 8px 0 0;
 }
 
+/* --- DJ tab bar: stays at the top of the screen while the page scrolls, so that from anywhere on a long page the DJ can
+       jump to the top of the page, the queue or the history. Opaque (the page must not show through) and above the sticky
+       headers of the lists (z-index 2). dashboard.js (initTabs) lights the tab of the part of the page in view. --- */
+.dj-tabbar {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background: var(--s2p-bg-card);
+}
+.dj-tabbar .nav-link { white-space: nowrap; }
+/* Three tabs in a row on a narrow phone. */
+@media (max-width: 400px) {
+    .dj-tabbar .nav-link { padding-left: 0.6rem; padding-right: 0.6rem; }
+}
+/* A jump to an anchor (the "Queue" link of another page) must not leave the top of the target under the bar. */
+#queue-content,
+#history-content { scroll-margin-top: 4rem; }
+
 /* --- Table border --- */
 .table { border-color: var(--s2p-border); }
 

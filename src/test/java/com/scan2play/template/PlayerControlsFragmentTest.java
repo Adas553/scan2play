@@ -59,6 +59,13 @@ class PlayerControlsFragmentTest {
     }
 
     @Test
+    @DisplayName("the tooltip of Back says that a second press within 10 seconds goes to the previous track (RESTART_AFTER_SECONDS and DOUBLE_PRESS_MS in youtube-autopilot.js)")
+    void shouldExplainTheDoublePressInTheTooltipOfBack() {
+        assertThat(render(Locale.ENGLISH)).contains("a second press within 10 seconds goes to the track that played before it");
+        assertThat(render(PL)).contains("drugie naciśnięcie w ciągu 10 sekund przechodzi do utworu, który leciał przed nim");
+    }
+
+    @Test
     @DisplayName("the pause button carries both of its labels (pause while it plays, resume while it is paused), and starts as \"Pause\"")
     void shouldCarryBothLabelsOfThePauseButton() {
         String html = render(Locale.ENGLISH);

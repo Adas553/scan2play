@@ -162,36 +162,79 @@ function submitAutoPilotToggle(checkbox) {
 }
 
 // ==========================================================================
-// AJAX TAB SWITCHING (YouTube only)
+// TABS — Panel / Queue / History, in a bar that stays in view (fragment dj-nav, .dj-tabbar)
 //
-// Loads History tab content via AJAX into #history-content,
-// toggling visibility with #queue-content.
-// YouTube player stays alive across tab switches.
-// When Spotify is the provider, normal page navigation is used.
+// Panel scrolls to the top of the page (the settings, the QR code, the player), Queue shows the queue and scrolls to it,
+// History shows the history and scrolls to it, so from anywhere on a long page the DJ can jump to any of them. The tab
+// that is lit follows the part of the page in view.
+// With YouTube the History tab loads its content via AJAX into #history-content and swaps it with #queue-content: the
+// player stays alive across tab switches. With Spotify, and on the standalone history page, History is a normal page
+// (and that page has neither list, so there this script does nothing: its tabs are plain links).
 // ==========================================================================
 
-(function initTabSwitching() {
-    if (!isYouTubeProvider()) return;
-
-    const historyLink = document.querySelector('a[href="/dj/history-view"]');
-    const queueLink   = document.querySelector('a[href="/dj/dashboard"]');
-    if (!historyLink || !queueLink) return;
-
+(function initTabs() {
+    const bar = document.getElementById('djTabBar');
+    const links = {
+        panel:   document.querySelector('[data-dj-tab="panel"]'),
+        queue:   document.querySelector('[data-dj-tab="queue"]'),
+        history: document.querySelector('[data-dj-tab="history"]')
+    };
     const queueContent   = document.getElementById('queue-content');
     const historyContent = document.getElementById('history-content');
-    let activeTab = 'queue';
+    if (!bar || !links.panel || !links.queue || !links.history || !queueContent || !historyContent) return;
+
+    const ajaxHistory = isYouTubeProvider();
+    let activeList = 'queue';   // the list that shows: 'queue' or 'history' (YouTube swaps them without leaving the page)
+    let lit = 'panel';          // the tab that is lit
+    // A smooth scroll started by a click passes other parts of the page on its way: they must not light their tabs meanwhile.
+    let litLockedUntil = 0;
+    const SMOOTH_SCROLL_MS = 900;
+
+    function setLit(name) {
+        lit = name;
+        Object.keys(links).forEach(function(key) {
+            links[key].classList.toggle('active', key === name);
+            if (key === name) links[key].setAttribute('aria-current', 'page');
+            else links[key].removeAttribute('aria-current');
+        });
+    }
+
+    /** The tab of the part of the page in view: Panel above the list; the list once it has come up to the upper half of the screen. */
+    function tabByPosition() {
+        if (window.scrollY < 2) return 'panel';
+        const list = activeList === 'history' ? historyContent : queueContent;
+        // At the very bottom the list wins even when a short page could not bring it up any higher
+        const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+        return atBottom || list.getBoundingClientRect().top < window.innerHeight * 0.5 ? activeList : 'panel';
+    }
+
+    function followScroll() {
+        if (Date.now() < litLockedUntil) return;
+        const name = tabByPosition();
+        if (name !== lit) setLit(name);
+    }
+    window.addEventListener('scroll', followScroll, { passive: true });
+    window.addEventListener('resize', followScroll);
+    // Where it exists: when a scroll has ended the lock is over (a long smooth scroll may outlast SMOOTH_SCROLL_MS) and the lit tab is checked once more
+    window.addEventListener('scrollend', function() { litLockedUntil = 0; followScroll(); });
+
+    function scrollToPosition(top) {
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        litLockedUntil = Date.now() + (reduced ? 0 : SMOOTH_SCROLL_MS);
+        // 'instant', not 'auto': Bootstrap sets scroll-behavior: smooth on the page, which 'auto' would inherit
+        window.scrollTo({ top: top, behavior: reduced ? 'instant' : 'smooth' });
+    }
 
     /**
-     * After a tab switch the new list is not where the DJ is looking: on a phone it sits below the settings, the QR code
-     * and the player, so nothing seems to happen unless the DJ scrolls all the way down. Bring the top of the new
-     * content into view — unless it already is (a wide screen shows it without any scrolling).
+     * After a click on a tab the part of the page it stands for may be far away — on a phone the lists sit below the
+     * settings, the QR code and the player — so bring the top of the list into view, just under the tab bar. Unless it
+     * already is in the upper part of the screen (a wide screen shows it without any scrolling).
      */
     function revealContent(element) {
         const top = element.getBoundingClientRect().top;
-        if (top >= 0 && top < window.innerHeight * 0.4) return;
-        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        // 'instant', not 'auto': Bootstrap sets scroll-behavior: smooth on the page, which 'auto' would inherit
-        window.scrollTo({ top: window.scrollY + top - 8, behavior: reduced ? 'instant' : 'smooth' });
+        const barHeight = bar.getBoundingClientRect().height;
+        if (top >= barHeight && top < window.innerHeight * 0.4) return;
+        scrollToPosition(window.scrollY + top - barHeight - 8);
     }
 
     /** The history fragment: the last page of requests, or — "Show more" — the last {@code limit} of them. */
@@ -211,9 +254,9 @@ function submitAutoPilotToggle(checkbox) {
     /**
      * "Show more" of the History tab: asks for a longer history and puts it in place, keeping what the DJ had set up —
      * the search text, the Played / Rejected filter and the scroll position. (The standalone history page has no
-     * such function; there the button reloads the page — see initListTools.)
+     * such function; there the button reloads the page — see initListTools. Nor has a Spotify party's dashboard.)
      */
-    window.reloadHistory = function(limit) {
+    function reloadHistory(limit) {
         const list = historyContent.querySelector('[data-list]');
         const searchInput = list && list.querySelector('[data-list-search]');
         const activeFilter = list && list.querySelector('[data-list-filter].active');
@@ -233,20 +276,46 @@ function submitAutoPilotToggle(checkbox) {
             const newBox = historyContent.querySelector('.list-scroll');
             if (newBox) newBox.scrollTop = scrollTop;
         }).catch(function(err) { console.error('[Tabs] History reload error:', err); });
-    };
+    }
+    if (ajaxHistory) window.reloadHistory = reloadHistory;
 
-    historyLink.addEventListener('click', function(e) {
+    // Panel: the top of the page. The list that shows stays as it is.
+    links.panel.addEventListener('click', function(e) {
         e.preventDefault();
-        if (activeTab === 'history') return;
+        setLit('panel');
+        scrollToPosition(0);
+    });
+
+    // Queue: the queue shows (and the history goes away, with YouTube) and the page scrolls to it.
+    links.queue.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (activeList === 'history') {
+            queueContent.style.display = '';
+            historyContent.style.display = 'none';
+            activeList = 'queue';
+        }
+        setLit('queue');
+        revealContent(queueContent);
+    });
+
+    // History: with YouTube the history is loaded into the page and shown in place of the queue, and the page scrolls to
+    // it (also when it shows already: the DJ may be looking at the player); otherwise the link is a normal one.
+    links.history.addEventListener('click', function(e) {
+        if (!ajaxHistory) return;
+        e.preventDefault();
+        if (activeList === 'history') {
+            setLit('history');
+            revealContent(historyContent);
+            return;
+        }
 
         fetchHistory()
         .then(function(html) {
             historyContent.innerHTML = html;
             queueContent.style.display = 'none';
             historyContent.style.display = '';
-            historyLink.classList.add('active');
-            queueLink.classList.remove('active');
-            activeTab = 'history';
+            activeList = 'history';
+            setLit('history');
             // Init sorting on dynamically loaded history table
             if (typeof window.initSortableHeaders === 'function') {
                 window.initSortableHeaders(historyContent);
@@ -254,17 +323,6 @@ function submitAutoPilotToggle(checkbox) {
             revealContent(historyContent);
         })
         .catch(function(err) { console.error('[Tabs] History load error:', err); });
-    });
-
-    queueLink.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (activeTab === 'queue') return;
-        queueContent.style.display = '';
-        historyContent.style.display = 'none';
-        queueLink.classList.add('active');
-        historyLink.classList.remove('active');
-        activeTab = 'queue';
-        revealContent(queueContent);
     });
 })();
 
