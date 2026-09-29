@@ -7,12 +7,19 @@ first session (2026-09-28, remote) is summarised at the bottom.
 
 - Phase 3 (the DJ sees and reorders the playlist queue — buttons **and drag and drop**) is finished, was tried by the owner
   on a real phone (Galaxy S25, Chrome; "everything worked", 2026-09-29) and is committed on `dev` as two local commits
-  (code, then docs) on top of `8b9c45c`. **Nothing is pushed yet** — four local commits are ahead of `origin/dev`
-  (Phase 2 stages 4–5 and Phase 3); push only when the owner says so.
+  (code `fc7252d`, docs `808bf4c`). Phase 4 stage 0 is committed on top as two more (below). **Nothing is pushed yet** —
+  six local commits are ahead of `origin/dev` (Phase 2 stages 4–5, Phase 3, Phase 4 stage 0); push only when the owner
+  says so.
 - The phone login problem is solved: see **"Trying the DJ dashboard on a phone"** below (the owner reaches the local app on
   `https://dev.scan2play.com.pl`, which is registered in the Google OAuth client).
-- The owner's next requests (2026-09-29), not built yet: previous/next buttons for the DJ, like a normal player, and a way
-  to make the active queue and the history readable when they hold many songs — see "Next".
+- The owner's next requests (2026-09-29): previous/next buttons for the DJ, like a normal player, and a way to make the
+  active queue and the history readable when they hold many songs. Agreed plan = Section 14, **Phase 4**, three stages.
+  **Stage 0 ("one window plays") is done and committed** (the owner tried it on the computer and the phone: "works well") —
+  see "Phase 4, stage 0" below. **Stages 1 and 2 are not started**; the owner has answered the open questions of stage 1
+  (2026-09-29): *Next* is a **remote control** — pressed in a window that does not play it makes the window that plays skip
+  (via the lease reports), not a takeover and not a hidden button; and the queue/history lists may have their own scroll
+  box on a phone. Ask the owner "shall I start stage 1?" before building it — it was not started because the last
+  message asked for a commit, not for stage 1.
 - Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
 
@@ -32,13 +39,19 @@ first session (2026-09-28, remote) is summarised at the bottom.
   `dashboard.js`, one line in `youtube-autopilot.js`, the PL/EN messages, tests, and `PROJECT_CONTEXT.md` (Sections 4.1,
   5.4, 6, 7.3, 10, 12, 13, 14). The owner's local `scan2play` database has been through the restart that applies `V5`
   (`manual_move`), and the owner tried the moves and the drag on it.
+- **Phase 4, stage 0 (one dashboard window plays) is committed** (two commits, code then docs, on top of Phase 3): new
+  `PlayerLeaseService`, `DjPlayerLeaseController`, `PlayerLeaseMode`, `PlayerLeaseResponse`,
+  `fragments/player-lease-banner.html`; changed `DjDashboardController` (`next-track` takes `deviceId`, answers 409),
+  `NextTrackResponse` / `NextTrackService` (a background track names its `playlistId`), `youtube-autopilot.js`,
+  `dashboard.html` (one `th:replace`), the PL/EN messages, tests, `PROJECT_CONTEXT.md` (Sections 5.4, 6, 13, 14) and
+  this file. No migration.
 - One stash, deliberately parked: *"Spotify playback redirect-uri as {baseUrl} template (parked: Spotify rejects
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: 232 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
+- Tests: 266 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
   run them without disturbing the app running from IntelliJ) — run on 2026-09-29 in a scratch copy of the working
-  tree with Phase 3 steps 1 and 2 (`BUILD SUCCESS`; it was 146 before). Nothing in `youtube-autopilot.js` / `dashboard.js`
+  tree with Phase 3 and Phase 4 stage 0 (`BUILD SUCCESS`; 232 before stage 0, 146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
   has automated tests; stage 4 was verified against the real YouTube player, Phase 3 against a real PostgreSQL and the
   real JS on stub endpoints (see below).
 
@@ -205,6 +218,47 @@ file with the Write tool and run it. Also see the `\u` gotcha above. The built-i
 when it is not visible (screenshots then time out): the drag tests replaced `requestAnimationFrame` with a timer; a real,
 visible page is fine. Synthetic touch events need the mobile viewport preset (it defines `Touch` / `TouchEvent`).
 
+## Phase 4, stage 0 — one dashboard window plays (done, committed)
+
+Why: the owner said they usually control from one device but may open the dashboard on a phone to peek. Reading the code
+showed that a second window is **not passive** — every window has its own player and asks `next-track` while Auto-Pilot is
+on, so a peeking phone would take a background track off the queue (consumed the moment it is handed out) that the main
+window never plays, and a guest song could play on the phone's speaker. Existing behaviour, not caused by Phase 3.
+Section 5.4 ("One window plays") has the full rules; the short version:
+
+- A per-party **lease** in memory (`PlayerLeaseService`, 10 s timeout, single instance like the caches). Windows report to
+  `POST /dj/dashboard/player-lease` every 3 s with a random id (`sessionStorage`) and a mode: `CLAIM` (renew, or take only when
+  free), `WATCH` (never take), `TAKE_OVER` (the DJ's button). The holder plays; the others show a banner "Odtwarzanie działa
+  na innym urządzeniu" with a "Odtwarzaj na tym urządzeniu" button (confirmation first when another window still plays).
+- The server enforces it: `next-track` (with `deviceId`) answers **409** to a window that does not hold a live lease.
+- **A playlist saved or cleared in a window that does not play** (found by the owner's question about the shuffle switch:
+  the shuffle switch, moves and drags are server-side and need nothing, but *Save* / *Stop* reach only the player of the window
+  where the DJ clicked, so the playing window would have finished the old playlist's track): the lease answer now carries
+  `fallbackPlaylistId`, and `next-track` carries the `playlistId` of every background track. The playing window stops a
+  background track whose playlist is no longer the current one (≤ 3 s) and asks for the next. A report sent before the
+  running track was loaded is ignored (`trackLoadedAtLeaseSeq`), otherwise a slow answer describing the old playlist would
+  stop the track just started for the new one.
+- Decided with the owner: *Next* will work with Auto-Pilot off (stage 1). Not asked, chosen by me: a window that was told
+  another one plays never re-claims by itself (only the button does), so closing the main tab does not make a phone start
+  playing; the ▶ links do nothing in such a window (they just open YouTube).
+
+**How it was verified:** 266 unit tests in a scratch copy (34 new: the service with a hand-moved clock, the controller, the 409,
+the playlist ids, the banner fragment rendered with the real PL/EN bundles). The **real `youtube-autopilot.js` in two browser tabs** against a
+throw-away stand-in server (Python, same rules and a CSRF check; a fake `YT.Player` that logs its calls; none of it is in the repo):
+first tab plays and asks once; the second is refused, silent, shows the Polish banner and its ▶ link falls through; takeover
+shows the exact Polish confirmation and moves playback, the old tab stops and shows the banner; a direct `next-track` from the
+refused tab (with and without its id) gets 409 and hands nothing out; leaving the page releases the lease (beacon with `_csrf`
+in the body) and the other tab shows "no device is playing" and takes over without a confirmation; a reload keeps the role; a
+14 s outage of the lease endpoint changes nothing; a 409 from `next-track` silences a window that thought it played; a
+playlist replaced or cleared "elsewhere" (the stand-in's state) stops the old track within one report, the next comes from
+the new playlist and is not stopped again; with the lease answers delayed by 2.5 s a report sent before a same-window save
+answers with the old playlist and is ignored. (The stand-in's `?playlist=` cannot be blank — Python's `parse_qs` drops blank
+values; it uses `NONE` for "cleared". A first attempt showed "no stop" for exactly that reason, not because of the script.)
+**Not done:** two real devices for the playlist part (the owner tried the lease itself on the computer and the phone), the real
+Spring Security filter chain (that `_csrf` in a `sendBeacon` body is accepted — Spring's default reads that parameter, but it
+was not run; if it were refused the 10 s timeout does the same job), out-of-order answers of two overlapping reports (guarded
+by a sequence number, not exercised).
+
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
 **How it works now (2026-09-29):** the owner opens the local app, on the phone and on the computer, through
@@ -230,15 +284,20 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-1. **Push** the four local commits when the owner says so (Phase 2 stages 4–5, Phase 3 code and docs). Phase 3 was
-   reviewed and tried on a real phone by the owner, and committed on their word ("możemy commitować").
-2. **The owner's new requests (2026-09-29), to be designed with them first:**
-   - *Previous / next for the DJ, like a normal player.* "Next" can reuse `POST /dj/dashboard/next-track` (it already
-     hands out a guest song first, else the head of the background queue); "previous" needs a history of what was played
-     (the `fallback_track` rows are marked `PLAYED` but carry no play time — check before promising it).
-   - *The "Aktywna kolejka" (`#song-list` in `dashboard.html`) and the history tab (`history.html`) become unreadable with many
-     songs* — the DJ has to scroll to the bottom. Ideas to discuss: a fixed-height list with its own scrollbar (as the
-     "up next" panel has), paging or "show more", a search/filter box, newest first, and keeping the current song pinned.
+1. **Push** the six local commits when the owner says so (Phase 2 stages 4–5, Phase 3, Phase 4 stage 0 — each as code
+   and docs). Phase 3 and stage 0 were tried on real devices by the owner and committed on their word.
+2. **Phase 4, stages 1 and 2 (Section 14)** — the owner's requests (2026-09-29); ask "shall I start stage 1?" first:
+   - *Stage 1:* ⏭ *Next* as a **remote control** (owner's decision): in the window that plays it acts at once; in a window
+     that does not play it sends a NEXT command that the playing window collects with its next lease report (≤ 3 s) and
+     carries out. Work with Auto-Pilot off too. Sketch: `PlayerLeaseService` keeps a pending command per party (set by any
+     window of that party, consumed by the holder's report, which returns it in the answer — e.g. a `command` field next to
+     `holder`/`free`/`fallbackPlaylistId`); the client runs `NEXT` as "stop what plays, ask `next-track`, load it" whatever
+     the player state; think about a command pressed while nobody holds the lease (drop it, or tell the DJ), and about two
+     presses in one interval (one skip or two? the DJ pressed twice). And the active queue (`#song-list` in `dashboard.html`)
+     and history (`history.html`) in a fixed-height list with its own scrollbar (fine on a phone, owner's answer), count,
+     search, history filter and "load more", compact rows on a phone.
+   - *Stage 2:* `V6` `song_requests.played_at`, history ordered by play time and merged with the background tracks (their
+     `fallback_track.played_at` and titles exist), then ⏮ *Previous* on top of that, through the same command channel.
 3. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
    saying how many guest songs wait ("Czeka 2 piosenki gości" — they play first; the owner asked about showing both lists
    together and agreed to keep the guest table separate), and a note in the panel when Auto-Pilot is off (nothing plays
