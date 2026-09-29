@@ -7,9 +7,10 @@ first session (2026-09-28, remote) is summarised at the bottom.
 
 - Phase 3 (the DJ sees and reorders the playlist queue — buttons **and drag and drop**) is finished, was tried by the owner
   on a real phone (Galaxy S25, Chrome; "everything worked", 2026-09-29) and is committed on `dev` as two local commits
-  (code `fc7252d`, docs `808bf4c`). Phase 4 stages 0 and 1 are committed on top, two commits each (below). **Nothing is
-  pushed yet** — eight local commits are ahead of `origin/dev` (Phase 2 stages 4–5, Phase 3, Phase 4 stages 0 and 1); push
-  only when the owner says so.
+  (code `fc7252d`, docs `808bf4c`). Phase 4 stages 0 and 1 are committed on top, two commits each (below). **All of it is
+  pushed to `origin/dev`** (2026-09-29, at the owner's request: Phase 2 stages 4–5, Phase 3, Phase 4 stages 0 and 1, each as
+  code and docs — `git status -sb` should show `dev...origin/dev` with nothing ahead). Local `main` has two commits that are
+  on neither `origin/main` nor `dev` — see "Open items for the owner", item 1.
 - The phone login problem is solved: see **"Trying the DJ dashboard on a phone"** below (the owner reaches the local app on
   `https://dev.scan2play.com.pl`, which is registered in the Google OAuth client).
 - The owner's next requests (2026-09-29): previous/next buttons for the DJ, like a normal player, and a way to make the
@@ -24,12 +25,13 @@ first session (2026-09-28, remote) is summarised at the bottom.
 ## Where things stand
 
 - Branch `dev`: `origin/dev` = `0519d78` (the 8 commits below plus one docs commit that added `CLAUDE.md` and this
-  file). **Phase 2, stages 4 and 5 and Phase 3 are committed on top of it as four local commits and NOT pushed yet** —
+  file). **Phase 2, stages 4 and 5, Phase 3 and Phase 4 stages 0 and 1 are committed on top of it as eight commits, and
+  pushed** —
   Phase 2: first the client code (`youtube-autopilot.js` rewritten, `dashboard.js`, `dashboard.html`), then the docs
   (`PROJECT_CONTEXT.md` with Section 5.4 rewritten and Sections 5.1/13/14 updated, `AGENTS.md`,
   `.github/copilot-instructions.md`, this file, and three stale comments in `DjPartySettingsController` /
-  `DjDashboardController` — comments only). Phase 3 (below): first the code and tests, then the docs.
-  `git status -sb` shows whether they have gone out. `main` is untouched (`5314006`).
+  `DjDashboardController` — comments only). Phase 3 and Phase 4 (below): first the code and tests, then the docs.
+  `origin/main` is untouched (`5314006`); local `main` is not (open items, item 1).
 - **Phase 3 (the DJ sees and reorders the playlist queue) is committed** (2026-09-29, after the owner tried it on a phone):
   migrations `V4` and `V5`, the fallback queue code (`FallbackTrackCommandService`, `FallbackTrackRepository`,
   `YouTubePlaylistClient`, `FallbackPlaylistService`, `NextTrackService`, the entity), the new `FallbackQueueService` /
@@ -338,26 +340,31 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-1. **Push** the eight local commits when the owner says so (Phase 2 stages 4–5, Phase 3, Phase 4 stages 0 and 1 — each as
-   code and docs). Phase 3 and Phase 4 were tried on real devices by the owner and committed on their word.
-2. **Phase 4, stage 2 (Section 14)** — ask the owner before starting: `V6` `song_requests.played_at`, history ordered by
+1. **Phase 4, stage 2 (Section 14)** — ask the owner before starting (the owner said on 2026-09-29 that the remote ⏭
+   "works very well", which is the channel ⏮ would use): `V6` `song_requests.played_at`, history ordered by
    play time and merged with the background tracks (their `fallback_track.played_at` and titles exist), then ⏮ *Previous*
    on top of that, through the same command channel (`PlayerCommand` gets `PREVIOUS`; "restart the track when it has played
    more than ~3 s" is a client decision).
-3. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
+2. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
    saying how many guest songs wait ("Czeka 2 piosenki gości" — they play first; the owner asked about showing both lists
    together and agreed to keep the guest table separate), and a note in the panel when Auto-Pilot is off (nothing plays
    by itself then).
-4. Optional (Section 14): show the import result on the dashboard (`X-Fallback-Import: ok|failed`,
+3. Optional (Section 14): show the import result on the dashboard (`X-Fallback-Import: ok|failed`,
    `X-Fallback-Import-Reason`) — the new panel is a natural place — instead of always flashing the Save button green;
    remove `GET /dj/dashboard/next-guest-track` and its tests, which nothing calls any more; browser-level tests for the JS.
-5. `dev` → `main` is the next real decision (open items 1 and 4 below), but the owner said on 2026-09-29 that they do
+4. `dev` → `main` is the next real decision (open items 1 and 3 below), but the owner said on 2026-09-29 that they do
    **not** want to merge yet — they want a polished `dev` first. Leave `main` alone until they bring it up.
 
 ## Open items for the owner
 
-1. **`main`** is still the old pre-session state. Merging `dev` into `main` is a deliberate step (see `AGENTS.md`): the
-   production database has never been checked against `V1` (item 4) and the client still has no browser-level tests.
+1. **`main`**: `origin/main` is still the old pre-session state (`5314006`). Merging `dev` into `main` is a deliberate step
+   (see `AGENTS.md`): the production database has never been checked against `V1` (item 3) and the client still has no
+   browser-level tests. **Local `main` also holds two commits of the owner's from 2026-04-06/07 that exist only on this
+   computer** — `33eef2a` (Screen Wake Lock, so the display does not sleep during DJ sessions) and `b3870d6` (an
+   environment-agnostic configuration: `{baseUrl}` placeholders for the Spotify/Google redirects, `scan2play.guest-url` from
+   `${BASE_URL}`) — found on 2026-09-29 while pushing; they are not on `origin/main` and not on `dev` (`main` is not an
+   ancestor of `dev`), and were left alone. The redirect change overlaps with what `dev` already did (`{baseUrl}`), so
+   expect conflicts when merging. Push `main` or otherwise keep those two commits before anything is done to that branch.
 2. **`YOUTUBE_API_KEY`**: the production key was pasted into a chat/screenshot on 2026-09-28 — rotate or restrict it
    (Google Cloud Console → Credentials: restrict to the YouTube Data API v3). Local run configuration: the variable
    name must have no stray characters (it had a trailing `:`, which silently disabled the key).
