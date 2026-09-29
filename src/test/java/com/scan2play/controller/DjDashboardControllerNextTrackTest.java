@@ -5,6 +5,7 @@ import com.scan2play.model.NextTrackResponse.Source;
 import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +44,10 @@ class DjDashboardControllerNextTrackTest {
 
     private static final String PARTY = "ABC12";
 
+    private static final String DEVICE = "0f8fad5b-d9cb-469f-a165-70867728950e";
+
     private NextTrackService nextTrackService;
+    private PlayerLeaseService playerLeaseService;
     private DjSessionHelper sessionHelper;
     private MockMvc mockMvc;
     private OAuth2AuthenticationToken token;
@@ -52,10 +56,12 @@ class DjDashboardControllerNextTrackTest {
     @BeforeEach
     void setUp() {
         nextTrackService = mock(NextTrackService.class);
+        playerLeaseService = mock(PlayerLeaseService.class);
+        when(playerLeaseService.mayPlay(any(), any())).thenReturn(true);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class),
-                sessionHelper, nextTrackService)).build();
+                sessionHelper, nextTrackService, playerLeaseService)).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
@@ -72,20 +78,22 @@ class DjDashboardControllerNextTrackTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.source").value("GUEST"))
                 .andExpect(jsonPath("$.id").value(42))
-                .andExpect(jsonPath("$.videoId").value("hTWKbfoikeg"));
+                .andExpect(jsonPath("$.videoId").value("hTWKbfoikeg"))
+                .andExpect(jsonPath("$.playlistId").doesNotExist());
     }
 
     @Test
     @DisplayName("200 with source BACKGROUND when only the fallback playlist has something to play")
     void shouldReturnBackgroundTrack() throws Exception {
         when(nextTrackService.findNextTrack(PARTY, Set.of()))
-                .thenReturn(Optional.of(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ")));
+                .thenReturn(Optional.of(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", "PLtestPlaylist01")));
 
         mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.source").value("BACKGROUND"))
                 .andExpect(jsonPath("$.id").value(7))
-                .andExpect(jsonPath("$.videoId").value("dQw4w9WgXcQ"));
+                .andExpect(jsonPath("$.videoId").value("dQw4w9WgXcQ"))
+                .andExpect(jsonPath("$.playlistId").value("PLtestPlaylist01"));
     }
 
     @Test
@@ -107,6 +115,43 @@ class DjDashboardControllerNextTrackTest {
                 .param("exclude", "5, 7,abc,,9").principal(token).session(session));
 
         verify(nextTrackService).findNextTrack(PARTY, Set.of(5L, 7L, 9L));
+    }
+
+    @Test
+    @DisplayName("the asking window's id is checked against the player lease; when it may play, the track is handed out")
+    void shouldAsk_theLease_withTheDeviceId() throws Exception {
+        when(nextTrackService.findNextTrack(PARTY, Set.of()))
+                .thenReturn(Optional.of(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ")));
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .principal(token).session(session))
+                .andExpect(status().isOk());
+
+        verify(playerLeaseService).mayPlay(PARTY, DEVICE);
+    }
+
+    @Test
+    @DisplayName("409 Conflict and nothing handed out or marked played when another window holds the player lease")
+    void shouldReturnConflict_whenAnotherWindowPlays() throws Exception {
+        when(playerLeaseService.mayPlay(PARTY, DEVICE)).thenReturn(false);
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .principal(token).session(session))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(""));
+
+        verifyNoInteractions(nextTrackService);
+    }
+
+    @Test
+    @DisplayName("a request without a window id is checked too — it counts as another window when a lease is live")
+    void shouldCheckTheLease_evenWithoutADeviceId() throws Exception {
+        when(playerLeaseService.mayPlay(PARTY, null)).thenReturn(false);
+
+        mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(status().isConflict());
+
+        verifyNoInteractions(nextTrackService);
     }
 
     @Test

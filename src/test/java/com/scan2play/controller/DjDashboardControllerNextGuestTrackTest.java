@@ -4,6 +4,7 @@ import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,7 +54,7 @@ class DjDashboardControllerNextGuestTrackTest {
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 djService, mock(PartySettingsQueryService.class), mock(QrCodeService.class), sessionHelper,
-                mock(NextTrackService.class))).build();
+                mock(NextTrackService.class), mock(PlayerLeaseService.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");

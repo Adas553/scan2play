@@ -11,8 +11,16 @@ package com.scan2play.model;
  *                playback with {@code POST /dj/dashboard/play}; {@link Source#BACKGROUND}: the
  *                {@code FallbackTrackEntity} id (already marked played by the server when handed out)
  * @param videoId the 11-character YouTube video ID, ready for {@code player.loadVideoById()}
+ * @param playlistId {@link Source#BACKGROUND}: the playlist the track was taken from (the same id the dashboard's
+ *                player lease reports as the party's current playlist, so the window that plays can tell when the DJ
+ *                has replaced or cleared it and stop the track); {@code null} for a guest song
  */
-public record NextTrackResponse(Source source, Long id, String videoId) {
+public record NextTrackResponse(Source source, Long id, String videoId, String playlistId) {
+
+    /** A guest song: it belongs to no playlist. */
+    public NextTrackResponse(Source source, Long id, String videoId) {
+        this(source, id, videoId, null);
+    }
 
     public enum Source {
         GUEST,

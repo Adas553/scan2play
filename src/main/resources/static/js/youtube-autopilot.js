@@ -13,6 +13,14 @@
  * playing waits for it to end, and a paused player is left alone — a pause is the DJ's choice.
  * With Auto-Pilot off nothing starts by itself when a track ends.
  *
+ * Only ONE dashboard window plays (PROJECT_CONTEXT.md Section 5.4, "One window plays"). Every open dashboard has
+ * its own player, and a second one — the DJ peeking from a phone — would take tracks off the queue that the first
+ * never plays. A window reports to POST /dj/dashboard/player-lease every 3 s and asks for tracks only while the
+ * server says it holds the lease; the others show a banner with a "play on this device" button. The server
+ * enforces it as well: next-track answers 409 to a window that does not hold the lease. The same reports carry
+ * the party's current fallback playlist, so a playlist the DJ replaces or clears in another window stops the
+ * background track that came from the old one (next-track names the playlist of every background track).
+ *
  * Guest songs are still confirmed by the client via POST /dj/dashboard/play once the video
  * actually reaches PLAYING. Background tracks need no confirmation and no error report: a track
  * that fails to play is already PLAYED, so the client just asks for the next one.
@@ -44,6 +52,19 @@
     // playlist of unplayable videos is not burnt through in a tight loop.
     let consecutiveErrors = 0;
     const MAX_IMMEDIATE_RETRIES = 5;
+    // Which window plays (see the file header): null = the server has not answered yet, true = this window plays,
+    // false = another window or device does. Tracks are asked for only while it is true.
+    let isPlayerDevice = null;
+    // True while no window holds the lease (the one that played has gone away): the banner then offers "play on
+    // this device" without asking for confirmation.
+    let leaseFree = false;
+    // Numbers the lease reports so that an answer that arrives late cannot undo a newer one.
+    let leaseRequestSeq = 0, leaseAppliedSeq = 0;
+    // The playlist the running background track came from (null: unknown, or not a background track), and the number
+    // of the last lease report sent before that track was loaded: only a report sent after it says anything about it.
+    let playingPlaylistId = null, trackLoadedAtLeaseSeq = 0;
+    const LEASE_REPORT_INTERVAL_MS = 3000;
+    const deviceId = loadDeviceId();
 
     const partyCodeEl = document.getElementById('partyCode');
     const partyCodeValue = partyCodeEl ? partyCodeEl.value : null;
@@ -95,11 +116,16 @@
     async function fetchNextTrack() {
         if (!partyCodeValue) return null;
         try {
-            let url = '/dj/dashboard/next-track?partyCode=' + encodeURIComponent(partyCodeValue);
+            let url = '/dj/dashboard/next-track?partyCode=' + encodeURIComponent(partyCodeValue)
+                + '&deviceId=' + encodeURIComponent(deviceId);
             if (erroredSongIds.size > 0) {
                 url += '&exclude=' + Array.from(erroredSongIds).join(',');
             }
             const response = await fetch(url, { method: 'POST', headers: { [csrf.header]: csrf.token } });
+            if (response.status === 409) { // another window holds the lease: this one only looks
+                applyLease(false, false);
+                return null;
+            }
             if (response.status === 204 || !response.ok) return null;
             const track = await response.json();
             return track && track.videoId ? track : null;
@@ -162,6 +188,8 @@
         isLoadingSong = true;
         isBackgroundTrack = track.source === 'BACKGROUND';
         currentlyPlayingSongId = track.source === 'GUEST' ? track.id : null;
+        playingPlaylistId = isBackgroundTrack ? (track.playlistId || null) : null;
+        trackLoadedAtLeaseSeq = leaseRequestSeq;
         player.loadVideoById(track.videoId);
         // The server has just taken a background track off the queue — let the dashboard show what comes next.
         if (isBackgroundTrack && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
@@ -174,25 +202,144 @@
         playerState = -1;
         isBackgroundTrack = false;
         isLoadingSong = false;
+        playingPlaylistId = null;
+    }
+
+    /**
+     * The DJ replaced or cleared the fallback playlist — perhaps in another window, which cannot stop this window's
+     * player: a background track that came from the old playlist stops, and the next one is asked for. A report
+     * that was sent before the running track was loaded may still describe the old playlist, so it is not trusted.
+     */
+    function dropStaleBackgroundTrack(currentPlaylistId, reportSeq) {
+        if (!isBackgroundTrack || playingPlaylistId === null || playingPlaylistId === currentPlaylistId) return;
+        if (reportSeq <= trackLoadedAtLeaseSeq) return;
+        stopBackgroundTrack();
+        tryAutoPlay();
     }
 
     /** Main entry point — called by polling, on player ready, on ENDED and after a player error. */
     async function tryAutoPlay() {
-        if (!playerReady || !player || isLoadingSong || tryAutoPlayInFlight) return;
+        if (isPlayerDevice !== true || !playerReady || !player || isLoadingSong || tryAutoPlayInFlight) return;
         if (!isAutoPilotOn() || !isPlayerIdle()) return;
         tryAutoPlayInFlight = true;
 
         try {
             const track = await fetchNextTrack();
             // Playback was taken over while we were asking (the DJ picked a track, Auto-Pilot was
-            // switched off) — drop the answer. A guest song is only consumed once it plays; a
-            // background track handed out here is skipped for this round of the playlist.
-            if (!track || isLoadingSong || !isAutoPilotOn() || !isPlayerIdle()) return;
+            // switched off, another window took the lease) — drop the answer. A guest song is only
+            // consumed once it plays; a background track handed out here is skipped for this round of
+            // the playlist.
+            if (!track || isPlayerDevice !== true || isLoadingSong || !isAutoPilotOn() || !isPlayerIdle()) return;
             playTrack(track);
         } finally {
             tryAutoPlayInFlight = false;
         }
     }
+
+    // ---- Which window plays (the player lease) ----
+
+    function newDeviceId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+        return 'w' + Math.random().toString(36).slice(2) + Date.now().toString(36); // plain-HTTP pages have no randomUUID
+    }
+
+    /** A random id of this window, kept for the life of the tab so that a reload keeps its role. */
+    function loadDeviceId() {
+        const key = 'scan2play.playerDeviceId';
+        try {
+            let id = window.sessionStorage.getItem(key);
+            if (!id) {
+                id = newDeviceId();
+                window.sessionStorage.setItem(key, id);
+            }
+            return id;
+        } catch (e) {
+            return newDeviceId(); // storage is blocked: the id lives as long as this page
+        }
+    }
+
+    function renderLeaseBanner() {
+        const banner = document.getElementById('playerLeaseBanner');
+        if (!banner) return;
+        const show = isPlayerDevice === false;
+        banner.classList.toggle('d-none', !show);
+        if (show) {
+            banner.querySelector('[data-role="text"]').textContent =
+                leaseFree ? banner.dataset.textFree : banner.dataset.textOther;
+        }
+    }
+
+    /** This window lost the lease: what it plays stops, the window that took over carries on from the queue. */
+    function stopPlaybackHere() {
+        if (player && playerReady) player.stopVideo();
+        playerState = -1;
+        currentlyPlayingSongId = null;
+        isBackgroundTrack = false;
+        isLoadingSong = false;
+    }
+
+    /** The server says who plays: the answer of every lease report, and a 409 from next-track. */
+    function applyLease(holder, free) {
+        const wasPlayer = isPlayerDevice === true;
+        isPlayerDevice = holder;
+        leaseFree = !holder && free;
+        renderLeaseBanner();
+        if (holder && !wasPlayer) {
+            tryAutoPlay();
+        } else if (!holder && wasPlayer) {
+            stopPlaybackHere();
+        }
+    }
+
+    /** @param {'CLAIM'|'WATCH'|'TAKE_OVER'} mode see PlayerLeaseMode on the server */
+    async function reportLease(mode) {
+        if (!partyCodeValue) return;
+        const seq = ++leaseRequestSeq;
+        try {
+            const response = await fetch('/dj/dashboard/player-lease', {
+                method: 'POST',
+                headers: { [csrf.header]: csrf.token },
+                body: new URLSearchParams({ partyCode: partyCodeValue, deviceId: deviceId, mode: mode })
+            });
+            // A hiccup (server error, login redirect) keeps the current role: it must neither silence the
+            // window that plays nor make another one start.
+            if (!response.ok || response.redirected) return;
+            const lease = await response.json();
+            if (seq < leaseAppliedSeq) return; // a newer answer has been applied already
+            leaseAppliedSeq = seq;
+            applyLease(lease.holder === true, lease.free === true);
+            if (lease.holder === true) dropStaleBackgroundTrack(lease.fallbackPlaylistId || null, seq);
+        } catch (e) {
+            console.error('[YT] reportLease error:', e);
+        }
+    }
+
+    function leaseLoop() {
+        // A window that has been told another one plays only watches; it takes the lease again only when the DJ asks.
+        reportLease(isPlayerDevice === false ? 'WATCH' : 'CLAIM')
+            .finally(() => setTimeout(leaseLoop, LEASE_REPORT_INTERVAL_MS));
+    }
+
+    function takeOverPlayback() {
+        const banner = document.getElementById('playerLeaseBanner');
+        // Taking the lease from a window that still plays stops it there — ask first (a stray tap on a phone).
+        if (!leaseFree && banner && !window.confirm(banner.dataset.confirm)) return;
+        reportLease('TAKE_OVER');
+    }
+
+    const takeOverButton = document.getElementById('playerLeaseTakeover');
+    if (takeOverButton) takeOverButton.addEventListener('click', takeOverPlayback);
+
+    // Going away (tab closed, another page opened): give the lease up at once, so that the next window does not
+    // have to wait for the timeout. sendBeacon cannot set headers, so the CSRF token goes in the body.
+    window.addEventListener('pagehide', function () {
+        if (isPlayerDevice !== true || !partyCodeValue || !navigator.sendBeacon) return;
+        navigator.sendBeacon('/dj/dashboard/player-lease/release', new URLSearchParams({
+            partyCode: partyCodeValue, deviceId: deviceId, _csrf: csrf.token
+        }));
+    });
+
+    leaseLoop();
 
     // ---- Public API ----
 
@@ -207,7 +354,8 @@
     window.stopFallback = stopBackgroundTrack;
 
     window.playInEmbeddedPlayer = function (trackUrl) {
-        if (!playerReady || !player) return false;
+        // A window that does not hold the lease must not start sound by a stray tap: the ▶ link then simply opens on YouTube.
+        if (isPlayerDevice !== true || !playerReady || !player) return false;
         const videoId = extractVideoId(trackUrl);
         if (!videoId) return false;
         // Picked by hand: nothing to confirm, not a background track. Auto-Pilot carries on when it ends.

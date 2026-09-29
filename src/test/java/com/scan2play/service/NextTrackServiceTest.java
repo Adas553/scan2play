@@ -97,7 +97,7 @@ class NextTrackServiceTest {
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(track));
 
         assertThat(service.findNextTrack(PARTY, Set.of()))
-                .contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ"));
+                .contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
         verify(fallbackPlaylistService, never()).syncFallbackTracks(anyString(), anyString(), anyBoolean());
     }
 
@@ -130,7 +130,7 @@ class NextTrackServiceTest {
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, "V:dQw4w9WgXcQ")).thenReturn(Optional.of(LocalDateTime.now()));
         when(fallbackTrackCommandService.takeNextTrack(PARTY, "V:dQw4w9WgXcQ", true)).thenReturn(Optional.of(track));
 
-        assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
+        assertThat(service.findNextTrack(PARTY, Set.of())).map(NextTrackResponse::playlistId).contains("V:dQw4w9WgXcQ");
     }
 
     // ---- lazy import ----
@@ -144,7 +144,7 @@ class NextTrackServiceTest {
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true))
                 .thenReturn(Optional.empty(), Optional.of(track));
 
-        assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ"));
+        assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
 
         verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST, true);
     }
@@ -237,6 +237,6 @@ class NextTrackServiceTest {
                 .thenThrow(new FallbackImportException(Reason.API_ERROR, "quota"));
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(track));
 
-        assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ"));
+        assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
     }
 }

@@ -82,7 +82,7 @@ public class NextTrackService {
         if (track.isEmpty() && tryImport(partyCode, playlistId, shuffle)) {
             track = fallbackTrackCommandService.takeNextTrack(partyCode, playlistId, shuffle);
         }
-        return track.map(t -> new NextTrackResponse(Source.BACKGROUND, t.getId(), t.getVideoId()));
+        return track.map(t -> new NextTrackResponse(Source.BACKGROUND, t.getId(), t.getVideoId(), playlistId));
     }
 
     /** Re-imports a playlist whose tracks are close to the 30-day retention limit. */

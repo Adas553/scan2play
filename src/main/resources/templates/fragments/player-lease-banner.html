@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/*
+    The "another window plays" banner of the YouTube Player card (dashboard.html). Hidden until youtube-autopilot.js is
+    told by the server that another window or device holds the party's player lease (PROJECT_CONTEXT.md Section 5.4,
+    "One window plays"); the script then puts one of the two texts in and shows the banner. The texts travel in data
+    attributes so that the script needs no message bundle of its own.
+*/-->
+<div th:fragment="banner" id="playerLeaseBanner" role="status"
+     class="d-none d-flex flex-wrap align-items-center gap-2 border border-warning rounded text-warning px-3 py-2 mb-3"
+     th:attr="data-text-other=#{dashboard.player.lease.other},data-text-free=#{dashboard.player.lease.free},data-confirm=#{dashboard.player.lease.confirm}">
+    <span data-role="text" class="flex-grow-1"></span>
+    <button type="button" id="playerLeaseTakeover" class="btn btn-sm btn-warning flex-shrink-0"
+            th:text="#{dashboard.player.lease.takeover}">Play on this device</button>
+</div>
+
+</body>
+</html>

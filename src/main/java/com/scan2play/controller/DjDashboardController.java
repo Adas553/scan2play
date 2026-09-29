@@ -6,6 +6,7 @@ import com.scan2play.model.NextTrackResponse;
 import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.util.YouTubeUrls;
 import jakarta.annotation.PostConstruct;
@@ -53,6 +54,7 @@ public class DjDashboardController {
     private final QrCodeService qrCodeService;
     private final DjSessionHelper sessionHelper;
     private final NextTrackService nextTrackService;
+    private final PlayerLeaseService playerLeaseService;
 
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
@@ -207,18 +209,25 @@ public class DjDashboardController {
      * handed out (a guest song is still confirmed later via {@code POST /dj/dashboard/play}). Ask for it only
      * when a track is actually about to be loaded, not to poll.
      * <p>
-     * Returns 204 No Content when there is neither a guest song nor a background track.
+     * Returns 204 No Content when there is neither a guest song nor a background track, and 409 Conflict when
+     * another dashboard window holds the party's player lease ({@link PlayerLeaseService}) — nothing is handed out
+     * then, so a window that only looks at the dashboard cannot take tracks off the queue.
      *
-     * @param exclude Optional comma-separated guest song IDs the client already knows are broken (the YouTube
-     *                player itself errored on them) and wants skipped.
+     * @param exclude  Optional comma-separated guest song IDs the client already knows are broken (the YouTube
+     *                 player itself errored on them) and wants skipped.
+     * @param deviceId The asking window's id, as it reports it to {@code /dashboard/player-lease}.
      */
     @PostMapping("/dashboard/next-track")
     @ResponseBody
     public ResponseEntity<NextTrackResponse> nextTrack(@RequestParam String partyCode,
                                                        @RequestParam(required = false) String exclude,
+                                                       @RequestParam(required = false) String deviceId,
                                                        OAuth2AuthenticationToken authentication,
                                                        HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
+        if (!playerLeaseService.mayPlay(partyCode, deviceId)) {
+            return ResponseEntity.status(409).build();
+        }
         return nextTrackService.findNextTrack(partyCode, parseExcludeIds(exclude))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
