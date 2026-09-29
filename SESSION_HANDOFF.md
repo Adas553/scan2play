@@ -7,9 +7,10 @@ first session (2026-09-28, remote) is summarised at the bottom.
 
 - Phase 3 (the DJ sees and reorders the playlist queue — buttons **and drag and drop**) is finished, was tried by the owner
   on a real phone (Galaxy S25, Chrome; "everything worked", 2026-09-29) and is committed on `dev` as two local commits
-  (code `fc7252d`, docs `808bf4c`). Phase 4 stages 0 and 1 are committed on top, two commits each (below). **All of it is
-  pushed to `origin/dev`** (2026-09-29, at the owner's request: Phase 2 stages 4–5, Phase 3, Phase 4 stages 0 and 1, each as
-  code and docs — `git status -sb` should show `dev...origin/dev` with nothing ahead). Local `main` has two commits that are
+  (code `fc7252d`, docs `808bf4c`). Phase 4 stages 0 and 1 are committed on top, two commits each, and stages 2 and 3
+  together as one more pair (code `0a87a41`, docs `1ce76ec`) (below). **All of it is pushed to `origin/dev`** (2026-09-29, at the
+  owner's request: Phase 2 stages 4–5, Phase 3, Phase 4 stages 0 to 3, each as code and docs — `git status -sb` should show
+  `dev...origin/dev` with nothing ahead). Local `main` has two commits that are
   on neither `origin/main` nor `dev` — see "Open items for the owner", item 1.
 - The phone login problem is solved: see **"Trying the DJ dashboard on a phone"** below (the owner reaches the local app on
   `https://dev.scan2play.com.pl`, which is registered in the Google OAuth client).
@@ -25,8 +26,8 @@ first session (2026-09-28, remote) is summarised at the bottom.
   queries run against a real PostgreSQL 18, ⏮ and ⏯ checked on the real dashboard page in two browser tabs. **Two decisions of
   the owner are NOT BUILT yet** (2026-09-29, at the very end of the session): ⏮ from the phone becomes option B, and the
   navigation gets three tabs with a sticky bar — see "Decided, not built" at the end of the stage 3 section; they are the first
-  two items of "Next", and should be a separate pair of commits on top. `dev` is pushed up to stage 1 (`b7c0035`); the two
-  commits of stages 2 and 3 are local only (push only when the owner says so).
+  two items of "Next", and should be a separate pair of commits on top. `dev` is pushed, stages 2 and 3
+  included; whatever is built next is local until the owner says to push.
 - Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them and says to commit, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
 
@@ -34,7 +35,7 @@ first session (2026-09-28, remote) is summarised at the bottom.
 
 - Branch `dev`: `origin/dev` = `0519d78` (the 8 commits below plus one docs commit that added `CLAUDE.md` and this
   file). **Phase 2, stages 4 and 5, Phase 3 and Phase 4 stages 0 and 1 are committed on top of it as eight commits, and
-  pushed** —
+  pushed; stages 2 and 3 came later as one more pair of commits, also pushed** —
   Phase 2: first the client code (`youtube-autopilot.js` rewritten, `dashboard.js`, `dashboard.html`), then the docs
   (`PROJECT_CONTEXT.md` with Section 5.4 rewritten and Sections 5.1/13/14 updated, `AGENTS.md`,
   `.github/copilot-instructions.md`, this file, and three stale comments in `DjPartySettingsController` /
@@ -340,8 +341,8 @@ Gotcha of the harness: the rendered `dashboard.html` needs the fake `YT` loaded 
 ## Phase 4, stage 2 — the timeline of what played, and ⏮ Back (done, committed)
 
 The owner said "zaczynaj" (2026-09-29) after stage 1 was pushed, and had said that the remote ⏭ "works very well". The stage was
-started, interrupted, and finished in a second session the same day. **It is in the working tree only** (`git status`),
-nothing of it is committed or pushed. Section 5.4 of `PROJECT_CONTEXT.md` ("Back ⏮", "The history is one timeline") has the
+started, interrupted, and finished in a second session the same day. It is committed together with stage 3
+(one pair of commits, code `0a87a41` and docs `1ce76ec`, on top of `b7c0035`) and pushed. Section 5.4 of `PROJECT_CONTEXT.md` ("Back ⏮", "The history is one timeline") has the
 full rules; the decisions below are the ones nobody was asked about.
 
 **Decisions I took (the owner was not asked; all easy to change — they are listed in the report to the owner):**
@@ -531,9 +532,9 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 2. **Build the three tabs "Panel DJ-a" / "Kolejka" / "Historia" with a sticky bar** — decided, see "Decided, not built" (2). Stages 2 and
    3 are already committed, so items 1 and 2 become their own pair of commits (code, then docs) — leave them uncommitted for the
    owner's review in IntelliJ first.
-3. **Push** the two local commits of stages 2 and 3 (and, later, the ones of the two items above) when the owner says so. The
-   migration `V6` is applied at the next restart of the app (the owner's `scan2play` database is at `V5`; the owner has already
-   restarted and tried stages 2 and 3). After the two items above Phase 4 is complete.
+3. **Push** what the two items above produce, when the owner says so. Stages 2 and 3 are pushed; the migration `V6` is applied
+   at the next restart of the app (the owner's `scan2play` database is at `V5`; the owner has already restarted and tried stages
+   2 and 3). After the two items above Phase 4 is complete.
 4. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
    saying how many guest songs wait ("Czeka 2 piosenki gości" — they play first; the owner asked about showing both lists
    together and agreed to keep the guest table separate), and a note in the panel when Auto-Pilot is off (nothing plays
