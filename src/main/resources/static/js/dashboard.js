@@ -237,12 +237,16 @@ function submitAutoPilotToggle(checkbox) {
         scrollToPosition(window.scrollY + top - barHeight - 8);
     }
 
-    /** The history fragment: the last page of requests, or — "Show more" — the last {@code limit} of them. */
-    function fetchHistory(limit) {
+    /**
+     * The history fragment: the last page of entries, or — "Show more" — the last {@code limit} of them, of the kind
+     * {@code filter} says (all / guest / background / played / rejected; none = all). The server filters.
+     */
+    function fetchHistory(limit, filter) {
         const partyCode = document.getElementById('partyCode').value;
         const csrf = getCsrf();
         let url = '/dj/history-view/fragment?partyCode=' + encodeURIComponent(partyCode);
         if (limit) url += '&limit=' + encodeURIComponent(limit);
+        if (filter && filter !== 'all') url += '&filter=' + encodeURIComponent(filter);
         return fetch(url, { headers: { [csrf.header]: csrf.token } })
             .then(function(r) {
                 // A redirect means the session expired (the login page would come back as 200 OK).
@@ -251,23 +255,28 @@ function submitAutoPilotToggle(checkbox) {
             });
     }
 
+    let historyRequest = 0;
+
     /**
-     * "Show more" of the History tab: asks for a longer history and puts it in place, keeping what the DJ had set up —
-     * the search text, the Played / Rejected filter and the scroll position. (The standalone history page has no
-     * such function; there the button reloads the page — see initListTools. Nor has a Spotify party's dashboard.)
+     * "Show more" and the filter buttons of the History tab: ask for a longer history ({@code limit}) and/or another
+     * kind of entries ({@code filter}; none = the one that is chosen) and put the answer in place, keeping what the DJ had
+     * set up — the search text, and the scroll position unless the filter changed (the new list starts at its top).
+     * Only the newest answer is shown. Resolves to true when the list was replaced, false when the request failed, and
+     * null when a newer request took over (its answer decides). (The standalone history page has no such function; there
+     * the buttons reload the page — see initListTools. Nor has a Spotify party's dashboard.)
      */
-    function reloadHistory(limit) {
+    function reloadHistory(limit, filter) {
         const list = historyContent.querySelector('[data-list]');
         const searchInput = list && list.querySelector('[data-list-search]');
         const activeFilter = list && list.querySelector('[data-list-filter].active');
-        const state = {
-            search: searchInput ? searchInput.value : '',
-            filter: activeFilter ? activeFilter.getAttribute('data-list-filter') : 'all'
-        };
+        const chosen = activeFilter ? activeFilter.getAttribute('data-list-filter') : 'all';
+        const state = { search: searchInput ? searchInput.value : '', filter: filter || chosen };
         const box = historyContent.querySelector('.list-scroll');
-        const scrollTop = box ? box.scrollTop : 0;
+        const scrollTop = box && state.filter === chosen ? box.scrollTop : 0;
+        const request = ++historyRequest;
 
-        return fetchHistory(limit).then(function(html) {
+        return fetchHistory(limit, state.filter).then(function(html) {
+            if (request !== historyRequest) return null;        // an older answer: a newer request is on its way
             historyContent.innerHTML = html;
             if (typeof window.initSortableHeaders === 'function') window.initSortableHeaders(historyContent);
             if (typeof window.restoreListState === 'function') {
@@ -275,7 +284,11 @@ function submitAutoPilotToggle(checkbox) {
             }
             const newBox = historyContent.querySelector('.list-scroll');
             if (newBox) newBox.scrollTop = scrollTop;
-        }).catch(function(err) { console.error('[Tabs] History reload error:', err); });
+            return true;
+        }).catch(function(err) {
+            console.error('[Tabs] History reload error:', err);
+            return false;
+        });
     }
     if (ajaxHistory) window.reloadHistory = reloadHistory;
 
@@ -991,9 +1004,12 @@ function toggleFallbackShuffle() {
 // LONG LISTS — search, filter and "Show more" (the active queue and the history)
 //
 // A list is any element with data-list. Inside it: an input [data-list-search], buttons [data-list-filter="all" |
-// "played" | "rejected"] (the chosen one has class "active"), a count [data-list-count] (its data-suffix is appended:
-// the history's "+" says that older requests exist) and the rows tbody tr[data-song-name] (history rows also carry
-// data-decision); tr[data-nomatch] is the "nothing matches" row. Filtering hides rows with class d-none. The queue's
+// "guest" | "background" | "played" | "rejected"] (the chosen one has class "active"; the history only), a count
+// [data-list-count] (its data-suffix is appended: the history's "+" says that older requests exist) and the rows
+// tbody tr[data-song-name]; tr[data-nomatch] is the "nothing matches" row. The search hides rows (of what is loaded)
+// with class d-none. The filter buttons do not hide anything: the server reads the entries of the chosen kind, inside
+// its bounded queries, so a filter reaches as far back as the limit allows however many other entries lie between —
+// the list is asked for again (reloadHistory in the History tab, a page load on the standalone page). The queue's
 // <tbody> is replaced by every poll, so applyListFilters(list) is called again after each refresh. The listeners are
 // delegated, so a list that arrives by AJAX (the History tab) needs no set-up.
 // ==========================================================================
@@ -1007,19 +1023,17 @@ function toggleFallbackShuffle() {
         return (text || '').toLowerCase().normalize('NFD').replace(COMBINING_MARKS, '').replace(/ł/g, 'l');
     }
 
+    /** The search box: hides the rows (of what is loaded) whose name does not contain the text. The filter buttons are the server's job. */
     function applyFilters(list) {
         if (!list) return;
         const searchInput = list.querySelector('[data-list-search]');
         const needle = normalize(searchInput ? searchInput.value.trim() : '');
-        const activeFilter = list.querySelector('[data-list-filter].active');
-        const decision = activeFilter ? activeFilter.getAttribute('data-list-filter') : 'all';
-        const filtering = needle !== '' || decision !== 'all';
+        const filtering = needle !== '';
 
         const rows = list.querySelectorAll('tbody tr[data-song-name]');
         let shown = 0;
         for (let i = 0; i < rows.length; i++) {
-            const visible = (needle === '' || normalize(rows[i].getAttribute('data-song-name')).indexOf(needle) >= 0)
-                && (decision === 'all' || rows[i].getAttribute('data-decision') === decision);
+            const visible = needle === '' || normalize(rows[i].getAttribute('data-song-name')).indexOf(needle) >= 0;
             rows[i].classList.toggle('d-none', !visible);
             if (visible) shown++;
         }
@@ -1053,26 +1067,60 @@ function toggleFallbackShuffle() {
         if (input) applyFilters(input.closest('[data-list]'));
     });
 
+    /** The button of the filter that is chosen in a list ('all' when none is marked). */
+    function chosenFilter(list) {
+        const active = list && list.querySelector('[data-list-filter].active');
+        return active ? active.getAttribute('data-list-filter') : 'all';
+    }
+
+    /** The standalone history page: the same list, asked for again with a longer limit and/or another filter. */
+    function historyPageUrl(limit, filter) {
+        let url = '/dj/history-view?';
+        if (limit) url += 'limit=' + encodeURIComponent(limit) + '&';
+        if (filter && filter !== 'all') url += 'filter=' + encodeURIComponent(filter) + '&';
+        return url.replace(/[?&]$/, '');
+    }
+
     document.addEventListener('click', function(e) {
+        // A filter button (the history): the server reads the entries of that kind, so the list is asked for again — in
+        // place in the History tab (the button lights at once, and goes back if the answer does not come), by a page
+        // load on the standalone page.
         const filter = e.target.closest('[data-list-filter]');
         if (filter) {
             const list = filter.closest('[data-list]');
-            const buttons = list.querySelectorAll('[data-list-filter]');
-            for (let i = 0; i < buttons.length; i++) {
-                buttons[i].classList.toggle('active', buttons[i] === filter);
+            if (filter.classList.contains('active')) return;
+            const value = filter.getAttribute('data-list-filter');
+            if (typeof window.reloadHistory === 'function') {
+                const before = list.querySelector('[data-list-filter].active');
+                const buttons = list.querySelectorAll('[data-list-filter]');
+                for (let i = 0; i < buttons.length; i++) {
+                    buttons[i].classList.toggle('active', buttons[i] === filter);
+                }
+                window.reloadHistory(null, value).then(function(replaced) {
+                    // The request failed (null: a newer one took over, and its answer decides): if the old list is still
+                    // the one on the screen, its button lights again
+                    if (replaced === false && list.isConnected && before) {
+                        for (let i = 0; i < buttons.length; i++) {
+                            buttons[i].classList.toggle('active', buttons[i] === before);
+                        }
+                    }
+                });
+            } else {
+                window.location.href = historyPageUrl(null, value);
             }
-            applyFilters(list);
             return;
         }
 
+        // "Show more": a longer history of the kind that is chosen; the search text and the scroll position stay.
         const more = e.target.closest('[data-history-more]');
         if (more) {
             const limit = more.getAttribute('data-limit');
+            const chosen = chosenFilter(more.closest('[data-list]'));
             if (typeof window.reloadHistory === 'function') {
                 more.disabled = true;               // one request at a time
-                window.reloadHistory(limit).then(function() { more.disabled = false; }); // the History tab: replace in place
+                window.reloadHistory(limit, chosen).then(function() { more.disabled = false; }); // the History tab: replace in place
             } else {
-                window.location.href = '/dj/history-view?limit=' + encodeURIComponent(limit); // the standalone page
+                window.location.href = historyPageUrl(limit, chosen); // the standalone page
             }
         }
     });

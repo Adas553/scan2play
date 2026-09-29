@@ -99,6 +99,30 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("the button of the filter in the model (historyFilter) is the lit one, and only that one; no filter lights All")
+    void shouldLightTheButtonOfTheFilter() {
+        for (String filter : new String[] {"all", "guest", "background", "played", "rejected"}) {
+            String html = renderWithFilter(filter);
+
+            for (String other : new String[] {"all", "guest", "background", "played", "rejected"}) {
+                assertThat(html.contains("class=\"btn btn-outline-secondary btn-sm active\" data-list-filter=\"" + other + "\""))
+                        .as("%s is lit when the filter is %s", other, filter).isEqualTo(other.equals(filter));
+            }
+        }
+        assertThat(render(List.of(guest(1, "Alpha", "played")), false, Locale.ENGLISH))
+                .contains("active\" data-list-filter=\"all\"");
+    }
+
+    private static String renderWithFilter(String filter) {
+        Context context = new Context(Locale.ENGLISH);
+        context.setVariable("history", List.of(guest(1, "Alpha", "played")));
+        context.setVariable("historyHasMore", false);
+        context.setVariable("historyNextLimit", 100);
+        context.setVariable("historyFilter", filter);
+        return engine.process("history", Set.of("historyTableContent"), context);
+    }
+
+    @Test
     @DisplayName("a track of the background playlist is a row like the others: played, with its title and a link to the video")
     void shouldRenderABackgroundTrack() {
         String html = render(List.of(background(7, "Rick Astley - Never Gonna Give You Up")), false, Locale.ENGLISH);
@@ -149,14 +173,20 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("the list has a search box, the three filter buttons (All chosen at first), a count and a scroll box")
+    @DisplayName("the list has a search box, the five filter buttons (All chosen at first, then Guests, Playlist, Played, Rejected), a count and a scroll box")
     void shouldHaveTheListTools() {
         String html = render(List.of(guest(1, "Alpha", "played")), false, Locale.ENGLISH);
 
         assertThat(html).contains("data-list", "data-list-search", "data-list-count", "data-nomatch", "list-scroll");
-        assertThat(html).containsPattern("class=\"btn btn-outline-secondary active\"[^>]*data-list-filter=\"all\"");
-        assertThat(html).contains("data-list-filter=\"played\"", "data-list-filter=\"rejected\"");
-        assertThat(html).contains(">All<", ">Played<", ">Rejected<", "placeholder=\"Search");
+        assertThat(html).containsPattern("class=\"btn btn-outline-secondary btn-sm active\"[^>]*data-list-filter=\"all\"");
+        assertThat(html).contains("data-list-filter=\"guest\"", "data-list-filter=\"background\"",
+                "data-list-filter=\"played\"", "data-list-filter=\"rejected\"");
+        assertThat(html).contains(">All<", ">Guests<", ">Playlist<", ">Played<", ">Rejected<", "placeholder=\"Search");
+        assertThat(html.split("data-list-filter=", -1)).hasSize(6);             // exactly five buttons
+        assertThat(html.indexOf("data-list-filter=\"all\"")).isLessThan(html.indexOf("data-list-filter=\"guest\""));
+        assertThat(html.indexOf("data-list-filter=\"guest\"")).isLessThan(html.indexOf("data-list-filter=\"background\""));
+        assertThat(html.indexOf("data-list-filter=\"background\"")).isLessThan(html.indexOf("data-list-filter=\"played\""));
+        assertThat(html.indexOf("data-list-filter=\"played\"")).isLessThan(html.indexOf("data-list-filter=\"rejected\""));
     }
 
     @Test
@@ -198,7 +228,8 @@ class HistoryFragmentTest {
     void shouldRenderInPolish() {
         String html = render(List.of(guest(1, "Alpha", "played"), background(2, "Utwór")), true, PL);
 
-        assertThat(html).contains(">Wszystkie<", ">Zagrane<", ">Odrzucone<", ">Pokaż więcej<", "placeholder=\"Szukaj…\"");
+        assertThat(html).contains(">Wszystkie<", ">Goście<", ">Playlista<", ">Zagrane<", ">Odrzucone<", ">Pokaż więcej<",
+                "placeholder=\"Szukaj…\"");
         assertThat(html).contains("Nic nie pasuje.", "🎶 Playlista");
         assertThat(html).doesNotContain("??");
     }

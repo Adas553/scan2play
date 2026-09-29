@@ -5,6 +5,7 @@ import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.FallbackTrackStatus;
 import com.scan2play.model.HistoryEntry;
 import com.scan2play.model.HistoryEntry.Source;
+import com.scan2play.model.HistoryFilter;
 import com.scan2play.repository.FallbackTrackRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.YouTubeUrls;
@@ -62,7 +63,24 @@ public class PlayHistoryService {
      */
     @Transactional(readOnly = true)
     public Page getHistory(String partyCode, int limit) {
-        List<HistoryEntry> timeline = timeline(partyCode, List.of(DECISION_PLAYED, DECISION_REJECTED), limit + 1);
+        return getHistory(partyCode, limit, HistoryFilter.ALL);
+    }
+
+    /**
+     * The last {@code limit} entries of the kind {@code filter} says. The filter is applied in the queries, not on the
+     * page: only the tables the filter needs are read (guests' requests, the background playlist, or both), each with
+     * its own bound, so the limit counts the entries of that kind however many others lie between them.
+     */
+    @Transactional(readOnly = true)
+    public Page getHistory(String partyCode, int limit, HistoryFilter filter) {
+        List<String> decisions = new ArrayList<>(2);
+        if (filter.includesGuestsPlayed()) {
+            decisions.add(DECISION_PLAYED);
+        }
+        if (filter.includesGuestsRejected()) {
+            decisions.add(DECISION_REJECTED);
+        }
+        List<HistoryEntry> timeline = timeline(partyCode, decisions, filter.includesBackgroundTracks(), limit + 1);
         boolean hasMore = timeline.size() > limit;
         return new Page(hasMore ? timeline.subList(0, limit) : timeline, hasMore);
     }
@@ -76,16 +94,22 @@ public class PlayHistoryService {
      */
     @Transactional(readOnly = true)
     public List<HistoryEntry> getRecentlyPlayed(String partyCode, int limit) {
-        return timeline(partyCode, List.of(DECISION_PLAYED), limit).stream()
+        return timeline(partyCode, List.of(DECISION_PLAYED), true, limit).stream()
                 .filter(entry -> entry.videoId() != null)
                 .toList();
     }
 
-    private List<HistoryEntry> timeline(String partyCode, List<String> decisions, int n) {
+    /**
+     * @param decisions         the decisions of the guests' requests to read; none: that table is not read at all
+     * @param backgroundTracks  whether to read the tracks of the background playlist
+     */
+    private List<HistoryEntry> timeline(String partyCode, List<String> decisions, boolean backgroundTracks, int n) {
         PageRequest firstN = PageRequest.of(0, n);
         List<HistoryEntry> entries = new ArrayList<>();
-        songRequestRepository.findHistory(partyCode, decisions, firstN).forEach(song -> entries.add(toEntry(song)));
-        if (decisions.contains(DECISION_PLAYED)) {
+        if (!decisions.isEmpty()) {
+            songRequestRepository.findHistory(partyCode, decisions, firstN).forEach(song -> entries.add(toEntry(song)));
+        }
+        if (backgroundTracks) {
             fallbackTrackRepository.findPlayedTracks(partyCode, FallbackTrackStatus.PLAYED, firstN)
                     .forEach(track -> entries.add(toEntry(track)));
         }

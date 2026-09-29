@@ -3,6 +3,7 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryEntry;
 import com.scan2play.model.HistoryEntry.Source;
+import com.scan2play.model.HistoryFilter;
 import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
@@ -75,10 +76,14 @@ class DjDashboardControllerHistoryTest {
                 .toList();
     }
 
-    /** Sets up what the service returns and gives back that very list. */
+    /** Sets up what the service returns for every entry of the history (no filter) and gives back that very list. */
     private List<HistoryEntry> givenHistory(int limit, int rowCount, boolean hasMore) {
+        return givenHistory(limit, HistoryFilter.ALL, rowCount, hasMore);
+    }
+
+    private List<HistoryEntry> givenHistory(int limit, HistoryFilter filter, int rowCount, boolean hasMore) {
         List<HistoryEntry> entries = entries(rowCount);
-        when(historyService.getHistory(PARTY, limit)).thenReturn(new Page(entries, hasMore));
+        when(historyService.getHistory(PARTY, limit, filter)).thenReturn(new Page(entries, hasMore));
         return entries;
     }
 
@@ -94,7 +99,7 @@ class DjDashboardControllerHistoryTest {
                 .andExpect(model().attribute("historyHasMore", true))
                 .andExpect(model().attribute("historyNextLimit", 100));
 
-        verify(historyService).getHistory(PARTY, 50);
+        verify(historyService).getHistory(PARTY, 50, HistoryFilter.ALL);
     }
 
     @Test
@@ -127,7 +132,7 @@ class DjDashboardControllerHistoryTest {
                 .andExpect(model().attribute("historyHasMore", true))
                 .andExpect(model().attribute("historyNextLimit", 200));
 
-        verify(historyService).getHistory(PARTY, 150);
+        verify(historyService).getHistory(PARTY, 150, HistoryFilter.ALL);
     }
 
     @Test
@@ -140,7 +145,7 @@ class DjDashboardControllerHistoryTest {
                 .andExpect(model().attribute("historyHasMore", false))
                 .andExpect(model().attribute("historyNextLimit", 300));
 
-        verify(historyService).getHistory(PARTY, 300);
+        verify(historyService).getHistory(PARTY, 300, HistoryFilter.ALL);
     }
 
     @Test
@@ -153,7 +158,69 @@ class DjDashboardControllerHistoryTest {
         mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("limit", "-7")
                 .principal(token).session(session));
 
-        verify(historyService, times(2)).getHistory(PARTY, 50);
+        verify(historyService, times(2)).getHistory(PARTY, 50, HistoryFilter.ALL);
+    }
+
+    @Test
+    @DisplayName("a filter button asks for entries of that kind: the filter is passed on to the service, and its button is the lit one")
+    void shouldPassTheFilterOn() throws Exception {
+        for (HistoryFilter filter : HistoryFilter.values()) {
+            List<HistoryEntry> entries = givenHistory(50, filter, 5, false);
+
+            mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", filter.param())
+                            .principal(token).session(session))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("history", entries))
+                    .andExpect(model().attribute("historyFilter", filter.param()));
+
+            verify(historyService).getHistory(PARTY, 50, filter);
+        }
+    }
+
+    @Test
+    @DisplayName("the filter and the limit work together: \"Show more\" of a filtered list asks for that filter with the next limit")
+    void shouldCombineTheFilterWithTheLimit() throws Exception {
+        givenHistory(150, HistoryFilter.GUEST, 150, true);
+
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("limit", "150")
+                        .param("filter", "guest").principal(token).session(session))
+                .andExpect(model().attribute("historyFilter", "guest"))
+                .andExpect(model().attribute("historyHasMore", true))
+                .andExpect(model().attribute("historyNextLimit", 200));
+
+        verify(historyService).getHistory(PARTY, 150, HistoryFilter.GUEST);
+    }
+
+    @Test
+    @DisplayName("no filter, or one nobody knows, is \"all\" — a bad link does not break the page (and the value is case-blind)")
+    void shouldTreatAMissingOrUnknownFilterAsAll() throws Exception {
+        givenHistory(50, 3, false);
+
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", "nonsense")
+                        .principal(token).session(session))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("historyFilter", "all"));
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", "")
+                .principal(token).session(session)).andExpect(model().attribute("historyFilter", "all"));
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY)
+                .principal(token).session(session)).andExpect(model().attribute("historyFilter", "all"));
+
+        givenHistory(50, HistoryFilter.PLAYED, 3, false);
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", "PLAYED")
+                .principal(token).session(session)).andExpect(model().attribute("historyFilter", "played"));
+
+        verify(historyService, times(3)).getHistory(PARTY, 50, HistoryFilter.ALL);
+    }
+
+    @Test
+    @DisplayName("the standalone page takes the filter too")
+    void shouldTakeTheFilterOnTheStandalonePage() throws Exception {
+        List<HistoryEntry> entries = givenHistory(50, HistoryFilter.BACKGROUND, 4, false);
+
+        mockMvc.perform(get("/dj/history-view").param("filter", "background").principal(token).session(session))
+                .andExpect(view().name("history"))
+                .andExpect(model().attribute("history", entries))
+                .andExpect(model().attribute("historyFilter", "background"));
     }
 
     @Test

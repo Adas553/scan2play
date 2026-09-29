@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.HistoryFilter;
 import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.model.NextTrackResponse;
 import com.scan2play.service.DjService;
@@ -121,10 +122,12 @@ public class DjDashboardController {
     }
 
     /**
-     * Displays the history of played and rejected songs — the last {@code limit} requests (see {@link #addHistory}).
+     * Displays the history of played and rejected songs — the last {@code limit} entries of the kind {@code filter}
+     * says (see {@link #addHistory}).
      */
     @GetMapping("/history-view")
-    public String historyView(@RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit, Model model,
+    public String historyView(@RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit,
+                              @RequestParam(required = false) String filter, Model model,
                               OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication == null) {
             return REDIRECT_LOGIN;
@@ -134,7 +137,7 @@ public class DjDashboardController {
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
-        addHistory(model, partyCode, limit);
+        addHistory(model, partyCode, limit, filter);
 
         return "history";
     }
@@ -143,14 +146,16 @@ public class DjDashboardController {
      * Returns the history table as an HTML fragment for AJAX-based tab switching.
      * Used by the dashboard to load history without a full page reload,
      * which preserves the YouTube IFrame player state. "Show more" asks for the same fragment with a larger
-     * {@code limit}.
+     * {@code limit}, and a button of the filter (All / Guests / Playlist / Played / Rejected) with another
+     * {@code filter}.
      */
     @GetMapping("/history-view/fragment")
     public String historyFragment(@RequestParam String partyCode,
-                                  @RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit, Model model,
+                                  @RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit,
+                                  @RequestParam(required = false) String filter, Model model,
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
-        addHistory(model, partyCode, limit);
+        addHistory(model, partyCode, limit, filter);
         // The fragment lands under the dashboard's other panels: it gets a heading of its own (the standalone page has one)
         model.addAttribute(HISTORY_HEADING, true);
         return "history :: historyTableContent";
@@ -160,11 +165,14 @@ public class DjDashboardController {
      * Puts the last {@code limit} entries of the history in the model — songs of guests that played or were rejected
      * and tracks of the background playlist, on one timeline — at least one page, at most {@value #HISTORY_MAX_LIMIT}
      * (the queries are always bounded) — and what the "Show more" button needs: whether there are older ones to show
-     * and the limit to ask for next.
+     * and the limit to ask for next. The entries are of the kind the filter says (a missing or unknown filter is
+     * "all"); the filter goes into the model too, so that its button is the lit one.
      */
-    private void addHistory(Model model, String partyCode, int requestedLimit) {
+    private void addHistory(Model model, String partyCode, int requestedLimit, String filterParam) {
         int limit = Math.max(HISTORY_PAGE_SIZE, Math.min(requestedLimit, HISTORY_MAX_LIMIT));
-        PlayHistoryService.Page page = playHistoryService.getHistory(partyCode, limit);
+        HistoryFilter filter = HistoryFilter.fromParam(filterParam);
+        PlayHistoryService.Page page = playHistoryService.getHistory(partyCode, limit, filter);
+        model.addAttribute(HISTORY_FILTER, filter.param());
         model.addAttribute(HISTORY, page.entries());
         model.addAttribute(HISTORY_HAS_MORE, page.hasMore() && limit < HISTORY_MAX_LIMIT);
         model.addAttribute(HISTORY_NEXT_LIMIT, Math.min(limit + HISTORY_PAGE_SIZE, HISTORY_MAX_LIMIT));

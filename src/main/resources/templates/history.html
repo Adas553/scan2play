@@ -27,11 +27,14 @@
         </div>
     </div>
 
-    <!--/* The history list: a count, a Played / Rejected filter and a search box above a list of fixed height with its own
+    <!--/* The history list: a count, filter buttons (All / Guests / Playlist / Played / Rejected — the server filters, in
+         its bounded queries, and the button of the model attribute historyFilter is the lit one) and a search box (which
+         works on the rows that are there) above a list of fixed height with its own
          scrollbar (.list-scroll), and a "Show more" button when older requests exist. Used by the standalone page
          and, as an AJAX fragment, by the dashboard's History tab. dashboard.js (initListTools) does the filtering
          and "Show more"; the count carries the "+" that says there are older requests in data-suffix. */-->
-    <div th:fragment="historyTableContent" class="mb-4" data-list>
+    <div th:fragment="historyTableContent" class="mb-4" data-list
+         th:with="activeFilter=${historyFilter != null ? historyFilter : 'all'}">
         <!--/* A heading only where the list arrives by itself under the dashboard's other panels (the History tab, model
              attribute historyHeading): the standalone page has its own h1 above. It tells the DJ what has just appeared. */-->
         <h4 th:if="${historyHeading}" class="text-white mb-2" th:text="#{history.title}">📜 Party History</h4>
@@ -40,12 +43,22 @@
                 <span class="badge text-bg-secondary" data-list-count
                       th:attr="data-suffix=${historyHasMore} ? '+' : ''"
                       th:text="${#lists.size(history)} + (${historyHasMore} ? '+' : '')">0</span>
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" data-list-filter="all"
+                <!--/* Separate small buttons that wrap (a joined btn-group of five is wider than a phone) */-->
+                <div class="d-flex flex-wrap gap-1" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="all"
+                            th:classappend="${activeFilter == 'all'} ? 'active'"
                             th:text="#{history.filter.all}">All</button>
-                    <button type="button" class="btn btn-outline-secondary" data-list-filter="played"
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="guest"
+                            th:classappend="${activeFilter == 'guest'} ? 'active'"
+                            th:text="#{history.filter.guest}">Guests</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="background"
+                            th:classappend="${activeFilter == 'background'} ? 'active'"
+                            th:text="#{history.filter.background}">Playlist</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="played"
+                            th:classappend="${activeFilter == 'played'} ? 'active'"
                             th:text="#{history.filter.played}">Played</button>
-                    <button type="button" class="btn btn-outline-secondary" data-list-filter="rejected"
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="rejected"
+                            th:classappend="${activeFilter == 'rejected'} ? 'active'"
                             th:text="#{history.filter.rejected}">Rejected</button>
                 </div>
             </div>

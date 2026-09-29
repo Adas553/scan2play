@@ -5,6 +5,7 @@ import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.FallbackTrackStatus;
 import com.scan2play.model.HistoryEntry;
 import com.scan2play.model.HistoryEntry.Source;
+import com.scan2play.model.HistoryFilter;
 import com.scan2play.repository.FallbackTrackRepository;
 import com.scan2play.repository.SongRequestRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -217,6 +218,81 @@ class PlayHistoryServiceTest {
 
         assertThat(page.entries()).isEmpty();
         assertThat(page.hasMore()).isFalse();
+    }
+
+    // ---- the filter buttons: the server reads only the entries of the chosen kind ----
+
+    private static final List<String> REJECTED = List.of("rejected");
+
+    @Test
+    @DisplayName("Guests: only the guests' requests, played and rejected — the playlist table is not read at all")
+    void shouldReadOnlyTheGuests_forTheGuestsFilter() {
+        givenGuests(PLAYED_AND_REJECTED, 51, playedSong(1, "Guest song", NOON),
+                song(2, "Rejected one", "rejected", null, NOON.minusMinutes(5), null));
+
+        PlayHistoryService.Page page = service.getHistory(PARTY, 50, HistoryFilter.GUEST);
+
+        assertThat(page.entries()).extracting(HistoryEntry::key).containsExactly("G:1", "G:2");
+        verify(fallbackTrackRepository, never()).findPlayedTracks(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Playlist: only the tracks of the background playlist — the requests table is not read at all")
+    void shouldReadOnlyThePlaylist_forThePlaylistFilter() {
+        givenTracks(51, track(7, "aaaaaaaaaaa", "Track one", NOON), track(6, "bbbbbbbbbbb", "Track two", NOON.minusMinutes(3)));
+
+        PlayHistoryService.Page page = service.getHistory(PARTY, 50, HistoryFilter.BACKGROUND);
+
+        assertThat(page.entries()).extracting(HistoryEntry::key).containsExactly("B:7", "B:6");
+        verify(songRequestRepository, never()).findHistory(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Played: the guests' requests that played and the playlist tracks, no rejected request")
+    void shouldReadWhatPlayed_forThePlayedFilter() {
+        givenGuests(PLAYED, 51, playedSong(1, "Guest song", NOON.minusMinutes(5)));
+        givenTracks(51, track(7, "aaaaaaaaaaa", "Track", NOON));
+
+        PlayHistoryService.Page page = service.getHistory(PARTY, 50, HistoryFilter.PLAYED);
+
+        assertThat(page.entries()).extracting(HistoryEntry::key).containsExactly("B:7", "G:1");
+        verify(songRequestRepository, never()).findHistory(eq(PARTY), eq(PLAYED_AND_REJECTED), any());
+    }
+
+    @Test
+    @DisplayName("Rejected: only the rejected requests — the playlist table is not read at all")
+    void shouldReadOnlyTheRejected_forTheRejectedFilter() {
+        givenGuests(REJECTED, 51, song(2, "Rejected one", "rejected", null, NOON, null));
+
+        PlayHistoryService.Page page = service.getHistory(PARTY, 50, HistoryFilter.REJECTED);
+
+        assertThat(page.entries()).extracting(HistoryEntry::key).containsExactly("G:2");
+        assertThat(page.entries().getFirst().decision()).isEqualTo("rejected");
+        verify(fallbackTrackRepository, never()).findPlayedTracks(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("the limit counts the entries of the chosen kind: however many playlist tracks lie between, the last 5 guests' requests are the page")
+    void shouldCountOnlyTheChosenKindAgainstTheLimit() {
+        List<SongRequestEntity> guests = IntStream.range(0, 6)
+                .mapToObj(i -> playedSong(i, "Guest " + i, NOON.minusHours(i))).toList();   // one an hour: between them, the playlist played a lot
+        givenGuests(PLAYED_AND_REJECTED, 6, guests.toArray(new SongRequestEntity[0]));
+
+        PlayHistoryService.Page page = service.getHistory(PARTY, 5, HistoryFilter.GUEST);
+
+        assertThat(page.entries()).extracting(HistoryEntry::title).containsExactly("Guest 0", "Guest 1", "Guest 2", "Guest 3", "Guest 4");
+        assertThat(page.hasMore()).isTrue();
+        verify(fallbackTrackRepository, never()).findPlayedTracks(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("without a filter the history is everything: the same two reads as the All filter")
+    void shouldMeanAll_whenNoFilterIsGiven() {
+        givenGuests(PLAYED_AND_REJECTED, 51, playedSong(1, "Guest song", NOON));
+        givenTracks(51, track(7, "aaaaaaaaaaa", "Track", NOON.plusMinutes(1)));
+
+        assertThat(service.getHistory(PARTY, 50).entries()).extracting(HistoryEntry::key).containsExactly("B:7", "G:1");
+        assertThat(service.getHistory(PARTY, 50, HistoryFilter.ALL).entries()).extracting(HistoryEntry::key).containsExactly("B:7", "G:1");
     }
 
     // ---- recently played: what "previous track" walks back along ----
