@@ -7,19 +7,17 @@ first session (2026-09-28, remote) is summarised at the bottom.
 
 - Phase 3 (the DJ sees and reorders the playlist queue — buttons **and drag and drop**) is finished, was tried by the owner
   on a real phone (Galaxy S25, Chrome; "everything worked", 2026-09-29) and is committed on `dev` as two local commits
-  (code `fc7252d`, docs `808bf4c`). Phase 4 stage 0 is committed on top as two more (below). **Nothing is pushed yet** —
-  six local commits are ahead of `origin/dev` (Phase 2 stages 4–5, Phase 3, Phase 4 stage 0); push only when the owner
-  says so.
+  (code `fc7252d`, docs `808bf4c`). Phase 4 stages 0 and 1 are committed on top, two commits each (below). **Nothing is
+  pushed yet** — eight local commits are ahead of `origin/dev` (Phase 2 stages 4–5, Phase 3, Phase 4 stages 0 and 1); push
+  only when the owner says so.
 - The phone login problem is solved: see **"Trying the DJ dashboard on a phone"** below (the owner reaches the local app on
   `https://dev.scan2play.com.pl`, which is registered in the Google OAuth client).
 - The owner's next requests (2026-09-29): previous/next buttons for the DJ, like a normal player, and a way to make the
   active queue and the history readable when they hold many songs. Agreed plan = Section 14, **Phase 4**, three stages.
   **Stage 0 ("one window plays") is done and committed** (the owner tried it on the computer and the phone: "works well") —
-  see "Phase 4, stage 0" below. **Stages 1 and 2 are not started**; the owner has answered the open questions of stage 1
-  (2026-09-29): *Next* is a **remote control** — pressed in a window that does not play it makes the window that plays skip
-  (via the lease reports), not a takeover and not a hidden button; and the queue/history lists may have their own scroll
-  box on a phone. Ask the owner "shall I start stage 1?" before building it — it was not started because the last
-  message asked for a commit, not for stage 1.
+  see "Phase 4, stage 0" below. **Stage 1 (⏭ Next as a remote control, readable lists, the "up next" list refreshed across
+  windows) is done and committed** (the owner tried it: "działa"); see "Phase 4, stage 1" below. **Stage 2 is not started**
+  (`V6`, history by play time, ⏮ Previous) — ask the owner first.
 - Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
 
@@ -45,13 +43,21 @@ first session (2026-09-28, remote) is summarised at the bottom.
   `NextTrackResponse` / `NextTrackService` (a background track names its `playlistId`), `youtube-autopilot.js`,
   `dashboard.html` (one `th:replace`), the PL/EN messages, tests, `PROJECT_CONTEXT.md` (Sections 5.4, 6, 13, 14) and
   this file. No migration.
+- **Phase 4, stage 1 is committed** (two commits, code then docs, on top of stage 0): new
+  `PlayerCommand`, `fragments/player-controls.html`; changed `PlayerLeaseService` (`sendCommand`, the holder collects the
+  command), `PlayerLeaseResponse` (`queueVersion`, `command`), `DjPlayerLeaseController` (`POST .../player-command`),
+  `FallbackQueueService` (`getVersion`, `versionOf`), `DjFallbackQueueController` (`X-Queue-Version` header), `DjService` /
+  `SongRequestRepository` / `DjDashboardController` / `ViewAttributes` (paged history: `limit`, `HistoryPage`; the unused
+  `findTop50…` is gone), `dashboard.html`, `history.html`, `app.css` (`.list-scroll`), `dashboard.js` (`initListTools`,
+  "Show more", the version), `youtube-autopilot.js` (⏭ Next, commands, the version), the PL/EN messages, tests (313 pass)
+  and `PROJECT_CONTEXT.md` (Sections 5.4, 6, 13, 14) and this file. No migration.
 - One stash, deliberately parked: *"Spotify playback redirect-uri as {baseUrl} template (parked: Spotify rejects
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: 266 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
+- Tests: 313 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
   run them without disturbing the app running from IntelliJ) — run on 2026-09-29 in a scratch copy of the working
-  tree with Phase 3 and Phase 4 stage 0 (`BUILD SUCCESS`; 232 before stage 0, 146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
+  tree with Phase 3 and Phase 4 stages 0 and 1 (`BUILD SUCCESS`; 266 before stage 1, 232 before stage 0, 146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
   has automated tests; stage 4 was verified against the real YouTube player, Phase 3 against a real PostgreSQL and the
   real JS on stub endpoints (see below).
 
@@ -259,6 +265,54 @@ Spring Security filter chain (that `_csrf` in a `sendBeacon` body is accepted �
 was not run; if it were refused the 10 s timeout does the same job), out-of-order answers of two overlapping reports (guarded
 by a sequence number, not exercised).
 
+## Phase 4, stage 1 — Next from any window, readable lists (done, committed)
+
+Requested by the owner (2026-09-29): ⏭ *Next* "like a normal player" and a queue and a history that stay readable when they
+hold many songs; decisions: *Next* works with Auto-Pilot off, and in a window that does not play it is a **remote control**
+of the window that does (option 3 of three offered); lists may have their own scroll box on a phone. Section 5.4 ("Next ⏭",
+"The up next list in a window that did not change it", "Long lists") has the details; the short version:
+
+- **⏭ Next** (`fragments/player-controls.html`, under the video): in the window that plays, `skipToNext()` asks `next-track`
+  and loads the answer whatever the player is doing (Auto-Pilot off too; 204 → the current track carries on). In another
+  window it posts `player-command` (`NEXT`); the server keeps one command per party and hands it out once, in the answer of
+  the holder's next lease report (≤ ~3 s). The sender's button says "Sent…" and is disabled for 3.5 s, so two presses are one
+  skip. 409 when nobody plays (banner: "no device is playing"). A command is dropped when the lease changes hands, is given
+  up or expires; one that reaches the window mid-lookup is lost (press again).
+- **The owner's shuffle question turned up a display gap:** the "up next" list refreshed only after events in its own
+  window, so a shuffle or a move on the phone left the computer's list old until its next track (and the phone's list never
+  noticed the computer taking tracks). Playback was right (the queue is server-side). Now the lease answer carries
+  `queueVersion` (a hash of the `FallbackQueueView`, `FallbackQueueService.getVersion`; ≤ 500 tracks read once per report per
+  window — if that ever matters, cache it for a couple of seconds) and the list endpoint sends `X-Queue-Version`; a window
+  fetches the list again when a report brings a version it does not know.
+- **Lists:** the active queue and the history are a count + a search box (accent-insensitive: "zolc" finds "Żółć") over a
+  60 vh box with its own scrollbar and a sticky header (`.list-scroll` in `app.css`); the scroll box is outside the polled
+  `<tbody>`, so a poll keeps the position and `applyListFilters` runs again after it. History: Played / Rejected filter and
+  "Show more" (`?limit=`, 50 → 300, one row more read than asked to know if older ones exist, "50+" in the count; in the
+  dashboard's tab it replaces the fragment in place keeping search, filter and scroll; on the standalone page it reloads).
+  `DjService.getHistory(partyCode, limit)` now returns `HistoryPage(rows, hasMore)`; the unused `findTop50…` repository
+  method is gone.
+
+**How it was verified:** 313 unit tests in a scratch copy (47 new: commands and version in `PlayerLeaseServiceTest` /
+`DjPlayerLeaseControllerTest` / `FallbackQueueServiceTest`, the paged history in `DjServiceTest` /
+`DjDashboardControllerHistoryTest`, and template tests that render the real history fragment, the queue's polled tbody
+(with a web context, for the `@{…}` links) and the Next button with the real PL/EN bundles). Then the **real dashboard**: a
+scratch Java test (only in the scratch copy, not in the repo) rendered the whole `dashboard.html` in Polish with 60 songs in
+the queue and the history fragment with 120 requests, and a stand-in server (Python; same lease/command/409/version rules;
+fake `YT.Player`; not in the repo) served them with the real `static/js` and `static/css`; two browser tabs were two windows.
+Checked: the queue box scrolls (432 px of a 720 px viewport, 2410 px of content), the header is sticky, search and count, a
+poll replaced the rows and kept scroll position and filter; History tab: 50+, the Rejected filter (12 of 50), search, "Show
+more" twice keeping both, 120 at the end with no button; ⏭ in the playing window (also with Auto-Pilot off); ⏭ in the other
+window: "Sent…", disabled, one command for two presses, the playing window skipped within a report (also with Auto-Pilot off);
+the playing window left → ⏭ got 409 and the banner said nobody plays and the button did not stay disabled; changing the
+"up next" order on the server updated the list in both windows with one fetch each and none afterwards.
+**Not done by me:** real devices — the owner tried the result afterwards and said it works ("działa"), without details of what
+was tried, so the ~3 s delay of a remote ⏭ has not been judged in words; the pane of the built-in browser was not visible, so
+no screenshot was taken and the look of the lists (spacing, the sticky header over the rows, the buttons on a phone) was
+checked only through computed styles, not by eye;
+the real Spring Security chain for `sendBeacon`; the standalone history page's "Show more" (it just reloads with `?limit=`).
+Gotcha of the harness: the rendered `dashboard.html` needs the fake `YT` loaded first (the stand-in injects it at the start of
+`<head>`), and Python's `parse_qs` drops empty values (`?playlist=` did nothing — use a word such as `NONE`).
+
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
 **How it works now (2026-09-29):** the owner opens the local app, on the phone and on the computer, through
@@ -284,20 +338,12 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-1. **Push** the six local commits when the owner says so (Phase 2 stages 4–5, Phase 3, Phase 4 stage 0 — each as code
-   and docs). Phase 3 and stage 0 were tried on real devices by the owner and committed on their word.
-2. **Phase 4, stages 1 and 2 (Section 14)** — the owner's requests (2026-09-29); ask "shall I start stage 1?" first:
-   - *Stage 1:* ⏭ *Next* as a **remote control** (owner's decision): in the window that plays it acts at once; in a window
-     that does not play it sends a NEXT command that the playing window collects with its next lease report (≤ 3 s) and
-     carries out. Work with Auto-Pilot off too. Sketch: `PlayerLeaseService` keeps a pending command per party (set by any
-     window of that party, consumed by the holder's report, which returns it in the answer — e.g. a `command` field next to
-     `holder`/`free`/`fallbackPlaylistId`); the client runs `NEXT` as "stop what plays, ask `next-track`, load it" whatever
-     the player state; think about a command pressed while nobody holds the lease (drop it, or tell the DJ), and about two
-     presses in one interval (one skip or two? the DJ pressed twice). And the active queue (`#song-list` in `dashboard.html`)
-     and history (`history.html`) in a fixed-height list with its own scrollbar (fine on a phone, owner's answer), count,
-     search, history filter and "load more", compact rows on a phone.
-   - *Stage 2:* `V6` `song_requests.played_at`, history ordered by play time and merged with the background tracks (their
-     `fallback_track.played_at` and titles exist), then ⏮ *Previous* on top of that, through the same command channel.
+1. **Push** the eight local commits when the owner says so (Phase 2 stages 4–5, Phase 3, Phase 4 stages 0 and 1 — each as
+   code and docs). Phase 3 and Phase 4 were tried on real devices by the owner and committed on their word.
+2. **Phase 4, stage 2 (Section 14)** — ask the owner before starting: `V6` `song_requests.played_at`, history ordered by
+   play time and merged with the background tracks (their `fallback_track.played_at` and titles exist), then ⏮ *Previous*
+   on top of that, through the same command channel (`PlayerCommand` gets `PREVIOUS`; "restart the track when it has played
+   more than ~3 s" is a client decision).
 3. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
    saying how many guest songs wait ("Czeka 2 piosenki gości" — they play first; the owner asked about showing both lists
    together and agreed to keep the guest table separate), and a note in the panel when Auto-Pilot is off (nothing plays

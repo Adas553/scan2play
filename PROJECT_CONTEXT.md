@@ -323,6 +323,45 @@ show the queue.
   server restart frees every lease and the window that plays takes it back with its next report (if a second window
   reports first it gets it — press *Play on this device* in the right one).
 
+**Next ⏭ — from any window** (Phase 4 stage 1; owner's decisions 2026-09-29): a button under the video
+(`fragments/player-controls.html`, handled by `youtube-autopilot.js`). It skips to whatever `next-track` hands out now —
+a waiting guest song first, else the head of the background queue — **whatever the player is doing and with Auto-Pilot
+off too**: it is a deliberate act of the DJ, so neither the "player must be idle" nor the "Auto-Pilot must be on" rule of
+`tryAutoPlay` applies (the track that ends later still does not start another by itself while Auto-Pilot is off). If
+there is nothing to play (204) the track that plays now carries on. Only the window that holds the lease can start a
+track, so:
+- in **the window that plays** it acts at once (`skipToNext`; a press while a lookup is in flight is ignored);
+- in **another window** (the phone as a remote control) it sends `POST /dj/dashboard/player-command` (`command=NEXT`) and
+  stays disabled ("Sent…") for 3.5 s. The server keeps the command per party until the window that plays collects it with
+  its next lease report (the answer has a `command` field, handed out once), so it is carried out within about 3 s.
+  Only one command waits per party: a second press within the interval skips once (the disabled button says so). It is
+  refused with **409** when no window holds a live lease (nobody would ever carry it out — the banner then says "no device
+  is playing"), and a waiting command never outlives the lease it was given for: it is dropped when the lease changes
+  hands, is given up or expires. A command that reaches the window while it is in the middle of a lookup is lost (the
+  DJ presses again).
+
+**The "up next" list in a window that did not change it** (stage 1): the list used to be refreshed only by events in its
+own window (page load, its own buttons, its own player taking a track), so after the DJ shuffled or moved tracks on the
+phone the computer's list stayed old until its next track, and the phone's list never noticed the computer taking
+tracks. The playback was right all along (the queue is on the server); only the display was stale. Now the lease answer
+carries `queueVersion` — a hash of the whole `FallbackQueueView` (`FallbackQueueService.getVersion`; the same bounded
+read the list does, ≤ 500 tracks, once per report) — and `GET /dj/dashboard/fallback-queue` sends the version of the list
+it returns in `X-Queue-Version`. A window remembers the version of the list it shows (`setKnownQueueVersion`, called by
+`refreshFallbackQueue`) and fetches the list again when a report brings another one; the window that made the change
+already holds the new version, so nothing is fetched twice. The version does not survive a restart (one extra fetch).
+
+**Long lists** (stage 1): the active queue and the history no longer stretch the page. Each is a heading with a count, a
+search box and a list of fixed height (`.list-scroll`, 60 % of the viewport) with its own scrollbar and a sticky header;
+the scroll box is the wrapper, outside the polled `<tbody>`, so a poll (every 3 s) keeps the scroll position, and the
+search is applied again after each refresh (`applyListFilters`, called from the poll). The search ignores case and
+accents ("zolc" finds "Żółć"); while filtering the count reads "3 / 60". The history also has a **Played / Rejected**
+filter and **"Show more"**: `GET /dj/history-view[/fragment]?limit=` (50 at first, +50 each time, at most 300 — the query
+is always bounded, and reads one row more than asked for to know whether older ones exist; the count shows "50+" while
+they do). In the dashboard's History tab "Show more" replaces the fragment in place and keeps the search text, the filter
+and the scroll position; on the standalone history page it reloads the page with the new limit. `data-list*` attributes
+tie a list to its search box, filter buttons, count and "nothing matches" row (`initListTools` in `dashboard.js`, delegated
+listeners, so an AJAX-loaded list needs no set-up). Rows are `table-sm` — a little more compact on a phone.
+
 **DJ actions on the fallback playlist**
 - *Save:* AJAX `POST /dj/dashboard/fallback-playlist` → the server saves the URL and imports the tracks (best
   effort; response headers `X-Fallback-Id`, `X-Fallback-Import: ok|failed`, `X-Fallback-Tracks` /
@@ -397,7 +436,14 @@ window" (the stand-in's state changes) stops the playing window's old track with
 next one comes from the new playlist without being stopped again; with the lease answers delayed by 2.5 s a report sent
 before a same-window save answers with the old playlist and does not stop the new track. Not tried: two real devices,
 the real Spring Security filter chain (that `_csrf` in a `sendBeacon` body is accepted), two overlapping reports whose
-answers arrive in the wrong order.
+answers arrive in the wrong order. Stage 1 was verified with the REAL dashboard page: a scratch test rendered the whole
+`dashboard.html` (Polish, 60 songs in the queue) and the history fragment (120 requests, three pages) with the real
+message bundles, and a stand-in server served them with the real `static/js` and `static/css` — the queue list scrolls
+inside its box with a sticky header, the search (accent-insensitive) and the count, a poll keeps the scroll position and
+the filter, the History tab with its filter, search and "Show more" (which keeps both), ⏭ pressed in the playing window
+(also with Auto-Pilot off), ⏭ pressed in the other window (pending state, one command for two presses, carried out within
+a report, also with Auto-Pilot off, 409 and the banner when nobody plays), and the "up next" list of both windows changing
+when the order changed on the server (one fetch per window, none while nothing changes).
 
 ---
 
@@ -408,10 +454,10 @@ answers arrive in the wrong order.
 | Class                       | Mapping                 | Purpose |
 |-----------------------------|-------------------------|---------|
 | `HomeController`            | `GET /`                 | Landing page or redirect to dashboard if authenticated |
-| `DjDashboardController`     | `/dj/dashboard`, `/dj/history-view` | DJ dashboard view, AJAX polling updates (ETag), history view/fragment; `extractPlaylistId()` resolves YouTube URLs to playlist/video IDs |
+| `DjDashboardController`     | `/dj/dashboard`, `/dj/history-view` | DJ dashboard view, AJAX polling updates (ETag), history view/fragment (`limit`: 50 at first, up to 300, "Show more"); `extractPlaylistId()` resolves YouTube URLs to playlist/video IDs |
 | `DjPartySettingsController` | `/dj/**`                | Start/end party, vibe, rate limits, playback mode, fallback playlist and shuffle (a shuffle switch re-orders the queue), account deletion |
 | `DjFallbackQueueController` | `/dj/dashboard/fallback-queue`, `POST .../move`, `POST .../place` | The DJ's "up next" list of the fallback playlist as an HTML fragment (`fragments/fallback-queue.html`), and the DJ's moves of a track (up / down / play next, or dragged to a place) |
-| `DjPlayerLeaseController`   | `POST /dj/dashboard/player-lease`, `POST .../release` | Which dashboard window plays (Section 5.4, "One window plays"): a window reports in and learns whether it is the holder; the holder gives the lease up when it leaves the page |
+| `DjPlayerLeaseController`   | `POST /dj/dashboard/player-lease`, `POST .../release`, `POST /dj/dashboard/player-command` | Which dashboard window plays (Section 5.4, "One window plays"): a window reports in and learns whether it is the holder (and gets the current playlist, the version of the "up next" list and a waiting command); the holder gives the lease up when it leaves the page; any window can give the one that plays a command (⏭ Next) |
 | `DjSongController`          | `/dj/**`                | Song queue actions: mark as played, push to Spotify, DJ picks |
 | `DjSessionHelper`           | —                       | Shared component: resolves party settings from HTTP session + **validates partyCode ownership** (IDOR protection) |
 | `FeedbackController`        | `POST /dj/feedback`     | REST endpoint for DJ bug reports / feature ideas |
@@ -424,7 +470,7 @@ answers arrive in the wrong order.
 
 | Class                        | Lines | Purpose |
 |------------------------------|-------|---------|
-| `DjService`                  | 201   | Song queue queries (dashboard, history, public), queue fingerprint, and song actions (mark played, push to Spotify, DJ picks) — all song actions validate partyCode ownership |
+| `DjService`                  | 201   | Song queue queries (dashboard, history — bounded, paged with a `limit`, `HistoryPage(rows, hasMore)` —, public), queue fingerprint, and song actions (mark played, push to Spotify, DJ picks) — all song actions validate partyCode ownership |
 | `SongEvaluationService`      | 280   | AI-powered song evaluation pipeline: Gemini AI → track resolution → save → optional auto-queue; includes **song name normalization** (temperature 0.0 for deterministic output) |
 | `PartySettingsCommandService`| 76    | Create/update party settings via generic `updateSettings()` lambda (write side, `@CachePut`) |
 | `PartySettingsQueryService`  | 31    | Read party settings (read side, `@Cacheable`) |
@@ -438,9 +484,9 @@ answers arrive in the wrong order.
 | `YouTubePlaylistClient`      | ~190  | Reads a playlist via YouTube Data API (`playlistItems.list` + `videos.list`): max 500 items, drops private/deleted/non-embeddable videos, returns each video's title too (same `videos.list` call); `findTitle` for a single video (best-effort); API key never appears in errors |
 | `FallbackPlaylistService`    | ~65   | Syncs the party's server-side fallback tracks with the DJ's playlist (playlist / single video / cleared), in the DJ's shuffle setting. API first, DB only after a complete non-empty result; `applyShuffleSetting` re-orders the queue without any API call |
 | `FallbackTrackCommandService`| ~360  | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new in playlist or shuffled order), cancel, daily 30-day purge, `applyShuffleSetting` (on: fresh random order; off: playlist order continuing after the last played track), `moveTrack` (the DJ's up / down / play next), `placeTrack` (a drag: in front of another track or to the end; a moved track is flagged `manualMove`) and `takeNextTrack` — takes the queued track with the lowest `playOrder`, claims it QUEUED → PLAYED with one conditional UPDATE (concurrent callers never get the same track), and when that was the last one starts the next round at once (re-queues the party's newest import in playlist order or freshly shuffled; a shuffled round never opens with the track that is still playing); every method that changes the queue first takes a per-party PostgreSQL advisory lock — a stress test with concurrent moves and takes deadlocked without it |
-| `FallbackQueueService`       | ~55   | Read side for the dashboard: the queued tracks of the round (up to 500) in exactly the order `takeNextTrack` serves them, plus how many are left and whether the DJ has moved tracks by hand; `moveTrack` / `placeTrack` resolve the party's current playlist and delegate |
+| `FallbackQueueService`       | ~55   | Read side for the dashboard: the queued tracks of the round (up to 500) in exactly the order `takeNextTrack` serves them, plus how many are left and whether the DJ has moved tracks by hand; `moveTrack` / `placeTrack` resolve the party's current playlist and delegate; `getVersion` / `versionOf` — a hash of the whole view, so that a window can tell that the list changed elsewhere |
 | `NextTrackService`           | 120   | "What plays next?": a waiting guest song first, else a background track. Imports lazily when there is nothing to play or the tracks are ≥ 29 days old; per party+playlist single-flight and a 5-minute pause after a failed import |
-| `PlayerLeaseService`         | ~100  | Which dashboard window plays: one in-memory lease per party (a window id + the time it last reported, 10 s timeout), `report` (`CLAIM` / `WATCH` / `TAKE_OVER`), `mayPlay` (used by `next-track`, answers 409 to another window) and `release`; takes a `Clock` in a package-private constructor so that tests move time by hand |
+| `PlayerLeaseService`         | ~140  | Which dashboard window plays: one in-memory lease per party (a window id + the time it last reported, 10 s timeout), `report` (`CLAIM` / `WATCH` / `TAKE_OVER`; the holder also collects the command waiting for it), `sendCommand` (⏭ Next from any window; refused when nobody plays; one command per party, dropped when the lease changes hands), `mayPlay` (used by `next-track`, answers 409 to another window) and `release`; takes a `Clock` in a package-private constructor so that tests move time by hand |
 
 ### 6.3 Configuration
 
@@ -464,7 +510,7 @@ answers arrive in the wrong order.
 |------------------------|---------|
 | `landing.html`         | Public landing page — two provider cards (Spotify / YouTube) + "How It Works" guide |
 | `dashboard.html`       | DJ control panel: queue, settings, QR code, playback controls, DJ Pick form, YouTube player |
-| `history.html`         | DJ history view: played and rejected songs |
+| `history.html`         | DJ history view: played and rejected songs; the `historyTableContent` fragment (count, Played / Rejected filter, search, list of fixed height, "Show more") serves both this page and the dashboard's History tab |
 | `index.html`           | Guest song request form |
 | `result.html`          | Guest view: AI decision result |
 | `party_ended.html`     | Guest view when party is inactive |
@@ -475,14 +521,15 @@ answers arrive in the wrong order.
 | `terms_pl.html`        | Terms of Service (Polish) |
 | `fragments/components.html` | Shared fragments: DJ navigation, scroll restore script, feedback modal + toast + JS |
 | `fragments/fallback-queue.html` | "Up next" list of the fallback playlist (titles, order caption, "Next" badge); rendered by `DjFallbackQueueController` into `#fallbackQueue` on the dashboard |
+| `fragments/player-controls.html` | The ⏭ Next button under the video of the YouTube Player card (its label and the "sent" text travel in `data-*` attributes) |
 | `fragments/player-lease-banner.html` | The "playback runs on another device" banner of the YouTube Player card — hidden until `youtube-autopilot.js` learns from the server that another window holds the player lease; its texts travel in `data-*` attributes |
 
 ### 6.6 Static Assets
 
 | File                    | Purpose |
 |-------------------------|---------|
-| `css/app.css`           | Shared stylesheet with design tokens, page-scoped rules (`.page-dj`, `.page-guest`, etc.) |
-| `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), AJAX tab switching, table polling (3s, ETag/304), clipboard, client-side table sorting |
+| `css/app.css`           | Shared stylesheet with design tokens, page-scoped rules (`.page-dj`, `.page-guest`, etc.), `.list-scroll` (a long list in a box of fixed height with a sticky header) |
+| `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), AJAX tab switching, table polling (3s, ETag/304), clipboard, client-side table sorting, search / filter / "Show more" of the long lists (`initListTools`) |
 | `js/youtube-autopilot.js` | YouTube Auto-Pilot, a "dumb player" (Section 14, stage 4): when the player is idle / on `ENDED` / after a player error it asks `POST /dj/dashboard/next-track` and `loadVideoById()`s the answer; confirms guest songs via `/dj/dashboard/play`; never touches a paused or playing track; asks only while its window holds the player lease (`POST /dj/dashboard/player-lease` every 3 s), otherwise shows the banner |
 | `js/song-autocomplete.js` | Song autocomplete / typeahead via public iTunes Search API (client-side, debounced at 300ms, no server involvement, no YouTube quota) |
 
@@ -777,12 +824,13 @@ PartySettingsQueryService
 | Method | Path                              | Handler                                          | Notes |
 |--------|-----------------------------------|--------------------------------------------------|-------|
 | GET    | `/dj/dashboard`                   | `DjDashboardController.dashboard()`              |       |
-| GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            |       |
-| GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated |
+| GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            | Optional `limit` (default 50, raised to 50 at least, capped at 300; not a number → 400): the last `limit` played or rejected requests, newest request first; model also has `historyHasMore` and `historyNextLimit` for "Show more" |
+| GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated; the same `limit` |
 | GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
 | GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1). Not called by the client since stage 4 (superseded by `next-track`); kept as the read-only "is a guest waiting?" peek |
 | POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId, playlistId}` (`playlistId` = the playlist a BACKGROUND track came from, null for a guest song) or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Optional `deviceId` (the asking window's id): **409** when another window holds the party's player lease (see below) — nothing is handed out; a request without an id counts as another window while a lease is live. Section 14 Phase 2 stage 3; called by `youtube-autopilot.js` since stage 4 |
-| POST   | `/dj/dashboard/player-lease`      | `DjPlayerLeaseController.report()`               | JSON `{holder, free, fallbackPlaylistId}` (the last one is the party's current fallback playlist, so the window that plays can stop a track of a playlist the DJ has replaced or cleared elsewhere), ownership-validated. Params `partyCode`, `deviceId` (random id of the window, `[A-Za-z0-9_-]{8,64}`), `mode` = `CLAIM` / `WATCH` / `TAKE_OVER`. **Not read-only**: the report renews the window's lease (10 s timeout), `TAKE_OVER` moves it. 400 for a bad id or mode. Called by `youtube-autopilot.js` every 3 s — Section 5.4, "One window plays" |
+| POST   | `/dj/dashboard/player-lease`      | `DjPlayerLeaseController.report()`               | JSON `{holder, free, fallbackPlaylistId, queueVersion, command}` (`fallbackPlaylistId` is the party's current fallback playlist, so the window that plays can stop a track of a playlist the DJ has replaced or cleared elsewhere; `queueVersion` changes whenever the "up next" list would look different, so every window can tell that it was changed in another one; `command` is `NEXT` when the DJ pressed ⏭ in another window — only ever for the holder, handed out once), ownership-validated. Params `partyCode`, `deviceId` (random id of the window, `[A-Za-z0-9_-]{8,64}`), `mode` = `CLAIM` / `WATCH` / `TAKE_OVER`. **Not read-only**: the report renews the window's lease (10 s timeout), `TAKE_OVER` moves it. 400 for a bad id or mode. Called by `youtube-autopilot.js` every 3 s — Section 5.4, "One window plays" |
+| POST   | `/dj/dashboard/player-command`    | `DjPlayerLeaseController.sendCommand()`          | ownership-validated. Params `partyCode`, `command` = `NEXT`. The DJ gives the window that plays a command from any window (the phone as a remote control); it is carried out when that window's next lease report brings it (≤ ~3 s). 204 when it is waiting, **409** when no window holds a live lease (nobody would carry it out), 400 for an unknown command — Section 5.4, "Next ⏭" |
 | POST   | `/dj/dashboard/player-lease/release` | `DjPlayerLeaseController.release()`           | ownership-validated. Params `partyCode`, `deviceId`. The holder gives the lease up when its page is left (`sendBeacon`, CSRF token in the body as `_csrf`); ignored when the window does not hold it. 204, or 400 for a bad id |
 | POST   | `/dj/dashboard/vibe`              | `DjPartySettingsController.updateGlobalVibe()`   | ownership-validated |
 | POST   | `/dj/dashboard/limits`            | `DjPartySettingsController.updateLimits()`       | ownership-validated |
@@ -790,7 +838,7 @@ PartySettingsQueryService
 | POST   | `/dj/dashboard/playback-mode`     | `DjPartySettingsController.togglePlaybackMode()` | ownership-validated |
 | POST   | `/dj/dashboard/fallback-playlist` | `DjPartySettingsController.updateFallbackPlaylist()` | YouTube only, ownership-validated. Always saves the URL; also imports the playlist into `fallback_track` (best-effort) and reports it in headers: `X-Fallback-Id`, `X-Fallback-Import: ok\|failed`, `X-Fallback-Tracks: <n>` or `X-Fallback-Import-Reason: NO_API_KEY\|INVALID_PLAYLIST\|API_ERROR\|NO_PLAYABLE_TRACKS` |
 | POST   | `/dj/dashboard/fallback-shuffle`  | `DjPartySettingsController.toggleFallbackShuffle()` | ownership-validated. Toggles the flag **and re-orders the queued tracks** (on: new random order; off: playlist order continuing after the last played track); new state in `X-Fallback-Shuffle`. The dashboard asks for confirmation first when the DJ has moved tracks by hand |
-| GET    | `/dj/dashboard/fallback-queue`    | `DjFallbackQueueController.fallbackQueue()`      | HTML fragment (`fragments/fallback-queue.html`), read-only, ownership-validated — the DJ's "up next" list (all tracks left in this round, titles, order caption, count) |
+| GET    | `/dj/dashboard/fallback-queue`    | `DjFallbackQueueController.fallbackQueue()`      | HTML fragment (`fragments/fallback-queue.html`), read-only, ownership-validated — the DJ's "up next" list (all tracks left in this round, titles, order caption, count); response header `X-Queue-Version` = the version of the list, the same value the lease reports carry |
 | POST   | `/dj/dashboard/fallback-queue/move` | `DjFallbackQueueController.moveTrack()`      | ownership-validated. Params `partyCode`, `trackId`, `direction` = `UP` / `DOWN` / `TOP` (play next). 204 when done, 409 when the track can no longer be moved (the player has taken it, or it belongs to another party or an old playlist), 400 for a bad parameter |
 | POST   | `/dj/dashboard/fallback-queue/place` | `DjFallbackQueueController.placeTrack()`    | ownership-validated. Params `partyCode`, `trackId`, `beforeTrackId` (optional; missing = the end of the queue): the DJ dropped a dragged track in front of `beforeTrackId`. 204 when done, 409 when a track can no longer be moved (taken by the player, another party's or an old playlist's), 400 for a bad parameter |
 | POST   | `/dj/dashboard/dj-pick`           | `DjSongController.addDjPick()`                   | YouTube only, bypasses AI, ownership-validated |
@@ -829,9 +877,9 @@ PartySettingsQueryService
 
 ### Testing
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
-- **Unit tests (259 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`), and the rendering of `fragments/fallback-queue.html` and `fragments/player-lease-banner.html` with the real message bundles.
+- **Unit tests (306 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the paged history (`DjService.getHistory`, the `limit` of the history endpoints), and the rendering of `fragments/fallback-queue.html`, `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles.
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 266 tests** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, counted 2026-09-29). No integration tests in the repo — the queue SQL of Phase 3 was checked once against a throw-away PostgreSQL database, not by a test that stays — and no tests for the browser code (`youtube-autopilot.js`, `dashboard.js`).
+- **Total: 313 tests** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, counted 2026-09-29). No integration tests in the repo — the queue SQL of Phase 3 was checked once against a throw-away PostgreSQL database, not by a test that stays — and no tests for the browser code (`youtube-autopilot.js`, `dashboard.js`).
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
@@ -975,14 +1023,16 @@ and a phone as the DJ, and a second window turned out not to be passive, so it w
 | Stage | What | Status |
 |-------|------|--------|
 | 0 | **One window plays** — a per-party player lease (`PlayerLeaseService`, in memory): the window that holds it plays, the others show the queue and a banner with a "play on this device" button; `next-track` answers 409 to a window without the lease; a playlist saved or cleared in a window that does not play stops the playing window's track from the old playlist (the lease answer names the current playlist, `next-track` names each track's). Section 5.4, "One window plays" | **done** (2026-09-29) — 266 unit tests, and the real script in two browser tabs against a stand-in server; the owner tried it on the computer and the phone ("works well"); the playlist-change part was verified only against the stand-in |
-| 1 | A ⏭ *Next* button: works with Auto-Pilot off too, and works as a **remote control** (owner's decisions 2026-09-29): pressed in a window that does not play, it sends a NEXT command that the window that plays picks up with its next lease report (≤ 3 s) and carries out; pressed in the window that plays it acts at once. It asks `next-track` whatever the player is doing. The active queue and the history in a list of fixed height with its own scrollbar and a sticky header, a count in the heading, a search box (and a Played / Rejected filter in the history), "load more" in the history (the paged repository method exists), compact rows on a phone | planned |
+| 1 | A ⏭ *Next* button: works with Auto-Pilot off too, and works as a **remote control** (owner's decisions 2026-09-29): pressed in a window that does not play, it sends a NEXT command that the window that plays picks up with its next lease report (≤ 3 s) and carries out; pressed in the window that plays it acts at once. It asks `next-track` whatever the player is doing. The active queue and the history in a list of fixed height with its own scrollbar and a sticky header, a count in the heading, a search box (accent-insensitive), a Played / Rejected filter and "Show more" (50 at a time, up to 300) in the history, compact rows (`table-sm`). Also the "up next" list of a window that did not change it: the lease answer carries a version of the list and a window fetches it again when it changes (found by the owner's question about shuffling on the phone). Section 5.4, "Next ⏭", "The up next list in a window that did not change it", "Long lists" | **done** (2026-09-29) — 313 unit tests, and the real dashboard page (60 songs in the queue, 120 in the history) with the real `dashboard.js` and `youtube-autopilot.js` in two browser tabs against a stand-in server; the owner tried it ("works") |
 | 2 | `V6`: `song_requests.played_at`, history ordered by play time and merged with the background tracks (they already have `played_at` and titles) — one timeline of what played; ⏮ *Previous* on top of it, shared by both devices (a browser-only Previous would lose its list on reload and when the DJ switches device); Previous restarts the current track when it has played for more than ~3 s | planned |
 
 Decided for stage 1 (owner, 2026-09-29): *Next* in a window that does not play is a remote control of the window that
 does (not a hidden button, and not a takeover — a takeover would move the sound to the phone); the command travels
 through the lease reports (the command is kept on the server per party until the holder collects it; the same channel
 can carry *Previous* in stage 2). The queue and history lists may have their own scroll box on a phone, like the
-"up next" list does.
+"up next" list does. Built that way. Not built (left for later if the owner wants it): compact "card" rows on a phone
+beyond `table-sm` (the columns that do not fit are already hidden on a narrow screen), and a spinner or a message while a
+remote *Next* is on its way — the button only says "Sent…".
 
 ### Original one-shot plan (kept for reference — see caveat above)
 
