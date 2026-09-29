@@ -346,6 +346,15 @@ channel: in the window that plays it acts at once, in another window it is the c
 the last press wins). `skipToPrevious` in `youtube-autopilot.js`:
 - a track that is playing (or paused, or buffering) and has been running for more than **3 seconds**
   (`RESTART_AFTER_SECONDS`; the button's tooltip in the bundles says "3 seconds" — keep them equal) starts again (`seekTo(0)`);
+- **a second press soon after such a restart goes back a track** (the owner's decision 2026-09-29, "option B"): when ⏮
+  restarts a track `skipToPrevious` notes `{trackLoads, time}` (`lastRestart`; `trackLoads` counts every track loaded into the
+  player — all loads go through `loadIntoPlayer` — so the note holds only for the track that was restarted, and any other
+  track makes it stale), and a ⏮ within `DOUBLE_PRESS_MS` = **10 seconds** of it skips the restart and goes to the track
+  before, however long the restarted track has played by then. It is needed for another window: a remote press is disabled for
+  3.5 s (`COMMAND_PENDING_MS`) and reaches the window that plays with its next lease report (every 3 s), so two presses are
+  always more than 3 s apart, the track has played longer than `RESTART_AFTER_SECONDS` each time, and without this the previous
+  track could never be reached from the phone. A single press is unchanged, locally and remotely (the tooltip says
+  "10 seconds" — keep it equal to `DOUBLE_PRESS_MS`);
 - otherwise the track that played **before** it comes back. The list is the server's timeline of what played
   (`GET /dj/dashboard/recent-tracks`, below — the same whichever window played the tracks, so a reload or a switch of device
   loses nothing). The running track is found in it by its **key** (`G:<request id>` for a guest song, `B:<track id>` for a
@@ -376,15 +385,40 @@ have passed) rather than showing the old label again for a moment — measured 4
 may refuse to start sound in a window nobody has touched, so a remote *resume* can fail on a page that was never clicked
 (the state then stays "paused" and the label tells the truth).
 
-**The History tab scrolls into view** (stage 3; the owner: on a phone "we have to go to the very end to even realise that
-something changed"): the tab swaps the list in *below* the settings, the QR code and the player, so on a phone nothing
-changed where the DJ was looking (in the harness the list started at 2194 px of a 3188 px page, on an 812 px screen). After
-the switch `revealContent` in `dashboard.js` scrolls the new content to the top of the screen (smooth; instant for
-"reduce motion", explicitly `instant` because Bootstrap sets `scroll-behavior: smooth` on the page and `auto` would inherit
-it) — unless its top is already in the upper 40 % of the screen (a wide screen), and the same when going back to the queue.
-The fragment gets a heading of its own when it arrives as the tab (`historyHeading`, set by `historyFragment`; the standalone
-page has its own h1), using the existing `history.title`, so the DJ sees at once what has appeared. The tab bar is left
-behind at the top, so going back means scrolling up (a sticky tab bar would help; not built).
+**Three tabs in a bar that stays in view — Panel DJ-a / Kolejka / Historia** (stage 3 made the History tab scroll its list
+into view, because the owner found on a phone that "we have to go to the very end to even realise that something changed" —
+the list is swapped in *below* the settings, the QR code and the player, on a phone 2194 px down a 3188 px page; the bar was
+left behind at the top, so going back meant scrolling up. The owner's idea 2026-09-29, built after stage 3: three tabs in a bar
+that sticks to the top of the screen.) The bar is `<nav id="djTabBar" class="dj-tabbar">` in the `dj-nav` fragment of
+`fragments/components.html` (`position: sticky; top: 0`, opaque, above the sticky headers of the lists). It must be a direct
+child of the page's container — `sticky` works only inside a parent as tall as the page — so the fragment's root is a
+`th:block`, and the account buttons (feedback, end party, logout, delete account) form a row of their own above the bar and
+scroll away with the page. Each tab is a link with `data-dj-tab="panel|queue|history"`; `initTabs` in `dashboard.js` handles
+them without leaving the page, so the player keeps playing:
+- **Panel DJ-a** scrolls to the top of the page (the settings, the QR code, the player and its controls). It does not change
+  which list shows.
+- **Kolejka** shows the queue (swapping the history away, with YouTube) and scrolls to it; **Historia** loads the history into
+  `#history-content` (once — pressed again while it shows, it only scrolls there) and scrolls to it. `revealContent` puts the
+  top of the list just under the bar (bar height + 8 px), unless it is already in the upper 40 % of the screen (a wide
+  screen). Smooth; instant for "reduce motion" — explicitly `instant`, because Bootstrap sets `scroll-behavior: smooth` on
+  the page and `auto` would inherit it.
+- **The lit tab follows the page.** Panel while the page is at its top or the list's top is still below the middle of the
+  screen; otherwise the list that shows (Kolejka / Historia); at the very bottom of the page the list wins, so a short page
+  cannot leave Panel lit. A click lights its tab at once and holds the highlight for 900 ms (and until `scrollend`, where the
+  browser has it), so that the smooth scroll passing other parts of the page does not make it flicker.
+- **Plain links** — without JavaScript, for a Spotify party and on the standalone history page (`activeTab='history'`): `/dj/dashboard#top`,
+  `/dj/dashboard#queue-content` and `/dj/history-view`. The anchors work because `scroll-margin-top` keeps the top of the
+  target out from under the bar and the scroll-restore script in `<head>` (`fragments/components.html`) does not restore the
+  saved position when the URL has a hash. On a Spotify dashboard Panel and Kolejka scroll within the page and Historia is a
+  page of its own (`reloadHistory` is defined only with YouTube). The standalone page has neither list, so the script does
+  nothing there. (Arriving by such a link at a YouTube dashboard, the up-next list is filled in after the jump and may push
+  the queue down by its own height; the tabs of the dashboard itself do not go through a page load.)
+- Messages: `dashboard.nav.panel` ("DJ Panel" / "Panel DJ-a") and `dashboard.nav.queue` ("Queue" / "Kolejka") — the old
+  "Queue (Dashboard)" was one tab that was both. On a 375 px phone the three Polish tabs take 249 px of the 343 available and do
+  not wrap (below 400 px the padding of a tab is smaller).
+
+The History fragment gets a heading of its own when it arrives as the tab (`historyHeading`, set by `historyFragment`; the
+standalone page has its own h1), using the existing `history.title`, so the DJ sees at once what has appeared.
 
 **The history is one timeline** (stage 2): `PlayHistoryService` merges the guests' requests that played or were rejected
 (`song_requests`, ordered by `COALESCE(played_at, requested_at)` — a rejected request and one played before V6 are placed by
@@ -590,7 +624,7 @@ PostgreSQL 18 with a throw-away database (see Section 10).
 | `privacy_pl.html`      | Privacy Policy (Polish) |
 | `terms.html`           | Terms of Service (English) |
 | `terms_pl.html`        | Terms of Service (Polish) |
-| `fragments/components.html` | Shared fragments: DJ navigation, scroll restore script, feedback modal + toast + JS |
+| `fragments/components.html` | Shared fragments: DJ navigation (the account buttons and the sticky bar of three tabs Panel / Queue / History), scroll restore script (skipped when the URL has a hash), feedback modal + toast + JS |
 | `fragments/fallback-queue.html` | "Up next" list of the fallback playlist (titles, order caption, "Next" badge); rendered by `DjFallbackQueueController` into `#fallbackQueue` on the dashboard |
 | `fragments/player-controls.html` | The ⏮ Back, ⏯ pause / resume and ⏭ Next buttons under the video of the YouTube Player card (their labels and the "sent" text travel in `data-*` attributes; the pause button carries both of its labels and follows the state of the music) |
 | `fragments/player-lease-banner.html` | The "playback runs on another device" banner of the YouTube Player card — hidden until `youtube-autopilot.js` learns from the server that another window holds the player lease; its texts travel in `data-*` attributes |
@@ -599,8 +633,8 @@ PostgreSQL 18 with a throw-away database (see Section 10).
 
 | File                    | Purpose |
 |-------------------------|---------|
-| `css/app.css`           | Shared stylesheet with design tokens, page-scoped rules (`.page-dj`, `.page-guest`, etc.), `.list-scroll` (a long list in a box of fixed height with a sticky header) |
-| `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), AJAX tab switching, table polling (3s, ETag/304), clipboard, client-side table sorting, search / filter / "Show more" of the long lists (`initListTools`) |
+| `css/app.css`           | Shared stylesheet with design tokens, page-scoped rules (`.page-dj`, `.page-guest`, etc.), `.list-scroll` (a long list in a box of fixed height with a sticky header), `.dj-tabbar` (the tab bar that stays in view) |
+| `js/dashboard.js`       | Dashboard core: AJAX form interceptor (preserves YT player), the tabs (`initTabs`: Panel / Queue / History, the lit tab follows the scroll, the history loaded by AJAX with YouTube), table polling (3s, ETag/304), clipboard, client-side table sorting, search / filter / "Show more" of the long lists (`initListTools`) |
 | `js/youtube-autopilot.js` | YouTube Auto-Pilot, a "dumb player" (Section 14, stage 4): when the player is idle / on `ENDED` / after a player error it asks `POST /dj/dashboard/next-track` and `loadVideoById()`s the answer; confirms guest songs via `/dj/dashboard/play`; never touches a paused or playing track; asks only while its window holds the player lease (`POST /dj/dashboard/player-lease` every 3 s), otherwise shows the banner |
 | `js/song-autocomplete.js` | Song autocomplete / typeahead via public iTunes Search API (client-side, debounced at 300ms, no server involvement, no YouTube quota) |
 
@@ -1086,7 +1120,7 @@ Details worth knowing:
   server does not compress responses (`server.compression` is off), which is fine on a LAN and acceptable elsewhere
   for playlists of the usual size.
 
-### Phase 4 — playback controls and readable lists (in progress; dev branch)
+### Phase 4 — playback controls and readable lists (done; dev branch)
 
 Requested by the owner (2026-09-29, after trying Phase 3 on a real phone): Next / Previous buttons "like a normal player",
 and an active queue and a history tab that stay readable when they hold many songs (before stage 1 the whole table was in
@@ -1100,7 +1134,8 @@ not to be passive, so it was agreed to start there:
 | 0 | **One window plays** — a per-party player lease (`PlayerLeaseService`, in memory): the window that holds it plays, the others show the queue and a banner with a "play on this device" button; `next-track` answers 409 to a window without the lease; a playlist saved or cleared in a window that does not play stops the playing window's track from the old playlist (the lease answer names the current playlist, `next-track` names each track's). Section 5.4, "One window plays" | **done** (2026-09-29) — 266 unit tests, and the real script in two browser tabs against a stand-in server; the owner tried it on the computer and the phone ("works well"); the playlist-change part was verified only against the stand-in |
 | 1 | A ⏭ *Next* button: works with Auto-Pilot off too, and works as a **remote control** (owner's decisions 2026-09-29): pressed in a window that does not play, it sends a NEXT command that the window that plays picks up with its next lease report (≤ 3 s) and carries out; pressed in the window that plays it acts at once. It asks `next-track` whatever the player is doing. The active queue and the history in a list of fixed height with its own scrollbar and a sticky header, a count in the heading, a search box (accent-insensitive), a Played / Rejected filter and "Show more" (50 at a time, up to 300) in the history, compact rows (`table-sm`). Also the "up next" list of a window that did not change it: the lease answer carries a version of the list and a window fetches it again when it changes (found by the owner's question about shuffling on the phone). Section 5.4, "Next ⏭", "The up next list in a window that did not change it", "Long lists" | **done** (2026-09-29) — 313 unit tests, and the real dashboard page (60 songs in the queue, 120 in the history) with the real `dashboard.js` and `youtube-autopilot.js` in two browser tabs against a stand-in server; the owner tried it ("works") |
 | 2 | `V6`: `song_requests.played_at`, history ordered by play time and merged with the background tracks (they already have `played_at` and titles) — one timeline of what played (`PlayHistoryService`); ⏮ *Back* on top of it, shared by both devices (a browser-only Back would lose its list on reload and when the DJ switches device): a track that has played for more than 3 s starts again, otherwise the track before it comes back, pressed again the one before that; it works from any window like ⏭ (`PlayerCommand.PREVIOUS`, `GET /dj/dashboard/recent-tracks`). ⏭ after ⏮ goes to the queue, it does not walk forward through the history. Section 5.4, "Back ⏮", "The history is one timeline" | **done** (2026-09-29) — 344 unit tests; V6 and both history queries against a real PostgreSQL 18 (V1–V6 + Hibernate validation, V5 → V6 on existing data, the merge order, the bound, the filters); ⏮ on the real dashboard page with the real scripts in two browser tabs against a stand-in server; not tried on real devices |
-| 3 | Two things the owner asked for while trying stage 2 on the phone (2026-09-29): **⏯ pause / resume from any window** (`PlayerCommand.PAUSE` / `RESUME`, explicit rather than a toggle; the window that plays reports whether its player makes sound, the answers tell it to the others, the button follows it and waits with "Sent…" until the state has changed), and **the History tab scrolls into view** on a phone, with a heading of its own (`historyHeading`). Section 5.4, "Pause ⏯", "The History tab scrolls into view" | **done** (2026-09-29) — 360 unit tests; the real dashboard page with the real scripts in two browser tabs against a stand-in server (local pause, remote pause and resume with the label following, a pause made at the computer showing on the phone, 409 when nobody plays, Auto-Pilot leaving a paused player alone); the History scroll on a 375×812 viewport through the *instant* path only — the smooth path could not be run in the invisible browser pane; not tried on real devices |
+| 3 | Two things the owner asked for while trying stage 2 on the phone (2026-09-29): **⏯ pause / resume from any window** (`PlayerCommand.PAUSE` / `RESUME`, explicit rather than a toggle; the window that plays reports whether its player makes sound, the answers tell it to the others, the button follows it and waits with "Sent…" until the state has changed), and **the History tab scrolls into view** on a phone, with a heading of its own (`historyHeading`). Section 5.4, "Pause ⏯", "Three tabs in a bar that stays in view" | **done** (2026-09-29) — 360 unit tests; the real dashboard page with the real scripts in two browser tabs against a stand-in server (local pause, remote pause and resume with the label following, a pause made at the computer showing on the phone, 409 when nobody plays, Auto-Pilot leaving a paused player alone); the History scroll on a 375×812 viewport through the *instant* path only — the smooth path could not be run in the invisible browser pane; not tried on real devices |
+| 4 | Two decisions of the owner from the end of the stage 3 session (2026-09-29): **⏮ pressed twice within 10 s goes to the previous track** (a restart that ⏮ caused is noted with a counter of the tracks loaded into the player, so it counts only for that track; `DOUBLE_PRESS_MS`; makes the previous track reachable from another window), and **three tabs Panel DJ-a / Kolejka / Historia in a sticky bar** (the `dj-nav` fragment split into a row of account buttons and the bar; `initTabs` in `dashboard.js`; Panel scrolls to the top, the lit tab follows the scroll; plain links for Spotify and the standalone history page). Section 5.4, "Back ⏮", "Three tabs in a bar that stays in view" | **done** (2026-09-29) — 365 unit tests (a new `DjNavFragmentTest`); the real rendered dashboard, history and up-next fragments with the real scripts and styles against a stand-in server: ⏮ locally (second press within 10 s goes back, after 12 s it restarts again, a new track resets it, the first 3 s go back at once) and from a second browser window in real time (restart at 2.8 s, previous track 3 s later); the tabs on 1280×800 and 375×812 (both languages), the History AJAX swap, Panel, sticky bar, lit tab by scroll position, anchors from the standalone page (the saved scroll is skipped, `scroll-margin-top`), a Spotify dashboard; scrolling through the *instant* path only — the smooth path could not be run in the invisible browser pane; not tried on real devices |
 
 Decided for stage 1 (owner, 2026-09-29): *Next* in a window that does not play is a remote control of the window that
 does (not a hidden button, and not a takeover — a takeover would move the sound to the phone); the command travels
@@ -1110,11 +1145,14 @@ through the lease reports (the command is kept on the server per party until the
 beyond `table-sm` (the columns that do not fit are already hidden on a narrow screen), and a spinner or a message while a
 remote *Next* is on its way — the button only says "Sent…".
 
-Decided by the owner (2026-09-29), **not built yet**: (1) *Back ⏮* pressed twice within ~10 s goes to the previous track — after
-a restart that ⏮ caused, a second ⏮ skips the restart (today, from another window, the previous track cannot be reached: the
-button is disabled for 3.5 s and a command arrives at the next 3 s report, so the second press always finds the track past its
-first 3 seconds); (2) three navigation tabs **Panel DJ-a / Kolejka / Historia** in a sticky bar, "Panel" scrolling to the top of
-the page, so that the DJ can jump to any part from anywhere on a long page (the details are in `SESSION_HANDOFF.md`).
+Stage 4 = two decisions the owner made at the end of the stage 3 session (2026-09-29), built afterwards: (1) *Back ⏮* pressed
+twice within 10 s goes to the previous track — after a restart that ⏮ caused, a second ⏮ skips the restart (before, from
+another window, the previous track could not be reached: the button is disabled for 3.5 s and a command arrives at the next 3 s
+report, so the second press always found the track past its first 3 seconds); (2) three navigation tabs **Panel DJ-a /
+Kolejka / Historia** in a sticky bar, "Panel" scrolling to the top of the page, so that the DJ can jump to any part from
+anywhere on a long page. Choices nobody was asked about: the account buttons moved to a row above the tab bar (only the tabs
+stay in view), the lit tab follows the scroll position, and the tabs are plain links where there is no AJAX (Spotify, the
+standalone history page). With this Phase 4 is complete; what remains are the optional follow-ups in `SESSION_HANDOFF.md`.
 
 ### Original one-shot plan (kept for reference — see caveat above)
 
