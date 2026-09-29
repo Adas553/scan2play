@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/*
+    "Up next" list of the DJ's fallback (background music) playlist, filled into #fallbackQueue on the dashboard by
+    dashboard.js (GET /dj/dashboard/fallback-queue). Model attribute "queue" is a FallbackQueueView.
+    Titles come from YouTube, so they are only ever rendered with th:text (escaped).
+    The buttons carry data-move (TOP / UP / DOWN); the track id is on the row (data-track-id) — a long queue (up to
+    500 rows) is sent on every refresh, so the markup per row is kept small. dashboard.js handles the clicks and the
+    dragging of a row (press and drag with the mouse, press and hold on a touch screen); the title is plain text so that
+    a press on it starts a drag, and the link to YouTube is the small arrow beside the buttons. data-manual tells
+    dashboard.js whether the DJ has moved tracks by hand (it asks before the shuffle switch would undo that).
+*/-->
+<div th:fragment="queue" th:attr="data-manual=${queue.manualOrder()}">
+    <p th:if="${!queue.hasPlaylist()}" class="text-secondary small mb-0"
+       th:text="#{dashboard.fallback.queue.noplaylist}">Set a playlist above to see what plays next.</p>
+
+    <th:block th:if="${queue.hasPlaylist()}">
+        <p th:if="${queue.tracks().isEmpty()}" class="text-warning small mb-0"
+           th:text="#{dashboard.fallback.queue.empty}">No tracks in the queue.</p>
+
+        <th:block th:unless="${queue.tracks().isEmpty()}">
+            <div class="d-flex justify-content-between align-items-center small text-secondary mb-2">
+                <span th:text="${queue.shuffle()} ? (${queue.manualOrder()} ? #{dashboard.fallback.queue.order.shuffle.manual} : #{dashboard.fallback.queue.order.shuffle}) : (${queue.manualOrder()} ? #{dashboard.fallback.queue.order.playlist.manual} : #{dashboard.fallback.queue.order.playlist})">Playlist order</span>
+                <span th:text="#{dashboard.fallback.queue.remaining(${queue.remaining()})}">12 left in this round</span>
+            </div>
+            <!--/* Fixed height with its own scrollbar: the list holds the whole round (up to 500 tracks); 17rem next to the 640px player lines up with the video's height. dashboard.js keeps the scroll position when it refreshes the list. */-->
+            <ol class="list-group list-group-numbered"
+                style="max-height: 17rem; overflow-y: auto; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
+                <li th:each="track, stat : ${queue.tracks()}" th:attr="data-track-id=${track.id()}"
+                    class="list-group-item bg-black text-light border-secondary py-1 small d-flex align-items-center gap-2">
+                    <span class="text-break me-auto"
+                          th:classappend="${stat.first} ? 'fw-bold' : ''"
+                          th:text="${track.title() != null} ? ${track.title()} : ${'youtu.be/' + track.videoId()}">Song title</span>
+                    <span th:if="${stat.first}" class="badge text-bg-success flex-shrink-0"
+                          th:text="#{dashboard.fallback.queue.next}">Next</span>
+                    <a th:href="${'https://www.youtube.com/watch?v=' + track.videoId()}"
+                       target="_blank" rel="noopener noreferrer" draggable="false"
+                       class="text-secondary text-decoration-none flex-shrink-0 px-1"
+                       th:title="#{dashboard.fallback.queue.open}">↗</a>
+                    <span class="btn-group btn-group-sm flex-shrink-0">
+                        <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="TOP"
+                                th:title="#{dashboard.fallback.queue.move.top}"
+                                th:disabled="${stat.first}">⇑</button>
+                        <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="UP"
+                                th:title="#{dashboard.fallback.queue.move.up}"
+                                th:disabled="${stat.first}">↑</button>
+                        <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="DOWN"
+                                th:title="#{dashboard.fallback.queue.move.down}"
+                                th:disabled="${stat.last}">↓</button>
+                    </span>
+                </li>
+            </ol>
+        </th:block>
+    </th:block>
+</div>
+
+</body>
+</html>

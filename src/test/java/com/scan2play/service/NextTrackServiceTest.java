@@ -98,7 +98,7 @@ class NextTrackServiceTest {
 
         assertThat(service.findNextTrack(PARTY, Set.of()))
                 .contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ"));
-        verify(fallbackPlaylistService, never()).syncFallbackTracks(anyString(), anyString());
+        verify(fallbackPlaylistService, never()).syncFallbackTracks(anyString(), anyString(), anyBoolean());
     }
 
     @Test
@@ -146,7 +146,21 @@ class NextTrackServiceTest {
 
         assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ"));
 
-        verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST);
+        verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST, true);
+    }
+
+    @Test
+    @DisplayName("an on-demand import uses the DJ's shuffle setting for the order of the imported tracks")
+    void shouldImportWithTheShuffleSetting() {
+        givenNoGuestWaiting();
+        givenFallbackPlaylist(PLAYLIST_URL, false);
+        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.empty());
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, false))
+                .thenReturn(Optional.empty(), Optional.of(track));
+
+        assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
+
+        verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST, false);
     }
 
     @Test
@@ -156,14 +170,14 @@ class NextTrackServiceTest {
         givenFallbackPlaylist(PLAYLIST_URL, true);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.empty());
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.empty());
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST))
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST, true))
                 .thenThrow(new FallbackImportException(Reason.NO_API_KEY, "no key"));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).isEmpty();
         assertThat(service.findNextTrack(PARTY, Set.of())).isEmpty();
         assertThat(service.findNextTrack(PARTY, Set.of())).isEmpty();
 
-        verify(fallbackPlaylistService, times(1)).syncFallbackTracks(PARTY, PLAYLIST);
+        verify(fallbackPlaylistService, times(1)).syncFallbackTracks(PARTY, PLAYLIST, true);
     }
 
     @Test
@@ -174,14 +188,14 @@ class NextTrackServiceTest {
                 .partyCode(inv.getArgument(0)).fallbackPlaylistUrl(PLAYLIST_URL).build());
         when(fallbackTrackRepository.findLatestFetchedAt(anyString(), anyString())).thenReturn(Optional.empty());
         when(fallbackTrackCommandService.takeNextTrack(anyString(), anyString(), anyBoolean())).thenReturn(Optional.empty());
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST))
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST, true))
                 .thenThrow(new FallbackImportException(Reason.API_ERROR, "quota"));
 
         service.findNextTrack(PARTY, Set.of());
         service.findNextTrack("OTHER", Set.of());
 
-        verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST);
-        verify(fallbackPlaylistService).syncFallbackTracks("OTHER", PLAYLIST);
+        verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST, true);
+        verify(fallbackPlaylistService).syncFallbackTracks("OTHER", PLAYLIST, true);
     }
 
     @Test
@@ -196,7 +210,7 @@ class NextTrackServiceTest {
         assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
 
         InOrder order = inOrder(fallbackPlaylistService, fallbackTrackCommandService);
-        order.verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST);
+        order.verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST, true);
         order.verify(fallbackTrackCommandService).takeNextTrack(PARTY, PLAYLIST, true);
     }
 
@@ -210,7 +224,7 @@ class NextTrackServiceTest {
 
         service.findNextTrack(PARTY, Set.of());
 
-        verify(fallbackPlaylistService, never()).syncFallbackTracks(anyString(), anyString());
+        verify(fallbackPlaylistService, never()).syncFallbackTracks(anyString(), anyString(), anyBoolean());
     }
 
     @Test
@@ -219,7 +233,7 @@ class NextTrackServiceTest {
         givenNoGuestWaiting();
         givenFallbackPlaylist(PLAYLIST_URL, true);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(LocalDateTime.now().minusDays(29).minusHours(1)));
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST))
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST, true))
                 .thenThrow(new FallbackImportException(Reason.API_ERROR, "quota"));
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(track));
 

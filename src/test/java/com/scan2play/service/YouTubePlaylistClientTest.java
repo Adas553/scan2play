@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scan2play.model.PlaylistTrack;
 import com.scan2play.service.FallbackImportException.Reason;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,13 +61,14 @@ class YouTubePlaylistClientTest {
                 + (nextPageToken != null ? ",\"nextPageToken\":\"" + nextPageToken + "\"" : "") + "}";
     }
 
-    /** videos.list response; a spec is a video ID (embeddable), or "id:noembed". */
+    /** videos.list response; a spec is a video ID (embeddable, titled "Title <id>"), or "id:noembed". */
     private static String videosResponse(String... specs) {
         List<String> items = new ArrayList<>();
         for (String spec : specs) {
             String[] parts = spec.split(":");
             boolean embeddable = parts.length == 1;
-            items.add("{\"id\":\"" + parts[0] + "\",\"status\":{\"embeddable\":" + embeddable + ",\"privacyStatus\":\"public\"}}");
+            items.add("{\"id\":\"" + parts[0] + "\",\"status\":{\"embeddable\":" + embeddable + ",\"privacyStatus\":\"public\"},"
+                    + "\"snippet\":{\"title\":\"Title " + parts[0] + "\"}}");
         }
         return "{\"items\":[" + String.join(",", items) + "]}";
     }
@@ -87,14 +90,14 @@ class YouTubePlaylistClientTest {
                 .andRespond(withSuccess(playlistPage(null, "v1", "v2:private", "v3", "v4", "v5"), MediaType.APPLICATION_JSON));
         // v2 (private) is not even asked for; v3 disallows embedding; v5 was deleted (missing from videos.list)
         server.expect(requestTo(containsString("/youtube/v3/videos")))
-                .andExpect(queryParam("part", "status"))
+                .andExpect(queryParam("part", "status,snippet"))
                 .andExpect(queryParam("id", "v1,v3,v4,v5"))
                 .andExpect(queryParam("key", KEY))
                 .andRespond(withSuccess(videosResponse("v4", "v3:noembed", "v1"), MediaType.APPLICATION_JSON));
 
-        List<String> result = client.fetchPlayableVideoIds(PLAYLIST);
+        List<PlaylistTrack> result = client.fetchPlayableTracks(PLAYLIST);
 
-        assertThat(result).containsExactly("v1", "v4");
+        assertThat(result).containsExactly(new PlaylistTrack("v1", "Title v1"), new PlaylistTrack("v4", "Title v4"));
         server.verify();
     }
 
@@ -111,7 +114,7 @@ class YouTubePlaylistClientTest {
                 .andExpect(queryParam("id", "a1,a2,b1"))
                 .andRespond(withSuccess(videosResponse("b1", "a2", "a1"), MediaType.APPLICATION_JSON));
 
-        assertThat(client.fetchPlayableVideoIds(PLAYLIST)).containsExactly("a1", "a2", "b1");
+        assertThat(client.fetchPlayableTracks(PLAYLIST)).extracting(PlaylistTrack::videoId).containsExactly("a1", "a2", "b1");
         server.verify();
     }
 
@@ -135,11 +138,11 @@ class YouTubePlaylistClientTest {
                     return withSuccess(videosResponse(ids), MediaType.APPLICATION_JSON).createResponse(request);
                 });
 
-        List<String> result = client.fetchPlayableVideoIds(PLAYLIST);
+        List<PlaylistTrack> result = client.fetchPlayableTracks(PLAYLIST);
 
         assertThat(result).hasSize(YouTubePlaylistClient.MAX_TRACKS);
-        assertThat(result.get(0)).isEqualTo("vid00000000");
-        assertThat(result.get(499)).isEqualTo("vid00000499");
+        assertThat(result.get(0).videoId()).isEqualTo("vid00000000");
+        assertThat(result.get(499).videoId()).isEqualTo("vid00000499");
         server.verify(); // exactly 10 + 10 calls, no more
     }
 
@@ -149,7 +152,7 @@ class YouTubePlaylistClientTest {
         server.expect(requestTo(containsString("/playlistItems")))
                 .andRespond(withSuccess(playlistPage(null), MediaType.APPLICATION_JSON));
 
-        assertThat(client.fetchPlayableVideoIds(PLAYLIST)).isEmpty();
+        assertThat(client.fetchPlayableTracks(PLAYLIST)).isEmpty();
         server.verify();
     }
 
@@ -161,7 +164,60 @@ class YouTubePlaylistClientTest {
         server.expect(requestTo(containsString("/videos")))
                 .andRespond(withSuccess(videosResponse("v1:noembed", "v2:noembed"), MediaType.APPLICATION_JSON));
 
-        assertThat(client.fetchPlayableVideoIds(PLAYLIST)).isEmpty();
+        assertThat(client.fetchPlayableTracks(PLAYLIST)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a video without a title in the response is still kept — with no title")
+    void shouldKeepVideoWithoutTitle() {
+        server.expect(requestTo(containsString("/playlistItems")))
+                .andRespond(withSuccess(playlistPage(null, "v1", "v2"), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(containsString("/videos")))
+                .andRespond(withSuccess("{\"items\":["
+                        + "{\"id\":\"v1\",\"status\":{\"embeddable\":true,\"privacyStatus\":\"public\"}},"
+                        + "{\"id\":\"v2\",\"status\":{\"embeddable\":true,\"privacyStatus\":\"public\"},\"snippet\":{\"title\":\"  \"}}]}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(client.fetchPlayableTracks(PLAYLIST))
+                .containsExactly(new PlaylistTrack("v1", null), new PlaylistTrack("v2", null));
+    }
+
+    // ---- findTitle (single-video fallback) ----
+
+    @Test
+    @DisplayName("findTitle looks up one video with a single videos.list call")
+    void findTitle_shouldReturnTitle() {
+        server.expect(requestTo(containsString("/youtube/v3/videos")))
+                .andExpect(queryParam("part", "snippet"))
+                .andExpect(queryParam("id", "dQw4w9WgXcQ"))
+                .andExpect(queryParam("key", KEY))
+                .andRespond(withSuccess(videosResponse("dQw4w9WgXcQ"), MediaType.APPLICATION_JSON));
+
+        assertThat(client.findTitle("dQw4w9WgXcQ")).contains("Title dQw4w9WgXcQ");
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("findTitle is best-effort: no key, a malformed ID or an API failure just mean 'no title'")
+    void findTitle_shouldNeverFail() {
+        YouTubePlaylistClient noKey = new YouTubePlaylistClient(RestClient.builder().build(), new ObjectMapper(), "");
+        assertThat(noKey.findTitle("dQw4w9WgXcQ")).isEmpty();
+
+        assertThat(client.findTitle("bad&id")).isEmpty();
+        assertThat(client.findTitle(null)).isEmpty();
+        server.verify(); // none of the above made a request
+
+        server.expect(requestTo(containsString("/videos"))).andRespond(withStatus(HttpStatus.FORBIDDEN));
+        assertThat(client.findTitle("dQw4w9WgXcQ")).isEqualTo(Optional.empty());
+    }
+
+    @Test
+    @DisplayName("findTitle returns nothing when the video does not exist")
+    void findTitle_shouldReturnEmpty_whenVideoIsUnknown() {
+        server.expect(requestTo(containsString("/videos")))
+                .andRespond(withSuccess("{\"items\":[]}", MediaType.APPLICATION_JSON));
+
+        assertThat(client.findTitle("dQw4w9WgXcQ")).isEmpty();
     }
 
     // ---- failures ----
@@ -172,7 +228,7 @@ class YouTubePlaylistClientTest {
         for (String blank : Arrays.asList("", "  ", null)) {
             YouTubePlaylistClient noKey = new YouTubePlaylistClient(RestClient.builder().build(), new ObjectMapper(), blank);
 
-            assertThatThrownBy(() -> noKey.fetchPlayableVideoIds(PLAYLIST))
+            assertThatThrownBy(() -> noKey.fetchPlayableTracks(PLAYLIST))
                     .isInstanceOf(FallbackImportException.class)
                     .extracting(e -> ((FallbackImportException) e).getReason()).isEqualTo(Reason.NO_API_KEY);
         }
@@ -182,7 +238,7 @@ class YouTubePlaylistClientTest {
     @DisplayName("a malformed playlist ID is rejected before any HTTP call (no parameter injection)")
     void shouldRejectInvalidPlaylistId() {
         for (String bad : new String[]{null, "", "x", "PL&key=evil", "PL abc", "a/b", "PL{x}"}) {
-            assertThatThrownBy(() -> client.fetchPlayableVideoIds(bad))
+            assertThatThrownBy(() -> client.fetchPlayableTracks(bad))
                     .isInstanceOf(FallbackImportException.class)
                     .extracting(e -> ((FallbackImportException) e).getReason()).isEqualTo(Reason.INVALID_PLAYLIST);
         }
@@ -194,7 +250,7 @@ class YouTubePlaylistClientTest {
     void shouldMapNotFoundToApiError() {
         server.expect(requestTo(containsString("/playlistItems"))).andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        assertThatThrownBy(() -> client.fetchPlayableVideoIds(PLAYLIST))
+        assertThatThrownBy(() -> client.fetchPlayableTracks(PLAYLIST))
                 .isInstanceOf(FallbackImportException.class)
                 .hasMessageContaining("404")
                 .hasMessageContaining("not found")
@@ -206,7 +262,7 @@ class YouTubePlaylistClientTest {
     void shouldMapForbiddenToApiError() {
         server.expect(requestTo(containsString("/playlistItems"))).andRespond(withStatus(HttpStatus.FORBIDDEN));
 
-        assertThatThrownBy(() -> client.fetchPlayableVideoIds(PLAYLIST))
+        assertThatThrownBy(() -> client.fetchPlayableTracks(PLAYLIST))
                 .isInstanceOf(FallbackImportException.class)
                 .hasMessageContaining("403")
                 .extracting(e -> ((FallbackImportException) e).getReason()).isEqualTo(Reason.API_ERROR);
@@ -219,7 +275,7 @@ class YouTubePlaylistClientTest {
                 .andRespond(withSuccess(playlistPage(null, "v1"), MediaType.APPLICATION_JSON));
         server.expect(requestTo(containsString("/videos"))).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThatThrownBy(() -> client.fetchPlayableVideoIds(PLAYLIST))
+        assertThatThrownBy(() -> client.fetchPlayableTracks(PLAYLIST))
                 .isInstanceOf(FallbackImportException.class)
                 .extracting(e -> ((FallbackImportException) e).getReason()).isEqualTo(Reason.API_ERROR);
     }
@@ -230,7 +286,7 @@ class YouTubePlaylistClientTest {
         server.expect(requestTo(containsString("/playlistItems")))
                 .andRespond(withSuccess("<html>not json</html>", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> client.fetchPlayableVideoIds(PLAYLIST))
+        assertThatThrownBy(() -> client.fetchPlayableTracks(PLAYLIST))
                 .isInstanceOf(FallbackImportException.class)
                 .extracting(e -> ((FallbackImportException) e).getReason()).isEqualTo(Reason.API_ERROR);
     }
@@ -243,7 +299,7 @@ class YouTubePlaylistClientTest {
                     throw new IOException("Connection reset while calling " + request.getURI());
                 });
 
-        assertThatThrownBy(() -> client.fetchPlayableVideoIds(PLAYLIST))
+        assertThatThrownBy(() -> client.fetchPlayableTracks(PLAYLIST))
                 .isInstanceOf(FallbackImportException.class)
                 .hasMessageNotContaining(KEY)
                 .hasMessageContaining("***")

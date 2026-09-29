@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scan2play.model.PlaylistTrack;
 import com.scan2play.service.FallbackImportException.Reason;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,19 +15,22 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Reads a YouTube playlist through the YouTube Data API v3 and returns the video IDs that can
+ * Reads a YouTube playlist through the YouTube Data API v3 and returns the videos (ID and title) that can
  * actually be played in the embedded player, in playlist order.
  * <p>
  * <b>Quota:</b> {@code playlistItems.list} and {@code videos.list} cost 1 unit per call (50 items),
  * drawn from the general 10,000-units/day pool — separate from the tight {@code search.list} limit.
- * At most {@value #MAX_TRACKS} playlist items are read (≤ 10 + 10 calls ≈ 20 units per import).
+ * At most {@value #MAX_TRACKS} playlist items are read (≤ 10 + 10 calls ≈ 20 units per import). The titles come
+ * from the same {@code videos.list} calls (an extra {@code part} does not cost extra quota).
  * <p>
  * <b>Filtering:</b> private items are skipped up front; deleted videos and videos that disallow
  * embedding are dropped via {@code videos.list} (they would only cause player errors later).
@@ -45,6 +49,7 @@ public class YouTubePlaylistClient {
     private static final String PLAYLIST_ITEMS_URL = "https://www.googleapis.com/youtube/v3/playlistItems";
     private static final String VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
     private static final Pattern PLAYLIST_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{2,64}");
+    private static final Pattern VIDEO_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{11}");
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -60,11 +65,11 @@ public class YouTubePlaylistClient {
 
     /**
      * @param playlistId a YouTube playlist ID (e.g. {@code PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf})
-     * @return playable video IDs in playlist order, without duplicates, at most {@value #MAX_TRACKS} candidates
+     * @return playable videos in playlist order, without duplicates, at most {@value #MAX_TRACKS} candidates
      *         considered; empty if the playlist has no public, embeddable videos
      * @throws FallbackImportException if the key is missing, the ID is malformed or the API call fails
      */
-    public List<String> fetchPlayableVideoIds(String playlistId) {
+    public List<PlaylistTrack> fetchPlayableTracks(String playlistId) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new FallbackImportException(Reason.NO_API_KEY,
                     "YouTube API key is not configured (youtube.api-key / YOUTUBE_API_KEY)");
@@ -74,9 +79,36 @@ public class YouTubePlaylistClient {
         }
 
         List<String> candidates = fetchPlaylistVideoIds(playlistId);
-        List<String> playable = keepEmbeddable(candidates);
+        List<PlaylistTrack> playable = keepEmbeddable(candidates);
         log.info("YouTube playlist {}: {} item(s) read, {} playable", playlistId, candidates.size(), playable.size());
         return playable;
+    }
+
+    /**
+     * Best-effort title lookup for a single video (one {@code videos.list} call, 1 quota unit). Used for a
+     * single-video fallback, which needs no API call to be played — so a missing key or a failing API
+     * only means "no title", never an error.
+     */
+    public Optional<String> findTitle(String videoId) {
+        if (apiKey == null || apiKey.isBlank() || videoId == null || !VIDEO_ID_PATTERN.matcher(videoId).matches()) {
+            return Optional.empty();
+        }
+        URI uri = UriComponentsBuilder.fromUriString(VIDEOS_URL)
+                .queryParam("part", "snippet")
+                .queryParam("id", videoId)
+                .queryParam("key", apiKey)
+                .build().encode().toUri();
+        try {
+            for (JsonNode video : getJson(uri).path("items")) {
+                String title = video.path("snippet").path("title").asText("");
+                if (!title.isBlank()) {
+                    return Optional.of(title);
+                }
+            }
+        } catch (FallbackImportException e) {
+            log.debug("No title for video {}: {}", videoId, e.getMessage());
+        }
+        return Optional.empty();
     }
 
     // ---- playlistItems.list ----
@@ -109,13 +141,16 @@ public class YouTubePlaylistClient {
 
     // ---- videos.list ----
 
-    /** Keeps only videos that still exist, are not private and allow embedding — preserving order. */
-    private List<String> keepEmbeddable(List<String> candidates) {
-        Set<String> ok = new HashSet<>();
+    /**
+     * Keeps only videos that still exist, are not private and allow embedding — preserving order — and attaches
+     * their titles.
+     */
+    private List<PlaylistTrack> keepEmbeddable(List<String> candidates) {
+        Map<String, String> titles = new HashMap<>(); // video ID -> title (null if the API sent none)
         for (int from = 0; from < candidates.size(); from += PAGE_SIZE) {
             List<String> chunk = candidates.subList(from, Math.min(from + PAGE_SIZE, candidates.size()));
             URI uri = UriComponentsBuilder.fromUriString(VIDEOS_URL)
-                    .queryParam("part", "status")
+                    .queryParam("part", "status,snippet")
                     .queryParam("id", String.join(",", chunk))
                     .queryParam("key", apiKey)
                     .build().encode().toUri();
@@ -123,11 +158,14 @@ public class YouTubePlaylistClient {
                 boolean embeddable = video.path("status").path("embeddable").asBoolean(false);
                 boolean isPrivate = "private".equals(video.path("status").path("privacyStatus").asText(""));
                 if (embeddable && !isPrivate) {
-                    ok.add(video.path("id").asText(""));
+                    titles.put(video.path("id").asText(""), video.path("snippet").path("title").asText(null));
                 }
             }
         }
-        return candidates.stream().filter(ok::contains).toList();
+        return candidates.stream()
+                .filter(titles::containsKey)
+                .map(id -> new PlaylistTrack(id, titles.get(id)))
+                .toList();
     }
 
     // ---- HTTP ----

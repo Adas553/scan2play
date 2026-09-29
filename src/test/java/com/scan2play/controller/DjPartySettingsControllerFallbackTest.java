@@ -1,5 +1,6 @@
 package com.scan2play.controller;
 
+import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.FallbackImportException;
 import com.scan2play.service.FallbackImportException.Reason;
@@ -20,6 +21,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +38,8 @@ class DjPartySettingsControllerFallbackTest {
     private static final String PLAYLIST_ID = "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf";
 
     private PartySettingsCommandService settingsService;
+    /** What the (mocked) settings service returns after an update: the party as saved, shuffle on by default. */
+    private PartySettingsEntity savedSettings;
     private DjSessionHelper sessionHelper;
     private FallbackPlaylistService fallbackPlaylistService;
     private MockMvc mockMvc;
@@ -45,6 +49,8 @@ class DjPartySettingsControllerFallbackTest {
     @BeforeEach
     void setUp() {
         settingsService = mock(PartySettingsCommandService.class);
+        savedSettings = PartySettingsEntity.builder().partyCode(PARTY).fallbackShuffle(true).build();
+        when(settingsService.updateSettings(eq(PARTY), any())).thenAnswer(invocation -> savedSettings);
         sessionHelper = mock(DjSessionHelper.class);
         fallbackPlaylistService = mock(FallbackPlaylistService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
@@ -66,7 +72,7 @@ class DjPartySettingsControllerFallbackTest {
     @Test
     @DisplayName("a playlist URL is saved, imported, and the result is reported in headers")
     void shouldImportPlaylistAndReportInHeaders() throws Exception {
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST_ID)).thenReturn(42);
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST_ID, true)).thenReturn(42);
 
         setPlaylist("https://www.youtube.com/playlist?list=" + PLAYLIST_ID)
                 .andExpect(status().isOk())
@@ -80,7 +86,7 @@ class DjPartySettingsControllerFallbackTest {
     @Test
     @DisplayName("a failed import still saves the setting and answers 200 (playback does not depend on it yet)")
     void shouldStillSaveSetting_whenImportFails() throws Exception {
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST_ID))
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST_ID, true))
                 .thenThrow(new FallbackImportException(Reason.NO_API_KEY, "no key"));
 
         setPlaylist("https://www.youtube.com/playlist?list=" + PLAYLIST_ID)
@@ -96,7 +102,7 @@ class DjPartySettingsControllerFallbackTest {
     @Test
     @DisplayName("a single-video URL is passed on as V:<id>")
     void shouldPassSingleVideoAsPrefixedId() throws Exception {
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, "V:dQw4w9WgXcQ")).thenReturn(1);
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, "V:dQw4w9WgXcQ", true)).thenReturn(1);
 
         setPlaylist("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
                 .andExpect(header().string("X-Fallback-Id", "V:dQw4w9WgXcQ"))
@@ -107,7 +113,7 @@ class DjPartySettingsControllerFallbackTest {
     @Test
     @DisplayName("clearing the playlist (blank URL) clears the server-side tracks too")
     void shouldClearTracks_whenUrlIsBlank() throws Exception {
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, null)).thenReturn(0);
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, null, true)).thenReturn(0);
 
         setPlaylist("   ")
                 .andExpect(status().isOk())
@@ -115,13 +121,73 @@ class DjPartySettingsControllerFallbackTest {
                 .andExpect(header().string("X-Fallback-Import", "ok"))
                 .andExpect(header().string("X-Fallback-Tracks", "0"));
 
-        verify(fallbackPlaylistService).syncFallbackTracks(PARTY, null);
+        verify(fallbackPlaylistService).syncFallbackTracks(PARTY, null, true);
     }
 
     @Test
     @DisplayName("party ownership is validated before anything is saved or imported")
     void shouldValidateOwnership() throws Exception {
         setPlaylist(null);
+
+        verify(sessionHelper).validateOwnership(PARTY, token, session);
+    }
+
+    @Test
+    @DisplayName("the import uses the party's shuffle setting, so the imported tracks get the right order")
+    void shouldImportWithTheShuffleSetting() throws Exception {
+        savedSettings.setFallbackShuffle(false);
+        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST_ID, false)).thenReturn(5);
+
+        setPlaylist("https://www.youtube.com/playlist?list=" + PLAYLIST_ID)
+                .andExpect(header().string("X-Fallback-Import", "ok"))
+                .andExpect(header().string("X-Fallback-Tracks", "5"));
+    }
+
+    // ---- shuffle switch ----
+
+    private org.springframework.test.web.servlet.ResultActions toggleShuffle() throws Exception {
+        return mockMvc.perform(post("/dj/dashboard/fallback-shuffle").param("partyCode", PARTY).principal(token).session(session));
+    }
+
+    @Test
+    @DisplayName("shuffle switched on: the tracks still to play are re-ordered and the new state is reported")
+    void shouldReorderTheQueue_whenShuffleIsSwitchedOn() throws Exception {
+        savedSettings.setFallbackShuffle(true);
+        savedSettings.setFallbackPlaylistUrl("https://www.youtube.com/playlist?list=" + PLAYLIST_ID);
+
+        toggleShuffle()
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Fallback-Shuffle", "true"));
+
+        verify(fallbackPlaylistService).applyShuffleSetting(PARTY, PLAYLIST_ID, true);
+    }
+
+    @Test
+    @DisplayName("shuffle switched off: the queue goes back to playlist order")
+    void shouldReorderTheQueue_whenShuffleIsSwitchedOff() throws Exception {
+        savedSettings.setFallbackShuffle(false);
+        savedSettings.setFallbackPlaylistUrl("https://youtu.be/dQw4w9WgXcQ");
+
+        toggleShuffle()
+                .andExpect(header().string("X-Fallback-Shuffle", "false"));
+
+        verify(fallbackPlaylistService).applyShuffleSetting(PARTY, "V:dQw4w9WgXcQ", false);
+    }
+
+    @Test
+    @DisplayName("without a fallback playlist the switch only saves the setting — there is nothing to re-order")
+    void shouldOnlySaveTheSetting_whenThereIsNoPlaylist() throws Exception {
+        savedSettings.setFallbackPlaylistUrl(null);
+
+        toggleShuffle().andExpect(status().isOk());
+
+        verify(fallbackPlaylistService, never()).applyShuffleSetting(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    @DisplayName("the shuffle switch validates party ownership first")
+    void shouldValidateOwnership_whenTogglingShuffle() throws Exception {
+        toggleShuffle();
 
         verify(sessionHelper).validateOwnership(PARTY, token, session);
     }

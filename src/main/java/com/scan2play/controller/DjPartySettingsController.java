@@ -141,7 +141,8 @@ public class DjPartySettingsController {
         String sanitized = (fallbackPlaylistUrl != null && !fallbackPlaylistUrl.isBlank())
                 ? fallbackPlaylistUrl.trim()
                 : null;
-        partySettingsCommandService.updateSettings(partyCode, s -> s.setFallbackPlaylistUrl(sanitized));
+        PartySettingsEntity saved = partySettingsCommandService.updateSettings(partyCode,
+                s -> s.setFallbackPlaylistUrl(sanitized));
 
         String extractedId = YouTubeUrls.extractPlaylistId(sanitized);
         log.info("Party [{}]: Fallback playlist updated to: {} (extracted: {})",
@@ -154,7 +155,7 @@ public class DjPartySettingsController {
         // Best-effort here: a failed import must not fail saving the setting; NextTrackService imports lazily
         // when it has nothing to play, and the outcome is reported in the X-Fallback-Import headers.
         try {
-            int tracks = fallbackPlaylistService.syncFallbackTracks(partyCode, extractedId);
+            int tracks = fallbackPlaylistService.syncFallbackTracks(partyCode, extractedId, saved.isFallbackShuffle());
             response.header("X-Fallback-Import", "ok")
                     .header("X-Fallback-Tracks", String.valueOf(tracks));
         } catch (FallbackImportException e) {
@@ -166,7 +167,9 @@ public class DjPartySettingsController {
     }
 
     /**
-     * Toggles shuffle mode for the fallback playlist.
+     * Toggles shuffle mode for the fallback playlist and re-orders the tracks that are still to play: a fresh
+     * random order when shuffle is switched on, playlist order (continuing after the last track played) when it
+     * is switched off — so the "up next" list changes at once and what it shows is what will play.
      * Returns 200 OK with the new shuffle state in the {@code X-Fallback-Shuffle} header.
      */
     @PostMapping("/dashboard/fallback-shuffle")
@@ -177,6 +180,11 @@ public class DjPartySettingsController {
                 s -> s.setFallbackShuffle(!s.isFallbackShuffle()));
 
         log.info("Party [{}]: Fallback shuffle toggled to {}", partyCode, updated.isFallbackShuffle());
+
+        String playlistId = YouTubeUrls.extractPlaylistId(updated.getFallbackPlaylistUrl());
+        if (playlistId != null) {
+            fallbackPlaylistService.applyShuffleSetting(partyCode, playlistId, updated.isFallbackShuffle());
+        }
 
         return ResponseEntity.ok()
                 .header("X-Fallback-Shuffle", String.valueOf(updated.isFallbackShuffle()))

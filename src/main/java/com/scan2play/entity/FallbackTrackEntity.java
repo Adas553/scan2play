@@ -14,9 +14,10 @@ import java.time.LocalDateTime;
  * per video. Changing the playlist soft-invalidates still-{@link FallbackTrackStatus#QUEUED} rows
  * ({@link FallbackTrackStatus#CANCELLED}) instead of deleting them; played rows stay as history.
  * <p>
- * <b>YouTube API ToS compliance:</b> only video IDs are stored, and rows older than
+ * <b>YouTube API ToS compliance:</b> only the video ID and its title are stored, and rows older than
  * {@value #MAX_AGE_DAYS} days are purged (same rule as {@link YoutubeCacheEntity}).
- * The schema is created by Flyway migration {@code V2__create_fallback_track.sql}.
+ * The schema is created by Flyway migrations {@code V2__create_fallback_track.sql} and
+ * {@code V4__fallback_track_order_and_title.sql} and {@code V5__fallback_track_manual_move.sql}.
  */
 @Entity
 @Table(name = "fallback_track", indexes = {
@@ -50,6 +51,25 @@ public class FallbackTrackEntity {
     /** 0-based order of the track within its source playlist. */
     @Column(nullable = false)
     private int playlistPosition;
+
+    /**
+     * When the track plays: among the QUEUED tracks of a playlist the lowest value goes first (ties are broken by
+     * {@link #playlistPosition}). Playlist order, a random order (shuffle) or — for a playlist that was already
+     * partly played — playlist order continuing after the last played track; see {@code FallbackTrackCommandService}.
+     */
+    @Column(nullable = false)
+    private int playOrder;
+
+    /**
+     * True while the DJ has moved this track by hand within the current order (V5). Cleared whenever the queued
+     * tracks are given a new order (import, shuffle, a new round, the shuffle switch).
+     */
+    @Column(nullable = false)
+    private boolean manualMove;
+
+    /** Video title shown to the DJ; {@code null} when unknown (rows imported before V4, or a failed lookup). */
+    @Column(length = 255)
+    private String title;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)

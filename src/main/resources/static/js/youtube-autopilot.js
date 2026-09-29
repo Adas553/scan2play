@@ -163,6 +163,8 @@
         isBackgroundTrack = track.source === 'BACKGROUND';
         currentlyPlayingSongId = track.source === 'GUEST' ? track.id : null;
         player.loadVideoById(track.videoId);
+        // The server has just taken a background track off the queue — let the dashboard show what comes next.
+        if (isBackgroundTrack && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
     }
 
     /** Stops a running background track (the DJ changed or cleared the playlist). A guest song keeps playing. */

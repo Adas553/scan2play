@@ -75,22 +75,22 @@ public class NextTrackService {
             return Optional.empty(); // the DJ has no fallback playlist
         }
 
-        refreshIfStale(partyCode, playlistId);
-
         boolean shuffle = settings.isFallbackShuffle();
+        refreshIfStale(partyCode, playlistId, shuffle);
+
         Optional<FallbackTrackEntity> track = fallbackTrackCommandService.takeNextTrack(partyCode, playlistId, shuffle);
-        if (track.isEmpty() && tryImport(partyCode, playlistId)) {
+        if (track.isEmpty() && tryImport(partyCode, playlistId, shuffle)) {
             track = fallbackTrackCommandService.takeNextTrack(partyCode, playlistId, shuffle);
         }
         return track.map(t -> new NextTrackResponse(Source.BACKGROUND, t.getId(), t.getVideoId()));
     }
 
     /** Re-imports a playlist whose tracks are close to the 30-day retention limit. */
-    private void refreshIfStale(String partyCode, String playlistId) {
+    private void refreshIfStale(String partyCode, String playlistId, boolean shuffle) {
         Optional<LocalDateTime> fetchedAt = fallbackTrackRepository.findLatestFetchedAt(partyCode, playlistId);
         if (fetchedAt.isPresent() && fetchedAt.get().isBefore(LocalDateTime.now().minusDays(REFRESH_AFTER_DAYS))) {
             log.info("Party [{}]: fallback playlist {} was fetched at {} — refreshing", partyCode, playlistId, fetchedAt.get());
-            tryImport(partyCode, playlistId);
+            tryImport(partyCode, playlistId, shuffle);
         }
     }
 
@@ -99,14 +99,14 @@ public class NextTrackService {
      *
      * @return true if tracks were imported
      */
-    private boolean tryImport(String partyCode, String playlistId) {
+    private boolean tryImport(String partyCode, String playlistId, boolean shuffle) {
         String key = partyCode + ':' + playlistId;
         if (recentImportFailures.getIfPresent(key) != null || !importsInFlight.add(key)) {
             return false;
         }
         try {
             log.info("Party [{}]: importing fallback playlist {} on demand", partyCode, playlistId);
-            fallbackPlaylistService.syncFallbackTracks(partyCode, playlistId);
+            fallbackPlaylistService.syncFallbackTracks(partyCode, playlistId, shuffle);
             return true;
         } catch (FallbackImportException e) {
             recentImportFailures.put(key, Boolean.TRUE);
