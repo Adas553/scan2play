@@ -26,11 +26,12 @@ first session (2026-09-28, remote) is summarised at the bottom.
   queries run against a real PostgreSQL 18, ⏮ and ⏯ checked on the real dashboard page in two browser tabs. **The two decisions
   of the owner from the very end of that session are BUILT, COMMITTED AND PUSHED** (stage 4, 2026-09-29, a third session, on the
   owner's "możesz wypychać"): ⏮ pressed twice within 10 s goes to the previous track, and the navigation is three tabs Panel DJ-a /
-  Kolejka / Historia in a sticky bar — see "Phase 4, stage 4". One more pair of commits (code, then docs) on top of `36c76a9`; `git
-  status -sb` should show `dev...origin/dev` with nothing ahead. (That session's prompt said stages 2 and 3 were uncommitted;
+  Kolejka / Historia in a sticky bar — see "Phase 4, stage 4". One more pair of commits (code, then docs) on top of `36c76a9`; after
+  that push `git status -sb` showed `dev...origin/dev` with nothing ahead. (That session's prompt said stages 2 and 3 were uncommitted;
   `git status` showed a clean `dev...origin/dev` and the commits `0a87a41` / `1ce76ec` / `36c76a9`, so there was nothing to
-  commit and the question about it was moot.) **One open question of the owner** (asked right after the push): ⏭ pressed after ⏮
-  skips the guest song that played just before — see "Next", item 1.
+  commit and the question about it was moot.) **Right after the push the owner asked about ⏭ after ⏮ skipping the guest song that
+  played just before; on "zbuduj" it was built — ⏭ retraces the steps after ⏮ — and, on "możesz commitować", COMMITTED (a pair,
+  code then docs, on top of `74d1e05`; NOT pushed yet)**: see "Phase 4, stage 4", "Follow-up".
 - Working agreements are in `CLAUDE.md` (leave changes uncommitted until the owner has reviewed them and says to commit, never touch the
   `scan2play` database, test in a copy of the repo, CRLF, secrets).
 
@@ -88,9 +89,9 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: 365 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
+- Tests: 366 tests pass (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
   run them without disturbing the app running from IntelliJ) — run on 2026-09-29 in a scratch copy of the working
-  tree with Phase 3 and Phase 4 stages 0, 1, 2, 3 and 4 (`BUILD SUCCESS`; 360 before stage 4, 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
+  tree with Phase 3 and Phase 4 stages 0, 1, 2, 3 and 4 and its follow-up (`BUILD SUCCESS`; 365 before the follow-up, 360 before stage 4, 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
   146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
   has automated tests; stage 4 was verified against the real YouTube player, Phase 3 against a real PostgreSQL and the
   real JS on stub endpoints (see below).
@@ -386,8 +387,8 @@ full rules; the decisions below are the ones nobody was asked about.
   null for a hand-picked ▶ track) and play the entry *after* it (older); an unknown key → the newest entry; when the player
   is idle (the track ended) and the track is in the list → replay that one; nothing older → `seekTo(0)`. A replayed track is
   **not** marked played again, is not a "background track" (no playlist check), and when it ends Auto-Pilot carries on with
-  the queue — **⏭ after ⏮ goes to `next-track`, it does not walk forward through the history** (a deliberate simplification;
-  repeated ⏮ does walk further back). Remote: `onControlClick(command, button)` handles both buttons (pending state per
+  the queue — **⏭ after ⏮ went to `next-track` and did not walk forward through the history** (a deliberate simplification of
+  this stage; **changed in stage 4: ⏭ now retraces the steps**; repeated ⏮ does walk further back). Remote: `onControlClick(command, button)` handles both buttons (pending state per
   button, `COMMAND_PENDING_MS = 3500`); the lease answer's `command` runs `skipToPrevious()`.
 - `fragments/player-controls.html`: the fragment is now `controls` (both buttons: `#playerPreviousBtn` before
   `#playerNextBtn`); messages `dashboard.player.previous(.title)`, `history.source.background` (PL/EN, the escapes made with a
@@ -576,6 +577,40 @@ ASCII; in the Bash tool `powershell -Command "… $_ …"` loses the `$_` (use t
 process that listens on the port, not by name); `Read`/`Edit` handle the CRLF working files fine (`git diff --stat` showed no
 whole-file rewrites).
 
+### Follow-up of stage 4: ⏭ after ⏮ retraces the steps (done, committed, not pushed)
+
+The owner's question right after stage 4 was pushed (2026-09-29): the playlist plays, a guest song arrives and plays; ⏮ goes back to
+the playlist track before it; ⏭ then hands out the *next playlist track* and the guest song is "lost" (⏮ again finds it). Cause:
+`skipToNext` always asked `next-track`, and a guest song that has played is no longer queued. It was the deliberate simplification of
+stage 2; the owner found it confusing and, on the recommendation, said "zbuduj". Section 5.4 ("Back ⏮") has the rules.
+- `youtube-autopilot.js`: `playingFromHistory` is set by `replayTrack` (a track that came back through ⏮) and cleared by `playTrack`
+  (anything the server hands out), `playInEmbeddedPlayer` (a hand-picked ▶ track) and `stopPlaybackHere` (lost lease). `skipToNext`:
+  with the flag set it fetches `recent-tracks` and, when the running track (by `nowPlayingKey`) is not the newest entry, `replayTrack`s
+  the entry that is one **newer** (`recent[position - 1]`: no `POST /play`, no new `played_at`); at the newest entry, for a track not in
+  the list, or without the flag it asks `next-track` as before. If `recent-tracks` fails it does nothing (like ⏮). **The natural end of
+  a track that came back is unchanged**: Auto-Pilot goes to the queue (no accidental repeats at a party). The remote ⏭ runs the same
+  function in the window that plays, so it behaves the same. The example `[G, B2, B1]`: ⏮ → B2, ⏭ → G, ⏭ → the next queue track.
+- Messages: `dashboard.player.next.title` (PL/EN, by script) says that after ⏮ ⏭ goes forward again through what played.
+  `PlayerControlsFragmentTest` +1: **366 unit tests pass** (365 before; run in a scratch copy: 367 with the scratch renderer,
+  `BUILD SUCCESS`).
+- **Verified in the browser** with the harness of stage 4 (real scripts on the real rendered dashboard, stand-in server, fake
+  `YT.Player`), extended with a waiting guest song (`/__guest`), a failing `recent-tracks` (`/__fail`) and **scenario scripts**: a
+  page opened with `?scenario=NAME` runs `scenario.js` after load and POSTs its result to the server, which writes it to a file — done
+  because the browser pane's JS tool kept getting no verdict from the auto-mode classifier this time; the page-driven way turned out
+  handy (repeatable, nothing typed by hand), and `navigate` + reading the result file is all it needs. 22 steps, all as expected,
+  no errors: the owner's case `[G, B2, B1]` — ⏮ → B2, **⏭ → G**, ⏭ → the next queue track; ⏮ ⏮ ⏮ back to B1 and ⏭ ⏭ ⏭ forward
+  again through B2, G, B3 (the newest entry, replayed) and then a new track from `next-track`; a hand-picked ▶ track after ⏮ →
+  ⏭ asks `next-track`; a replayed track that ends → Auto-Pilot asks `next-track` and a ⏭ after that is a plain next; with
+  `recent-tracks` failing ⏭ and ⏮ do nothing and work again afterwards. **Exactly one `POST /play` in the whole run** — the guest
+  song was confirmed once, when it played live, and neither replay confirmed it again. From a second browser window (the banner
+  "playback runs on another device", the button "Wysłano…") a remote ⏭ made the playing window load the guest song 0.8 s later
+  instead of a new playlist track.
+- **Not done:** real devices (the owner should try ⏮ then ⏭ from the phone with a guest song in the history); the lost-lease reset
+  of the flag (`stopPlaybackHere`) is not exercised; more than 30 tracks back (`recent-tracks` holds 30: the track is then not in the
+  list and ⏭ asks `next-track`); a guest song the DJ marks played by hand (button) while retracing joins the timeline as the newest
+  entry, and ⏭ walking forward would replay it. (The stage 2 text above, "⏭ after ⏮ asks `next-track`", describes what was
+  built and verified then; this follow-up changed it.)
+
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
 **How it works now (2026-09-29):** the owner opens the local app, on the phone and on the computer, through
@@ -601,27 +636,24 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-1. **Open question of the owner (2026-09-29, right after stage 4 was pushed): ⏭ after ⏮ loses the guest song.** The case: the
-   playlist plays, a guest song arrives and plays; ⏮ goes back to the playlist track that played before it; ⏭ then does not return
-   to the guest song but hands out the *next* playlist track (`skipToNext` asks `next-track`, and the guest song is already
-   marked played, so it is not queued any more) — while ⏮ from there finds it again. It is the deliberate simplification of stage 2
-   ("⏭ after ⏮ goes to `next-track`, it does not walk forward through the history", Section 5.4), and it does confuse. **Proposed
-   (recommended to the owner, not built — waiting for a yes):** after ⏮ the ⏭ button retraces the steps — a replayed track
-   (`replayTrack`) sets a flag; `skipToNext` in a flagged window fetches `recent-tracks`, and when the running track is not the
-   newest entry it replays the entry just *newer* (`recent[position - 1]`, no confirmation, no new `played_at`), and only at the
-   newest entry (or with a hand-picked track, or a track not in the list) asks `next-track` as before; `playTrack` and
-   `playInEmbeddedPlayer` clear the flag. The natural end of a replayed track stays as it is (Auto-Pilot carries on with the
-   queue, so a party does not hear the same tracks twice by accident). Client only, no server change; needs the ⏭ tooltip, Section
-   5.4 ("Back ⏮" says ⏭ does not walk forward), a harness check (the case above: [G, B2, B1] → ⏮ → B2 → ⏭ → G → ⏭ → new track) and
-   a decision about the remote ⏭ (it uses the same `skipToNext`, so it would behave the same). Alternative: leave it and say so in
-   the ⏭ tooltip.
+1. **Push** the two commits of the follow-up (⏭ after ⏮ retraces the steps — "Phase 4, stage 4", "Follow-up"; built on the
+   owner's "zbuduj", committed on their "możesz commitować", on top of `74d1e05`) when the owner says so, and let them try it on the
+   phone: a guest song plays, ⏮ → the playlist track, ⏭ → the guest song again, ⏭ → the queue.
 2. **The owner tries stage 4 on the phone** (⏮ twice with the computer playing; the buttons row above the tabs; the bar over a
    list) and says what to change. The migration `V6` is applied at the next restart of the app (the owner's `scan2play` database
    was at `V5`; the owner has already restarted and tried stages 2 and 3). With stage 4 Phase 4 is complete.
 3. Follow-ups the owner may also want: skip/remove a track from the "up next" list, one line in the panel
    saying how many guest songs wait ("Czeka 2 piosenki gości" — they play first; the owner asked about showing both lists
    together and agreed to keep the guest table separate), and a note in the panel when Auto-Pilot is off (nothing plays
-   by itself then).
+   by itself then). **That note is now worth doing** (2026-09-29): the owner sent `https://dev.scan2play.com.pl/` to a friend who
+   pasted a playlist and the player did not start, while it starts at the owner's. Cause, from the code and her screenshot: a new
+   party starts with `PlaybackMode.MANUAL` (`PartySettingsCommandService`, the builder) — Auto-Pilot off — and with it off nothing
+   starts by itself (stage 4 of Phase 2); the screenshot showed the first playlist track still marked "Następny" with 120 left in
+   the round, i.e. the window had never asked `next-track`. She should switch "Auto-Pilot (Queue)" on (or press ⏭). Proposed, not
+   built (the owner was asked): a hint next to the player while Auto-Pilot is off, with a button to switch it on, and a message when
+   the YouTube IFrame API does not load (an ad blocker, Brave shields, a school network — the screenshot showed no black player
+   rectangle, which was not certain; today that failure is silent). Not proposed: making AUTO the default — it also applies to
+   Spotify parties, where AUTO puts accepted songs straight into the Spotify queue.
 4. Optional (Section 14): show the import result on the dashboard (`X-Fallback-Import: ok|failed`,
    `X-Fallback-Import-Reason`) — the new panel is a natural place — instead of always flashing the Save button green;
    remove `GET /dj/dashboard/next-guest-track` and its tests, which nothing calls any more; browser-level tests for the JS
