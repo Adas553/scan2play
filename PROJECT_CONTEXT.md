@@ -132,7 +132,7 @@ Stores bug reports and feature ideas submitted by DJs from the dashboard.
 
 **Indexes:** `idx_feedback_submitted_at` on `submittedAt`, `idx_feedback_owner_id` on `ownerId`.
 
-#### `FallbackTrackEntity` → table: `fallback_track` (Flyway `V2`)
+#### `FallbackTrackEntity` → table: `fallback_track` (Flyway `V2`, `V4`, `V5`)
 
 Server-side copy of a party's fallback ("background music") playlist — Section 14, Phase 2. Written when the DJ
 sets the playlist. Served by `POST /dj/dashboard/next-track` (stage 3), which `youtube-autopilot.js` has called since
@@ -143,8 +143,11 @@ stage 4 — the client no longer plays the playlist itself (no `loadPlaylist()`)
 | `id`               | Long (PK, auto)         |                                                                   |
 | `partyCode`        | String(5)               | Owning party (no FK, like `song_requests`)                        |
 | `playlistId`       | String(64)              | Source: playlist ID, or `V:<videoId>` for a single video          |
-| `videoId`          | String(20)              | 11-char YouTube video ID (no titles stored — ToS minimisation)    |
+| `videoId`          | String(20)              | 11-char YouTube video ID                                          |
+| `title`            | String(255, nullable)   | Video title shown to the DJ (V4); same API call and 30-day retention as the row. `null` for rows imported before V4 and for a single video whose title could not be looked up |
 | `playlistPosition` | int                     | 0-based order within the source playlist                          |
+| `playOrder`        | int                     | When it plays (V4): among `QUEUED` tracks of a playlist the lowest value goes first, ties by `playlistPosition`. Playlist order, a random order (shuffle), or playlist order continuing after the last played track |
+| `manualMove`       | boolean                 | True while the DJ has moved this track by hand within the current order (V5); cleared by every statement that gives the queued tracks a new order (import, shuffle, a new round, the shuffle switch) |
 | `status`           | FallbackTrackStatus     | `QUEUED` → `PLAYED`, or `CANCELLED` (playlist changed/cleared)    |
 | `fetchedAt`        | LocalDateTime           | When fetched from the YouTube API — basis of the 30-day retention |
 | `playedAt`         | LocalDateTime (nullable)|                                                                   |
@@ -255,8 +258,9 @@ The client asks the server only when a track is about to be loaded — Auto-Pilo
 The server (NextTrackService) answers with, in this order:
     1. the oldest accepted guest song with a resolvable video ID, minus `exclude`
        (DjService.findNextPlayableGuestTrack — reads only; the client confirms it)
-    2. else the next QUEUED track of the DJ's current fallback playlist: playlist order, or a server-side
-       random pick when shuffle is on; marked PLAYED as it is handed out; the playlist loops when exhausted
+    2. else the next QUEUED track of the DJ's current fallback playlist — the one with the lowest `playOrder`
+       (fixed in advance: playlist order or a random order, so the DJ can be shown what comes next); marked
+       PLAYED as it is handed out; the playlist loops (the next round is prepared as soon as the last track is taken)
     3. else 204 (no fallback playlist, or nothing could be imported)
 
 Confirmation:
@@ -285,8 +289,39 @@ Confirmation:
   flashes green.
 - *Stop:* `dashboard.js` posts an empty URL; only after the server has cleared it does `stopFallback()` stop a
   running background track (a playing guest song keeps playing).
-- *Shuffle:* `POST /dj/dashboard/fallback-shuffle`; the server reads the flag on every `next-track`, so it
-  applies from the next track on.
+- *Shuffle:* `POST /dj/dashboard/fallback-shuffle` toggles the flag **and re-orders the tracks still queued**, so the
+  "up next" list changes at once: switched **on** → a fresh random order; switched **off** → playlist order
+  *continuing after the last track played* (music carries on from where it is instead of jumping back to the start;
+  tracks already played in this round do not come back). The track that is playing is not affected. The order
+  caption above the list ("Random order" / "Playlist order") always says which one is active; once tracks were moved by hand it says so ("..., changed by hand") and
+  switching shuffle first asks for confirmation, because the new order replaces those moves.
+
+**"Up next" panel** (Phase 3, step 1): in the YouTube Player card, to the right of the video (on a narrow screen it
+wraps below it), a list of **all** background tracks still queued in this round (up to 500) with their titles, the
+first one marked "Next", and how many are left; the list has a fixed height (17rem, about the height of the 640 px
+video) and its own scrollbar, and keeps its scroll position when it is refreshed. A guest song still plays before
+them (the hint under the heading says so). It is `GET /dj/dashboard/fallback-queue`, an HTML fragment that `dashboard.js`
+(`refreshFallbackQueue`) drops into `#fallbackQueue` on page load, after the playlist is saved or cleared, after the
+shuffle switch, and — from `youtube-autopilot.js` — each time the player takes a background track. Only the answer
+of the newest request is shown, and an error or a redirect to the login page leaves the list as it is.
+
+**Moving tracks** (Phase 3, step 2): every row has three small buttons — ⇑ *play next* (in front of everything),
+↑ / ↓ *one place*; they are disabled where they cannot do anything (the first row cannot go up, the last cannot go down).
+A click is `POST /dj/dashboard/fallback-queue/move` (`trackId`, `direction`), then the list is refreshed, the moved
+track is scrolled into view and flashes green for a moment, and clicks are ignored while a move is in flight. If the
+player has just taken that track the server answers 409 and the refreshed list shows what really is queued. The
+moves apply to the **current round** only: a new order — an import, the shuffle switch, the start of the next round —
+replaces them, and the list says "changed by hand" for as long as they exist.
+
+**Dragging** (Phase 3, step 2, added after the first review): a row can also be dragged to any place — press on it and
+drag with the mouse, or press and hold about 0.4 s on a touch screen and then drag (a finger that moves earlier is
+scrolling). The row itself moves through the list while the pointer passes the middle of the other rows, the list
+scrolls when the pointer is near its top or bottom edge, Esc (or a cancelled touch) puts the row back, and dropping it
+where it started sends nothing. On drop, `POST /dj/dashboard/fallback-queue/place` tells the server which track now
+follows the dragged one (`trackId`, `beforeTrackId`; no `beforeTrackId` = the end of the queue). While a row is being
+dragged the list is not refreshed (a refresh asked for meanwhile is done afterwards). The title is plain text so that a
+press on it starts the drag; the link to the YouTube video is the small ↗ beside the buttons, and pressing a button or
+that link never starts a drag. The buttons stay for those who prefer them (and for the keyboard).
 
 **Timing:** ENDED → next track PLAYING took 230–250 ms with the server stubbed (2026-09-29) — that is YouTube's
 own load time (each track is a fresh `loadVideoById`). No pre-fetching was built (Section 14).
@@ -299,8 +334,9 @@ reads the result from the `X-Fallback-Id` header to show/hide the Stop button):
 - `https://youtu.be/KD5fLb-WgBU?si=...` → single video
 - Raw playlist ID (`PLxxx`) or raw 11-char video ID → resolved automatically
 
-A single video is stored as one `fallback_track` row (`playlist_id` = `V:<videoId>`, no API call and no API key
-needed); when it has been played the playlist loops, so it simply repeats.
+A single video is stored as one `fallback_track` row (`playlist_id` = `V:<videoId>`; no API call and no API key are
+needed to play it — only its title is looked up, best-effort); when it has been played the playlist loops, so it
+simply repeats.
 
 **Testing:** `youtube-autopilot.js` has no automated tests. It was verified against the real YouTube player (no
 login needed) with a throw-away static page: the real script, `window.fetch` stubbed for `/dj/dashboard/*`,
@@ -320,7 +356,8 @@ seconds; many well-known videos have embedding disabled and fail with error 150 
 |-----------------------------|-------------------------|---------|
 | `HomeController`            | `GET /`                 | Landing page or redirect to dashboard if authenticated |
 | `DjDashboardController`     | `/dj/dashboard`, `/dj/history-view` | DJ dashboard view, AJAX polling updates (ETag), history view/fragment; `extractPlaylistId()` resolves YouTube URLs to playlist/video IDs |
-| `DjPartySettingsController` | `/dj/**`                | Start/end party, vibe, rate limits, playback mode, fallback shuffle, account deletion |
+| `DjPartySettingsController` | `/dj/**`                | Start/end party, vibe, rate limits, playback mode, fallback playlist and shuffle (a shuffle switch re-orders the queue), account deletion |
+| `DjFallbackQueueController` | `/dj/dashboard/fallback-queue`, `POST .../move`, `POST .../place` | The DJ's "up next" list of the fallback playlist as an HTML fragment (`fragments/fallback-queue.html`), and the DJ's moves of a track (up / down / play next, or dragged to a place) |
 | `DjSongController`          | `/dj/**`                | Song queue actions: mark as played, push to Spotify, DJ picks |
 | `DjSessionHelper`           | —                       | Shared component: resolves party settings from HTTP session + **validates partyCode ownership** (IDOR protection) |
 | `FeedbackController`        | `POST /dj/feedback`     | REST endpoint for DJ bug reports / feature ideas |
@@ -344,9 +381,10 @@ seconds; many well-known videos have embedding disabled and fail with error 150 
 | `GuestSessionService`        | 73    | Session-based rate limiting for guests (token bucket) |
 | `QrCodeService`              | 50    | QR code generation (ZXing, `@Cacheable`) |
 | `AccountDeletionService`     | 65    | Deletes all DJ data (songs, fallback tracks, feedback, settings) — required by Google API data deletion policy |
-| `YouTubePlaylistClient`      | 156   | Reads a playlist via YouTube Data API (`playlistItems.list` + `videos.list`): max 500 items, drops private/deleted/non-embeddable videos; API key never appears in errors |
-| `FallbackPlaylistService`    | 53    | Syncs the party's server-side fallback tracks with the DJ's playlist (playlist / single video / cleared). API first, DB only after a complete non-empty result |
-| `FallbackTrackCommandService`| 164   | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new), cancel, daily 30-day purge, and `takeNextTrack` — picks the next track of the *current* playlist (playlist order or random), claims it QUEUED → PLAYED with one conditional UPDATE (concurrent callers never get the same track), loops the playlist by re-queuing the party's newest import when exhausted |
+| `YouTubePlaylistClient`      | ~190  | Reads a playlist via YouTube Data API (`playlistItems.list` + `videos.list`): max 500 items, drops private/deleted/non-embeddable videos, returns each video's title too (same `videos.list` call); `findTitle` for a single video (best-effort); API key never appears in errors |
+| `FallbackPlaylistService`    | ~65   | Syncs the party's server-side fallback tracks with the DJ's playlist (playlist / single video / cleared), in the DJ's shuffle setting. API first, DB only after a complete non-empty result; `applyShuffleSetting` re-orders the queue without any API call |
+| `FallbackTrackCommandService`| ~360  | Transactional writes for `fallback_track`: replace (soft-invalidate QUEUED → CANCELLED, insert new in playlist or shuffled order), cancel, daily 30-day purge, `applyShuffleSetting` (on: fresh random order; off: playlist order continuing after the last played track), `moveTrack` (the DJ's up / down / play next), `placeTrack` (a drag: in front of another track or to the end; a moved track is flagged `manualMove`) and `takeNextTrack` — takes the queued track with the lowest `playOrder`, claims it QUEUED → PLAYED with one conditional UPDATE (concurrent callers never get the same track), and when that was the last one starts the next round at once (re-queues the party's newest import in playlist order or freshly shuffled; a shuffled round never opens with the track that is still playing); every method that changes the queue first takes a per-party PostgreSQL advisory lock — a stress test with concurrent moves and takes deadlocked without it |
+| `FallbackQueueService`       | ~55   | Read side for the dashboard: the queued tracks of the round (up to 500) in exactly the order `takeNextTrack` serves them, plus how many are left and whether the DJ has moved tracks by hand; `moveTrack` / `placeTrack` resolve the party's current playlist and delegate |
 | `NextTrackService`           | 120   | "What plays next?": a waiting guest song first, else a background track. Imports lazily when there is nothing to play or the tracks are ≥ 29 days old; per party+playlist single-flight and a 5-minute pause after a failed import |
 
 ### 6.3 Configuration
@@ -381,6 +419,7 @@ seconds; many well-known videos have embedding disabled and fail with error 150 
 | `terms.html`           | Terms of Service (English) |
 | `terms_pl.html`        | Terms of Service (Polish) |
 | `fragments/components.html` | Shared fragments: DJ navigation, scroll restore script, feedback modal + toast + JS |
+| `fragments/fallback-queue.html` | "Up next" list of the fallback playlist (titles, order caption, "Next" badge); rendered by `DjFallbackQueueController` into `#fallbackQueue` on the dashboard |
 
 ### 6.6 Static Assets
 
@@ -453,8 +492,10 @@ Two separate authentication flows:
   (The older wording "100 units per search" gives the same ~100 unique searches/day.) Verify your project's actual
   quota in Google Cloud Console → APIs & Services → YouTube Data API v3 → Quotas.
 - **Playlist import (`YouTubePlaylistClient`, Phase 2):** when the DJ sets a fallback playlist the backend reads it once —
-  at most 500 items = ≤ 10 `playlistItems` + ≤ 10 `videos` calls (≈ 20 units from the general pool, none from `search.list`).
-  Requires `youtube.api-key`; a single video needs no API call. Failures (`NO_API_KEY`, `INVALID_PLAYLIST`, `API_ERROR`,
+  at most 500 items = ≤ 10 `playlistItems` + ≤ 10 `videos` calls (≈ 20 units from the general pool, none from `search.list`);
+  the video titles shown in the DJ's "up next" list come from the same `videos.list` calls (`part=status,snippet`, no extra
+  quota) and are kept under the same 30-day rule. Requires `youtube.api-key`; a single video needs no API call to be
+  played (its title is looked up with one best-effort `videos.list` call — without a key it is simply stored untitled). Failures (`NO_API_KEY`, `INVALID_PLAYLIST`, `API_ERROR`,
   `NO_PLAYABLE_TRACKS`) are thrown as `FallbackImportException` **before** any DB write, so existing tracks stay intact.
   The API key is part of the request URL, so exceptions are scrubbed of it and carry no cause.
 
@@ -514,6 +555,13 @@ Additional caching: DJ's `partyCode` is cached in `HttpSession` to avoid repeate
 | `DB_PASSWORD`          | PostgreSQL database password     |
 | `SCAN2PLAY_GUEST_URL`  | Optional. Overrides `scan2play.guest-url` (default `https://www.scan2play.com.pl/`) — the base URL encoded in the dashboard QR code and "Party Link". Set it to the machine's LAN IP (`http://<lan-ip>:8080/`) to test the guest flow from a phone locally; `localhost` is not reachable from a phone. |
 
+**Logging in to the DJ dashboard from another device (a phone).** The login redirect is built from the address the browser
+used (`{baseUrl}`), and Google accepts only registered redirect URIs that are HTTPS (localhost exempt), not a raw IP
+address (localhost exempt) and on a public suffix — so a LAN address such as `http://192.168.x.x:8080` can never be
+registered and DJ login does not work through it. The guest side (`/p/<code>`, QR code) needs no login and works through
+the LAN IP with `SCAN2PLAY_GUEST_URL`. For the DJ dashboard on a phone use `localhost` forwarded over USB (Chrome remote
+debugging port forwarding) or a public HTTPS address such as a tunnel on your own domain; see SESSION_HANDOFF.md.
+
 ### Key Application Properties
 
 | Property                         | Value                                    |
@@ -540,7 +588,10 @@ Flyway applies pending files in order at startup, before Hibernate validates, an
 - Migrations so far: `V1__baseline` (schema as of 2026-09-28, taken from a dump of the working database),
   `V2__create_fallback_track` (Phase 2 tracks), `V3__default_request_limits` (data fix: parties created while
   `@Builder` ignored the field defaults have `request_limit`/`cooldown_minutes` = 0, which switches guest rate
-  limiting off; sets them to 2 / 3 where < 1 — `duplicate_check_window` is left alone because 0 is valid there).
+  limiting off; sets them to 2 / 3 where < 1 — `duplicate_check_window` is left alone because 0 is valid there),
+  `V4__fallback_track_order_and_title` (`fallback_track.play_order` — backfilled with a random order for parties
+  with shuffle on, playlist order otherwise — and `title`), `V5__fallback_track_manual_move` (`manual_move` flag:
+  which queued tracks the DJ has moved by hand).
 - **`spring.flyway.baseline-on-migrate=true`**: a database that already has tables but no history table
   (every database created before Flyway, including production) is recorded as version 1 *without running
   V1*, and only V2+ are applied. An empty database gets V1 applied in full. Both paths were verified
@@ -680,7 +731,10 @@ PartySettingsQueryService
 | POST   | `/dj/dashboard/play`              | `DjSongController.markAsPlayed()`                | song-level ownership check |
 | POST   | `/dj/dashboard/playback-mode`     | `DjPartySettingsController.togglePlaybackMode()` | ownership-validated |
 | POST   | `/dj/dashboard/fallback-playlist` | `DjPartySettingsController.updateFallbackPlaylist()` | YouTube only, ownership-validated. Always saves the URL; also imports the playlist into `fallback_track` (best-effort) and reports it in headers: `X-Fallback-Id`, `X-Fallback-Import: ok\|failed`, `X-Fallback-Tracks: <n>` or `X-Fallback-Import-Reason: NO_API_KEY\|INVALID_PLAYLIST\|API_ERROR\|NO_PLAYABLE_TRACKS` |
-| POST   | `/dj/dashboard/fallback-shuffle`  | `DjPartySettingsController.toggleFallbackShuffle()` | ownership-validated |
+| POST   | `/dj/dashboard/fallback-shuffle`  | `DjPartySettingsController.toggleFallbackShuffle()` | ownership-validated. Toggles the flag **and re-orders the queued tracks** (on: new random order; off: playlist order continuing after the last played track); new state in `X-Fallback-Shuffle`. The dashboard asks for confirmation first when the DJ has moved tracks by hand |
+| GET    | `/dj/dashboard/fallback-queue`    | `DjFallbackQueueController.fallbackQueue()`      | HTML fragment (`fragments/fallback-queue.html`), read-only, ownership-validated — the DJ's "up next" list (all tracks left in this round, titles, order caption, count) |
+| POST   | `/dj/dashboard/fallback-queue/move` | `DjFallbackQueueController.moveTrack()`      | ownership-validated. Params `partyCode`, `trackId`, `direction` = `UP` / `DOWN` / `TOP` (play next). 204 when done, 409 when the track can no longer be moved (the player has taken it, or it belongs to another party or an old playlist), 400 for a bad parameter |
+| POST   | `/dj/dashboard/fallback-queue/place` | `DjFallbackQueueController.placeTrack()`    | ownership-validated. Params `partyCode`, `trackId`, `beforeTrackId` (optional; missing = the end of the queue): the DJ dropped a dragged track in front of `beforeTrackId`. 204 when done, 409 when a track can no longer be moved (taken by the player, another party's or an old playlist's), 400 for a bad parameter |
 | POST   | `/dj/dashboard/dj-pick`           | `DjSongController.addDjPick()`                   | YouTube only, bypasses AI, ownership-validated |
 | POST   | `/dj/requests/{id}/push-to-spotify`| `DjSongController.pushToSpotify()`              | song-level ownership check |
 | POST   | `/dj/start-party`                 | `DjPartySettingsController.startParty()`         |       |
@@ -717,9 +771,9 @@ PartySettingsQueryService
 
 ### Testing
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
-- **Unit tests (139 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import, the server-side next-track decision (`NextTrackService`, shuffle, looping).
+- **Unit tests (225 tests)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch), the "up next" service/controller (listing and moving tracks, the queue lock), and the rendering of `fragments/fallback-queue.html` with the real message bundles.
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 146 tests** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, counted 2026-09-29). No integration tests, and no tests for the browser code (`youtube-autopilot.js`, `dashboard.js`).
+- **Total: 232 tests** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, counted 2026-09-29). No integration tests in the repo — the queue SQL of Phase 3 was checked once against a throw-away PostgreSQL database, not by a test that stays — and no tests for the browser code (`youtube-autopilot.js`, `dashboard.js`).
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
@@ -786,7 +840,8 @@ Flyway) and effort/regression risk in a live product, hence the stages:
 
 **Deviations from the original plan below:** the tracks live in a dedicated `fallback_track` table (statuses `QUEUED` /
 `PLAYED` / `CANCELLED`, no `type` column) instead of a unified `party_queue` — guest requests stay in `song_requests`
-and the `PENDING` approval gate never existed. Only video IDs are stored (no titles), retained ≤ 30 days.
+and the `PENDING` approval gate never existed. Only video IDs are stored, retained ≤ 30 days (titles were added in
+Phase 3 — see below — under the same rule).
 
 Original Phase 2 notes (written before the decision above — "today" means before stage 4):
 
@@ -812,6 +867,44 @@ Original Phase 2 notes (written before the decision above — "today" means befo
 - `GET /dj/dashboard/next-guest-track` and its tests are no longer used by the client; remove them if no other
   consumer appears.
 - `youtube-autopilot.js` has no automated tests (Section 5.4, "Testing").
+
+### Phase 3 — the DJ sees and controls the fallback queue (done; dev branch)
+
+Requested by the owner (2026-09-29): see which song comes next from the playlist, and be able to change the order.
+Not possible before because the next track was only chosen when the player asked (a random row under shuffle) and no
+titles were stored, so it was done in two steps:
+
+| Step | What | Status |
+|------|------|--------|
+| 1 | `V4`: `fallback_track.play_order` + `title`. The order is fixed in advance (playlist order or a random order); `takeNextTrack` takes the lowest `play_order`; a new round is prepared as soon as the last track is taken, so there is always a "next". Shuffle switch re-orders the queue (on: reshuffle; off: playlist order continuing after the last played track). Titles come from the import's `videos.list` call (no extra quota). "Up next" panel on the dashboard (Section 5.4) | **done** (2026-09-29) — 186 unit tests plus a throw-away run against a real PostgreSQL 18 (V1–V4 on an empty database, Hibernate validation, the queue SQL, concurrent callers) and the real `dashboard.js` against stub endpoints |
+| 2 | The DJ reorders the queue. `V5`: `fallback_track.manual_move`. Every row has ⇑ (play next), ↑ and ↓ buttons (`POST /dj/dashboard/fallback-queue/move`) and can be dragged to any place (`POST .../place`; mouse: press and drag, touch: press and hold, then drag); the moves apply to the current round only (a new order replaces them); the caption says "changed by hand" and the shuffle switch asks for confirmation first while such moves exist (owner's decision). Every method that changes the queue takes a per-party advisory lock | **done** (2026-09-29) — 232 unit tests plus a throw-away run against a real PostgreSQL 18 (V1–V5, the moves and drops, ties in the order, the flags, concurrent moves, drops and takes — which found a deadlock, now fixed by the lock) and the real `dashboard.js` against stub endpoints (mouse and touch drags included) |
+
+Decisions for step 2 (owner, 2026-09-29): the shuffle switch stays a visible action on the list — the panel refreshes at
+once and its caption always names the active order — and it **asks first** when the DJ has moved tracks by hand,
+because the new order would throw those moves away. Skipping/removing a track was not built. Drag and drop was
+added on the owner's request after the first review (the buttons stay).
+
+Details worth knowing:
+- The shuffle is done by PostgreSQL (`UPDATE ... SET play_order = random key`), one statement per re-order; a shuffled
+  round never opens with the track that has just been handed out (it is moved to the end).
+- A drag refers to the track it is dropped in front of, not to a position, so it stays right even if the queue changed while
+  the DJ was dragging (the player took a track meanwhile; if it was one of the two, the answer is 409). Server side: renumber
+  the queue 0..n-1, shift the tracks in between by one (`shiftPlayOrder`, one statement), set the dragged track's order.
+  Only the dragged track is flagged as moved by hand; the ones it passes merely shift.
+- *Play next* sets the track's `play_order` to `min - 1`. Up / down first renumber the queue 0..n-1 (one statement) so
+  that two neighbours can swap values even if the order had ties, then swap the two rows. A move at the end of the
+  queue (up on the first, down on the last, play next on the one that is already next) changes nothing and sets no flag.
+- Only a track that is still `QUEUED` in the party's **current** playlist can be moved (the id is looked up together
+  with the party code, so one DJ can never reach another party's tracks); anything else is a 409.
+- **Concurrency:** statements that update many rows at once (a renumbering, a re-order, a new round) can lock the same
+  rows in different orders. A stress test with concurrent moves and takes against PostgreSQL did deadlock, so every
+  method of `FallbackTrackCommandService` that changes the queue first takes `pg_advisory_xact_lock` for the party
+  (`FallbackTrackRepository.lockQueue`); they run one after another, which costs nothing with one DJ.
+- Every caller goes for the same head of the queue, so `takeNextTrack` makes up to 10 attempts when concurrent callers
+  keep winning the conditional claim (one dashboard, at most a few tabs, in practice).
+- The fragment is sent whole on every refresh (about 1 KB per row, so up to ~500 KB for a 500-track playlist); the
+  server does not compress responses (`server.compression` is off), which is fine on a LAN and acceptable elsewhere
+  for playlists of the usual size.
 
 ### Original one-shot plan (kept for reference — see caveat above)
 

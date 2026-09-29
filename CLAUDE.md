@@ -21,5 +21,16 @@
 - **Line endings:** some files are committed with CRLF (`PROJECT_CONTEXT.md`, `AGENTS.md`), `core.autocrlf=true`.
   Edit with the Edit tool; do not use `sed -i` (it converts CRLF to LF and turns the diff into a whole-file rewrite).
   After a scripted edit check `git ls-files --eol <file>` and `git diff --stat`.
+- **`messages*.properties` keep every non-ASCII character as a literal backslash-u escape (four hex digits).** The
+  Write/Edit/Bash tool inputs *decode* such an escape when you type it, so it never reaches the file as text. Put the real
+  characters in a scratch file and let a script convert them (`chr(92) + 'u' + hex`, UTF-16 units so emoji work), encode the
+  whole result *before* opening the file for writing (a failed encode after `open(path, 'w')` leaves an empty file — it
+  happened once), keep the CRLF, and check `git diff`. A long Python heredoc in Bash may be rejected: write the script to a
+  file with the Write tool and run it.
+- **Queue SQL needs a check against a real PostgreSQL.** Mocked unit tests cannot show locking problems — a deadlock in
+  `FallbackTrackCommandService` was found only by a stress test on a real database. After touching that class or
+  `FallbackTrackRepository`, run a throw-away `@SpringBootTest` in the scratch copy (not in the repo) with `PGDATABASE=s2p_...`
+  and dummy `GOOGLE_AI_API_KEY`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`;
+  startup runs Flyway and Hibernate validation. Drop the database afterwards.
 - **Secrets:** never write API keys or passwords into the repo, docs or memory. If one shows up in a chat or a
   screenshot, tell the owner to rotate or restrict it.
