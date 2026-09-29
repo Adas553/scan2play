@@ -8,8 +8,10 @@ package com.scan2play.model;
  *
  * @param source  where the track comes from
  * @param id      {@link Source#GUEST}: the {@code SongRequestEntity} id — the client still confirms
- *                playback with {@code POST /dj/dashboard/play}; {@link Source#BACKGROUND}: the
- *                {@code FallbackTrackEntity} id (already marked played by the server when handed out)
+ *                playback with {@code POST /dj/dashboard/play}; {@link Source#BACKGROUND}: the id of the play log row
+ *                ({@code FallbackPlayEntity}) that was written when the track was handed out — <em>not</em> the id of
+ *                the queue's track, so that two plays of one video have two ids, and the client's key {@code B:<id>}
+ *                is the key of exactly that entry of the history (see {@code HistoryEntry#key()})
  * @param videoId the 11-character YouTube video ID, ready for {@code player.loadVideoById()}
  * @param playlistId {@link Source#BACKGROUND}: the playlist the track was taken from (the same id the dashboard's
  *                player lease reports as the party's current playlist, so the window that plays can tell when the DJ

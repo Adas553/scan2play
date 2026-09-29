@@ -7,8 +7,9 @@ import java.time.LocalDateTime;
  * background playlist. The two live in different tables; this is what puts them on one timeline.
  *
  * @param source      where it comes from
- * @param id          the {@code SongRequestEntity} id ({@link Source#GUEST}) or the {@code FallbackTrackEntity} id
- *                    ({@link Source#BACKGROUND})
+ * @param id          the {@code SongRequestEntity} id ({@link Source#GUEST}) or the id of the play log row,
+ *                    {@code FallbackPlayEntity} ({@link Source#BACKGROUND}) — the id of one <em>play</em>, so the same
+ *                    video in two rounds of a playlist has two ids
  * @param at          the moment of the event: when the song was played — or, for a rejected request and for one that
  *                    was played before V6 (no play time recorded), when it was requested; for a background track,
  *                    when the player took it
@@ -30,7 +31,12 @@ public record HistoryEntry(Source source, Long id, LocalDateTime at, String titl
         BACKGROUND
     }
 
-    /** An identifier that is unique across both tables: {@code G:<request id>} or {@code B:<track id>}. */
+    /**
+     * An identifier that is unique across both tables and across plays: {@code G:<request id>} or
+     * {@code B:<play id>}. The player script keeps the same string for the track it is playing ({@code next-track}
+     * answers with the play id), so it can find its place in the list; one key per entry is what keeps ⏮ and ⏭ from
+     * going in circles when the same video comes up twice.
+     */
     public String key() {
         return (source == Source.GUEST ? "G:" : "B:") + id;
     }

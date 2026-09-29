@@ -1,9 +1,11 @@
 package com.scan2play.service;
 
+import com.scan2play.entity.FallbackPlayEntity;
 import com.scan2play.entity.FallbackTrackEntity;
 import com.scan2play.model.FallbackTrackStatus;
 import com.scan2play.model.MoveDirection;
 import com.scan2play.model.PlaylistTrack;
+import com.scan2play.repository.FallbackPlayRepository;
 import com.scan2play.repository.FallbackTrackRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,10 @@ import static com.scan2play.repository.FallbackTrackRepository.UPCOMING_ORDER;
  * <b>Concurrency:</b> every method that changes the queue first takes a per-party advisory lock (transaction scoped),
  * so a move, a re-order, an import and the player taking a track never interleave — statements that update many
  * rows at once would otherwise lock the same rows in different orders and deadlock (seen against PostgreSQL).
+ * <p>
+ * <b>The play log:</b> the queue forgets what has played (a new round puts the played tracks back in the queue), so
+ * every hand-out is also written to {@code fallback_play} — {@link #takeNextTrack} does it inside the same transaction
+ * and under the same lock. The log is what the DJ history and "previous track" read.
  */
 @Service
 @RequiredArgsConstructor
@@ -56,6 +62,7 @@ public class FallbackTrackCommandService {
     private static final int MAX_QUEUE = 1000;
 
     private final FallbackTrackRepository fallbackTrackRepository;
+    private final FallbackPlayRepository fallbackPlayRepository;
 
     /**
      * Serialises everything that changes a party's queue (see {@link FallbackTrackRepository#lockQueue}). The lock
@@ -252,7 +259,8 @@ public class FallbackTrackCommandService {
     }
 
     /**
-     * Hands out the next background track of the party's <em>current</em> playlist and marks it PLAYED.
+     * Hands out the next background track of the party's <em>current</em> playlist, marks it PLAYED and writes it to the
+     * play log.
      * <ul>
      *     <li>It is the queued track with the lowest {@code playOrder} — the one the DJ is shown as "next".</li>
      *     <li>When that was the last queued track, the playlist starts a new round at once (played tracks go back
@@ -260,15 +268,20 @@ public class FallbackTrackCommandService {
      *         shuffled round never opens with the track that has just been handed out.</li>
      *     <li>The track is claimed with a single conditional UPDATE, so two concurrent callers never get
      *         the same one.</li>
+     *     <li>The claim and the log row are one transaction: a track is never handed out without being in the history,
+     *         and never in the history without having been handed out. The row is a snapshot (video, title, when it was
+     *         fetched), so it survives the next round, a replaced playlist and the purge of the track.</li>
      * </ul>
      * Only tracks of {@code playlistId} are considered: after the DJ switches playlists, tracks of an old
      * playlist must never play — even if the import of the new one has not succeeded yet.
      *
      * @param shuffle whether the next round is shuffled (the order of the current round is already fixed)
-     * @return the claimed track, or empty if the playlist has no tracks to play (never imported / all cancelled)
+     * @return the log row of this hand-out — its id is what the client knows the track by ({@code B:<id>}), so two
+     *         plays of the same video (in two rounds) are two different entries — or empty if the playlist has no
+     *         tracks to play (never imported / all cancelled)
      */
     @Transactional
-    public Optional<FallbackTrackEntity> takeNextTrack(String partyCode, String playlistId, boolean shuffle) {
+    public Optional<FallbackPlayEntity> takeNextTrack(String partyCode, String playlistId, boolean shuffle) {
         lockQueue(partyCode);
         boolean newRoundStarted = false;
         for (int attempt = 0; attempt < MAX_TAKE_ATTEMPTS; attempt++) {
@@ -285,13 +298,20 @@ public class FallbackTrackCommandService {
             }
 
             FallbackTrackEntity track = next.get(0);
-            int claimed = fallbackTrackRepository.claimQueuedTrack(
-                    track.getId(), QUEUED, PLAYED, LocalDateTime.now());
+            LocalDateTime now = LocalDateTime.now();
+            int claimed = fallbackTrackRepository.claimQueuedTrack(track.getId(), QUEUED, PLAYED, now);
             if (claimed == 1) {
+                FallbackPlayEntity play = fallbackPlayRepository.save(FallbackPlayEntity.builder()
+                        .partyCode(partyCode)
+                        .videoId(track.getVideoId())
+                        .title(track.getTitle())
+                        .fetchedAt(track.getFetchedAt())
+                        .playedAt(now)
+                        .build());
                 if (fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, QUEUED) == 0) {
                     startNewRound(partyCode, playlistId, shuffle, track.getId());
                 }
-                return Optional.of(track);
+                return Optional.of(play);
             }
             // lost the race for this track — pick again
         }
@@ -334,17 +354,19 @@ public class FallbackTrackCommandService {
     }
 
     /**
-     * Deletes tracks fetched more than {@value FallbackTrackEntity#MAX_AGE_DAYS} days ago — YouTube API data
-     * must not be retained longer. Runs daily at 04:30.
+     * Deletes tracks — and the play log rows that copied their data — fetched more than
+     * {@value FallbackTrackEntity#MAX_AGE_DAYS} days ago: YouTube API data must not be retained longer. Runs daily
+     * at 04:30.
      */
     @Scheduled(cron = "0 30 4 * * *")
     @Transactional
     public void purgeStaleTracks() {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(FallbackTrackEntity.MAX_AGE_DAYS);
         int deleted = fallbackTrackRepository.deleteFetchedBefore(cutoff);
-        if (deleted > 0) {
-            log.info("Fallback track cleanup: deleted {} track(s) older than {} days",
-                    deleted, FallbackTrackEntity.MAX_AGE_DAYS);
+        int deletedPlays = fallbackPlayRepository.deleteFetchedBefore(cutoff);
+        if (deleted > 0 || deletedPlays > 0) {
+            log.info("Fallback track cleanup: deleted {} track(s) and {} play log row(s) fetched more than {} days ago",
+                    deleted, deletedPlays, FallbackTrackEntity.MAX_AGE_DAYS);
         }
     }
 }

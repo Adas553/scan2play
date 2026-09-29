@@ -82,8 +82,9 @@
     // Whether the window that plays says its player makes sound (true) or is paused (false), from the lease answers;
     // null = unknown. A window that does not play shows "pause" or "resume" by it (the window that plays looks at its own player).
     let holderPlaying = null;
-    // The key of the track that plays ('G:<request id>' or 'B:<track id>', the same keys the server's list of recently
-    // played tracks uses), or null for a track the DJ picked by hand — "back" finds its place in that list by it.
+    // The key of the track that plays ('G:<request id>' or 'B:<play id>', the same keys the server's list of recently
+    // played tracks uses — a background track's id is that of one *play*, so the same video in two rounds of the playlist
+    // has two keys), or null for a track the DJ picked by hand — "back" finds its place in that list by it.
     let nowPlayingKey = null;
     // True while the track that plays came back through ⏮ (replayTrack): ⏭ then retraces the steps — it goes forward through
     // what played, up to the newest entry — instead of asking the server for a new track (skipToNext). Any track the server

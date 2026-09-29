@@ -1,8 +1,10 @@
 package com.scan2play.service;
 
+import com.scan2play.entity.FallbackPlayEntity;
 import com.scan2play.entity.FallbackTrackEntity;
 import com.scan2play.model.MoveDirection;
 import com.scan2play.model.PlaylistTrack;
+import com.scan2play.repository.FallbackPlayRepository;
 import com.scan2play.repository.FallbackTrackRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -45,11 +48,23 @@ class FallbackTrackCommandServiceTest {
     @Mock
     private FallbackTrackRepository repository;
 
+    @Mock
+    private FallbackPlayRepository playRepository;
+
     private FallbackTrackCommandService service;
+
+    /** The id the play log gives its next row (the database does that; the mock imitates it). */
+    private long nextPlayId;
 
     @BeforeEach
     void setUp() {
-        service = new FallbackTrackCommandService(repository);
+        service = new FallbackTrackCommandService(repository, playRepository);
+        nextPlayId = 1000;
+        lenient().when(playRepository.save(any(FallbackPlayEntity.class))).thenAnswer(invocation -> {
+            FallbackPlayEntity play = invocation.getArgument(0);
+            play.setId(nextPlayId++);
+            return play;
+        });
     }
 
     private static FallbackTrackEntity track(long id) {
@@ -128,9 +143,21 @@ class FallbackTrackCommandServiceTest {
     }
 
     @Test
-    @DisplayName("purgeStaleTracks deletes tracks fetched more than 30 days ago")
+    @DisplayName("replaceTracks and cancelQueuedTracks leave the play log alone — the history survives a change of playlist")
+    void replaceAndCancel_shouldNotTouchThePlayLog() {
+        service.replaceTracks(PARTY, PLAYLIST, List.of(new PlaylistTrack("a", null)), false);
+        service.cancelQueuedTracks(PARTY);
+
+        verify(playRepository, never()).deleteByPartyCode(any());
+        verify(playRepository, never()).deleteFetchedBefore(any());
+        verify(playRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("purgeStaleTracks deletes tracks — and the play log rows that copy them — fetched more than 30 days ago")
     void purgeStaleTracks_shouldUseThirtyDayCutoff() {
         when(repository.deleteFetchedBefore(any())).thenReturn(4);
+        when(playRepository.deleteFetchedBefore(any())).thenReturn(9);
         LocalDateTime before = LocalDateTime.now().minusDays(FallbackTrackEntity.MAX_AGE_DAYS);
 
         service.purgeStaleTracks();
@@ -139,6 +166,10 @@ class FallbackTrackCommandServiceTest {
         ArgumentCaptor<LocalDateTime> cutoff = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(repository).deleteFetchedBefore(cutoff.capture());
         assertThat(cutoff.getValue()).isBetween(before, after);
+        // the log is purged by the same clock (the fetch time of the data it copied), so it never outlives the tracks
+        ArgumentCaptor<LocalDateTime> playCutoff = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(playRepository).deleteFetchedBefore(playCutoff.capture());
+        assertThat(playCutoff.getValue()).isEqualTo(cutoff.getValue());
         assertThat(FallbackTrackEntity.MAX_AGE_DAYS).isEqualTo(30);
     }
 
@@ -190,7 +221,7 @@ class FallbackTrackCommandServiceTest {
         when(repository.claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), any())).thenReturn(1);
         when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(2L);
 
-        assertThat(service.takeNextTrack(PARTY, PLAYLIST, true)).contains(first);
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, true)).map(FallbackPlayEntity::getVideoId).contains(first.getVideoId());
 
         verify(repository).claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), any(LocalDateTime.class));
         // more tracks are queued, so the round goes on — nothing is re-queued or re-ordered
@@ -209,7 +240,7 @@ class FallbackTrackCommandServiceTest {
         when(repository.claimQueuedTrack(eq(2L), any(), any(), any())).thenReturn(1);
         when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(1L);
 
-        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).contains(won);
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).map(FallbackPlayEntity::getVideoId).contains(won.getVideoId());
     }
 
     @Test
@@ -220,6 +251,81 @@ class FallbackTrackCommandServiceTest {
 
         assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).isEmpty();
         verify(repository, times(FallbackTrackCommandService.MAX_TAKE_ATTEMPTS)).claimQueuedTrack(any(), any(), any(), any());
+    }
+
+    // ---- the play log: every hand-out is written down, so the history outlives the rounds ----
+
+    @Test
+    @DisplayName("a hand-out is written to the play log as a snapshot (video, title, fetch time) with the moment it was claimed")
+    void takeNextTrack_shouldWriteTheHandOutToThePlayLog() {
+        FallbackTrackEntity first = track(11);
+        first.setTitle("Song 11");
+        first.setFetchedAt(LocalDateTime.of(2026, 9, 1, 12, 0));
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(first));
+        when(repository.claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), any())).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(2L);
+
+        FallbackPlayEntity play = service.takeNextTrack(PARTY, PLAYLIST, false).orElseThrow();
+
+        ArgumentCaptor<LocalDateTime> claimedAt = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(repository).claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), claimedAt.capture());
+        ArgumentCaptor<FallbackPlayEntity> saved = ArgumentCaptor.forClass(FallbackPlayEntity.class);
+        verify(playRepository).save(saved.capture());
+        assertThat(saved.getValue()).isSameAs(play);
+        assertThat(play.getId()).isEqualTo(1000L);   // the id of the play, not of the track (11): that is what the client is told
+        assertThat(play.getPartyCode()).isEqualTo(PARTY);
+        assertThat(play.getVideoId()).isEqualTo("video11");
+        assertThat(play.getTitle()).isEqualTo("Song 11");
+        assertThat(play.getFetchedAt()).isEqualTo(LocalDateTime.of(2026, 9, 1, 12, 0));
+        assertThat(play.getPlayedAt()).isEqualTo(claimedAt.getValue());   // the track and the log agree on when it was taken
+    }
+
+    @Test
+    @DisplayName("the play log is written under the party's lock, after the track was claimed")
+    void takeNextTrack_shouldWriteThePlayLogUnderTheLock() {
+        FallbackTrackEntity first = track(11);
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(first));
+        when(repository.claimQueuedTrack(eq(11L), any(), any(), any())).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(2L);
+
+        service.takeNextTrack(PARTY, PLAYLIST, false);
+
+        InOrder order = inOrder(repository, playRepository);
+        order.verify(repository).lockQueue(FallbackTrackCommandService.queueLockKey(PARTY));
+        order.verify(repository).claimQueuedTrack(eq(11L), any(), any(), any());
+        order.verify(playRepository).save(any(FallbackPlayEntity.class));
+    }
+
+    @Test
+    @DisplayName("the same video handed out in two rounds is two plays with two ids — two different entries of the history")
+    void takeNextTrack_shouldGiveEveryPlayItsOwnId() {
+        FallbackTrackEntity only = track(41);
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(only));
+        when(repository.claimQueuedTrack(eq(41L), any(), any(), any())).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
+        when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(1);   // a one-track playlist: every round is this track
+
+        FallbackPlayEntity firstRound = service.takeNextTrack(PARTY, PLAYLIST, false).orElseThrow();
+        FallbackPlayEntity secondRound = service.takeNextTrack(PARTY, PLAYLIST, false).orElseThrow();
+
+        assertThat(firstRound.getVideoId()).isEqualTo(secondRound.getVideoId());
+        assertThat(firstRound.getId()).isNotEqualTo(secondRound.getId());
+    }
+
+    @Test
+    @DisplayName("a lost race, or nothing to play, writes nothing to the play log")
+    void takeNextTrack_shouldNotWriteThePlayLog_whenNothingWasClaimed() {
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(track(1)));
+        when(repository.claimQueuedTrack(any(), any(), any(), any())).thenReturn(0);
+
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).isEmpty();
+        verify(playRepository, never()).save(any());
+
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of());
+        when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(0);
+
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).isEmpty();
+        verify(playRepository, never()).save(any());
     }
 
     // ---- the playlist loops: a new round starts as soon as the last track is handed out ----
@@ -233,10 +339,12 @@ class FallbackTrackCommandServiceTest {
         when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
         when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(3);
 
-        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).contains(last);
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).map(FallbackPlayEntity::getVideoId).contains(last.getVideoId());
 
-        InOrder order = inOrder(repository);
+        InOrder order = inOrder(repository, playRepository);
         order.verify(repository).claimQueuedTrack(eq(21L), any(), any(), any());
+        // the log row is written before the round starts: the new round clears the track's own played_at, the log keeps it
+        order.verify(playRepository).save(any(FallbackPlayEntity.class));
         order.verify(repository).requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED);
         order.verify(repository).orderByPlaylistPosition(PARTY, PLAYLIST, QUEUED, -1, ROTATION);
         verify(repository, never()).shuffle(any(), any(), any());
@@ -253,7 +361,7 @@ class FallbackTrackCommandServiceTest {
         when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
         when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(4);
 
-        assertThat(service.takeNextTrack(PARTY, PLAYLIST, true)).contains(last);
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, true)).map(FallbackPlayEntity::getVideoId).contains(last.getVideoId());
 
         InOrder order = inOrder(repository);
         order.verify(repository).requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED);
@@ -285,7 +393,7 @@ class FallbackTrackCommandServiceTest {
         when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
         when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(1);
 
-        assertThat(service.takeNextTrack(PARTY, PLAYLIST, true)).contains(only);
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, true)).map(FallbackPlayEntity::getVideoId).contains(only.getVideoId());
 
         verify(repository, times(1)).findByPartyCodeAndPlaylistIdAndStatus(any(), any(), any(), any());
         verify(repository, never()).moveToEnd(any(), any());
@@ -301,7 +409,7 @@ class FallbackTrackCommandServiceTest {
         when(repository.claimQueuedTrack(eq(51L), any(), any(), any())).thenReturn(1);
         when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(2L);
 
-        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).contains(first);
+        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).map(FallbackPlayEntity::getVideoId).contains(first.getVideoId());
 
         verify(repository).orderByPlaylistPosition(PARTY, PLAYLIST, QUEUED, -1, ROTATION);
     }

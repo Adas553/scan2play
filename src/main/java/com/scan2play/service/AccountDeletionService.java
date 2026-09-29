@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.repository.FallbackPlayRepository;
 import com.scan2play.repository.FallbackTrackRepository;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
@@ -25,10 +26,11 @@ public class AccountDeletionService {
     private final SongRequestRepository songRequestRepository;
     private final FeedbackRepository feedbackRepository;
     private final FallbackTrackRepository fallbackTrackRepository;
+    private final FallbackPlayRepository fallbackPlayRepository;
 
     /**
      * Deletes all data associated with the given DJ (owner).
-     * This includes: song requests, fallback tracks, feedback, and party settings.
+     * This includes: song requests, fallback tracks and their play log, feedback, and party settings.
      *
      * @param ownerId The OAuth2 owner ID (Google or Spotify subject).
      */
@@ -49,6 +51,10 @@ public class AccountDeletionService {
             // 3. Delete the server-side fallback playlist tracks
             fallbackTrackRepository.deleteByPartyCode(partyCode);
             log.info("Deleted fallback tracks for partyCode={}", partyCode);
+
+            // 3b. ... and the log of what they played (the history of the background playlist)
+            fallbackPlayRepository.deleteByPartyCode(partyCode);
+            log.info("Deleted fallback play log for partyCode={}", partyCode);
 
             // 4. Delete party settings
             partySettingsRepository.delete(partyOpt.get());

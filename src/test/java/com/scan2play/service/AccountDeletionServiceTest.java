@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.repository.FallbackPlayRepository;
 import com.scan2play.repository.FallbackTrackRepository;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
@@ -22,7 +23,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Account deletion is a Google API Services User Data Policy requirement — every table that holds
- * per-party data must be cleaned, including the server-side fallback tracks.
+ * per-party data must be cleaned, including the server-side fallback tracks and the log of what they played.
  */
 @ExtendWith(MockitoExtension.class)
 class AccountDeletionServiceTest {
@@ -38,21 +39,25 @@ class AccountDeletionServiceTest {
     private FeedbackRepository feedbackRepository;
     @Mock
     private FallbackTrackRepository fallbackTrackRepository;
+    @Mock
+    private FallbackPlayRepository fallbackPlayRepository;
 
     @InjectMocks
     private AccountDeletionService service;
 
     @Test
-    @DisplayName("deletes song requests, fallback tracks, party settings and feedback — settings last")
+    @DisplayName("deletes song requests, fallback tracks and their play log, party settings and feedback — settings last")
     void shouldDeleteAllPartyData() {
         PartySettingsEntity party = PartySettingsEntity.builder().ownerId(OWNER).partyCode(PARTY).build();
         when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.of(party));
 
         service.deleteAllUserData(OWNER);
 
-        InOrder order = inOrder(songRequestRepository, fallbackTrackRepository, partySettingsRepository, feedbackRepository);
+        InOrder order = inOrder(songRequestRepository, fallbackTrackRepository, fallbackPlayRepository,
+                partySettingsRepository, feedbackRepository);
         order.verify(songRequestRepository).deleteByPartyCode(PARTY);
         order.verify(fallbackTrackRepository).deleteByPartyCode(PARTY);
+        order.verify(fallbackPlayRepository).deleteByPartyCode(PARTY);
         order.verify(partySettingsRepository).delete(party);
         order.verify(feedbackRepository).deleteByOwnerId(OWNER);
     }
@@ -65,6 +70,6 @@ class AccountDeletionServiceTest {
         service.deleteAllUserData(OWNER);
 
         verify(feedbackRepository).deleteByOwnerId(OWNER);
-        verifyNoInteractions(songRequestRepository, fallbackTrackRepository);
+        verifyNoInteractions(songRequestRepository, fallbackTrackRepository, fallbackPlayRepository);
     }
 }

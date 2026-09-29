@@ -2,6 +2,7 @@ package com.scan2play.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.scan2play.entity.FallbackPlayEntity;
 import com.scan2play.entity.FallbackTrackEntity;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.NextGuestTrackResponse;
@@ -78,11 +79,13 @@ public class NextTrackService {
         boolean shuffle = settings.isFallbackShuffle();
         refreshIfStale(partyCode, playlistId, shuffle);
 
-        Optional<FallbackTrackEntity> track = fallbackTrackCommandService.takeNextTrack(partyCode, playlistId, shuffle);
-        if (track.isEmpty() && tryImport(partyCode, playlistId, shuffle)) {
-            track = fallbackTrackCommandService.takeNextTrack(partyCode, playlistId, shuffle);
+        Optional<FallbackPlayEntity> play = fallbackTrackCommandService.takeNextTrack(partyCode, playlistId, shuffle);
+        if (play.isEmpty() && tryImport(partyCode, playlistId, shuffle)) {
+            play = fallbackTrackCommandService.takeNextTrack(partyCode, playlistId, shuffle);
         }
-        return track.map(t -> new NextTrackResponse(Source.BACKGROUND, t.getId(), t.getVideoId(), playlistId));
+        // The id is the play log row's, not the track's: the client keeps it as B:<id> and finds the track by it in the
+        // history (recent-tracks), so it has to be the id the history entry of this very play has.
+        return play.map(p -> new NextTrackResponse(Source.BACKGROUND, p.getId(), p.getVideoId(), playlistId));
     }
 
     /** Re-imports a playlist whose tracks are close to the 30-day retention limit. */

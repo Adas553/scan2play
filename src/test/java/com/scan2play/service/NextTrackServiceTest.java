@@ -1,6 +1,6 @@
 package com.scan2play.service;
 
-import com.scan2play.entity.FallbackTrackEntity;
+import com.scan2play.entity.FallbackPlayEntity;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.model.NextTrackResponse;
@@ -52,11 +52,12 @@ class NextTrackServiceTest {
     @InjectMocks
     private NextTrackService service;
 
-    private FallbackTrackEntity track;
+    /** What the queue hands out: a row of the play log — its id is the one the client is told (B:<id>). */
+    private FallbackPlayEntity play;
 
     @BeforeEach
     void setUp() {
-        track = FallbackTrackEntity.builder().id(7L).videoId("dQw4w9WgXcQ").build();
+        play = FallbackPlayEntity.builder().id(7L).videoId("dQw4w9WgXcQ").build();
     }
 
     private void givenFallbackPlaylist(String url, boolean shuffle) {
@@ -94,7 +95,7 @@ class NextTrackServiceTest {
         givenNoGuestWaiting();
         givenFallbackPlaylist(PLAYLIST_URL, true);
         givenFreshPlaylist();
-        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(track));
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of()))
                 .contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
@@ -107,7 +108,7 @@ class NextTrackServiceTest {
         givenNoGuestWaiting();
         givenFallbackPlaylist(PLAYLIST_URL, false);
         givenFreshPlaylist();
-        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, false)).thenReturn(Optional.of(track));
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, false)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
     }
@@ -128,7 +129,7 @@ class NextTrackServiceTest {
         givenNoGuestWaiting();
         givenFallbackPlaylist("https://youtu.be/dQw4w9WgXcQ", true);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, "V:dQw4w9WgXcQ")).thenReturn(Optional.of(LocalDateTime.now()));
-        when(fallbackTrackCommandService.takeNextTrack(PARTY, "V:dQw4w9WgXcQ", true)).thenReturn(Optional.of(track));
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, "V:dQw4w9WgXcQ", true)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).map(NextTrackResponse::playlistId).contains("V:dQw4w9WgXcQ");
     }
@@ -142,7 +143,7 @@ class NextTrackServiceTest {
         givenFallbackPlaylist(PLAYLIST_URL, true);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.empty());
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true))
-                .thenReturn(Optional.empty(), Optional.of(track));
+                .thenReturn(Optional.empty(), Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
 
@@ -156,7 +157,7 @@ class NextTrackServiceTest {
         givenFallbackPlaylist(PLAYLIST_URL, false);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.empty());
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, false))
-                .thenReturn(Optional.empty(), Optional.of(track));
+                .thenReturn(Optional.empty(), Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
 
@@ -205,7 +206,7 @@ class NextTrackServiceTest {
         givenFallbackPlaylist(PLAYLIST_URL, true);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST))
                 .thenReturn(Optional.of(LocalDateTime.now().minusDays(NextTrackService.REFRESH_AFTER_DAYS).minusHours(1)));
-        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(track));
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
 
@@ -220,7 +221,7 @@ class NextTrackServiceTest {
         givenNoGuestWaiting();
         givenFallbackPlaylist(PLAYLIST_URL, true);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(LocalDateTime.now().minusDays(28)));
-        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(track));
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
 
         service.findNextTrack(PARTY, Set.of());
 
@@ -235,7 +236,7 @@ class NextTrackServiceTest {
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(LocalDateTime.now().minusDays(29).minusHours(1)));
         when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST, true))
                 .thenThrow(new FallbackImportException(Reason.API_ERROR, "quota"));
-        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(track));
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
     }

@@ -1,12 +1,11 @@
 package com.scan2play.service;
 
-import com.scan2play.entity.FallbackTrackEntity;
+import com.scan2play.entity.FallbackPlayEntity;
 import com.scan2play.entity.SongRequestEntity;
-import com.scan2play.model.FallbackTrackStatus;
 import com.scan2play.model.HistoryEntry;
 import com.scan2play.model.HistoryEntry.Source;
 import com.scan2play.model.HistoryFilter;
-import com.scan2play.repository.FallbackTrackRepository;
+import com.scan2play.repository.FallbackPlayRepository;
 import com.scan2play.repository.SongRequestRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,7 +40,7 @@ class PlayHistoryServiceTest {
     @Mock
     private SongRequestRepository songRequestRepository;
     @Mock
-    private FallbackTrackRepository fallbackTrackRepository;
+    private FallbackPlayRepository fallbackPlayRepository;
 
     @InjectMocks
     private PlayHistoryService service;
@@ -56,18 +55,18 @@ class PlayHistoryServiceTest {
         return song(id, name, "played", "https://www.youtube.com/watch?v=hTWKbfoikeg", playedAt.minusMinutes(30), playedAt);
     }
 
-    private static FallbackTrackEntity track(long id, String videoId, String title, LocalDateTime playedAt) {
-        return FallbackTrackEntity.builder().id(id).partyCode(PARTY).videoId(videoId).title(title)
-                .status(FallbackTrackStatus.PLAYED).playedAt(playedAt).build();
+    /** One row of the play log: the id is the id of that play. */
+    private static FallbackPlayEntity play(long id, String videoId, String title, LocalDateTime playedAt) {
+        return FallbackPlayEntity.builder().id(id).partyCode(PARTY).videoId(videoId).title(title)
+                .fetchedAt(playedAt.minusDays(1)).playedAt(playedAt).build();
     }
 
     private void givenGuests(List<String> decisions, int n, SongRequestEntity... songs) {
         when(songRequestRepository.findHistory(eq(PARTY), eq(decisions), eq(PageRequest.of(0, n)))).thenReturn(List.of(songs));
     }
 
-    private void givenTracks(int n, FallbackTrackEntity... tracks) {
-        when(fallbackTrackRepository.findPlayedTracks(eq(PARTY), eq(FallbackTrackStatus.PLAYED), eq(PageRequest.of(0, n))))
-                .thenReturn(List.of(tracks));
+    private void givenTracks(int n, FallbackPlayEntity... plays) {
+        when(fallbackPlayRepository.findRecent(eq(PARTY), eq(PageRequest.of(0, n)))).thenReturn(List.of(plays));
     }
 
     // ---- the history: one timeline ----
@@ -79,8 +78,8 @@ class PlayHistoryServiceTest {
                 playedSong(1, "Guest song, played 12:10", NOON.plusMinutes(10)),
                 playedSong(2, "Guest song, played 11:20", NOON.minusMinutes(40)));
         givenTracks(51,
-                track(7, "aaaaaaaaaaa", "Playlist track 12:30", NOON.plusMinutes(30)),
-                track(6, "bbbbbbbbbbb", "Playlist track 11:50", NOON.minusMinutes(10)));
+                play(7, "aaaaaaaaaaa", "Playlist track 12:30", NOON.plusMinutes(30)),
+                play(6, "bbbbbbbbbbb", "Playlist track 11:50", NOON.minusMinutes(10)));
 
         PlayHistoryService.Page page = service.getHistory(PARTY, 50);
 
@@ -109,7 +108,7 @@ class PlayHistoryServiceTest {
         SongRequestEntity rejected = song(1, "Rejected", "rejected", null, NOON.plusMinutes(5), null);
         SongRequestEntity oldPlayed = song(2, "Played before V6", "played", null, NOON.minusMinutes(5), null);
         givenGuests(PLAYED_AND_REJECTED, 51, rejected, oldPlayed);
-        givenTracks(51, track(7, "aaaaaaaaaaa", "Track", NOON));
+        givenTracks(51, play(7, "aaaaaaaaaaa", "Track", NOON));
 
         List<HistoryEntry> entries = service.getHistory(PARTY, 50).entries();
 
@@ -122,7 +121,7 @@ class PlayHistoryServiceTest {
     @DisplayName("entries at the very same moment keep a stable order: the higher id first")
     void shouldBreakTiesByIdDescending() {
         givenGuests(PLAYED_AND_REJECTED, 51, playedSong(1, "One", NOON), playedSong(3, "Three", NOON));
-        givenTracks(51, track(2, "aaaaaaaaaaa", "Two", NOON));
+        givenTracks(51, play(2, "aaaaaaaaaaa", "Two", NOON));
 
         assertThat(service.getHistory(PARTY, 50).entries()).extracting(HistoryEntry::title)
                 .containsExactly("Three", "Two", "One");
@@ -149,7 +148,7 @@ class PlayHistoryServiceTest {
     @DisplayName("a background track is a played BACKGROUND entry with its title, a watch link and no style, comment or energy")
     void shouldMapABackgroundTrack() {
         givenGuests(PLAYED_AND_REJECTED, 51);
-        givenTracks(51, track(7, "dQw4w9WgXcQ", "Rick Astley - Never Gonna Give You Up", NOON));
+        givenTracks(51, play(7, "dQw4w9WgXcQ", "Rick Astley - Never Gonna Give You Up", NOON));
 
         HistoryEntry entry = service.getHistory(PARTY, 50).entries().getFirst();
 
@@ -168,7 +167,7 @@ class PlayHistoryServiceTest {
     @DisplayName("a background track without a known title is shown as youtu.be/<id>, like in the up-next list")
     void shouldNameATrackWithoutATitleByItsVideoId() {
         givenGuests(PLAYED_AND_REJECTED, 51);
-        givenTracks(51, track(7, "dQw4w9WgXcQ", null, NOON), track(8, "aaaaaaaaaaa", "   ", NOON.minusMinutes(1)));
+        givenTracks(51, play(7, "dQw4w9WgXcQ", null, NOON), play(8, "aaaaaaaaaaa", "   ", NOON.minusMinutes(1)));
 
         assertThat(service.getHistory(PARTY, 50).entries()).extracting(HistoryEntry::title)
                 .containsExactly("youtu.be/dQw4w9WgXcQ", "youtu.be/aaaaaaaaaaa");
@@ -181,10 +180,10 @@ class PlayHistoryServiceTest {
     void shouldReadOneMoreThanAsked_andSayThereIsMore() {
         List<SongRequestEntity> guests = IntStream.range(0, 4)
                 .mapToObj(i -> playedSong(i, "Guest " + i, NOON.minusMinutes(2L * i))).toList();
-        List<FallbackTrackEntity> tracks = IntStream.range(0, 4)
-                .mapToObj(i -> track(100 + i, "vid" + String.format("%08d", i), "Track " + i, NOON.minusMinutes(2L * i + 1))).toList();
+        List<FallbackPlayEntity> tracks = IntStream.range(0, 4)
+                .mapToObj(i -> play(100 + i, "vid" + String.format("%08d", i), "Track " + i, NOON.minusMinutes(2L * i + 1))).toList();
         when(songRequestRepository.findHistory(eq(PARTY), eq(PLAYED_AND_REJECTED), eq(PageRequest.of(0, 6)))).thenReturn(guests);
-        when(fallbackTrackRepository.findPlayedTracks(eq(PARTY), eq(FallbackTrackStatus.PLAYED), eq(PageRequest.of(0, 6))))
+        when(fallbackPlayRepository.findRecent(eq(PARTY), eq(PageRequest.of(0, 6))))
                 .thenReturn(tracks);
 
         PlayHistoryService.Page page = service.getHistory(PARTY, 5);
@@ -200,7 +199,7 @@ class PlayHistoryServiceTest {
     void shouldNotSayThereIsMore_whenItAllFits() {
         givenGuests(PLAYED_AND_REJECTED, 6, playedSong(1, "One", NOON), playedSong(2, "Two", NOON.minusMinutes(1)),
                 playedSong(3, "Three", NOON.minusMinutes(2)));
-        givenTracks(6, track(7, "aaaaaaaaaaa", "Four", NOON.minusMinutes(3)), track(8, "bbbbbbbbbbb", "Five", NOON.minusMinutes(4)));
+        givenTracks(6, play(7, "aaaaaaaaaaa", "Four", NOON.minusMinutes(3)), play(8, "bbbbbbbbbbb", "Five", NOON.minusMinutes(4)));
 
         PlayHistoryService.Page page = service.getHistory(PARTY, 5);
 
@@ -233,13 +232,13 @@ class PlayHistoryServiceTest {
         PlayHistoryService.Page page = service.getHistory(PARTY, 50, HistoryFilter.GUEST);
 
         assertThat(page.entries()).extracting(HistoryEntry::key).containsExactly("G:1", "G:2");
-        verify(fallbackTrackRepository, never()).findPlayedTracks(any(), any(), any());
+        verify(fallbackPlayRepository, never()).findRecent(any(), any());
     }
 
     @Test
     @DisplayName("Playlist: only the tracks of the background playlist — the requests table is not read at all")
     void shouldReadOnlyThePlaylist_forThePlaylistFilter() {
-        givenTracks(51, track(7, "aaaaaaaaaaa", "Track one", NOON), track(6, "bbbbbbbbbbb", "Track two", NOON.minusMinutes(3)));
+        givenTracks(51, play(7, "aaaaaaaaaaa", "Track one", NOON), play(6, "bbbbbbbbbbb", "Track two", NOON.minusMinutes(3)));
 
         PlayHistoryService.Page page = service.getHistory(PARTY, 50, HistoryFilter.BACKGROUND);
 
@@ -251,7 +250,7 @@ class PlayHistoryServiceTest {
     @DisplayName("Played: the guests' requests that played and the playlist tracks, no rejected request")
     void shouldReadWhatPlayed_forThePlayedFilter() {
         givenGuests(PLAYED, 51, playedSong(1, "Guest song", NOON.minusMinutes(5)));
-        givenTracks(51, track(7, "aaaaaaaaaaa", "Track", NOON));
+        givenTracks(51, play(7, "aaaaaaaaaaa", "Track", NOON));
 
         PlayHistoryService.Page page = service.getHistory(PARTY, 50, HistoryFilter.PLAYED);
 
@@ -268,7 +267,7 @@ class PlayHistoryServiceTest {
 
         assertThat(page.entries()).extracting(HistoryEntry::key).containsExactly("G:2");
         assertThat(page.entries().getFirst().decision()).isEqualTo("rejected");
-        verify(fallbackTrackRepository, never()).findPlayedTracks(any(), any(), any());
+        verify(fallbackPlayRepository, never()).findRecent(any(), any());
     }
 
     @Test
@@ -282,14 +281,14 @@ class PlayHistoryServiceTest {
 
         assertThat(page.entries()).extracting(HistoryEntry::title).containsExactly("Guest 0", "Guest 1", "Guest 2", "Guest 3", "Guest 4");
         assertThat(page.hasMore()).isTrue();
-        verify(fallbackTrackRepository, never()).findPlayedTracks(any(), any(), any());
+        verify(fallbackPlayRepository, never()).findRecent(any(), any());
     }
 
     @Test
     @DisplayName("without a filter the history is everything: the same two reads as the All filter")
     void shouldMeanAll_whenNoFilterIsGiven() {
         givenGuests(PLAYED_AND_REJECTED, 51, playedSong(1, "Guest song", NOON));
-        givenTracks(51, track(7, "aaaaaaaaaaa", "Track", NOON.plusMinutes(1)));
+        givenTracks(51, play(7, "aaaaaaaaaaa", "Track", NOON.plusMinutes(1)));
 
         assertThat(service.getHistory(PARTY, 50).entries()).extracting(HistoryEntry::key).containsExactly("B:7", "G:1");
         assertThat(service.getHistory(PARTY, 50, HistoryFilter.ALL).entries()).extracting(HistoryEntry::key).containsExactly("B:7", "G:1");
@@ -301,12 +300,30 @@ class PlayHistoryServiceTest {
     @DisplayName("recently played: only what played (no rejected requests), guest songs and background tracks together, newest first")
     void shouldListWhatPlayedRecently() {
         givenGuests(PLAYED, 30, playedSong(1, "Guest song", NOON.minusMinutes(5)));
-        givenTracks(30, track(7, "aaaaaaaaaaa", "Track", NOON));
+        givenTracks(30, play(7, "aaaaaaaaaaa", "Track", NOON));
 
         List<HistoryEntry> recent = service.getRecentlyPlayed(PARTY, 30);
 
         assertThat(recent).extracting(HistoryEntry::key).containsExactly("B:7", "G:1");
         verify(songRequestRepository, never()).findHistory(any(), eq(PLAYED_AND_REJECTED), any());
+    }
+
+    @Test
+    @DisplayName("a video that plays in two rounds of the playlist is two entries with two keys — history and \"previous track\" alike")
+    void shouldKeepEveryPlayOfTheSameVideoAsAnEntryOfItsOwn() {
+        // A B A: the playlist has looped and A came round again. The key must tell the two A's apart, otherwise "back"
+        // from the older A would find the newer one and go round in circles.
+        givenGuests(PLAYED_AND_REJECTED, 51);
+        givenGuests(PLAYED, 30);
+        givenTracks(51, play(9, "aaaaaaaaaaa", "A", NOON.plusMinutes(6)), play(8, "bbbbbbbbbbb", "B", NOON.plusMinutes(3)),
+                play(7, "aaaaaaaaaaa", "A", NOON));
+        givenTracks(30, play(9, "aaaaaaaaaaa", "A", NOON.plusMinutes(6)), play(8, "bbbbbbbbbbb", "B", NOON.plusMinutes(3)),
+                play(7, "aaaaaaaaaaa", "A", NOON));
+
+        assertThat(service.getHistory(PARTY, 50).entries()).extracting(HistoryEntry::key).containsExactly("B:9", "B:8", "B:7");
+        List<HistoryEntry> recent = service.getRecentlyPlayed(PARTY, 30);
+        assertThat(recent).extracting(HistoryEntry::key).containsExactly("B:9", "B:8", "B:7").doesNotHaveDuplicates();
+        assertThat(recent).extracting(HistoryEntry::videoId).containsExactly("aaaaaaaaaaa", "bbbbbbbbbbb", "aaaaaaaaaaa");
     }
 
     @Test

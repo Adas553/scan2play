@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
  * <p>
  * The playlist is fetched from the YouTube Data API once, when the DJ sets it, and stored as one row
  * per video. Changing the playlist soft-invalidates still-{@link FallbackTrackStatus#QUEUED} rows
- * ({@link FallbackTrackStatus#CANCELLED}) instead of deleting them; played rows stay as history.
+ * ({@link FallbackTrackStatus#CANCELLED}) instead of deleting them. A row records only the <em>current round</em> of its
+ * playlist: when the playlist loops, the played rows go back in the queue and lose their {@link #playedAt}. What has
+ * played over the whole party — the DJ history — is kept in {@link FallbackPlayEntity} (V7).
  * <p>
  * <b>YouTube API ToS compliance:</b> only the video ID and its title are stored, and rows older than
  * {@value #MAX_AGE_DAYS} days are purged (same rule as {@link YoutubeCacheEntity}).
@@ -79,5 +81,6 @@ public class FallbackTrackEntity {
     @Column(nullable = false)
     private LocalDateTime fetchedAt;
 
+    /** When the player took the track in the current round; cleared when the playlist starts a new round. */
     private LocalDateTime playedAt;
 }

@@ -169,17 +169,6 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
     /** A track by ID, but only if it belongs to the party (a DJ must never reach another party's tracks). */
     Optional<FallbackTrackEntity> findByIdAndPartyCode(Long id, String partyCode);
 
-    /**
-     * The tracks the player has taken (status PLAYED), the most recent first — for the DJ history
-     * ({@code PlayHistoryService}). A PLAYED track always has a play time (it is set when the track is claimed); the
-     * null guard only keeps a damaged row from floating to the top. Bounded by the pageable, one party.
-     */
-    @Query("SELECT t FROM FallbackTrackEntity t WHERE t.partyCode = :partyCode AND t.status = :status "
-            + "AND t.playedAt IS NOT NULL ORDER BY t.playedAt DESC, t.id DESC")
-    List<FallbackTrackEntity> findPlayedTracks(@Param("partyCode") String partyCode,
-                                               @Param("status") FallbackTrackStatus status,
-                                               Pageable pageable);
-
     /** When the newest import of this playlist for the party was fetched (empty if it was never imported). */
     @Query("SELECT MAX(t.fetchedAt) FROM FallbackTrackEntity t WHERE t.partyCode = :partyCode AND t.playlistId = :playlistId")
     Optional<LocalDateTime> findLatestFetchedAt(@Param("partyCode") String partyCode,
@@ -203,6 +192,9 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
      * loops). "Newest" is party-wide, not per playlist: a batch that a later import — of the same or of
      * another playlist — has superseded is history and is never revived. If the newest import belongs to a
      * different playlist than {@code playlistId}, nothing matches and 0 is returned.
+     * <p>
+     * This clears {@code playedAt}, so a track's own row says only what happened in the <em>current</em> round; what has
+     * played over the whole party is in the play log ({@code fallback_play}, {@link FallbackPlayRepository}).
      *
      * @return number of tracks re-queued
      */

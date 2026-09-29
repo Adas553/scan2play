@@ -1,12 +1,11 @@
 package com.scan2play.service;
 
-import com.scan2play.entity.FallbackTrackEntity;
+import com.scan2play.entity.FallbackPlayEntity;
 import com.scan2play.entity.SongRequestEntity;
-import com.scan2play.model.FallbackTrackStatus;
 import com.scan2play.model.HistoryEntry;
 import com.scan2play.model.HistoryEntry.Source;
 import com.scan2play.model.HistoryFilter;
-import com.scan2play.repository.FallbackTrackRepository;
+import com.scan2play.repository.FallbackPlayRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.YouTubeUrls;
 import lombok.RequiredArgsConstructor;
@@ -25,10 +24,15 @@ import static com.scan2play.service.DjService.DECISION_REJECTED;
 /**
  * One timeline of what played at a party (Phase 4, stage 2): the guests' songs that played (or were rejected) and the
  * tracks the player took from the background playlist, newest event first. They live in different tables
- * ({@code song_requests}, {@code fallback_track}), so each side is read with its own bounded query and the two are
+ * ({@code song_requests}, {@code fallback_play}), so each side is read with its own bounded query and the two are
  * merged here. The timeline serves the DJ's history page and the "previous track" button.
  * <p>
- * A background track counts as played when the player <em>takes</em> it (that is when {@code played_at} is set), so a
+ * The background side is the <em>play log</em> ({@code fallback_play}), not the queue ({@code fallback_track}): the
+ * queue forgets what has played when the playlist starts a new round, the log does not, so a short playlist that loops
+ * during a party keeps its whole history (until the 30-day retention of YouTube API data deletes it). Every play is its
+ * own entry with its own id — the same video in two rounds is two entries.
+ * <p>
+ * A background track counts as played when the player <em>takes</em> it (that is when the log row is written), so a
  * track that was handed out but never sounded — the answer arrived after the DJ had picked something by hand, or the
  * video could not be played — is in the history too.
  */
@@ -52,7 +56,7 @@ public class PlayHistoryService {
     }
 
     private final SongRequestRepository songRequestRepository;
-    private final FallbackTrackRepository fallbackTrackRepository;
+    private final FallbackPlayRepository fallbackPlayRepository;
 
     /**
      * The last {@code limit} things that played or were rejected. The caller decides how far back the DJ may look
@@ -110,8 +114,7 @@ public class PlayHistoryService {
             songRequestRepository.findHistory(partyCode, decisions, firstN).forEach(song -> entries.add(toEntry(song)));
         }
         if (backgroundTracks) {
-            fallbackTrackRepository.findPlayedTracks(partyCode, FallbackTrackStatus.PLAYED, firstN)
-                    .forEach(track -> entries.add(toEntry(track)));
+            fallbackPlayRepository.findRecent(partyCode, firstN).forEach(play -> entries.add(toEntry(play)));
         }
         // The n newest of the union are among the n newest of each side, so n rows from each are enough.
         entries.sort(NEWEST_FIRST);
@@ -125,11 +128,11 @@ public class PlayHistoryService {
                 song.getStyle(), song.getDecision(), song.getDjComment(), song.getEnergyLevel());
     }
 
-    private static HistoryEntry toEntry(FallbackTrackEntity track) {
-        String title = track.getTitle() != null && !track.getTitle().isBlank()
-                ? track.getTitle() : "youtu.be/" + track.getVideoId();
-        return new HistoryEntry(Source.BACKGROUND, track.getId(), track.getPlayedAt(), title,
-                "https://www.youtube.com/watch?v=" + track.getVideoId(), track.getVideoId(),
+    private static HistoryEntry toEntry(FallbackPlayEntity play) {
+        String title = play.getTitle() != null && !play.getTitle().isBlank()
+                ? play.getTitle() : "youtu.be/" + play.getVideoId();
+        return new HistoryEntry(Source.BACKGROUND, play.getId(), play.getPlayedAt(), title,
+                "https://www.youtube.com/watch?v=" + play.getVideoId(), play.getVideoId(),
                 null, DECISION_PLAYED, null, null);
     }
 }
