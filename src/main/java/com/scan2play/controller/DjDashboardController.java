@@ -56,6 +56,12 @@ public class DjDashboardController {
     private final NextTrackService nextTrackService;
     private final PlayerLeaseService playerLeaseService;
 
+    /** The history shows this many requests at first, and this many more each time the DJ asks for more. */
+    static final int HISTORY_PAGE_SIZE = 50;
+
+    /** The furthest back the history goes: the query stays bounded, and the list stays a list a person can use. */
+    static final int HISTORY_MAX_LIMIT = 300;
+
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
 
@@ -113,10 +119,11 @@ public class DjDashboardController {
     }
 
     /**
-     * Displays the history of played and rejected songs.
+     * Displays the history of played and rejected songs — the last {@code limit} requests (see {@link #addHistory}).
      */
     @GetMapping("/history-view")
-    public String historyView(Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
+    public String historyView(@RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit, Model model,
+                              OAuth2AuthenticationToken authentication, HttpSession session) {
         if (authentication == null) {
             return REDIRECT_LOGIN;
         }
@@ -125,7 +132,7 @@ public class DjDashboardController {
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
-        model.addAttribute(HISTORY, djService.getHistory(partyCode));
+        addHistory(model, partyCode, limit);
 
         return "history";
     }
@@ -133,14 +140,29 @@ public class DjDashboardController {
     /**
      * Returns the history table as an HTML fragment for AJAX-based tab switching.
      * Used by the dashboard to load history without a full page reload,
-     * which preserves the YouTube IFrame player state.
+     * which preserves the YouTube IFrame player state. "Show more" asks for the same fragment with a larger
+     * {@code limit}.
      */
     @GetMapping("/history-view/fragment")
-    public String historyFragment(@RequestParam String partyCode, Model model,
+    public String historyFragment(@RequestParam String partyCode,
+                                  @RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit, Model model,
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
-        model.addAttribute(HISTORY, djService.getHistory(partyCode));
+        addHistory(model, partyCode, limit);
         return "history :: historyTableContent";
+    }
+
+    /**
+     * Puts the last {@code limit} requests of the history in the model — at least one page, at most
+     * {@value #HISTORY_MAX_LIMIT} (the query is always bounded) — and what the "Show more" button needs: whether
+     * there are older ones to show and the limit to ask for next.
+     */
+    private void addHistory(Model model, String partyCode, int requestedLimit) {
+        int limit = Math.max(HISTORY_PAGE_SIZE, Math.min(requestedLimit, HISTORY_MAX_LIMIT));
+        DjService.HistoryPage page = djService.getHistory(partyCode, limit);
+        model.addAttribute(HISTORY, page.rows());
+        model.addAttribute(HISTORY_HAS_MORE, page.hasMore() && limit < HISTORY_MAX_LIMIT);
+        model.addAttribute(HISTORY_NEXT_LIMIT, Math.min(limit + HISTORY_PAGE_SIZE, HISTORY_MAX_LIMIT));
     }
 
     /**

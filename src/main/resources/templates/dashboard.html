@@ -159,6 +159,7 @@
                 <div class="ratio ratio-16x9">
                     <div id="yt-player"></div>
                 </div>
+                <div th:replace="~{fragments/player-controls :: next}"></div>
             </div>
 
             <!--/* "Up next" of the fallback playlist, beside the player: filled by dashboard.js (refreshFallbackQueue) from /dj/dashboard/fallback-queue; on a narrow screen it wraps below the player */-->
@@ -189,9 +190,21 @@
         </form>
     </div>
 
-    <div class="table-responsive mb-4">
-        <h4 class="text-white mb-3" th:text="#{dashboard.active.queue}">Active Queue</h4>
-        <table class="table table-dark table-hover align-middle">
+    <!--/* The active queue: a heading with the number of songs and a search box, and a list of fixed height with its own
+         scrollbar (.list-scroll) and a header that stays in view — with many songs the DJ no longer scrolls the whole
+         page. dashboard.js (initListTools) does the searching; the polled <tbody> below is replaced every 3 s, so
+         the list keeps its scroll position and the filter is applied again after each refresh. */-->
+    <div class="mb-4" id="queueList" data-list>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <h4 class="text-white mb-0">
+                <span th:text="#{dashboard.active.queue}">Active Queue</span>
+                <span class="badge text-bg-secondary ms-1" data-list-count th:text="${#lists.size(history)}">0</span>
+            </h4>
+            <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary"
+                   style="max-width: 16rem;" th:placeholder="#{dashboard.list.search}" autocomplete="off">
+        </div>
+        <div class="table-responsive list-scroll">
+        <table class="table table-dark table-hover table-sm align-middle">
             <thead>
             <tr>
                 <th class="d-none d-md-table-cell" data-sort="time" th:text="#{dashboard.table.header.time}">Time</th>
@@ -250,8 +263,12 @@
             <tr th:if="${#lists.isEmpty(history)}">
                 <td colspan="7" class="text-center text-light py-4" style="background: #232323;" th:text="#{dashboard.empty.queue}">No pending requests. Queue is empty! 🎵</td>
             </tr>
+            <tr data-nomatch class="d-none">
+                <td colspan="7" class="text-center text-secondary py-3" style="background: #232323;" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
+            </tr>
             </tbody>
         </table>
+        </div>
     </div>
     </div>
 

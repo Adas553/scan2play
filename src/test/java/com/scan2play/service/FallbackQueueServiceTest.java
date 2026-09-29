@@ -69,6 +69,67 @@ class FallbackQueueServiceTest {
                 new FallbackQueueView.Track(9L, "bbbbbbbbbbb", null));
     }
 
+    // ---- version: lets a window that does not play notice that the list changed elsewhere ----
+
+    private void givenQueue(boolean shuffle, long remaining, FallbackTrackEntity... tracks) {
+        givenSettings(PLAYLIST_URL, shuffle);
+        when(fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, UPCOMING))
+                .thenReturn(List.of(tracks));
+        when(fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(remaining);
+    }
+
+    @Test
+    @DisplayName("version: the same list gives the same version, however often it is asked for")
+    void shouldGiveTheSameVersion_whenNothingChanged() {
+        givenQueue(true, 2, entity(1, "aaaaaaaaaaa", "A"), entity(2, "bbbbbbbbbbb", "B"));
+
+        assertThat(service.getVersion(PARTY)).isEqualTo(service.getVersion(PARTY)).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("version: it changes when the order changes (a move or a drag swaps two tracks — the ids stay the same)")
+    void shouldChangeTheVersion_whenTheOrderChanges() {
+        givenQueue(false, 2, entity(1, "aaaaaaaaaaa", "A"), entity(2, "bbbbbbbbbbb", "B"));
+        String before = service.getVersion(PARTY);
+
+        givenQueue(false, 2, entity(2, "bbbbbbbbbbb", "B"), entity(1, "aaaaaaaaaaa", "A"));
+
+        assertThat(service.getVersion(PARTY)).isNotEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("version: it changes when the player takes the first track")
+    void shouldChangeTheVersion_whenATrackIsTaken() {
+        givenQueue(false, 2, entity(1, "aaaaaaaaaaa", "A"), entity(2, "bbbbbbbbbbb", "B"));
+        String before = service.getVersion(PARTY);
+
+        givenQueue(false, 1, entity(2, "bbbbbbbbbbb", "B"));
+
+        assertThat(service.getVersion(PARTY)).isNotEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("version: it changes with the shuffle switch even when the order it produces happens to be the same")
+    void shouldChangeTheVersion_whenShuffleIsSwitched() {
+        givenQueue(false, 1, entity(1, "aaaaaaaaaaa", "A"));
+        String before = service.getVersion(PARTY);
+
+        givenQueue(true, 1, entity(1, "aaaaaaaaaaa", "A"));
+
+        assertThat(service.getVersion(PARTY)).isNotEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("version: it changes when the DJ clears the playlist")
+    void shouldChangeTheVersion_whenThePlaylistIsCleared() {
+        givenQueue(false, 1, entity(1, "aaaaaaaaaaa", "A"));
+        String before = service.getVersion(PARTY);
+
+        givenSettings(null, false);
+
+        assertThat(service.getVersion(PARTY)).isNotEqualTo(before);
+    }
+
     @Test
     @DisplayName("the list covers a whole round — as many tracks as a playlist can be imported with, so it is never cut")
     void shouldListAWholeRound() {

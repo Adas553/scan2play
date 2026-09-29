@@ -59,6 +59,24 @@ public class FallbackQueueService {
     }
 
     /**
+     * A short string that changes whenever {@link #getUpcoming} would return something different — a track taken,
+     * a move, a new order, the shuffle switch, another playlist. The dashboard windows compare it on every lease
+     * report and fetch the "up next" list again when it changes, so a change made in one window shows up in the
+     * others (nothing else refreshes the list of a window that does not play).
+     * <p>
+     * It is a hash of the whole view (at most {@value #UPCOMING_LIMIT} tracks — the same bounded read the list
+     * itself does), so it is only good for "did it change"; it does not survive a restart of the application.
+     */
+    public String getVersion(String partyCode) {
+        return versionOf(getUpcoming(partyCode));
+    }
+
+    /** The version of a view that was already read — sent along with the list itself, so that its window knows it. */
+    public static String versionOf(FallbackQueueView view) {
+        return Integer.toHexString(view.hashCode());
+    }
+
+    /**
      * The DJ moves a track of the queue.
      *
      * @return true if the track was queued in the party's current playlist (it was moved, or was already at that

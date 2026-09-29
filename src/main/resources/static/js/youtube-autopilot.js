@@ -21,11 +21,16 @@
  * the party's current fallback playlist, so a playlist the DJ replaces or clears in another window stops the
  * background track that came from the old one (next-track names the playlist of every background track).
  *
+ * The ⏭ button skips to the next track (whatever the player is doing, with Auto-Pilot off too): at once in the window
+ * that plays; in another window — the phone as a remote control — it sends POST /dj/dashboard/player-command, and the
+ * window that plays carries it out when its next lease report brings it (within ~3 s). The reports also carry a version
+ * of the "up next" list, so a window that did not change the list itself fetches it again when it changed elsewhere.
+ *
  * Guest songs are still confirmed by the client via POST /dj/dashboard/play once the video
  * actually reaches PLAYING. Background tracks need no confirmation and no error report: a track
  * that fails to play is already PLAYED, so the client just asks for the next one.
  *
- * Exposes: checkYouTubeAutoPlay, playInEmbeddedPlayer, updateFallbackSource, stopFallback
+ * Exposes: checkYouTubeAutoPlay, playInEmbeddedPlayer, updateFallbackSource, stopFallback, setKnownQueueVersion
  */
 (function () {
     'use strict';
@@ -63,6 +68,9 @@
     // The playlist the running background track came from (null: unknown, or not a background track), and the number
     // of the last lease report sent before that track was loaded: only a report sent after it says anything about it.
     let playingPlaylistId = null, trackLoadedAtLeaseSeq = 0;
+    // The version of the "up next" list this window last saw (from the list itself or from a lease answer): when the
+    // server reports another one, the list was changed elsewhere and is fetched again. null = not seen yet.
+    let lastQueueVersion = null;
     const LEASE_REPORT_INTERVAL_MS = 3000;
     const deviceId = loadDeviceId();
 
@@ -291,6 +299,86 @@
         }
     }
 
+    // ---- The "up next" list of a window that did not change it itself ----
+
+    /** The list was fetched (dashboard.js) with this version: remember it, so that the next lease answer does not ask for it again. */
+    window.setKnownQueueVersion = function (version) {
+        lastQueueVersion = version;
+    };
+
+    function noteQueueVersion(version) {
+        const changedElsewhere = lastQueueVersion !== null && version !== lastQueueVersion;
+        lastQueueVersion = version;
+        if (changedElsewhere && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
+    }
+
+    // ---- Next: skip to the next track, from any window ----
+
+    /**
+     * Skips to whatever next-track hands out now — whatever the player is doing, and with Auto-Pilot off too: it is a
+     * deliberate act of the DJ. Only the window that plays can do it; a window that does not sends the command to it
+     * (onNextClick). When there is nothing to play (204) the track that plays now carries on.
+     */
+    async function skipToNext() {
+        if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
+        tryAutoPlayInFlight = true;
+        try {
+            const track = await fetchNextTrack();
+            if (!track || isPlayerDevice !== true) return; // nothing to play, or the lease moved while we asked
+            playTrack(track);
+        } finally {
+            tryAutoPlayInFlight = false;
+        }
+    }
+
+    // A little longer than one lease report interval: the time the command needs to reach the window that plays.
+    const NEXT_PENDING_MS = 3500;
+
+    function setNextPending(pending) {
+        const button = document.getElementById('playerNextBtn');
+        if (!button) return;
+        button.disabled = pending;
+        const label = button.querySelector('[data-role="label"]');
+        if (label) label.textContent = pending ? button.dataset.textSent : button.dataset.textLabel;
+    }
+
+    /**
+     * The ⏭ button. In the window that plays it acts at once; in another window it sends the command to the one
+     * that plays (it carries it out with its next report, so within a few seconds) and stays disabled meanwhile — a
+     * second press would not skip twice, only one command waits.
+     */
+    async function onNextClick() {
+        if (isPlayerDevice === true) {
+            skipToNext();
+            return;
+        }
+        if (isPlayerDevice !== false || !partyCodeValue) return; // the server has not said who plays yet
+        setNextPending(true);
+        try {
+            const response = await fetch('/dj/dashboard/player-command', {
+                method: 'POST',
+                headers: { [csrf.header]: csrf.token },
+                body: new URLSearchParams({ partyCode: partyCodeValue, command: 'NEXT' })
+            });
+            if (response.status === 409) { // nobody plays: the banner says so and offers to play here
+                applyLease(false, true);
+                setNextPending(false);
+                return;
+            }
+            if (!response.ok || response.redirected) {
+                setNextPending(false);
+                return;
+            }
+            setTimeout(function () { setNextPending(false); }, NEXT_PENDING_MS);
+        } catch (e) {
+            console.error('[YT] player-command error:', e);
+            setNextPending(false);
+        }
+    }
+
+    const nextButton = document.getElementById('playerNextBtn');
+    if (nextButton) nextButton.addEventListener('click', onNextClick);
+
     /** @param {'CLAIM'|'WATCH'|'TAKE_OVER'} mode see PlayerLeaseMode on the server */
     async function reportLease(mode) {
         if (!partyCodeValue) return;
@@ -309,6 +397,9 @@
             leaseAppliedSeq = seq;
             applyLease(lease.holder === true, lease.free === true);
             if (lease.holder === true) dropStaleBackgroundTrack(lease.fallbackPlaylistId || null, seq);
+            if (lease.queueVersion) noteQueueVersion(lease.queueVersion);
+            // A command the DJ gave from another window (the phone as a remote control), handed out once.
+            if (lease.holder === true && lease.command === 'NEXT') skipToNext();
         } catch (e) {
             console.error('[YT] reportLease error:', e);
         }

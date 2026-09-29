@@ -1,5 +1,6 @@
 package com.scan2play.service;
 
+import com.scan2play.model.PlayerCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,15 +58,130 @@ class PlayerLeaseServiceTest {
     }
 
     private static PlayerLeaseService.Status holder() {
-        return new PlayerLeaseService.Status(true, false);
+        return new PlayerLeaseService.Status(true, false, null);
+    }
+
+    private static PlayerLeaseService.Status holderWith(PlayerCommand command) {
+        return new PlayerLeaseService.Status(true, false, command);
     }
 
     private static PlayerLeaseService.Status notHolder() {
-        return new PlayerLeaseService.Status(false, false);
+        return new PlayerLeaseService.Status(false, false, null);
     }
 
     private static PlayerLeaseService.Status noneHolds() {
-        return new PlayerLeaseService.Status(false, true);
+        return new PlayerLeaseService.Status(false, true, null);
+    }
+
+    // ---- commands: the phone as a remote control of the window that plays ----
+
+    @Test
+    @DisplayName("a command given while a window plays is handed to that window with its next report — once")
+    void shouldHandTheCommandToTheHolder_once() {
+        service.report(PARTY, COMPUTER, CLAIM);
+
+        assertThat(service.sendCommand(PARTY, PlayerCommand.NEXT)).isTrue();
+
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.NEXT));
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holder());
+    }
+
+    @Test
+    @DisplayName("a window that does not play never receives the command, and does not use it up")
+    void shouldNotHandTheCommandToAWindowThatDoesNotPlay() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+
+        assertThat(service.report(PARTY, PHONE, WATCH)).isEqualTo(notHolder());
+        assertThat(service.report(PARTY, PHONE, CLAIM)).isEqualTo(notHolder());
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.NEXT));
+    }
+
+    @Test
+    @DisplayName("nobody plays: the command is refused (it would wait for nobody), and nothing is kept for later")
+    void shouldRefuseACommand_whenNobodyPlays() {
+        assertThat(service.sendCommand(PARTY, PlayerCommand.NEXT)).isFalse();
+
+        service.report(PARTY, COMPUTER, CLAIM);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holder());
+
+        service.release(PARTY, COMPUTER);
+        assertThat(service.sendCommand(PARTY, PlayerCommand.NEXT)).isFalse();
+    }
+
+    @Test
+    @DisplayName("an expired lease does not accept a command either")
+    void shouldRefuseACommand_whenTheLeaseHasExpired() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        clock.advance(PlayerLeaseService.LEASE_TTL.plusSeconds(1));
+
+        assertThat(service.sendCommand(PARTY, PlayerCommand.NEXT)).isFalse();
+    }
+
+    @Test
+    @DisplayName("a command left behind by a window that went away is not carried out by whoever claims the lease next")
+    void shouldNotCarryOutAStaleCommand_afterTheLeaseExpired() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+
+        clock.advance(PlayerLeaseService.LEASE_TTL.plusSeconds(1));
+
+        assertThat(service.report(PARTY, PHONE, CLAIM)).isEqualTo(holder());
+        assertThat(service.report(PARTY, PHONE, CLAIM)).isEqualTo(holder());
+    }
+
+    @Test
+    @DisplayName("the same window that reports late, after its lease expired, does not get a command from before either")
+    void shouldNotCarryOutAStaleCommand_whenTheSameWindowComesBack() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+
+        clock.advance(PlayerLeaseService.LEASE_TTL.plusSeconds(1));
+
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holder());
+    }
+
+    @Test
+    @DisplayName("pressing next twice before the window that plays reports in gives one command, not two")
+    void shouldKeepOnlyOneCommandPerParty() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.NEXT));
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holder());
+    }
+
+    @Test
+    @DisplayName("a command meant for the window that played does not fire in the window that takes over")
+    void shouldDropTheCommand_whenTheLeaseChangesHands() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+
+        assertThat(service.report(PARTY, PHONE, TAKE_OVER)).isEqualTo(holder());
+        assertThat(service.report(PARTY, PHONE, CLAIM)).isEqualTo(holder());
+    }
+
+    @Test
+    @DisplayName("a command waiting for a window that leaves is dropped with its lease")
+    void shouldDropTheCommand_whenTheHolderReleasesTheLease() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+
+        service.release(PARTY, COMPUTER);
+
+        assertThat(service.report(PARTY, PHONE, CLAIM)).isEqualTo(holder());
+    }
+
+    @Test
+    @DisplayName("commands of one party are not seen by another party")
+    void shouldKeepCommandsOfDifferentPartiesApart() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.report("XYZ99", PHONE, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+
+        assertThat(service.report("XYZ99", PHONE, CLAIM)).isEqualTo(holder());
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.NEXT));
     }
 
     @Test

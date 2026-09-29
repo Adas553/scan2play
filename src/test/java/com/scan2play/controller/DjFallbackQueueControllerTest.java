@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -66,6 +67,17 @@ class DjFallbackQueueControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("fragments/fallback-queue :: queue"))
                 .andExpect(model().attribute("queue", queue));
+    }
+
+    @Test
+    @DisplayName("the list comes with its version, the same one the lease reports carry, so its window knows it is up to date")
+    void shouldSendTheVersionOfTheList() throws Exception {
+        FallbackQueueView queue = new FallbackQueueView(true, true, false, 12,
+                List.of(new FallbackQueueView.Track(1L, "dQw4w9WgXcQ", "Never Gonna Give You Up")));
+        when(queueService.getUpcoming(PARTY)).thenReturn(queue);
+
+        mockMvc.perform(get("/dj/dashboard/fallback-queue").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(header().string("X-Queue-Version", FallbackQueueService.versionOf(queue)));
     }
 
     @Test

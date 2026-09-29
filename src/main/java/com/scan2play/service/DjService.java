@@ -8,6 +8,7 @@ import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,16 +93,28 @@ public class DjService {
     }
 
     /**
-     * Returns historical songs (PLAYED and optionally REJECTED).
-     * Limited to the 50 most recent entries.
+     * A page of the history: the most recent requests, and whether older ones exist.
+     *
+     * @param rows    at most the requested number of played or rejected requests, newest request first
+     * @param hasMore {@code true} when there are older ones than the last of {@code rows}
+     */
+    public record HistoryPage(List<SongRequestEntity> rows, boolean hasMore) {
+    }
+
+    /**
+     * Returns historical songs (PLAYED and REJECTED), the most recent request first. The query is bounded by
+     * {@code limit} — the caller decides how far back the DJ may look (see {@code DjDashboardController}).
+     * One row more than asked for is read, to tell whether there is anything older.
      *
      * @param partyCode The unique code of the party.
-     * @return List of played or rejected song requests.
+     * @param limit     How many requests to return at most; at least 1.
+     * @return The most recent played or rejected song requests, and whether older ones exist.
      */
-    public List<SongRequestEntity> getHistory(String partyCode) {
-        return songRequestRepository.findTop50ByPartyCodeAndDecisionInOrderByRequestedAtDesc(
-                partyCode, Arrays.asList(DECISION_PLAYED, DECISION_REJECTED)
-        );
+    public HistoryPage getHistory(String partyCode, int limit) {
+        List<SongRequestEntity> rows = songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                partyCode, Arrays.asList(DECISION_PLAYED, DECISION_REJECTED), PageRequest.of(0, limit + 1));
+        boolean hasMore = rows.size() > limit;
+        return new HistoryPage(hasMore ? rows.subList(0, limit) : rows, hasMore);
     }
 
     /**

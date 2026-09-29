@@ -1,7 +1,9 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.PlayerCommand;
 import com.scan2play.model.PlayerLeaseMode;
+import com.scan2play.service.FallbackQueueService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.PlayerLeaseService.Status;
@@ -42,6 +44,7 @@ class DjPlayerLeaseControllerTest {
 
     private PlayerLeaseService leaseService;
     private PartySettingsQueryService settingsService;
+    private FallbackQueueService queueService;
     private DjSessionHelper sessionHelper;
     private MockMvc mockMvc;
     private OAuth2AuthenticationToken token;
@@ -52,8 +55,11 @@ class DjPlayerLeaseControllerTest {
         leaseService = mock(PlayerLeaseService.class);
         settingsService = mock(PartySettingsQueryService.class);
         givenFallbackPlaylistUrl("https://www.youtube.com/playlist?list=" + PLAYLIST);
+        queueService = mock(FallbackQueueService.class);
+        when(queueService.getVersion(PARTY)).thenReturn("1a2b3c");
         sessionHelper = mock(DjSessionHelper.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new DjPlayerLeaseController(leaseService, sessionHelper, settingsService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                new DjPlayerLeaseController(leaseService, sessionHelper, settingsService, queueService)).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
@@ -68,7 +74,7 @@ class DjPlayerLeaseControllerTest {
     @Test
     @DisplayName("200 with holder and free as JSON; the mode and the window id reach the service")
     void shouldReturnTheLeaseState() throws Exception {
-        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false));
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false, null));
 
         mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
                         .param("mode", "CLAIM").principal(token).session(session))
@@ -80,7 +86,7 @@ class DjPlayerLeaseControllerTest {
     @Test
     @DisplayName("a window that is told another one plays gets holder=false; free=true when nobody holds the lease")
     void shouldReturnNotHolderAndFree() throws Exception {
-        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.WATCH)).thenReturn(new Status(false, true));
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.WATCH)).thenReturn(new Status(false, true, null));
 
         mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
                         .param("mode", "WATCH").principal(token).session(session))
@@ -92,7 +98,7 @@ class DjPlayerLeaseControllerTest {
     @Test
     @DisplayName("the answer names the party's current fallback playlist, so the window that plays can tell that it was replaced")
     void shouldNameTheCurrentFallbackPlaylist() throws Exception {
-        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false));
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false, null));
 
         mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
                         .param("mode", "CLAIM").principal(token).session(session))
@@ -103,7 +109,7 @@ class DjPlayerLeaseControllerTest {
     @DisplayName("a single video is named V:<id> — the id the tracks of it carry")
     void shouldNameASingleVideoPlaylist() throws Exception {
         givenFallbackPlaylistUrl("https://youtu.be/dQw4w9WgXcQ");
-        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false));
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false, null));
 
         mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
                         .param("mode", "CLAIM").principal(token).session(session))
@@ -114,7 +120,7 @@ class DjPlayerLeaseControllerTest {
     @DisplayName("no fallback playlist (never set, or cleared by the DJ): the playlist id is null")
     void shouldReturnNullPlaylist_whenThereIsNone() throws Exception {
         givenFallbackPlaylistUrl(null);
-        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false));
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false, null));
 
         mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
                         .param("mode", "CLAIM").principal(token).session(session))
@@ -123,9 +129,77 @@ class DjPlayerLeaseControllerTest {
     }
 
     @Test
+    @DisplayName("the answer carries the version of the up-next list, so that every window can tell when it changed elsewhere")
+    void shouldCarryTheQueueVersion() throws Exception {
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.WATCH)).thenReturn(new Status(false, false, null));
+
+        mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .param("mode", "WATCH").principal(token).session(session))
+                .andExpect(jsonPath("$.queueVersion").value("1a2b3c"));
+    }
+
+    @Test
+    @DisplayName("the command waiting for the window that plays is in its answer; for everyone else it is null")
+    void shouldCarryTheCommand() throws Exception {
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM)).thenReturn(new Status(true, false, PlayerCommand.NEXT));
+
+        mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .param("mode", "CLAIM").principal(token).session(session))
+                .andExpect(jsonPath("$.command").value("NEXT"));
+
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.WATCH)).thenReturn(new Status(false, false, null));
+
+        mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .param("mode", "WATCH").principal(token).session(session))
+                .andExpect(jsonPath("$.command").value((Object) null));
+    }
+
+    @Test
+    @DisplayName("player-command: 204 when the command is waiting for the window that plays")
+    void shouldAcceptACommand() throws Exception {
+        when(leaseService.sendCommand(PARTY, PlayerCommand.NEXT)).thenReturn(true);
+
+        mockMvc.perform(post("/dj/dashboard/player-command").param("partyCode", PARTY).param("command", "NEXT")
+                        .principal(token).session(session))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(leaseService).sendCommand(PARTY, PlayerCommand.NEXT);
+    }
+
+    @Test
+    @DisplayName("player-command: 409 when no window plays — nobody would carry it out")
+    void shouldRefuseACommand_whenNobodyPlays() throws Exception {
+        when(leaseService.sendCommand(PARTY, PlayerCommand.NEXT)).thenReturn(false);
+
+        mockMvc.perform(post("/dj/dashboard/player-command").param("partyCode", PARTY).param("command", "NEXT")
+                        .principal(token).session(session))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("player-command: 400 for an unknown command, POST-only, and a party owned by someone else is rejected")
+    void shouldGuardTheCommandEndpoint() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/player-command").param("partyCode", PARTY).param("command", "EXPLODE")
+                        .principal(token).session(session))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/dj/dashboard/player-command").param("partyCode", PARTY).param("command", "NEXT")
+                        .principal(token).session(session))
+                .andExpect(status().isMethodNotAllowed());
+
+        doThrow(new AccessDeniedException("You do not own party: OTHER"))
+                .when(sessionHelper).validateOwnership(any(), any(), any());
+        assertThatThrownBy(() -> mockMvc.perform(post("/dj/dashboard/player-command")
+                        .param("partyCode", "OTHER").param("command", "NEXT").principal(token).session(session)))
+                .hasRootCauseInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(leaseService);
+    }
+
+    @Test
     @DisplayName("TAKE_OVER is passed on as it is")
     void shouldPassTakeOverOn() throws Exception {
-        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.TAKE_OVER)).thenReturn(new Status(true, false));
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.TAKE_OVER)).thenReturn(new Status(true, false, null));
 
         mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
                         .param("mode", "TAKE_OVER").principal(token).session(session))
@@ -167,7 +241,7 @@ class DjPlayerLeaseControllerTest {
     @Test
     @DisplayName("validates that the party belongs to the logged-in DJ before answering (IDOR protection)")
     void shouldValidateOwnership() throws Exception {
-        when(leaseService.report(any(), any(), any())).thenReturn(new Status(true, false));
+        when(leaseService.report(any(), any(), any())).thenReturn(new Status(true, false, null));
 
         mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
                 .param("mode", "CLAIM").principal(token).session(session));

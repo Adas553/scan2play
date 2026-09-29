@@ -1,7 +1,9 @@
 package com.scan2play.controller;
 
+import com.scan2play.model.FallbackQueueView;
 import com.scan2play.model.MoveDirection;
 import com.scan2play.service.FallbackQueueService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class DjFallbackQueueController {
 
     static final String QUEUE_ATTRIBUTE = "queue";
+    static final String VERSION_HEADER = "X-Queue-Version";
 
     private final FallbackQueueService fallbackQueueService;
     private final DjSessionHelper sessionHelper;
@@ -30,14 +33,21 @@ public class DjFallbackQueueController {
      * The "up next" list as an HTML fragment, fetched by the dashboard whenever it may have changed: on page load,
      * after the DJ saves or clears the playlist or toggles shuffle, and when the player takes the next
      * background track. Read-only.
+     * <p>
+     * The response header {@value #VERSION_HEADER} is the version of the list (the same value the dashboard's lease
+     * reports carry): a window that has just fetched the list knows it is up to date, and asks again only when the
+     * version changes.
      */
     @GetMapping("/dashboard/fallback-queue")
     public String fallbackQueue(@RequestParam String partyCode,
                                 Model model,
+                                HttpServletResponse response,
                                 OAuth2AuthenticationToken authentication,
                                 HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
-        model.addAttribute(QUEUE_ATTRIBUTE, fallbackQueueService.getUpcoming(partyCode));
+        FallbackQueueView queue = fallbackQueueService.getUpcoming(partyCode);
+        response.setHeader(VERSION_HEADER, FallbackQueueService.versionOf(queue));
+        model.addAttribute(QUEUE_ATTRIBUTE, queue);
         return "fragments/fallback-queue :: queue";
     }
 

@@ -181,17 +181,52 @@ function submitAutoPilotToggle(checkbox) {
     const historyContent = document.getElementById('history-content');
     let activeTab = 'queue';
 
+    /** The history fragment: the last page of requests, or — "Show more" — the last {@code limit} of them. */
+    function fetchHistory(limit) {
+        const partyCode = document.getElementById('partyCode').value;
+        const csrf = getCsrf();
+        let url = '/dj/history-view/fragment?partyCode=' + encodeURIComponent(partyCode);
+        if (limit) url += '&limit=' + encodeURIComponent(limit);
+        return fetch(url, { headers: { [csrf.header]: csrf.token } })
+            .then(function(r) {
+                // A redirect means the session expired (the login page would come back as 200 OK).
+                if (!r.ok || r.redirected) throw new Error('HTTP ' + r.status);
+                return r.text();
+            });
+    }
+
+    /**
+     * "Show more" of the History tab: asks for a longer history and puts it in place, keeping what the DJ had set up —
+     * the search text, the Played / Rejected filter and the scroll position. (The standalone history page has no
+     * such function; there the button reloads the page — see initListTools.)
+     */
+    window.reloadHistory = function(limit) {
+        const list = historyContent.querySelector('[data-list]');
+        const searchInput = list && list.querySelector('[data-list-search]');
+        const activeFilter = list && list.querySelector('[data-list-filter].active');
+        const state = {
+            search: searchInput ? searchInput.value : '',
+            filter: activeFilter ? activeFilter.getAttribute('data-list-filter') : 'all'
+        };
+        const box = historyContent.querySelector('.list-scroll');
+        const scrollTop = box ? box.scrollTop : 0;
+
+        return fetchHistory(limit).then(function(html) {
+            historyContent.innerHTML = html;
+            if (typeof window.initSortableHeaders === 'function') window.initSortableHeaders(historyContent);
+            if (typeof window.restoreListState === 'function') {
+                window.restoreListState(historyContent.querySelector('[data-list]'), state);
+            }
+            const newBox = historyContent.querySelector('.list-scroll');
+            if (newBox) newBox.scrollTop = scrollTop;
+        }).catch(function(err) { console.error('[Tabs] History reload error:', err); });
+    };
+
     historyLink.addEventListener('click', function(e) {
         e.preventDefault();
         if (activeTab === 'history') return;
 
-        const partyCode = document.getElementById('partyCode').value;
-        const csrf = getCsrf();
-
-        fetch('/dj/history-view/fragment?partyCode=' + encodeURIComponent(partyCode), {
-            headers: { [csrf.header]: csrf.token }
-        })
-        .then(function(r) { return r.text(); })
+        fetchHistory()
         .then(function(html) {
             historyContent.innerHTML = html;
             queueContent.style.display = 'none';
@@ -281,6 +316,11 @@ function submitAutoPilotToggle(checkbox) {
             if (typeof window.reapplySort === 'function') {
                 window.reapplySort();
             }
+
+            // The rows are new: apply the search text again, and update the number of songs in the heading
+            if (typeof window.applyListFilters === 'function') {
+                window.applyListFilters(document.getElementById('queueList'));
+            }
         } catch (err) {
             console.error('[Polling] Refresh error:', err);
         } finally {
@@ -336,10 +376,12 @@ function refreshFallbackQueue() {
     }
 
     const request = ++fallbackQueueRequest;
+    let version = null;
     return fetch('/dj/dashboard/fallback-queue?partyCode=' + encodeURIComponent(partyCode.value))
         .then(function(response) {
             // A redirect means the session expired (the login page would come back as 200 OK).
             if (!response.ok || response.redirected) throw new Error('HTTP ' + response.status);
+            version = response.headers.get('X-Queue-Version');
             return response.text();
         })
         .then(function(html) {
@@ -349,6 +391,9 @@ function refreshFallbackQueue() {
                 fallbackQueueRefreshPending = true;
                 return;
             }
+            // The list is up to date as of this version: the player script (which learns from the server when the
+            // list changes in another window) then does not fetch it again for the same state.
+            if (version && typeof window.setKnownQueueVersion === 'function') window.setKnownQueueVersion(version);
             // The list scrolls: keep where the DJ has scrolled to instead of jumping back to the top.
             const oldList = box.querySelector('ol');
             const scrollTop = oldList ? oldList.scrollTop : 0;
@@ -867,5 +912,96 @@ function toggleFallbackShuffle() {
     if (queueContent) {
         window.initSortableHeaders(queueContent);
     }
+})();
+
+// ==========================================================================
+// LONG LISTS — search, filter and "Show more" (the active queue and the history)
+//
+// A list is any element with data-list. Inside it: an input [data-list-search], buttons [data-list-filter="all" |
+// "played" | "rejected"] (the chosen one has class "active"), a count [data-list-count] (its data-suffix is appended:
+// the history's "+" says that older requests exist) and the rows tbody tr[data-song-name] (history rows also carry
+// data-decision); tr[data-nomatch] is the "nothing matches" row. Filtering hides rows with class d-none. The queue's
+// <tbody> is replaced by every poll, so applyListFilters(list) is called again after each refresh. The listeners are
+// delegated, so a list that arrives by AJAX (the History tab) needs no set-up.
+// ==========================================================================
+
+(function initListTools() {
+    'use strict';
+
+    // Lower case and without accents, so that "zolc" finds "Żółć" (ł has no accent to strip, hence the extra replace)
+    const COMBINING_MARKS = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
+    function normalize(text) {
+        return (text || '').toLowerCase().normalize('NFD').replace(COMBINING_MARKS, '').replace(/ł/g, 'l');
+    }
+
+    function applyFilters(list) {
+        if (!list) return;
+        const searchInput = list.querySelector('[data-list-search]');
+        const needle = normalize(searchInput ? searchInput.value.trim() : '');
+        const activeFilter = list.querySelector('[data-list-filter].active');
+        const decision = activeFilter ? activeFilter.getAttribute('data-list-filter') : 'all';
+        const filtering = needle !== '' || decision !== 'all';
+
+        const rows = list.querySelectorAll('tbody tr[data-song-name]');
+        let shown = 0;
+        for (let i = 0; i < rows.length; i++) {
+            const visible = (needle === '' || normalize(rows[i].getAttribute('data-song-name')).indexOf(needle) >= 0)
+                && (decision === 'all' || rows[i].getAttribute('data-decision') === decision);
+            rows[i].classList.toggle('d-none', !visible);
+            if (visible) shown++;
+        }
+
+        const noMatch = list.querySelector('tr[data-nomatch]');
+        if (noMatch) noMatch.classList.toggle('d-none', shown > 0 || rows.length === 0);
+
+        const count = list.querySelector('[data-list-count]');
+        if (count) {
+            count.textContent = (filtering ? shown + ' / ' + rows.length : String(rows.length))
+                + (count.getAttribute('data-suffix') || '');
+        }
+    }
+
+    window.applyListFilters = applyFilters;
+
+    /** Puts a list back in a state saved earlier ({search, filter}) — after it was replaced by a freshly loaded one. */
+    window.restoreListState = function(list, state) {
+        if (!list || !state) return;
+        const searchInput = list.querySelector('[data-list-search]');
+        if (searchInput) searchInput.value = state.search || '';
+        const buttons = list.querySelectorAll('[data-list-filter]');
+        for (let i = 0; i < buttons.length; i++) {
+            buttons[i].classList.toggle('active', buttons[i].getAttribute('data-list-filter') === (state.filter || 'all'));
+        }
+        applyFilters(list);
+    };
+
+    document.addEventListener('input', function(e) {
+        const input = e.target.closest ? e.target.closest('[data-list-search]') : null;
+        if (input) applyFilters(input.closest('[data-list]'));
+    });
+
+    document.addEventListener('click', function(e) {
+        const filter = e.target.closest('[data-list-filter]');
+        if (filter) {
+            const list = filter.closest('[data-list]');
+            const buttons = list.querySelectorAll('[data-list-filter]');
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].classList.toggle('active', buttons[i] === filter);
+            }
+            applyFilters(list);
+            return;
+        }
+
+        const more = e.target.closest('[data-history-more]');
+        if (more) {
+            const limit = more.getAttribute('data-limit');
+            if (typeof window.reloadHistory === 'function') {
+                more.disabled = true;               // one request at a time
+                window.reloadHistory(limit).then(function() { more.disabled = false; }); // the History tab: replace in place
+            } else {
+                window.location.href = '/dj/history-view?limit=' + encodeURIComponent(limit); // the standalone page
+            }
+        }
+    });
 })();
 

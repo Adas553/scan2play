@@ -9,6 +9,12 @@ package com.scan2play.model;
  *                           {@code null} when there is none. The window that plays compares it with the playlist of
  *                           the background track it is playing: the DJ may have replaced or cleared the playlist in
  *                           another window, and then that track has to stop.
+ * @param queueVersion       changes whenever the "up next" list would look different (a track taken, a move, a new
+ *                           order, the shuffle switch, another playlist). A window that sees it change fetches the
+ *                           list again — the DJ may have changed the queue in another window, and no timer refreshes it.
+ * @param command            a command the DJ gave from another window, for the window that plays ({@code null} for
+ *                           everyone else, and when there is none). It is handed out once.
  */
-public record PlayerLeaseResponse(boolean holder, boolean free, String fallbackPlaylistId) {
+public record PlayerLeaseResponse(boolean holder, boolean free, String fallbackPlaylistId, String queueVersion,
+                                  PlayerCommand command) {
 }

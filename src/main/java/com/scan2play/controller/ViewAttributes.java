@@ -25,6 +25,8 @@ public final class ViewAttributes {
     public static final String PLAYBACK_MODE = "playbackMode";
     public static final String IS_SPOTIFY_CONNECTED = "isSpotifyConnected";
     public static final String HISTORY = "history";
+    public static final String HISTORY_HAS_MORE = "historyHasMore";
+    public static final String HISTORY_NEXT_LIMIT = "historyNextLimit";
     public static final String QR_CODE_BASE64 = "qrCodeBase64";
     public static final String PERMANENT_LINK = "permanentLink";
     public static final String REQUEST_LIMIT = "requestLimit";

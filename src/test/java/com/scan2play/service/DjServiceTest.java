@@ -11,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Optional;
@@ -349,6 +350,51 @@ class DjServiceTest {
         verify(songRequestRepository).findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 PARTY_CODE, List.of(DECISION_ACCEPTED));
         verifyNoMoreInteractions(songRequestRepository);
+    }
+
+    // ---- getHistory ----
+
+    private static List<SongRequestEntity> played(int count) {
+        return java.util.stream.IntStream.range(0, count)
+                .mapToObj(i -> SongRequestEntity.builder().id((long) i).partyCode(PARTY_CODE)
+                        .songName("Song " + i).decision(DECISION_PLAYED).build())
+                .toList();
+    }
+
+    @Test
+    void getHistory_shouldReadOneRowMoreThanAsked_toTellWhetherThereAreOlderOnes() {
+        when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                eq(PARTY_CODE), eq(List.of(DECISION_PLAYED, DECISION_REJECTED)), eq(PageRequest.of(0, 51))))
+                .thenReturn(played(51));
+
+        DjService.HistoryPage page = djService.getHistory(PARTY_CODE, 50);
+
+        assertThat(page.hasMore()).isTrue();
+        assertThat(page.rows()).hasSize(50);
+        assertThat(page.rows().getLast().getSongName()).isEqualTo("Song 49");   // the extra row is not shown
+    }
+
+    @Test
+    void getHistory_shouldReportNoOlderRows_whenTheQueryReturnsNoMoreThanAsked() {
+        when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
+                eq(PARTY_CODE), any(), eq(PageRequest.of(0, 51))))
+                .thenReturn(played(50));
+
+        DjService.HistoryPage page = djService.getHistory(PARTY_CODE, 50);
+
+        assertThat(page.hasMore()).isFalse();
+        assertThat(page.rows()).hasSize(50);
+    }
+
+    @Test
+    void getHistory_shouldWorkForAnEmptyHistory() {
+        when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(eq(PARTY_CODE), any(), any()))
+                .thenReturn(List.of());
+
+        DjService.HistoryPage page = djService.getHistory(PARTY_CODE, 50);
+
+        assertThat(page.hasMore()).isFalse();
+        assertThat(page.rows()).isEmpty();
     }
 }
 

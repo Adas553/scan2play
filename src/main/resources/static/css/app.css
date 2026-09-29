@@ -102,6 +102,19 @@ body {
     white-space: nowrap;
 }
 
+/* --- Long lists (the active queue, the history): a fixed height with their own scrollbar and a header that stays in
+       view, so the DJ does not have to scroll the whole page to the bottom. The scroll box is the wrapper, outside the
+       polled <tbody>, so a refresh keeps the position. --- */
+.list-scroll {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+.list-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
 /* --- Sortable column headers --- */
 th[data-sort] {
     cursor: pointer;

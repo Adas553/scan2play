@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/*
+    The controls under the video of the YouTube Player card (dashboard.html). Handled by youtube-autopilot.js: in the
+    window that plays the button skips to the next track at once; in another window it sends the command to the
+    window that plays (the phone as a remote control) and stays disabled for a moment. The label and the "sent"
+    text travel in data attributes so that the script needs no message bundle of its own.
+*/-->
+<div th:fragment="next" class="mt-2">
+    <button type="button" id="playerNextBtn" class="btn btn-sm btn-outline-light"
+            th:title="#{dashboard.player.next.title}"
+            th:attr="data-text-label=#{dashboard.player.next},data-text-sent=#{dashboard.player.next.sent}">
+        <span data-role="label" th:text="#{dashboard.player.next}">⏭ Next</span>
+    </button>
+</div>
+
+</body>
+</html>

@@ -32,16 +32,8 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     List<SongRequestEntity> findTop5ByPartyCodeAndDecisionOrderByRequestedAtDesc(String partyCode, String decision);
 
     /**
-     * Finds song requests for a specific party filtered by one or more statuses, limited to the top 50 most recent.
-     *
-     * @param partyCode The unique code of the party.
-     * @param decisions The list of statuses to include (e.g., ["accepted"]).
-     * @return A list of the top 50 matching song requests, ordered by most recent.
-     */
-    List<SongRequestEntity> findTop50ByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions);
-
-    /**
-     * Finds song requests for a specific party filtered by one or more statuses, dynamically paginated.
+     * Finds song requests for a specific party filtered by one or more statuses, most recent first, dynamically
+     * paginated — the DJ history ({@code DjService.getHistory}) and the recent requests the AI looks at.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include.
