@@ -1,6 +1,7 @@
     package com.scan2play.config;
 
     import com.google.genai.Client;
+    import com.google.genai.types.HttpOptions;
     import org.springframework.beans.factory.annotation.Value;
     import org.springframework.context.annotation.Bean;
     import org.springframework.context.annotation.Configuration;
@@ -8,6 +9,14 @@
 
     @Configuration
     public class GeminiConfig {
+
+        /**
+         * How long one Gemini call may take (milliseconds). Without it a hanging call held its thread for as long as the
+         * connection lived — after the guest's own request had long timed out (spring.mvc.async.request-timeout, 30 s) — and a
+         * few of them used up the threads that evaluate every guest's request. A failed call rejects the song with the
+         * "AI offline" message, as before (SongEvaluationService).
+         */
+        static final int TIMEOUT_MS = 10_000;
 
         @Value("${google.ai.api-key}")
         private String apiKey;
@@ -34,6 +43,7 @@
 
             return Client.builder()
                     .apiKey(apiKey)
+                    .httpOptions(HttpOptions.builder().timeout(TIMEOUT_MS).build())
                     .build();
         }
     }

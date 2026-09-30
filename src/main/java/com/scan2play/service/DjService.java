@@ -159,11 +159,13 @@ public class DjService {
      * Pushes a specific song to the Spotify queue manually.
      * Only works if the active provider is Spotify.
      * Validates that the song belongs to the given party (IDOR protection).
+     * <p>
+     * The song is marked as played once Spotify has taken it ({@link QueueService#addToQueue} runs asynchronously); when that
+     * fails it stays in the queue, so the DJ sees it is still waiting and can press again.
      *
      * @param id             The ID of the song request.
      * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
      */
-    @Transactional
     public void pushToSpotify(Long id, String ownerPartyCode) {
         songRequestRepository.findById(id).ifPresent(song -> {
             if (!song.getPartyCode().equals(ownerPartyCode)) {
@@ -175,10 +177,16 @@ public class DjService {
             PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
             if (settings.getActiveProvider() == MusicProviderType.SPOTIFY && song.getTrackUrl() != null) {
-                queueService.addToQueue(partyCode, song.getTrackUrl(), MusicProviderType.SPOTIFY);
-                markPlayed(song, LocalDateTime.now());
-                songRequestRepository.save(song);
-                log.info("Manually pushed song ID={} to Spotify queue and marked as PLAYED", id);
+                queueService.addToQueue(partyCode, song.getTrackUrl(), MusicProviderType.SPOTIFY)
+                        .whenComplete((ignored, error) -> {
+                            if (error != null) {
+                                log.warn("Could not push song ID={} to the Spotify queue — it stays in the queue", id, error);
+                                return;
+                            }
+                            markPlayed(song, LocalDateTime.now());
+                            songRequestRepository.save(song);
+                            log.info("Manually pushed song ID={} to Spotify queue and marked as PLAYED", id);
+                        });
             } else {
                 log.warn("Cannot push to Spotify: Provider is {} or track URL is missing", settings.getActiveProvider());
             }

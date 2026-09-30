@@ -61,16 +61,16 @@ public class SpotifyAuthService {
     /**
      * Generates the Spotify Authorization URL for the DJ to connect their account.
      *
-     * @param partyCode The unique code for the party session (sent as 'state').
+     * @param state A random value the callback checks against the DJ's session (see {@code SpotifyAuthController}).
      * @return The URL to redirect the DJ to.
      */
-    public String getAuthorizationUrl(String partyCode) {
+    public String getAuthorizationUrl(String state) {
         return UriComponentsBuilder.fromUriString(authorizationUri)
                 .queryParam(PARAM_CLIENT_ID, clientId)
                 .queryParam(PARAM_RESPONSE_TYPE, VALUE_RESPONSE_TYPE_CODE)
                 .queryParam(PARAM_REDIRECT_URI, redirectUri)
                 .queryParam(PARAM_SCOPE, Scopes.PLAYBACK_SCOPES)
-                .queryParam(PARAM_STATE, partyCode)
+                .queryParam(PARAM_STATE, state)
                 .encode()
                 .build()
                 .toUriString();

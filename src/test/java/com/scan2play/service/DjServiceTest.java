@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static com.scan2play.service.DjService.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -126,12 +127,31 @@ class DjServiceTest {
 
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
+        when(queueService.addToQueue(PARTY_CODE, "spotify:track:abc123", MusicProviderType.SPOTIFY))
+                .thenReturn(CompletableFuture.completedFuture(null));
 
         djService.pushToSpotify(1L, PARTY_CODE);
 
         verify(queueService).addToQueue(PARTY_CODE, "spotify:track:abc123", MusicProviderType.SPOTIFY);
         assertThat(song.getDecision()).isEqualTo(DECISION_PLAYED);
         verify(songRequestRepository).save(song);
+    }
+
+    @Test
+    void pushToSpotify_shouldLeaveTheSongInTheQueue_whenSpotifyRefusesIt() {
+        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
+                .decision(DECISION_ACCEPTED).trackUrl("spotify:track:abc123").build();
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+        when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(
+                PartySettingsEntity.builder().partyCode(PARTY_CODE).activeProvider(MusicProviderType.SPOTIFY).build());
+        when(queueService.addToQueue(PARTY_CODE, "spotify:track:abc123", MusicProviderType.SPOTIFY))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("no active device")));
+
+        djService.pushToSpotify(1L, PARTY_CODE);
+
+        assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(song.getPlayedAt()).isNull();
+        verify(songRequestRepository, never()).save(any());
     }
 
     @Test
@@ -396,6 +416,8 @@ class DjServiceTest {
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(
                 PartySettingsEntity.builder().partyCode(PARTY_CODE).activeProvider(MusicProviderType.SPOTIFY).build());
+        when(queueService.addToQueue(PARTY_CODE, "spotify:track:abc123", MusicProviderType.SPOTIFY))
+                .thenReturn(CompletableFuture.completedFuture(null));
 
         djService.pushToSpotify(1L, PARTY_CODE);
 

@@ -13,10 +13,14 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -41,6 +45,10 @@ class AccountDeletionServiceTest {
     private FallbackTrackRepository fallbackTrackRepository;
     @Mock
     private FallbackPlayRepository fallbackPlayRepository;
+    @Mock
+    private CacheManager cacheManager;
+    @Mock
+    private Cache cache;
 
     @InjectMocks
     private AccountDeletionService service;
@@ -63,6 +71,19 @@ class AccountDeletionServiceTest {
     }
 
     @Test
+    @DisplayName("the deleted party is evicted from every cache that holds it under its code (settings with the Spotify tokens, the queues)")
+    void shouldEvictThePartyFromTheCaches() {
+        PartySettingsEntity party = PartySettingsEntity.builder().ownerId(OWNER).partyCode(PARTY).build();
+        when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.of(party));
+        AccountDeletionService.PARTY_CACHES.forEach(name -> when(cacheManager.getCache(name)).thenReturn(cache));
+
+        service.deleteAllUserData(OWNER);
+
+        verify(cache, times(AccountDeletionService.PARTY_CACHES.size())).evict(PARTY);
+        assertThat(AccountDeletionService.PARTY_CACHES).contains("partySettings");
+    }
+
+    @Test
     @DisplayName("an owner without a party only has their feedback deleted")
     void shouldOnlyDeleteFeedback_whenThereIsNoParty() {
         when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.empty());
@@ -70,6 +91,6 @@ class AccountDeletionServiceTest {
         service.deleteAllUserData(OWNER);
 
         verify(feedbackRepository).deleteByOwnerId(OWNER);
-        verifyNoInteractions(songRequestRepository, fallbackTrackRepository, fallbackPlayRepository);
+        verifyNoInteractions(songRequestRepository, fallbackTrackRepository, fallbackPlayRepository, cacheManager);
     }
 }

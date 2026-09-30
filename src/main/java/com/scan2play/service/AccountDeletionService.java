@@ -8,9 +8,14 @@ import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -22,11 +27,18 @@ import java.util.Optional;
 @Slf4j
 public class AccountDeletionService {
 
+    /**
+     * The caches that hold a party's data under its code (AppConfig). Without evicting them the deleted party lived on in
+     * memory — its settings with the Spotify tokens for up to 24 h — and guests could still send requests to it.
+     */
+    static final List<String> PARTY_CACHES = List.of("partySettings", "dashboardQueue", "publicQueue");
+
     private final PartySettingsRepository partySettingsRepository;
     private final SongRequestRepository songRequestRepository;
     private final FeedbackRepository feedbackRepository;
     private final FallbackTrackRepository fallbackTrackRepository;
     private final FallbackPlayRepository fallbackPlayRepository;
+    private final CacheManager cacheManager;
 
     /**
      * Deletes all data associated with the given DJ (owner).
@@ -59,6 +71,9 @@ public class AccountDeletionService {
             // 4. Delete party settings
             partySettingsRepository.delete(partyOpt.get());
             log.info("Deleted party settings for partyCode={}", partyCode);
+
+            // 4b. ... and forget the party in memory
+            evictPartyCachesAfterCommit(partyCode);
         }
 
         // 5. Delete all feedback from this owner
@@ -66,6 +81,27 @@ public class AccountDeletionService {
         log.info("Deleted feedback for ownerId={}", ownerId);
 
         log.info("Account deletion completed for ownerId={}", ownerId);
+    }
+
+    /**
+     * After the commit, not before: a request that read the party while this transaction was still open would otherwise put
+     * it back into the cache. Without a transaction (a unit test) the caches are evicted at once.
+     */
+    private void evictPartyCachesAfterCommit(String partyCode) {
+        Runnable evict = () -> PARTY_CACHES.stream()
+                .map(cacheManager::getCache)
+                .filter(Objects::nonNull)
+                .forEach(cache -> cache.evict(partyCode));
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evict.run();
+                }
+            });
+        } else {
+            evict.run();
+        }
     }
 }
 

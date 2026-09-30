@@ -76,10 +76,14 @@
     // with a resolvable video ID — the player is what failed, not the URL shape).
     const erroredSongIds = new Set();
     // Player errors in a row without a video reaching PLAYING in between. The first few are
-    // followed by an immediate "next track"; after that the dashboard's poll sets the pace, so a
+    // followed by an immediate "next track"; after that the lease reports set the pace (askAgain), so a
     // playlist of unplayable videos is not burnt through in a tight loop.
     let consecutiveErrors = 0;
     const MAX_IMMEDIATE_RETRIES = 5;
+    // True when the last ask for a track failed (a network error, a 5xx, an expired login) or the player gave up after
+    // MAX_IMMEDIATE_RETRIES errors: the next lease report (every 3 s) asks again. Nothing else would — the dashboard's poll asks
+    // only when the guest queue has changed, so an idle player stayed silent until a guest added a song.
+    let askAgain = false;
     // Which window plays (see the file header): null = the server has not answered yet, true = this window plays,
     // false = another window or device does. Tracks are asked for only while it is true.
     let isPlayerDevice = null;
@@ -168,14 +172,18 @@
             }
             const response = await fetch(url, { method: 'POST', headers: { [csrf.header]: csrf.token } });
             if (response.status === 409) { // another window holds the lease: this one only looks
+                askAgain = false;
                 applyLease(false, false);
                 return null;
             }
-            if (response.status === 204 || !response.ok) return null;
+            // A redirect is the login page: the session has expired (it may come back, e.g. after a login in another tab).
+            askAgain = response.status !== 204 && (!response.ok || response.redirected);
+            if (response.status === 204 || askAgain) return null;
             const track = await response.json();
             return track && track.videoId ? track : null;
         } catch (e) {
             console.error('[YT] fetchNextTrack error:', e);
+            askAgain = true;
             return null;
         }
     }
@@ -250,6 +258,7 @@
         isLoadingSong = false;
         playerState = -1; // the failed video is not playing — do not wait for a state event that may not come
         if (++consecutiveErrors <= MAX_IMMEDIATE_RETRIES) tryAutoPlay();
+        else askAgain = true; // no tight loop through unplayable videos: the next lease report asks
     }
 
     // ---- Core Playback ----
@@ -731,7 +740,10 @@
     function leaseLoop() {
         // A window that has been told another one plays only watches; it takes the lease again only when the DJ asks.
         reportLease(isPlayerDevice === false ? 'WATCH' : 'CLAIM')
-            .finally(() => setTimeout(leaseLoop, LEASE_REPORT_INTERVAL_MS));
+            .finally(() => {
+                if (askAgain) tryAutoPlay(); // tryAutoPlay itself checks: this window plays, Auto-Pilot on, the player idle
+                setTimeout(leaseLoop, LEASE_REPORT_INTERVAL_MS);
+            });
     }
 
     function takeOverPlayback() {

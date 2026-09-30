@@ -44,6 +44,8 @@ public class YouTubeMusicProvider implements MusicProvider {
             "https://www.googleapis.com/youtube/v3/search";
     private static final String YOUTUBE_WATCH_URL = "https://www.youtube.com/watch?v=";
     private static final String YOUTUBE_SEARCH_FALLBACK = "https://www.youtube.com/results?search_query=";
+    /** How Google APIs accept an API key other than the {@code key} query parameter. */
+    static final String API_KEY_HEADER = "X-goog-api-key";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -144,10 +146,11 @@ public class YouTubeMusicProvider implements MusicProvider {
     private String callYouTubeApi(String searchQuery, String normalizedQuery, YoutubeCacheEntity existingEntry) {
         try {
             log.debug("YouTube API call for: '{}' (cache miss or expired)", searchQuery);
+            // The key goes in a header, not in the URL: an I/O error (timeout, reset) puts the whole URL into the exception
+            // message, and that is logged below.
             String responseBody = restClient.get()
-                    .uri(YOUTUBE_API_URL
-                                    + "?part=id&q={q}&type=video&videoCategoryId=10&maxResults=1&key={key}",
-                            searchQuery, apiKey)
+                    .uri(YOUTUBE_API_URL + "?part=id&q={q}&type=video&videoCategoryId=10&maxResults=1", searchQuery)
+                    .header(API_KEY_HEADER, apiKey)
                     .retrieve()
                     .body(String.class);
 

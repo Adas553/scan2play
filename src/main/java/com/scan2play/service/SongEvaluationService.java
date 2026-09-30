@@ -223,7 +223,11 @@ public class SongEvaluationService {
         return transactionTemplate.execute(status -> songRequestRepository.save(entity));
     }
 
-    private void handleAutoQueue(PartySettingsEntity settings, SongRequestEntity savedRequest, String trackUrl, String autopilotErrorMsg) {
+    /**
+     * Auto-Pilot of a Spotify party: puts an accepted song straight into the DJ's Spotify queue. The song counts as played only
+     * when that worked; when it failed it stays in the DJ's queue (accepted) with a note, so the DJ can still push it by hand.
+     */
+    void handleAutoQueue(PartySettingsEntity settings, SongRequestEntity savedRequest, String trackUrl, String autopilotErrorMsg) {
         if (trackUrl == null || !DECISION_ACCEPTED.equalsIgnoreCase(savedRequest.getDecision()) || settings.getPlaybackMode() != PlaybackMode.AUTO) {
             return;
         }
@@ -233,21 +237,23 @@ public class SongEvaluationService {
             return;
         }
 
+        // whenComplete, not exceptionally + thenAccept: exceptionally recovers the future, so a thenAccept after it ran on a failure
+        // too and marked the song as played although it never reached Spotify.
         queueService.addToQueue(settings.getPartyCode(), trackUrl, settings.getActiveProvider())
-                .exceptionally(ex -> {
-                    log.error("Failed to Auto-Queue track {} for party {}. Updating song status to indicate failure.", trackUrl, settings.getPartyCode(), ex);
+                .whenComplete((ignored, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to Auto-Queue track {} for party {}. Updating song status to indicate failure.", trackUrl, settings.getPartyCode(), ex);
+                    }
                     transactionTemplate.executeWithoutResult(status ->
-                            songRequestRepository.findById(savedRequest.getId()).ifPresent(song ->
-                                    song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg)
-                            )
+                            songRequestRepository.findById(savedRequest.getId()).ifPresent(song -> {
+                                if (ex == null) {
+                                    DjService.markPlayed(song, LocalDateTime.now());
+                                } else {
+                                    song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg);
+                                }
+                            })
                     );
-                    return null;
-                })
-                .thenAccept(v -> transactionTemplate.executeWithoutResult(status ->
-                        songRequestRepository.findById(savedRequest.getId()).ifPresent(song ->
-                                DjService.markPlayed(song, LocalDateTime.now())
-                        )
-                ));
+                });
     }
 
     /**
