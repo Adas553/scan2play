@@ -139,8 +139,8 @@ Startup of that test runs Flyway on the empty database and Hibernate validation,
 runner's own Chrome) for every push to `dev` / `main`, every pull request and by hand; a failed run keeps the verdicts of the scenarios
 (`results/*.json`) as an artifact. It needs nothing but Maven Central: no database, no secrets, no YouTube. Two things in `run.py` are
 there for it: `mvnw` is started with `sh` (it is committed without the executable bit) and a Chrome that does not start ends the scenario
-after a few seconds instead of after the whole timeout. **It has not been run on a GitHub runner yet** — the first run may show a
-difference between that machine and this one (the Chrome flags, the locale: see "Writing a scenario").
+after a few seconds instead of after the whole timeout. **First run on GitHub (2026-09-30): green, all 27 scenarios, about 4½ minutes.**
+The unit tests have their own workflow, `.github/workflows/unit-tests.yml`.
 
 ## What this does not show
 

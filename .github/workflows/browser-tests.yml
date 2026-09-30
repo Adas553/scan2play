@@ -20,18 +20,20 @@ concurrency:
 
 jobs:
   browser-tests:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: GitHub moves that label to Ubuntu 26 from 2026-10-19, and this is the image the browser tests were seen green on.
+    # Move to the newer image on purpose (change the label, run it by hand), not by surprise.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -46,7 +48,7 @@ jobs:
       # What each scenario recorded (steps, expected and actual values, the requests): for a failure that cannot be reproduced at once.
       - name: Keep the verdicts of a failed run
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: browser-test-verdicts
           path: ${{ runner.temp }}/scan2play-browser-tests/target/browser-harness/results/

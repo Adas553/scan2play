@@ -1,0 +1,45 @@
+name: Unit tests
+
+# `mvnw test` without the one @SpringBootTest that needs a full environment and a database (Scan2playApplicationTests) — the command of
+# CLAUDE.md. No database, no secrets, nothing but Maven Central. The browser tests are their own workflow (browser-tests.yml).
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unit-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    # Pinned like the browser tests' job (see there): ubuntu-latest becomes Ubuntu 26 from 2026-10-19.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # mvnw is committed without the executable bit, hence sh; the single quotes keep the shell away from the !
+      - name: Unit tests
+        run: sh mvnw -B -ntp test '-Dtest=!Scan2playApplicationTests'
+
+      # Which test failed and why, for a failure that cannot be reproduced at once.
+      - name: Keep the reports of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-reports
+          path: target/surefire-reports/
+          if-no-files-found: ignore
+          retention-days: 14
