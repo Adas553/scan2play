@@ -295,4 +295,22 @@ class FallbackQueueServiceTest {
 
         verifyNoInteractions(fallbackTrackCommandService);
     }
+
+    // ---- a single video ----
+
+    @Test
+    @DisplayName("a video link is reported as a single video (there is nothing to skip to), a playlist is not")
+    void shouldReportASingleVideo() {
+        givenSettings("https://youtu.be/dQw4w9WgXcQ", true);
+        when(fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, "V:dQw4w9WgXcQ", QUEUED, UPCOMING))
+                .thenReturn(List.of(entity(1, "dQw4w9WgXcQ", "Never Gonna Give You Up")));
+
+        assertThat(service.getUpcoming(PARTY).singleVideo()).isTrue();
+
+        givenSettings(PLAYLIST_URL, true);
+        when(fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, UPCOMING))
+                .thenReturn(List.of(entity(1, "aaaaaaaaaaa", "A")));
+
+        assertThat(service.getUpcoming(PARTY).singleVideo()).isFalse();
+    }
 }

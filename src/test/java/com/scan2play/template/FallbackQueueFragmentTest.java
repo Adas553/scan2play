@@ -270,4 +270,52 @@ class FallbackQueueFragmentTest {
         assertThat(render(new FallbackQueueView(true, false, false, 3, 0, List.of(track)), Locale.ENGLISH))
                 .contains("3 left in this round").doesNotContain("Skipped");
     }
+
+    // ---- a single video, and the layout of a row ----
+
+    /** The opening tag of the skip button (attributes included) of the first row. */
+    private static String skipButton(String html) {
+        int at = html.indexOf("data-skip");
+        int start = html.lastIndexOf("<button", at);
+        return html.substring(start, html.indexOf(">", at) + 1);
+    }
+
+    @Test
+    @DisplayName("a single video (the DJ pasted a video link, not a playlist): the skip button is off, and its tooltip says why — there is nothing to skip to, Stop removes it")
+    void shouldSwitchOffTheSkipButton_forASingleVideo() {
+        Track only = new Track(1L, "aaaaaaaaaaa", "Only video");
+        FallbackQueueView single = new FallbackQueueView(true, false, false, 1, 0, true, List.of(only));
+
+        assertThat(skipButton(render(single, Locale.ENGLISH))).contains("disabled=\"disabled\"")
+                .contains("title=\"This is the only track, so there is nothing to skip to. Stop removes it.\"");
+        assertThat(skipButton(render(single, PL))).contains("disabled=\"disabled\"")
+                .contains("title=\"To jedyny utwór, więc nie ma na co go pominąć. Przycisk Stop go usuwa.\"");
+    }
+
+    @Test
+    @DisplayName("a playlist with a single track left in the round can still skip it (the next round starts): the skip button is on, with its usual tooltip")
+    void shouldKeepTheSkipButtonOn_forTheLastTrackOfAPlaylist() {
+        String html = render(queue(false, 1, new Track(1L, "aaaaaaaaaaa", "Last of the round")), Locale.ENGLISH);
+
+        assertThat(skipButton(html)).doesNotContain("disabled").contains("title=\"Skip this round");
+    }
+
+    @Test
+    @DisplayName("a row wraps: the title keeps at least 10rem and the badge, the link and the buttons drop under it together on a narrow row (on a phone the title was squeezed to a few letters a line)")
+    void shouldLetARowWrap_soThatATitleIsNeverSqueezed() {
+        String html = render(queue(false, 2, new Track(1L, "aaaaaaaaaaa", "A rather long title of the first song"),
+                new Track(2L, "bbbbbbbbbbb", "The second song")), Locale.ENGLISH);
+
+        assertThat(count(html, "d-flex flex-wrap")).as("every row may wrap").isEqualTo(2);
+        assertThat(count(html, "flex: 1 1 10rem")).as("every title keeps its room").isEqualTo(2);
+        assertThat(count(html, "flex-shrink-0 ms-auto")).as("every row has one group of controls that moves as a whole").isEqualTo(2);
+        // in the first row: the title, then the group with the badge, the link and the buttons (skip last)
+        int title = html.indexOf("A rather long title");
+        int group = html.indexOf("flex-shrink-0 ms-auto", title);
+        assertThat(group).isGreaterThan(title);
+        assertThat(html.indexOf("text-bg-success", title)).isGreaterThan(group);
+        assertThat(html.indexOf("data-move=\"TOP\"", title)).isGreaterThan(html.indexOf("text-bg-success", title));
+        assertThat(html.indexOf("data-skip", title)).isGreaterThan(html.indexOf("data-move=\"DOWN\"", title));
+        assertThat(html.indexOf("The second song")).isGreaterThan(html.indexOf("data-skip"));   // and the second row follows
+    }
 }

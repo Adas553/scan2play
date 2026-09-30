@@ -31,30 +31,37 @@
             <!--/* Fixed height with its own scrollbar: the list holds the whole round (up to 500 tracks); 17rem next to the 640px player lines up with the video's height. dashboard.js keeps the scroll position when it refreshes the list. */-->
             <ol class="list-group list-group-numbered"
                 style="max-height: 17rem; overflow-y: auto; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
+                <!--/* A row wraps: the title takes at least 10rem (flex: 1 1 10rem) and the badge and the buttons go together under it when the
+                     row is too narrow — on a phone the title used to be squeezed to a few letters a line (the DJ's report, 2026-09-30). */-->
                 <li th:each="track, stat : ${queue.tracks()}" th:attr="data-track-id=${track.id()}"
-                    class="list-group-item bg-black text-light border-secondary py-1 small d-flex align-items-center gap-2">
-                    <span class="text-break me-auto"
+                    class="list-group-item bg-black text-light border-secondary py-1 small d-flex flex-wrap align-items-center gap-2">
+                    <span class="text-break"
+                          style="flex: 1 1 10rem; min-width: 0;"
                           th:classappend="${stat.first} ? 'fw-bold' : ''"
                           th:text="${track.title() != null} ? ${track.title()} : ${'youtu.be/' + track.videoId()}">Song title</span>
-                    <span th:if="${stat.first}" class="badge text-bg-success flex-shrink-0"
-                          th:text="#{dashboard.fallback.queue.next}">Next</span>
-                    <a th:href="${'https://www.youtube.com/watch?v=' + track.videoId()}"
-                       target="_blank" rel="noopener noreferrer" draggable="false"
-                       class="text-secondary text-decoration-none flex-shrink-0 px-1"
-                       th:title="#{dashboard.fallback.queue.open}">↗</a>
-                    <span class="btn-group btn-group-sm flex-shrink-0">
-                        <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="TOP"
-                                th:title="#{dashboard.fallback.queue.move.top}"
-                                th:disabled="${stat.first}">⇑</button>
-                        <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="UP"
-                                th:title="#{dashboard.fallback.queue.move.up}"
-                                th:disabled="${stat.first}">↑</button>
-                        <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="DOWN"
-                                th:title="#{dashboard.fallback.queue.move.down}"
-                                th:disabled="${stat.last}">↓</button>
+                    <span class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
+                        <span th:if="${stat.first}" class="badge text-bg-success flex-shrink-0"
+                              th:text="#{dashboard.fallback.queue.next}">Next</span>
+                        <a th:href="${'https://www.youtube.com/watch?v=' + track.videoId()}"
+                           target="_blank" rel="noopener noreferrer" draggable="false"
+                           class="text-secondary text-decoration-none flex-shrink-0 px-1"
+                           th:title="#{dashboard.fallback.queue.open}">↗</a>
+                        <span class="btn-group btn-group-sm flex-shrink-0">
+                            <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="TOP"
+                                    th:title="#{dashboard.fallback.queue.move.top}"
+                                    th:disabled="${stat.first}">⇑</button>
+                            <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="UP"
+                                    th:title="#{dashboard.fallback.queue.move.up}"
+                                    th:disabled="${stat.first}">↑</button>
+                            <button type="button" class="btn btn-outline-secondary py-0 px-2" data-move="DOWN"
+                                    th:title="#{dashboard.fallback.queue.move.down}"
+                                    th:disabled="${stat.last}">↓</button>
+                        </span>
+                        <!--/* Skipping needs another track to play: a single video has none (the round would start over with the same video), so the button is off — Stop removes it */-->
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" data-skip
+                                th:title="${queue.singleVideo()} ? #{dashboard.fallback.queue.skip.single} : #{dashboard.fallback.queue.skip}"
+                                th:disabled="${queue.singleVideo()}">✕</button>
                     </span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" data-skip
-                            th:title="#{dashboard.fallback.queue.skip}">✕</button>
                 </li>
             </ol>
         </th:block>

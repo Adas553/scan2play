@@ -5,6 +5,9 @@ import com.scan2play.controller.DjSessionHelper;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.FallbackQueueView;
+import com.scan2play.model.HistoryEntry;
+import com.scan2play.model.HistoryEntry.Source;
+import com.scan2play.model.HistoryFilter;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
@@ -106,10 +109,7 @@ class DashboardPageRenderTest {
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
-        OAuth2AuthenticationToken token = new OAuth2AuthenticationToken(
-                new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
-                AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
-        String view = controller.dashboard(model, token, new MockHttpSession());
+        String view = controller.dashboard(model, ownerToken(), new MockHttpSession());
         assertThat(view).isEqualTo("dashboard");
 
         MockServletContext servletContext = new MockServletContext();
@@ -121,6 +121,12 @@ class DashboardPageRenderTest {
         // what Spring Security's CsrfRequestDataValueProcessor / the `_csrf` request attribute give the real page
         context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         return engine.process(view, context);
+    }
+
+    private static OAuth2AuthenticationToken ownerToken() {
+        return new OAuth2AuthenticationToken(
+                new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
+                AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
     }
 
     private static PartySettingsEntity youTubeParty(PlaybackMode mode, String playlistUrl) {
@@ -147,6 +153,9 @@ class DashboardPageRenderTest {
         assertThat(html).contains("id=\"partyCode\"", "value=\"" + PARTY + "\"");
         assertThat(html).contains("name=\"_csrf\" content=\"harness-csrf-token\"", "name=\"_csrf_header\" content=\"X-CSRF-TOKEN\"");
         assertThat(html).contains("id=\"song-list\"", "data-playback-mode=\"" + autoPilot + "\"");
+        // the lists and the tabs (dashboard.js): the queue's search box, count and "nothing matches" row, the tab bar, the two panels
+        assertThat(html).contains("id=\"queueList\"", "data-list-search", "data-list-count", "data-nomatch", "id=\"queue-content\"",
+                "id=\"history-content\"", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
         assertThat(html).contains("/js/dashboard.js", "/js/youtube-autopilot.js");
         assertThat(html.indexOf("/js/dashboard.js")).as("dashboard.js goes before youtube-autopilot.js")
                 .isLessThan(html.indexOf("/js/youtube-autopilot.js"));
@@ -176,6 +185,30 @@ class DashboardPageRenderTest {
     }
 
     @Test
+    @DisplayName("the same party in English (written to target/browser-harness/dashboard-en.html): the page says which language it is")
+    void shouldRenderTheDashboardInEnglish() throws IOException {
+        String html = renderDashboard(youTubeParty(PlaybackMode.AUTO, "https://www.youtube.com/playlist?list=" + PLAYLIST),
+                List.of(song(1, "Song One", "aaaaaaaaaaA")), Locale.ENGLISH);
+
+        assertWhatTheScriptsNeed(html, "AUTO");
+        assertThat(html).contains("data-text-ok=\"Playlist saved. Tracks in the queue: {0}.\"");
+        write("dashboard-en.html", html);
+    }
+
+    @Test
+    @DisplayName("<html lang> is the language of the texts: the bundle that wrote them says it, so they cannot disagree (a locale without a bundle gets the English one)")
+    void shouldDeclareTheLanguageOfTheTexts() {
+        PartySettingsEntity party = youTubeParty(PlaybackMode.AUTO, null);
+
+        assertThat(renderDashboard(party, List.of(), PL)).contains("<html lang=\"pl\">");
+        assertThat(renderDashboard(party, List.of(), Locale.ENGLISH)).contains("<html lang=\"en\">");
+        // A German browser: there is no German bundle, the texts are the English ones — and so is the declared language
+        // (a `${#locale.language}` would have said "de" over English texts)
+        String german = renderDashboard(party, List.of(), Locale.GERMAN);
+        assertThat(german).contains("data-text-ok=\"Playlist saved. Tracks in the queue: {0}.\"", "<html lang=\"en\">");
+    }
+
+    @Test
     @DisplayName("the box that says how the playlist import went carries all its texts, in both languages (dashboard.js showFallbackImportResult)")
     void shouldCarryTheTextsOfTheImportResult() {
         for (Locale locale : List.of(PL, Locale.ENGLISH)) {
@@ -191,13 +224,84 @@ class DashboardPageRenderTest {
                 .contains("data-text-ok=\"Playlista zapisana. Utworów w kolejce: {0}.\"");
     }
 
+    /** A row of the sample timeline: {@code i} counts back from the newest (1) — every entry is a minute older than the one before. */
+    private static HistoryEntry historyGuest(int i, String title, String decision) {
+        return new HistoryEntry(Source.GUEST, (long) i, LocalDateTime.of(2026, 9, 29, 22, 0).minusMinutes(i), title,
+                "https://www.youtube.com/watch?v=g" + String.format("%010d", i), "g" + String.format("%010d", i), "Pop", decision,
+                "ok", 5 + i % 5);
+    }
+
+    private static HistoryEntry historyBackground(int i, String title) {
+        return new HistoryEntry(Source.BACKGROUND, (long) i, LocalDateTime.of(2026, 9, 29, 22, 0).minusMinutes(i), title,
+                "https://www.youtube.com/watch?v=b" + String.format("%010d", i), "b" + String.format("%010d", i), null, "played", null, null);
+    }
+
+    /** What the real server does with a filter: the entries whose kind the filter includes (the flags are the real enum's). */
+    private static boolean belongsTo(HistoryEntry entry, HistoryFilter filter) {
+        if (entry.source() == Source.BACKGROUND) {
+            return filter.includesBackgroundTracks();
+        }
+        return "rejected".equals(entry.decision()) ? filter.includesGuestsRejected() : filter.includesGuestsPlayed();
+    }
+
+    /** The History tab's fragment as {@code DjDashboardController.historyFragment} builds it for what the service answers, rendered in Polish. */
+    private static String renderHistory(HistoryFilter filter, int limit, List<HistoryEntry> entries, boolean hasMore) {
+        PlayHistoryService history = mock(PlayHistoryService.class);
+        when(history.getHistory(PARTY, limit, filter)).thenReturn(new PlayHistoryService.Page(entries, hasMore));
+        DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
+                mock(QrCodeService.class), mock(DjSessionHelper.class), mock(NextTrackService.class), mock(PlayerLeaseService.class), history);
+
+        ConcurrentModel model = new ConcurrentModel();
+        String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
+        assertThat(view).isEqualTo("history :: historyTableContent");
+
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(
+                JakartaServletWebApplication.buildApplication(servletContext)
+                        .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        return engine.process("history", Set.of("historyTableContent"), context);
+    }
+
+    @Test
+    @DisplayName("the History tab as the dashboard fetches it: a first page and a longer one (\"Show more\") for each filter, through the real controller (written to target/browser-harness/history-<filter>[-more].html)")
+    void shouldRenderTheHistoryForTheBrowserTests() throws IOException {
+        // ten entries on one timeline, newest first: guests' songs that played or were rejected, and tracks of the playlist
+        List<HistoryEntry> timeline = List.of(
+                historyGuest(1, "Żółć — piosenka", "played"), historyBackground(2, "Playlist Alpha"), historyGuest(3, "Rejected Beat", "rejected"),
+                historyBackground(4, "Playlist Bravo"), historyGuest(5, "Guest Charlie", "played"), historyGuest(6, "Rejected Delta", "rejected"),
+                historyBackground(7, "Playlist Echo"), historyGuest(8, "Guest Foxtrot", "played"), historyGuest(9, "Rejected Golf", "rejected"),
+                historyBackground(10, "Playlist Hotel"));
+        int firstPage = 4;   // a "page" of the sample is four entries, so that a short list has something to show more of
+
+        for (HistoryFilter filter : HistoryFilter.values()) {
+            List<HistoryEntry> ofKind = timeline.stream().filter(entry -> belongsTo(entry, filter)).toList();
+            boolean older = ofKind.size() > firstPage;
+            // the controller asks for a page of 50, and "Show more" for the 100 that its button carries (data-limit)
+            String first = renderHistory(filter, 50, ofKind.subList(0, Math.min(firstPage, ofKind.size())), older);
+            String more = renderHistory(filter, 100, ofKind, false);
+
+            assertThat(first).as(filter.param()).contains("data-list-filter=\"" + filter.param() + "\"").doesNotContain("??");
+            assertThat(first.contains("data-history-more")).as("%s: a button to show more only where older entries exist", filter.param()).isEqualTo(older);
+            if (older) {
+                assertThat(first).contains("data-limit=\"100\"");
+            }
+            assertThat(more).as(filter.param() + " (more)").doesNotContain("data-history-more").doesNotContain("??");
+            write("history-" + filter.param() + ".html", first);
+            write("history-" + filter.param() + "-more.html", more);
+        }
+    }
+
     @Test
     @DisplayName("the \"up next\" list as the dashboard fetches it: four tracks, one skipped in this round (written to target/browser-harness/fallback-queue.html)")
     void shouldRenderTheUpNextListForTheBrowserTests() throws IOException {
         ConcurrentModel model = new ConcurrentModel();
         model.addAttribute("queue", new FallbackQueueView(true, false, false, 4, 1, List.of(
-                new FallbackQueueView.Track(11L, "aaaaaaaaaaA", "Old A"), new FallbackQueueView.Track(12L, "bbbbbbbbbbB", "Old B"),
-                new FallbackQueueView.Track(13L, "cccccccccCc", "Old C"), new FallbackQueueView.Track(14L, "ddddddddddD", "Old D"))));
+                // titles as a real playlist has them — long ones, with an ampersand, Polish letters — so that a look at the page shows how a row copes
+                new FallbackQueueView.Track(11L, "aaaaaaaaaaA", "Warren - Ordinary (Official Video)"),
+                new FallbackQueueView.Track(12L, "bbbbbbbbbbB", "Justin Bieber - DAISIES (Audio)"),
+                new FallbackQueueView.Track(13L, "cccccccccCc", "MAZUREK & STANOWSKI #117: WAŁĘSA ANALFABETĄ, CZARZASTY W POLU, POKAZ MODY W MINISTERSTWIE"),
+                new FallbackQueueView.Track(14L, "ddddddddddD", "Short one"))));
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(
                 JakartaServletWebApplication.buildApplication(servletContext)

@@ -10,6 +10,8 @@ from a fixture of answers that the REAL services gave (fixtures/*.json, recorded
   /harness/*                         this directory (fake-yt.js, harness.js, scenarios/*.js)
   POST /__reset                      the default answers, an empty request log
   POST /__config  {json}             merged into the state (see default_state for the keys)
+  GET  /dj/history-view/fragment     the REAL history fragment (rendered by DashboardPageRenderTest: history-<filter>.html, and
+                                     history-<filter>-more.html when the request has a limit — "Show more")
   GET  /__log                        {"requests": [{"m", "p", "q"}...], "state": {...}}
   POST /__result?name=NAME           a scenario's verdict: written to <results>/NAME.json and handed to the runner
 
@@ -20,6 +22,7 @@ import copy
 import html
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -59,6 +62,7 @@ def default_state():
         # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the track link).
         # The rendered page itself has two rows, but the first poll replaces them with these.
         'queue': [],
+        'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'queueVersion': 'v1',          # X-Queue-Version of GET fallback-queue
         'queueActionStatus': 204,      # the answer of POST fallback-queue/move|place|skip (409: the player took the track)
         'commandStatus': 204,          # the answer of POST player-command (409: no window plays, nobody would carry it out)
@@ -143,6 +147,16 @@ class Stand:
             return []
         recent = fixture['steps'][min(n, len(fixture['steps'])) - 1]['recentTracks']
         return [self._old(fixture, e) for e in recent] if replay['keys'] == 'old' else recent
+
+    def nomatch_row(self):
+        """The "nothing matches" row of the queue table, as the REAL template renders it. It is part of the polled <tbody> (the
+        fragment dashboard :: songTableBody), so an answer to the poll that lacked it would make the search box look different
+        from the real page after the first poll. Taken from the rendered page, so its markup and text are not copied by hand."""
+        if not hasattr(self, '_nomatch'):
+            with open(os.path.join(self.rendered, 'dashboard.html'), encoding='utf-8') as f:
+                found = re.search(r'<tr data-nomatch[^>]*>.*?</tr>', f.read(), re.S)
+            self._nomatch = found.group(0) if found else ''
+        return self._nomatch
 
     def config(self, patch):
         with self.lock:
@@ -247,11 +261,25 @@ class Handler(BaseHTTPRequestHandler):
             etag = '"q-%08x"' % zlib.crc32(json.dumps([mode, queue], sort_keys=True).encode('utf-8'))
             if self.headers.get('If-None-Match') == etag:
                 return self._send(304, headers={'ETag': etag})
-            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"><td>%s</td></tr>'
-                           % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True), html.escape(r['name']))
+            # a row has the song cell that the column sort reads (data-sort-value / data-val) and, after the rows, the real
+            # "nothing matches" row that the search box shows and hides
+            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"><td data-sort-value="song" data-val="%s">%s</td></tr>'
+                           % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True), html.escape(r['name'], True), html.escape(r['name']))
                            for r in queue)
-            body = '<tbody id="song-list" data-playback-mode="%s" data-provider="YOUTUBE">%s</tbody>' % (mode, rows)
+            body = '<tbody id="song-list" data-playback-mode="%s" data-provider="YOUTUBE">%s%s</tbody>' % (mode, rows, stand.nomatch_row())
             return self._send(200, body, 'text/html; charset=utf-8', {'ETag': etag})
+        if path == '/dj/history-view/fragment':
+            # the REAL history fragment as DashboardPageRenderTest renders it through the real controller: one file per filter
+            # (all, guest, background, played, rejected) — the first page — and a "-more" one for "Show more" (a request with a limit)
+            with stand.lock:
+                if state['historyStatus']:
+                    return self._send(state['historyStatus'])
+            name = 'history-%s%s.html' % (re.sub(r'[^a-z]', '', query.get('filter', ['all'])[0].lower()) or 'all', '-more' if 'limit' in query else '')
+            listing = os.path.join(stand.rendered, name)
+            if not os.path.isfile(listing):
+                return self._send(404, ('no rendered ' + name).encode('utf-8'), 'text/plain')
+            with open(listing, encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/fallback-queue':
             # the REAL fragment as DashboardPageRenderTest renders it (four tracks); a bare placeholder if it was not rendered
             listing = os.path.join(stand.rendered, 'fallback-queue.html')

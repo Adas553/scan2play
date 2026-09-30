@@ -25,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -76,7 +77,9 @@ def render(work):
     """DashboardPageRenderTest in the copy: writes target/browser-harness/dashboard*.html."""
     wrapper = work / ('mvnw.cmd' if os.name == 'nt' else 'mvnw')
     command = [str(wrapper), '-B', '-ntp', '-q', 'test', '-Dtest=DashboardPageRenderTest', '-Dsurefire.failIfNoSpecifiedTests=false']
-    print('rendering the dashboard in the copy: ' + ' '.join(command[1:]), flush=True)
+    if os.name != 'nt':
+        command.insert(0, 'sh')   # mvnw is committed without the executable bit (mode 100644): a checkout on Linux could not run it directly
+    print('rendering the dashboard in the copy: ' + ' '.join(command[1 if os.name == 'nt' else 2:]), flush=True)
     result = subprocess.run(command, cwd=work)
     if result.returncode != 0:
         sys.exit('DashboardPageRenderTest failed (see above) — nothing to run the scenarios on')
@@ -118,8 +121,8 @@ def kill(process):
         process.kill()
 
 
-def run_scenario(stand, port, name, chrome, allow_cdn, timeout):
-    """Opens the scenario in a fresh headless Chrome and waits for its verdict; None when none came."""
+def run_scenario(stand, port, name, chrome, allow_cdn, timeout, no_sandbox=False):
+    """Opens the scenario in a fresh headless Chrome and waits for its verdict; None when none came (or the browser is gone)."""
     event = stand.event(name)
     event.clear()
     stand.result_data.pop(name, None)
@@ -127,13 +130,23 @@ def run_scenario(stand, port, name, chrome, allow_cdn, timeout):
     flags = ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-extensions',
              '--disable-background-networking', '--disable-component-update', '--disable-sync', '--mute-audio',
              '--window-size=1280,900', '--user-data-dir=' + profile]
+    if no_sandbox:
+        flags.append('--no-sandbox')   # a CI runner may forbid the sandbox's user namespaces; the browser opens only pages of this stand-in
     # Nothing here needs the network: the YouTube API is faked, and Bootstrap from its CDN only styles the page (no script uses it).
     blocked = ['www.youtube.com', 'i.ytimg.com'] + ([] if allow_cdn else ['cdn.jsdelivr.net'])
     flags.append('--host-resolver-rules=' + ', '.join('MAP %s ~NOTFOUND' % host for host in blocked))
     url = 'http://127.0.0.1:%d/dj/dashboard?scenario=%s' % (port, name)
     process = subprocess.Popen([chrome] + flags + [url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        event.wait(timeout)
+        # Wait for the verdict — but not the whole timeout for a browser that never started (a runner without a usable Chrome would
+        # otherwise spend it on every scenario): once the process is gone, give the page a few seconds more and stop.
+        deadline, gone_since = time.monotonic() + timeout, None
+        while time.monotonic() < deadline and not event.wait(0.5):
+            if process.poll() is not None:
+                gone_since = gone_since or time.monotonic()
+                if time.monotonic() - gone_since > 5:
+                    print('      the browser exited with code %s before the scenario finished' % process.returncode, flush=True)
+                    break
     finally:
         kill(process)
         shutil.rmtree(profile, ignore_errors=True)
@@ -183,6 +196,7 @@ def main():
     parser.add_argument('--chrome', help='path of chrome.exe / msedge.exe (else S2P_CHROME, else looked for)')
     parser.add_argument('--cdn', action='store_true', help='let the page load Bootstrap from its CDN (by default it is blocked: not needed)')
     parser.add_argument('--timeout', type=int, default=90, help='seconds to wait for one scenario')
+    parser.add_argument('--no-sandbox', action='store_true', help="start Chrome with --no-sandbox (for a CI runner that forbids the sandbox; it only opens this stand-in's pages)")
     args = parser.parse_args()
 
     known = scenario_names()
@@ -218,7 +232,7 @@ def main():
 
     passed = True
     for name in wanted:
-        passed = show(name, run_scenario(stand, port, name, chrome, args.cdn, args.timeout)) and passed
+        passed = show(name, run_scenario(stand, port, name, chrome, args.cdn, args.timeout, args.no_sandbox)) and passed
     httpd.shutdown()
     print('\n%s — results: %s' % ('all scenarios passed' if passed else 'SOME SCENARIOS FAILED', stand.results))
     return 0 if passed else 1

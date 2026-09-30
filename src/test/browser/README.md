@@ -10,6 +10,7 @@ python src/test/browser/run.py boundary        # one, or several, by name
 python src/test/browser/run.py --list
 python src/test/browser/run.py --no-render     # a quick loop while editing scenarios: copy the repo, skip Maven
 python src/test/browser/run.py --clean         # start from an empty work directory (a full build)
+python src/test/browser/run.py --no-sandbox    # Chrome without its sandbox: for a CI runner that forbids it (see "In CI")
 ```
 
 A run takes about a minute (most of it waiting for real timers: a lease report comes every 3 s) and ends with one line per scenario,
@@ -36,13 +37,20 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest �
 
 * **`DashboardPageRenderTest`** (`src/test/java/.../template`) is an ordinary unit test: it calls the real
   `DjDashboardController.dashboard()` with mocked services and renders the model with the real templates and message bundles. It
-  writes `dashboard.html` (Polish, Auto-Pilot on, a playlist saved, two songs), `dashboard-manual.html` (a brand-new party) and
-  `fallback-queue.html` (the "up next" fragment, four tracks, one skipped). It fails when the page loses something the scripts need.
+  writes `dashboard.html` (Polish, Auto-Pilot on, a playlist saved, two songs), `dashboard-manual.html` (a brand-new party),
+  `dashboard-en.html` (the same party in English), `fallback-queue.html` (the "up next" fragment, four tracks, one skipped) and
+  `history-<filter>.html` / `history-<filter>-more.html` (the History tab's fragment for each of the five filters — the first page, and
+  the longer list that "Show more" asks for — built by the real `DjDashboardController.historyFragment` from ten sample entries, with the
+  real `HistoryFilter` deciding which of them a filter includes). It fails when the page loses something the scripts need.
 * **The stand-in** knows nothing about music. What `next-track` and `recent-tracks` answer is told by the scenario or **replayed from
   the fixture**. `POST /__config` merges a JSON object into its state (`server.py`, `default_state()`, lists the keys: `lease`,
   `commands`, `nextTracks`, `nextTrackStatus`, `recent`, `recentStatus`, `replay`, `delays`, `playbackMode`, `queue`,
-  `queueActionStatus`, `fallbackSave`); a config is **merged**, so a key is set back to its default value, not left out
-  (`delays: {'/path': 0}`, not `delays: {}`).
+  `queueActionStatus`, `historyStatus`, `fallbackSave`); a config is **merged**, so a key is set back to its default value, not left
+  out (`delays: {'/path': 0}`, not `delays: {}`). What the poll of the queue answers is a `<tbody>` of the rows the scenario names plus
+  the real "nothing matches" row (taken from the rendered page: it is part of the polled fragment).
+* **The lease is scripted, not simulated:** who holds the player lease is a config (`lease: {holder, free}`), so "another window took
+  over" is `stand.config({ lease: { holder: false } })`. The rules of the server (who gets the lease, the timeout) are unit-tested on the
+  server side; the scenarios check what the *window* does with the answers.
 * **The fake player** (`fake-yt.js`) replaces the IFrame API: the real script never loads. `window.__fake`: `position`, `emit(state)`,
   `end()`, `holdState = 'UNSTARTED' | 'CUED'` + `release()` (a load that waits — the real player does it between two videos),
   `advanceClock(ms)` (moves `Date.now()`, so nothing waits for real minutes), `blockApi` (the API never loads), `loads`, `seeks`,
@@ -80,7 +88,14 @@ track is easy to tell.
 * An uncaught error in the page fails the scenario; `console.error` / `console.warn` are listed in the verdict for information.
 * **A control** is a scenario that must fail: `control: { mustFail: ['label prefix', ...] }` — it passes only if every step whose
   label starts with one of those fails, so it proves that the check can see the problem it exists for (`boundary-old-keys`).
-* Make a new scenario **fail first**: run it against the unfixed script, see it red for the reason you expect, then fix.
+* Make a new scenario **fail first**: run it against the unfixed script, see it red for the reason you expect, then fix. A scenario for
+  code that already works cannot be seen red that way — **break the code instead** (in a copy, never in the repo while the app runs):
+  take the line the scenario is about out of the script, and the scenario must go red for the right step. The lists, the tabs and the
+  lease scenarios were checked like this, with 17 such mutations (one of them survived — removing the `scroll` listener changes nothing
+  because Chrome's `scrollend` runs the same function — and a mutation that really stops the lit tab from following was killed).
+* Two things that differ between machines and made an assertion wrong once: the **language of the browser** (in a Polish Chrome `ż`
+  sorts after `z`, in an English one it does not — a sort test must not name the exact neighbour) and **timing** (a lease report is every
+  3 s, the poll every 3 s: wait for the state with `waitFor`, do not sleep for it).
 * Timing: the page reports to the lease every 3 s and polls the queue every 3 s; a scenario that waits for those needs real seconds.
 
 ## The fixture of real answers
@@ -118,9 +133,18 @@ try {
 Startup of that test runs Flyway on the empty database and Hibernate validation, so it is a check of the schema as well. Then run
 `python src/test/browser/run.py` — the scenarios must still pass; the ids in the file change with every recording, nothing depends on them.
 
+## In CI
+
+`.github/workflows/browser-tests.yml` runs `python src/test/browser/run.py --no-sandbox` on `ubuntu-latest` (Java 21, Python 3.12, the
+runner's own Chrome) for every push to `dev` / `main`, every pull request and by hand; a failed run keeps the verdicts of the scenarios
+(`results/*.json`) as an artifact. It needs nothing but Maven Central: no database, no secrets, no YouTube. Two things in `run.py` are
+there for it: `mvnw` is started with `sh` (it is committed without the executable bit) and a Chrome that does not start ends the scenario
+after a few seconds instead of after the whole timeout. **It has not been run on a GitHub runner yet** — the first run may show a
+difference between that machine and this one (the Chrome flags, the locale: see "Writing a scenario").
+
 ## What this does not show
 
 The real YouTube player (sound, the autoplay policy, the events between two videos — the fake does what the script relies on and no
-more), the real Spring Security chain (a `_csrf` sent by `sendBeacon`), two real devices, layout and the smooth scroll (no scenario
-measures pixels), the guest side. Real devices remain the owner's part. Not yet covered by a scenario: the lease takeover, the lists and
-their filters, the History tab, the three tabs — they were checked by hand with earlier throw-away versions of this harness.
+more), the real Spring Security chain (a `_csrf` sent by `sendBeacon`), two real devices — the lease scenarios script the server's
+answers, they do not run two windows — layout as the eye sees it (the scenarios measure positions and scrolling, not how a row looks),
+the guest side. Real devices remain the owner's part.

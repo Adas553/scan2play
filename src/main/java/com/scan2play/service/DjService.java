@@ -98,9 +98,9 @@ public class DjService {
      * <p>
      * Does <b>not</b> mark anything as played — the client still confirms that via the
      * existing {@link #markSongAsPlayed} once the video actually starts. That keeps this
-     * method a safe, repeatable read: Auto-Pilot polls it every few seconds while idle or
-     * running the fallback playlist, and it reuses {@link #getDashboardQueue} (already
-     * {@code @Cacheable}, 3s TTL) so most calls are a cache hit rather than a fresh query.
+     * method a safe, repeatable read: {@link NextTrackService} asks it whenever the player is about
+     * to load a track, and it reuses {@link #getDashboardQueue} (already {@code @Cacheable}, 3s TTL)
+     * so most calls are a cache hit rather than a fresh query.
      *
      * @param partyCode The unique code of the party.
      * @param excludeIds Song IDs to skip even though they're accepted+resolvable — the

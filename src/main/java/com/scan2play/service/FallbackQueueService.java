@@ -57,7 +57,8 @@ public class FallbackQueueService {
                 partyCode, playlistId, FallbackTrackStatus.QUEUED);
         long skipped = fallbackTrackRepository
                 .countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, FallbackTrackStatus.SKIPPED);
-        return new FallbackQueueView(true, settings.isFallbackShuffle(), manualOrder, remaining, skipped, tracks);
+        boolean singleVideo = playlistId.startsWith(YouTubeUrls.SINGLE_VIDEO_PREFIX);   // a video link, not a playlist
+        return new FallbackQueueView(true, settings.isFallbackShuffle(), manualOrder, remaining, skipped, singleVideo, tracks);
     }
 
     /**

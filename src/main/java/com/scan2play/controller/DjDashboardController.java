@@ -2,7 +2,6 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryFilter;
-import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.model.NextTrackResponse;
 import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
@@ -210,30 +209,6 @@ public class DjDashboardController {
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
-    }
-
-    /**
-     * Read-only "is a guest song waiting?" peek (Section 14, Phase 1).
-     * <p>
-     * Returns the oldest accepted guest song with a playable video ID, or 204 No Content
-     * when none is ready. It replaced the old client-side DOM scan of the queue table; since
-     * Phase 2 stage 4 the Auto-Pilot client asks {@link #nextTrack} instead (guest song or
-     * background track), so nothing calls this endpoint any more. Read-only: guest playback is
-     * confirmed via the existing {@code POST /dj/dashboard/play} once the video actually starts.
-     *
-     * @param exclude Optional comma-separated song IDs the client already knows are
-     *                broken (the YouTube player itself errored on them) and wants skipped.
-     */
-    @GetMapping("/dashboard/next-guest-track")
-    @ResponseBody
-    public ResponseEntity<NextGuestTrackResponse> nextGuestTrack(@RequestParam String partyCode,
-                                                                  @RequestParam(required = false) String exclude,
-                                                                  OAuth2AuthenticationToken authentication,
-                                                                  HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
-        return djService.findNextPlayableGuestTrack(partyCode, parseExcludeIds(exclude))
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     /**
