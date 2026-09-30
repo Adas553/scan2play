@@ -6,8 +6,9 @@ first session (2026-09-28, remote) is summarised at the bottom.
 ## Start here (updated at the end of the 2026-09-30 session, the seventh)
 
 - **The seventh session (2026-09-30): the whole-project review — `REVIEW.md` at the repo root, 39 ranked findings — and its first package of
-  fixes (3.1, 4.3, 4.2, 1.1, 4.4, 2.2, 5.2), COMMITTED (code `57d3def`, the caption fix of the "up next" list `b00feec`, then the docs), NOT
-  pushed.** See "The session of 2026-09-30, the seventh" (after the sixth's section). The owner picks the next items from the table at the end of
+  fixes (3.1, 4.3, 4.2, 1.1, 4.4, 2.2, 5.2), COMMITTED (code `57d3def`, the caption fix of the "up next" list `b00feec`, then the docs), and
+  afterwards the resume of the last track after a reload and a takeover (`59c0944`, docs `d58bde2`) — ALL PUSHED on the owner's word
+  (2026-09-30): `git status -sb` should show `dev...origin/dev` with nothing ahead. The push runs both workflows on GitHub — look at them.** See "The session of 2026-09-30, the seventh" (after the sixth's section). The owner picks the next items from the table at the end of
   `REVIEW.md`.
 - **The very newest session (2026-09-30, the sixth) is described in "The session of 2026-09-30, the sixth" (after the fifth's section).** In
   short: at the owner's choice of all four, it added **browser scenarios for the lease, the lists, the History tab and the tabs** (27 scenarios
@@ -1072,7 +1073,8 @@ on a real PostgreSQL).
   on that answer, was lost. Now the press sets `takeOverPending` and the first answer that makes the window the holder resumes (scenario
   `resume-on-takeover-when-a-watch-answer-comes-first`, the WATCH answer delayed so it wins: red before — it played the next track —
   green now, three runs in a row). (2) In a window that does not hold the lease PLAYING / BUFFERING of its own YouTube player is stopped at
-  once (`old-window-cannot-play-after-takeover`, red before). **38** scenarios, all green. Not tried on a phone yet. Files: `youtube-autopilot.js`, `RecentTrack`, `DjPlayerLeaseController` (+ test), `resume.js`, `server.py` (a
+  once (`old-window-cannot-play-after-takeover`, red before). **38** scenarios, all green. **The owner tried it: "działa o wiele lepiej"** —
+  and said to commit and push: code `59c0944`, docs `d58bde2`, then this note; **PUSHED** with the review's commits (2026-09-30). Files: `youtube-autopilot.js`, `RecentTrack`, `DjPlayerLeaseController` (+ test), `resume.js`, `server.py` (a
   comment), `PROJECT_CONTEXT.md` (5.4, 6.8, 12, 13), this file.
 - Commits: code `57d3def`; then the caption fix of the "up next" list above (`b00feec` — it had been waiting uncommitted since before this
   session, and the owner said to commit it too); then the docs (`PROJECT_CONTEXT.md`, this file, `REVIEW.md`). **Not pushed.**
