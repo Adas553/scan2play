@@ -1,9 +1,17 @@
-# Session Handoff — 2026-09-29
+# Session Handoff — 2026-09-30
 
 Where the work stands, for whoever continues (a new Claude Code session or a person). The history of the
 first session (2026-09-28, remote) is summarised at the bottom.
 
-## Start here (written at the end of the 2026-09-29 session)
+## Start here (updated at the end of the 2026-09-29/30 session)
+
+- **The newest session (2026-09-29/30, a fifth one) is the first thing to read: see "The session of 2026-09-29/30" below.** In short:
+  the browser tests are now **in the repo** (`src/test/browser`, `python src/test/browser/run.py`), the three small JS fixes (and, added
+  later that day at the owner's request, two buttons "Wstecz" / "Od początku" in a window that does not play — its section, 6) and the
+  three polish items are built, the guests' song requests are purged after 30 days (`V8` is a new migration — the status `SKIPPED`), and
+  the Auto-Pilot hint / IFrame message were **not** built (the owner wants the friend's steps reproduced first). **All of it is
+  COMMITTED as one more pair (code `8248f9c`, then the docs) — on the owner's "działa, commituj", said after trying the two back buttons;
+  NOT pushed: `dev` is 10 commits ahead of `origin/dev`.** The list of the changed files is in that section.
 
 - Phase 3 (the DJ sees and reorders the playlist queue — buttons **and drag and drop**) is finished, was tried by the owner
   on a real phone (Galaxy S25, Chrome; "everything worked", 2026-09-29) and is committed on `dev` as two local commits
@@ -97,13 +105,14 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: **386** tests pass with the play log (380 before it; the rest of this bullet describes the earlier runs)
+- Tests: **425** tests (424 run, 1 skipped — the fixture recorder) with the work of the 2026-09-29/30 session (386 before it; the rest of
+  this bullet describes the earlier runs)
   (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
-  run them without disturbing the app running from IntelliJ) — run on 2026-09-29 in a scratch copy of the working
-  tree with Phase 3 and Phase 4 stages 0, 1, 2, 3 and 4 and its two follow-ups (`BUILD SUCCESS`; 366 before the history filters, 365 before the first follow-up, 360 before stage 4, 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
-  146 before Phase 3). Nothing in `youtube-autopilot.js` / `dashboard.js`
-  has automated tests; stage 4 was verified against the real YouTube player, Phase 3 against a real PostgreSQL and the
-  real JS on stub endpoints (see below).
+  run them without disturbing the app running from IntelliJ) — run on 2026-09-30 in a scratch copy of the working
+  tree (`BUILD SUCCESS`; 386 before the browser tests, the skip and the purge, 366 before the history filters, 365 before the first follow-up, 360 before stage 4, 344 before stage 3, 313 before stage 2, 266 before stage 1, 232 before stage 0,
+  146 before Phase 3). The browser code has **browser tests in the repo** since 2026-09-30 (`src/test/browser`, 19 scenarios, not part
+  of `mvnw test`); earlier stages were verified against the real YouTube player, a real PostgreSQL and throw-away versions of that
+  harness (see below).
 
 ## What was done (commit order)
 
@@ -157,7 +166,7 @@ Details worth knowing:
 
 **How it was verified (no login needed):** a throw-away static page with the real `youtube-autopilot.js`, `window.fetch`
 stubbed for `/dj/dashboard/*`, `YT.Player` wrapped to log every `onStateChange` with `getVideoData().video_id`, served by
-`python -m http.server` and opened in the built-in browser (the page is not kept in the repo). 13 scenarios passed: start
+`python -m http.server` and opened in the built-in browser (the page is not kept in the repo — the harness of the later stages is: `src/test/browser`, since 2026-09-30). 13 scenarios passed: start
 when idle (1 request, no `/play`); polls while playing and while paused (0 requests); `ENDED` → waiting guest plays and is
 confirmed exactly once; a guest song the player cannot play (→ `exclude=<id>`, not confirmed); a run of errors (6 requests,
 then one per poll); Auto-Pilot off (nothing on `ENDED`, resumes when switched on); `updateFallbackSource` stops a
@@ -294,7 +303,7 @@ Section 5.4 ("One window plays") has the full rules; the short version:
 
 **How it was verified:** 266 unit tests in a scratch copy (34 new: the service with a hand-moved clock, the controller, the 409,
 the playlist ids, the banner fragment rendered with the real PL/EN bundles). The **real `youtube-autopilot.js` in two browser tabs** against a
-throw-away stand-in server (Python, same rules and a CSRF check; a fake `YT.Player` that logs its calls; none of it is in the repo):
+throw-away stand-in server (Python, same rules and a CSRF check; a fake `YT.Player` that logs its calls; none of it was in the repo — its descendant is, `src/test/browser`):
 first tab plays and asks once; the second is refused, silent, shows the Polish banner and its ▶ link falls through; takeover
 shows the exact Polish confirmation and moves playback, the old tab stops and shows the banner; a direct `next-track` from the
 refused tab (with and without its id) gets 409 and hands nothing out; leaving the page releases the lease (beacon with `_csrf`
@@ -340,7 +349,7 @@ of the window that does (option 3 of three offered); lists may have their own sc
 `DjPlayerLeaseControllerTest` / `FallbackQueueServiceTest`, the paged history in `DjServiceTest` /
 `DjDashboardControllerHistoryTest`, and template tests that render the real history fragment, the queue's polled tbody
 (with a web context, for the `@{…}` links) and the Next button with the real PL/EN bundles). Then the **real dashboard**: a
-scratch Java test (only in the scratch copy, not in the repo) rendered the whole `dashboard.html` in Polish with 60 songs in
+scratch Java test (only in the scratch copy then; `DashboardPageRenderTest` is its descendant in the repo) rendered the whole `dashboard.html` in Polish with 60 songs in
 the queue and the history fragment with 120 requests, and a stand-in server (Python; same lease/command/409/version rules;
 fake `YT.Player`; not in the repo) served them with the real `static/js` and `static/css`; two browser tabs were two windows.
 Checked: the queue box scrolls (432 px of a 720 px viewport, 2410 px of content), the header is sticky, search and count, a
@@ -717,7 +726,7 @@ Section 4.1 (`fallback_play`), 5.4 ("The history is one timeline", "The history 
   and shuffle flips plus the nightly purge in a loop — 480 hand-outs, 480 log rows, no errors, no deadlock; the whole class was run **three times on fresh databases** (and once more when the
   recording for the browser was made). (Two of my own scripting slips turned up on the way and are not code problems: `psql` inherits `PGDATABASE`, so `DROP DATABASE` needs `-d postgres`;
   and the PowerShell tool does not keep environment variables between calls, so every call that runs a Spring test needs the dummy keys again.)
-- **Verified in the browser** (harness recreated — **not in the repo**, kept in the scratch directory: a scratch JUnit test renders the real `dashboard.html`; a Python stand-in server serves it with the
+- **Verified in the browser** (harness recreated then **outside the repo**, in the scratch directory — **it is in the repo now**: `src/test/browser`, see "The session of 2026-09-29/30"; what it was: a scratch JUnit test renders the real `dashboard.html`; a Python stand-in server serves it with the
   real `static/js` and `static/css`; a fake `YT.Player` replaces the IFrame API — the fake keeps the real `iframe_api` script from loading by intercepting `document.head.appendChild`; scenarios run
   inside the page (`?scenario=NAME&mode=play|old`) and POST their verdict to the stand-in, which writes a file that is read afterwards, no JS tool needed). The stand-in **does not compute anything**: it
   replays the *real* answers of `next-track` and `recent-tracks` recorded from the real services on the real PostgreSQL (10 hand-outs of A B C looping, the 3rd already opening round 2). Scenario
@@ -730,6 +739,131 @@ Section 4.1 (`fallback_play`), 5.4 ("The history is one timeline", "The history 
   browser (the fragment is unchanged, `HistoryFragmentTest` still renders it; only the source of the entries changed); the production first-deploy with `V7` (Section 10's checklist is unchanged, the migration is
   additive); a dashboard window that is open across the deployment holds an old-style key for its running track (one wrong ⏮ at worst, documented in 5.4).
 - **Not built, on purpose:** any "clear history" button for the DJ (today only the 30-day purge and "Delete account"), an index on `fetched_at` for the purge (a daily delete on a small table; `fallback_track` has none either).
+
+## The session of 2026-09-29/30: browser tests in the repo, three small fixes, polish, retention (done, committed, not pushed)
+
+The fifth session. The owner's prompt listed five tasks; all but the last were built and left uncommitted for review in IntelliJ
+(`CLAUDE.md`); after the owner tried the two back buttons of item 6 ("działa, commituj") they were committed as a pair (code `8248f9c`,
+then the docs); nothing was pushed, reset or stashed — `git status -sb` shows `dev...origin/dev [ahead 10]`. The state at the start was as
+the prompt said (clean tree, tip `9e10a1f`). `PROJECT_CONTEXT.md` Sections 4.1, 5.4, 6.8, 10, 12,
+13 and 14 describe the result; what follows is what is easy to lose.
+
+**The two decisions asked at the start** (`AskUserQuestion`; the owner took the recommended option both times): (1) ⏭ after a change
+of playlist: **clear the retracing, let the running old track finish**; (2) skipping a track of the "up next" list: **this round only**.
+
+**1. Browser tests in the repo** (`src/test/browser/`, guide: its `README.md`; `python src/test/browser/run.py`, about a minute):
+`run.py` (copies the repo to `%TEMP%\scan2play-browser-tests`, runs `DashboardPageRenderTest` there, starts the stand-in, opens each
+scenario in a headless Chrome), `server.py` (stand-in, standard library only), `fake-yt.js`, `harness.js`, `scenarios/*.js` (15
+scenarios), `fixtures/play-log-boundary.json`; Java: `template/DashboardPageRenderTest` (renders the real page from the model of the real
+`DjDashboardController.dashboard()`), `controller/PlayLogFixtureRecorderTest` (records the fixture; skipped unless `S2P_FIXTURE_OUT` is
+set; refuses any database not called `s2p_*`).
+- Checked first, as asked: **headless Chrome works here** (Chrome 154, `--headless=new`, fresh `--user-data-dir`; JS runs, the CDN can be
+  blocked); a first probe printed "Otwieram w istniejącej sesji przeglądarki" once and never again — `run.py` always uses its own profile and
+  leaves no browser process behind. **Bootstrap from the CDN is not needed** (no script uses its API; `run.py` blocks it and every
+  scenario passes).
+- Based on the old scratch harness (`server.py`, `fake-yt.js`, `scenario.js`, `recorded.json` were found and reused); changes that
+  matter: the fixture now holds the JSON **bodies of the real controllers** (MockMvc through the real `DjDashboardController` /
+  `DjPlayerLeaseController`, real ownership and lease checks) — before, the mapping of `recent-tracks` was copied by hand; the old-keys
+  variant is derived from `trackIdByVideo` instead of being recorded; scenarios configure the stand-in (`POST /__config`) instead of the
+  stand-in knowing them; the fake can hold a load in UNSTARTED / CUED, move `Date.now()`, block the API.
+- **Two races in the harness itself, found by the new scenarios and fixed** (not app bugs): the first lease report of the page left
+  before the scenario had configured the stand-in and got the default "you are the holder" answer (now `fake-yt.js` holds it until
+  `fake.start()`); and a `/__config` is *merged*, so `delays: {}` did not remove a delay (set it to 0).
+- **The first scenario, as asked:** `boundary` — ⏮ / ⏭ across the round boundary with the real answers (all steps pass) — and
+  `boundary-old-keys`, the control with the keys of before the play log: it **fails on all three steps it must fail on**
+  (⏮ ×6 gives `a c b a c b`, ⏭ ×5 skips, `next-track` is asked 10 times instead of 6).
+- Not covered by a scenario yet: the lease takeover, the lists and their filters, the History tab, the tabs (checked by hand earlier).
+
+**2. The three small JS fixes** (`youtube-autopilot.js`; each scenario was run against the unfixed script first and failed as expected):
+- (a) `DOUBLE_PRESS_MS` = 20 s; tooltip `dashboard.player.previous.title` PL and EN by script (`add`-style byte replace, CRLF kept, one-line
+  diffs), `PlayerControlsFragmentTest`, `PROJECT_CONTEXT.md` 5.4 and 14. Scenario `double-press-window` (19 s vs 21 s, and reads the tooltip).
+- (b) "Wznów" while a track loads: `isPlayingOrLoading()` = playing, or `isLoadingSong` and not paused and less than 10 s since the load,
+  used for the button of the window that plays and for `playing` in its lease reports. **A deviation from the prompt, on purpose:** the
+  prompt said "count `isLoadingSong` as playing", plain; I added the 10 s limit and the "not paused" condition because a browser that
+  refuses sound in a page nobody touched leaves the player at CUED for good and `isLoadingSong` never clears — the button would say
+  "Pauza" for ever and the DJ could not press "Wznów" to start it. Easy to drop (one condition). Scenario `pause-while-loading` (held UNSTARTED and
+  CUED: the report says `playing=true`, the button "Pauza"; a load stuck for 11 s: `false` / "Wznów", and "Wznów" starts it; a real pause).
+- (c) ⏭ after a playlist change: `notePlaylist` (the lease answer names another playlist than the last one ⇒ `playingFromHistory =
+  false`, only from a report sent after the track came back — `trackLoadedAtLeaseSeq`, like `dropStaleBackgroundTrack`), and
+  `updateFallbackSource` / `stopFallback` clear it in the window where the DJ acted (so also on **Stop**, and when the **same playlist
+  is saved again** — my reading of "the playlist changes"). Five scenarios (Section 5.4); `retrace-survives-a-change-in-flight` turns
+  red when the `trackLoadedAtLeaseSeq` condition is removed (tried).
+
+**3. Polish** (messages PL and EN by script, `CLAUDE.md`):
+- **Import result:** `showFallbackImportResult` in `dashboard.js` + `#fallbackImportStatus` in `dashboard.html` — green "Playlista zapisana.
+  Utworów w kolejce: N." / red with the reason (`NO_API_KEY`, `INVALID_PLAYLIST`, `API_ERROR`, `NO_PLAYABLE_TRACKS`, other), the Save
+  button ✓ green or ✗ red, hidden after Stop. The failure texts say the link *is* saved but nothing will play from it for now (true:
+  the queue is empty until a later lazy import). Scenario `import-result` (fails with the feature disconnected — tried).
+- **"Czeka N piosenek gości":** `updateGuestsWaiting`, counts playable rows (`?v=` + 11 characters) of the polled queue table; the plural
+  form by `Intl.PluralRules` — **`dashboard.html` has `lang="en"` hard-coded** (found here), so the language travels in `data-lang`.
+  A client-side count instead of a server endpoint was my choice (no new query, follows the 3 s poll). Scenario `guests-waiting`.
+- **Skipping a track (this round):** `V8`, `FallbackTrackStatus.SKIPPED`, `FallbackTrackCommandService.skipTrack`,
+  `POST /dj/dashboard/fallback-queue/skip`, ✕ on every row, "Skipped this round: M" in the caption. Design points I decided: the status
+  is new because `PLAYED` with a `played_at` would have broken the anchor of "shuffle off" (`ORDER BY played_at DESC` puts NULL first),
+  and `V2`'s check constraint had to be widened anyway; `requeuePlayedTracks` re-queues `PLAYED` and `SKIPPED` (one statement); skipping the
+  **last queued** track ends the round and starts the next at once (there is always a "next"), the skipped track at its end; skipping
+  writes nothing to the play log. Checked on a real PostgreSQL 18 (`s2p_skip`, `s2p_skip_up`, dropped): see 5.4 — including **V7 → V8
+  on existing data** and 159 skips + 360 hand-outs + moves/drops/shuffle flips/purge from three parties at once, no deadlock.
+  Scenario `skip-track`.
+
+**4. Retention of `song_requests`: 30 days from `requested_at`** (the owner's decision): `SongRequestRetentionService.purgeStaleRequests`
+(04:45), a bounded native delete (`SongRequestRepository.deleteRequestedBefore`: batches of 1000, each its own transaction, at most 200
+batches a night), `SongRequestEntity.MAX_AGE_DAYS`; "Data Retention" of `privacy.html` / `privacy_pl.html` corrected (**and I added a
+bullet for the playlist tracks and the play log — 30 days, true since V2/V7 and not on the page**). Checked on a real PostgreSQL
+(`s2p_purge`, dropped): 29 d 23 h kept / 30 d 1 h deleted, every decision, another party's rows and a NULL date left alone; 250 000 old
+rows: the first night deletes 200 000 (834 ms), the second the rest; a night with nothing to delete 4 ms; while requests are inserted and
+the queue fingerprint is read: no error, nothing recent lost; the account deletion still works. **No new index:** PostgreSQL 18 answers
+with a skip scan of `idx_party_decision_time` (1.9 ms for nothing to delete among 300 000 rows), and a forced sequential scan of 300 000
+rows took 155 ms. If production runs an older PostgreSQL it is the sequential scan — fine for this table.
+
+**5. NOT built — the Auto-Pilot hint and the IFrame-API message** (the prompt: only after the friend's steps are reproduced on a fresh
+party on the owner's phone; the owner was not there). Instead the harness has **three scenarios that state what each suspected state
+looks like today** (`scenarios/silent-states.js`; they pass and are meant to be changed when something is built): `silent-autopilot-off`
+(a new party: nothing is asked, nothing plays, no word about it — and switching Auto-Pilot on starts the music at once),
+`silent-iframe-api-blocked` (no player is made, nothing is asked, ⏭ silently does nothing, no message), `silent-lease-elsewhere` (the banner
+shows; nothing is asked). **A question for the owner is in "Next", 2** — asked at the end of the session; the owner's answer: wait for the
+phone test, build nothing yet.
+
+**6. Added afterwards, the same day — two back buttons in a window that does not play** (the owner, after trying ⏮ from the phone:
+"wstecz nie jest intuicyjne; czy możemy mieć 2 przyciski na odtwarzaczu niegrającym? Wstecz i od początku"). Read as: in the window
+that **does not play** (the phone as a remote) the single ⏮ with its rules (restart first, back on a second press within 20 s) is replaced
+by **⏮ Wstecz** (always the previous track) and **↺ Od początku** (the current track from the start); the window that plays keeps the
+single ⏮ — **my reading of "niegrającym"; if the owner meant every window, it is one line: `renderBackButtons` in `youtube-autopilot.js`
+(`remote = isPlayerDevice === false`) and the single button could go** (with `DOUBLE_PRESS_MS`, `restartedByBackJustNow` and their scenario).
+New commands `PlayerCommand.PREVIOUS_TRACK` and `RESTART` (`PREVIOUS` stays, accepted, for a page opened before); the script: `goToPreviousTrack`,
+`restartTrack`, `runCommandHere` (one dispatch for a press here and a command from another window — the old local code ended in
+`else resumeHere()`), `renderBackButtons`; `fragments/player-controls.html` has the two buttons hidden (`d-none`) until the window learns it does not
+play; messages `dashboard.player.back.title`, `dashboard.player.restart`, `dashboard.player.restart.title` (by script) and the tooltip of the
+single ⏮ lost its last sentence ("in a window that does not play the command is sent on"). Decisions: RESTART of a **paused** track keeps it
+paused; RESTART when the track **ended** with Auto-Pilot off plays it again from the timeline; "Wstecz" with nothing older restarts the
+track (like the single ⏮). Four scenarios (`scenarios/back-and-restart.js`; two mutations tried: without `renderBackButtons` the buttons do not swap, and with
+`PREVIOUS_TRACK` routed through the single ⏮'s rules it restarts after 30 s instead of going back) and nine unit tests (`PlayerControlsFragmentTest`,
+`DjPlayerLeaseControllerTest`, `PlayerLeaseServiceTest`); the stand-in got `commandStatus`. Tried by the owner on the phone: "działa" (2026-09-30). The suite is now 425 tests
+(1 skipped) and 19 browser scenarios, all passing.
+
+**Files changed** (all in the commit pair `8248f9c` + docs): `AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `PROJECT_CONTEXT.md`, this file; main:
+`DjFallbackQueueController`, `SongRequestEntity` (a constant), `FallbackQueueView` (+ `skipped`, a 5-argument constructor kept),
+`FallbackTrackStatus`, `FallbackTrackRepository`, `SongRequestRepository`, `FallbackQueueService`, `FallbackTrackCommandService`,
+**new** `SongRequestRetentionService`, **new** `db/migration/V8__fallback_track_skipped.sql`, `messages*.properties`, `dashboard.js`,
+`youtube-autopilot.js`, `dashboard.html`, `fragments/fallback-queue.html`, `fragments/player-controls.html`, `PlayerCommand`, `privacy.html`, `privacy_pl.html`; tests: `DjFallbackQueueControllerTest`,
+`FallbackQueueServiceTest`, `FallbackTrackCommandServiceTest`, `FallbackQueueFragmentTest`, `PlayerControlsFragmentTest`, `DjPlayerLeaseControllerTest`, `PlayerLeaseServiceTest`, **new**
+`SongRequestRetentionServiceTest`, `DashboardPageRenderTest`, `PlayLogFixtureRecorderTest`; **new** `src/test/browser/`. **`V8` is new: the
+owner's local database applies it at the next restart** (after that the local `scan2play` has `fallback_track_status_check` with `SKIPPED`;
+nothing else changes there). The first production deploy: the Flyway checklist of Section 10 is unchanged.
+
+**What was checked and what was not.** Checked: 425 unit tests (`BUILD SUCCESS`, in a scratch copy); 19 browser scenarios (all pass; the
+control fails as it must); V8, the skip and the purge against real PostgreSQL databases (all dropped, the owner's `scan2play` untouched —
+the recorder and the scratch tests were pointed only at `s2p_*` databases); the recorder's recipe from the README run verbatim. **Not
+checked:** anything on a real device or with the real YouTube player (sound, the real events between two videos, the autoplay policy);
+the messages in the real dashboard behind the login (the render test and the scenarios use the real templates and bundles, not the
+running app); the skip and the import result by the owner's hands; the smooth scroll; the browser tests in CI (there is none); the first
+production deploy with `V8`; the purge on the production database (it runs at 04:45 after the deploy).
+
+**Two things that went wrong, for the record.** (1) A `Write` of a scratch file with a relative path (`..\..\Users\…`) resolved on drive
+**D:** and created an empty directory tree `D:\Users\lasut\AppData\Local\Temp\claude\…` (the file in it was deleted at once; the tool refuses
+to delete the protected directory `D:\Users`, so the empty skeleton is left — **delete `D:\Users` by hand**). (2) The command checker
+misread a harmless `Remove-Item Env:\PGDATABASE` in a PowerShell command (a blocked "system path") — nothing ran; the call was repeated
+without that line (every `psql` here passes `-d postgres`, so the variable need not be unset).
 
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
@@ -756,58 +890,47 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-Updated 2026-09-29, after the owner answered the suggestions made at the end of the play-log session.
+Updated 2026-09-30, at the end of the fifth session (the one of "The session of 2026-09-29/30").
 
 1. **The owner's own small steps**
-   - **Push.** `dev` is 8 commits ahead of `origin/dev` (the two of "Follow-up", the two of "Follow-up 2", the two of "Follow-up 3", the wake lock and the docs of the session that followed); they wait for the
-     owner's word. The owner has tried the play log on the phone (2026-09-29): ⏮ / ⏭ across a loop works — see item 2 for the two remarks.
+   - **The work of the fifth session is committed** (code `8248f9c`, then the docs — one pair, because the parts share files:
+     `dashboard.js`, `youtube-autopilot.js`, the message bundles, `PROJECT_CONTEXT.md`). Of the things in it the owner has tried only the
+     two back buttons so far ("działa"); the rest is in the "Try on the phone" item below.
+   - **Push.** `dev` is 10 commits ahead of `origin/dev` (the two of "Follow-up", the two of "Follow-up 2", the two of "Follow-up 3", the wake lock and the docs of the session that followed, and the pair of the fifth session); they wait for the
+     owner's word.
+   - **Try on the phone** — real devices are still not covered: ✕ on a row of "up next" (and what the list and the "Skipped this round"
+     say afterwards); Save with a private playlist and with a wrong link (the red line); "Czeka N piosenek gości" while a guest song
+     is queued; the pause button while ⏮ rewinds; ⏭ after saving another playlist; the two back buttons on the phone with the computer
+     playing ("Wstecz", "Od początku") — **tried, "działa"** — and whether the single ⏮ on the computer still feels right; the 20 s window of the second ⏮ now matters only at the computer.
    - **`YOUTUBE_API_KEY`: rotated by the owner on 2026-09-29** (a new key put in the IntelliJ run configuration and in Railway). Still to do: **delete the old key** in Google
      Cloud Console → APIs & Services → Credentials → *API keys* once nothing uses it, and check that the new one is restricted to the YouTube Data API v3. A restriction alone would not have
      helped: a key that was pasted into a chat can still spend the YouTube quota. The page the owner showed on 2026-09-29 was a different thing — the *OAuth client secrets* (`GOOGLE_CLIENT_SECRET`; `****pfTe` enabled,
      created 10.03.2026, and `****IgiS` disabled, created 31.03.2026): nothing is known to have leaked there; the disabled one cannot authenticate, so it can be deleted
      to silence Google's "more than one secret" warning, but the enabled one must stay the one the app uses.
    - **Local `main` and the wake lock:** see "Open items", 1.
-2. **The next session with code** (proposed order; the owner agreed to all of it, except where it says otherwise):
-   - **Two remarks from trying ⏮ / ⏭ on the phone.** (a) After ⏮ there is very little time to press it a second time so that the song goes back to the previous track: the
-     window is `DOUBLE_PRESS_MS` = 10 s in `youtube-autopilot.js`, and from another window two presses are at least ~3.5 s apart because of the disabled button and the report
-     interval. **Decided by the owner: 20 s** (30 s was suggested) — to be changed in the places that must stay equal: the constant, the tooltip `dashboard.player.previous.title` (PL and EN, "10 seconds" —
-     the message files are edited by script, see `CLAUDE.md`), `PlayerControlsFragmentTest`, and the mentions of 10 s in `PROJECT_CONTEXT.md` Section 5.4 and Section 14, stage 4. (b) When the rewind takes longer the pause
-     button sometimes says "Wznów" instead of "Pauza": most likely the window that plays reports `playing = false` while the player is between two videos (`isPlaying()` counts
-     only PLAYING and BUFFERING; after `loadVideoById` the state can be UNSTARTED / CUED for a moment). A fix would count "a track is being loaded" (`isLoadingSong`) as playing, both for the
-     button of the window that plays and in the `playing` value of its lease reports. The owner: a small fix, do it. The fake player of the browser harness must be able to stay in UNSTARTED / CUED
-     for a while, otherwise the check proves nothing.
-     (c) **A rough edge the owner noticed (2026-09-29; "not sure it is a problem"):** with one playlist, ⏮ several tracks back, then the playlist is changed — ⏭ has to be pressed through all the old tracks
-     before the new playlist starts. It is the designed "⏭ retraces the steps" (`playingFromHistory`, "Follow-up") and nothing clears it when the playlist changes: `updateFallbackSource()` and the lease
-     check (`dropStaleBackgroundTrack`) only touch a *background* track, and a track that came back through ⏮ is deliberately not one. The retrace makes sense for a guest song that was never
-     re-queued, not for the tracks of a playlist the DJ has just left. Suggested: when the current playlist changes (the window where the DJ saved it: `updateFallbackSource`; other windows: a new
-     `fallbackPlaylistId` in a lease answer, so remember the last one seen) clear `playingFromHistory`, so that ⏭ asks `next-track` at once and the new playlist starts; the running old track is not
-     interrupted (like a guest song). The old playlist's plays stay in the history (the owner's decision), so ⏮ from the new playlist still goes back into the old one. Confirm with the owner.
-   - **The Auto-Pilot hint and the IFrame-API message — first reproduce, then build.** The owner: it needs testing, because the friend clicked many things. The cause below is a
-     hypothesis from her screenshot; do not build on it before her steps are reproduced on a fresh party (a phone through `https://dev.scan2play.com.pl`): Auto-Pilot off (a new party
-     starts with `PlaybackMode.MANUAL`), the YouTube IFrame API blocked (ad blocker, Brave shields), and the player lease held by another window (the banner). Background: a new
-     party starts with Auto-Pilot off and with it off nothing starts by itself (stage 4 of Phase 2); her screenshot showed the first playlist track still marked "Następny" with 120 left in
-     the round, i.e. the window had never asked `next-track` — which fits all three. Proposed: a hint next to the player while Auto-Pilot is off, with a button to switch it on, and a
-     message when the IFrame API does not load (today that failure is silent). Not proposed: making AUTO the default — it also applies to Spotify parties, where AUTO puts accepted
-     songs straight into the Spotify queue.
-   - **Purge `song_requests` by age** — the owner: "możemy czyścić". Open item 5 has the reason. Proposal to confirm with the owner: 30 days from `requested_at` (the table has no
-     fetch time), a scheduled job in the style of `purgeStaleTracks`, and the "Data Retention" of `privacy.html` / `privacy_pl.html` saying 30 days instead of "the duration of the party
-     session". It also means the guests' part of the history reaches back 30 days at most, like the playlist's.
-   - **Browser tests into the repo** — the owner: "możesz dać do repo". What existed (built twice by now, kept only in a scratch directory each time): a scratch JUnit test that renders the real
-     `dashboard.html`; a Python stand-in server (standard library only) that serves it with the real `static/js` and `static/css` and replays answers; a fake `YT.Player` that also keeps the real
-     `iframe_api` script from loading (it intercepts `document.head.appendChild`); scenarios that run inside the page (`?scenario=NAME&mode=...`) and POST their verdict to the stand-in,
-     which writes a file; and, for the play log, a fixture of the *real* `next-track` / `recent-tracks` answers recorded from the real services on a real PostgreSQL. Proposed shape: a
-     directory under `src/test` with the stand-in, the fake, the scenarios and the fixture (with a note how to record it again), the render test as an ordinary unit test that writes into
-     `target/`, and a small runner that copies the repo to a scratch directory (`CLAUDE.md`: never `mvnw` inside the repo), renders, starts the stand-in and opens the scenarios in a headless system
-     Chrome — no new dependency, no Node. Check first that headless Chrome runs on the owner's machine and that the page's Bootstrap from the CDN is not needed offline. Scenarios worth keeping:
-     ⏮ / ⏭ across a loop (with the old-style-keys control, which must fail), the lease, pause, the tabs — and one for each small JS fix above (the 20 s window, "Wznów" while a track loads,
-     ⏭ after the playlist changed), so it is best to build the suite first or together with them.
-3. **Polish — the owner wants it in the next session (2026-09-29):** the three items below; do (c) — the import result — first, it is the most useful.
-   (Explained to the owner on 2026-09-29:) (a) skip / remove a track from the "up next" list (today it can only be moved; a design point: for this round only, or
-   from the playlist for good); (b) a line "Czeka N piosenek gości" — the first playlist track is badged "Następny" although waiting guest songs play first; (c) show the result of the playlist import
-   (`X-Fallback-Import: ok|failed` and `X-Fallback-Import-Reason` are sent, the dashboard ignores them and always flashes the Save button green — so a private or wrong playlist ends in an
-   empty list without a word; the most useful of the three, and the same kind of silent failure as the Auto-Pilot one). Also optional: remove `GET /dj/dashboard/next-guest-track` and its tests,
-   which nothing calls any more.
-4. **Production.** The owner: at the next go-live. Then the Flyway checklist ("Open items", 3) comes first, and `dev` → `main` is the next real decision — the owner does **not** want to merge yet (2026-09-29).
+   - **Delete `D:\Users`** (an empty directory tree created by a mistaken relative path of the fifth session; the tool would not delete it).
+2. **The next session with code**
+   - **The Auto-Pilot hint and the IFrame-API message — WAITING FOR THE OWNER'S ANSWER; do not build on the hypothesis.** The
+     hypothesis (from the friend's screenshot: the first playlist track still "Następny" with 120 left, i.e. the window never asked
+     `next-track`): a new party starts with Auto-Pilot off and with it off nothing starts by itself; the YouTube IFrame API may be blocked
+     (an ad blocker, Brave shields) and that failure is silent; another window may hold the player lease (that one has a banner).
+     The harness now shows what each state looks like **today** (`silent-autopilot-off`, `silent-iframe-api-blocked`,
+     `silent-lease-elsewhere` — Section "The session of 2026-09-29/30", 5): all three are silent except the lease one. What is
+     needed from the owner: **try the friend's steps on a fresh party on the phone (`https://dev.scan2play.com.pl`) — with Auto-Pilot
+     off, with the IFrame API blocked, and with a second window holding the lease — and say which one it was** (or that none of them
+     reproduces it). Proposed, unchanged: a hint next to the player while Auto-Pilot is off, with a button that switches it on, and a
+     message when the IFrame API does not load (the script has no handler for the failed load of `iframe_api`; the fake can imitate it:
+     `fake.blockApi`). Not proposed: making AUTO the default — it also applies to Spotify parties, where AUTO puts accepted songs
+     straight into the Spotify queue. When something is built, change the last step of the matching `silent-*` scenario.
+   - **More scenarios** for what has none: the lease takeover (two windows: the banner, "play on this device" and its confirmation, the
+     old window stops, the release on `pagehide`), the lists (search, filters, "Show more", the scroll position across a poll), the three
+     tabs, the History tab. Optionally the browser tests in CI (they need Java, Python and Chrome on the runner; today nothing runs them
+     but a person).
+   - Optional: `dashboard.html` has `lang="en"` hard-coded, whatever the locale (found while building the guests line): it should
+     follow the language (screen readers, the browser's own translation, hyphenation). And remove `GET /dj/dashboard/next-guest-track` and its
+     tests, which nothing calls any more.
+3. **Polish — done** in the fifth session (the import result, "Czeka N piosenek gości", skipping a track for this round): see its section.
+4. **Production.** The owner: at the next go-live. Then the Flyway checklist ("Open items", 3) comes first — with `V8` in it (it replaces the check constraint of `fallback_track`; the first production deploy applies V2 to V8 in one go) — and `dev` → `main` is the next real decision — the owner does **not** want to merge yet (2026-09-29).
 5. **Parked idea: a "music only" checkbox that skips the intro of a music video** (asked 2026-09-29, checked, the owner decided not to build it now). Feasible, not free: no library derives it from the
    audio — the IFrame API gives no access to it and downloading it is against the API policy (III.I.7) — but **SponsorBlock** has a category `music_offtopic` ("Non-Music Section", music videos only)
    and a public API: `GET https://sponsor.ajay.app/api/skipSegments?videoID=<id>&category=music_offtopic` answers a list of `{segment: [start, end], votes, locked, ...}` and 404 for a video without data. Six
@@ -839,10 +962,13 @@ Updated 2026-09-29, after the owner answered the suggestions made at the end of 
 3. **First production deploy** of Flyway: backup, compare `pg_dump --schema-only` with `V1__baseline.sql`
    (checklist in `PROJECT_CONTEXT.md`, Section 10). The production schema has never been checked against `V1`. The owner: when going to production again.
 4. Spotify locally: see the stash above; the Spotify Developer Dashboard also needs the redirect URIs.
-5. **`song_requests` has no retention by age** (found 2026-09-29, while deciding the retention of the play log). Only the account
-   deletion removes them, while `privacy.html` says "Song requests: stored for the duration of the party session" — the text and the code
-   disagree. And `song_requests.track_url` holds YouTube URLs with video IDs that came from the search API (YouTube API data, at most 30
-   calendar days by the API Services Developer Policies III.E.4.d, see "Follow-up 3"). **Decided by the owner (2026-09-29): purge them** — see "Next", 2, for the proposal; not built yet.
+5. **`song_requests` had no retention by age — fixed, awaiting review** (found 2026-09-29, while deciding the retention of the play log). Only the account
+   deletion removed them, while `privacy.html` said "Song requests: stored for the duration of the party session" — the text and the code
+   disagreed. And `song_requests.track_url` holds YouTube URLs with video IDs that came from the search API (YouTube API data, at most 30
+   calendar days by the API Services Developer Policies III.E.4.d, see "Follow-up 3"). **Decided by the owner (2026-09-29): purge them — BUILT
+   2026-09-30** (30 days from `requested_at`, `SongRequestRetentionService`, the privacy pages corrected; see "The session of 2026-09-29/30", 4 —
+   committed, not pushed). What the owner may still want to look at: the privacy pages now also say that the playlist
+   tracks and the play log are deleted after 30 days (a bullet added, true since V2 / V7 and not on the page before).
 
 ## History — first session (2026-09-28, remote Claude Code)
 

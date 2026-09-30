@@ -32,5 +32,10 @@
   `FallbackTrackRepository`, run a throw-away `@SpringBootTest` in the scratch copy (not in the repo) with `PGDATABASE=s2p_...`
   and dummy `GOOGLE_AI_API_KEY`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`;
   startup runs Flyway and Hibernate validation. Drop the database afterwards.
+- **Browser tests** (`src/test/browser`, guide in its `README.md`): `python src/test/browser/run.py` runs the real
+  `youtube-autopilot.js` / `dashboard.js` on the real rendered dashboard in a headless Chrome. It copies the repo to a work directory
+  (`%TEMP%\scan2play-browser-tests`) and runs Maven there — never in the repo — so it is safe while the app runs. `--no-render`
+  skips Maven (a quick loop while editing scenarios). A new behaviour of those scripts gets a scenario, seen red before green. The
+  fixture of real answers is recorded by `PlayLogFixtureRecorderTest` against a throw-away `s2p_*` database (README).
 - **Secrets:** never write API keys or passwords into the repo, docs or memory. If one shows up in a chat or a
   screenshot, tell the owner to rotate or restrict it.
