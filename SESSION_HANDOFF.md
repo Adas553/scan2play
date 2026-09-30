@@ -1056,6 +1056,24 @@ on a real PostgreSQL).
   party comes from the DJ's session. The redirect URI is the production one, so this cannot be tried locally.
 - Tests: **442** (441 run, 1 skipped; 11 new: `SongEvaluationServiceTest` 3, `YouTubeMusicProviderTest` 2, `SpotifyAuthControllerTest` 4,
   `DjServiceTest` +1, `AccountDeletionServiceTest` +1), `BUILD SUCCESS` in a scratch copy; **29 browser scenarios**, all passing.
+- **Afterwards, the resume after a reload (UNCOMMITTED, for review).** The owner tried the Gemini timeout (with 1 ms the guest saw "AI
+  offline"; with 10 s it works) and then asked about a reload with Auto-Pilot on: it loaded the next track, which did not sound. That
+  morning the owner had decided to leave it; on the answer (each reload used up a track — `next-track` marks it played as it hands it out,
+  and the browser refuses sound in an untouched page) they said "to zmień to". Built: on the first track after a page load the window that
+  plays brings back the newest entry of `recent-tracks` (from its start, if it started at most 10 min ago) instead of asking `next-track`
+  — `resumeLastTrack` in `youtube-autopilot.js`; not with Auto-Pilot off, and a ▶ track loaded first ends it. The owner tried it ("działa")
+  and reported that "play on this device" still gave the next song — the first version had left a takeover out on purpose (my guess that
+  the DJ taking over wants the music to move on — wrong, and not asked); now a TAKE_OVER that succeeds brings back the last track as well.
+  `RecentTrack` got `secondsAgo` (the server's clock). New `scenarios/resume.js` (6): the resume scenarios are red on the old script
+  (reload) and without the TAKE_OVER line (takeover); the Auto-Pilot-off one red when its guard is removed. **443** unit tests, **36**
+  scenarios, all green. **Then the owner: "czasem działa, czasem nie", and the old device's YouTube player could still be played after a
+  takeover.** (1) A race: a WATCH report sent while the TAKE_OVER was in flight is answered holder too (the server has moved the lease);
+  when its answer came first the window asked `next-track`, and the TAKE_OVER's answer was then dropped as older — so the resume, set only
+  on that answer, was lost. Now the press sets `takeOverPending` and the first answer that makes the window the holder resumes (scenario
+  `resume-on-takeover-when-a-watch-answer-comes-first`, the WATCH answer delayed so it wins: red before — it played the next track —
+  green now, three runs in a row). (2) In a window that does not hold the lease PLAYING / BUFFERING of its own YouTube player is stopped at
+  once (`old-window-cannot-play-after-takeover`, red before). **38** scenarios, all green. Not tried on a phone yet. Files: `youtube-autopilot.js`, `RecentTrack`, `DjPlayerLeaseController` (+ test), `resume.js`, `server.py` (a
+  comment), `PROJECT_CONTEXT.md` (5.4, 6.8, 12, 13), this file.
 - Commits: code `57d3def`; then the caption fix of the "up next" list above (`b00feec` — it had been waiting uncommitted since before this
   session, and the owner said to commit it too); then the docs (`PROJECT_CONTEXT.md`, this file, `REVIEW.md`). **Not pushed.**
 
