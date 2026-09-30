@@ -11,7 +11,11 @@ first session (2026-09-28, remote) is summarised at the bottom.
   with its tests, and wrote **a GitHub Actions workflow for the browser tests** (not run on GitHub yet). The Auto-Pilot hint / IFrame message
   are still **not built**: the owner tried the friend's steps on another laptop and they worked; they will ask her again. **All of it — and
   item 7 of the fifth session, which the same files carry — is COMMITTED as one more pair (code `50558eb`, then the docs) on the owner's
-  "ok, commituj"; NOT pushed: `dev` is 12 commits ahead of `origin/dev`** (`git status -sb`: `dev...origin/dev [ahead 12]`).
+  "ok, commituj".** The same day, on the owner's "jak jest to łatwe to możesz to zrobić", `lang` was declared on the six other pages that use the
+  bundles too (`HtmlLangDeclarationTest`; `terms` / `privacy` need none — section "The other pages' `lang`"; code `41cbafb`, then the docs), and the
+  owner's wish for a whole-project review session went into "Next", 2. **PUSHED on the owner's "ok, to pushuj"** (2026-09-30, after the
+  owner had seen the summary): `git status -sb` should show `dev...origin/dev` with nothing ahead. **The push started the browser-tests workflow on
+  GitHub for the first time — look at that run** (see "Next", 1, "Push").
 - **The fifth session (2026-09-29/30) — see "The session of 2026-09-29/30" below.** In short:
   the browser tests are now **in the repo** (`src/test/browser`, `python src/test/browser/run.py`), the three small JS fixes (and, added
   later that day at the owner's request, two buttons "Wstecz" / "Od początku" in a window that does not play — its section, 6) and the
@@ -112,8 +116,8 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: **426** tests (425 run, 1 skipped — the fixture recorder) after the sixth session (2026-09-30: 429 before it, minus the six tests of the
-  removed `next-guest-track` endpoint, plus three of `DashboardPageRenderTest`; counted in a scratch copy, `BUILD SUCCESS`) and **27 browser scenarios**
+- Tests: **430** tests (429 run, 1 skipped — the fixture recorder) after the sixth session (2026-09-30: 429 before it, minus the six tests of the
+  removed `next-guest-track` endpoint, plus three of `DashboardPageRenderTest` and four of `HtmlLangDeclarationTest`; counted in a scratch copy, `BUILD SUCCESS`) and **27 browser scenarios**
   (19 before). The next bullet's numbers are those of the fifth session (**429** tests, 428 run, 1 skipped, with the work of the 2026-09-29/30 session — 386 before it; the rest of
   this bullet describes the earlier runs)
   (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
@@ -894,7 +898,7 @@ The state at the start was as the prompt said: `dev...origin/dev [ahead 10]`, ti
 files of item 7 of the fifth session (checked with `git status -sb` and `git log --oneline -6`). Nothing was pushed, reset or stashed; the work
 was left uncommitted for review in IntelliJ and, on the owner's "ok, commituj", **committed as one pair — code `50558eb`, then the docs — with
 item 7 of the fifth session in it** (its files are the same ones: the message bundles, `DashboardPageRenderTest`, this file, `PROJECT_CONTEXT.md`);
-not pushed, `dev` is 12 ahead of `origin/dev`.
+pushed later that day (see "Start here").
 
 **The two questions asked at the start** (`AskUserQuestion`): (1) *were the friend's steps reproduced on a phone, and which state was it?* — the
 owner: "zrobiłem to na innym laptopie i zadziałało. Musiałbym koleżankę jeszcze raz poprosić. Dam znać" — so **nothing was built** for the
@@ -934,9 +938,10 @@ and brings its part under the bar — the smooth scroll —, History loads once,
 escapes; added by a script that keeps the CRLF). **Not `${#locale.language}`** — my choice, and the reason: this app has no `messages_en`, so a
 German (or any other) browser gets the *default* bundle, the English texts, while `#locale.language` says `de`; the bundle that wrote the texts
 is the only thing that always agrees with them. `DashboardPageRenderTest` pins it (Polish, English, and German → English texts and `lang="en"`),
-`page-language` was red before the fix (it said `en` over Polish texts) and `page-language-en` covers the other side. **The eight other templates
-still have `lang="en"`** (`landing`, `index`, `history`, `result`, `error`, `party_ended`, `terms`, `privacy`; the `_pl` legal pages have `pl`):
-the owner named only the dashboard — see "Next", 2. `data-lang` on the guests line was left alone (it works, and both say the same).
+`page-language` was red before the fix (it said `en` over Polish texts) and `page-language-en` covers the other side. **The other templates were left
+for the moment** (the owner named only the dashboard) — and later the same day done, see "The other pages' `lang`" below; this paragraph first said
+"the eight other templates" — that was wrong: `terms` and `privacy` have their text written in, one file per language, so their `lang` was
+right already. `data-lang` on the guests line was left alone (it works, and both say the same).
 
 **3. `GET /dj/dashboard/next-guest-track` removed**: the method of `DjDashboardController` (and its now unused import), and
 `DjDashboardControllerNextGuestTrackTest` (six tests — the file is deleted from the working tree, so it shows as ` D`; it stays in git
@@ -953,7 +958,7 @@ ends the wait after a few seconds (before: the whole 90 s timeout, for each of 2
 `sh mvnw -v` works in Git Bash, `run.py --no-sandbox` passes on Windows. What was not: the Linux branch of `run.py` as a whole, the runner's Chrome,
 the action versions (`checkout@v4`, `setup-java@v4`, `setup-python@v5`, `upload-artifact@v4` — written from memory, not looked up).
 
-**What was checked and what was not.** Checked: **426 unit tests, `BUILD SUCCESS`** (a scratch copy, `%TEMP%\scan2play-unit`; 425 run, 1 skipped);
+**What was checked and what was not.** Checked (before "The other pages' `lang`", below, which changed the count to 430): **426 unit tests, `BUILD SUCCESS`** (a scratch copy, `%TEMP%\scan2play-unit`; 425 run, 1 skipped);
 **27 browser scenarios all pass** (a full run, then `tabs` again after its last step was added, and the eight new ones twice more); 17 mutations
 killed; `page-language` red before green. **Not checked:** the workflow on GitHub (above); anything on a real device; the look of anything in
 the built-in browser (nothing changed visibly; `tabs` measures positions and scrolling, not how anything looks); the running app's dashboard
@@ -972,6 +977,21 @@ code that already works is checked by breaking that code in a copy, never in the
 `NextGuestTrackResponse` (comments and the removed endpoint), `templates/dashboard.html`, `messages.properties`, `messages_pl.properties`;
 `src/test`: `DashboardPageRenderTest`, `DjDashboardControllerNextGuestTrackTest` (deleted); `PROJECT_CONTEXT.md` (5.4, 6.8, 12, 13, 14),
 this file. No migration.
+
+**The other pages' `lang` (the same day, after the pair above was committed; then committed — code `41cbafb`, then the docs — and pushed with the rest).** The owner: "jak jest to łatwe to
+możesz to zrobić". Six pages got `th:lang="#{html.lang}"` next to their `lang="en"`: `landing`, `index`, `history`, `result`, `error`,
+`party_ended` (`templates/*.html`; the history *fragment* that the dashboard loads has no `<html>` tag). **Not `terms` and `privacy`** —
+the earlier "eight templates" was my mistake, found by counting the message keys per template: those two have none, their text is written
+into the file, and `LegalController` serves `terms_pl` / `privacy_pl` (`lang="pl"`) to a Polish browser and the English file to everyone
+else, so the language of the *file* is the right one and `lang="en"` is correct as it stands. New `HtmlLangDeclarationTest` (4 tests): every
+page of `templates/` that contains `#{` has the declaration (and the scan must have found the seven pages — a scan that found none would pass
+in silence), the legal pages have none and use no keys, each bundle names its language (Polish, English, and English for a German locale),
+and `party_ended` and `error` are rendered in Polish, English and German. The other four pages need a model (`index`, `history`, `result`,
+`landing`'s `param`) and are covered by the scan, not by a render — the attribute is the same one that `DashboardPageRenderTest` renders
+for the dashboard. Checked that the test can go red: with `th:lang` taken out of `landing.html` in a scratch copy it fails and names
+`landing`. **430 unit tests** (429 run, 1 skipped), `BUILD SUCCESS`. Not run: the browser scenarios (nothing they use changed; `history.html`'s
+fragment is unchanged), nothing on a phone. Files: the six templates, `HtmlLangDeclarationTest` (new), `PROJECT_CONTEXT.md` (Sections 13 and 14),
+this file — which also got the "whole project" session in "Next", 2 (asked for by the owner in the same message).
 
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
@@ -1007,10 +1027,11 @@ Updated 2026-09-30, at the end of the sixth session (the one of "The session of 
    - **The work of the fifth session is committed** (code `8248f9c`, then the docs — one pair, because the parts share files:
      `dashboard.js`, `youtube-autopilot.js`, the message bundles, `PROJECT_CONTEXT.md`). Of the things in it the owner has tried only the
      two back buttons so far ("działa"); the rest is in the "Try on the phone" item below.
-   - **Push.** `dev` is 12 commits ahead of `origin/dev` (the two of "Follow-up", the two of "Follow-up 2", the two of "Follow-up 3", the wake lock and the docs of the session that followed, and the pairs of the fifth and the sixth session); they wait for the
-     owner's word. **The first push that contains `.github/workflows/browser-tests.yml` starts the workflow on GitHub — the first time it
-     runs anywhere but on a developer's machine** (it was written without being able to run it): look at that run; the verdicts of a
-     failed one are kept as an artifact (`browser-test-verdicts`). If it is red on the runner and green here, the suspects are the Chrome
+   - **Pushed (2026-09-30, on the owner's "ok, to pushuj")**: all the commits that had waited — the two of "Follow-up", the two of "Follow-up 2", the two of
+     "Follow-up 3", the wake lock and the docs of the session that followed, and the pairs of the fifth and the sixth session, and the `lang` pair.
+     **That push started the workflow `.github/workflows/browser-tests.yml` on GitHub — the first time it runs anywhere but on a developer's machine**
+     (it was written without being able to run it): **look at that run** (https://github.com/Adas553/scan2play/actions); the verdicts of a
+     failed one are kept as an artifact (`browser-test-verdicts`). What it shows decides the next step: the unit-test job is added only after it. If it is red on the runner and green here, the suspects are the Chrome
      flags (`--no-sandbox` is passed), the locale of the machine (a sort test must not depend on it; see the README) and timing.
    - **Try on the phone** — real devices are still not covered: ✕ on a row of "up next" (and what the list and the "Skipped this round"
      say afterwards); Save with a private playlist and with a wrong link (the red line); "Czeka N piosenek gości" while a guest song
@@ -1041,13 +1062,24 @@ Updated 2026-09-30, at the end of the sixth session (the one of "The session of 
      straight into the Spotify queue. When something is built, change the last step of the matching `silent-*` scenario.
    - ~~More scenarios (the lease takeover, the lists and their filters, the tabs, the History tab), the browser tests in CI, `lang="en"`
      of `dashboard.html`, the unused `GET /dj/dashboard/next-guest-track`~~ — **all four done in the sixth session** ("The session of
-     2026-09-30, the sixth", above). What they leave: the first run of the workflow on GitHub (item 1, "Push"); the eight other
-     templates that still have `lang="en"` written in (`landing`, `index`, `history`, `result`, `error`, `party_ended`, `terms`,
-     `privacy` — the same one-attribute fix with the `html.lang` key, and a render test each; `PROJECT_CONTEXT.md` Section 13 lists them);
+     2026-09-30, the sixth", above); the `lang` of the six other pages that use the bundles was done afterwards ("The other pages' `lang`").
+     What they leave: the first run of the workflow on GitHub (item 1, "Push");
      `data-lang` on the guests line could now be read from `document.documentElement.lang` instead of its own attribute (no need to, both
      say the same and a scenario pins that); no scenario runs **two** real windows (the lease scenarios script the server's answers);
      the unit tests run in no CI (the workflow could get a second job with `mvnw test "-Dtest=!Scan2playApplicationTests"`, no database
      needed).
+   - **A session for looking at the whole project — asked for by the owner (2026-09-30): readability, efficiency, scalability; where the weak
+     points are and what to improve.** Not started. Suggested shape: a read-only review first (a ranked list of findings with the file and the
+     reason, nothing changed), then the owner picks what to fix. Starting points the documents already name — not a complete list:
+     the fragments and the lease answers cost more the longer the playlist is (`FallbackQueueService.getVersion` reads up to 500 tracks per
+     lease report per window, "cache it for a couple of seconds if that ever matters"; the "up next" fragment is ~1 KB a row and the server
+     does not compress responses, `PROJECT_CONTEXT.md` Section 5.4 and Phase 3); everything that makes the app single-instance (Caffeine caches,
+     the in-memory player lease, session-based rate limiting — Section 13, "Scalability"); the 3 s polls (queue, lease, and the History
+     tab when open) multiplied by windows; the queries and their indexes (the history query's sort without an expression index, the purge,
+     `takeNextTrack`'s up to 10 attempts under the party lock); external calls (Gemini, the YouTube Data API: quotas, timeouts, what happens
+     when they are slow); security notes in Section 13 (no CSP, Spotify tokens in plain text); the size of `dashboard.js` (~1200 lines) and
+     `youtube-autopilot.js` (~800 lines) and how testable each part is; and what the tests do not reach (Section 13, "Testing"). A fresh
+     session is better for it than this one: it needs a clean context, and the repo should be committed (and pushed) first.
 3. **Polish — done** in the fifth session (the import result, "Czeka N piosenek gości", skipping a track for this round): see its section.
 4. **Production.** The owner: at the next go-live. Then the Flyway checklist ("Open items", 3) comes first — with `V8` in it (it replaces the check constraint of `fallback_track`; the first production deploy applies V2 to V8 in one go) — and `dev` → `main` is the next real decision — the owner does **not** want to merge yet (2026-09-29).
 5. **Parked idea: a "music only" checkbox that skips the intro of a music video** (asked 2026-09-29, checked, the owner decided not to build it now). Feasible, not free: no library derives it from the
