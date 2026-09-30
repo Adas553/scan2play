@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -323,6 +324,20 @@ class DjPlayerLeaseControllerTest {
                 .andExpect(jsonPath("$[1].key").value("G:42"))
                 .andExpect(jsonPath("$[1].source").value("GUEST"))
                 .andExpect(jsonPath("$[1].videoId").value("hTWKbfoikeg"));
+    }
+
+    @Test
+    @DisplayName("recent-tracks: each entry says how many seconds ago it started, by the server's clock (for the resume after a reload)")
+    void shouldSayHowLongAgoEachRecentTrackStarted() throws Exception {
+        HistoryEntry justNow = new HistoryEntry(Source.BACKGROUND, 7L, LocalDateTime.now().minusSeconds(90), "Now",
+                "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ", null, "played", null, null);
+        when(historyService.getRecentlyPlayed(PARTY, 30)).thenReturn(List.of(justNow));
+
+        String json = mockMvc.perform(get("/dj/dashboard/recent-tracks").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        long secondsAgo = com.jayway.jsonpath.JsonPath.<Number>read(json, "$[0].secondsAgo").longValue();
+        assertThat(secondsAgo).isBetween(90L, 120L);
     }
 
     @Test

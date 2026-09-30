@@ -11,7 +11,9 @@
  * error. The call is NOT read-only (a background track is marked PLAYED as it is handed out), so
  * it is never used to poll. Consequences, by design: a guest song that arrives while a track is
  * playing waits for it to end, and a paused player is left alone — a pause is the DJ's choice.
- * With Auto-Pilot off nothing starts by itself when a track ends.
+ * With Auto-Pilot off nothing starts by itself when a track ends. After a reload, and in a window that has just taken playback
+ * over from another device, the first track is the one that played last (from its start, if it started within 10 minutes), not
+ * the next one — see resumeLastTrack.
  *
  * Only ONE dashboard window plays (PROJECT_CONTEXT.md Section 5.4, "One window plays"). Every open dashboard has
  * its own player, and a second one — the DJ peeking from a phone — would take tracks off the queue that the first
@@ -84,6 +86,17 @@
     // MAX_IMMEDIATE_RETRIES errors: the next lease report (every 3 s) asks again. Nothing else would — the dashboard's poll asks
     // only when the guest queue has changed, so an idle player stayed silent until a guest added a song.
     let askAgain = false;
+    // Resume the track that played last (the owner's decisions 2026-09-30): after a reload, and after "play on this device", the
+    // first track this window plays by itself is the one that played last — the newest entry of the server's timeline, if it started
+    // at most RESUME_WITHIN_SECONDS ago — from its start, instead of the next one. Asking next-track then used up a track (it is marked
+    // played when handed out): at load nobody heard it (the browser refuses sound in a page nobody has touched, so it was only
+    // loaded), and a takeover skipped the track the other device was playing. Only for that first track: any load clears it
+    // (loadIntoPlayer), and so do a page loaded with Auto-Pilot off and an answer that another window plays; "play on this device"
+    // sets it again once this window holds the lease (takeOverPending, applyLease).
+    let resumeLastTrack = true;
+    // "Play on this device" has been pressed and no answer has made this window the holder yet (applyLease).
+    let takeOverPending = false;
+    const RESUME_WITHIN_SECONDS = 600;
     // Which window plays (see the file header): null = the server has not answered yet, true = this window plays,
     // false = another window or device does. Tracks are asked for only while it is true.
     let isPlayerDevice = null;
@@ -221,6 +234,15 @@
     // ---- Event Handlers ----
 
     function onPlayerStateChange(event) {
+        // Only the window that holds the lease makes sound. The YouTube player of another window still has its own play button:
+        // pressed there, the video is stopped at once (the banner offers "play on this device" instead).
+        if (isPlayerDevice === false
+                && (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.BUFFERING)) {
+            player.stopVideo();
+            playerState = -1;
+            updatePauseButton();
+            return;
+        }
         playerState = event.data;
         updatePauseButton();
         // Say at once that the music started or stopped, instead of at the next 3 s report: a window that does not
@@ -268,6 +290,7 @@
     let trackLoads = 0;
 
     function loadIntoPlayer(videoId) {
+        resumeLastTrack = false;
         trackLoads++;
         loadStartedAt = Date.now();
         player.loadVideoById(videoId);
@@ -326,10 +349,24 @@
     /** Main entry point — called by polling, on player ready, on ENDED and after a player error. */
     async function tryAutoPlay() {
         if (isPlayerDevice !== true || !playerReady || !player || isLoadingSong || tryAutoPlayInFlight) return;
-        if (!isAutoPilotOn() || !isPlayerIdle()) return;
+        if (!isAutoPilotOn()) {
+            resumeLastTrack = false; // Auto-Pilot off: switching it on later starts from the queue
+            return;
+        }
+        if (!isPlayerIdle()) return;
         tryAutoPlayInFlight = true;
 
         try {
+            if (resumeLastTrack) {
+                resumeLastTrack = false;
+                const recent = await fetchRecentTracks();
+                const last = recent && recent[0];
+                if (last && typeof last.secondsAgo === 'number' && last.secondsAgo <= RESUME_WITHIN_SECONDS) {
+                    if (isPlayerDevice !== true || isLoadingSong || !isAutoPilotOn() || !isPlayerIdle()) return;
+                    replayTrack(last); // as ⏮ does: not confirmed again, ⏭ goes on from the queue, so does its end
+                    return;
+                }
+            }
             const track = await fetchNextTrack();
             // Playback was taken over while we were asking (the DJ picked a track, Auto-Pilot was
             // switched off, another window took the lease) — drop the answer. A guest song is only
@@ -406,14 +443,21 @@
     function applyLease(holder, free) {
         const wasPlayer = isPlayerDevice === true;
         isPlayerDevice = holder;
+        if (!holder) resumeLastTrack = false; // another window plays
+        // "Play on this device" was pressed: whichever answer makes this window the holder first — the TAKE_OVER's, or a WATCH report
+        // that was on its way and was answered after the server had moved the lease — it carries on with the track the other device
+        // was playing, not the next one. (Setting it only on the TAKE_OVER's answer lost it whenever the WATCH answer came first:
+        // the window had already asked next-track, and the TAKE_OVER's answer was then dropped as the older one.)
+        if (holder && !wasPlayer && takeOverPending) resumeLastTrack = true;
+        if (holder) takeOverPending = false;
         leaseFree = !holder && free;
         renderLeaseBanner();
         renderBackButtons();
         updatePauseButton();
         if (holder && !wasPlayer) {
             tryAutoPlay();
-        } else if (!holder && wasPlayer) {
-            stopPlaybackHere();
+        } else if (!holder && (wasPlayer || isPlaying())) {
+            stopPlaybackHere(); // also a window that never played but whose YouTube player the DJ started by hand
         }
     }
 
@@ -750,6 +794,7 @@
         const banner = document.getElementById('playerLeaseBanner');
         // Taking the lease from a window that still plays stops it there — ask first (a stray tap on a phone).
         if (!leaseFree && banner && !window.confirm(banner.dataset.confirm)) return;
+        takeOverPending = true;
         reportLease('TAKE_OVER');
     }
 

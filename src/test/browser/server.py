@@ -48,7 +48,8 @@ def default_state():
         # The answers of POST next-track in order ({source, id, videoId, playlistId}); when they run out: 204.
         'nextTracks': [],
         'nextTrackStatus': None,       # e.g. 409: every next-track is refused
-        # The answer of GET recent-tracks (a list of {key, source, id, videoId, title}).
+        # The answer of GET recent-tracks (a list of {key, source, id, videoId, title, secondsAgo}; without secondsAgo a reload
+        # never resumes the newest entry).
         'recent': [],
         'recentStatus': None,          # e.g. 500: recent-tracks fails
         # Replaying a fixture instead: {'fixture': 'play-log-boundary', 'keys': 'play' | 'old', 'n': <hand-outs so far>}.

@@ -10,6 +10,9 @@ package com.scan2play.model;
  * @param id      the request id, or the id of the play log row of a background track
  * @param videoId the YouTube video ID, ready for {@code player.loadVideoById()}
  * @param title   what to call it (the video ID when nothing better is known)
+ * @param secondsAgo how long ago it started to play, by the server's clock (so the browser's clock and time zone do not
+ *                   matter); null when the moment is unknown. A dashboard that is loaded again brings the newest track back
+ *                   only when it started recently (youtube-autopilot.js, "resume after a reload").
  */
-public record RecentTrack(String key, String source, Long id, String videoId, String title) {
+public record RecentTrack(String key, String source, Long id, String videoId, String title, Long secondsAgo) {
 }
