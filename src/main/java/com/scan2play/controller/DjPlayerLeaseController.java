@@ -1,5 +1,6 @@
 package com.scan2play.controller;
 
+import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.PlayerCommand;
 import com.scan2play.model.PlayerLeaseMode;
 import com.scan2play.model.PlayerLeaseResponse;
@@ -72,10 +73,10 @@ public class DjPlayerLeaseController {
             return ResponseEntity.badRequest().build();
         }
         PlayerLeaseService.Status status = playerLeaseService.report(partyCode, deviceId, mode, playing);
-        String playlistId = YouTubeUrls.extractPlaylistId(
-                partySettingsQueryService.getSettings(partyCode).getFallbackPlaylistUrl());
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        String playlistId = YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl());
         return ResponseEntity.ok(new PlayerLeaseResponse(status.holder(), status.free(), playlistId,
-                fallbackQueueService.getVersion(partyCode), status.command(), status.playing()));
+                fallbackQueueService.getVersion(partyCode), status.command(), status.playing(), settings.getPlaybackMode()));
     }
 
     /**

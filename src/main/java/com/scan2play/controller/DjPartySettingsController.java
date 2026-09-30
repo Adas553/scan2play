@@ -104,16 +104,19 @@ public class DjPartySettingsController {
     }
 
     /**
-     * Toggles the playback mode between AUTO and MANUAL for the specific party.
+     * Sets the playback mode (Auto-Pilot) of the party: to {@code mode} when it is given — what the dashboard's switch sends,
+     * the state it shows — or, without it, the other one of the two (a page opened before the switch sent the mode, and the
+     * Spotify dashboard's plain form). A toggle alone inverted the setting when the DJ clicked the switch of a window that
+     * showed an old state (the setting had been changed on another device).
      */
     @PostMapping("/dashboard/playback-mode")
     public String togglePlaybackMode(@RequestParam String partyCode,
+                                     @RequestParam(required = false) PlaybackMode mode,
                                      OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> {
-            PlaybackMode newMode = (s.getPlaybackMode() == PlaybackMode.AUTO)
-                    ? PlaybackMode.MANUAL
-                    : PlaybackMode.AUTO;
+            PlaybackMode newMode = mode != null ? mode
+                    : s.getPlaybackMode() == PlaybackMode.AUTO ? PlaybackMode.MANUAL : PlaybackMode.AUTO;
             s.setPlaybackMode(newMode);
         });
         return REDIRECT_DASHBOARD;

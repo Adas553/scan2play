@@ -93,6 +93,19 @@ class DjPlayerLeaseControllerTest {
     }
 
     @Test
+    @DisplayName("every answer carries the party's Auto-Pilot setting, so each window follows a change made on another device")
+    void shouldTellTheAutoPilotSetting() throws Exception {
+        when(settingsService.getSettings(PARTY)).thenReturn(PartySettingsEntity.builder().partyCode(PARTY)
+                .playbackMode(com.scan2play.model.PlaybackMode.AUTO).build());
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.WATCH, null)).thenReturn(new Status(false, false, null, true));
+
+        mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .param("mode", "WATCH").principal(token).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.playbackMode").value("AUTO"));
+    }
+
+    @Test
     @DisplayName("a window that is told another one plays gets holder=false; free=true when nobody holds the lease")
     void shouldReturnNotHolderAndFree() throws Exception {
         when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.WATCH, null)).thenReturn(new Status(false, true, null, null));

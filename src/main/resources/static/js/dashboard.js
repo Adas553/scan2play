@@ -181,6 +181,11 @@ function submitAutoPilotToggle(checkbox) {
 
     const csrf = getCsrf();
     const formData = new FormData(checkbox.form);
+    // The state the switch shows now, not "toggle": a window whose switch showed an old state (Auto-Pilot changed on another
+    // device) would otherwise have inverted the setting.
+    const newMode = checkbox.checked ? 'AUTO' : 'MANUAL';
+    formData.append('mode', newMode);
+    playbackModeChangedHereAt = Date.now();
 
     fetch('/dj/dashboard/playback-mode', {
         method: 'POST',
@@ -188,24 +193,49 @@ function submitAutoPilotToggle(checkbox) {
         body: formData,
         redirect: 'manual'
     }).then(function() {
-        const tbody = document.getElementById('song-list');
-        if (tbody) {
-            const newMode = checkbox.checked ? 'AUTO' : 'MANUAL';
-            tbody.setAttribute('data-playback-mode', newMode);
-            console.log('[Auto-Pilot] Mode toggled to: ' + newMode);
-            if (newMode === 'AUTO' && typeof checkYouTubeAutoPlay === 'function') {
-                checkYouTubeAutoPlay();
-            }
-            // Keep screen awake while Auto-Pilot is running (wake-lock.js)
-            if (typeof window.syncWakeLock === 'function') {
-                window.syncWakeLock(newMode === 'AUTO');
-            }
-        }
+        setPlaybackMode(newMode);
+        console.log('[Auto-Pilot] Mode set to: ' + newMode);
     }).catch(function(err) {
         console.error('[Auto-Pilot] Toggle error:', err);
         checkbox.checked = !checkbox.checked;
     });
 }
+
+/** When the DJ last flipped the Auto-Pilot switch in this window (Date.now()), see applyPlaybackMode. */
+let playbackModeChangedHereAt = 0;
+
+/**
+ * Makes this window follow an Auto-Pilot setting: the attribute youtube-autopilot.js reads (what happens when a track ends),
+ * the switch, the screen wake lock; switched on, the player starts if it is idle.
+ */
+function setPlaybackMode(mode) {
+    const tbody = document.getElementById('song-list');
+    if (!tbody) return;
+    const changed = tbody.getAttribute('data-playback-mode') !== mode;
+    tbody.setAttribute('data-playback-mode', mode);
+    const toggle = document.getElementById('autoToggle');
+    if (toggle) toggle.checked = mode === 'AUTO';
+    if (!changed) return;
+    // Keep screen awake while Auto-Pilot is running (wake-lock.js)
+    if (typeof window.syncWakeLock === 'function') window.syncWakeLock(mode === 'AUTO');
+    if (mode === 'AUTO' && typeof checkYouTubeAutoPlay === 'function') checkYouTubeAutoPlay();
+}
+
+/**
+ * The party's Auto-Pilot setting as the server says it (every lease answer carries it — youtube-autopilot.js): one setting for
+ * all the DJ's windows, so a change made on another device reaches this one within a report. Before, a window knew only the value
+ * it was loaded with (the queue poll brings a new one only when the guest queue changes), and a window that took the playback
+ * over with a stale "off" left its player empty. An answer to a report sent before the DJ flipped the switch here is ignored: it
+ * may still say the old value.
+ *
+ * @param {'AUTO'|'MANUAL'} mode
+ * @param {number} reportSentAt when the report that brought it was sent (Date.now())
+ */
+window.applyPlaybackMode = function (mode, reportSentAt) {
+    if (mode !== 'AUTO' && mode !== 'MANUAL') return;
+    if (reportSentAt <= playbackModeChangedHereAt) return;
+    setPlaybackMode(mode);
+};
 
 // ==========================================================================
 // TABS — Panel / Queue / History, in a bar that stays in view (fragment dj-nav, .dj-tabbar)

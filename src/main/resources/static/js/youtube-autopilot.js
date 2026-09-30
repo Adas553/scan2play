@@ -96,6 +96,8 @@
     let resumeLastTrack = true;
     // "Play on this device" has been pressed and no answer has made this window the holder yet (applyLease).
     let takeOverPending = false;
+    // The resume comes from "play on this device": it happens with Auto-Pilot off too (tryAutoPlay).
+    let resumeWithoutAutoPilot = false;
     const RESUME_WITHIN_SECONDS = 600;
     // Which window plays (see the file header): null = the server has not answered yet, true = this window plays,
     // false = another window or device does. Tracks are asked for only while it is true.
@@ -290,7 +292,7 @@
     let trackLoads = 0;
 
     function loadIntoPlayer(videoId) {
-        resumeLastTrack = false;
+        resumeLastTrack = resumeWithoutAutoPilot = false;
         trackLoads++;
         loadStartedAt = Date.now();
         player.loadVideoById(videoId);
@@ -349,7 +351,10 @@
     /** Main entry point — called by polling, on player ready, on ENDED and after a player error. */
     async function tryAutoPlay() {
         if (isPlayerDevice !== true || !playerReady || !player || isLoadingSong || tryAutoPlayInFlight) return;
-        if (!isAutoPilotOn()) {
+        // "Play on this device" brings the last track back even with Auto-Pilot off: the DJ asked for music here. Auto-Pilot only
+        // decides what happens when it ends — the queue goes on (on) or the player stops (off).
+        const takeOver = resumeLastTrack && resumeWithoutAutoPilot;
+        if (!isAutoPilotOn() && !takeOver) {
             resumeLastTrack = false; // Auto-Pilot off: switching it on later starts from the queue
             return;
         }
@@ -359,14 +364,16 @@
         try {
             if (resumeLastTrack) {
                 resumeLastTrack = false;
+                resumeWithoutAutoPilot = false;
                 const recent = await fetchRecentTracks();
                 const last = recent && recent[0];
                 if (last && typeof last.secondsAgo === 'number' && last.secondsAgo <= RESUME_WITHIN_SECONDS) {
-                    if (isPlayerDevice !== true || isLoadingSong || !isAutoPilotOn() || !isPlayerIdle()) return;
+                    if (isPlayerDevice !== true || isLoadingSong || !(isAutoPilotOn() || takeOver) || !isPlayerIdle()) return;
                     replayTrack(last); // as ⏮ does: not confirmed again, ⏭ goes on from the queue, so does its end
                     return;
                 }
             }
+            if (!isAutoPilotOn()) return; // a takeover with Auto-Pilot off plays the last track only, never the next one
             const track = await fetchNextTrack();
             // Playback was taken over while we were asking (the DJ picked a track, Auto-Pilot was
             // switched off, another window took the lease) — drop the answer. A guest song is only
@@ -443,12 +450,12 @@
     function applyLease(holder, free) {
         const wasPlayer = isPlayerDevice === true;
         isPlayerDevice = holder;
-        if (!holder) resumeLastTrack = false; // another window plays
+        if (!holder) resumeLastTrack = resumeWithoutAutoPilot = false; // another window plays
         // "Play on this device" was pressed: whichever answer makes this window the holder first — the TAKE_OVER's, or a WATCH report
         // that was on its way and was answered after the server had moved the lease — it carries on with the track the other device
         // was playing, not the next one. (Setting it only on the TAKE_OVER's answer lost it whenever the WATCH answer came first:
         // the window had already asked next-track, and the TAKE_OVER's answer was then dropped as the older one.)
-        if (holder && !wasPlayer && takeOverPending) resumeLastTrack = true;
+        if (holder && !wasPlayer && takeOverPending) resumeLastTrack = resumeWithoutAutoPilot = true;
         if (holder) takeOverPending = false;
         leaseFree = !holder && free;
         renderLeaseBanner();
@@ -753,6 +760,7 @@
     async function reportLease(mode) {
         if (!partyCodeValue) return;
         const seq = ++leaseRequestSeq;
+        const sentAt = Date.now();
         try {
             const params = { partyCode: partyCodeValue, deviceId: deviceId, mode: mode };
             // Whether this window's player makes sound — only the window that plays is believed, so a watcher says nothing.
@@ -768,6 +776,9 @@
             const lease = await response.json();
             if (seq < leaseAppliedSeq) return; // a newer answer has been applied already
             leaseAppliedSeq = seq;
+            // The party's Auto-Pilot setting, one for all windows (dashboard.js) — before applyLease, so that a window that has just
+            // become the holder decides with the current value.
+            if (lease.playbackMode && typeof window.applyPlaybackMode === 'function') window.applyPlaybackMode(lease.playbackMode, sentAt);
             applyLease(lease.holder === true, lease.free === true);
             notePlaylist(lease.fallbackPlaylistId || null, seq);
             if (lease.holder === true) dropStaleBackgroundTrack(lease.fallbackPlaylistId || null, seq);

@@ -59,7 +59,7 @@ def default_state():
         # Seconds to wait before answering a path, e.g. {'/dj/dashboard/player-lease': 2.5}: an answer that arrives late.
         # (The request is logged at once, and the answer says what the state was when the request came.)
         'delays': {},
-        'playbackMode': 'AUTO',        # what the dashboard's poll (GET updates) says
+        'playbackMode': 'AUTO',        # the party's Auto-Pilot setting: in every lease answer, and in the poll's <tbody> when it is sent
         # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the track link).
         # The rendered page itself has two rows, but the first poll replaces them with these.
         'queue': [],
@@ -259,7 +259,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/updates':
             with stand.lock:
                 mode, queue = state['playbackMode'], list(state['queue'])
-            etag = '"q-%08x"' % zlib.crc32(json.dumps([mode, queue], sort_keys=True).encode('utf-8'))
+            # Like the real server: the ETag is a fingerprint of the guest queue only, so a change of the Auto-Pilot setting alone is
+            # answered 304 — a window learns it from the lease answers.
+            etag = '"q-%08x"' % zlib.crc32(json.dumps(queue, sort_keys=True).encode('utf-8'))
             if self.headers.get('If-None-Match') == etag:
                 return self._send(304, headers={'ETag': etag})
             # a row has the song cell that the column sort reads (data-sort-value / data-val) and, after the rows, the real
@@ -322,7 +324,7 @@ class Handler(BaseHTTPRequestHandler):
                 answer = {'holder': state['lease']['holder'], 'free': state['lease']['free'],
                           'fallbackPlaylistId': state['lease']['fallbackPlaylistId'],
                           'queueVersion': state['lease']['queueVersion'], 'command': None,
-                          'playing': state['lease']['playing']}
+                          'playing': state['lease']['playing'], 'playbackMode': state['playbackMode']}
                 if answer['holder'] and state['commands']:
                     answer['command'] = state['commands'].pop(0)
             return self._json(answer)
@@ -349,9 +351,10 @@ class Handler(BaseHTTPRequestHandler):
                 elif save.get('reason'):
                     headers['X-Fallback-Import-Reason'] = save['reason']
             return self._send(200, b'', headers=headers)
-        if path == '/dj/dashboard/playback-mode':      # the Auto-Pilot switch: the poll says the new mode from now on
+        if path == '/dj/dashboard/playback-mode':      # the Auto-Pilot switch: sets the mode it sends (toggles without one)
             with stand.lock:
-                state['playbackMode'] = 'MANUAL' if state['playbackMode'] == 'AUTO' else 'AUTO'
+                wanted = fields.get('mode')
+                state['playbackMode'] = wanted if wanted in ('AUTO', 'MANUAL') else ('MANUAL' if state['playbackMode'] == 'AUTO' else 'AUTO')
             return self._json({})
         if path in ('/dj/dashboard/play', '/dj/dashboard/fallback-shuffle'):
             return self._json({})
