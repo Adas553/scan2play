@@ -266,7 +266,32 @@ QR Code Scan → /p/{partyCode}
     → Result page shows decision + DJ comment
 ```
 
-Rate limiting is session-based (HttpSession). No guest authentication required.
+No guest authentication required. A request passes three limits, each counted **before** the AI evaluates it (REVIEW.md 4.1,
+2026-09-30 — before, the session limit was checked before and recorded after the 2–4 s evaluation, and a request without the
+cookie had no limit at all):
+1. **the guest's own** — the DJ's `requestLimit` per `cooldownMinutes`, in the `HttpSession` (`GuestSessionService.tryAcquire`:
+   check and record in one step under the session mutex); message `guest.error.rate_limit`;
+2. **client IP + party** — `guest.limit.per-ip-party` (30) per `guest.limit.per-ip-window-minutes` (10), loose because the guests
+   on a venue's Wi-Fi share one address; message `guest.error.too_many_requests` with the seconds to wait;
+3. **party** — `guest.limit.per-party-daily` (300) per 24 h whatever the address, the most one party (or a script faking addresses)
+   can spend; message `guest.error.party_daily_limit`.
+
+2 and 3 are `GuestRequestLimiter` (Caffeine, fixed windows, `asMap().compute`, in memory like the sessions); 0 switches a limit off.
+The client address is `getRemoteAddr()` — with the `FRAMEWORK` forward-headers strategy the *first* `X-Forwarded-For` entry,
+which a client can fake — unless `guest.client-ip-header` names a header a proxy overwrites (`CF-Connecting-IP` behind Cloudflare;
+set it in production when the traffic goes through Cloudflare — **set on Railway on 2026-09-30**, the production domain is proxied by
+Cloudflare and the service has no `*.up.railway.app` domain that would bypass it). A faked address gets past 2 only; 3 and the YouTube
+search fuse (Section 7.3) still hold.
+
+**The DJ sees them** (the owner's wish, 2026-09-30): under the limits form of the dashboard a line per server limit
+(`serverLimitsInfo`; rendered with the page and kept current by every queue poll — header `X-Guest-Limits-Use:
+<busiest network>,<party>`, 304 too, `dashboard.js` `applyGuestLimitsUse`) — 2 with how much the busiest network has used of its window
+(`GuestRequestLimiter.busiestClientRequestsUsed`: the address closest to its limit, usually the venue's Wi-Fi), 3 with how much the
+party has used; each use is a badge, grey, yellow from 80 %, red at the limit — and above the queue a warning shows while a
+limit stops guest songs — today's YouTube searches spent (YouTube parties only) or the party's 24-hour limit reached
+(`guestLimitWarnings`). Every answer of the queue poll `GET /dj/dashboard/updates`, 304 included, carries
+`X-Guest-Limits: none | search-spent | party-full | search-spent,party-full` (not part of the ETag), and `dashboard.js`
+(`applyGuestLimits`) shows or hides the warnings by it — so they appear within a poll (3 s) without a reload.
 
 ### 5.3 Spotify Playback Auth (Secondary OAuth2)
 
@@ -409,7 +434,12 @@ off too**: it is a deliberate act of the DJ, so neither the "player must be idle
 `tryAutoPlay` applies (the track that ends later still does not start another by itself while Auto-Pilot is off). If
 there is nothing to play (204) the track that plays now carries on. Only the window that holds the lease can start a
 track, so:
-- in **the window that plays** it acts at once (`skipToNext`; a press while a lookup is in flight is ignored);
+- in **the window that plays** it acts at once (`skipToNext`; a press while a lookup is in flight is ignored). Its ask adds the
+  guest song that runs now to `exclude` (REVIEW.md 1.3): a guest song leaves the queue only when the server has its confirmation
+  (`POST /play`, sent on PLAYING) and next-track reads the queue through a 3 s cache, so a ⏭ while the song loaded, or in its first
+  seconds, got the same song back. `DjService.markSongAsPlayed` also evicts `dashboardQueue` after its commit. A guest song skipped
+  while still loading was never confirmed, so it stays in the queue and comes back after the track ⏭ started (scenarios
+  `next-right-after-guest-song-started`, `next-while-guest-song-loads`);
 - in **another window** (the phone as a remote control) it sends `POST /dj/dashboard/player-command` (`command=NEXT`) and
   stays disabled ("Sent…") for 3.5 s. The server keeps the command per party until the window that plays collects it with
   its next lease report (the answer has a `command` field, handed out once), so it is carried out within about 3 s.
@@ -874,9 +904,11 @@ fixture again. Its parts:
 | `PartySettingsQueryService`  | 31    | Read party settings (read side, `@Cacheable`) |
 | `QueueService`               | 75    | Delegates to MusicProvider implementations (resolve track, add to queue) |
 | `SpotifyMusicProvider`       | 194   | Spotify integration: search tracks (Client Credentials), add to queue (User Auth) |
-| `YouTubeMusicProvider`       | 198   | YouTube integration: Data API v3 with two-level cache (Caffeine L1 + PostgreSQL L2, 30-day TTL per YouTube API ToS) + daily scheduled cleanup |
+| `YouTubeMusicProvider`       | ~220  | YouTube integration: Data API v3 with two-level cache (Caffeine L1 + PostgreSQL L2, 30-day TTL per YouTube API ToS) + daily scheduled cleanup; asks `YouTubeSearchBudget` before every API search (spent → the search link, not cached) |
 | `SpotifyAuthService`         | 188   | Spotify OAuth2 token management (exchange, refresh, store) — null-safe refresh with explicit exception |
-| `GuestSessionService`        | 73    | Session-based rate limiting for guests (token bucket) |
+| `GuestSessionService`        | ~60   | The guest's own limit in the session (the DJ's `requestLimit` per `cooldownMinutes`): `tryAcquire` checks and records in one step under the session mutex, before the evaluation (Section 5.2) |
+| `GuestRequestLimiter`        | ~130  | Server-side guest limits that need no cookie: client IP + party (30 / 10 min) and party (300 / 24 h), counted atomically before the evaluation; `clientIp` reads `guest.client-ip-header` or the remote address (Section 5.2) |
+| `YouTubeSearchBudget`        | ~85   | The daily fuse of the shared `search.list` limit: 80 API searches per Google day (midnight Pacific), tripped at once by a 403 `quotaExceeded` (Section 7.3) |
 | `QrCodeService`              | 50    | QR code generation (ZXing, `@Cacheable`) |
 | `AccountDeletionService`     | 70    | Deletes all DJ data (songs, fallback tracks and their play log, feedback, settings) — required by Google API data deletion policy |
 | `SongRequestRetentionService`| ~60   | The nightly purge (04:45) of the guests' song requests 30 days after `requested_at` (Section 4.1): batches of 1000 (`SongRequestRepository.deleteRequestedBefore`, each its own transaction), at most 200 batches a night |
@@ -972,7 +1004,11 @@ fixture; skipped unless `S2P_FIXTURE_OUT` is set). The CI workflow that runs it 
 ### 7.1 Google Gemini AI
 
 - **Purpose:** Evaluate song requests (accept/reject based on vibe match) + normalize DJ pick song names
-- **Model:** `gemini-2.5-flash-lite` (pinned — do NOT use `*-latest` aliases)
+- **Model:** `gemini-2.5-flash` (pinned — do NOT use `*-latest` aliases; env `GOOGLE_AI_MODEL` overrides it). Until 2026-09-30
+  `gemini-2.5-flash-lite`, which did not recognise well-known Polish songs from a line of their lyrics even with the improved prompt
+  (the owner's tries). A guest's request may think up to `google.ai.thinking-budget` tokens (1024, env `GOOGLE_AI_THINKING_BUDGET`;
+  0 = off, -1 = the model decides) — paid as output and added to the wait, within the 10 s timeout; the DJ's pick (normalization)
+  never thinks. Cost: a fraction of a cent per request (about $0.5 per 1000 without thinking, a few dollars per 1000 at the full budget)
 - **SDK:** `google-genai` Java SDK
 - **Response format:** JSON (`DjResponse` record)
 - **Temperature:** Default for evaluations (creative DJ comments), **0.0 for normalization** (deterministic)
@@ -982,6 +1018,11 @@ fixture; skipped unless `S2P_FIXTURE_OUT` is set). The CI workflow that runs it 
 - **Prompt language:** Locale-aware (English + Polish). Prompt is selected based on guest's browser locale via `LocaleContextHolder`; unsupported locales fall back to English.
 - **Comment length:** AI instructed to keep comments under 300 characters; entity truncates at 500 as safety net
 - **Duplicate detection:** Configurable window — recent N songs are injected into the prompt
+- **Lyrics as a request (2026-09-30):** a guest typed a line of a well-known Polish song and the model said it knew no such song and
+  picked another one. Point 1 of `prompt-template_{pl,en}.txt` now says a request may be a fragment of the lyrics, that the song it
+  comes from is picked (not replaced), a mood only when it is neither title, artist nor lyrics, and an honest word in the comment when a
+  quote is not recognised. The lite model still picked a wrong song with it (the owner's try), so the model is now
+  `gemini-2.5-flash` (above).
 
 ### 7.2 Spotify Web API
 
@@ -1019,6 +1060,12 @@ Two separate authentication flows:
   calls/day; every other endpoint shares **10,000 units/day**. `playlistItems.list` and `videos.list` cost 1 unit per call.
   (The older wording "100 units per search" gives the same ~100 unique searches/day.) Verify your project's actual
   quota in Google Cloud Console → APIs & Services → YouTube Data API v3 → Quotas.
+- **Search fuse (`YouTubeSearchBudget`, REVIEW.md 4.1):** the `search.list` limit is one per Google project, shared by every
+  party. The provider counts its real API searches per Google day (midnight to midnight `America/Los_Angeles`) and past
+  `youtube.search.daily-budget` (80, env `YOUTUBE_SEARCH_DAILY_BUDGET`; 0 = off) stops asking: new songs get the search link
+  (the DJ can play it by hand, Auto-Pilot skips it — the owner's choice). A 403 `quotaExceeded` trips it at once. The count is in
+  memory (a restart starts it over; the 403 is the backstop). Search links are not put into the `youtubeSearch` cache, so a
+  song gets its video once the API can be asked again. **Raise the budget together with the quota** when Google grants more.
 - **Playlist import (`YouTubePlaylistClient`, Phase 2):** when the DJ sets a fallback playlist the backend reads it once —
   at most 500 items = ≤ 10 `playlistItems` + ≤ 10 `videos` calls (≈ 20 units from the general pool, none from `search.list`);
   the video titles shown in the DJ's "up next" list come from the same `videos.list` calls (`part=status,snippet`, no extra
@@ -1061,7 +1108,7 @@ Uses **Caffeine** cache with per-cache TTL configuration.
 | `partySettings`  | partyCode  | 24h    | 500      | `PartySettingsQueryService.getSettings()` (`@Cacheable`) / `PartySettingsCommandService.updateSettings()` (`@CachePut`) |
 | `qr-codes`       | text+size  | 24h    | 1000     | `QrCodeService.generateQrCodeBase64()` (`@Cacheable`) |
 | `youtubeSearch`  | searchQuery| 24h    | 1000     | `YouTubeMusicProvider.findTrackUrl()` L1 cache — backed by permanent `youtube_cache` DB table (L2) |
-| `dashboardQueue` | partyCode  | 3s     | 200      | `DjService.getDashboardQueue()` (`@Cacheable`) — auto-expires for polling freshness |
+| `dashboardQueue` | partyCode  | 3s     | 200      | `DjService.getDashboardQueue()` (`@Cacheable`) — auto-expires for polling freshness; evicted after a song is confirmed played (`markSongAsPlayed`, `pushToSpotify`), because next-track reads it |
 | `publicQueue`    | partyCode  | 5s     | 200      | `DjService.getPublicQueue()` (`@Cacheable`) |
 
 Additional caching: DJ's `partyCode` is cached in `HttpSession` to avoid repeated `ownerId` → DB lookups.
@@ -1103,6 +1150,10 @@ debugging port forwarding) or a public HTTPS address such as a tunnel on your ow
 | `google.ai.model-name`           | `gemini-2.5-flash-lite`                  |
 | `spring.jpa.hibernate.ddl-auto`  | `validate`                               |
 | `server.forward-headers-strategy`| `FRAMEWORK` (for reverse proxy)          |
+| `youtube.search.daily-budget`    | `80` (env `YOUTUBE_SEARCH_DAILY_BUDGET`; Section 7.3) |
+| `guest.limit.per-ip-party` / `guest.limit.per-ip-window-minutes` | `30` / `10` (env `GUEST_LIMIT_PER_IP_PARTY`, `GUEST_LIMIT_PER_IP_WINDOW_MINUTES`; Section 5.2) |
+| `guest.limit.per-party-daily`    | `300` (env `GUEST_LIMIT_PER_PARTY_DAILY`; Section 5.2) |
+| `guest.client-ip-header`         | empty (env `GUEST_CLIENT_IP_HEADER`; `CF-Connecting-IP` behind Cloudflare; Section 5.2) |
 | `server.shutdown`                | `graceful` (30s timeout)                 |
 | `server.tomcat.max-http-form-post-size` | `10KB`                             |
 | `spring.datasource.hikari.maximum-pool-size` | `15`                          |
@@ -1200,6 +1251,7 @@ GuestController
     ├── SongEvaluationService
     ├── PartySettingsQueryService
     ├── GuestSessionService
+    ├── GuestRequestLimiter
     └── MessageSource
 
 LegalController
@@ -1226,7 +1278,7 @@ SongEvaluationService
 
 QueueService
     ├── SpotifyMusicProvider
-    └── YouTubeMusicProvider
+    └── YouTubeMusicProvider ──→ YouTubeSearchBudget
 
 SpotifyMusicProvider
     └── SpotifyAuthService
@@ -1272,7 +1324,7 @@ PartySettingsQueryService
 | GET    | `/dj/dashboard`                   | `DjDashboardController.dashboard()`              |       |
 | GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            | Optional `limit` (default 50, raised to 50 at least, capped at 300; not a number → 400) and `filter` (`all` \| `guest` \| `background` \| `played` \| `rejected`; missing or unknown → `all`): the last `limit` entries of that kind from the timeline of what played or was rejected — guests' songs and background tracks (`HistoryEntry`), newest event first; the model also has `historyFilter` (the lit button), `historyHasMore` and `historyNextLimit` for "Show more" |
 | GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated; the same `limit` and `filter` |
-| GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
+| GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated; every answer carries `X-Guest-Limits` and `X-Guest-Limits-Use` (Section 5.2) |
 | POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId, playlistId}` (`playlistId` = the playlist a BACKGROUND track came from, null for a guest song; `id` = the request id of a guest song, or the id of the play log row — table `fallback_play` — that this hand-out wrote for a BACKGROUND track, the same id `recent-tracks` uses in its `B:<id>` key) or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` and written to the play log as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Optional `deviceId` (the asking window's id): **409** when another window holds the party's player lease (see below) — nothing is handed out; a request without an id counts as another window while a lease is live. Section 14 Phase 2 stage 3; called by `youtube-autopilot.js` since stage 4 |
 | POST   | `/dj/dashboard/player-lease`      | `DjPlayerLeaseController.report()`               | JSON `{holder, free, fallbackPlaylistId, queueVersion, command, playing, playbackMode}` (`playbackMode` is the party's Auto-Pilot setting, which every window follows; `playing` is whether the player of the window that plays makes sound — true / false, null when nobody plays or it has not said; `fallbackPlaylistId` is the party's current fallback playlist, so the window that plays can stop a track of a playlist the DJ has replaced or cleared elsewhere; `queueVersion` changes whenever the "up next" list would look different, so every window can tell that it was changed in another one; `command` is `NEXT` when the DJ pressed ⏭ in another window — only ever for the holder, handed out once), ownership-validated. Params `partyCode`, `deviceId` (random id of the window, `[A-Za-z0-9_-]{8,64}`), `mode` = `CLAIM` / `WATCH` / `TAKE_OVER`, optional `playing` = `true` / `false` (whether the window's own player makes sound — only the holder's is kept; anything else → 400). **Not read-only**: the report renews the window's lease (10 s timeout), `TAKE_OVER` moves it. 400 for a bad id or mode. Called by `youtube-autopilot.js` every 3 s — Section 5.4, "One window plays" |
 | POST   | `/dj/dashboard/player-command`    | `DjPlayerLeaseController.sendCommand()`          | ownership-validated. Params `partyCode`, `command` = `NEXT`, `PREVIOUS`, `PREVIOUS_TRACK`, `RESTART`, `PAUSE` or `RESUME` (`PREVIOUS_TRACK` and `RESTART` are the two back buttons of a window that does not play, since 2026-09-30; `PREVIOUS` is the single ⏮ with its rules and is no longer sent by the page, only accepted). The DJ gives the window that plays a command from any window (the phone as a remote control); it is carried out when that window's next lease report brings it (≤ ~3 s); one command waits per party, the last one pressed. 204 when it is waiting, **409** when no window holds a live lease (nobody would carry it out), 400 for an unknown command — Section 5.4, "Next ⏭" and "Back ⏮" |
@@ -1311,9 +1363,7 @@ PartySettingsQueryService
 ### Security
 - Spotify tokens are stored as plain text in the database (no encryption at rest).
 - No Content Security Policy (CSP) headers — should be added to restrict script sources (YouTube IFrame, iTunes API).
-- The whole-project review of 2026-09-30 (`REVIEW.md` at the repo root) lists what is still open, ranked — among it the guests' rate
-  limit, which lives in the session and is checked before and recorded after the AI call, so a script can spend the day's 100
-  YouTube searches (4.1).
+- The whole-project review of 2026-09-30 (`REVIEW.md` at the repo root) lists what is still open, ranked, and what has been fixed.
 
 ### Frontend
 - Server-rendered (Thymeleaf) with AJAX enhancements. No SPA, no JavaScript framework.
@@ -1326,7 +1376,8 @@ PartySettingsQueryService
   key. `HtmlLangDeclarationTest` scans `templates/` so that a new page with `#{…}` keys cannot forget the declaration.
 
 ### Scalability
-- **Session-based rate limiting** (HttpSession only). Clearing cookies resets the limit. No server-side rate limiting per IP.
+- **Guest rate limits are in memory** (the session, `GuestRequestLimiter`, `YouTubeSearchBudget`; Sections 5.2, 7.3): a restart
+  starts them over, and a second instance would have its own. Clearing cookies resets only the guest's own limit.
 - **In-memory Caffeine cache** — not shared across instances. If horizontally scaled, consider Spring Session + Redis.
 - **Single-instance deployment** assumed. For multi-instance, caching and session management need Redis/JDBC backing. The player lease (which dashboard window plays, Section 5.4) is in memory too and would need the same.
 
@@ -1334,12 +1385,18 @@ PartySettingsQueryService
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
 - **Unit tests (424 tests, one of them skipped unless asked for — see below)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch) and the play log it writes (a row per hand-out, under the party lock, one id per play; the purge; the account deletion), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the timeline of what played (`PlayHistoryService`: the merge, play time vs request time, the bound and `hasMore`, what ⏮ can play again; `DjService.markPlayed`; `YouTubeUrls`), the `limit` of the history endpoints, `recent-tracks` and the `PREVIOUS` command, the state of the player and the `PAUSE` / `RESUME` commands (`PlayerLeaseService`, `DjPlayerLeaseController`), and the rendering of `fragments/fallback-queue.html` (with its skip button and the skipped count), `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles; skipping a track for this round (`FallbackTrackCommandService.skipTrack`, `FallbackQueueService`, `DjFallbackQueueController`), the nightly purge of the song requests (`SongRequestRetentionService`: the cutoff, the batches, the bound, the schedule) and — through `DashboardPageRenderTest` — the whole `dashboard.html`, rendered from the model of the real controller, in both languages (the texts of the import result, the ids the scripts need, `<html lang>` = the language of the bundle — also for a locale that has no bundle) and the History tab's fragment for every filter through the real controller; `HtmlLangDeclarationTest` checks that every page of `templates/` that uses `#{…}` keys declares its language.
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 450 tests, 449 run and 1 skipped** with the Auto-Pilot setting followed by every window (7 more:
+- **Total: 480 tests, 479 run and 1 skipped** with the limits on the DJ's dashboard (`DashboardPageRenderTest` +1: the colour of the
+  badges; `DjDashboardControllerGuestLimitsTest` 5 — the `X-Guest-Limits-Use` header and the
+  `X-Guest-Limits` header, on a 304 too — two more in `GuestRequestLimiterTest`, one in `YouTubeSearchBudgetTest`; `DashboardPageRenderTest`
+  checks the new ids); **471** after review items 4.1 and 1.3 (2026-09-30, the eighth session: `GuestRequestLimiterTest` 9,
+  `GuestControllerTest` 5, `YouTubeSearchBudgetTest` 3, `YouTubeMusicProviderCacheTest` 2 (the `@Cacheable` through a real cache proxy),
+  `YouTubeMusicProviderTest` +2, `DjServiceTest` +1; `GuestSessionServiceTest` rewritten for `tryAcquire`, 7 → 6, with parallel requests);
+  **450** with the Auto-Pilot setting followed by every window (7 more:
   `DjPartySettingsControllerPlaybackModeTest`, one in `DjPlayerLeaseControllerTest`); **443** with the resume after a reload (one more in `DjPlayerLeaseControllerTest`:
   `secondsAgo` of `recent-tracks`); **442** after the review's first package (2026-09-30, the seventh session: 11 more —
   `SongEvaluationServiceTest` (the Spotify auto-queue), `YouTubeMusicProviderTest` (the key in a header), `SpotifyAuthControllerTest`
   (the OAuth state), one each in `DjServiceTest` and `AccountDeletionServiceTest`). Before it: **431 tests, 430 run and 1 skipped** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"` in a copy of the repo, counted 2026-09-30, after the sixth session: 429 before it, minus the 6 tests of the removed `next-guest-track` endpoint, plus 3 of `DashboardPageRenderTest`, 4 of `HtmlLangDeclarationTest` and 1 of `FallbackQueueFragmentTest`). No integration tests in the repo — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs), and `V8`, the skip and the purge of the song requests (Sections 4.1, 5.4, 10) were checked against a throw-away PostgreSQL database, not by a test that stays. The one exception is the **fixture recorder** `PlayLogFixtureRecorderTest`: a `@SpringBootTest` that is skipped (no Spring context is even started) unless `S2P_FIXTURE_OUT` is set, and that refuses a database whose name does not start with `s2p_`; it is compiled with the rest, so an API change that breaks it shows at once.
-- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 42 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **written, not yet run on GitHub**. What the browser tests do not cover is listed in Section 5.4.
+- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 46 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **both green on GitHub for every push of 2026-09-30, the last one `847c872`**. What the browser tests do not cover is listed in Section 5.4.
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI

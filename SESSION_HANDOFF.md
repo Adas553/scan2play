@@ -3,8 +3,16 @@
 Where the work stands, for whoever continues (a new Claude Code session or a person). The history of the
 first session (2026-09-28, remote) is summarised at the bottom.
 
-## Start here (updated at the end of the 2026-09-30 session, the seventh)
+## Start here (updated at the end of the 2026-09-30 session, the eighth)
 
+- **The eighth session (2026-09-30): review items 4.1 (guest request limits on the server + a YouTube search fuse) and 1.3 (⏭ right
+  after a guest song started handed it out again), then the limits on the DJ's dashboard and a better AI model — DONE, tried by the
+  owner ("działa"), COMMITTED (code `dafffac`, then the docs) and PUSHED on the owner's "możesz commitować i pushuj"
+  (2026-09-30): `git status -sb` should show `dev...origin/dev` with nothing ahead. The push runs both workflows — look at them.** See "The session of 2026-09-30, the
+  eighth" (after the seventh's section). Before it: `dev...origin/dev` at `847c872` (two commits past the `32ac785` the session's prompt
+  named: the Auto-Pilot setting followed by every window), and both GitHub workflows green for `32ac785` and `847c872`. Afterwards:
+  `GUEST_CLIENT_IP_HEADER` set on Railway, and the DJ's dashboard shows the server limits and warns when one stops guest songs.
+  **480** unit tests, **46** browser scenarios, all green. Next: the owner reviews the diff; then, from `REVIEW.md`, 6.1 (a lasting PostgreSQL test).
 - **The seventh session (2026-09-30): the whole-project review — `REVIEW.md` at the repo root, 39 ranked findings — and its first package of
   fixes (3.1, 4.3, 4.2, 1.1, 4.4, 2.2, 5.2), COMMITTED (code `57d3def`, the caption fix of the "up next" list `b00feec`, then the docs), and
   afterwards the resume of the last track after a reload and a takeover (`59c0944`, docs `d58bde2`) and the Auto-Pilot setting followed by
@@ -1095,6 +1103,81 @@ on a real PostgreSQL).
   scenario file, `PROJECT_CONTEXT.md` (5.4, 6.8, 12, 13), this file.
 - Commits: code `57d3def`; then the caption fix of the "up next" list above (`b00feec` — it had been waiting uncommitted since before this
   session, and the owner said to commit it too); then the docs (`PROJECT_CONTEXT.md`, this file, `REVIEW.md`). **Not pushed.**
+
+## The session of 2026-09-30, the eighth: review items 4.1 and 1.3 (done, committed `dafffac` + docs, pushed)
+
+**Checked first:** `git status -sb` = `dev...origin/dev`, HEAD `847c872` (not `32ac785` as the prompt said — the Auto-Pilot pair had been
+pushed after it). GitHub Actions: Unit tests and Browser tests green for both `32ac785` and `847c872` (`gh` is not installed here; the
+public API `api.github.com/repos/Adas553/scan2play/actions/runs` answers without it).
+
+**4.1 — decided with the owner:** the client address is configurable (`guest.client-ip-header`, empty = the remote address; set it to
+`CF-Connecting-IP` in production if the traffic goes through Cloudflare); when the search budget is spent a new song is accepted with the
+search link (the DJ plays it by hand, Auto-Pilot skips it); the owner has no customers yet and will ask Google for more quota, so every
+number is a property with an environment variable (raise `YOUTUBE_SEARCH_DAILY_BUDGET` with the quota; 0 = off). The owner asked how the
+limits work, got the four layers explained, and said "ok, zrób wszystko". Built:
+- `GuestSessionService.tryAcquire` — the guest's own limit (the DJ's setting), checked and recorded in one step under the session mutex,
+  before the evaluation (replaces `getRateLimitWaitTimeSeconds` + `recordSuccessfulRequest`).
+- `GuestRequestLimiter` (new) — client IP + party 30 / 10 min, party 300 / 24 h, atomic (`asMap().compute`), in memory.
+- `YouTubeSearchBudget` (new) — 80 API searches per Google day (midnight Pacific), tripped by a 403 `quotaExceeded`; `YouTubeMusicProvider`
+  asks it before every search and does not cache a search link (`@Cacheable unless`).
+- `GuestController` — the order: party active → the guest's own limit → the server limits → the evaluation; the IP is read on the
+  request thread, before the `Callable`. Two new message keys (PL/EN, escapes made by a script).
+- **Not checked in the running app** (unit tests only): worth one guest request in IntelliJ, and a look at the flash message after 31
+  quick requests from one address (or set `GUEST_LIMIT_PER_IP_PARTY=2` to see it sooner).
+
+**1.3:** first the scenarios (`scenarios/next-during-guest-song.js`: ⏭ a second after a guest song started, and ⏭ while it still loads) —
+the stand-in now drops a scripted GUEST answer the request excludes, as the real server does, and gives the stale answer twice. Both red on
+the old script (⏭ loaded `g` again, the ask had no `exclude`), green after: `skipToNext` passes the running guest song to
+`fetchNextTrack(skippedSongId)`, which adds it to `exclude`. Server side `DjService.markSongAsPlayed` / `pushToSpotify` evict
+`dashboardQueue` after the commit. A guest song skipped while still loading was never confirmed: it stays in the queue and comes back after
+the track ⏭ started. Asked: the owner could not tell (the case is hard to reproduce by hand — a guest song usually loads at once) and
+it was **left as it is** on the recommendation (the guest does not lose the request; the DJ who does not want it presses "Oznacz jako
+zagraną" in the queue — there is no delete button for a guest song). The alternative, if it bothers at a party: ⏭ marks it played. Found on the way:
+`run.py` crashed on a failed step whose actual value was `undefined`; it prints "undefined" now.
+
+**Then, on the owner's word:**
+- **`GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` set on Railway** (project `celebrated-enjoyment`, service `scan2play`, production; without
+  a redeploy — the service is paused, and the code that reads it is not on `main` yet). Checked: `www.scan2play.com.pl` resolves to
+  Cloudflare and answers `Server: cloudflare`; the service has no `*.up.railway.app` domain. The owner also put it in the IntelliJ run
+  configuration (the `dev.scan2play.com.pl` tunnel goes through Cloudflare too).
+- **The DJ sees the limits** ("Czy DJ wie jakie ma limity na imprezę?" → "rób"): a line under the limits form (the server limits and
+  how many requests the party has used, read at page load) and two warnings above the queue — YouTube searches spent, party limit
+  reached — shown / hidden by the `X-Guest-Limits` header of every queue poll, 304 too (`DjDashboardController`, `dashboard.html`,
+  `dashboard.js` `applyGuestLimits`, 5 message keys PL/EN). New scenario `guest-limit-warnings` (red on the old `dashboard.js`: the
+  warnings never showed; green now), `DjDashboardControllerGuestLimitsTest` (4), +1 each in `GuestRequestLimiterTest` /
+  `YouTubeSearchBudgetTest`; the stand-in has `guestLimits`.
+
+- The owner tried it and asked for the two limits apart, each with its use: now one line per limit — "Jedna sieć (np. Wi-Fi lokalu):
+  30 próśb na 10 min — najbardziej aktywna sieć wykorzystała N/30" (the address closest to its limit; the limit is per address, so a
+  single "used" number needs a choice — the busiest, as the venue's Wi-Fi is the one that fills up) and "Cała impreza: 300 próśb na 24 h
+  — wykorzystano N/300". Read at page load, not live.
+- **The owner's report on the AI:** a guest typed the lyric "baśka miała fajny biust" (Wilki, "Baśka"); the AI said it knew no such
+  song and accepted "Weekend - Ona tańczy dla mnie" instead. The prompt (`prompts/prompt-template_*.txt`) never says a request may be a
+  line of the lyrics, and the model is the smallest one (`gemini-2.5-flash-lite`). On the owner's "Popraw prompt": point 1 of both
+  `prompt-template_pl.txt` / `_en.txt` now says a request may be a fragment of the lyrics, that the song it comes from is to be found
+  and picked (not replaced), a mood only when it is none of title / artist / lyrics, and an honest word in the comment when the quote
+  is not recognised. **Not tried against the real API** (no key here) — the owner tries it in IntelliJ with the same phrase; if the
+  lite model still does not know Polish songs, the next step is `google.ai.model-name=gemini-2.5-flash` (prices compared in the chat,
+  2026-09-30: a request is a fraction of a cent on every model considered).
+- **The owner tried the new prompt:** the same line gave "Krzysztof Krawczyk - Parostatek" — still wrong. On "zmieńmy na lepszy
+  model": `google.ai.model-name=${GOOGLE_AI_MODEL:gemini-2.5-flash}` and a thinking budget for a guest's request
+  (`google.ai.thinking-budget`, 1024, env `GOOGLE_AI_THINKING_BUDGET`; `SongEvaluationService` builds its config in `init()`; the DJ's
+  pick has budget 0). **Not tried against the real API** — the owner tries it in IntelliJ: whether it recognises the song, and how long
+  the guest waits (if it is slow, lower the budget; if it still does not know, try a newer model through `GOOGLE_AI_MODEL`). Production
+  needs no new variable (the default is the new model).
+- **The badges follow the poll** (the owner: "liczby się odświeżają dopiero jak odświeżę przeglądarkę"): every queue poll carries
+  `X-Guest-Limits-Use: <busiest network>,<party>` and `dashboard.js` `applyGuestLimitsUse` sets the text and colour. New scenario
+  `guest-limit-use-follows-the-poll` (red before the JS change, green after), `DjDashboardControllerGuestLimitsTest` +1. The busiest
+  network is now scanned on every poll (the address windows of all parties — a few hundred entries at a busy time).
+- The use of each server limit is now a badge (grey, yellow from 80 %, red at the limit), on the owner's wish that the numbers stand
+  out; `DashboardPageRenderTest` checks the colours.
+
+**Tests:** 480 unit tests (479 run, 1 skipped; 450 before the session), `BUILD SUCCESS` in a scratch copy; 46 browser scenarios, all green.
+**Files:** `GuestController`, `GuestSessionService`, `GuestRequestLimiter` (new), `YouTubeSearchBudget` (new), `YouTubeMusicProvider`,
+`DjService`, `application.properties`, `messages.properties`, `messages_pl.properties`, `youtube-autopilot.js`; tests `GuestControllerTest`,
+`GuestRequestLimiterTest`, `YouTubeSearchBudgetTest`, `YouTubeMusicProviderCacheTest` (new), `GuestSessionServiceTest`,
+`YouTubeMusicProviderTest`, `DjServiceTest`; browser `server.py`, `run.py`, `README.md`, `scenarios/next-during-guest-song.js` (new);
+docs `PROJECT_CONTEXT.md` (5.2, 5.4, 6.2, 7.3, 9, 10, 11, 13), `REVIEW.md` (status), this file.
 
 ## Trying the DJ dashboard on a phone (Google login) — solved
 

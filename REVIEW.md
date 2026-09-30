@@ -418,7 +418,7 @@ sprawdzania na PostgreSQL).
 
 ## Status poprawek
 
-**Pierwsza paczka — zrobiona 2026-09-30, zacommitowana (kod `57d3def`, potem dokumenty), niewypchnięta:**
+**Pierwsza paczka — zrobiona 2026-09-30, zacommitowana (kod `57d3def`, potem dokumenty) i wypchnięta:**
 
 | # | Co zmieniono | Pliki | Testy |
 |---|--------------|-------|-------|
@@ -432,3 +432,21 @@ sprawdzania na PostgreSQL).
 
 Testy jednostkowe: **442** (441 uruchomionych, 1 pominięty), `BUILD SUCCESS` w kopii repo. Dokumenty zaktualizowane:
 `PROJECT_CONTEXT.md` (5.3, 5.4, 7.1–7.3, 9, 13) i `SESSION_HANDOFF.md` („The session of 2026-09-30, the seventh”).
+
+**Druga paczka — 4.1 i 1.3, zrobione 2026-09-30 (sesja ósma), zacommitowane (kod `dafffac`, potem dokumenty) i wypchnięte:**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 4.1 | Trzy limity, każdy liczony **przed** oceną AI. (1) Limit gościa z sesji: sprawdzenie i zapis w jednym kroku pod mutexem sesji (`tryAcquire`). (2) IP + impreza: 30 próśb / 10 min — luźno, bo goście na Wi-Fi lokalu mają jeden adres. (3) Impreza: 300 próśb / 24 h, niezależnie od adresu. (2) i (3) w `GuestRequestLimiter` (Caffeine, `asMap().compute`). Adres: `getRemoteAddr()` albo nagłówek z `guest.client-ip-header` (`CF-Connecting-IP` za Cloudflare — ustawić na produkcji). Do tego globalny bezpiecznik `YouTubeSearchBudget`: 80 wyszukiwań API na dobę Google (północ czasu pacyficznego), 403 `quotaExceeded` wyłącza wyszukiwanie od razu; po wyczerpaniu piosenka dostaje link do wyników (decyzja właściciela), a taki link nie trafia do cache'u `youtubeSearch`. Wszystkie liczby w `application.properties` + zmienne środowiskowe, 0 = wyłączone. Nowe komunikaty `guest.error.too_many_requests`, `guest.error.party_daily_limit` (PL/EN). | `GuestController`, `GuestSessionService`, nowe `GuestRequestLimiter`, `YouTubeSearchBudget`; `YouTubeMusicProvider`, `application.properties`, `messages*.properties` | nowe `GuestRequestLimiterTest` (9, w tym równoległe żądania), `GuestControllerTest` (5), `YouTubeSearchBudgetTest` (3), `YouTubeMusicProviderCacheTest` (2, prawdziwe proxy cache); `YouTubeMusicProviderTest` +2; `GuestSessionServiceTest` przepisany (6, w tym 16 równoległych żądań jednej sesji → przechodzą 2) |
+| 1.3 | ⏭ dodaje bieżącą piosenkę gościa do `exclude` zapytania `next-track`; `markSongAsPlayed` (i `pushToSpotify`) czyści `dashboardQueue` po commicie. Piosenka pominięta ⏭ jeszcze w trakcie ładowania nie była potwierdzona — zostaje w kolejce i wraca po utworze, który ⏭ włączył. | `youtube-autopilot.js`, `DjService.java`; stand-in `server.py` respektuje `exclude` jak prawdziwy serwer | nowe scenariusze `next-right-after-guest-song-started`, `next-while-guest-song-loads` — oba **czerwone na starym skrypcie** (⏭ podał `g` drugi raz), zielone teraz; `DjServiceTest` +1 |
+
+Do 4.1 doszło potem (życzenie właściciela): DJ widzi limity serwera w panelu (linijka pod formularzem limitów) i ostrzeżenie nad kolejką,
+gdy limit wyszukiwań YouTube albo limit imprezy zatrzymuje piosenki gości — nagłówek `X-Guest-Limits` każdej odpowiedzi pollu kolejki
+(także 304); scenariusz `guest-limit-warnings`, `DjDashboardControllerGuestLimitsTest`. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP`
+ustawione na Railway.
+
+Testy jednostkowe: **480** (479 uruchomionych, 1 pominięty; było 450), `BUILD SUCCESS` w kopii repo. Scenariusze przeglądarkowe: **46**, wszystkie
+zielone. CI na GitHubie (oba workflowy) zielone dla `32ac785` i `847c872`.
+
+Nie zrobione z 4.1: licznik bezpiecznika i okna limitów są w pamięci (restart je zeruje; 403 jest zabezpieczeniem) — trwały licznik w bazie
+to osobna decyzja, gdy będzie więcej niż jedna instancja (2.3).
