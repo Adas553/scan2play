@@ -15,6 +15,8 @@ import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
+import com.scan2play.service.YouTubeSearchBudget;
+import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeAll;
@@ -95,6 +97,11 @@ class DashboardPageRenderTest {
 
     /** What the controller does for a DJ with these settings, rendered like the view resolver would. */
     private static String renderDashboard(PartySettingsEntity settings, List<SongRequestEntity> queue, Locale locale) {
+        return renderDashboard(settings, queue, locale, new GuestRequestLimiter(30, 10, 300, ""));
+    }
+
+    private static String renderDashboard(PartySettingsEntity settings, List<SongRequestEntity> queue, Locale locale,
+                                          GuestRequestLimiter limiter) {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         DjService djService = mock(DjService.class);
         QrCodeService qrCodeService = mock(QrCodeService.class);
@@ -104,7 +111,7 @@ class DashboardPageRenderTest {
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsQueryService.class),
                 qrCodeService, sessionHelper, mock(NextTrackService.class), mock(PlayerLeaseService.class),
-                mock(PlayHistoryService.class));
+                mock(PlayHistoryService.class), limiter, new YouTubeSearchBudget(80));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -121,6 +128,32 @@ class DashboardPageRenderTest {
         // what Spring Security's CsrfRequestDataValueProcessor / the `_csrf` request attribute give the real page
         context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         return engine.process(view, context);
+    }
+
+    /** The use of each server limit is a badge the DJ notices: grey, yellow from 80 %, red at the limit. */
+    @Test
+    void theUseOfTheServerLimits_standsOut_andTurnsYellowThenRed() {
+        GuestRequestLimiter limiter = new GuestRequestLimiter(30, 10, 300, "");
+        for (int i = 0; i < 24; i++) {
+            limiter.tryAcquire("203.0.113.7", PARTY);
+        }
+        String html = renderDashboard(youTubeParty(PlaybackMode.AUTO, null), List.of(), PL, limiter);
+        assertThat(badge(html, "network")).contains("text-bg-warning").endsWith(">24/30");
+        assertThat(badge(html, "party")).contains("text-bg-secondary").endsWith(">24/300");
+
+        for (int i = 0; i < 6; i++) {
+            limiter.tryAcquire("203.0.113.7", PARTY);
+        }
+        html = renderDashboard(youTubeParty(PlaybackMode.AUTO, null), List.of(), PL, limiter);
+        assertThat(badge(html, "network")).contains("text-bg-danger").endsWith(">30/30");
+    }
+
+    /** The badge of one limit's use, from its opening tag to its text. */
+    private static String badge(String html, String limit) {
+        int at = html.indexOf("data-limit-use=\"" + limit + "\"");
+        assertThat(at).as("the badge of " + limit).isPositive();
+        int start = html.lastIndexOf("<span", at);
+        return html.substring(start, html.indexOf("</span>", at));
     }
 
     private static OAuth2AuthenticationToken ownerToken() {
@@ -156,6 +189,9 @@ class DashboardPageRenderTest {
         // the lists and the tabs (dashboard.js): the queue's search box, count and "nothing matches" row, the tab bar, the two panels
         assertThat(html).contains("id=\"queueList\"", "data-list-search", "data-list-count", "data-nomatch", "id=\"queue-content\"",
                 "id=\"history-content\"", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
+        // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
+        assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"search-spent\"", "data-guest-limit=\"party-full\"",
+                "id=\"serverLimitsInfo\"");
         assertThat(html).contains("/js/dashboard.js", "/js/youtube-autopilot.js");
         assertThat(html.indexOf("/js/dashboard.js")).as("dashboard.js goes before youtube-autopilot.js")
                 .isLessThan(html.indexOf("/js/youtube-autopilot.js"));
@@ -249,7 +285,8 @@ class DashboardPageRenderTest {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(PARTY, limit, filter)).thenReturn(new PlayHistoryService.Page(entries, hasMore));
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                mock(QrCodeService.class), mock(DjSessionHelper.class), mock(NextTrackService.class), mock(PlayerLeaseService.class), history);
+                mock(QrCodeService.class), mock(DjSessionHelper.class), mock(NextTrackService.class), mock(PlayerLeaseService.class), history,
+                mock(GuestRequestLimiter.class), mock(YouTubeSearchBudget.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());

@@ -4,7 +4,10 @@ The user sent a request: "%s".
 Preferred music genre for the party: "%s".
 
 Your tasks:
-1. Interpret the user's intent: Is it a specific song, a band, or just a mood description?
+1. Interpret the user's intent. The request may be a song title (also misspelled or colloquial), an artist, a FRAGMENT OF THE LYRICS (e.g. a line of the chorus typed from memory, without capitals or punctuation), or a mood description.
+   - If the request looks like a quote from lyrics, first work out which song it comes from and pick THAT song — do not replace it with another one just because the quote sounds casual or funny.
+   - Treat the request as a mood only when it is neither a title, nor an artist, nor a fragment of the lyrics of a song you know.
+   - If it looks like a quote but you do not know which song it comes from, do not pretend: say so briefly in the comment and pick a track that fits the vibe of the request.
 2. NO HALLUCINATIONS (CRITICAL): The song you choose MUST exist in reality and be widely available on Spotify. Never invent non-existent covers, collaborations, or remixes.
 3. VIBE CHECK:
    - If the user asks for a specific track/band (e.g. Nirvana), but the preferred genre is e.g. "Salsa & Timba" and the track ABSOLUTELY DOES NOT FIT — you must reject the request (decision: "rejected").

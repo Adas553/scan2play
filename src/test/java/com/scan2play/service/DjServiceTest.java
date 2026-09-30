@@ -11,6 +11,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +37,8 @@ class DjServiceTest {
     private QueueService queueService;
     @Mock
     private SongEvaluationService songEvaluationService;
+    @Mock
+    private CacheManager cacheManager;
 
     @InjectMocks
     private DjService djService;
@@ -80,6 +84,20 @@ class DjServiceTest {
 
         assertThat(song.getDecision()).isEqualTo(DECISION_PLAYED);
         verify(songRequestRepository).save(song);
+    }
+
+    /** Review item 1.3: next-track reads the queue through a 3 s cache — a song that played leaves it at once. */
+    @Test
+    void markSongAsPlayed_evictsTheCachedDashboardQueueOfTheParty() {
+        SongRequestEntity song = SongRequestEntity.builder()
+                .id(1L).partyCode(PARTY_CODE).songName("Test Song").decision(DECISION_ACCEPTED).build();
+        Cache dashboardQueue = mock(Cache.class);
+        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+        when(cacheManager.getCache("dashboardQueue")).thenReturn(dashboardQueue);
+
+        djService.markSongAsPlayed(1L, PARTY_CODE);
+
+        verify(dashboardQueue).evict(PARTY_CODE);
     }
 
     @Test

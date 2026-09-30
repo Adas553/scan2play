@@ -175,7 +175,8 @@ def show(name, verdict):
     for s in failed if not control else []:
         print('      x %s' % s['label'])
         if 'expected' in s:
-            print('          expected %s\n          actual   %s' % (s['expected'], s['actual']))
+            # an `undefined` actual value is left out of the JSON
+            print('          expected %s\n          actual   %s' % (s['expected'], s.get('actual', 'undefined')))
     for error in verdict.get('errors', []):
         print('      uncaught error in the page: %s' % error)
     if verdict.get('consoleErrors'):

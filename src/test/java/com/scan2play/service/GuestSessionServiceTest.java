@@ -1,27 +1,30 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
-import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 /**
- * Tests for {@link GuestSessionService} rate limiting logic.
- * Rate limiting is a core mechanism that protects the platform from spam.
+ * Tests for {@link GuestSessionService} rate limiting logic: the per-guest limit the DJ sets ({@code requestLimit} per
+ * {@code cooldownMinutes}), checked and counted in one step before the evaluation.
  */
 class GuestSessionServiceTest {
 
     private GuestSessionService service;
-    private HttpSession session;
+    private MockHttpSession session;
     private PartySettingsEntity settings;
 
     private static final String PARTY_CODE = "ABC12";
@@ -30,7 +33,7 @@ class GuestSessionServiceTest {
     @BeforeEach
     void setUp() {
         service = new GuestSessionService();
-        session = mock(HttpSession.class);
+        session = new MockHttpSession();
         settings = PartySettingsEntity.builder()
                 .partyCode(PARTY_CODE)
                 .requestLimit(2)
@@ -38,89 +41,90 @@ class GuestSessionServiceTest {
                 .build();
     }
 
-    // --- getRateLimitWaitTimeSeconds ---
+    @SuppressWarnings("unchecked")
+    private List<Instant> recorded() {
+        return (List<Instant>) session.getAttribute(SESSION_KEY);
+    }
 
-    @Test
-    void getRateLimitWaitTime_shouldReturnEmpty_whenNoRequestsInSession() {
-        when(session.getAttribute(SESSION_KEY)).thenReturn(null);
-
-        Optional<Long> result = service.getRateLimitWaitTimeSeconds(session, PARTY_CODE, settings);
-
-        assertThat(result).isEmpty();
+    private void givenEarlierRequests(Instant... times) {
+        session.setAttribute(SESSION_KEY, new ArrayList<>(List.of(times)));
     }
 
     @Test
-    void getRateLimitWaitTime_shouldReturnEmpty_whenEmptyRequestList() {
-        when(session.getAttribute(SESSION_KEY)).thenReturn(new ArrayList<>());
+    void tryAcquire_letsTheFirstRequestThrough_andCountsIt() {
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
 
-        Optional<Long> result = service.getRateLimitWaitTimeSeconds(session, PARTY_CODE, settings);
-
-        assertThat(result).isEmpty();
+        assertThat(recorded()).hasSize(1);
     }
 
     @Test
-    void getRateLimitWaitTime_shouldReturnEmpty_whenUnderLimit() {
-        List<Instant> timestamps = new ArrayList<>();
-        timestamps.add(Instant.now().minus(1, ChronoUnit.MINUTES)); // 1 request within window
+    void tryAcquire_countsUpToTheLimit_thenRefusesWithTheWaitTime() {
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
 
-        when(session.getAttribute(SESSION_KEY)).thenReturn(timestamps);
+        Optional<Long> third = service.tryAcquire(session, PARTY_CODE, settings);
 
-        Optional<Long> result = service.getRateLimitWaitTimeSeconds(session, PARTY_CODE, settings);
-
-        assertThat(result).isEmpty();
+        assertThat(third).isPresent();
+        assertThat(third.get()).isPositive().isLessThanOrEqualTo(180);
+        assertThat(recorded()).as("a refused request is not counted").hasSize(2);
     }
 
     @Test
-    void getRateLimitWaitTime_shouldReturnWaitTime_whenLimitExceeded() {
-        List<Instant> timestamps = new ArrayList<>();
-        timestamps.add(Instant.now().minus(1, ChronoUnit.MINUTES));
-        timestamps.add(Instant.now().minus(30, ChronoUnit.SECONDS));
+    void tryAcquire_refuses_whenTheLimitIsReachedWithinTheCooldown() {
+        givenEarlierRequests(Instant.now().minus(1, ChronoUnit.MINUTES), Instant.now().minus(30, ChronoUnit.SECONDS));
 
-        when(session.getAttribute(SESSION_KEY)).thenReturn(timestamps);
-
-        Optional<Long> result = service.getRateLimitWaitTimeSeconds(session, PARTY_CODE, settings);
+        Optional<Long> result = service.tryAcquire(session, PARTY_CODE, settings);
 
         assertThat(result).isPresent();
         assertThat(result.get()).isPositive();
     }
 
     @Test
-    void getRateLimitWaitTime_shouldReturnEmpty_whenAllRequestsExpired() {
-        List<Instant> timestamps = new ArrayList<>();
-        timestamps.add(Instant.now().minus(10, ChronoUnit.MINUTES)); // older than 3-min window
-        timestamps.add(Instant.now().minus(5, ChronoUnit.MINUTES));
+    void tryAcquire_forgetsRequestsOlderThanTheCooldown() {
+        givenEarlierRequests(Instant.now().minus(10, ChronoUnit.MINUTES), Instant.now().minus(5, ChronoUnit.MINUTES));
 
-        when(session.getAttribute(SESSION_KEY)).thenReturn(timestamps);
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
 
-        Optional<Long> result = service.getRateLimitWaitTimeSeconds(session, PARTY_CODE, settings);
-
-        assertThat(result).isEmpty();
-    }
-
-    // --- recordSuccessfulRequest ---
-
-    @Test
-    void recordSuccessfulRequest_shouldCreateNewListIfNone() {
-        when(session.getAttribute(SESSION_KEY)).thenReturn(null);
-
-        service.recordSuccessfulRequest(session, PARTY_CODE);
-
-        verify(session).setAttribute(eq(SESSION_KEY), argThat(arg -> {
-            @SuppressWarnings("unchecked")
-            List<Instant> list = (List<Instant>) arg;
-            return list.size() == 1;
-        }));
+        assertThat(recorded()).hasSize(1);
     }
 
     @Test
-    void recordSuccessfulRequest_shouldAppendToExistingList() {
-        List<Instant> existing = new ArrayList<>();
-        existing.add(Instant.now().minus(1, ChronoUnit.MINUTES));
-        when(session.getAttribute(SESSION_KEY)).thenReturn(existing);
+    void tryAcquire_keepsASeparateCountPerParty() {
+        service.tryAcquire(session, PARTY_CODE, settings);
+        service.tryAcquire(session, PARTY_CODE, settings);
 
-        service.recordSuccessfulRequest(session, PARTY_CODE);
+        assertThat(service.tryAcquire(session, "OTHER", settings)).isEmpty();
+    }
 
-        assertThat(existing).hasSize(2);
+    /**
+     * The bug of review item 4.1: the limit was checked before and recorded after the 2–4 s evaluation, so requests sent in
+     * parallel from one session all passed. Now only {@code requestLimit} of them do.
+     */
+    @Test
+    void tryAcquire_letsOnlyTheLimitThrough_whenRequestsOfOneSessionComeInParallel() throws Exception {
+        int requests = 16;
+        ExecutorService pool = Executors.newFixedThreadPool(requests);
+        try {
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<Optional<Long>>> results = new ArrayList<>();
+            for (int i = 0; i < requests; i++) {
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return service.tryAcquire(session, PARTY_CODE, settings);
+                }));
+            }
+            start.countDown();
+
+            int passed = 0;
+            for (Future<Optional<Long>> result : results) {
+                if (result.get().isEmpty()) {
+                    passed++;
+                }
+            }
+            assertThat(passed).isEqualTo(2);
+            assertThat(recorded()).hasSize(2);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }
-

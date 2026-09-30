@@ -46,7 +46,9 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest �
   the fixture**. `POST /__config` merges a JSON object into its state (`server.py`, `default_state()`, lists the keys: `lease`,
   `commands`, `nextTracks`, `nextTrackStatus`, `recent`, `recentStatus`, `replay`, `delays`, `playbackMode`, `queue`,
   `queueActionStatus`, `historyStatus`, `fallbackSave`); a config is **merged**, so a key is set back to its default value, not left
-  out (`delays: {'/path': 0}`, not `delays: {}`). What the poll of the queue answers is a `<tbody>` of the rows the scenario names plus
+  out (`delays: {'/path': 0}`, not `delays: {}`). One rule of the real server it does follow: a scripted `GUEST` answer whose id the
+  request lists in `exclude` is dropped, as the real server never hands out an excluded song (`next-during-guest-song.js`). Every
+  answer of the queue poll carries `X-Guest-Limits` from the key `guestLimits` (`guest-limits.js`). What the poll of the queue answers is a `<tbody>` of the rows the scenario names plus
   the real "nothing matches" row (taken from the rendered page: it is part of the polled fragment).
 * **The lease is scripted, not simulated:** who holds the player lease is a config (`lease: {holder, free}`), so "another window took
   over" is `stand.config({ lease: { holder: false } })`. The rules of the server (who gets the lease, the timeout) are unit-tested on the

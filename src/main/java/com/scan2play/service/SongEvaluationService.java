@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
+import com.google.genai.types.ThinkingConfig;
 import com.google.genai.types.GenerateContentResponse;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
@@ -52,18 +53,15 @@ import static com.scan2play.service.DjService.DECISION_REJECTED;
 @Slf4j
 public class SongEvaluationService {
 
-    /** Config for AI evaluation requests — default temperature allows creative DJ comments. */
-    private static final GenerateContentConfig AI_JSON_CONFIG = GenerateContentConfig.builder()
-            .responseMimeType("application/json")
-            .build();
-
     /**
      * Config for song name normalization — temperature 0.0 ensures deterministic output.
-     * The task is purely factual: map raw input to canonical "ARTIST - TITLE" format.
+     * The task is purely factual: map raw input to canonical "ARTIST - TITLE" format, so the model does not think first
+     * (a thinking budget of 0; it keeps the DJ's pick quick).
      */
     private static final GenerateContentConfig AI_NORMALIZE_CONFIG = GenerateContentConfig.builder()
             .responseMimeType("application/json")
             .temperature(0.0f)
+            .thinkingConfig(ThinkingConfig.builder().thinkingBudget(0).build())
             .build();
 
     private static final String DEFAULT_LANG = "en";
@@ -71,6 +69,17 @@ public class SongEvaluationService {
 
     @Value("${google.ai.model-name}")
     private String modelName;
+
+    /**
+     * How many tokens the model may think before it answers a guest's request ({@code google.ai.thinking-budget}): working out
+     * which song a line of lyrics comes from needs a little, and every thinking token is paid as output and adds to the guest's
+     * wait (the call times out after 10 s, {@code GeminiConfig}). 0 = no thinking, -1 = the model decides.
+     */
+    @Value("${google.ai.thinking-budget:1024}")
+    private int thinkingBudget;
+
+    /** Config for AI evaluation requests — default temperature allows creative DJ comments; built in {@link #init()}. */
+    private GenerateContentConfig aiJsonConfig;
 
     private final Client client;
     private final ObjectMapper objectMapper;
@@ -96,6 +105,10 @@ public class SongEvaluationService {
     @PostConstruct
     public void init() {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.aiJsonConfig = GenerateContentConfig.builder()
+                .responseMimeType("application/json")
+                .thinkingConfig(ThinkingConfig.builder().thinkingBudget(thinkingBudget).build())
+                .build();
         try {
             var prompts = new java.util.HashMap<String, String>();
             var duplicates = new java.util.HashMap<String, String>();
@@ -182,7 +195,7 @@ public class SongEvaluationService {
                     : "";
             String prompt = String.format(promptTemplates.get(lang), songName, style, duplicateRule);
 
-            GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_JSON_CONFIG);
+            GenerateContentResponse response = client.models.generateContent(modelName, prompt, aiJsonConfig);
             return objectMapper.readValue(response.text(), DjResponse.class);
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);

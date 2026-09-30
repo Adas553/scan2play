@@ -4,7 +4,10 @@ Użytkownik wysłał prośbę: "%s".
 Preferowany gatunek muzyczny imprezy: "%s".
 
 Twoje zadania:
-1. Zinterpretuj intencję użytkownika: Czy to konkretna piosenka, zespół, czy tylko opis nastroju?
+1. Zinterpretuj intencję użytkownika. Prośba może być tytułem piosenki (także z błędami albo potocznym), wykonawcą, FRAGMENTEM TEKSTU piosenki (np. linijką refrenu wpisaną z pamięci, bez wielkich liter i interpunkcji) albo opisem nastroju.
+   - Jeśli prośba wygląda jak cytat z tekstu, najpierw ustal, z jakiej piosenki pochodzi, i wybierz TĘ piosenkę — nie zastępuj jej inną tylko dlatego, że cytat brzmi potocznie lub zabawnie.
+   - Za opis nastroju uznaj prośbę dopiero wtedy, gdy nie jest ani tytułem, ani wykonawcą, ani fragmentem tekstu znanej Ci piosenki.
+   - Jeśli to wygląda na cytat, ale nie wiesz, z której piosenki pochodzi, nie udawaj: napisz to krótko w komentarzu i wybierz utwór pasujący do klimatu prośby.
 2. ZAKAZ HALUCYNACJI (KRYTYCZNE): Piosenka, którą wybierzesz, MUSI istnieć w rzeczywistości i być powszechnie dostępna na Spotify. Nigdy nie wymyślaj nieistniejących coverów, współprac ani remiksów.
 3. WERYFIKACJA KLIMATU:
    - Jeśli użytkownik prosi o konkretny utwór/zespół (np. Nirvana), a preferowany gatunek to np. "Salsa & Timba" i utwór do niego ABSOLUTNIE NIE PASUJE - musisz bezwzględnie ODRZUCIĆ prośbę (decision: "rejected").

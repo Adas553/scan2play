@@ -8,9 +8,13 @@ import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.YouTubeUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +53,7 @@ public class DjService {
     private final PartySettingsQueryService partySettingsQueryService;
     private final QueueService queueService;
     private final SongEvaluationService songEvaluationService;
+    private final CacheManager cacheManager;
 
     // ---- Queue Queries ----
 
@@ -151,8 +156,32 @@ public class DjService {
             }
             markPlayed(song, LocalDateTime.now());
             songRequestRepository.save(song);
+            evictDashboardQueueAfterCommit(song.getPartyCode());
             log.info("Marked song ID={} as PLAYED for party {}", id, song.getPartyCode());
         });
+    }
+
+    /**
+     * A song that has played leaves the queue at once, not when the 3 s cache of {@link #getDashboardQueue} expires: next-track
+     * reads that cache, and a ⏭ in those seconds handed the song that had just started out again. After the commit, not
+     * before: a request that read the queue while this transaction was still open would put the old list back. Without a
+     * transaction the cache is evicted at once.
+     */
+    private void evictDashboardQueueAfterCommit(String partyCode) {
+        Runnable evict = () -> {
+            Cache cache = cacheManager.getCache("dashboardQueue");
+            if (cache != null) cache.evict(partyCode);
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evict.run();
+                }
+            });
+        } else {
+            evict.run();
+        }
     }
 
     /**
@@ -185,6 +214,7 @@ public class DjService {
                             }
                             markPlayed(song, LocalDateTime.now());
                             songRequestRepository.save(song);
+                            evictDashboardQueueAfterCommit(partyCode);
                             log.info("Manually pushed song ID={} to Spotify queue and marked as PLAYED", id);
                         });
             } else {

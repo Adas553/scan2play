@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.PartySettingsEntity;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.WebUtils;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -17,56 +18,38 @@ import java.util.Optional;
 public class GuestSessionService {
 
     /**
-     * Checks if the guest is rate-limited based on their session history and party settings.
+     * Counts one song request against the guest's limit ({@code requestLimit} per {@code cooldownMinutes}), if it is under it.
+     * <p>
+     * The check and the record are one step under the session's mutex, and the request is counted <b>before</b> the evaluation
+     * (2–4 s of AI): before, parallel requests of one session all passed the check while the first was still being evaluated.
      *
      * @param session   the user's HTTP session
      * @param partyCode the unique code of the party
      * @param settings  the current settings of the party
-     * @return an Optional containing the wait time in seconds if rate-limited, empty otherwise
+     * @return empty if the request may go on (it has been counted), otherwise the wait time in seconds
      */
-    public Optional<Long> getRateLimitWaitTimeSeconds(HttpSession session, String partyCode, PartySettingsEntity settings) {
+    public Optional<Long> tryAcquire(HttpSession session, String partyCode, PartySettingsEntity settings) {
         String sessionKey = "requests_" + partyCode;
-        @SuppressWarnings("unchecked")
-        List<Instant> requestTimestamps = (List<Instant>) session.getAttribute(sessionKey);
-        
-        if (requestTimestamps == null || requestTimestamps.isEmpty()) {
+        synchronized (WebUtils.getSessionMutex(session)) {
+            @SuppressWarnings("unchecked")
+            List<Instant> requestTimestamps = (List<Instant>) session.getAttribute(sessionKey);
+            if (requestTimestamps == null) {
+                requestTimestamps = new ArrayList<>();
+            }
+
+            Instant now = Instant.now();
+            Instant cutoffTime = now.minus(settings.getCooldownMinutes(), ChronoUnit.MINUTES);
+            requestTimestamps.removeIf(t -> t.isBefore(cutoffTime));
+
+            if (!requestTimestamps.isEmpty() && requestTimestamps.size() >= settings.getRequestLimit()) {
+                Instant oldestRequest = requestTimestamps.getFirst();
+                long secondsToWait = ChronoUnit.SECONDS.between(now, oldestRequest.plus(settings.getCooldownMinutes(), ChronoUnit.MINUTES));
+                return Optional.of(Math.max(0, secondsToWait));
+            }
+
+            requestTimestamps.add(now);
+            session.setAttribute(sessionKey, requestTimestamps);
             return Optional.empty();
         }
-
-        Instant now = Instant.now();
-        Instant cutoffTime = now.minus(settings.getCooldownMinutes(), ChronoUnit.MINUTES);
-        
-        // Remove expired entries
-        requestTimestamps.removeIf(t -> t.isBefore(cutoffTime));
-
-        // After cleanup, if no active requests remain, guest is not rate-limited
-        if (requestTimestamps.isEmpty()) {
-            return Optional.empty();
-        }
-
-        // Check if the limit has been exceeded
-        if (requestTimestamps.size() >= settings.getRequestLimit()) {
-            Instant oldestRequest = requestTimestamps.getFirst();
-            long secondsToWait = ChronoUnit.SECONDS.between(now, oldestRequest.plus(settings.getCooldownMinutes(), ChronoUnit.MINUTES));
-            return Optional.of(Math.max(0, secondsToWait));
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Records a successful song request timestamp in the user's session.
-     *
-     * @param session   the user's HTTP session
-     * @param partyCode the unique code of the party
-     */
-    public void recordSuccessfulRequest(HttpSession session, String partyCode) {
-        String sessionKey = "requests_" + partyCode;
-        @SuppressWarnings("unchecked")
-        List<Instant> requestTimestamps = (List<Instant>) session.getAttribute(sessionKey);
-        if (requestTimestamps == null) {
-            requestTimestamps = new ArrayList<>();
-        }
-        requestTimestamps.add(Instant.now());
-        session.setAttribute(sessionKey, requestTimestamps);
     }
 }

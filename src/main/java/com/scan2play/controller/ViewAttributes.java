@@ -37,6 +37,13 @@ public final class ViewAttributes {
     public static final String FALLBACK_PLAYLIST_ID = "fallbackPlaylistId";
     public static final String FALLBACK_PLAYLIST_URL = "fallbackPlaylistUrl";
     public static final String FALLBACK_SHUFFLE = "fallbackShuffle";
+    public static final String SERVER_LIMIT_PER_NETWORK = "serverLimitPerNetwork";
+    public static final String SERVER_LIMIT_WINDOW_MINUTES = "serverLimitWindowMinutes";
+    public static final String SERVER_LIMIT_PER_PARTY = "serverLimitPerParty";
+    public static final String PARTY_REQUESTS_USED = "partyRequestsUsed";
+    public static final String BUSIEST_NETWORK_REQUESTS_USED = "busiestNetworkRequestsUsed";
+    public static final String SEARCH_BUDGET_SPENT = "searchBudgetSpent";
+    public static final String PARTY_LIMIT_REACHED = "partyLimitReached";
 
     // --- Index/Guest Attributes ---
     public static final String PUBLIC_QUEUE = "publicQueue";

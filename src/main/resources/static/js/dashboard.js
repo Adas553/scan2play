@@ -425,6 +425,37 @@ window.applyPlaybackMode = function (mode, reportSentAt) {
 (function initPolling() {
     let currentETag = null;
 
+    /**
+     * Shows the warning of each server limit the header names (search-spent, party-full) and hides the others. A missing
+     * header (an answer from before this version, an error page) changes nothing.
+     */
+    function applyGuestLimits(value) {
+        if (value === null) return;
+        const active = value.split(',').map(function (flag) { return flag.trim(); });
+        document.querySelectorAll('#guestLimitWarnings [data-guest-limit]').forEach(function (warning) {
+            warning.classList.toggle('d-none', active.indexOf(warning.dataset.guestLimit) < 0);
+        });
+    }
+
+    /**
+     * Sets the badges with the use of the server limits from '<busiest network>,<party>': "used/limit", grey, yellow from 80 %,
+     * red at the limit — the same rule as the page's template. A missing or malformed header changes nothing.
+     */
+    function applyGuestLimitsUse(value) {
+        if (value === null) return;
+        const used = value.split(',').map(function (n) { return parseInt(n, 10); });
+        if (used.length !== 2 || used.some(isNaN)) return;
+        [['network', used[0]], ['party', used[1]]].forEach(function (pair) {
+            const badge = document.querySelector('[data-limit-use="' + pair[0] + '"]');
+            const limit = badge ? parseInt(badge.dataset.limit, 10) : NaN;
+            if (isNaN(limit)) return;
+            badge.textContent = pair[1] + '/' + limit;
+            badge.classList.toggle('text-bg-danger', pair[1] >= limit);
+            badge.classList.toggle('text-bg-warning', pair[1] < limit && pair[1] * 5 >= limit * 4);
+            badge.classList.toggle('text-bg-secondary', pair[1] * 5 < limit * 4);
+        });
+    }
+
     async function refreshTable() {
         try {
             const partyCodeEl = document.getElementById('partyCode');
@@ -440,6 +471,10 @@ window.applyPlaybackMode = function (mode, reportSentAt) {
                 method: 'GET',
                 headers: headers
             });
+
+            // Every answer, 304 too, says which server limit stops guest songs now, and how much of each is used
+            applyGuestLimits(response.headers.get('X-Guest-Limits'));
+            applyGuestLimitsUse(response.headers.get('X-Guest-Limits-Use'));
 
             // 304 Not Modified — queue unchanged, skip DOM replacement
             if (response.status === 304) {

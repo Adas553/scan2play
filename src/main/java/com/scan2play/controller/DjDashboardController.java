@@ -2,13 +2,16 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryFilter;
+import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.NextTrackResponse;
 import com.scan2play.service.DjService;
+import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
+import com.scan2play.service.YouTubeSearchBudget;
 import com.scan2play.util.YouTubeUrls;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +32,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -57,6 +62,24 @@ public class DjDashboardController {
     private final NextTrackService nextTrackService;
     private final PlayerLeaseService playerLeaseService;
     private final PlayHistoryService playHistoryService;
+    private final GuestRequestLimiter guestRequestLimiter;
+    private final YouTubeSearchBudget youTubeSearchBudget;
+
+    /**
+     * On every answer of the queue poll, 304 too: the limits that stop guest songs now, comma-separated —
+     * {@value #FLAG_SEARCH_SPENT} (today's YouTube searches, YouTube parties only) and {@value #FLAG_PARTY_FULL} (the party's
+     * 24-hour limit) — or {@value #FLAG_NONE}. The dashboard shows or hides its warnings by it.
+     */
+    static final String GUEST_LIMITS_HEADER = "X-Guest-Limits";
+    static final String FLAG_SEARCH_SPENT = "search-spent";
+    static final String FLAG_PARTY_FULL = "party-full";
+    static final String FLAG_NONE = "none";
+
+    /**
+     * On every answer of the queue poll, 304 too: how many requests the server limits have used now,
+     * {@code <busiest network>,<party>} — the dashboard keeps its badges current by it, without a reload.
+     */
+    static final String GUEST_LIMITS_USE_HEADER = "X-Guest-Limits-Use";
 
     /** The history shows this many requests at first, and this many more each time the DJ asks for more. */
     static final int HISTORY_PAGE_SIZE = 50;
@@ -107,6 +130,15 @@ public class DjDashboardController {
         model.addAttribute(FALLBACK_PLAYLIST_ID, extractPlaylistId(settings.getFallbackPlaylistUrl()));
         model.addAttribute(FALLBACK_PLAYLIST_URL, settings.getFallbackPlaylistUrl());
         model.addAttribute(FALLBACK_SHUFFLE, settings.isFallbackShuffle());
+
+        // --- The server's guest limits (they are not the DJ's to set) and whether one stops guest songs now ---
+        model.addAttribute(SERVER_LIMIT_PER_NETWORK, guestRequestLimiter.perClientLimit());
+        model.addAttribute(SERVER_LIMIT_WINDOW_MINUTES, guestRequestLimiter.clientWindowMinutes());
+        model.addAttribute(SERVER_LIMIT_PER_PARTY, guestRequestLimiter.perPartyLimit());
+        model.addAttribute(PARTY_REQUESTS_USED, guestRequestLimiter.partyRequestsUsed(partyCode));
+        model.addAttribute(BUSIEST_NETWORK_REQUESTS_USED, guestRequestLimiter.busiestClientRequestsUsed(partyCode));
+        model.addAttribute(SEARCH_BUDGET_SPENT, isSearchBudgetSpent(settings));
+        model.addAttribute(PARTY_LIMIT_REACHED, guestRequestLimiter.isPartyLimitReached(partyCode));
 
         // --- QR Code ---
         String guestUrl = cleanBaseUrl + "/p/" + partyCode;
@@ -190,6 +222,12 @@ public class DjDashboardController {
                                       HttpServletRequest request, HttpServletResponse response,
                                       OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode); // cached
+        // Not part of the ETag: the warnings follow the limits even while the queue stays the same
+        response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode, settings));
+        response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
+                + "," + guestRequestLimiter.partyRequestsUsed(partyCode));
+
         // --- Lightweight fingerprint check (avoids full query + render) ---
         String fingerprint = djService.getQueueFingerprint(partyCode);
         String etag = "\"q-" + fingerprint + "\"";
@@ -203,12 +241,24 @@ public class DjDashboardController {
 
         // --- Full render (queue changed) ---
         response.setHeader("ETag", etag);
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
+    }
+
+    /** The value of {@link #GUEST_LIMITS_HEADER}. */
+    private String guestLimitFlags(String partyCode, PartySettingsEntity settings) {
+        List<String> flags = new ArrayList<>(2);
+        if (isSearchBudgetSpent(settings)) flags.add(FLAG_SEARCH_SPENT);
+        if (guestRequestLimiter.isPartyLimitReached(partyCode)) flags.add(FLAG_PARTY_FULL);
+        return flags.isEmpty() ? FLAG_NONE : String.join(",", flags);
+    }
+
+    /** Spent YouTube searches matter to a YouTube party only: Spotify resolves its songs by its own search. */
+    private boolean isSearchBudgetSpent(PartySettingsEntity settings) {
+        return settings.getActiveProvider() == MusicProviderType.YOUTUBE && youTubeSearchBudget.isSpent();
     }
 
     /**

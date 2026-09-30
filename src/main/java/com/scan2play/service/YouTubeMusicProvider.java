@@ -12,6 +12,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.net.URLEncoder;
@@ -46,20 +47,25 @@ public class YouTubeMusicProvider implements MusicProvider {
     private static final String YOUTUBE_SEARCH_FALLBACK = "https://www.youtube.com/results?search_query=";
     /** How Google APIs accept an API key other than the {@code key} query parameter. */
     static final String API_KEY_HEADER = "X-goog-api-key";
+    /** The {@code reason} of the 403 Google answers once the day's quota is spent. */
+    private static final String QUOTA_EXCEEDED_REASON = "quotaExceeded";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final YoutubeCacheRepository youtubeCacheRepository;
+    private final YouTubeSearchBudget searchBudget;
     private final String apiKey;
 
     public YouTubeMusicProvider(
             RestClient restClient,
             ObjectMapper objectMapper,
             YoutubeCacheRepository youtubeCacheRepository,
+            YouTubeSearchBudget searchBudget,
             @Value("${youtube.api-key:}") String apiKey) {
         this.restClient = restClient;
         this.objectMapper = objectMapper;
         this.youtubeCacheRepository = youtubeCacheRepository;
+        this.searchBudget = searchBudget;
         this.apiKey = apiKey;
     }
 
@@ -80,14 +86,16 @@ public class YouTubeMusicProvider implements MusicProvider {
      * If a DB cache entry is found but older than 30 days (YouTube API ToS limit),
      * it is treated as expired — the API is called again and the row is updated in place.
      * <p>
-     * Only {@code null} results (API failures) are excluded from caching so they can be retried.
+     * When today's search budget is spent ({@link YouTubeSearchBudget}) the API is not called and the song gets the search link.
+     * <p>
+     * {@code null} results (API failures) and search links are not cached, so the song gets its video once the API can be asked.
      *
      * @param searchQuery the text to search for (e.g., song title and artist)
      * @return a YouTube video URL, or a search fallback URL, or null if search fails
      */
     @Cacheable(value = "youtubeSearch",
             key = "#searchQuery.strip().toLowerCase()",
-            unless = "#result == null")
+            unless = "#result == null || #result.startsWith('" + YOUTUBE_SEARCH_FALLBACK + "')")
     @Override
     public String findTrackUrl(String searchQuery) {
         String normalizedQuery = searchQuery.strip().toLowerCase();
@@ -110,6 +118,12 @@ public class YouTubeMusicProvider implements MusicProvider {
         // No API key → return clickable fallback (Auto-Pilot won't work)
         if (apiKey == null || apiKey.isBlank()) {
             log.warn("YouTube API key not configured — returning search URL fallback for: '{}'", searchQuery);
+            return buildSearchFallbackUrl(searchQuery);
+        }
+
+        // The search limit is one per Google project, shared by every party: past today's budget, the song gets the search link
+        if (!searchBudget.tryAcquire()) {
+            log.debug("YouTube search budget spent — returning search URL fallback for: '{}'", searchQuery);
             return buildSearchFallbackUrl(searchQuery);
         }
 
@@ -165,6 +179,12 @@ public class YouTubeMusicProvider implements MusicProvider {
                 }
             }
             log.warn("No YouTube video found for: '{}'", searchQuery);
+        } catch (HttpClientErrorException.Forbidden e) {
+            if (e.getResponseBodyAsString().contains(QUOTA_EXCEEDED_REASON)) {
+                searchBudget.markQuotaExceeded();
+                return buildSearchFallbackUrl(searchQuery);
+            }
+            log.error("YouTube Data API search refused for: '{}'", searchQuery, e);
         } catch (Exception e) {
             log.error("YouTube Data API search failed for: '{}'", searchQuery, e);
         }

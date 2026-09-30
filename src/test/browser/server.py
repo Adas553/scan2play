@@ -45,7 +45,8 @@ def default_state():
         'lease': {'holder': True, 'free': False, 'fallbackPlaylistId': PARTY_CODE_PLAYLIST, 'queueVersion': 'v1', 'playing': None},
         # Commands for the window that plays, handed out one per lease report of the holder: 'NEXT', 'PAUSE'...
         'commands': [],
-        # The answers of POST next-track in order ({source, id, videoId, playlistId}); when they run out: 204.
+        # The answers of POST next-track in order ({source, id, videoId, playlistId}); when they run out: 204. A GUEST answer whose
+        # id the request lists in `exclude` is dropped and the next one given, as the real server never hands out an excluded song.
         'nextTracks': [],
         'nextTrackStatus': None,       # e.g. 409: every next-track is refused
         # The answer of GET recent-tracks (a list of {key, source, id, videoId, title, secondsAgo}; without secondsAgo a reload
@@ -63,6 +64,11 @@ def default_state():
         # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the track link).
         # The rendered page itself has two rows, but the first poll replaces them with these.
         'queue': [],
+        # The X-Guest-Limits header of every poll answer: 'none', or the server limits that stop guest songs now, e.g.
+        # 'search-spent', 'party-full', 'search-spent,party-full' (the dashboard shows a warning for each)
+        'guestLimits': 'none',
+        # The X-Guest-Limits-Use header of every poll answer: '<busiest network>,<party>' — the requests used of each server limit
+        'guestLimitsUse': '0,0',
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'queueVersion': 'v1',          # X-Queue-Version of GET fallback-queue
         'queueActionStatus': 204,      # the answer of POST fallback-queue/move|place|skip (409: the player took the track)
@@ -259,18 +265,19 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/updates':
             with stand.lock:
                 mode, queue = state['playbackMode'], list(state['queue'])
+                limits = {'X-Guest-Limits': state['guestLimits'], 'X-Guest-Limits-Use': state['guestLimitsUse']}
             # Like the real server: the ETag is a fingerprint of the guest queue only, so a change of the Auto-Pilot setting alone is
-            # answered 304 — a window learns it from the lease answers.
+            # answered 304 — a window learns it from the lease answers. X-Guest-Limits(-Use) is on every answer, 304 too.
             etag = '"q-%08x"' % zlib.crc32(json.dumps(queue, sort_keys=True).encode('utf-8'))
             if self.headers.get('If-None-Match') == etag:
-                return self._send(304, headers={'ETag': etag})
+                return self._send(304, headers=dict(limits, ETag=etag))
             # a row has the song cell that the column sort reads (data-sort-value / data-val) and, after the rows, the real
             # "nothing matches" row that the search box shows and hides
             rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"><td data-sort-value="song" data-val="%s">%s</td></tr>'
                            % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True), html.escape(r['name'], True), html.escape(r['name']))
                            for r in queue)
             body = '<tbody id="song-list" data-playback-mode="%s" data-provider="YOUTUBE">%s%s</tbody>' % (mode, rows, stand.nomatch_row())
-            return self._send(200, body, 'text/html; charset=utf-8', {'ETag': etag})
+            return self._send(200, body, 'text/html; charset=utf-8', dict(limits, ETag=etag))
         if path == '/dj/history-view/fragment':
             # the REAL history fragment as DashboardPageRenderTest renders it through the real controller: one file per filter
             # (all, guest, background, played, rejected) — the first page — and a "-more" one for "Show more" (a request with a limit)
@@ -335,6 +342,11 @@ class Handler(BaseHTTPRequestHandler):
                 if state['replay']:
                     answer = stand.replay_next()
                 else:
+                    # Like the real server, never hand out a guest song the request excludes: its scripted answer is dropped
+                    excluded = {int(x) for x in (fields.get('exclude') or '').split(',') if x.strip().isdigit()}
+                    while (state['nextTracks'] and state['nextTracks'][0].get('source') == 'GUEST'
+                           and state['nextTracks'][0].get('id') in excluded):
+                        state['nextTracks'].pop(0)
                     answer = state['nextTracks'].pop(0) if state['nextTracks'] else None
             return self._send(204) if answer is None else self._json(answer)
         if path == '/dj/dashboard/fallback-playlist':

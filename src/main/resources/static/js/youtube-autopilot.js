@@ -175,15 +175,18 @@
      * when the answer is about to be loaded. Returns null on "nothing to play" (204) or on a
      * network error.
      *
+     * @param {number|null} [skippedSongId] a guest song ⏭ is skipping: not handed out again by this ask (see skipToNext)
      * @returns {Promise<{source: 'GUEST'|'BACKGROUND', id: number, videoId: string}|null>}
      */
-    async function fetchNextTrack() {
+    async function fetchNextTrack(skippedSongId) {
         if (!partyCodeValue) return null;
         try {
             let url = '/dj/dashboard/next-track?partyCode=' + encodeURIComponent(partyCodeValue)
                 + '&deviceId=' + encodeURIComponent(deviceId);
-            if (erroredSongIds.size > 0) {
-                url += '&exclude=' + Array.from(erroredSongIds).join(',');
+            const exclude = new Set(erroredSongIds);
+            if (skippedSongId) exclude.add(skippedSongId);
+            if (exclude.size > 0) {
+                url += '&exclude=' + Array.from(exclude).join(',');
             }
             const response = await fetch(url, { method: 'POST', headers: { [csrf.header]: csrf.token } });
             if (response.status === 409) { // another window holds the lease: this one only looks
@@ -507,7 +510,9 @@
                     return;
                 }
             }
-            const track = await fetchNextTrack();
+            // The guest song that runs now is excluded: it leaves the queue only once the server has its confirmation (POST /play,
+            // sent on PLAYING) — a ⏭ while it loads, or before the confirmation arrived, got the same song back.
+            const track = await fetchNextTrack(currentlyPlayingSongId);
             if (!track || isPlayerDevice !== true) return; // nothing to play, or the lease moved while we asked
             playTrack(track);
         } finally {
