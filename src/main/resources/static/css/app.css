@@ -230,7 +230,9 @@ th[data-sort].sort-desc::after {
  *    Body class: .page-landing
  * ========================================================================== */
 .page-landing { background-color: #121212; color: #fff; }
-.hero-section  { padding: 100px 0; text-align: center; }
+/* Vertical padding only: the element is also a Bootstrap .container, whose side padding the row inside it (negative margins)
+   relies on — a `padding: 100px 0` took it away and the page was 12 px wider than a phone, so it could be nudged sideways. */
+.hero-section  { padding-block: 100px; text-align: center; }
 
 .btn-spotify       { background-color: var(--s2p-green); color: white; font-weight: bold; border: none; }
 .btn-spotify:hover  { background-color: var(--s2p-green-hover); color: white; }
@@ -270,7 +272,7 @@ th[data-sort].sort-desc::after {
 
 /* --- How-it-works guide (landing page) --- */
 .guide-section {
-    padding: 60px 0 80px;
+    padding-block: 60px 80px;   /* vertical only, like .hero-section above */
 }
 .guide-section h2 {
     color: #fff;
