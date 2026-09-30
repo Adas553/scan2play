@@ -3,15 +3,22 @@
 Where the work stands, for whoever continues (a new Claude Code session or a person). The history of the
 first session (2026-09-28, remote) is summarised at the bottom.
 
-## Start here (updated at the end of the 2026-09-29/30 session)
+## Start here (updated at the end of the 2026-09-30 session, the sixth)
 
-- **The newest session (2026-09-29/30, a fifth one) is the first thing to read: see "The session of 2026-09-29/30" below.** In short:
+- **The very newest session (2026-09-30, the sixth) is described in "The session of 2026-09-30, the sixth" (after the fifth's section).** In
+  short: at the owner's choice of all four, it added **browser scenarios for the lease, the lists, the History tab and the tabs** (27 scenarios
+  now), made **`<html lang>` of the dashboard follow the language** (`html.lang` in both bundles), **removed `GET /dj/dashboard/next-guest-track`**
+  with its tests, and wrote **a GitHub Actions workflow for the browser tests** (not run on GitHub yet). The Auto-Pilot hint / IFrame message
+  are still **not built**: the owner tried the friend's steps on another laptop and they worked; they will ask her again. **All of it — and
+  item 7 of the fifth session, which the same files carry — is COMMITTED as one more pair (code `50558eb`, then the docs) on the owner's
+  "ok, commituj"; NOT pushed: `dev` is 12 commits ahead of `origin/dev`** (`git status -sb`: `dev...origin/dev [ahead 12]`).
+- **The fifth session (2026-09-29/30) — see "The session of 2026-09-29/30" below.** In short:
   the browser tests are now **in the repo** (`src/test/browser`, `python src/test/browser/run.py`), the three small JS fixes (and, added
   later that day at the owner's request, two buttons "Wstecz" / "Od początku" in a window that does not play — its section, 6) and the
   three polish items are built, the guests' song requests are purged after 30 days (`V8` is a new migration — the status `SKIPPED`), and
   the Auto-Pilot hint / IFrame message were **not** built (the owner wants the friend's steps reproduced first). **All of it is
   COMMITTED as one more pair (code `8248f9c`, then the docs) — on the owner's "działa, commituj", said after trying the two back buttons;
-  NOT pushed: `dev` is 10 commits ahead of `origin/dev`.** The list of the changed files is in that section.
+  NOT pushed: `dev` was 10 commits ahead of `origin/dev` (12 since the sixth session's pair).** The list of the changed files is in that section.
 
 - Phase 3 (the DJ sees and reorders the playlist queue — buttons **and drag and drop**) is finished, was tried by the owner
   on a real phone (Galaxy S25, Chrome; "everything worked", 2026-09-29) and is committed on `dev` as two local commits
@@ -105,7 +112,9 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: **425** tests (424 run, 1 skipped — the fixture recorder) with the work of the 2026-09-29/30 session (386 before it; the rest of
+- Tests: **426** tests (425 run, 1 skipped — the fixture recorder) after the sixth session (2026-09-30: 429 before it, minus the six tests of the
+  removed `next-guest-track` endpoint, plus three of `DashboardPageRenderTest`; counted in a scratch copy, `BUILD SUCCESS`) and **27 browser scenarios**
+  (19 before). The next bullet's numbers are those of the fifth session (**429** tests, 428 run, 1 skipped, with the work of the 2026-09-29/30 session — 386 before it; the rest of
   this bullet describes the earlier runs)
   (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
   run them without disturbing the app running from IntelliJ) — run on 2026-09-30 in a scratch copy of the working
@@ -772,7 +781,7 @@ set; refuses any database not called `s2p_*`).
 - **The first scenario, as asked:** `boundary` — ⏮ / ⏭ across the round boundary with the real answers (all steps pass) — and
   `boundary-old-keys`, the control with the keys of before the play log: it **fails on all three steps it must fail on**
   (⏮ ×6 gives `a c b a c b`, ⏭ ×5 skips, `next-track` is asked 10 times instead of 6).
-- Not covered by a scenario yet: the lease takeover, the lists and their filters, the History tab, the tabs (checked by hand earlier).
+- Not covered by a scenario yet: the lease takeover, the lists and their filters, the History tab, the tabs (checked by hand earlier). **Covered since the sixth session** (2026-09-30, see its section below).
 
 **2. The three small JS fixes** (`youtube-autopilot.js`; each scenario was run against the unfixed script first and failed as expected):
 - (a) `DOUBLE_PRESS_MS` = 20 s; tooltip `dashboard.player.previous.title` PL and EN by script (`add`-style byte replace, CRLF kept, one-line
@@ -795,7 +804,7 @@ set; refuses any database not called `s2p_*`).
   button ✓ green or ✗ red, hidden after Stop. The failure texts say the link *is* saved but nothing will play from it for now (true:
   the queue is empty until a later lazy import). Scenario `import-result` (fails with the feature disconnected — tried).
 - **"Czeka N piosenek gości":** `updateGuestsWaiting`, counts playable rows (`?v=` + 11 characters) of the polled queue table; the plural
-  form by `Intl.PluralRules` — **`dashboard.html` has `lang="en"` hard-coded** (found here), so the language travels in `data-lang`.
+  form by `Intl.PluralRules` — **`dashboard.html` had `lang="en"` hard-coded** (found here; fixed in the sixth session), so the language travels in `data-lang`.
   A client-side count instead of a server endpoint was my choice (no new query, follows the 3 s poll). Scenario `guests-waiting`.
 - **Skipping a track (this round):** `V8`, `FallbackTrackStatus.SKIPPED`, `FallbackTrackCommandService.skipTrack`,
   `POST /dj/dashboard/fallback-queue/skip`, ✕ on every row, "Skipped this round: M" in the caption. Design points I decided: the status
@@ -838,10 +847,24 @@ single ⏮ lost its last sentence ("in a window that does not play the command i
 paused; RESTART when the track **ended** with Auto-Pilot off plays it again from the timeline; "Wstecz" with nothing older restarts the
 track (like the single ⏮). Four scenarios (`scenarios/back-and-restart.js`; two mutations tried: without `renderBackButtons` the buttons do not swap, and with
 `PREVIOUS_TRACK` routed through the single ⏮'s rules it restarts after 30 s instead of going back) and nine unit tests (`PlayerControlsFragmentTest`,
-`DjPlayerLeaseControllerTest`, `PlayerLeaseServiceTest`); the stand-in got `commandStatus`. Tried by the owner on the phone: "działa" (2026-09-30). The suite is now 425 tests
+`DjPlayerLeaseControllerTest`, `PlayerLeaseServiceTest`); the stand-in got `commandStatus`. Tried by the owner on the phone: "działa" (2026-09-30). The suite is now 429 tests
 (1 skipped) and 19 browser scenarios, all passing.
 
-**Files changed** (all in the commit pair `8248f9c` + docs): `AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `PROJECT_CONTEXT.md`, this file; main:
+**7. After the commit pair, from the owner's screenshots (committed in the sixth session's pair, `50558eb` and the docs after it).** The owner tried the skip: "X działa na playliście" (the
+✕ works on a playlist). Two remarks: (a) **a plain video link can be saved as the "playlist"** (it becomes one track, playlist id `V:<id>`) and then ✕
+does nothing visible — the round starts over with the same video; (b) **on the phone a row with the badge "Następny" squeezed its title to three letters a
+line** (the fifth button, ✕, which I had added, took the room). Done: (a) `FallbackQueueView.singleVideo` (from the `V:` prefix; a 6-argument
+constructor and the 5-argument one are kept) and the ✕ of a single video is **disabled** with the tooltip `dashboard.fallback.queue.skip.single` ("…nothing to skip
+to. Stop removes it"); a real playlist with one track left in the round still skips (visible: the next round starts) — my choice, the owner only described
+what happens; (b) the row of `fragments/fallback-queue.html` **wraps**: the title has `flex: 1 1 10rem` and the badge, the ↗ link and the buttons are one
+group (`ms-auto`) that drops under the title when the row is narrow. **Looked at in the built-in browser** (the stand-in server on the real rendered
+dashboard, Bootstrap from its CDN) at 375 × 812 and 1280 × 800 with the titles of the owner's screenshots (the sample `fallback-queue.html` of
+`DashboardPageRenderTest` has them now): on the phone the title has the whole line and the buttons sit under it on the right; on a wide screen a short title and its
+buttons stay on one line. The hidden pane only scrolls when `scroll-behavior` is set to `auto` first. Four unit tests (`FallbackQueueFragmentTest` ×3,
+`FallbackQueueServiceTest`), 429 tests in all (1 skipped), 19 scenarios pass. Not tried on the phone yet. Files: `FallbackQueueView`, `FallbackQueueService`,
+`fragments/fallback-queue.html`, `messages*.properties`, `DashboardPageRenderTest`, `FallbackQueueFragmentTest`, `FallbackQueueServiceTest`, `PROJECT_CONTEXT.md` (5.4, 13), this file.
+
+**Files changed** (all in the commit pair `8248f9c` + docs, except what item 7 lists): `AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `PROJECT_CONTEXT.md`, this file; main:
 `DjFallbackQueueController`, `SongRequestEntity` (a constant), `FallbackQueueView` (+ `skipped`, a 5-argument constructor kept),
 `FallbackTrackStatus`, `FallbackTrackRepository`, `SongRequestRepository`, `FallbackQueueService`, `FallbackTrackCommandService`,
 **new** `SongRequestRetentionService`, **new** `db/migration/V8__fallback_track_skipped.sql`, `messages*.properties`, `dashboard.js`,
@@ -856,7 +879,7 @@ control fails as it must); V8, the skip and the purge against real PostgreSQL da
 the recorder and the scratch tests were pointed only at `s2p_*` databases); the recorder's recipe from the README run verbatim. **Not
 checked:** anything on a real device or with the real YouTube player (sound, the real events between two videos, the autoplay policy);
 the messages in the real dashboard behind the login (the render test and the scenarios use the real templates and bundles, not the
-running app); the skip and the import result by the owner's hands; the smooth scroll; the browser tests in CI (there is none); the first
+running app); the skip and the import result by the owner's hands; the smooth scroll; the browser tests in CI (there was none — a workflow was written in the sixth session); the first
 production deploy with `V8`; the purge on the production database (it runs at 04:45 after the deploy).
 
 **Two things that went wrong, for the record.** (1) A `Write` of a scratch file with a relative path (`..\..\Users\…`) resolved on drive
@@ -864,6 +887,91 @@ production deploy with `V8`; the purge on the production database (it runs at 04
 to delete the protected directory `D:\Users`, so the empty skeleton is left — **delete `D:\Users` by hand**). (2) The command checker
 misread a harmless `Remove-Item Env:\PGDATABASE` in a PowerShell command (a blocked "system path") — nothing ran; the call was repeated
 without that line (every `psql` here passes `-d postgres`, so the variable need not be unset).
+
+## The session of 2026-09-30, the sixth: more browser scenarios, the language of the page, one endpoint less, CI (done, committed, not pushed)
+
+The state at the start was as the prompt said: `dev...origin/dev [ahead 10]`, tip `5f586f5` (docs) over `8248f9c` (code), and the ten uncommitted
+files of item 7 of the fifth session (checked with `git status -sb` and `git log --oneline -6`). Nothing was pushed, reset or stashed; the work
+was left uncommitted for review in IntelliJ and, on the owner's "ok, commituj", **committed as one pair — code `50558eb`, then the docs — with
+item 7 of the fifth session in it** (its files are the same ones: the message bundles, `DashboardPageRenderTest`, this file, `PROJECT_CONTEXT.md`);
+not pushed, `dev` is 12 ahead of `origin/dev`.
+
+**The two questions asked at the start** (`AskUserQuestion`): (1) *were the friend's steps reproduced on a phone, and which state was it?* — the
+owner: "zrobiłem to na innym laptopie i zadziałało. Musiałbym koleżankę jeszcze raz poprosić. Dam znać" — so **nothing was built** for the
+Auto-Pilot hint or the IFrame message and the `silent-*` scenarios are untouched (see "Next", 2); (2) *what of the list's other side?* — the
+owner chose **all four**: more scenarios, `lang`, the unused endpoint, browser tests in CI.
+
+**1. Scenarios for what had none** (`scenarios/lease.js`, `lists.js`, `tabs.js`; 27 scenarios now, 19 before). What each checks is in
+`PROJECT_CONTEXT.md` Section 5.4, "Testing"; in short: the lease (`lease-lost-and-taken-back`: the window stops, only watches, "play here"
+asks first and a "no" sends nothing, a "yes" takes it and plays; `lease-free-takeover-asks-nothing`; `lease-released-on-leaving`: the beacon
+of `pagehide`, and none from a window that does not play), the queue list (`queue-list`: "zolc" finds "Żółć", count, "nothing matches",
+and the search, the scroll position and the column sort survive a poll), the History tab (`history-tab`: the real fragment, filters,
+"Show more" with the chosen filter, the search text kept, a failed request puts the button back) and the tabs (`tabs`: a click lights the tab
+and brings its part under the bar — the smooth scroll —, History loads once, Panel keeps the list that shows, the lit tab follows the scroll).
+- **Harness changes to feed them:** `server.py` answers `GET /dj/history-view/fragment` with one rendered file per filter (`history-<filter>.html`,
+  and `-more` for a request with a limit), has the new state key `historyStatus`, and its answer to the poll now has the song cell that the
+  column sort reads **and the real "nothing matches" row** — found while writing `queue-list`: that row is *inside* the polled `<tbody>`
+  (`dashboard :: songTableBody`), so an answer without it made the search box behave differently from the real page after the first poll;
+  it is taken from the rendered page by a regular expression, not copied by hand. `DashboardPageRenderTest` renders the extra pages —
+  `dashboard-en.html`, `history-<filter>[-more].html` (through the real `DjDashboardController.historyFragment`, ten sample entries, the real
+  `HistoryFilter` deciding what a filter includes) — and checks more ids (`queueList`, `data-list-search`, `djTabBar`, `data-dj-tab=…`).
+- **These scenarios could not be seen red the usual way** (the code worked), so each was **mutation-checked**: one line of the script taken out
+  in a copy — 17 mutations, **all killed for the right step**. One mutation survived at first and was an *equivalent* one, not a hole:
+  removing the `scroll` listener changes nothing, because Chrome's `scrollend` runs the same function; replaced by one that really stops the
+  lit tab from following (killed). The mutation script is **not in the repo** (it lived in the session's scratch directory): it is ~100 lines
+  that `import run, server`, `run.mirror` the repo into a *second* work directory (never the repo, never the usual work directory: the
+  mutation must not reach the files IntelliJ watches), break one string of one script, and `run.run_scenario` the scenarios that must go red.
+  The README says how to do it by hand.
+- **Two things a run taught:** in a *Polish* Chrome `ż` sorts after `z`, in an English one it does not, so my first expectation ("Zulu more
+  first") was wrong on this machine and would have been wrong in another way in CI — the sort assertion now names no exact neighbour; and
+  `tabs` is the first scenario that looks at scrolling, so it first checks that the browser does **not** ask for reduced motion (the script
+  scrolls instantly then, and the smooth path — the one the DJ gets — would go untested without a word).
+- **The lease is scripted, not simulated:** who holds it is a config of the stand-in (`lease: {holder, free}`), so "another window took over" is a
+  change of that config; the rules of the server (who gets it, the 10 s timeout) stay unit-tested. No scenario runs two real windows.
+- Timing: each of the eight new scenarios was run four times (first, in the full run, twice more) — no flake.
+
+**2. `<html lang>` of `dashboard.html`.** `th:lang="#{html.lang}"` and the key `html.lang` (`en` / `pl`) at the top of both bundles (ASCII, so no
+escapes; added by a script that keeps the CRLF). **Not `${#locale.language}`** — my choice, and the reason: this app has no `messages_en`, so a
+German (or any other) browser gets the *default* bundle, the English texts, while `#locale.language` says `de`; the bundle that wrote the texts
+is the only thing that always agrees with them. `DashboardPageRenderTest` pins it (Polish, English, and German → English texts and `lang="en"`),
+`page-language` was red before the fix (it said `en` over Polish texts) and `page-language-en` covers the other side. **The eight other templates
+still have `lang="en"`** (`landing`, `index`, `history`, `result`, `error`, `party_ended`, `terms`, `privacy`; the `_pl` legal pages have `pl`):
+the owner named only the dashboard — see "Next", 2. `data-lang` on the guests line was left alone (it works, and both say the same).
+
+**3. `GET /dj/dashboard/next-guest-track` removed**: the method of `DjDashboardController` (and its now unused import), and
+`DjDashboardControllerNextGuestTrackTest` (six tests — the file is deleted from the working tree, so it shows as ` D`; it stays in git
+history). `DjService.findNextPlayableGuestTrack` and `NextGuestTrackResponse` **stay** — `NextTrackService` uses them; their comments (which
+still spoke of a client polling the endpoint) were corrected. Section 12 and Section 14 of `PROJECT_CONTEXT.md` say so.
+
+**4. Browser tests in CI: `.github/workflows/browser-tests.yml`** — `ubuntu-latest`, Java 21 (Temurin, Maven cache), Python 3.12, the Chrome the
+runner has, `python src/test/browser/run.py --no-sandbox --work "$RUNNER_TEMP/scan2play-browser-tests"`; on every push to `dev` / `main`, every
+pull request and by hand; a failed run keeps `results/*.json` as the artifact `browser-test-verdicts`. Only the browser tests — the unit tests
+are not in it (a second job would be four lines; nobody asked). Changes in `run.py` for it: `mvnw` is started with `sh` on Linux (it is committed
+with mode 100644, so a checkout there could not run it directly), a new `--no-sandbox` option, and a Chrome that exits before the scenario finishes
+ends the wait after a few seconds (before: the whole 90 s timeout, for each of 27 scenarios).
+**It has never run on GitHub.** What was checked here: its YAML parses (SnakeYAML from `~/.m2`, through `jshell` — PyYAML is not installed),
+`sh mvnw -v` works in Git Bash, `run.py --no-sandbox` passes on Windows. What was not: the Linux branch of `run.py` as a whole, the runner's Chrome,
+the action versions (`checkout@v4`, `setup-java@v4`, `setup-python@v5`, `upload-artifact@v4` — written from memory, not looked up).
+
+**What was checked and what was not.** Checked: **426 unit tests, `BUILD SUCCESS`** (a scratch copy, `%TEMP%\scan2play-unit`; 425 run, 1 skipped);
+**27 browser scenarios all pass** (a full run, then `tabs` again after its last step was added, and the eight new ones twice more); 17 mutations
+killed; `page-language` red before green. **Not checked:** the workflow on GitHub (above); anything on a real device; the look of anything in
+the built-in browser (nothing changed visibly; `tabs` measures positions and scrolling, not how anything looks); the running app's dashboard
+(the render test and the scenarios use the real template and bundles, not the app behind the login — so `lang` was not seen in a real
+response); no SQL, entity or migration was touched, so no PostgreSQL run was needed (`V8` is still the newest, the next would be `V9`).
+
+**Three things that went wrong, for the record.** (1) I removed the endpoint's test file with `git rm --cached`, which staged the deletion and
+left the file on disk; I caught it in the next `git status`, undid it (`git reset -q HEAD -- <that file>`) and deleted the file normally — the index
+is as before. (2) I first added lines about CI and the mutation check to `CLAUDE.md`, `AGENTS.md` and the copy in `.github/` — standing
+instructions the request did not name — and took them out again; they are unchanged (if the owner wants them: one sentence each, "a scenario for
+code that already works is checked by breaking that code in a copy, never in the repo", and a pointer to the workflow). (3) PowerShell wraps
+`stderr` of a native command as an error when it is redirected with `2>&1` (the Maven warnings looked like a failure): the runs here did not use it.
+
+**Files changed in this session** (on top of the ten of item 7): `.github/workflows/browser-tests.yml` (new), `src/test/browser/`: `run.py`,
+`server.py`, `README.md`, `scenarios/lease.js` `lists.js` `tabs.js` `page-language.js` (new); `src/main`: `DjDashboardController`, `DjService`,
+`NextGuestTrackResponse` (comments and the removed endpoint), `templates/dashboard.html`, `messages.properties`, `messages_pl.properties`;
+`src/test`: `DashboardPageRenderTest`, `DjDashboardControllerNextGuestTrackTest` (deleted); `PROJECT_CONTEXT.md` (5.4, 6.8, 12, 13, 14),
+this file. No migration.
 
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
@@ -890,14 +998,20 @@ Spotify usable locally (the parked stash makes its redirect follow the request h
 
 ## Next
 
-Updated 2026-09-30, at the end of the fifth session (the one of "The session of 2026-09-29/30").
+Updated 2026-09-30, at the end of the sixth session (the one of "The session of 2026-09-30, the sixth").
 
 1. **The owner's own small steps**
+   - **The work of the sixth session is committed** (code `50558eb`, then the docs — one pair, with item 7 of the fifth session in it: ✕
+     disabled for a single video and the wrapping "up next" row, which the same files carried; the sixth session's section lists them).
+     Of it the owner has tried nothing by hand yet: the phone check of item 7 is in "Try on the phone" below.
    - **The work of the fifth session is committed** (code `8248f9c`, then the docs — one pair, because the parts share files:
      `dashboard.js`, `youtube-autopilot.js`, the message bundles, `PROJECT_CONTEXT.md`). Of the things in it the owner has tried only the
      two back buttons so far ("działa"); the rest is in the "Try on the phone" item below.
-   - **Push.** `dev` is 10 commits ahead of `origin/dev` (the two of "Follow-up", the two of "Follow-up 2", the two of "Follow-up 3", the wake lock and the docs of the session that followed, and the pair of the fifth session); they wait for the
-     owner's word.
+   - **Push.** `dev` is 12 commits ahead of `origin/dev` (the two of "Follow-up", the two of "Follow-up 2", the two of "Follow-up 3", the wake lock and the docs of the session that followed, and the pairs of the fifth and the sixth session); they wait for the
+     owner's word. **The first push that contains `.github/workflows/browser-tests.yml` starts the workflow on GitHub — the first time it
+     runs anywhere but on a developer's machine** (it was written without being able to run it): look at that run; the verdicts of a
+     failed one are kept as an artifact (`browser-test-verdicts`). If it is red on the runner and green here, the suspects are the Chrome
+     flags (`--no-sandbox` is passed), the locale of the machine (a sort test must not depend on it; see the README) and timing.
    - **Try on the phone** — real devices are still not covered: ✕ on a row of "up next" (and what the list and the "Skipped this round"
      say afterwards); Save with a private playlist and with a wrong link (the red line); "Czeka N piosenek gości" while a guest song
      is queued; the pause button while ⏮ rewinds; ⏭ after saving another playlist; the two back buttons on the phone with the computer
@@ -910,7 +1024,10 @@ Updated 2026-09-30, at the end of the fifth session (the one of "The session of 
    - **Local `main` and the wake lock:** see "Open items", 1.
    - **Delete `D:\Users`** (an empty directory tree created by a mistaken relative path of the fifth session; the tool would not delete it).
 2. **The next session with code**
-   - **The Auto-Pilot hint and the IFrame-API message — WAITING FOR THE OWNER'S ANSWER; do not build on the hypothesis.** The
+   - **The Auto-Pilot hint and the IFrame-API message — STILL WAITING; do not build on the hypothesis.** *(The sixth session asked
+     whether the friend's steps had been reproduced: the owner tried them on another laptop and it worked — no reproduction, no state
+     to name. The owner will ask her again and say which state it was, or that it did not repeat. Until then nothing is built and the
+     `silent-*` scenarios stay as they are.)* The
      hypothesis (from the friend's screenshot: the first playlist track still "Następny" with 120 left, i.e. the window never asked
      `next-track`): a new party starts with Auto-Pilot off and with it off nothing starts by itself; the YouTube IFrame API may be blocked
      (an ad blocker, Brave shields) and that failure is silent; another window may hold the player lease (that one has a banner).
@@ -922,13 +1039,15 @@ Updated 2026-09-30, at the end of the fifth session (the one of "The session of 
      message when the IFrame API does not load (the script has no handler for the failed load of `iframe_api`; the fake can imitate it:
      `fake.blockApi`). Not proposed: making AUTO the default — it also applies to Spotify parties, where AUTO puts accepted songs
      straight into the Spotify queue. When something is built, change the last step of the matching `silent-*` scenario.
-   - **More scenarios** for what has none: the lease takeover (two windows: the banner, "play on this device" and its confirmation, the
-     old window stops, the release on `pagehide`), the lists (search, filters, "Show more", the scroll position across a poll), the three
-     tabs, the History tab. Optionally the browser tests in CI (they need Java, Python and Chrome on the runner; today nothing runs them
-     but a person).
-   - Optional: `dashboard.html` has `lang="en"` hard-coded, whatever the locale (found while building the guests line): it should
-     follow the language (screen readers, the browser's own translation, hyphenation). And remove `GET /dj/dashboard/next-guest-track` and its
-     tests, which nothing calls any more.
+   - ~~More scenarios (the lease takeover, the lists and their filters, the tabs, the History tab), the browser tests in CI, `lang="en"`
+     of `dashboard.html`, the unused `GET /dj/dashboard/next-guest-track`~~ — **all four done in the sixth session** ("The session of
+     2026-09-30, the sixth", above). What they leave: the first run of the workflow on GitHub (item 1, "Push"); the eight other
+     templates that still have `lang="en"` written in (`landing`, `index`, `history`, `result`, `error`, `party_ended`, `terms`,
+     `privacy` — the same one-attribute fix with the `html.lang` key, and a render test each; `PROJECT_CONTEXT.md` Section 13 lists them);
+     `data-lang` on the guests line could now be read from `document.documentElement.lang` instead of its own attribute (no need to, both
+     say the same and a scenario pins that); no scenario runs **two** real windows (the lease scenarios script the server's answers);
+     the unit tests run in no CI (the workflow could get a second job with `mvnw test "-Dtest=!Scan2playApplicationTests"`, no database
+     needed).
 3. **Polish — done** in the fifth session (the import result, "Czeka N piosenek gości", skipping a track for this round): see its section.
 4. **Production.** The owner: at the next go-live. Then the Flyway checklist ("Open items", 3) comes first — with `V8` in it (it replaces the check constraint of `fallback_track`; the first production deploy applies V2 to V8 in one go) — and `dev` → `main` is the next real decision — the owner does **not** want to merge yet (2026-09-29).
 5. **Parked idea: a "music only" checkbox that skips the intro of a music video** (asked 2026-09-29, checked, the owner decided not to build it now). Feasible, not free: no library derives it from the

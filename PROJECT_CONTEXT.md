@@ -663,7 +663,16 @@ never handed out). The next round re-queues it together with the tracks that pla
 version hash, so the other windows refresh their list). If the skip empties the queue (the skipped track was the last one) the round
 is over at once: the next one starts on the spot, as when the player takes the last track — so there is always a "next" — and the
 skipped track comes back at its end, not at its front (`keepOutOfFirstPlace`; a shuffled round does that by itself). A one-track
-playlist simply starts its round over. Checked on a real PostgreSQL (throw-away database `s2p_skip`): V1–V8 on an empty database with
+playlist simply starts its round over — so **for a single video** (the DJ pasted a video link, not a playlist: the playlist id starts
+with `V:`, `FallbackQueueView.singleVideo`) the ✕ is **disabled** and its tooltip says "This is the only track, so there is nothing to
+skip to. Stop removes it" (the owner's remark, 2026-09-30: with one video ✕ did nothing visible, just as the move buttons are disabled
+for a single track); a real playlist with one track left in the round can still skip it (the next round starts, and that is visible).
+**A row wraps** (2026-09-30, the owner's phone screenshot): with the badge "Następny" and the fifth button the title of a row was squeezed
+to three letters a line on a 375 px screen; now the title keeps at least 10rem (`flex: 1 1 10rem`) and the badge, the ↗ link and the
+buttons form one group (`ms-auto`) that drops under the title when the row is too narrow — looked at in the built-in browser at 375 and
+1280 px with long real-looking titles (the sample `fallback-queue.html` of `DashboardPageRenderTest` has them now): on the phone the title
+has the whole line and the buttons sit under it on the right, on a wide screen a short title and its buttons stay on one line.
+Checked on a real PostgreSQL (throw-away database `s2p_skip`): V1–V8 on an empty database with
 Hibernate validation; **V7 → V8 on existing data** (one migration executed, rows and statuses kept, `SKIPPED` refused before and
 accepted after, an unknown status still refused); the skip in the middle of a round (the track leaves, the round goes on without it, the
 next round has all of them, the play log has no row for a skip); the last queued track skipped in playlist order (with the skipped
@@ -706,9 +715,12 @@ fixture again. Its parts:
 - **The page.** `DashboardPageRenderTest` (an ordinary unit test) calls the real `DjDashboardController.dashboard()` with mocked
   services and renders the model it builds with the real Thymeleaf templates and message bundles, in Polish and English, and writes
   `target/browser-harness/dashboard.html` (Auto-Pilot on, a playlist saved, two songs in the queue), `dashboard-manual.html` (a
-  brand-new party: Auto-Pilot off, no playlist) and `fallback-queue.html` (the "up next" fragment: four tracks, one skipped). It also
-  checks what the scripts depend on (the ids of the buttons, the party code, the CSRF meta tags, the order of the scripts, no
-  unresolved `??key??`).
+  brand-new party: Auto-Pilot off, no playlist), `dashboard-en.html` (the first party in English), `fallback-queue.html` (the "up next"
+  fragment: four tracks, one skipped) and `history-<filter>.html` / `history-<filter>-more.html` (the History tab's fragment for each
+  of the five filters, the first page and the longer list that "Show more" asks for — through the real `historyFragment` of the
+  controller, from ten sample entries; the real `HistoryFilter` says which entries a filter includes). It also checks what the scripts
+  depend on (the ids of the buttons, the party code, the CSRF meta tags, the order of the scripts, the queue's search box, the tab bar,
+  no unresolved `??key??`) and that `<html lang>` is the language of the bundle that wrote the texts.
 - **The stand-in server** (`server.py`, Python standard library only) serves those pages with the real `static/js` and `static/css`
   and answers the endpoints the scripts call; what it answers is told by the scenario (`POST /__config`: the lease answer, the
   commands waiting, the tracks `next-track` hands out, `recent-tracks`, the queue rows of the poll, the answer of Save, delays) or
@@ -724,7 +736,8 @@ fixture again. Its parts:
   from it) to a work directory, runs `DashboardPageRenderTest` there, starts the stand-in, opens each scenario in a fresh headless
   Chrome and reads the verdict. No new dependency, no Node; Bootstrap from its CDN is **not needed** (no script uses its API — only
   its CSS, so the run blocks it: the tests do not depend on the network).
-- **What is covered today** (19 scenarios): ⏮ / ⏭ across the round boundary of a looping playlist with the real answers — and its
+- **What is covered today** (27 scenarios; the last eight — the language of the page, the lease, the lists, the History tab and the tabs —
+  are listed after the first nineteen): ⏮ / ⏭ across the round boundary of a looping playlist with the real answers — and its
   **control**, the same walk with the keys of before the play log (the queue's track id), which must fail and does (⏮ goes round in
   circles, ⏭ skips entries); the 20 s window of the second ⏮; the pause button and the lease reports while a track loads; ⏭ after a
   playlist change (saved here, cleared, changed in another window, and the two cases where it must still retrace); the import result;
@@ -735,18 +748,46 @@ fixture again. Its parts:
   change); `import-result` fails with the feature disconnected and `retrace-survives-a-change-in-flight` fails with the
   `trackLoadedAtLeaseSeq` condition left out (both tried); the scenarios of the guest songs line and the skip button were written
   together with the feature and not tried without it.
+- **The eight scenarios of the sixth session** (2026-09-30: what had **no automated test** until then — the lease, the lists, the
+  History tab, the tabs — and the language of the page). None of them could be seen red against an unfixed script (the code worked),
+  so each was **mutation-checked**: one line of the script taken out in a copy, and the scenario had to go red for the right step —
+  17 mutations, all killed (the first version of one, "no `scroll` listener", survived because Chrome's `scrollend` runs the same
+  function; a mutation that really stops the lit tab from following was killed). `page-language` / `page-language-en`: `<html lang>` is
+  `pl` / `en` and the same as the language of the texts and of the plural rules (`page-language` was red before `dashboard.html` was
+  fixed: it said `en` over Polish texts). `lease-lost-and-taken-back`: another window takes the lease → this one stops its player and
+  shows the banner, from then on reports `WATCH` and asks for no track; "play here" asks first, in the banner's words (a "no" sends
+  nothing), a "yes" sends one `TAKE_OVER` and the window plays again. `lease-free-takeover-asks-nothing`: with nobody playing "play here"
+  asks nothing. `lease-released-on-leaving`: `pagehide` of the window that plays sends the release beacon (party, the window's own id,
+  the CSRF token in the body), `pagehide` of a window that does not play sends nothing. `queue-list`: the search finds "Żółć" by
+  "zolc", the count says "shown / all", the "nothing matches" row, and after a poll the search, the scroll position and the column sort
+  are all still there. `history-tab`: the tab loads the real fragment in place of the queue with a heading; the search works on the
+  loaded rows; "Show more" asks for the limit its button carries — with the chosen filter — and keeps the search text; a filter button
+  lights at once, asks the server, and the search text survives; the sort handlers work on rows that arrived by AJAX; a failed request
+  puts the previous button back. `tabs`: a click lights the tab at once and brings the list under the bar (the smooth scroll — the
+  scenario checks that the browser does not ask for reduced motion, so it is that path that runs), History loads once and a second
+  click does not load it again, Panel scrolls to the top and leaves the list that shows, Queue hides the history, and the lit tab
+  follows the scroll (the page is made taller first, or a short page could not scroll as far as a tab asks).
+- **The lease is scripted here, not simulated:** who holds it is a config of the stand-in, so "another window took over" is a change
+  of that config. The rules of the server (who gets the lease, the 10 s timeout) are unit-tested; these scenarios check what the
+  *window* does with its answers. Two real windows are not run.
 - **What they do not cover:** the real YouTube player (sound, autoplay policy, the real events between two videos — the fake
-  imitates what the script relies on), the real Spring Security chain (the `_csrf` of a `sendBeacon`), two real devices, the smooth
-  scroll (headless Chrome would draw it, but no scenario looks at it yet), layout (no scenario measures pixels), and the guest side.
-  Real devices are still the owner's part.
+  imitates what the script relies on), the real Spring Security chain (the `_csrf` of a `sendBeacon`), two real devices, layout as the
+  eye sees it (the `tabs` scenario measures positions and scrolling, no scenario looks at how a row or a button looks — the phone
+  layout of the "up next" rows was looked at by hand, Section 5.4 "Skipping a track"), and the guest side. Real devices are still the
+  owner's part.
+- **In CI:** `.github/workflows/browser-tests.yml` runs `python src/test/browser/run.py --no-sandbox` on `ubuntu-latest` for every push
+  to `dev` / `main`, every pull request and by hand (Java 21, Python 3.12, the runner's own Chrome; the verdicts of a failed run are
+  kept as an artifact). `run.py` starts `mvnw` with `sh` on Linux (the wrapper is committed without the executable bit) and stops
+  waiting for a browser that has exited. **It has not been run on GitHub yet**: it was written here, its YAML parses, and `run.py --no-sandbox`
+  runs on Windows — the first run on a runner may show a difference (the Chrome flags, the locale).
 - **How the earlier stages were verified** (stage 0 to the play log, all with throw-away versions of the same harness): the
   lease — two browser tabs as two windows against a stand-in with the rules of `PlayerLeaseService` (first window plays, the second is
   refused and silent, takeover with confirmation, the old window stops, release on leaving, reload keeps the role, a 14 s outage
   changes nothing, a `409` silences the window, a playlist replaced or cleared in another window stops the old track within one
   report, a late answer does not stop the new track); ⏭ and ⏮ from the playing window and from the other one; the up-next list of both
   windows following the server; the lists, search, filters and "Show more"; the play log across a round boundary. They were run by
-  hand in the built-in browser and are now partly the scenarios above; what is not among them (the lease takeover, the lists, the
-  History tab, the tabs) has **no automated test yet**. Gotchas of the real player: it needs a real click first (user activation) or
+  hand in the built-in browser and are now the scenarios above (the lease takeover, the lists, the History tab and the tabs since the
+  sixth session). Gotchas of the real player: it needs a real click first (user activation) or
   it stays on the play button, its methods exist only after `onReady`, it pauses itself after a few seconds unless muted, and many
   well-known videos have embedding disabled (error 150) — `M7lc1UVf-VE` and `aqz-KE-bpKQ` play fine.
 
@@ -862,14 +903,15 @@ Described in Section 5.4, "Testing"; its own `README.md` is the guide.
 |------|---------|
 | `README.md` | How it works, how to run it, how to write a scenario, how to record the fixture again, what is not covered |
 | `run.py` | The runner: copies the repo (without `target/`, `.git`, `.idea`) to a work directory, runs `DashboardPageRenderTest` there, starts the stand-in, opens every scenario in a headless Chrome, prints the verdicts (exit 1 if one fails) |
-| `server.py` | The stand-in server (Python standard library only): the real rendered pages, the real `static/js` and `static/css`, the endpoints the scripts call, configurable by a scenario or replaying a fixture |
+| `server.py` | The stand-in server (Python standard library only): the real rendered pages, the real `static/js` and `static/css`, the endpoints the scripts call (including the History tab's fragment, one rendered file per filter), configurable by a scenario or replaying a fixture |
 | `fake-yt.js` | The fake YouTube IFrame API (logs calls; holds a load in UNSTARTED / CUED; moves the clock; blocks the API; gates the first lease report until the scenario has configured the stand-in) |
 | `harness.js` | The scenario runner inside the page: `S2P.scenario({...})`, the helper `t` (`press`, `step`, `waitFor`, `stand.config`, `reportAfterConfig`, ...), the verdict, uncaught errors |
-| `scenarios/*.js` | The scenarios (Section 5.4, "Testing", lists what they cover) |
+| `scenarios/*.js` | The scenarios (Section 5.4, "Testing", lists what they cover): `back-and-restart`, `boundary`, `double-press`, `guests-waiting`, `import-result`, `next-after-playlist-change`, `pause-while-loading`, `silent-states`, `skip-track`, and — the sixth session — `page-language`, `lease` (three scenarios), `lists` (`queue-list`, `history-tab`), `tabs` |
 | `fixtures/play-log-boundary.json` | The real answers of `next-track` and `recent-tracks` for a looping 3-track playlist, recorded by `PlayLogFixtureRecorderTest` |
 
-The Java side, in `src/test/java`: `template/DashboardPageRenderTest` (renders the pages the scenarios run on) and
-`controller/PlayLogFixtureRecorderTest` (records the fixture; skipped unless `S2P_FIXTURE_OUT` is set).
+The Java side, in `src/test/java`: `template/DashboardPageRenderTest` (renders the pages the scenarios run on: the dashboard in Polish and
+English, the brand-new party, the "up next" fragment and the History fragments) and `controller/PlayLogFixtureRecorderTest` (records the
+fixture; skipped unless `S2P_FIXTURE_OUT` is set). The CI workflow that runs it all: `.github/workflows/browser-tests.yml`.
 
 ---
 
@@ -1169,7 +1211,6 @@ PartySettingsQueryService
 | GET    | `/dj/history-view`                | `DjDashboardController.historyView()`            | Optional `limit` (default 50, raised to 50 at least, capped at 300; not a number → 400) and `filter` (`all` \| `guest` \| `background` \| `played` \| `rejected`; missing or unknown → `all`): the last `limit` entries of that kind from the timeline of what played or was rejected — guests' songs and background tracks (`HistoryEntry`), newest event first; the model also has `historyFilter` (the lit button), `historyHasMore` and `historyNextLimit` for "Show more" |
 | GET    | `/dj/history-view/fragment`       | `DjDashboardController.historyFragment()`        | AJAX partial HTML, ownership-validated; the same `limit` and `filter` |
 | GET    | `/dj/dashboard/updates`           | `DjDashboardController.getDashboardUpdates()`    | AJAX partial HTML (polling, ETag/304), ownership-validated |
-| GET    | `/dj/dashboard/next-guest-track`  | `DjDashboardController.nextGuestTrack()`         | JSON, read-only, ownership-validated — Auto-Pilot "what's next" (Section 14 Phase 1). Not called by the client since stage 4 (superseded by `next-track`); kept as the read-only "is a guest waiting?" peek |
 | POST   | `/dj/dashboard/next-track`        | `DjDashboardController.nextTrack()`              | JSON `{source: GUEST\|BACKGROUND, id, videoId, playlistId}` (`playlistId` = the playlist a BACKGROUND track came from, null for a guest song; `id` = the request id of a guest song, or the id of the play log row — table `fallback_play` — that this hand-out wrote for a BACKGROUND track, the same id `recent-tracks` uses in its `B:<id>` key) or 204, ownership-validated. **Not read-only**: a background track is marked `PLAYED` and written to the play log as it is handed out (a guest song is still confirmed via `/dj/dashboard/play`), so ask only when a track is about to be loaded. Optional `deviceId` (the asking window's id): **409** when another window holds the party's player lease (see below) — nothing is handed out; a request without an id counts as another window while a lease is live. Section 14 Phase 2 stage 3; called by `youtube-autopilot.js` since stage 4 |
 | POST   | `/dj/dashboard/player-lease`      | `DjPlayerLeaseController.report()`               | JSON `{holder, free, fallbackPlaylistId, queueVersion, command, playing}` (`playing` is whether the player of the window that plays makes sound — true / false, null when nobody plays or it has not said; `fallbackPlaylistId` is the party's current fallback playlist, so the window that plays can stop a track of a playlist the DJ has replaced or cleared elsewhere; `queueVersion` changes whenever the "up next" list would look different, so every window can tell that it was changed in another one; `command` is `NEXT` when the DJ pressed ⏭ in another window — only ever for the holder, handed out once), ownership-validated. Params `partyCode`, `deviceId` (random id of the window, `[A-Za-z0-9_-]{8,64}`), `mode` = `CLAIM` / `WATCH` / `TAKE_OVER`, optional `playing` = `true` / `false` (whether the window's own player makes sound — only the holder's is kept; anything else → 400). **Not read-only**: the report renews the window's lease (10 s timeout), `TAKE_OVER` moves it. 400 for a bad id or mode. Called by `youtube-autopilot.js` every 3 s — Section 5.4, "One window plays" |
 | POST   | `/dj/dashboard/player-command`    | `DjPlayerLeaseController.sendCommand()`          | ownership-validated. Params `partyCode`, `command` = `NEXT`, `PREVIOUS`, `PREVIOUS_TRACK`, `RESTART`, `PAUSE` or `RESUME` (`PREVIOUS_TRACK` and `RESTART` are the two back buttons of a window that does not play, since 2026-09-30; `PREVIOUS` is the single ⏮ with its rules and is no longer sent by the page, only accepted). The DJ gives the window that plays a command from any window (the phone as a remote control); it is carried out when that window's next lease report brings it (≤ ~3 s); one command waits per party, the last one pressed. 204 when it is waiting, **409** when no window holds a live lease (nobody would carry it out), 400 for an unknown command — Section 5.4, "Next ⏭" and "Back ⏮" |
@@ -1213,6 +1254,10 @@ PartySettingsQueryService
 - Server-rendered (Thymeleaf) with AJAX enhancements. No SPA, no JavaScript framework.
 - Dashboard live updates via `setTimeout` + `fetch` polling every 3 seconds with ETag/304 optimization. No WebSockets/SSE.
 - No client-side validation on forms (server-side only).
+- **`<html lang>`:** only `dashboard.html` declares the language of the texts it shows (`th:lang="#{html.lang}"` — the key of each message
+  bundle says which language it is, so the declaration cannot disagree with the texts, also for a browser whose language has no
+  bundle). `landing`, `index`, `history`, `result`, `error`, `party_ended`, `terms` and `privacy` still have `lang="en"` written into
+  them (the `_pl` legal pages have `pl`), whatever the locale — the same fix would do, one attribute each (a screen reader pronounces by it).
 
 ### Scalability
 - **Session-based rate limiting** (HttpSession only). Clearing cookies resets the limit. No server-side rate limiting per IP.
@@ -1221,10 +1266,10 @@ PartySettingsQueryService
 
 ### Testing
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
-- **Unit tests (418 tests, one of them skipped unless asked for — see below)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch) and the play log it writes (a row per hand-out, under the party lock, one id per play; the purge; the account deletion), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the timeline of what played (`PlayHistoryService`: the merge, play time vs request time, the bound and `hasMore`, what ⏮ can play again; `DjService.markPlayed`; `YouTubeUrls`), the `limit` of the history endpoints, `recent-tracks` and the `PREVIOUS` command, the state of the player and the `PAUSE` / `RESUME` commands (`PlayerLeaseService`, `DjPlayerLeaseController`), and the rendering of `fragments/fallback-queue.html` (with its skip button and the skipped count), `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles; skipping a track for this round (`FallbackTrackCommandService.skipTrack`, `FallbackQueueService`, `DjFallbackQueueController`), the nightly purge of the song requests (`SongRequestRetentionService`: the cutoff, the batches, the bound, the schedule) and — through `DashboardPageRenderTest` — the whole `dashboard.html`, rendered from the model of the real controller, in both languages (the texts of the import result, the ids the scripts need).
+- **Unit tests (419 tests, one of them skipped unless asked for — see below)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch) and the play log it writes (a row per hand-out, under the party lock, one id per play; the purge; the account deletion), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the timeline of what played (`PlayHistoryService`: the merge, play time vs request time, the bound and `hasMore`, what ⏮ can play again; `DjService.markPlayed`; `YouTubeUrls`), the `limit` of the history endpoints, `recent-tracks` and the `PREVIOUS` command, the state of the player and the `PAUSE` / `RESUME` commands (`PlayerLeaseService`, `DjPlayerLeaseController`), and the rendering of `fragments/fallback-queue.html` (with its skip button and the skipped count), `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles; skipping a track for this round (`FallbackTrackCommandService.skipTrack`, `FallbackQueueService`, `DjFallbackQueueController`), the nightly purge of the song requests (`SongRequestRetentionService`: the cutoff, the batches, the bound, the schedule) and — through `DashboardPageRenderTest` — the whole `dashboard.html`, rendered from the model of the real controller, in both languages (the texts of the import result, the ids the scripts need, `<html lang>` = the language of the bundle — also for a locale that has no bundle) and the History tab's fragment for every filter through the real controller.
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 425 tests, 424 run and 1 skipped** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"` in a copy of the repo, counted 2026-09-30). No integration tests in the repo — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs), and `V8`, the skip and the purge of the song requests (Sections 4.1, 5.4, 10) were checked against a throw-away PostgreSQL database, not by a test that stays. The one exception is the **fixture recorder** `PlayLogFixtureRecorderTest`: a `@SpringBootTest` that is skipped (no Spring context is even started) unless `S2P_FIXTURE_OUT` is set, and that refuses a database whose name does not start with `s2p_`; it is compiled with the rest, so an API change that breaks it shows at once.
-- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 19 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (about a minute; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). Nothing checks them in CI. What they do not cover is listed in Section 5.4.
+- **Total: 426 tests, 425 run and 1 skipped** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"` in a copy of the repo, counted 2026-09-30, after the sixth session: 429 before it, minus the 6 tests of the removed `next-guest-track` endpoint, plus 3 of `DashboardPageRenderTest`). No integration tests in the repo — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs), and `V8`, the skip and the purge of the song requests (Sections 4.1, 5.4, 10) were checked against a throw-away PostgreSQL database, not by a test that stays. The one exception is the **fixture recorder** `PlayLogFixtureRecorderTest`: a `@SpringBootTest` that is skipped (no Spring context is even started) unless `S2P_FIXTURE_OUT` is set, and that refuses a database whose name does not start with `s2p_`; it is compiled with the rest, so an API change that breaks it shows at once.
+- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 27 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **written but not yet run on GitHub**; no workflow in the repo runs the unit tests. What they do not cover is listed in Section 5.4.
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
@@ -1258,7 +1303,8 @@ the way this note had to.
 Moved just the "which guest song is next" decision server-side:
 - `DjService.findNextPlayableGuestTrack(partyCode, excludeIds)` — oldest `accepted` song
   with an extractable video ID, reusing the existing `getDashboardQueue` cache (3s TTL).
-- `GET /dj/dashboard/next-guest-track` — read-only, IDOR-checked, 204 when nothing's ready.
+- `GET /dj/dashboard/next-guest-track` — read-only, IDOR-checked, 204 when nothing's ready. *(Removed 2026-09-30, together with its
+  tests: nothing had called it since stage 4. `DjService.findNextPlayableGuestTrack` stays — `NextTrackService` uses it.)*
 - `youtube-autopilot.js`: `findNextGuestSong()` (DOM scan of `#song-list`) replaced by an
   async call to that endpoint. Dropped the client-side `markedAsPlayedIds`/`skippedSongIds`
   bookkeeping — the server is now the source of truth for "already played" (its query only
@@ -1268,8 +1314,8 @@ Moved just the "which guest song is next" decision server-side:
 - Added a `stateVersion` counter + a `tryAutoPlayInFlight` guard so the now-`async` player
   event handlers don't act on a stale lookup if a newer event fires while one is in flight.
 - *Superseded by Phase 2 stage 4:* the client now calls `POST /dj/dashboard/next-track`, and `stateVersion` is gone
-  (`tryAutoPlayInFlight` plus a re-check after the lookup do the job). `next-guest-track` remains as a read-only
-  "is a guest waiting?" endpoint that the client no longer calls.
+  (`tryAutoPlayInFlight` plus a re-check after the lookup do the job). `next-guest-track` remained for a while as a
+  read-only "is a guest waiting?" endpoint that the client no longer called, and was **removed on 2026-09-30**.
 
 **Deliberately NOT done in Phase 1** (see rationale below): no `PENDING` approval gate (it
 never existed, so nothing to preserve), no pre-fetching, fallback/background-playlist
@@ -1315,8 +1361,8 @@ Original Phase 2 notes (written before the decision above — "today" means befo
 **Follow-ups after Phase 2** (none is needed for the feature to work):
 - ~~Show the import result on the dashboard (`X-Fallback-Import: ok|failed`, `X-Fallback-Import-Reason`) instead of
   always flashing the Save button green.~~ **Done 2026-09-30** (Section 5.4, "DJ actions on the fallback playlist").
-- `GET /dj/dashboard/next-guest-track` and its tests are no longer used by the client; remove them if no other
-  consumer appears.
+- ~~`GET /dj/dashboard/next-guest-track` and its tests are no longer used by the client; remove them if no other
+  consumer appears.~~ **Removed 2026-09-30** (the endpoint and its six tests; `DjService.findNextPlayableGuestTrack` stays, `NextTrackService` uses it).
 - ~~`youtube-autopilot.js` has no automated tests.~~ **Browser tests in the repo since 2026-09-30** (Section 5.4, "Testing").
 
 ### Phase 3 — the DJ sees and controls the fallback queue (done; dev branch)
@@ -1433,6 +1479,21 @@ Sections 4.1, 5.4, 6.8, 10 and in `SESSION_HANDOFF.md`):
    the previous track) and "Od początku" (the current track again from the start) instead of the single ⏮ with its rules, which is
    kept for the window that plays. New commands `PREVIOUS_TRACK` and `RESTART` (`PREVIOUS` stays, accepted); Section 5.4, "Two buttons
    in a window that does not play".
+
+**Follow-up of stage 4 — the sixth session, 2026-09-30** (what was left of the "Next" list of the fifth; the owner chose all four
+items). The first question was whether the friend's steps had been reproduced on a real phone: they were tried on another laptop and
+**worked** (no reproduction), and the owner will ask her again — so the hint for a window whose Auto-Pilot is off and the message for an
+IFrame API that does not load are **still not built**, and the `silent-*` scenarios still describe today's behaviour.
+1. **More browser scenarios** for what had no automated test: the lease (lost and taken back, free, released on leaving), the queue
+   list (search, count, sort, across a poll), the History tab (filters, "Show more", the search text, a failed request) and the three
+   tabs (Section 5.4, "Testing"). Written for code that already worked, so each was checked by **breaking the code in a copy** — 17
+   mutations, all killed. To feed them: the stand-in serves the History fragment (one rendered file per filter, first page and "Show
+   more"), `DashboardPageRenderTest` renders them through the real controller.
+2. **`<html lang>` of `dashboard.html`** follows the language of the texts: `th:lang="#{html.lang}"`, the key is in both bundles (a
+   `${#locale.language}` would say `de` over English texts for a German browser, which has no bundle). Scenario `page-language`
+   was red first. Section 13 lists the templates that still have `lang="en"` written in.
+3. **`GET /dj/dashboard/next-guest-track` removed**, with its six tests (Section 12).
+4. **Browser tests in CI**: `.github/workflows/browser-tests.yml`, not yet run on GitHub (Section 5.4, "In CI").
 
 ### Original one-shot plan (kept for reference — see caveat above)
 
