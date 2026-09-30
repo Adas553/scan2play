@@ -87,6 +87,7 @@ function isYouTubeProvider() {
             }
 
             // --- Fallback playlist save ---
+            let importFailed = false;
             if (action.includes('/fallback-playlist')) {
                 // Server returns the extracted playlist/video ID in X-Fallback-Id header
                 // so we don't need to duplicate the URL parsing logic client-side.
@@ -100,17 +101,19 @@ function isYouTubeProvider() {
                 if (stopBtn) {
                     stopBtn.classList.toggle('d-none', !extractedId);
                 }
+                importFailed = showFallbackImportResult(response, extractedId);
             }
 
-            // Flash the submit button green briefly as confirmation
+            // Flash the submit button briefly as confirmation: green, or red when the playlist could not be imported
             const btn = form.querySelector('button[type="submit"]');
             if (btn) {
                 const original = btn.textContent;
-                btn.textContent = '✓';
-                btn.classList.add('btn-success');
+                const flashClass = importFailed ? 'btn-danger' : 'btn-success';
+                btn.textContent = importFailed ? '✗' : '✓';
+                btn.classList.add(flashClass);
                 setTimeout(function() {
                     btn.textContent = original;
-                    btn.classList.remove('btn-success');
+                    btn.classList.remove(flashClass);
                 }, 1500);
             }
             // Clear "add item" forms after successful submission
@@ -122,6 +125,45 @@ function isYouTubeProvider() {
         });
     });
 })();
+
+// ==========================================================================
+// FALLBACK PLAYLIST — what came of the import
+//
+// Saving the playlist imports its tracks (best effort, on the server) and the answer says how it went:
+// X-Fallback-Import ok|failed, X-Fallback-Tracks (ok) or X-Fallback-Import-Reason (failed: NO_API_KEY, INVALID_PLAYLIST,
+// API_ERROR, NO_PLAYABLE_TRACKS). Without a word about it a private or wrong playlist ended in an empty "up next" list. The texts
+// travel in data attributes of #fallbackImportStatus (dashboard.html), so the script needs no message bundle of its own.
+// ==========================================================================
+
+/** Says under the playlist form how the import went. Returns true when it failed. Nothing is said when the playlist was cleared. */
+function showFallbackImportResult(response, extractedId) {
+    const box = document.getElementById('fallbackImportStatus');
+    const status = response.headers.get('X-Fallback-Import');
+    if (!box || !extractedId || !status) {   // no such box, the playlist was cleared, or a server that says nothing
+        hideFallbackImportResult();
+        return false;
+    }
+    const failed = status !== 'ok';
+    let text;
+    if (failed) {
+        const reason = (response.headers.get('X-Fallback-Import-Reason') || '').toLowerCase().replace(/_/g, '');
+        text = box.dataset['text' + reason.charAt(0).toUpperCase() + reason.slice(1)] || box.dataset.textUnknown;
+    } else {
+        text = (box.dataset.textOk || '').replace('{0}', response.headers.get('X-Fallback-Tracks') || '0');
+    }
+    box.textContent = text || '';
+    box.classList.toggle('text-danger', failed);
+    box.classList.toggle('text-success', !failed);
+    box.classList.remove('d-none');
+    return failed;
+}
+
+function hideFallbackImportResult() {
+    const box = document.getElementById('fallbackImportStatus');
+    if (!box) return;
+    box.classList.add('d-none');
+    box.textContent = '';
+}
 
 // ==========================================================================
 // AUTO-PILOT TOGGLE
@@ -411,6 +453,7 @@ function submitAutoPilotToggle(checkbox) {
             if (typeof window.applyListFilters === 'function') {
                 window.applyListFilters(document.getElementById('queueList'));
             }
+            updateGuestsWaiting();
         } catch (err) {
             console.error('[Polling] Refresh error:', err);
         } finally {
@@ -418,8 +461,34 @@ function submitAutoPilotToggle(checkbox) {
         }
     }
 
+    updateGuestsWaiting();
     setTimeout(refreshTable, 3000);
 })();
+
+/**
+ * The line above the "up next" list: how many guest songs wait — they play before the track marked "Next". Counted from the queue
+ * table (accepted songs, refreshed by the poll above) — only the ones that have a YouTube video ID, i.e. that Auto-Pilot can play
+ * (the same rule as extractVideoId in youtube-autopilot.js and YouTubeUrls.extractVideoId on the server); the ones with a search
+ * link are for the DJ to play by hand. Hidden when there are none. The plural form is the browser's (Polish has three), the four texts
+ * travel in data attributes of the line (dashboard.html); there is no such line for a Spotify party.
+ */
+function updateGuestsWaiting() {
+    const line = document.getElementById('fallbackGuestsWaiting');
+    if (!line) return;
+    let waiting = 0;
+    document.querySelectorAll('#song-list tr[data-song-id]').forEach(function(row) {
+        if (/[?&]v=[A-Za-z0-9_-]{11}/.test(row.getAttribute('data-track-url') || '')) waiting++;
+    });
+    if (waiting === 0) {
+        line.classList.add('d-none');
+        line.textContent = '';
+        return;
+    }
+    const form = new Intl.PluralRules(line.dataset.lang || 'en').select(waiting);   // one | few | many | other
+    const text = line.dataset['text' + form.charAt(0).toUpperCase() + form.slice(1)] || line.dataset.textOther || '';
+    line.textContent = text.replace('{0}', String(waiting));
+    line.classList.remove('d-none');
+}
 
 // ==========================================================================
 // COPY PARTY LINK
@@ -448,7 +517,7 @@ function copyPartyLink() {
 // into #fallbackQueue. It is refreshed whenever it may have changed: on page load, after the playlist is saved
 // or cleared, after the shuffle switch, after the DJ moves a track, and by youtube-autopilot.js each time the
 // player takes the next background track. A track is moved with the buttons in the list (data-move = TOP / UP / DOWN)
-// or by dragging its row.
+// or by dragging its row, and skipped for this round with its ✕ button (data-skip).
 // ==========================================================================
 
 let fallbackQueueRequest = 0;
@@ -530,6 +599,11 @@ function moveFallbackTrack(trackId, direction) {
     return changeFallbackQueue('move', { trackId: trackId, direction: direction }, trackId);
 }
 
+/** The DJ skips a track for this round with its ✕ button: it leaves the list and comes back when the playlist starts over. */
+function skipFallbackTrack(trackId) {
+    return changeFallbackQueue('skip', { trackId: trackId }, trackId);
+}
+
 /** The DJ dropped a dragged track in front of another one (beforeTrackId), or at the end of the list (empty). */
 function placeFallbackTrack(trackId, beforeTrackId) {
     // The row has already moved on screen; if the change cannot be sent now, put the list back as the server has it.
@@ -557,6 +631,11 @@ function revealFallbackTrack(trackId) {
     if (!box) return;
     // The list is replaced on every refresh, so the clicks are caught on the container that stays.
     box.addEventListener('click', function(e) {
+        const skipButton = e.target.closest('button[data-skip]');
+        if (skipButton && !skipButton.disabled) {
+            skipFallbackTrack(skipButton.closest('li').getAttribute('data-track-id'));
+            return;
+        }
         const button = e.target.closest('button[data-move]');
         if (!button || button.disabled) return;
         moveFallbackTrack(button.closest('li').getAttribute('data-track-id'), button.getAttribute('data-move'));
@@ -781,9 +860,10 @@ function stopFallbackPlaylist() {
     const input = document.getElementById('fallbackInput');
     if (input) input.value = '';
 
-    // Hide the stop button
+    // Hide the stop button, and what was said about the last import
     const stopBtn = document.getElementById('fallbackStopBtn');
     if (stopBtn) stopBtn.classList.add('d-none');
+    hideFallbackImportResult();
 
     // Clear server-side via AJAX POST
     const partyCode = document.getElementById('partyCode');

@@ -257,6 +257,47 @@ class DjPlayerLeaseControllerTest {
         verify(leaseService).sendCommand(PARTY, PlayerCommand.PREVIOUS);
     }
 
+    @Test
+    @DisplayName("player-command accepts PREVIOUS_TRACK and RESTART — the two buttons of a window that does not play: 204 when waiting, 409 when nobody plays")
+    void shouldAcceptThePreviousTrackAndRestartCommands() throws Exception {
+        when(leaseService.sendCommand(PARTY, PlayerCommand.PREVIOUS_TRACK)).thenReturn(true);
+        when(leaseService.sendCommand(PARTY, PlayerCommand.RESTART)).thenReturn(false);
+
+        mockMvc.perform(post("/dj/dashboard/player-command").param("partyCode", PARTY).param("command", "PREVIOUS_TRACK")
+                        .principal(token).session(session))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/dj/dashboard/player-command").param("partyCode", PARTY).param("command", "RESTART")
+                        .principal(token).session(session))
+                .andExpect(status().isConflict());
+
+        verify(leaseService).sendCommand(PARTY, PlayerCommand.PREVIOUS_TRACK);
+        verify(leaseService).sendCommand(PARTY, PlayerCommand.RESTART);
+    }
+
+    @Test
+    @DisplayName("the PREVIOUS_TRACK and RESTART commands reach the window that plays in its answer, by their names — the script looks for them")
+    void shouldCarryThePreviousTrackAndRestartCommands() throws Exception {
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM, null)).thenReturn(new Status(true, false, PlayerCommand.PREVIOUS_TRACK, null));
+        mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .param("mode", "CLAIM").principal(token).session(session))
+                .andExpect(jsonPath("$.command").value("PREVIOUS_TRACK"));
+
+        when(leaseService.report(PARTY, DEVICE, PlayerLeaseMode.CLAIM, null)).thenReturn(new Status(true, false, PlayerCommand.RESTART, null));
+        mockMvc.perform(post("/dj/dashboard/player-lease").param("partyCode", PARTY).param("deviceId", DEVICE)
+                        .param("mode", "CLAIM").principal(token).session(session))
+                .andExpect(jsonPath("$.command").value("RESTART"));
+    }
+
+    @Test
+    @DisplayName("a command that does not exist is a bad request, and nothing is sent to the window that plays")
+    void shouldRejectAnUnknownCommand() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/player-command").param("partyCode", PARTY).param("command", "REWIND")
+                        .principal(token).session(session))
+                .andExpect(status().isBadRequest());
+
+        verify(leaseService, org.mockito.Mockito.never()).sendCommand(any(), any());
+    }
+
     // ---- recent-tracks: what "previous" walks back along ----
 
     private static HistoryEntry entry(Source source, long id, String videoId, String title) {

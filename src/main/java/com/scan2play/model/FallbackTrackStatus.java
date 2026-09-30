@@ -9,5 +9,7 @@ public enum FallbackTrackStatus {
     /** Already played (kept as history). */
     PLAYED,
     /** Invalidated because the DJ changed or cleared the fallback playlist before it was played. */
-    CANCELLED
+    CANCELLED,
+    /** The DJ skipped it for the current round (V8): not queued now, back in the queue when the playlist starts its next round. */
+    SKIPPED
 }

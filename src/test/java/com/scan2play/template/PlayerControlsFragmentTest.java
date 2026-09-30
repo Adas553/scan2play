@@ -46,12 +46,13 @@ class PlayerControlsFragmentTest {
     }
 
     @Test
-    @DisplayName("the three buttons have the id and the label element the script looks for, and their labels and the \"sent\" text in English")
+    @DisplayName("the buttons have the id and the label element the script looks for, and their labels and the \"sent\" text in English")
     void shouldRenderTheButtons() {
         String html = render(Locale.ENGLISH);
 
-        assertThat(html).contains("id=\"playerNextBtn\"", "id=\"playerPreviousBtn\"", "id=\"playerPauseBtn\"");
-        assertThat(html.split("data-role=\"label\"", -1)).hasSize(4);       // one label element per button
+        assertThat(html).contains("id=\"playerNextBtn\"", "id=\"playerPreviousBtn\"", "id=\"playerPauseBtn\"",
+                "id=\"playerBackBtn\"", "id=\"playerRestartBtn\"");
+        assertThat(html.split("data-role=\"label\"", -1)).hasSize(6);       // one label element per button: five buttons
         assertThat(html).contains("data-text-label=\"⏭ Next\"", "data-text-label=\"⏮ Previous\"", "data-text-sent=\"Sent…\"");
         assertThat(html).contains(">⏭ Next</span>", ">⏮ Previous</span>");
         assertThat(html).contains("title=\"Skip to the next track.", "title=\"Back. A track that has played for more than 3 seconds");
@@ -59,10 +60,67 @@ class PlayerControlsFragmentTest {
     }
 
     @Test
-    @DisplayName("the tooltip of Back says that a second press within 10 seconds goes to the previous track (RESTART_AFTER_SECONDS and DOUBLE_PRESS_MS in youtube-autopilot.js)")
+    @DisplayName("the tooltip of Back says that a second press within 20 seconds goes to the previous track (RESTART_AFTER_SECONDS and DOUBLE_PRESS_MS in youtube-autopilot.js)")
     void shouldExplainTheDoublePressInTheTooltipOfBack() {
-        assertThat(render(Locale.ENGLISH)).contains("a second press within 10 seconds goes to the track that played before it");
-        assertThat(render(PL)).contains("drugie naciśnięcie w ciągu 10 sekund przechodzi do utworu, który leciał przed nim");
+        assertThat(render(Locale.ENGLISH)).contains("a second press within 20 seconds goes to the track that played before it");
+        assertThat(render(PL)).contains("drugie naciśnięcie w ciągu 20 sekund przechodzi do utworu, który leciał przed nim");
+    }
+
+    @Test
+    @DisplayName("the single Back no longer mentions a remote: a window that does not play has two buttons of its own (renderBackButtons in youtube-autopilot.js)")
+    void shouldNotPromiseARemoteBackOnTheSingleButton() {
+        assertThat(render(Locale.ENGLISH)).contains("Within the first 3 seconds of a track one press is enough.\"")
+                .doesNotContain("Within the first 3 seconds of a track one press is enough. In a window");
+        assertThat(render(PL)).contains("W pierwszych 3 sekundach utworu wystarcza jedno naciśnięcie.\"")
+                .doesNotContain("wystarcza jedno naciśnięcie. W oknie");
+    }
+
+    @Test
+    @DisplayName("a window that does not play has two buttons for back — the previous track, and the track from the start — hidden until the script knows it is such a window")
+    void shouldHaveTwoBackButtonsForAWindowThatDoesNotPlay() {
+        String english = render(Locale.ENGLISH);
+
+        assertThat(buttonTag(english, "playerBackBtn")).contains("d-none").contains("data-text-label=\"⏮ Previous\"")
+                .contains("title=\"Previous track: goes back to the track that played before this one");
+        assertThat(buttonTag(english, "playerRestartBtn")).contains("d-none").contains("data-text-label=\"↺ From start\"")
+                .contains("title=\"Plays the current track again from the start.");
+        assertThat(english).contains(">↺ From start</span>");
+        // the single ⏮ is the one that shows at first (the window that plays, or one that does not know yet)
+        assertThat(buttonTag(english, "playerPreviousBtn")).doesNotContain("d-none");
+        assertThat(buttonTag(english, "playerPauseBtn")).doesNotContain("d-none");
+        assertThat(buttonTag(english, "playerNextBtn")).doesNotContain("d-none");
+        // both carry the "sent" text of a remote press
+        assertThat(buttonTag(english, "playerBackBtn")).contains("data-text-sent=\"Sent…\"");
+        assertThat(buttonTag(english, "playerRestartBtn")).contains("data-text-sent=\"Sent…\"");
+    }
+
+    @Test
+    @DisplayName("the two back buttons in Polish: Wstecz and Od początku, every message key resolved")
+    void shouldRenderTheTwoBackButtonsInPolish() {
+        String html = render(PL);
+
+        assertThat(buttonTag(html, "playerBackBtn")).contains("data-text-label=\"⏮ Wstecz\"")
+                .contains("title=\"Poprzedni utwór: wraca do utworu, który leciał przed tym");
+        assertThat(buttonTag(html, "playerRestartBtn")).contains("data-text-label=\"↺ Od początku\"")
+                .contains("title=\"Odtwarza bieżący utwór jeszcze raz od początku.");
+        assertThat(html).contains(">↺ Od początku</span>").doesNotContain("??");
+    }
+
+    @Test
+    @DisplayName("the buttons of a window that does not play sit where the single back does: before pause and next, back first")
+    void shouldPlaceTheTwoBackButtonsBeforePauseAndNext() {
+        String html = render(Locale.ENGLISH);
+
+        assertThat(html.indexOf("playerPreviousBtn")).isLessThan(html.indexOf("playerBackBtn"));
+        assertThat(html.indexOf("playerBackBtn")).isLessThan(html.indexOf("playerRestartBtn"));
+        assertThat(html.indexOf("playerRestartBtn")).isLessThan(html.indexOf("playerPauseBtn"));
+    }
+
+    /** The opening tag of the button with this id (attributes included), to look at one button at a time. */
+    private static String buttonTag(String html, String id) {
+        int at = html.indexOf("id=\"" + id + "\"");
+        int start = html.lastIndexOf("<button", at);
+        return html.substring(start, html.indexOf(">", at) + 1);
     }
 
     @Test

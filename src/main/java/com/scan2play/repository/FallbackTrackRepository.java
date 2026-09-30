@@ -116,6 +116,19 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
     int moveToFront(@Param("id") Long id, @Param("status") FallbackTrackStatus status);
 
     /**
+     * The DJ skips a queued track for this round: QUEUED → SKIPPED in a single conditional UPDATE (it never touches a track
+     * the player took in the meantime). The track comes back when the playlist starts its next round
+     * ({@link #requeuePlayedTracks}).
+     *
+     * @return 1 if the track was skipped, 0 if it is no longer queued
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE FallbackTrackEntity t SET t.status = :skipped WHERE t.id = :id AND t.status = :queued")
+    int markSkipped(@Param("id") Long id,
+                    @Param("queued") FallbackTrackStatus queued,
+                    @Param("skipped") FallbackTrackStatus skipped);
+
+    /**
      * Gives the queued tracks of a playlist the play orders 0, 1, 2, … in their current order, so that no two of them
      * share an order and two neighbours can be swapped by exchanging their values. Does not change the sequence and
      * leaves the {@code manualMove} flags alone.
@@ -188,9 +201,9 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
                          @Param("now") LocalDateTime now);
 
     /**
-     * Puts the already-played tracks of the party's <em>newest</em> import back in the queue (the playlist
-     * loops). "Newest" is party-wide, not per playlist: a batch that a later import — of the same or of
-     * another playlist — has superseded is history and is never revived. If the newest import belongs to a
+     * Puts the already-played tracks — and the ones the DJ skipped in this round — of the party's <em>newest</em> import
+     * back in the queue (the playlist loops). "Newest" is party-wide, not per playlist: a batch that a later import — of
+     * the same or of another playlist — has superseded is history and is never revived. If the newest import belongs to a
      * different playlist than {@code playlistId}, nothing matches and 0 is returned.
      * <p>
      * This clears {@code playedAt}, so a track's own row says only what happened in the <em>current</em> round; what has
@@ -200,7 +213,8 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE FallbackTrackEntity t SET t.status = :queued, t.playedAt = null "
-            + "WHERE t.partyCode = :partyCode AND t.playlistId = :playlistId AND t.status = :played "
+            + "WHERE t.partyCode = :partyCode AND t.playlistId = :playlistId "
+            + "AND (t.status = :played OR t.status = com.scan2play.model.FallbackTrackStatus.SKIPPED) "
             + "AND t.fetchedAt = (SELECT MAX(x.fetchedAt) FROM FallbackTrackEntity x WHERE x.partyCode = :partyCode)")
     int requeuePlayedTracks(@Param("partyCode") String partyCode,
                             @Param("playlistId") String playlistId,

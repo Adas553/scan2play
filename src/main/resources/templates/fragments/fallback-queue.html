@@ -6,8 +6,8 @@
     "Up next" list of the DJ's fallback (background music) playlist, filled into #fallbackQueue on the dashboard by
     dashboard.js (GET /dj/dashboard/fallback-queue). Model attribute "queue" is a FallbackQueueView.
     Titles come from YouTube, so they are only ever rendered with th:text (escaped).
-    The buttons carry data-move (TOP / UP / DOWN); the track id is on the row (data-track-id) — a long queue (up to
-    500 rows) is sent on every refresh, so the markup per row is kept small. dashboard.js handles the clicks and the
+    The buttons carry data-move (TOP / UP / DOWN), the skip button data-skip; the track id is on the row (data-track-id) —
+    a long queue (up to 500 rows) is sent on every refresh, so the markup per row is kept small. dashboard.js handles the clicks and the
     dragging of a row (press and drag with the mouse, press and hold on a touch screen); the title is plain text so that
     a press on it starts a drag, and the link to YouTube is the small arrow beside the buttons. data-manual tells
     dashboard.js whether the DJ has moved tracks by hand (it asks before the shuffle switch would undo that).
@@ -23,7 +23,10 @@
         <th:block th:unless="${queue.tracks().isEmpty()}">
             <div class="d-flex justify-content-between align-items-center small text-secondary mb-2">
                 <span th:text="${queue.shuffle()} ? (${queue.manualOrder()} ? #{dashboard.fallback.queue.order.shuffle.manual} : #{dashboard.fallback.queue.order.shuffle}) : (${queue.manualOrder()} ? #{dashboard.fallback.queue.order.playlist.manual} : #{dashboard.fallback.queue.order.playlist})">Playlist order</span>
-                <span th:text="#{dashboard.fallback.queue.remaining(${queue.remaining()})}">12 left in this round</span>
+                <span>
+                    <span th:text="#{dashboard.fallback.queue.remaining(${queue.remaining()})}">12 left in this round</span><span
+                          th:if="${queue.skipped() > 0}" th:text="${' · ' + #messages.msg('dashboard.fallback.queue.skipped', queue.skipped())}"> · Skipped: 2</span>
+                </span>
             </div>
             <!--/* Fixed height with its own scrollbar: the list holds the whole round (up to 500 tracks); 17rem next to the 640px player lines up with the video's height. dashboard.js keeps the scroll position when it refreshes the list. */-->
             <ol class="list-group list-group-numbered"
@@ -50,6 +53,8 @@
                                 th:title="#{dashboard.fallback.queue.move.down}"
                                 th:disabled="${stat.last}">↓</button>
                     </span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" data-skip
+                            th:title="#{dashboard.fallback.queue.skip}">✕</button>
                 </li>
             </ol>
         </th:block>

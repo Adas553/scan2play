@@ -111,6 +111,9 @@
                             id="fallbackStopBtn" onclick="stopFallbackPlaylist()"
                             th:text="#{dashboard.fallback.stop}">⏹ Stop</button>
                 </form>
+                <!--/* What came of the import after Save (dashboard.js, showFallbackImportResult): the server answers ok / failed with a reason; the texts travel in data attributes */-->
+                <div id="fallbackImportStatus" class="small mt-2 d-none" role="status" aria-live="polite"
+                     th:attr="data-text-ok=#{dashboard.fallback.import.ok},data-text-noapikey=#{dashboard.fallback.import.noapikey},data-text-invalidplaylist=#{dashboard.fallback.import.invalidplaylist},data-text-apierror=#{dashboard.fallback.import.apierror},data-text-noplayabletracks=#{dashboard.fallback.import.noplayabletracks},data-text-unknown=#{dashboard.fallback.import.unknown}"></div>
                 <div class="form-check form-switch mt-2">
                     <input class="form-check-input" type="checkbox" role="switch"
                            id="fallbackShuffleToggle"
@@ -166,6 +169,9 @@
             <div class="flex-grow-1" style="flex-basis: 300px; max-width: 640px;">
                 <h6 class="text-light small mb-1" th:text="#{dashboard.fallback.queue.title}">Up next from the playlist</h6>
                 <p class="text-secondary small mb-2" th:text="#{dashboard.fallback.queue.hint}">Guest requests always play before the playlist.</p>
+                <!--/* How many guest songs wait (dashboard.js, updateGuestsWaiting): they play before the track marked "Next" below. The plural form is picked in the browser (Intl.PluralRules of data-lang), the four texts travel in data attributes. */-->
+                <p id="fallbackGuestsWaiting" class="text-warning small mb-2 d-none" role="status"
+                   th:attr="data-lang=${#locale.language},data-text-one=#{dashboard.fallback.queue.guests.one},data-text-few=#{dashboard.fallback.queue.guests.few},data-text-many=#{dashboard.fallback.queue.guests.many},data-text-other=#{dashboard.fallback.queue.guests.other}"></p>
                 <div id="fallbackQueue"></div>
             </div>
         </div>

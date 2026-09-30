@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.FallbackTrackEntity;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.FallbackQueueView;
+import com.scan2play.model.FallbackTrackStatus;
 import com.scan2play.model.MoveDirection;
 import com.scan2play.repository.FallbackTrackRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -255,6 +256,42 @@ class FallbackQueueServiceTest {
         givenSettings(null, true);
 
         assertThat(service.placeTrack(PARTY, 7L, 9L)).isFalse();
+
+        verifyNoInteractions(fallbackTrackCommandService);
+    }
+
+    // ---- skipping a track (for this round) ----
+
+    @Test
+    @DisplayName("the list says how many tracks the DJ has skipped in this round, and its version changes when that number does")
+    void shouldReportTheSkippedTracks() {
+        givenQueue(false, 3, entity(1, "aaaaaaaaaaa", "A"));
+        assertThat(service.getUpcoming(PARTY).skipped()).isZero();
+        String before = service.getVersion(PARTY);
+
+        when(fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, FallbackTrackStatus.SKIPPED)).thenReturn(2L);
+
+        assertThat(service.getUpcoming(PARTY).skipped()).isEqualTo(2);
+        assertThat(service.getVersion(PARTY)).isNotEqualTo(before);   // the other windows refresh their list
+    }
+
+    @Test
+    @DisplayName("skipping a track hands the current playlist and the shuffle setting to the command service, and says what it answered")
+    void skipTrack_shouldDelegateWithThePlaylistAndTheShuffleSetting() {
+        givenSettings(PLAYLIST_URL, true);
+        when(fallbackTrackCommandService.skipTrack(PARTY, PLAYLIST, 42L, true)).thenReturn(true);
+        when(fallbackTrackCommandService.skipTrack(PARTY, PLAYLIST, 43L, true)).thenReturn(false);
+
+        assertThat(service.skipTrack(PARTY, 42L)).isTrue();
+        assertThat(service.skipTrack(PARTY, 43L)).isFalse();
+    }
+
+    @Test
+    @DisplayName("without a fallback playlist there is nothing to skip — the command service is not asked")
+    void skipTrack_shouldRefuse_whenThereIsNoPlaylist() {
+        givenSettings(null, true);
+
+        assertThat(service.skipTrack(PARTY, 42L)).isFalse();
 
         verifyNoInteractions(fallbackTrackCommandService);
     }

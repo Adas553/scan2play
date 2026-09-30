@@ -55,7 +55,9 @@ public class FallbackQueueService {
                 .countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, FallbackTrackStatus.QUEUED);
         boolean manualOrder = fallbackTrackRepository.existsByPartyCodeAndPlaylistIdAndStatusAndManualMoveTrue(
                 partyCode, playlistId, FallbackTrackStatus.QUEUED);
-        return new FallbackQueueView(true, settings.isFallbackShuffle(), manualOrder, remaining, tracks);
+        long skipped = fallbackTrackRepository
+                .countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, FallbackTrackStatus.SKIPPED);
+        return new FallbackQueueView(true, settings.isFallbackShuffle(), manualOrder, remaining, skipped, tracks);
     }
 
     /**
@@ -105,6 +107,21 @@ public class FallbackQueueService {
             return false;
         }
         return fallbackTrackCommandService.placeTrack(partyCode, playlistId, trackId, beforeTrackId);
+    }
+
+    /**
+     * The DJ skips a track of the queue for this round: it comes back in the playlist's next round.
+     *
+     * @return true if the track was queued in the party's current playlist and is skipped now; false if it cannot be
+     *         skipped — unknown, not this party's, or already taken by the player
+     */
+    public boolean skipTrack(String partyCode, Long trackId) {
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        String playlistId = YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl());
+        if (playlistId == null) {
+            return false;
+        }
+        return fallbackTrackCommandService.skipTrack(partyCode, playlistId, trackId, settings.isFallbackShuffle());
     }
 
     private static FallbackQueueView.Track toTrack(FallbackTrackEntity entity) {

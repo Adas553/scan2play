@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * The DJ's view of the fallback (background music) playlist queue, and the moves the DJ can make in it.
+ * The DJ's view of the fallback (background music) playlist queue, and the moves the DJ can make in it (move, drag, skip).
  */
 @Controller
 @RequestMapping("/dj")
@@ -85,6 +85,24 @@ public class DjFallbackQueueController {
                                            HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
         return fallbackQueueService.placeTrack(partyCode, trackId, beforeTrackId)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.status(409).build();
+    }
+
+    /**
+     * Skips one track of the queue for this round: it is not played now and comes back when the playlist starts its next
+     * round. The dashboard refreshes the list afterwards.
+     * <p>
+     * 204 No Content when done; 409 Conflict when the track can no longer be skipped (the player has just taken it, or it
+     * is not part of this party's current playlist).
+     */
+    @PostMapping("/dashboard/fallback-queue/skip")
+    public ResponseEntity<Void> skipTrack(@RequestParam String partyCode,
+                                          @RequestParam Long trackId,
+                                          OAuth2AuthenticationToken authentication,
+                                          HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        return fallbackQueueService.skipTrack(partyCode, trackId)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.status(409).build();
     }

@@ -22,6 +22,7 @@ import java.util.stream.IntStream;
 import static com.scan2play.model.FallbackTrackStatus.CANCELLED;
 import static com.scan2play.model.FallbackTrackStatus.PLAYED;
 import static com.scan2play.model.FallbackTrackStatus.QUEUED;
+import static com.scan2play.model.FallbackTrackStatus.SKIPPED;
 import static com.scan2play.repository.FallbackTrackRepository.UPCOMING_ORDER;
 
 /**
@@ -239,6 +240,38 @@ public class FallbackTrackCommandService {
             fallbackTrackRepository.shiftPlayOrder(partyCode, playlistId, QUEUED, to, from - 1, 1);
         }
         fallbackTrackRepository.setPlayOrderByHand(trackId, to, QUEUED);
+        return true;
+    }
+
+    /**
+     * The DJ skips a track of the queue for this round: it is not queued any more, so it does not play now, and it comes back
+     * when the playlist starts its next round (with the tracks that played). Nothing is written to the play log — the track
+     * was never handed out.
+     * <p>
+     * When that was the last queued track the round is over: the next one starts at once, as when the player takes the last
+     * track — so there is always a "next" to show — and the skipped track comes back at the end of it, not at the front.
+     * <p>
+     * Only a track that is still queued in the party's <em>current</em> playlist can be skipped — never a track of another
+     * party, of an old playlist, or one the player has already taken.
+     *
+     * @param shuffle whether the next round is shuffled (only matters when the skip ends the round)
+     * @return true if the track was queued in this playlist and is skipped now; false if it cannot be skipped
+     */
+    @Transactional
+    public boolean skipTrack(String partyCode, String playlistId, Long trackId, boolean shuffle) {
+        lockQueue(partyCode);
+        if (!isQueuedIn(partyCode, playlistId, trackId)) {
+            return false;
+        }
+        if (fallbackTrackRepository.markSkipped(trackId, QUEUED, SKIPPED) != 1) {
+            return false;
+        }
+        if (fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, QUEUED) == 0
+                && startNewRound(partyCode, playlistId, shuffle, trackId) && !shuffle) {
+            // a shuffled round keeps the track out of first place by itself; in playlist order it could open the round again
+            keepOutOfFirstPlace(partyCode, playlistId, trackId);
+        }
+        log.info("Party [{}]: track {} of fallback playlist {} skipped for this round", partyCode, trackId, playlistId);
         return true;
     }
 

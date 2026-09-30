@@ -167,12 +167,12 @@ class FallbackQueueFragmentTest {
     }
 
     @Test
-    @DisplayName("a single track cannot move at all: all its buttons are disabled")
+    @DisplayName("a single track cannot move at all: all its move buttons are disabled")
     void shouldDisableEveryButton_forASingleTrack() {
         String html = render(queue(false, 1, new Track(1L, "aaaaaaaaaaa", "Only one")), Locale.ENGLISH);
 
-        assertThat(count(html, "<button")).isEqualTo(3);
-        assertThat(count(html, "disabled=\"disabled\"")).isEqualTo(3);
+        assertThat(count(html, "<button")).isEqualTo(4);                       // the three moves, and the skip button
+        assertThat(count(html, "disabled=\"disabled\"")).isEqualTo(3);         // (skipping the only track is fine: the round starts over)
     }
 
     @Test
@@ -241,5 +241,33 @@ class FallbackQueueFragmentTest {
         String html = render(queue(false, 1, new Track(1L, "aaaaaaaaaaa", "Piosenka")), PL);
 
         assertThat(html).contains("title=\"Otwórz na YouTube\"");
+    }
+
+    // ---- skipping a track for this round ----
+
+    @Test
+    @DisplayName("every row has a skip button that says what it does (dashboard.js handles data-skip); it is not one of the moves")
+    void shouldGiveEveryRowASkipButton() {
+        FallbackQueueView view = queue(false, 2, new Track(1L, "aaaaaaaaaaa", "One"), new Track(2L, "bbbbbbbbbbb", "Two"));
+
+        String english = render(view, Locale.ENGLISH);
+        assertThat(count(english, "data-skip")).isEqualTo(2);
+        assertThat(english).contains("title=\"Skip this round — the track comes back when the playlist starts over\"");
+        assertThat(render(view, PL)).contains("title=\"Pomiń w tej rundzie — utwór wróci, gdy playlista zacznie się od nowa\"");
+        // the skip button is enabled even for the first and the last row: the first track can be skipped like any other
+        assertThat(english).doesNotContain("data-skip disabled");
+    }
+
+    @Test
+    @DisplayName("how many tracks the DJ has skipped in this round is shown next to how many are left — and only when there are some")
+    void shouldShowHowManyTracksWereSkipped() {
+        Track track = new Track(1L, "aaaaaaaaaaa", "Song");
+
+        assertThat(render(new FallbackQueueView(true, false, false, 3, 2, List.of(track)), Locale.ENGLISH))
+                .contains("3 left in this round", "Skipped this round: 2");
+        assertThat(render(new FallbackQueueView(true, false, false, 3, 2, List.of(track)), PL))
+                .contains("Zostało w tej rundzie: 3", "Pominięte w tej rundzie: 2");
+        assertThat(render(new FallbackQueueView(true, false, false, 3, 0, List.of(track)), Locale.ENGLISH))
+                .contains("3 left in this round").doesNotContain("Skipped");
     }
 }

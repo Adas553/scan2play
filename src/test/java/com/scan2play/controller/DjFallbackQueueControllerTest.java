@@ -252,4 +252,63 @@ class DjFallbackQueueControllerTest {
 
         verifyNoInteractions(queueService);
     }
+
+    // ---- skipping a track (for this round) ----
+
+    @Test
+    @DisplayName("skip: 204 when the track was skipped — the ownership of the party is checked first")
+    void skip_shouldAnswerNoContent() throws Exception {
+        when(queueService.skipTrack(PARTY, 42L)).thenReturn(true);
+
+        mockMvc.perform(post("/dj/dashboard/fallback-queue/skip").param("partyCode", PARTY).param("trackId", "42")
+                        .principal(token).session(session))
+                .andExpect(status().isNoContent());
+
+        verify(sessionHelper).validateOwnership(PARTY, token, session);
+    }
+
+    @Test
+    @DisplayName("skip: 409 when the track can no longer be skipped (the player took it, or it is not of this party's current playlist)")
+    void skip_shouldAnswerConflict_whenTheTrackCannotBeSkipped() throws Exception {
+        when(queueService.skipTrack(PARTY, 42L)).thenReturn(false);
+
+        mockMvc.perform(post("/dj/dashboard/fallback-queue/skip").param("partyCode", PARTY).param("trackId", "42")
+                        .principal(token).session(session))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("skip: a missing or non-numeric track id is a 400, and nothing is skipped")
+    void skip_shouldRejectABadTrackId() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/fallback-queue/skip").param("partyCode", PARTY).principal(token).session(session))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/dj/dashboard/fallback-queue/skip").param("partyCode", PARTY).param("trackId", "abc")
+                        .principal(token).session(session))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(queueService);
+    }
+
+    @Test
+    @DisplayName("skip: a party owned by someone else is rejected and nothing is skipped (IDOR protection)")
+    void skip_shouldRejectSomeoneElsesParty() {
+        doThrow(new AccessDeniedException("You do not own party: OTHER"))
+                .when(sessionHelper).validateOwnership(any(), any(), any());
+
+        assertThatThrownBy(() -> mockMvc.perform(post("/dj/dashboard/fallback-queue/skip")
+                        .param("partyCode", "OTHER").param("trackId", "42").principal(token).session(session)))
+                .hasRootCauseInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(queueService);
+    }
+
+    @Test
+    @DisplayName("skip is POST-only — a GET is rejected")
+    void skip_shouldRejectGet() throws Exception {
+        mockMvc.perform(get("/dj/dashboard/fallback-queue/skip").param("partyCode", PARTY).param("trackId", "42")
+                        .principal(token).session(session))
+                .andExpect(status().isMethodNotAllowed());
+
+        verifyNoInteractions(queueService);
+    }
 }

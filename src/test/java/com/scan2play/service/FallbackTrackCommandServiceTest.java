@@ -35,6 +35,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.scan2play.model.FallbackTrackStatus.SKIPPED;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FallbackTrackCommandServiceTest {
@@ -731,5 +734,118 @@ class FallbackTrackCommandServiceTest {
         InOrder order = inOrder(repository);
         order.verify(repository).lockQueue(FallbackTrackCommandService.queueLockKey(PARTY));
         order.verify(repository).findByIdAndPartyCode(1L, PARTY);
+    }
+
+    // ---- skipTrack (the DJ skips a track for this round) ----
+
+    @Test
+    @DisplayName("skipping takes the party's lock first, then marks the queued track SKIPPED — and writes nothing to the play log (it was never handed out)")
+    void skipTrack_shouldMarkTheTrackSkipped() {
+        givenTrackIsQueued(queued(2, 1));
+        when(repository.markSkipped(2L, QUEUED, SKIPPED)).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(5L);
+
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 2L, false)).isTrue();
+
+        InOrder order = inOrder(repository);
+        order.verify(repository).lockQueue(LOCK_KEY);
+        order.verify(repository).findByIdAndPartyCode(2L, PARTY);
+        order.verify(repository).markSkipped(2L, QUEUED, SKIPPED);
+        verify(repository, never()).requeuePlayedTracks(any(), any(), any(), any());   // tracks are left in this round: no new one
+        verifyNoInteractions(playRepository);
+    }
+
+    @Test
+    @DisplayName("a track that does not exist, belongs to another party, has been played or is of an old playlist cannot be skipped — nothing is written")
+    void skipTrack_shouldRefuseTracksThatAreNotQueuedInTheCurrentPlaylist() {
+        FallbackTrackEntity played = queued(1, 0);
+        played.setStatus(PLAYED);
+        FallbackTrackEntity old = queued(2, 0);
+        old.setPlaylistId("PLold");
+        givenTrackIsQueued(played);
+        givenTrackIsQueued(old);
+        when(repository.findByIdAndPartyCode(99L, PARTY)).thenReturn(Optional.empty());   // unknown, or another party's
+
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 1L, false)).isFalse();
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 2L, false)).isFalse();
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 99L, false)).isFalse();
+
+        verify(repository, never()).markSkipped(any(), any(), any());
+        verify(repository, never()).requeuePlayedTracks(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("if the player takes the track while it is being skipped, the skip is refused and no round is started")
+    void skipTrack_shouldRefuse_whenThePlayerTookTheTrackInTheMeantime() {
+        givenTrackIsQueued(queued(2, 1));
+        when(repository.markSkipped(2L, QUEUED, SKIPPED)).thenReturn(0);
+
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 2L, false)).isFalse();
+
+        verify(repository, never()).countByPartyCodeAndPlaylistIdAndStatus(any(), any(), any());
+        verify(repository, never()).requeuePlayedTracks(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("skipping the last queued track ends the round: the next one starts at once (shuffled again), and the skipped track does not open it")
+    void skipTrack_lastQueuedTrack_shouldStartTheNextRoundShuffled() {
+        givenTrackIsQueued(queued(2, 1));
+        when(repository.markSkipped(2L, QUEUED, SKIPPED)).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
+        when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(4);   // the played ones and the skipped one
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(track(2)));   // the shuffle put it first
+
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 2L, true)).isTrue();
+
+        InOrder order = inOrder(repository);
+        order.verify(repository).markSkipped(2L, QUEUED, SKIPPED);
+        order.verify(repository).requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED);
+        order.verify(repository).shuffle(PARTY, PLAYLIST, QUEUED_NAME);
+        order.verify(repository).moveToEnd(2L, QUEUED);
+        verify(repository, times(1)).moveToEnd(any(), any());
+    }
+
+    @Test
+    @DisplayName("skipping the last queued track in playlist order: the next round is in playlist order, and the skipped track is put at its end if that order would open with it")
+    void skipTrack_lastQueuedTrack_shouldStartTheNextRoundInPlaylistOrder() {
+        givenTrackIsQueued(queued(2, 1));
+        when(repository.markSkipped(2L, QUEUED, SKIPPED)).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
+        when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(3);
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(track(2)));
+
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 2L, false)).isTrue();
+
+        verify(repository).orderByPlaylistPosition(PARTY, PLAYLIST, QUEUED, -1, ROTATION);
+        verify(repository, never()).shuffle(any(), any(), any());
+        verify(repository).moveToEnd(2L, QUEUED);
+    }
+
+    @Test
+    @DisplayName("if the round's order would not open with the skipped track, nothing is moved")
+    void skipTrack_lastQueuedTrack_shouldNotMoveAnythingIfAnotherTrackIsFirst() {
+        givenTrackIsQueued(queued(2, 1));
+        when(repository.markSkipped(2L, QUEUED, SKIPPED)).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
+        when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(3);
+        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(track(7)));
+
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 2L, false)).isTrue();
+
+        verify(repository, never()).moveToEnd(any(), any());
+    }
+
+    @Test
+    @DisplayName("skipping the last queued track when there is nothing to re-queue is still a success (the track is skipped; no round is started)")
+    void skipTrack_lastQueuedTrack_shouldNotFail_whenThereIsNothingToRequeue() {
+        givenTrackIsQueued(queued(2, 1));
+        when(repository.markSkipped(2L, QUEUED, SKIPPED)).thenReturn(1);
+        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(0L);
+        when(repository.requeuePlayedTracks(PARTY, PLAYLIST, PLAYED, QUEUED)).thenReturn(0);   // the newest import is another playlist's, say
+
+        assertThat(service.skipTrack(PARTY, PLAYLIST, 2L, false)).isTrue();
+
+        verify(repository, never()).orderByPlaylistPosition(any(), any(), any(), anyInt(), anyInt());
+        verify(repository, never()).moveToEnd(any(), any());
     }
 }

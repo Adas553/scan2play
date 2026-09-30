@@ -3,10 +3,13 @@ package com.scan2play.repository;
 import com.scan2play.entity.SongRequestEntity;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -80,4 +83,18 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * @param partyCode The unique code of the party.
      */
     void deleteByPartyCode(String partyCode);
+
+    /**
+     * Deletes at most {@code batchSize} song requests that were requested before {@code cutoff} — the retention purge
+     * ({@code SongRequestRetentionService}); any decision, played or not. A request without a {@code requested_at} has no age
+     * and is left alone. Bounded on purpose: the caller repeats it until a batch comes back short, so that a first run over
+     * a long backlog is many short transactions (short locks) and not one huge DELETE. Each call is its own transaction.
+     *
+     * @return number of deleted rows (less than {@code batchSize} when nothing older is left)
+     */
+    @Transactional
+    @Modifying
+    @Query(value = "DELETE FROM song_requests WHERE id IN "
+            + "(SELECT id FROM song_requests WHERE requested_at < :cutoff LIMIT :batchSize)", nativeQuery = true)
+    int deleteRequestedBefore(@Param("cutoff") LocalDateTime cutoff, @Param("batchSize") int batchSize);
 }

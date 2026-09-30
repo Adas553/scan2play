@@ -16,6 +16,13 @@ import java.time.LocalDateTime;
 @Builder
 public class SongRequestEntity {
 
+    /**
+     * How long a request is kept, counted from {@link #requestedAt}: a request older than this many days is deleted
+     * (nightly, see {@code SongRequestRetentionService}). {@link #trackUrl} holds YouTube video IDs that came from the
+     * YouTube API, which may be kept for 30 calendar days at most; the privacy pages say the same.
+     */
+    public static final int MAX_AGE_DAYS = 30;
+
     private static final int DJ_COMMENT_MAX = 500;
     private static final int SONG_NAME_MAX = 255;
     private static final int TRACK_URL_MAX = 500;

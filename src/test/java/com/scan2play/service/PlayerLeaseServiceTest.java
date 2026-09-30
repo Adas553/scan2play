@@ -242,6 +242,27 @@ class PlayerLeaseServiceTest {
     }
 
     @Test
+    @DisplayName("the two buttons of a window that does not play travel like the others: the previous track and the restart are handed over once, the last press wins")
+    void shouldHandOverThePreviousTrackAndRestartCommands() {
+        service.report(PARTY, COMPUTER, CLAIM);
+
+        service.sendCommand(PARTY, PlayerCommand.PREVIOUS_TRACK);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.PREVIOUS_TRACK));
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holder());     // handed out once
+
+        service.sendCommand(PARTY, PlayerCommand.PREVIOUS_TRACK);
+        service.sendCommand(PARTY, PlayerCommand.RESTART);
+        assertThat(service.report(PARTY, COMPUTER, CLAIM)).isEqualTo(holderWith(PlayerCommand.RESTART));
+    }
+
+    @Test
+    @DisplayName("the old PREVIOUS command is still known (a page opened before the two buttons existed sends it)")
+    void shouldStillKnowThePreviousCommand() {
+        assertThat(PlayerCommand.valueOf("PREVIOUS")).isEqualTo(PlayerCommand.PREVIOUS);
+        assertThat(PlayerCommand.values()).contains(PlayerCommand.PREVIOUS, PlayerCommand.PREVIOUS_TRACK, PlayerCommand.RESTART);
+    }
+
+    @Test
     @DisplayName("a command meant for the window that played does not fire in the window that takes over")
     void shouldDropTheCommand_whenTheLeaseChangesHands() {
         service.report(PARTY, COMPUTER, CLAIM);
