@@ -306,7 +306,7 @@ class FallbackQueueFragmentTest {
         String html = render(queue(false, 2, new Track(1L, "aaaaaaaaaaa", "A rather long title of the first song"),
                 new Track(2L, "bbbbbbbbbbb", "The second song")), Locale.ENGLISH);
 
-        assertThat(count(html, "d-flex flex-wrap")).as("every row may wrap").isEqualTo(2);
+        assertThat(count(html, "d-flex flex-wrap align-items-center gap-2")).as("every row may wrap").isEqualTo(2);
         assertThat(count(html, "flex: 1 1 10rem")).as("every title keeps its room").isEqualTo(2);
         assertThat(count(html, "flex-shrink-0 ms-auto")).as("every row has one group of controls that moves as a whole").isEqualTo(2);
         // in the first row: the title, then the group with the badge, the link and the buttons (skip last)
@@ -317,5 +317,20 @@ class FallbackQueueFragmentTest {
         assertThat(html.indexOf("data-move=\"TOP\"", title)).isGreaterThan(html.indexOf("text-bg-success", title));
         assertThat(html.indexOf("data-skip", title)).isGreaterThan(html.indexOf("data-move=\"DOWN\"", title));
         assertThat(html.indexOf("The second song")).isGreaterThan(html.indexOf("data-skip"));   // and the second row follows
+    }
+
+    @Test
+    @DisplayName("the caption wraps: the order and the counts side by side with a gap when they fit, one under the other on a phone; a count never breaks inside, so its number is not left alone on a line")
+    void shouldLetTheCaptionWrap_soThatItsPartsNeverTouch() {
+        // 80 left and 3 skipped, as on the DJ's phone: the order text and the two counts touched, and "… w tej rundzie:" / "3" broke apart
+        String html = render(new FallbackQueueView(true, false, false, 80, 3, List.of(new Track(1L, "aaaaaaaaaaa", "Song"))), PL);
+
+        assertThat(html).contains("d-flex flex-wrap justify-content-between align-items-center column-gap-3");
+        // the two counts are whole parts (text-nowrap) in a group of their own, and no " · " joins them any more
+        assertThat(html).containsPattern("<span class=\"text-nowrap\">Zostało w tej rundzie: 80</span>\\s*<span class=\"text-nowrap\">Pominięte w tej rundzie: 3</span>");
+        assertThat(html).doesNotContain(" · ");
+        // without skipped tracks there is one part only
+        assertThat(render(new FallbackQueueView(true, false, false, 80, 0, List.of(new Track(1L, "aaaaaaaaaaa", "Song"))), PL))
+                .contains("<span class=\"text-nowrap\">Zostało w tej rundzie: 80</span>").doesNotContain("Pominięte");
     }
 }
