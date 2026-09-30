@@ -7,7 +7,8 @@ first session (2026-09-28, remote) is summarised at the bottom.
 
 - **The seventh session (2026-09-30): the whole-project review — `REVIEW.md` at the repo root, 39 ranked findings — and its first package of
   fixes (3.1, 4.3, 4.2, 1.1, 4.4, 2.2, 5.2), COMMITTED (code `57d3def`, the caption fix of the "up next" list `b00feec`, then the docs), and
-  afterwards the resume of the last track after a reload and a takeover (`59c0944`, docs `d58bde2`) — ALL PUSHED on the owner's word
+  afterwards the resume of the last track after a reload and a takeover (`59c0944`, docs `d58bde2`) and the Auto-Pilot setting followed by
+  every window (`cc07357`, then the docs) — ALL PUSHED on the owner's word
   (2026-09-30): `git status -sb` should show `dev...origin/dev` with nothing ahead. The push runs both workflows on GitHub — look at them.** See "The session of 2026-09-30, the seventh" (after the sixth's section). The owner picks the next items from the table at the end of
   `REVIEW.md`.
 - **The very newest session (2026-09-30, the sixth) is described in "The session of 2026-09-30, the sixth" (after the fifth's section).** In
@@ -121,7 +122,8 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: **442** tests (441 run, 1 skipped) and **29 browser scenarios** after the seventh session's first package (the 442 include the
+- Tests (latest): **450** tests (449 run, 1 skipped) and **42 browser scenarios** with the Auto-Pilot setting followed by every window
+  (`cc07357`, below). Earlier: **442** tests (441 run, 1 skipped) and **29 browser scenarios** after the seventh session's first package (the 442 include the
   caption test of `b00feec`); before it **431** tests (430 run, 1 skipped — the fixture recorder) after the sixth session (2026-09-30: 429 before it, minus the six tests of the
   removed `next-guest-track` endpoint, plus three of `DashboardPageRenderTest`, four of `HtmlLangDeclarationTest` and one of `FallbackQueueFragmentTest`; counted in a scratch copy, `BUILD SUCCESS`) and **27 browser scenarios**
   (19 before). The next bullet's numbers are those of the fifth session (**429** tests, 428 run, 1 skipped, with the work of the 2026-09-29/30 session — 386 before it; the rest of
@@ -1066,16 +1068,31 @@ on a real PostgreSQL).
   and reported that "play on this device" still gave the next song — the first version had left a takeover out on purpose (my guess that
   the DJ taking over wants the music to move on — wrong, and not asked); now a TAKE_OVER that succeeds brings back the last track as well.
   `RecentTrack` got `secondsAgo` (the server's clock). New `scenarios/resume.js` (6): the resume scenarios are red on the old script
-  (reload) and without the TAKE_OVER line (takeover); the Auto-Pilot-off one red when its guard is removed. **443** unit tests, **36**
+  (reload) and without the TAKE_OVER line (takeover); the Auto-Pilot-off one red when its guard is removed. **443** unit tests, **35** (said "36" — a miscount)
   scenarios, all green. **Then the owner: "czasem działa, czasem nie", and the old device's YouTube player could still be played after a
   takeover.** (1) A race: a WATCH report sent while the TAKE_OVER was in flight is answered holder too (the server has moved the lease);
   when its answer came first the window asked `next-track`, and the TAKE_OVER's answer was then dropped as older — so the resume, set only
   on that answer, was lost. Now the press sets `takeOverPending` and the first answer that makes the window the holder resumes (scenario
   `resume-on-takeover-when-a-watch-answer-comes-first`, the WATCH answer delayed so it wins: red before — it played the next track —
   green now, three runs in a row). (2) In a window that does not hold the lease PLAYING / BUFFERING of its own YouTube player is stopped at
-  once (`old-window-cannot-play-after-takeover`, red before). **38** scenarios, all green. **The owner tried it: "działa o wiele lepiej"** —
+  once (`old-window-cannot-play-after-takeover`, red before). **37** scenarios, all green (said "38" at the time, in the commit
+  message of `59c0944` too — a miscount: 29 + the 8 of `resume.js`). **The owner tried it: "działa o wiele lepiej"** —
   and said to commit and push: code `59c0944`, docs `d58bde2`, then this note; **PUSHED** with the review's commits (2026-09-30). Files: `youtube-autopilot.js`, `RecentTrack`, `DjPlayerLeaseController` (+ test), `resume.js`, `server.py` (a
   comment), `PROJECT_CONTEXT.md` (5.4, 6.8, 12, 13), this file.
+- **Then: Auto-Pilot followed by every window — the owner tried it ("działa"), COMMITTED (code `cc07357`, then the docs) and PUSHED.** The owner's find after the push: Auto-Pilot on on one device,
+  a second one that showed it off took the playback over — its player stayed empty until ⏭ / ⏮. Cause: Auto-Pilot is one server
+  setting, but a window knew only the value it was loaded with (the queue poll's ETag fingerprints the guest queue only; the browser
+  stand-in's ETag included the mode, which is why no scenario saw it — now it mirrors the real server). And the switch sent "toggle", so a
+  click on a stale switch inverted the setting. Built (the owner: "zrób tak jak mówisz. Ważne jak utwór reaguje na końcu"): every lease
+  answer carries `playbackMode` and `dashboard.js` `applyPlaybackMode` sets the attribute, the switch and the wake lock (an answer to a
+  report sent before a click in that window is ignored); the switch sends `mode=AUTO|MANUAL` (`togglePlaybackMode` still toggles without
+  it); "play on this device" brings the last track back with Auto-Pilot off too (`resumeWithoutAutoPilot`). At a track's end the current
+  setting decides: on — the queue, off — the player stops. New `scenarios/autopilot-sync.js` (5): all red on the old scripts; the
+  stale-answer guard red when removed (the first version of that scenario passed with it removed — a track that started sent a report of
+  its own and hid the old answer; it now has nothing to play). New `DjPartySettingsControllerPlaybackModeTest` (6), one more in
+  `DjPlayerLeaseControllerTest`. **450** unit tests, **42** scenarios, all green. Files: `PlayerLeaseResponse`,
+  `DjPlayerLeaseController`, `DjPartySettingsController`, `dashboard.js`, `youtube-autopilot.js`, `server.py`, the two tests, the
+  scenario file, `PROJECT_CONTEXT.md` (5.4, 6.8, 12, 13), this file.
 - Commits: code `57d3def`; then the caption fix of the "up next" list above (`b00feec` — it had been waiting uncommitted since before this
   session, and the owner said to commit it too); then the docs (`PROJECT_CONTEXT.md`, this file, `REVIEW.md`). **Not pushed.**
 
