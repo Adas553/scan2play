@@ -995,6 +995,20 @@ for the dashboard. Checked that the test can go red: with `th:lang` taken out of
 fragment is unchanged), nothing on a phone. Files: the six templates, `HtmlLangDeclarationTest` (new), `PROJECT_CONTEXT.md` (Sections 13 and 14),
 this file — which also got the "whole project" session in "Next", 2 (asked for by the owner in the same message).
 
+**The landing page nudged sideways on a phone (the same day, after the pushes; committed and pushed — code the commit "Stop the landing page from
+moving sideways on a phone", then the docs — on the owner's "działa, commituj i pushuj").** The owner: on the start page on a
+phone the page could be moved a little to the right and left. Cause, **measured** (the built-in browser at 375 px, the real `app.css` and the
+template as a static prototype with Bootstrap from its CDN): `.hero-section` and `.guide-section` are on elements that are also Bootstrap
+`.container`s, and their shorthand `padding: 100px 0` / `60px 0 80px` took away the container's side padding — the `.row` inside has negative
+margins that depend on it, so the row stuck out 12 px past the screen (page 387 px wide in a 375 px window; the two `.row`s and their
+columns were the elements past the edge). Fix, two rules in `app.css`: `padding-block` instead of the shorthand, so the vertical padding is
+unchanged (100 / 100 and 60 / 80 px) and the side padding stays 12 px. After it: no sideways scroll at 320, 360, 375, 414 and 768 px, nothing past the edge;
+the content is now 12 px in from the screen edge instead of touching it, which looked right in a screenshot. The other pages were looked at by reading, not
+measured: their containers change only vertical padding through utility classes (`py-5`, `p-3`), which do not take the side padding away.
+No test guards it — the browser tests block Bootstrap (the CDN), and this bug needs Bootstrap's `.container` and `.row`; a check would need
+`--cdn` or a copy of Bootstrap's grid in the harness. I did not look at it on a real phone; **the owner tried it and said "działa"** before it was committed.
+File: `src/main/resources/static/css/app.css`.
+
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
 **How it works now (2026-09-29):** the owner opens the local app, on the phone and on the computer, through
