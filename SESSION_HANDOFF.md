@@ -8,7 +8,7 @@ first session (2026-09-28, remote) is summarised at the bottom.
 - **The very newest session (2026-09-30, the sixth) is described in "The session of 2026-09-30, the sixth" (after the fifth's section).** In
   short: at the owner's choice of all four, it added **browser scenarios for the lease, the lists, the History tab and the tabs** (27 scenarios
   now), made **`<html lang>` of the dashboard follow the language** (`html.lang` in both bundles), **removed `GET /dj/dashboard/next-guest-track`**
-  with its tests, and wrote **a GitHub Actions workflow for the browser tests** (not run on GitHub yet). The Auto-Pilot hint / IFrame message
+  with its tests, and wrote **a GitHub Actions workflow for the browser tests** (its first run on GitHub, 2026-09-30, was green). The Auto-Pilot hint / IFrame message
   are still **not built**: the owner tried the friend's steps on another laptop and they worked; they will ask her again. **All of it — and
   item 7 of the fifth session, which the same files carry — is COMMITTED as one more pair (code `50558eb`, then the docs) on the owner's
   "ok, commituj".** The same day, on the owner's "jak jest to łatwe to możesz to zrobić", `lang` was declared on the six other pages that use the
@@ -951,12 +951,14 @@ still spoke of a client polling the endpoint) were corrected. Section 12 and Sec
 **4. Browser tests in CI: `.github/workflows/browser-tests.yml`** — `ubuntu-latest`, Java 21 (Temurin, Maven cache), Python 3.12, the Chrome the
 runner has, `python src/test/browser/run.py --no-sandbox --work "$RUNNER_TEMP/scan2play-browser-tests"`; on every push to `dev` / `main`, every
 pull request and by hand; a failed run keeps `results/*.json` as the artifact `browser-test-verdicts`. Only the browser tests — the unit tests
-are not in it (a second job would be four lines; nobody asked). Changes in `run.py` for it: `mvnw` is started with `sh` on Linux (it is committed
+are not in it (a second workflow for them was written after its first green run, see "Next", 1). Changes in `run.py` for it: `mvnw` is started with `sh` on Linux (it is committed
 with mode 100644, so a checkout there could not run it directly), a new `--no-sandbox` option, and a Chrome that exits before the scenario finishes
 ends the wait after a few seconds (before: the whole 90 s timeout, for each of 27 scenarios).
-**It has never run on GitHub.** What was checked here: its YAML parses (SnakeYAML from `~/.m2`, through `jshell` — PyYAML is not installed),
-`sh mvnw -v` works in Git Bash, `run.py --no-sandbox` passes on Windows. What was not: the Linux branch of `run.py` as a whole, the runner's Chrome,
-the action versions (`checkout@v4`, `setup-java@v4`, `setup-python@v5`, `upload-artifact@v4` — written from memory, not looked up).
+**It had never run on GitHub when it was written — its first run, on the push of `914f88a` later the same day, was green** (all 27 scenarios; the
+job took 4 min 36 s, 4 min 25 s of it the scenarios; the run's annotations are in "Next", 1). What was checked here before: its YAML parses
+(SnakeYAML from `~/.m2`, through `jshell` — PyYAML is not installed), `sh mvnw -v` works in Git Bash, `run.py --no-sandbox` passes on Windows. What was
+not, at that time: the Linux branch of `run.py` as a whole and the runner's Chrome (the green run then showed both work) and the action versions
+(`checkout@v4`, `setup-java@v4`, `setup-python@v5`, `upload-artifact@v4` — written from memory; the annotations then showed they were outdated).
 
 **What was checked and what was not.** Checked (before "The other pages' `lang`", below, which changed the count to 430): **426 unit tests, `BUILD SUCCESS`** (a scratch copy, `%TEMP%\scan2play-unit`; 425 run, 1 skipped);
 **27 browser scenarios all pass** (a full run, then `tabs` again after its last step was added, and the eight new ones twice more); 17 mutations
@@ -1031,8 +1033,27 @@ Updated 2026-09-30, at the end of the sixth session (the one of "The session of 
      "Follow-up 3", the wake lock and the docs of the session that followed, and the pairs of the fifth and the sixth session, and the `lang` pair.
      **That push started the workflow `.github/workflows/browser-tests.yml` on GitHub — the first time it runs anywhere but on a developer's machine**
      (it was written without being able to run it): **look at that run** (https://github.com/Adas553/scan2play/actions); the verdicts of a
-     failed one are kept as an artifact (`browser-test-verdicts`). What it shows decides the next step: the unit-test job is added only after it. If it is red on the runner and green here, the suspects are the Chrome
-     flags (`--no-sandbox` is passed), the locale of the machine (a sort test must not depend on it; see the README) and timing.
+     failed one are kept as an artifact (`browser-test-verdicts`). **Its first run was green** (the owner's screenshot: all 27 scenarios,
+     4 min 36 s). **Its annotations** (the owner's screenshot): 2 warnings — `actions/checkout@v4`, `setup-java@v4` and `setup-python@v5` target
+     Node 20, which is deprecated (GitHub already forces them onto Node 24), and `setup-java@v4` is itself deprecated (migrate to v5) — and 1 notice:
+     `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19. **The answer to them, in both workflows (committed and pushed — code `00c9025`, then the docs — on the owner's "commituj i pushuj"):** the newest majors
+     (`checkout@v7`, `setup-java@v6`, `setup-python@v7`, `upload-artifact@v7`; found by asking GitHub for the latest releases, and by reading
+     each `action.yml`: `using: node24`, and the inputs the workflows use are still there), and the runner **pinned to `ubuntu-24.04`** — the
+     image the green run was on (assumed: the screenshot does not show the image name, but the notice says the label had not moved yet) —
+     so that the move to Ubuntu 26 is made on purpose, by changing the label and running the workflow by hand, not by surprise in three
+     weeks. **None of it has run on GitHub yet**; the new versions run on the Node 24 that GitHub was already forcing, so the risk is small.
+     As agreed, the unit-test workflow was written after the first green run — see below.
+   - **`.github/workflows/unit-tests.yml`** (committed and pushed in `00c9025`, with the documents that mention it). `sh mvnw -B -ntp test
+     '-Dtest=!Scan2playApplicationTests'` on ubuntu-24.04, same triggers as the browser workflow, `target/surefire-reports/` kept when it
+     fails. A separate file, not a second job of `browser-tests.yml` (no rename, two independent checks on GitHub). Before writing it the
+     430 tests were run **with an English locale and UTC** (`JAVA_TOOL_OPTIONS`; the machine is Polish, CET) and with the exact runner
+     command under a POSIX shell — no test depends on the machine's language or time zone; and no environment variable of the application
+     is set on this machine, so nothing passed here only because of one. **The push of `00c9025` started its first run — and the first run of the browser
+     tests with the new action versions and the pinned image: look at both on https://github.com/Adas553/scan2play/actions; at the time of writing
+     no result had been seen.**
+     If a run is red on the runner and green here, the suspects: for the browser tests the Chrome flags (`--no-sandbox` is passed), the locale of
+     the machine (a sort test must not depend on it; see the README) and timing; for the unit tests — language and time zone were tried — a
+     difference that this machine hides: Linux is case-sensitive about file names and Windows is not, and line endings.
    - **Try on the phone** — real devices are still not covered: ✕ on a row of "up next" (and what the list and the "Skipped this round"
      say afterwards); Save with a private playlist and with a wrong link (the red line); "Czeka N piosenek gości" while a guest song
      is queued; the pause button while ⏮ rewinds; ⏭ after saving another playlist; the two back buttons on the phone with the computer
