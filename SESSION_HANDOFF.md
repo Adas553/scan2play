@@ -3,8 +3,12 @@
 Where the work stands, for whoever continues (a new Claude Code session or a person). The history of the
 first session (2026-09-28, remote) is summarised at the bottom.
 
-## Start here (updated at the end of the 2026-09-30 session, the sixth)
+## Start here (updated at the end of the 2026-09-30 session, the seventh)
 
+- **The seventh session (2026-09-30): the whole-project review — `REVIEW.md` at the repo root, 39 ranked findings — and its first package of
+  fixes (3.1, 4.3, 4.2, 1.1, 4.4, 2.2, 5.2), COMMITTED (code `57d3def`, the caption fix of the "up next" list `b00feec`, then the docs), NOT
+  pushed.** See "The session of 2026-09-30, the seventh" (after the sixth's section). The owner picks the next items from the table at the end of
+  `REVIEW.md`.
 - **The very newest session (2026-09-30, the sixth) is described in "The session of 2026-09-30, the sixth" (after the fifth's section).** In
   short: at the owner's choice of all four, it added **browser scenarios for the lease, the lists, the History tab and the tabs** (27 scenarios
   now), made **`<html lang>` of the dashboard follow the language** (`html.lang` in both bundles), **removed `GET /dj/dashboard/next-guest-track`**
@@ -116,8 +120,9 @@ first session (2026-09-28, remote) is summarised at the bottom.
   http://localhost)"*. It makes `spotify.oauth.redirect-uri` follow the request host like the login flow does.
   Spotify only accepts HTTPS or a loopback IP (`127.0.0.1`) redirect URI, so it does not help local testing
   until the app is opened via `127.0.0.1`/HTTPS. `git stash pop` restores it.
-- Tests: **430** tests (429 run, 1 skipped — the fixture recorder) after the sixth session (2026-09-30: 429 before it, minus the six tests of the
-  removed `next-guest-track` endpoint, plus three of `DashboardPageRenderTest` and four of `HtmlLangDeclarationTest`; counted in a scratch copy, `BUILD SUCCESS`) and **27 browser scenarios**
+- Tests: **442** tests (441 run, 1 skipped) and **29 browser scenarios** after the seventh session's first package (the 442 include the
+  caption test of `b00feec`); before it **431** tests (430 run, 1 skipped — the fixture recorder) after the sixth session (2026-09-30: 429 before it, minus the six tests of the
+  removed `next-guest-track` endpoint, plus three of `DashboardPageRenderTest`, four of `HtmlLangDeclarationTest` and one of `FallbackQueueFragmentTest`; counted in a scratch copy, `BUILD SUCCESS`) and **27 browser scenarios**
   (19 before). The next bullet's numbers are those of the fifth session (**429** tests, 428 run, 1 skipped, with the work of the 2026-09-29/30 session — 386 before it; the rest of
   this bullet describes the earlier runs)
   (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"`, see `CLAUDE.md` for how to
@@ -1009,6 +1014,51 @@ No test guards it — the browser tests block Bootstrap (the CDN), and this bug 
 `--cdn` or a copy of Bootstrap's grid in the harness. I did not look at it on a real phone; **the owner tried it and said "działa"** before it was committed.
 File: `src/main/resources/static/css/app.css`.
 
+**The caption above the "up next" list touched itself on a phone (the same day, after that push; committed in the seventh session,
+`b00feec`, on the owner's word).** The owner's
+screenshot: "te teksty są osobno, ale bardzo blisko siebie" — the order text ("Kolejność z playlisty") and the counts ("Zostało w tej rundzie: 80 ·
+Pominięte w tej rundzie: 3"). **Measured** on the real rendered fragment at 375 px (the browser pane, the real `app.css`, Bootstrap from its CDN):
+0 px between the two, both squeezed to two lines. Fixed in `fragments/fallback-queue.html`: the row is `flex-wrap` with `column-gap-3 row-gap-1`,
+and the counts are a group of their own whose two parts are `text-nowrap` (so the number of "Pominięte w tej rundzie: 1" is not left alone on a third
+line — the first version of the fix did exactly that, seen in a screenshot, and was changed). **A decision that was mine:** the " · " between the two
+counts is gone (a gap, and on a phone a line, separate them; no message key and no test used it) — put it back if the owner misses it.
+Measured after: three lines at 320 and 375 px (order, then each count), two at 414 px, one from 768 px; no sideways scroll. `FallbackQueueFragmentTest`:
+a new test for the caption, and the row-wrap test now counts `d-flex flex-wrap align-items-center gap-2` (it counted `d-flex flex-wrap`, which the caption
+also has now); with the old template restored in a scratch copy only the new test fails. **431 unit tests** (430 run, 1 skipped), `BUILD SUCCESS`;
+`skip-track` and `guests-waiting` pass on the new fragment (rendered afresh). The counts' last class (`column-gap-3`, was `-2`) was measured on the
+render with that one class patched by hand, and the rendered file was not made again for it. Not looked at on a real phone. Files:
+`fragments/fallback-queue.html`, `FallbackQueueFragmentTest`, `PROJECT_CONTEXT.md` (5.4, 13), this file.
+
+## The session of 2026-09-30, the seventh: the whole-project review and its first package (committed, not pushed)
+
+**The review** ("Next", 2, the owner's wish): read-only first, written area by area into **`REVIEW.md`** at the repo root (the database and
+queries, the queue and the lease, the browser scripts, external integrations, security, tests, documents) — 39 findings, each with the file
+and line, the reason, the weight (W / Ś / N) and the effort, and a ranked table at the end. Resuming the track after a reload was left out
+(the owner's decision). The three of high weight: 3.1 (Auto-Pilot silent after one failed ask), 4.1 (the guests' rate limit lives in the
+session and is recorded only after the AI call — a script can spend the day's 100 YouTube searches), 6.1 (no lasting test of the queue SQL
+on a real PostgreSQL).
+
+**The first package** (the owner: "zrób pierwszą paczkę", then "dopisz i commituj"), one pair of commits (code, then the docs with `REVIEW.md`):
+- **3.1** `youtube-autopilot.js`: an ask that failed (network error, 5xx, a redirect to the login page) or a sixth player error in a row sets
+  `askAgain`, and the next lease report (every 3 s) asks again until the server answers. Before, the dashboard's poll asked only when the guest
+  queue changed (a 304 skipped `checkYouTubeAutoPlay`), so the party went silent. Found on the way: the first poll of a page always answers in
+  full (no ETag yet) and starts the player, which hid the bug from the first version of the scenarios — they now wait for the polls that answer
+  304. New `scenarios/recovery.js` (`recover-after-failed-ask`, `recover-after-player-errors`): red on the old script, green now.
+- **4.3** `SongEvaluationService` / `DjService.pushToSpotify`: a song counts as played only once Spotify has taken it (`whenComplete`; before,
+  `exceptionally` + `thenAccept` marked a failed auto-queue as played). `pushToSpotify` is no longer `@Transactional` — it saves in the callback.
+- **4.2** `YouTubeMusicProvider`: the API key goes in the `X-goog-api-key` header, not in the search URL (an I/O error logged the whole URL).
+  `YouTubePlaylistClient` still puts it in the URL but scrubs its messages, as before.
+- **1.1** `AccountDeletionService`: after the commit it evicts the party from `partySettings`, `dashboardQueue`, `publicQueue`.
+- **4.4** `GeminiConfig`: a 10 s timeout per call. **Not checked against the real API** (no key here; it compiles, the context was not
+  started) — worth one guest request in IntelliJ. The bounded async executor of the same finding was not done.
+- **2.2** `application.properties`: `server.compression.*` (gzip, 2 KB and more).
+- **5.2** `SpotifyAuthController` / `SpotifyAuthService`: the OAuth `state` is a random 32-byte value kept in the session and used once; the
+  party comes from the DJ's session. The redirect URI is the production one, so this cannot be tried locally.
+- Tests: **442** (441 run, 1 skipped; 11 new: `SongEvaluationServiceTest` 3, `YouTubeMusicProviderTest` 2, `SpotifyAuthControllerTest` 4,
+  `DjServiceTest` +1, `AccountDeletionServiceTest` +1), `BUILD SUCCESS` in a scratch copy; **29 browser scenarios**, all passing.
+- Commits: code `57d3def`; then the caption fix of the "up next" list above (`b00feec` — it had been waiting uncommitted since before this
+  session, and the owner said to commit it too); then the docs (`PROJECT_CONTEXT.md`, this file, `REVIEW.md`). **Not pushed.**
+
 ## Trying the DJ dashboard on a phone (Google login) — solved
 
 **How it works now (2026-09-29):** the owner opens the local app, on the phone and on the computer, through
@@ -1104,8 +1154,10 @@ Updated 2026-09-30, at the end of the sixth session (the one of "The session of 
      the unit tests run in no CI (the workflow could get a second job with `mvnw test "-Dtest=!Scan2playApplicationTests"`, no database
      needed).
    - **A session for looking at the whole project — asked for by the owner (2026-09-30): readability, efficiency, scalability; where the weak
-     points are and what to improve.** Not started. Suggested shape: a read-only review first (a ranked list of findings with the file and the
-     reason, nothing changed), then the owner picks what to fix. Starting points the documents already name — not a complete list:
+     points are and what to improve.** **DONE (the seventh session): `REVIEW.md` at the repo root — 39 findings ranked by weight, each with the
+     file and line, the reason and the effort; the first package of fixes is built and committed (see "The session of 2026-09-30, the seventh").
+     What is left: the owner picks the next items from its table — its own suggestion is 4.1 (the guests' rate limit) and 1.3, then 6.1
+     (Testcontainers) before the SQL items 1.4, 1.5, 2.1.** The starting points that were listed here before the review:
      the fragments and the lease answers cost more the longer the playlist is (`FallbackQueueService.getVersion` reads up to 500 tracks per
      lease report per window, "cache it for a couple of seconds if that ever matters"; the "up next" fragment is ~1 KB a row and the server
      does not compress responses, `PROJECT_CONTEXT.md` Section 5.4 and Phase 3); everything that makes the app single-instance (Caffeine caches,
