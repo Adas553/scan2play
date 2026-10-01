@@ -4,6 +4,10 @@
  * Uses ETag / 304 Not Modified to skip DOM replacement when the queue hasn't changed. This preserves client-side sorting and
  * reduces bandwidth. Every answer, 304 too, also carries the server's guest limits (X-Guest-Limits, X-Guest-Limits-Use).
  * When the rows are new the player is told (EVENTS.GUEST_QUEUE_UPDATED): a guest song may be waiting.
+ *
+ * A hidden window that does not play does not poll at all — the DJ's phone in a pocket, a second tab, the requests-only dashboard
+ * behind the DJ's own software: nobody sees the list, and it is fetched at once when the window is shown again. The window that plays
+ * (EVENTS.PLAYER_ROLE) goes on, hidden or not: its poll tells the player that a guest song waits.
  */
 import { EVENTS, emit, on } from './events.js';
 import { csrfHeaders, partyCode, showPartyActive } from './common.js';
@@ -46,6 +50,11 @@ function applyGuestLimitsUse(value) {
 let nextPoll = null;
 let polling = false;
 let pollAgain = false;
+let playsHere = false;   // a dashboard without the player (Spotify, requests-only) never plays here
+
+function resting() {
+    return document.hidden && !playsHere;
+}
 
 /** Fetches the queue now instead of at the next 3 s tick (EVENTS.GUEST_QUEUE_CHANGED: the DJ changed it here). */
 function pollNow() {
@@ -57,6 +66,16 @@ function pollNow() {
     refreshTable();
 }
 on(EVENTS.GUEST_QUEUE_CHANGED, pollNow);
+
+on(EVENTS.PLAYER_ROLE, function (role) {
+    const rested = nextPoll === null && !polling;
+    playsHere = role.plays === true;
+    if (playsHere && rested) pollNow();   // a hidden window that has just become the player: it needs the queue
+});
+
+document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') pollNow();
+});
 
 async function refreshTable() {
     polling = true;
@@ -123,7 +142,7 @@ async function refreshTable() {
         console.error('[Polling] Refresh error:', err);
     } finally {
         polling = false;
-        nextPoll = setTimeout(refreshTable, pollAgain ? 0 : 3000);
+        nextPoll = pollAgain || !resting() ? setTimeout(refreshTable, pollAgain ? 0 : 3000) : null;
         pollAgain = false;
     }
 }

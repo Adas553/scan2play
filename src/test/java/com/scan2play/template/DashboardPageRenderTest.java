@@ -239,9 +239,11 @@ class DashboardPageRenderTest {
         party.setActiveProvider(MusicProviderType.REQUESTS_ONLY);
         SongRequestEntity waiting = song(1, "Wilki - Baśka", "unused");
         waiting.setTrackUrl("https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka");
+        waiting.setGuestText("ta o Baśce, co ją Wilki grają");
         String html = renderDashboard(party, List.of(waiting), PL);
 
         assertThat(html).contains("Twój program DJ-a", "Grasz ze swojego programu");
+        assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
         assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">Pomiń<", "🔍 Podejrzyj",
                 "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
         // no player, no Auto-Pilot, no background playlist, no DJ pick: the DJ's own software plays

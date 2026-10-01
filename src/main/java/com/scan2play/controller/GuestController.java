@@ -111,13 +111,13 @@ public class GuestController {
                 Optional<Long> waitTimeSeconds = guestSessionService.tryAcquire(session, partyCode, settings);
                 if (waitTimeSeconds.isPresent()) {
                     return refuse(redirectAttributes, partyCode, "guest.error.rate_limit",
-                            settings.getRequestLimit(), waitTimeSeconds.get());
+                            settings.getRequestLimit(), waitText(waitTimeSeconds.get()));
                 }
                 Optional<GuestRequestLimiter.Refusal> refusal = guestRequestLimiter.tryAcquire(clientIp, partyCode);
                 if (refusal.isPresent()) {
                     return switch (refusal.get().scope()) {
                         case CLIENT -> refuse(redirectAttributes, partyCode, "guest.error.too_many_requests",
-                                refusal.get().waitSeconds());
+                                waitText(refusal.get().waitSeconds()));
                         case PARTY -> refuse(redirectAttributes, partyCode, "guest.error.party_daily_limit");
                     };
                 }
@@ -173,6 +173,14 @@ public class GuestController {
                 .filter(name -> name.equals(requested))
                 .findFirst()
                 .orElse(VibeType.ANY.name());
+    }
+
+    /**
+     * The guest's wait as people say it: from a minute on in whole minutes, rounded up ("3 min" — a phone at a party is not
+     * read to the second), below a minute in seconds ("45 s"). The same short units in every language of the app.
+     */
+    static String waitText(long seconds) {
+        return seconds < 60 ? seconds + " s" : (seconds + 59) / 60 + " min";
     }
 
     /** Back to the party page with the message of the limit that refused the request. */

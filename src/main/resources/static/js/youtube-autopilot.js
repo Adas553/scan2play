@@ -51,7 +51,7 @@
  *
  * A module (dashboard.html loads it after js/dashboard/main.js, a YouTube party only). It talks with the dashboard only through
  * the events of js/dashboard/events.js — it listens to PLAYBACK_MODE, GUEST_QUEUE_UPDATED, FALLBACK_PLAYLIST_SAVED,
- * FALLBACK_PLAYLIST_CLEARED and FALLBACK_QUEUE_VERSION, and sends FALLBACK_QUEUE_STALE and PLAYBACK_MODE_REPORTED. The one global it
+ * FALLBACK_PLAYLIST_CLEARED and FALLBACK_QUEUE_VERSION, and sends FALLBACK_QUEUE_STALE, PLAYBACK_MODE_REPORTED and PLAYER_ROLE. The one global it
  * sets is window.onYouTubeIframeAPIReady, which the YouTube IFrame API calls.
  */
 import { EVENTS, emit, on } from './dashboard/events.js';
@@ -561,6 +561,7 @@ import { EVENTS, emit, on } from './dashboard/events.js';
         } else if (!holder && (wasPlayer || isPlaying())) {
             stopPlaybackHere(); // also a window that never played but whose YouTube player the DJ started by hand
         }
+        emit(EVENTS.PLAYER_ROLE, { plays: holder });
     }
 
     // ---- The "up next" list of a window that did not change it itself ----
@@ -896,14 +897,28 @@ import { EVENTS, emit, on } from './dashboard/events.js';
         }
     }
 
+    // A hidden window that only watches reports rarely: nobody sees its banner, and it reports at once when it is shown again.
+    // The window that plays — or may take a free lease — keeps reporting every 3 s, hidden or not.
+    const HIDDEN_WATCH_INTERVAL_MS = 15000;
+    let leaseTimer = null;
+    let leaseInFlight = false;
+
     function leaseLoop() {
+        clearTimeout(leaseTimer);
+        leaseInFlight = true;
         // A window that has been told another one plays only watches; it takes the lease again only when the DJ asks.
         reportLease(isPlayerDevice === false ? 'WATCH' : 'CLAIM')
             .finally(() => {
+                leaseInFlight = false;
                 if (askAgain) tryAutoPlay(); // tryAutoPlay itself checks: this window plays, Auto-Pilot on, the player idle
-                setTimeout(leaseLoop, LEASE_REPORT_INTERVAL_MS);
+                const resting = document.hidden && isPlayerDevice === false;
+                leaseTimer = setTimeout(leaseLoop, resting ? HIDDEN_WATCH_INTERVAL_MS : LEASE_REPORT_INTERVAL_MS);
             });
     }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible' && !leaseInFlight) leaseLoop();
+    });
 
     function takeOverPlayback() {
         const banner = document.getElementById('playerLeaseBanner');

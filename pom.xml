@@ -63,6 +63,18 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
+		<!-- Bootstrap served by the app (/webjars/bootstrap/…), not by a CDN: a venue's poor network has one host less to reach, and
+		     the Content-Security-Policy lists no other host for scripts and styles but YouTube's. The locator lets the templates
+		     leave the version out of the URL, so it lives here only. -->
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>bootstrap</artifactId>
+			<version>5.3.8</version>
+		</dependency>
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>webjars-locator-lite</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>se.michaelthelin.spotify</groupId>
 			<artifactId>spotify-web-api-java</artifactId>

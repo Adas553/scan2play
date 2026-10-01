@@ -22,9 +22,17 @@ import java.time.Instant;
  * @param decision    {@code played} or {@code rejected} (a background track is always {@code played})
  * @param djComment   the AI's comment; {@code null} for a background track
  * @param energyLevel the AI's energy rating; {@code null} for a background track
+ * @param guestText   what the guest typed (V14), shown beside {@code title} when it says something else; {@code null} for a
+ *                    background track, a DJ's pick and a request from before V14
  */
 public record HistoryEntry(Source source, Long id, Instant at, String title, String trackUrl, String videoId,
-                           String style, String decision, String djComment, Integer energyLevel) {
+                           String style, String decision, String djComment, Integer energyLevel, String guestText) {
+
+    /** An entry without the guest's words: a background track (or a request that has none). */
+    public HistoryEntry(Source source, Long id, Instant at, String title, String trackUrl, String videoId,
+                        String style, String decision, String djComment, Integer energyLevel) {
+        this(source, id, at, title, trackUrl, videoId, style, decision, djComment, energyLevel, null);
+    }
 
     public enum Source {
         GUEST,

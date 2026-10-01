@@ -9,6 +9,8 @@ from a fixture of answers that the REAL services gave (fixtures/*.json, recorded
                                      the real Content-Security-Policy (csp.txt), enforced
   POST /csp-report                   204 (the page's violations are caught by harness.js)
   /js/*, /css/*                      src/main/resources/static
+  /webjars/bootstrap/*               Bootstrap from its webjar in the local Maven repository (the version the pom names), as
+                                     the real server serves it — so the policy is checked against Bootstrap's CSS and script too
   /harness/*                         this directory (fake-yt.js, harness.js, scenarios/*.js)
   POST /__reset                      the default answers, an empty request log
   POST /__config  {json}             merged into the state (see default_state for the keys)
@@ -28,6 +30,7 @@ import re
 import sys
 import threading
 import time
+import zipfile
 import zlib
 from email.parser import BytesParser
 from email.policy import HTTP
@@ -108,6 +111,7 @@ class Stand:
         self.fixtures = {}
         self.result_events = {}
         self.result_data = {}
+        self._webjar = None
 
     def event(self, name):
         with self.lock:
@@ -118,6 +122,24 @@ class Stand:
             with open(os.path.join(self.browser, 'fixtures', name + '.json'), encoding='utf-8') as f:
                 self.fixtures[name] = json.load(f)
         return self.fixtures[name]
+
+    def webjar_file(self, rel):
+        """A file of the Bootstrap webjar ('css/bootstrap.min.css'), or None. The jar is the one Maven fetched for the pom's version
+        (~/.m2, or M2_REPO); the real server leaves the version out of the URL the same way (webjars-locator-lite)."""
+        if self._webjar is None:
+            with open(os.path.join(self.root, 'pom.xml'), encoding='utf-8') as f:
+                found = re.search(r'<groupId>org\.webjars</groupId>\s*<artifactId>bootstrap</artifactId>\s*<version>([^<]+)</version>', f.read())
+            repo = os.environ.get('M2_REPO') or os.path.join(os.path.expanduser('~'), '.m2', 'repository')
+            version = found.group(1) if found else '?'
+            self._webjar = (os.path.join(repo, 'org', 'webjars', 'bootstrap', version, 'bootstrap-%s.jar' % version), version)
+        jar, version = self._webjar
+        if not os.path.isfile(jar):
+            return None
+        with zipfile.ZipFile(jar) as z:
+            try:
+                return z.read('META-INF/resources/webjars/bootstrap/%s/%s' % (version, rel))
+            except KeyError:
+                return None
 
     def csp(self):
         """The real server's Content-Security-Policy (csp.txt, written by DashboardPageRenderTest), or None before a render."""
@@ -266,6 +288,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(stand.static, path[1:])
         if path.startswith('/harness/'):
             return self._file(stand.browser, path[len('/harness/'):])
+        if path.startswith('/webjars/bootstrap/'):
+            data = stand.webjar_file(path[len('/webjars/bootstrap/'):])
+            if data is None:
+                return self._send(404, b'not found', 'text/plain')
+            return self._send(200, data, TYPES.get(os.path.splitext(path)[1], 'application/octet-stream'))
         if path == '/favicon.ico':
             return self._send(204)
         if path == '/__log':

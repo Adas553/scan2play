@@ -3,8 +3,8 @@
 // into view — just under the bar, unless it is in the upper part of the screen already; the History tab loads its content by AJAX and
 // shows it in place of the queue (the player stays alive); and the lit tab follows the part of the page in view when the DJ scrolls.
 //
-// The page of the harness has no Bootstrap (the CDN is blocked), but the layout engine is the real one and app.css is the real one, so
-// positions and scrolling are real. The page is made taller first: with a short page the browser could not scroll as far as a tab asks.
+// The page of the harness has the real Bootstrap (from its webjar), the real app.css and the real layout engine, so positions and
+// scrolling are real. The page is made taller first: with a short page the browser could not scroll as far as a tab asks.
 (function () {
     const link = function (name) { return document.querySelector('[data-dj-tab="' + name + '"]'); };
     const lit = function () { return ['panel', 'queue', 'history'].filter(function (n) { return link(n).classList.contains('active'); }); };

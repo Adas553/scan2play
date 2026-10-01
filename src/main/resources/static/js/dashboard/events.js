@@ -20,7 +20,9 @@ export const EVENTS = Object.freeze({
     /** The "up next" list may have changed (the player took a track, or another window changed it). Dashboard: fetch it. */
     FALLBACK_QUEUE_STALE: 's2p:fallback-queue-stale',
     /** The "up next" list on the page is now {version}. Player: do not fetch it again for the same state. */
-    FALLBACK_QUEUE_VERSION: 's2p:fallback-queue-version'
+    FALLBACK_QUEUE_VERSION: 's2p:fallback-queue-version',
+    /** A lease answer said whether this window is the one that plays: {plays}. Dashboard: a hidden window that does not play rests. */
+    PLAYER_ROLE: 's2p:player-role'
 });
 
 export function emit(name, detail) {

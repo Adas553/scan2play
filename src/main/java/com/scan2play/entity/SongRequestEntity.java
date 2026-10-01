@@ -25,6 +25,7 @@ public class SongRequestEntity {
     private static final int DJ_COMMENT_MAX = 500;
     private static final int SONG_NAME_MAX = 255;
     private static final int TRACK_URL_MAX = 500;
+    private static final int GUEST_TEXT_MAX = 150;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,6 +35,14 @@ public class SongRequestEntity {
     private String partyCode;
 
     private String songName;
+
+    /**
+     * What the guest typed, as typed (one line, at most 150 characters — what the AI is given; V14), so that the DJ can check the
+     * song the AI made of it. {@code null} for a DJ's pick and for requests from before V14.
+     */
+    @Column(length = GUEST_TEXT_MAX)
+    private String guestText;
+
     private String style;
     private String decision;
 
@@ -63,6 +72,7 @@ public class SongRequestEntity {
         songName = truncate(songName, SONG_NAME_MAX);
         djComment = truncate(djComment, DJ_COMMENT_MAX);
         trackUrl = truncate(trackUrl, TRACK_URL_MAX);
+        guestText = truncate(guestText, GUEST_TEXT_MAX);
     }
 
     private static String truncate(String value, int maxLength) {

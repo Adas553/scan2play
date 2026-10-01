@@ -75,11 +75,13 @@ class SmokeTest {
         mockMvc.perform(get("/"))
                 // no 'unsafe-inline' for scripts: the pages have no inline script and no inline handler
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString(
-                        "script-src 'self' https://cdn.jsdelivr.net https://www.youtube.com https://s.ytimg.com;")))
+                        "script-src 'self' https://www.youtube.com https://s.ytimg.com;")))
                 // and none for styles: the templates have no style="…" (NoInlineCodeInTemplatesTest)
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString(
-                        "style-src 'self' https://cdn.jsdelivr.net;")))
+                        "style-src 'self';")))
                 .andExpect(header().string("Content-Security-Policy-Report-Only", not(containsString("'unsafe-inline'"))))
+                // no other host for scripts and styles: Bootstrap comes from the app (/webjars)
+                .andExpect(header().string("Content-Security-Policy-Report-Only", not(containsString("cdn.jsdelivr.net"))))
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString("object-src 'none'")))
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString("report-uri /csp-report")))
                 .andExpect(header().doesNotExist("Content-Security-Policy"));
@@ -108,6 +110,16 @@ class SmokeTest {
         mockMvc.perform(get("/js/dashboard/main.js"))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/js/dashboard/events.js"))   // a module imported by the others
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Bootstrap is served by the app without a login, its version left out of the URL (webjars-locator-lite)")
+    void bootstrap_isServedByTheApp() throws Exception {
+        mockMvc.perform(get("/webjars/bootstrap/css/bootstrap.min.css"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Bootstrap")));
+        mockMvc.perform(get("/webjars/bootstrap/js/bootstrap.bundle.min.js"))
                 .andExpect(status().isOk());
     }
 

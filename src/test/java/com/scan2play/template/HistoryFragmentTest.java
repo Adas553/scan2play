@@ -155,6 +155,19 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("a guest's song shows the guest's own words under it when they say something else; a background track never")
+    void shouldShowTheGuestsWords() {
+        HistoryEntry shrek = new HistoryEntry(Source.GUEST, 1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Smash Mouth - All Star",
+                null, null, "Pop", "rejected", "no", 3, "the one from Shrek");
+        HistoryEntry same = new HistoryEntry(Source.GUEST, 2L, java.time.Instant.parse("2026-09-29T18:01:00Z"), "Wilki - Baśka",
+                null, null, "Pop", "played", "ok", 7, "wilki baska");
+        String html = render(List.of(shrek, same, background(3, "Intro")), false, Locale.ENGLISH);
+
+        assertThat(html).contains("guest wrote: “the one from Shrek”");
+        assertThat(html.split("guest-text", -1)).as("only the first row has the line").hasSize(2);
+    }
+
+    @Test
     @DisplayName("a song name is never rendered as HTML, not even inside an attribute (it comes from guests)")
     void shouldEscapeTheTitle() {
         String html = render(List.of(guest(1, "\"><script>alert(1)</script>", "played")), false, Locale.ENGLISH);

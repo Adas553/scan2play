@@ -94,6 +94,14 @@ class MigrationIT extends PostgresIntegrationTest {
         }
     }
 
+    /** V14: the guest's own words beside the song the AI made of them — one short line, as the prompt is given it. */
+    @Test
+    void aSongRequestKeepsTheGuestsWords() {
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns"
+                + " WHERE table_name = 'song_requests' AND column_name = 'guest_text' AND is_nullable = 'YES'", Integer.class))
+                .isEqualTo(150);
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

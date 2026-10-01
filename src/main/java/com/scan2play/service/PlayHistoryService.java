@@ -125,7 +125,7 @@ public class PlayHistoryService {
         Instant at = song.getPlayedAt() != null ? song.getPlayedAt() : song.getRequestedAt();
         return new HistoryEntry(Source.GUEST, song.getId(), at, song.getSongName(), song.getTrackUrl(),
                 YouTubeUrls.extractVideoId(song.getTrackUrl()).orElse(null),
-                song.getStyle(), song.getDecision(), song.getDjComment(), song.getEnergyLevel());
+                song.getStyle(), song.getDecision(), song.getDjComment(), song.getEnergyLevel(), song.getGuestText());
     }
 
     private static HistoryEntry toEntry(FallbackPlayEntity play) {

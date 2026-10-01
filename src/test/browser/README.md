@@ -16,7 +16,7 @@ python src/test/browser/run.py --no-sandbox    # Chrome without its sandbox: for
 
 A run takes about a minute (most of it waiting for real timers: a lease report comes every 3 s) and ends with one line per scenario,
 the failing steps with what was expected and what happened, and exit code 1 if anything failed. The `--chrome PATH` option (or
-`S2P_CHROME`) names another browser; `--cdn` lets the page load Bootstrap from its CDN (see below).
+`S2P_CHROME`) names another browser.
 
 **Never `mvnw` inside the repo** (`CLAUDE.md`): the app runs from IntelliJ out of `target/classes` and devtools restarts it whenever that
 changes. `run.py` copies the repo — without `target/`, `.git`, `.idea` — to `%TEMP%\scan2play-browser-tests` (a second run copies only
@@ -28,7 +28,7 @@ what changed, so Maven there builds incrementally), runs `DashboardPageRenderTes
 run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest ──► target/browser-harness/dashboard.html (+ -manual, fallback-queue)
    │
    ├─ server.py (stand-in, 127.0.0.1:<free port>) serves those pages, the real src/main/resources/static/{js,css},
-   │     this directory (/harness/...), and answers the endpoints the scripts call
+   │     Bootstrap's webjar (/webjars/bootstrap/...), this directory (/harness/...), and answers the endpoints the scripts call
    └─ for each scenario: a headless Chrome with a fresh profile opens  /dj/dashboard?scenario=NAME
           the page loads fake-yt.js and harness.js (head) and scenarios/*.js (end of body); on `load` the scenario runs:
           POST /__reset, POST /__config (its `setup`), fake.start() (now the fake YouTube API "loads"), then run(t)
@@ -70,9 +70,9 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest �
   `end()`, `clickPlay()` (YouTube's own ▶: on an empty player the real one reports error 2), `holdState = 'UNSTARTED' | 'CUED'` + `release()` (a load that waits — the real player does it between two videos),
   `advanceClock(ms)` (moves `Date.now()`, so nothing waits for real minutes), `blockApi` (the API never loads), `loads`, `seeks`,
   `calls`. The first lease report of the page waits until the scenario has configured the stand-in.
-* **Bootstrap from its CDN is not needed:** no script calls its API, it only styles the page, so `run.py` blocks the CDN and the
-  tests do not depend on the network. (Checked: with the CDN blocked all scenarios behave the same.) A scenario that looked at layout
-  would need it — use `--cdn`.
+* **Bootstrap is the real one, served like the app serves it:** the stand-in reads `/webjars/bootstrap/…` from the webjar Maven fetched
+  for the pom's version (`~/.m2`, or `M2_REPO`), so the pages have the real styles and script, and the policy is checked against them
+  too. Nothing needs the network.
 
 ## Writing a scenario
 

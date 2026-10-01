@@ -233,6 +233,20 @@ class SongEvaluationServiceTest {
     }
 
     @Test
+    void theGuestsOwnWords_areSavedBesideTheAisSong_asOneLineWithTheirQuotes() {
+        aYouTubeParty(0);
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+
+        answering("{\"decision\":\"rejected\",\"comment\":\"Nie na wesele\",\"songName\":\"Smash Mouth - All Star\","
+                + "\"energyLevel\":0,\"requestKind\":\"title\"}")
+                .evaluateAndSaveSong(PARTY_CODE, "  ta \"z Shreka\"\n  na wesele ", "ANY", RequestMode.SONG);
+
+        assertThat(saved.getValue().getSongName()).isEqualTo("Smash Mouth - All Star");
+        assertThat(saved.getValue().getGuestText()).isEqualTo("ta \"z Shreka\" na wesele");
+        assertThat(prompts.get(0)).as("the prompt still gets no double quotes").contains("ta 'z Shreka' na wesele");
+    }
+
+    @Test
     void aMoodSentAsASong_isNotSaved() {
         aYouTubeParty(0);
 

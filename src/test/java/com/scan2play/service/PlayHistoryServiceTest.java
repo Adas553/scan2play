@@ -90,6 +90,18 @@ class PlayHistoryServiceTest {
     }
 
     @Test
+    @DisplayName("a guest song carries the guest's own words (V14); a background track has none")
+    void shouldCarryTheGuestsWords() {
+        SongRequestEntity shrek = playedSong(1, "Smash Mouth - All Star", NOON);
+        shrek.setGuestText("the one from Shrek");
+        givenGuests(PLAYED_AND_REJECTED, 51, shrek);
+        givenTracks(51, play(7, "aaaaaaaaaaa", "Playlist track", NOON.plus(5, ChronoUnit.MINUTES)));
+
+        assertThat(service.getHistory(PARTY, 50).entries()).extracting(HistoryEntry::guestText)
+                .containsExactly(null, "the one from Shrek");
+    }
+
+    @Test
     @DisplayName("a guest song is placed by when it was played, not by when it was requested")
     void shouldOrderByThePlayTime_notTheRequestTime() {
         // requested first, played last

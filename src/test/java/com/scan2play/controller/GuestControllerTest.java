@@ -26,6 +26,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -134,6 +135,51 @@ class GuestControllerTest {
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("wait 42 s");
         verify(guestRequestLimiter, never()).tryAcquire(anyString(), anyString());
         verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void theWait_isSaidInWholeMinutes_roundedUp_andInSecondsBelowAMinute() {
+        assertThat(GuestController.waitText(1)).isEqualTo("1 s");
+        assertThat(GuestController.waitText(59)).isEqualTo("59 s");
+        assertThat(GuestController.waitText(60)).isEqualTo("1 min");
+        assertThat(GuestController.waitText(61)).isEqualTo("2 min");
+        assertThat(GuestController.waitText(117)).isEqualTo("2 min");
+        assertThat(GuestController.waitText(600)).isEqualTo("10 min");
+    }
+
+    @Test
+    void theGuestsOwnLimit_tellsTheWaitInMinutes() throws Exception {
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.of(150L));
+        when(messageSource.getMessage(eq("guest.error.rate_limit"), any(), any())).thenReturn("wait");
+
+        request();
+        verify(messageSource).getMessage(eq("guest.error.rate_limit"), aryEq(new Object[]{2, "3 min"}), any());
+    }
+
+    @Test
+    void theAddressLimit_tellsTheWaitInMinutes() throws Exception {
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.of(new Refusal(Scope.CLIENT, 300)));
+        when(messageSource.getMessage(eq("guest.error.too_many_requests"), any(), any())).thenReturn("too many");
+
+        request();
+        verify(messageSource).getMessage(eq("guest.error.too_many_requests"), aryEq(new Object[]{"5 min"}), any());
+    }
+
+    @Test
+    void theMessagesOfBothLimits_readWithTheWaitAsGiven() {
+        org.springframework.context.support.ResourceBundleMessageSource bundles = new org.springframework.context.support.ResourceBundleMessageSource();
+        bundles.setBasename("messages");
+        bundles.setDefaultEncoding("UTF-8");
+        bundles.setFallbackToSystemLocale(false);
+        java.util.Locale pl = java.util.Locale.forLanguageTag("pl");
+
+        assertThat(bundles.getMessage("guest.error.rate_limit", new Object[]{2, "3 min"}, pl)).endsWith("spróbuj za 3 min.");
+        assertThat(bundles.getMessage("guest.error.too_many_requests", new Object[]{"45 s"}, pl)).endsWith("Spróbuj ponownie za 45 s.");
+        assertThat(bundles.getMessage("guest.error.rate_limit", new Object[]{2, "3 min"}, java.util.Locale.ENGLISH))
+                .endsWith("try again in 3 min.");
+        assertThat(bundles.getMessage("guest.error.too_many_requests", new Object[]{"45 s"}, java.util.Locale.ENGLISH))
+                .endsWith("try again in 45 s.");
     }
 
     @Test

@@ -21,17 +21,17 @@ public class SecurityConfig {
 
     /**
      * The Content-Security-Policy of every page (review item 5.1). The pages have no inline script and no inline handler; what
-     * comes from elsewhere: Bootstrap (cdn.jsdelivr.net), the YouTube IFrame API and its player, the iTunes search of the song
+     * comes from elsewhere: the YouTube IFrame API and its player, the iTunes search of the song
      * suggestions. No inline style either: no {@code style="…"} attribute and no {@code <style>} element (the classes are in
      * {@code app.css}; scripts change styles through {@code element.style}, which the policy allows). Violations go to {@link com.scan2play.controller.CspReportController}. Public for the browser tests: their stand-in
      * server sends this same policy (written by {@code DashboardPageRenderTest}), enforced.
      */
     public static final String CONTENT_SECURITY_POLICY = String.join("; ",
             "default-src 'self'",
-            "script-src 'self' https://cdn.jsdelivr.net https://www.youtube.com https://s.ytimg.com",
-            "style-src 'self' https://cdn.jsdelivr.net",
+            "script-src 'self' https://www.youtube.com https://s.ytimg.com",
+            "style-src 'self'",
             "img-src 'self' data:",
-            "font-src 'self' https://cdn.jsdelivr.net",
+            "font-src 'self'",
             "connect-src 'self' https://itunes.apple.com",
             "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
             "object-src 'none'",
@@ -60,7 +60,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report"))
                 .authorizeHttpRequests(auth -> auth
                         // Public resources, landing page, and guest party views
-                        .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/images/**", "/favicon.ico", "/error").permitAll()
+                        .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()
                         // The landing page's tiles: the kind of party chosen, then Google's login (HomeController.start)
                         .requestMatchers("/start/**").permitAll()
                         // The browsers' reports of the Content-Security-Policy

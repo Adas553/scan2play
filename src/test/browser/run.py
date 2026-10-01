@@ -122,7 +122,7 @@ def kill(process):
         process.kill()
 
 
-def run_scenario(stand, port, name, chrome, allow_cdn, timeout, no_sandbox=False):
+def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False):
     """Opens the scenario in a fresh headless Chrome and waits for its verdict; None when none came (or the browser is gone)."""
     event = stand.event(name)
     event.clear()
@@ -133,9 +133,9 @@ def run_scenario(stand, port, name, chrome, allow_cdn, timeout, no_sandbox=False
              '--window-size=1280,900', '--user-data-dir=' + profile]
     if no_sandbox:
         flags.append('--no-sandbox')   # a CI runner may forbid the sandbox's user namespaces; the browser opens only pages of this stand-in
-    # Nothing here needs the network: the YouTube API is faked, Bootstrap from its CDN only styles the page (no script uses it), and
-    # the guest page's song suggestions may fail (the CSP check of a request comes before the network).
-    blocked = ['www.youtube.com', 'i.ytimg.com', 'itunes.apple.com'] + ([] if allow_cdn else ['cdn.jsdelivr.net'])
+    # Nothing here needs the network: the YouTube API is faked, Bootstrap comes from the stand-in (its webjar), and the guest page's
+    # song suggestions may fail (the CSP check of a request comes before the network).
+    blocked = ['www.youtube.com', 'i.ytimg.com', 'itunes.apple.com']
     flags.append('--host-resolver-rules=' + ', '.join('MAP %s ~NOTFOUND' % host for host in blocked))
     url = 'http://127.0.0.1:%d/dj/dashboard?scenario=%s' % (port, name)
     process = subprocess.Popen([chrome] + flags + [url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -197,7 +197,6 @@ def main():
     parser.add_argument('--clean', action='store_true', help='delete the work directory first (a full build)')
     parser.add_argument('--no-render', action='store_true', help='copy the repo but do not run Maven: reuse the pages rendered by an earlier run (a quick loop while editing scenarios)')
     parser.add_argument('--chrome', help='path of chrome.exe / msedge.exe (else S2P_CHROME, else looked for)')
-    parser.add_argument('--cdn', action='store_true', help='let the page load Bootstrap from its CDN (by default it is blocked: not needed)')
     parser.add_argument('--timeout', type=int, default=90, help='seconds to wait for one scenario')
     parser.add_argument('--no-sandbox', action='store_true', help="start Chrome with --no-sandbox (for a CI runner that forbids the sandbox; it only opens this stand-in's pages)")
     args = parser.parse_args()
@@ -235,7 +234,7 @@ def main():
 
     passed = True
     for name in wanted:
-        passed = show(name, run_scenario(stand, port, name, chrome, args.cdn, args.timeout, args.no_sandbox)) and passed
+        passed = show(name, run_scenario(stand, port, name, chrome, args.timeout, args.no_sandbox)) and passed
     httpd.shutdown()
     print('\n%s — results: %s' % ('all scenarios passed' if passed else 'SOME SCENARIOS FAILED', stand.results))
     return 0 if passed else 1

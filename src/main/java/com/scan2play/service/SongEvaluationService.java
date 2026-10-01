@@ -187,7 +187,7 @@ public class SongEvaluationService {
         }
 
         // 3. Database Operations: Safe, quick transaction
-        SongRequestEntity savedRequest = saveSongRequest(partyCode, aiResponse, style, trackUrl);
+        SongRequestEntity savedRequest = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl);
 
         // 4. External API Call: Add to Queue (If Accepted & Auto-Pilot is enabled)
         handleAutoQueue(settings, savedRequest, trackUrl, autopilotErrorMsg);
@@ -253,10 +253,18 @@ public class SongEvaluationService {
      * the AI (or to pay for its tokens). The form allows up to 10 KB.
      */
     static String forPrompt(String guestText) {
+        return asTyped(guestText).replace('"', '\'');
+    }
+
+    /**
+     * What the guest typed as the DJ is shown it beside the AI's song: the line the AI is given ({@link #forPrompt}), with the
+     * guest's double quotes.
+     */
+    static String asTyped(String guestText) {
         if (guestText == null) {
             return "";
         }
-        String text = guestText.replace('"', '\'').replaceAll("\\s+", " ").strip();
+        String text = guestText.replaceAll("\\s+", " ").strip();
         return text.length() > GUEST_TEXT_MAX ? text.substring(0, GUEST_TEXT_MAX).strip() : text;
     }
 
@@ -334,10 +342,11 @@ public class SongEvaluationService {
         return title.orElse(name);
     }
 
-    private SongRequestEntity saveSongRequest(String partyCode, DjResponse aiResponse, String style, String trackUrl) {
+    private SongRequestEntity saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style, String trackUrl) {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
                 .songName(aiResponse.songName())
+                .guestText(guestText.isEmpty() ? null : guestText)
                 .style(style)
                 .decision(aiResponse.decision())
                 .djComment(aiResponse.comment())
