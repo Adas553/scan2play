@@ -212,6 +212,8 @@
 
         // --- Debounced input handler ---
         const onInput = debounce(async function () {
+            // The page can switch the suggestions off (the guest's form in the mood mode)
+            if (input.dataset.autocompleteOff === 'true') { closeDropdown(); return; }
             const query = input.value.trim();
             if (query.length < MIN_CHARS) { closeDropdown(); return; }
             const results = await fetchSuggestions(query);

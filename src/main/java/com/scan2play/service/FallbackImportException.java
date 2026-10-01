@@ -20,7 +20,12 @@ public class FallbackImportException extends RuntimeException {
         /** The YouTube Data API call failed (quota, network, unknown or private playlist, ...). */
         API_ERROR,
         /** The playlist exists but has no public, embeddable videos. */
-        NO_PLAYABLE_TRACKS
+        NO_PLAYABLE_TRACKS,
+        /**
+         * A YouTube Mix ({@code list=RD…}): made up by YouTube for one viewer, not given out by the Data API. Refused before the link
+         * is saved (the party keeps its playlist).
+         */
+        YOUTUBE_MIX
     }
 
     private final Reason reason;

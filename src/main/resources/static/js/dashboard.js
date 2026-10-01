@@ -88,7 +88,10 @@ function isYouTubeProvider() {
 
             // --- Fallback playlist save ---
             let importFailed = false;
-            if (action.includes('/fallback-playlist')) {
+            if (action.includes('/fallback-playlist') && response.headers.get('X-Fallback-Saved') === 'false') {
+                // The server refused the link (a YouTube Mix) and kept the party's playlist: say why, touch nothing else
+                importFailed = showFallbackImportResult(response, null);
+            } else if (action.includes('/fallback-playlist')) {
                 // Server returns the extracted playlist/video ID in X-Fallback-Id header
                 // so we don't need to duplicate the URL parsing logic client-side.
                 const extractedId = response.headers.get('X-Fallback-Id') || '';
@@ -131,15 +134,19 @@ function isYouTubeProvider() {
 //
 // Saving the playlist imports its tracks (best effort, on the server) and the answer says how it went:
 // X-Fallback-Import ok|failed, X-Fallback-Tracks (ok) or X-Fallback-Import-Reason (failed: NO_API_KEY, INVALID_PLAYLIST,
-// API_ERROR, NO_PLAYABLE_TRACKS). Without a word about it a private or wrong playlist ended in an empty "up next" list. The texts
+// API_ERROR, NO_PLAYABLE_TRACKS, YOUTUBE_MIX — the last one refused before saving, X-Fallback-Saved: false). Without a word about it a private or wrong playlist ended in an empty "up next" list. The texts
 // travel in data attributes of #fallbackImportStatus (dashboard.html), so the script needs no message bundle of its own.
 // ==========================================================================
 
-/** Says under the playlist form how the import went. Returns true when it failed. Nothing is said when the playlist was cleared. */
+/**
+ * Says under the playlist form how the import went. Returns true when it failed. Nothing is said when the playlist was cleared; a
+ * link the server refused without saving (X-Fallback-Saved: false, extractedId null) is still reported.
+ */
 function showFallbackImportResult(response, extractedId) {
     const box = document.getElementById('fallbackImportStatus');
     const status = response.headers.get('X-Fallback-Import');
-    if (!box || !extractedId || !status) {   // no such box, the playlist was cleared, or a server that says nothing
+    const refused = response.headers.get('X-Fallback-Saved') === 'false';
+    if (!box || (!extractedId && !refused) || !status) {   // no such box, the playlist was cleared, or a server that says nothing
         hideFallbackImportResult();
         return false;
     }

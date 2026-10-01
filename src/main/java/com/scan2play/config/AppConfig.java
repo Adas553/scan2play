@@ -40,7 +40,7 @@ public class AppConfig {
      * <ul>
      *     <li>{@code partySettings} / {@code qrCodes} — long-lived, evicted manually via @CachePut</li>
      *     <li>{@code youtubeSearch} — 24h TTL, avoids redundant YouTube Data API calls (100 quota/search)</li>
-     *     <li>{@code dashboardQueue} — 3s TTL / {@code publicQueue} — 5s TTL, auto-expires to keep polling data fresh</li>
+     *     <li>{@code dashboardQueue} — 3s TTL, auto-expires to keep polling data fresh (the guest page reads it too)</li>
      * </ul>
      */
     @Bean
@@ -50,8 +50,7 @@ public class AppConfig {
                     buildCache("partySettings", Duration.ofHours(24), 500),
                     buildCache("qr-codes", Duration.ofHours(24), 1000),
                     buildCache("youtubeSearch", Duration.ofHours(24), 1000),
-                    buildCache("dashboardQueue", Duration.ofSeconds(3), 200),
-                    buildCache("publicQueue", Duration.ofSeconds(5), 200)
+                    buildCache("dashboardQueue", Duration.ofSeconds(3), 200)
             ));
             return cacheManager;
         }

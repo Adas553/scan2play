@@ -42,14 +42,39 @@
             <!-- Hidden Party Code Input -->
             <input type="hidden" name="partyCode" th:value="${partyCode}" />
 
+            <!--/* What the guest asks for: a specific song (the default) or a mood. The AI gets a prompt for each, so it no longer
+                 guesses which one a request is (it took a line of lyrics for a mood). A mood sent as a song comes back here with
+                 its text and the mood mode chosen (lastRequest, suggestedMode). */-->
+            <!--/* Two tiles, not a segmented bar: a guest who sees the page for the first time has to notice there is a choice (the
+                 owner's report). The question above them, a line under each title, the chosen one green with a ✓. */-->
+            <div class="mb-4" role="radiogroup" aria-labelledby="requestModeLabel">
+                <div id="requestModeLabel" class="form-label fw-bold" th:text="#{home.form.mode.label}">What are you asking for?</div>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                    <input type="radio" class="btn-check" name="requestMode" id="modeSong" value="SONG" autocomplete="off"
+                           th:checked="${suggestedMode != 'MOOD'}">
+                    <label class="btn btn-outline-success mode-tile flex-fill text-start" for="modeSong">
+                        <span class="d-block fw-bold" th:text="#{home.form.mode.song}">🎵 A specific song</span>
+                        <span class="d-block small mode-tile-hint" th:text="#{home.form.mode.song.hint}">a title, an artist or lyrics</span>
+                    </label>
+                    <input type="radio" class="btn-check" name="requestMode" id="modeMood" value="MOOD" autocomplete="off"
+                           th:checked="${suggestedMode == 'MOOD'}">
+                    <label class="btn btn-outline-success mode-tile flex-fill text-start" for="modeMood">
+                        <span class="d-block fw-bold" th:text="#{home.form.mode.mood}">✨ A mood</span>
+                        <span class="d-block small mode-tile-hint" th:text="#{home.form.mode.mood.hint}">the AI picks the song</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="mb-4">
                 <label for="songInput" class="form-label fw-bold" th:text="#{home.form.input.label}">Your choice</label>
                 <div class="song-autocomplete-wrapper">
                     <input type="text" id="songInput" name="songName" class="form-control" required
-                           data-autocomplete="songs">
+                           data-autocomplete="songs" th:value="${lastRequest}">
                     <!-- Dropdown injected here by song-autocomplete.js -->
                 </div>
-                <div class="form-text text-white-50 mt-2" th:text="#{home.form.input.help}">Provide a title, artist, or just describe your mood!</div>
+                <div id="songInputHelp" class="form-text text-white-50 mt-2"
+                     th:attr="data-text-song=#{home.form.input.help.song},data-text-mood=#{home.form.input.help.mood}"
+                     th:text="#{home.form.input.help.song}">A title, an artist or a line of the lyrics</div>
             </div>
 
             <div class="mb-4" th:if="${globalVibe.name() == 'ANY'}">
@@ -76,22 +101,59 @@
         </form>
     </div>
 
-    <!-- Public Queue (Last 5 Accepted) -->
-    <div class="w-100" style="max-width: 500px;" th:if="${not #lists.isEmpty(publicQueue)}">
-        <h6 class="queue-title text-center" th:text="#{home.queue.title}">🔥 Recently Accepted:</h6>
-        <ul class="list-group shadow-sm">
-            <li class="list-group-item d-flex justify-content-between align-items-center" th:each="song : ${publicQueue}">
-                <div>
-                    <span class="fw-bold" th:text="${song.songName}">Song Title</span>
-                </div>
-                <span class="badge rounded-pill bg-success text-dark">✓</span>
-            </li>
-        </ul>
+    <!--/* The music as a guest sees it (GuestQueueService): where the guest's own song waits, what plays now, and the next guest
+         songs in the order they play — the guest's own marked. */-->
+    <div id="guestQueueBox" class="w-100" style="max-width: 500px;"
+         th:attr="data-url=@{/p/{code}/queue(code=${partyCode})}">
+        <div th:replace="~{fragments/guest-queue :: guestQueue}"></div>
     </div>
 
 </div>
 
 <script th:inline="javascript">
+    // The mode buttons: the help text follows the mode, and song suggestions are only offered for a song
+    (function () {
+        const input = document.getElementById('songInput');
+        const help = document.getElementById('songInputHelp');
+        function applyMode() {
+            const mood = document.getElementById('modeMood').checked;
+            help.textContent = mood ? help.dataset.textMood : help.dataset.textSong;
+            input.dataset.autocompleteOff = String(mood);
+        }
+        document.querySelectorAll('input[name="requestMode"]').forEach(function (radio) {
+            radio.addEventListener('change', function () { applyMode(); input.focus(); });
+        });
+        applyMode();
+    })();
+
+    // The list under the form (what plays, what comes next, where the guest's song waits) is fetched again — no timer — when the
+    // guest comes back to the page (a phone unlocked, the tab chosen again, "back" from another page) and on "↻ Odśwież".
+    (function () {
+        const box = document.getElementById('guestQueueBox');
+        if (!box) return;
+        let lastRefresh = Date.now();
+        async function refreshQueue(force) {
+            if (!force && Date.now() - lastRefresh < 5000) return; // a quick switch back and forth asks once
+            lastRefresh = Date.now();
+            try {
+                const response = await fetch(box.dataset.url, { headers: { 'Accept': 'text/html' } });
+                if (response.ok && !response.redirected) box.innerHTML = await response.text();
+            } catch (e) {
+                // offline for a moment: the list stays as it was
+            }
+        }
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') refreshQueue(false);
+        });
+        window.addEventListener('pageshow', function (e) { if (e.persisted) refreshQueue(true); });
+        box.addEventListener('click', function (e) {
+            const button = e.target.closest('[data-guest-queue-refresh]');
+            if (!button) return;
+            button.disabled = true;
+            refreshQueue(true);
+        });
+    })();
+
     document.getElementById('requestForm').addEventListener('submit', function (e) {
         const btn = document.getElementById('submitBtn');
         const btnText = document.getElementById('submitBtnText');

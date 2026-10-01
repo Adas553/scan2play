@@ -50,4 +50,26 @@ class YouTubeUrlsTest {
         assertThat(YouTubeUrls.extractPlaylistId("  ")).isNull();
         assertThat(YouTubeUrls.extractPlaylistId(null)).isNull();
     }
+
+    @Test
+    void isMix_tellsAYouTubeMixFromAPlaylist() {
+        assertThat(YouTubeUrls.isMix(YouTubeUrls.extractPlaylistId("https://www.youtube.com/watch?v=3z-jNRAwSHk&list=RD3z-jNRAwSHk"))).isTrue();
+        assertThat(YouTubeUrls.isMix("RDMM")).isTrue();
+        assertThat(YouTubeUrls.isMix("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf")).isFalse();
+        assertThat(YouTubeUrls.isMix("RDCLAK5uy_kmPRjHDECIcuVwnKsx2Ng7fyNgFKWNJFs")).as("a curated YouTube Music list").isFalse();
+        assertThat(YouTubeUrls.isMix("V:3z-jNRAwSHk")).as("a single video").isFalse();
+        assertThat(YouTubeUrls.isMix(null)).isFalse();
+    }
+
+    @Test
+    void cleanVideoTitle_dropsTheTagsOfTheUpload_butKeepsWhatBelongsToTheSong() {
+        assertThat(YouTubeUrls.cleanVideoTitle("Wilki - Baśka (Official Video)")).isEqualTo("Wilki - Baśka");
+        assertThat(YouTubeUrls.cleanVideoTitle("Chciałem być - Krzysztof Krawczyk [HD]  (Teledysk)")).isEqualTo("Chciałem być - Krzysztof Krawczyk");
+        assertThat(YouTubeUrls.cleanVideoTitle("Artist - Song (Official Lyric Video) [4K]")).isEqualTo("Artist - Song");
+        assertThat(YouTubeUrls.cleanVideoTitle("Eiffel 65 - Blue (Da Ba Dee)")).isEqualTo("Eiffel 65 - Blue (Da Ba Dee)");
+        assertThat(YouTubeUrls.cleanVideoTitle("A - B (feat. C) (Remix)")).isEqualTo("A - B (feat. C) (Remix)");
+        assertThat(YouTubeUrls.cleanVideoTitle("Videoclub - Amour plastique")).as("a word outside brackets stays")
+                .isEqualTo("Videoclub - Amour plastique");
+        assertThat(YouTubeUrls.cleanVideoTitle(null)).isNull();
+    }
 }

@@ -185,6 +185,16 @@ th[data-sort].sort-desc::after {
     min-height: 370px;
 }
 
+/* The song of a queue row: broken between words only (Bootstrap's .text-break broke "Wilki - Baśka" letter by letter when the
+   comment beside it took the width), and on a computer the column keeps room for a title and the ▶ YOUTUBE button beside it */
+.page-dj .song-title {
+    overflow-wrap: break-word;
+    min-width: 0;
+}
+@media (min-width: 768px) {
+    .page-dj .song-cell { min-width: 16rem; }
+}
+
 /* Dark inputs placeholder visibility fix */
 .page-dj .form-control::placeholder {
     color: var(--s2p-text-muted);
@@ -224,6 +234,30 @@ th[data-sort].sort-desc::after {
 }
 .page-guest .accepted { color: var(--s2p-green); }
 .page-guest .rejected { color: var(--s2p-red); }
+
+/* The two request modes as tiles (index.html): each clearly a button of its own, the chosen one filled green with a ✓ */
+.page-guest .mode-tile {
+    position: relative;
+    flex: 1 1 0;
+    padding: 0.6rem 1.8rem 0.6rem 0.8rem; /* room on the right for the ✓ of the chosen tile */
+    border-width: 2px;
+    border-radius: 12px;
+    color: white;
+    border-color: #777; /* lighter than --s2p-border: the tile that is not chosen must still read as a button */
+    background: rgba(255, 255, 255, 0.04);
+}
+.page-guest .mode-tile:hover { border-color: var(--s2p-green); background: rgba(255, 255, 255, 0.08); color: white; }
+.page-guest .mode-tile .mode-tile-hint { color: var(--s2p-text-muted); font-weight: normal; }
+.page-guest .btn-check:checked + .mode-tile { background: var(--s2p-green); border-color: var(--s2p-green); color: #000; }
+.page-guest .btn-check:checked + .mode-tile .mode-tile-hint { color: rgba(0, 0, 0, 0.7); }
+.page-guest .btn-check:checked + .mode-tile::after {
+    content: "✓";
+    position: absolute;
+    top: 0.35rem;
+    right: 0.6rem;
+    font-weight: bold;
+}
+.page-guest .btn-check:focus-visible + .mode-tile { outline: 2px solid white; outline-offset: 2px; }
 
 /* ==========================================================================
  * 6. LANDING PAGE

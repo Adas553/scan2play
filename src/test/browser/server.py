@@ -75,7 +75,8 @@ def default_state():
         'commandStatus': 204,          # the answer of POST player-command (409: no window plays, nobody would carry it out)
         # The answer of POST fallback-playlist (the DJ pressed Save): its X-Fallback-* headers, and the party's playlist
         # afterwards (the next lease answer names it).
-        'fallbackSave': {'playlistId': PARTY_CODE_PLAYLIST, 'import': 'ok', 'tracks': 3, 'reason': None},
+        # saved: False = the server refused the link and kept the party's playlist (a YouTube Mix, reason YOUTUBE_MIX).
+        'fallbackSave': {'playlistId': PARTY_CODE_PLAYLIST, 'import': 'ok', 'tracks': 3, 'reason': None, 'saved': True},
         'requests': [],
     }
 
@@ -353,6 +354,10 @@ class Handler(BaseHTTPRequestHandler):
             with stand.lock:
                 save = copy.deepcopy(state['fallbackSave'])
                 cleared = not fields.get('fallbackPlaylistUrl', 'x')
+                if save.get('saved') is False:
+                    # Like the real server for a YouTube Mix: nothing is saved, the party keeps its playlist
+                    return self._send(200, b'', headers={'X-Fallback-Saved': 'false', 'X-Fallback-Import': 'failed',
+                                                         'X-Fallback-Import-Reason': save['reason']})
                 state['lease']['fallbackPlaylistId'] = None if cleared else save['playlistId']
             headers = {}
             if not cleared:

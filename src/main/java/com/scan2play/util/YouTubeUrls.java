@@ -5,7 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Parsing of the YouTube URLs / IDs a DJ pastes into the fallback-playlist field.
+ * Parsing of the YouTube URLs / IDs a DJ pastes into the fallback-playlist field, and of the titles of videos.
  */
 public final class YouTubeUrls {
 
@@ -21,7 +21,36 @@ public final class YouTubeUrls {
     /** Extracts YouTube video ID from short URLs (e.g. youtu.be/xxxxx). */
     private static final Pattern VIDEO_ID_SHORT_PATTERN = Pattern.compile("youtu\\.be/([A-Za-z0-9_-]{11})");
 
+    /**
+     * A bracketed part of a video title that describes the upload, not the song: "(Official Video)", "[HD]",
+     * "(Teledysk)", "(Lyrics)"… A bracket without such a word — "(Da Ba Dee)", "(feat. X)", "(Remix)" — is part of the song.
+     */
+    private static final Pattern UPLOAD_TAG_PATTERN = Pattern.compile(
+            "\\s*[(\\[][^()\\[\\]]*\\b(official|video|videoclip|audio|lyrics?|lyric video|teledysk|tekst|clip|hd|hq|4k|"
+                    + "visuali[sz]er|music video)\\b[^()\\[\\]]*[)\\]]",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
+
     private YouTubeUrls() {
+    }
+
+    /**
+     * Whether an ID from {@link #extractPlaylistId(String)} is a YouTube Mix ({@code RD…}, e.g. the {@code list=RD<video id>} of
+     * a "Mix" opened from a video): YouTube makes it up for one viewer and the Data API does not give it out. The curated YouTube
+     * Music lists ({@code RDCLAK…}) are left to the import, which says whether it could read them.
+     */
+    public static boolean isMix(String playlistId) {
+        return playlistId != null && playlistId.startsWith("RD") && !playlistId.startsWith("RDCLAK");
+    }
+
+    /**
+     * The title of a video as the DJ's lists show it: without the tags of the upload ("(Official Video)", "[HD]"…) and with
+     * single spaces. The order of artist and title stays as the uploader wrote it.
+     */
+    public static String cleanVideoTitle(String title) {
+        if (title == null) {
+            return null;
+        }
+        return UPLOAD_TAG_PATTERN.matcher(title).replaceAll("").replaceAll("\\s+", " ").strip();
     }
 
     /**

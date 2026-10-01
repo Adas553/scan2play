@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+<!--/* The music as a guest sees it — on the party page (GuestQueueService.GuestQueue in the model as guestQueue):
+     "your song — N. in the queue", what plays now, and the next guest songs in the order they will play (the guest's own marked).
+     Nothing at all when there is nothing to say. GET /p/{code}/queue renders this fragment alone: the page fetches it again when
+     the guest comes back to it (visibilitychange) and on "↻ Odśwież" (index.html). */-->
+<div th:fragment="guestQueue" class="w-100 guest-queue"
+     th:if="${guestQueue != null and (guestQueue.nowPlaying() != null or not #lists.isEmpty(guestQueue.upNext()))}">
+
+    <div class="d-flex justify-content-end mb-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary py-0" data-guest-queue-refresh
+                th:text="#{home.queue.refresh}">↻ Refresh</button>
+    </div>
+
+    <div th:if="${guestQueue.myPosition() != null}" id="myPosition"
+         class="alert alert-success text-center fw-bold py-2 mb-3" role="status"
+         th:text="#{home.queue.my_position(${guestQueue.mySong()}, ${guestQueue.myPosition()})}">Your song is number 3 in the queue</div>
+
+    <div th:if="${guestQueue.nowPlaying() != null}" id="nowPlaying" class="text-center mb-3">
+        <div class="queue-title mb-1" th:text="#{home.queue.now_playing}">🔊 Now playing</div>
+        <div class="fw-bold text-white" th:text="${guestQueue.nowPlaying()}">Song</div>
+    </div>
+
+    <th:block th:unless="${#lists.isEmpty(guestQueue.upNext())}">
+        <h6 class="queue-title text-center" th:text="#{home.queue.title}">Next in the queue</h6>
+        <ol class="list-group list-group-numbered shadow-sm" id="upNext">
+            <li class="list-group-item d-flex justify-content-between align-items-center" th:each="song : ${guestQueue.upNext()}">
+                <span class="fw-bold ms-2 me-auto" th:text="${song.songName}">Song Title</span>
+                <span th:if="${guestQueue.myIds().contains(song.id)}" class="badge rounded-pill bg-success text-dark"
+                      th:text="#{home.queue.yours}">Yours</span>
+            </li>
+        </ol>
+    </th:block>
+</div>
+</body>
+</html>

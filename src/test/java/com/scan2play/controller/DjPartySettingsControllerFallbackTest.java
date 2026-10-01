@@ -84,6 +84,20 @@ class DjPartySettingsControllerFallbackTest {
     }
 
     @Test
+    @DisplayName("a YouTube Mix (list=RD…) is refused before anything is saved or imported, with its own reason")
+    void shouldRefuseAYouTubeMix_withoutSavingIt() throws Exception {
+        setPlaylist("https://www.youtube.com/watch?v=3z-jNRAwSHk&list=RD3z-jNRAwSHk")
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Fallback-Saved", "false"))
+                .andExpect(header().string("X-Fallback-Import", "failed"))
+                .andExpect(header().string("X-Fallback-Import-Reason", "YOUTUBE_MIX"))
+                .andExpect(header().doesNotExist("X-Fallback-Id"));
+
+        verify(settingsService, org.mockito.Mockito.never()).updateSettings(any(), any());
+        org.mockito.Mockito.verifyNoInteractions(fallbackPlaylistService);
+    }
+
+    @Test
     @DisplayName("a failed import still saves the setting and answers 200 (playback does not depend on it yet)")
     void shouldStillSaveSetting_whenImportFails() throws Exception {
         when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST_ID, true))

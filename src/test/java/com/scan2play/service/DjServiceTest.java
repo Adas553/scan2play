@@ -251,6 +251,9 @@ class DjServiceTest {
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
         when(queueService.resolveTrack("Nirvana - Smells Like Teen Spirit", MusicProviderType.YOUTUBE))
                 .thenReturn("https://www.youtube.com/watch?v=hTWKbfoikeg");
+        // the queue shows the video's own title
+        when(songEvaluationService.nameOfTrack("Nirvana - Smells Like Teen Spirit", "https://www.youtube.com/watch?v=hTWKbfoikeg",
+                MusicProviderType.YOUTUBE)).thenReturn("Nirvana - Smells Like Teen Spirit");
 
         djService.addDjPick(PARTY_CODE, "nirvanna smells");
 
@@ -278,6 +281,7 @@ class DjServiceTest {
         when(songEvaluationService.normalizeSongName("Some Song")).thenReturn("Some Song");
         when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
         when(queueService.resolveTrack(any(), any())).thenThrow(new RuntimeException("API down"));
+        when(songEvaluationService.nameOfTrack("Some Song", null, MusicProviderType.YOUTUBE)).thenReturn("Some Song");
 
         djService.addDjPick(PARTY_CODE, "Some Song");
 
@@ -285,6 +289,7 @@ class DjServiceTest {
         verify(songRequestRepository).save(captor.capture());
 
         SongRequestEntity saved = captor.getValue();
+        assertThat(saved.getSongName()).isEqualTo("Some Song");
         assertThat(saved.getTrackUrl()).isNull();
         assertThat(saved.getDecision()).isEqualTo(DECISION_ACCEPTED);
     }

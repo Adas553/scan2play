@@ -11,7 +11,9 @@ import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
+import com.scan2play.model.RequestMode;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.YouTubeUrls;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
@@ -89,11 +92,14 @@ public class SongEvaluationService {
     private final MessageSource messageSource;
     private final ResourceLoader resourceLoader;
     private final PlatformTransactionManager transactionManager;
+    private final YouTubePlaylistClient youTubePlaylistClient;
 
     private TransactionTemplate transactionTemplate;
 
-    /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt). */
+    /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt), for a specific song. */
     private Map<String, String> promptTemplates;
+    /** The same for a mood the AI picks a song for. */
+    private Map<String, String> moodPromptTemplates;
     /** Duplicate rule template per language code. */
     private Map<String, String> duplicateRuleTemplates;
     /** Lightweight prompt for normalizing raw song names to "ARTIST - TITLE" format. */
@@ -111,12 +117,15 @@ public class SongEvaluationService {
                 .build();
         try {
             var prompts = new java.util.HashMap<String, String>();
+            var moodPrompts = new java.util.HashMap<String, String>();
             var duplicates = new java.util.HashMap<String, String>();
             for (String lang : SUPPORTED_LANGS) {
                 prompts.put(lang, loadResource("classpath:prompts/prompt-template_" + lang + ".txt"));
+                moodPrompts.put(lang, loadResource("classpath:prompts/prompt-mood_" + lang + ".txt"));
                 duplicates.put(lang, loadResource("classpath:prompts/prompt-duplicate-rule_" + lang + ".txt"));
             }
             this.promptTemplates = Map.copyOf(prompts);
+            this.moodPromptTemplates = Map.copyOf(moodPrompts);
             this.duplicateRuleTemplates = Map.copyOf(duplicates);
             this.normalizePromptTemplate = loadResource("classpath:prompts/prompt-normalize.txt");
         } catch (IOException e) {
@@ -134,12 +143,14 @@ public class SongEvaluationService {
      * Core evaluation pipeline: AI evaluation → track resolution → save → optional auto-queue.
      *
      * @param partyCode The unique code of the party.
-     * @param songName  Title of the song (from guest input).
+     * @param songName  What the guest typed: a title, an artist or a line of the lyrics ({@link RequestMode#SONG}), or a mood.
      * @param style     Desired style / mood selected by the guest.
-     * @return Complete AI response (decision + comment + energy level).
+     * @param mode      What the guest chose to ask for; each has its own prompt.
+     * @return Complete AI response (decision + comment + energy level). In the song mode a request the AI reads as a mood is
+     *         <b>not saved</b> — the response says so ({@link DjResponse#isMood()}) and the caller asks the guest to switch modes.
      */
-    public DjResponse evaluateAndSaveSong(String partyCode, String songName, String style) {
-        log.info("Party [{}]: Evaluating song: '{}' with style: '{}'", partyCode, songName, style);
+    public DjResponse evaluateAndSaveSong(String partyCode, String songName, String style, RequestMode mode) {
+        log.info("Party [{}]: Evaluating {} request: '{}' with style: '{}'", partyCode, mode, songName, style);
 
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         String recentSongs = getRecentSongsContext(partyCode, settings.getDuplicateCheckWindow());
@@ -152,12 +163,19 @@ public class SongEvaluationService {
         String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, locale);
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, aiOfflineMsg, locale);
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, aiOfflineMsg, locale, mode);
+        if (mode == RequestMode.SONG && aiResponse.isMood()) {
+            log.info("Party [{}]: '{}' was sent as a song but reads as a mood — not saved", partyCode, songName);
+            return aiResponse;
+        }
 
         // 2. External API Call: Spotify/YouTube Track Resolution (if accepted)
         String trackUrl = null;
         if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
-            trackUrl = resolveTrackUrl(aiResponse.songName(), settings.getActiveProvider());
+            trackUrl = resolveTrackUrl(searchQueryFor(aiResponse, songName, settings.getActiveProvider(), mode),
+                    settings.getActiveProvider());
+            // The name of what will play, not the AI's guess of it (the guest's result page and the DJ's lists show it)
+            aiResponse = aiResponse.withSongName(nameOfTrack(aiResponse.songName(), trackUrl, settings.getActiveProvider()));
         }
 
         // 3. Database Operations: Safe, quick transaction
@@ -166,7 +184,7 @@ public class SongEvaluationService {
         // 4. External API Call: Add to Queue (If Accepted & Auto-Pilot is enabled)
         handleAutoQueue(settings, savedRequest, trackUrl, autopilotErrorMsg);
 
-        return aiResponse;
+        return aiResponse.withRequestId(savedRequest != null ? savedRequest.getId() : null);
     }
 
     // ---- Private helpers ----
@@ -187,20 +205,26 @@ public class SongEvaluationService {
         return recentSongs.isEmpty() ? "None" : recentSongs;
     }
 
-    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg, Locale locale) {
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg, Locale locale,
+                                      RequestMode mode) {
         try {
-            String lang = resolvePromptLanguage(locale);
-            String duplicateRule = (recentSongs != null)
-                    ? String.format(duplicateRuleTemplates.get(lang), recentSongs)
-                    : "";
-            String prompt = String.format(promptTemplates.get(lang), songName, style, duplicateRule);
-
+            String prompt = buildPrompt(songName, style, recentSongs, locale, mode);
             GenerateContentResponse response = client.models.generateContent(modelName, prompt, aiJsonConfig);
             return objectMapper.readValue(response.text(), DjResponse.class);
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);
             return new DjResponse(DECISION_REJECTED, aiOfflineMsg, songName, 0);
         }
+    }
+
+    /** The prompt of the guest's mode in the guest's language, with the request, the style and the duplicate rule filled in. */
+    String buildPrompt(String songName, String style, String recentSongs, Locale locale, RequestMode mode) {
+        String lang = resolvePromptLanguage(locale);
+        String duplicateRule = (recentSongs != null)
+                ? String.format(duplicateRuleTemplates.get(lang), recentSongs)
+                : "";
+        Map<String, String> templates = mode == RequestMode.MOOD ? moodPromptTemplates : promptTemplates;
+        return String.format(templates.get(lang), songName, style, duplicateRule);
     }
 
     /**
@@ -219,6 +243,47 @@ public class SongEvaluationService {
             log.warn("Failed to resolve track URL for '{}'", songName, e);
             return null;
         }
+    }
+
+    /**
+     * What the provider searches for: the AI's name of the song — except when the guest typed a line of the lyrics at a YouTube
+     * party, then the guest's own words. The AI does not know lyrics reliably (a line of a well-known Polish song got a different
+     * made-up artist and title on each try, and the search then found another song), while YouTube's search matches lyrics well.
+     * Spotify's search does not, so a Spotify party keeps the AI's name. A mood is never searched by the guest's words: the AI
+     * picked the song.
+     *
+     * @param guestText what the guest typed
+     */
+    String searchQueryFor(DjResponse aiResponse, String guestText, MusicProviderType provider, RequestMode mode) {
+        if (mode == RequestMode.SONG && provider == MusicProviderType.YOUTUBE && aiResponse.isLyrics()
+                && guestText != null && !guestText.isBlank()) {
+            log.info("Lyrics requested: searching YouTube for '{}' (the AI named it '{}')", guestText, aiResponse.songName());
+            return guestText.strip();
+        }
+        return aiResponse.songName();
+    }
+
+    /**
+     * The name a song is shown by: for a YouTube video its real title (cleaned of "(Official Video)" and the like), otherwise
+     * {@code name}. The AI may name a song wrongly even when the search finds the right video — a line of lyrics named with
+     * another artist and a made-up title, while YouTube found the song the line comes from — and the DJ's queue, the history
+     * and the duplicate check should say what actually plays. One {@code videos.list} call (1 unit from the general pool, not
+     * the search limit); without a key, a video or a title the name stays.
+     *
+     * @param name     the name the song was searched by (the AI's, or the DJ's normalized pick)
+     * @param trackUrl what the provider resolved it to (a watch URL, a search link, or null)
+     */
+    public String nameOfTrack(String name, String trackUrl, MusicProviderType provider) {
+        if (provider != MusicProviderType.YOUTUBE) {
+            return name;
+        }
+        Optional<String> title = YouTubeUrls.extractVideoId(trackUrl)
+                .flatMap(youTubePlaylistClient::findTitle)
+                .map(YouTubeUrls::cleanVideoTitle)
+                .filter(t -> !t.isBlank());
+        title.filter(t -> !t.equalsIgnoreCase(name))
+                .ifPresent(t -> log.info("Song named '{}' plays as the video '{}'", name, t));
+        return title.orElse(name);
     }
 
     private SongRequestEntity saveSongRequest(String partyCode, DjResponse aiResponse, String style, String trackUrl) {

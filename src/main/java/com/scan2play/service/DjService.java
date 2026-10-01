@@ -86,17 +86,6 @@ public class DjService {
     }
 
     /**
-     * Returns the public queue for guest view (top 5 accepted songs).
-     *
-     * @param partyCode The unique code of the party.
-     * @return List of top 5 accepted song requests.
-     */
-    @Cacheable(value = "publicQueue", key = "#partyCode")
-    public List<SongRequestEntity> getPublicQueue(String partyCode) {
-        return songRequestRepository.findTop5ByPartyCodeAndDecisionOrderByRequestedAtDesc(partyCode, DECISION_ACCEPTED);
-    }
-
-    /**
      * Finds the oldest accepted, not-yet-played guest song that has a playable YouTube
      * video ID — the server-side replacement for the YouTube Auto-Pilot's old client-side
      * DOM scan of the queue table (see PROJECT_CONTEXT.md Section 14).
@@ -241,10 +230,12 @@ public class DjService {
 
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
         String trackUrl = resolveTrackUrl(normalizedName, settings.getActiveProvider());
+        // The queue shows what will play: the video's own title when there is one
+        String playedName = songEvaluationService.nameOfTrack(normalizedName, trackUrl, settings.getActiveProvider());
 
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
-                .songName(normalizedName)
+                .songName(playedName)
                 .style(DJ_PICK_STYLE)
                 .decision(DECISION_ACCEPTED)
                 .djComment(DJ_PICK_COMMENT)

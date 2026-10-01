@@ -46,8 +46,12 @@ public final class ViewAttributes {
     public static final String PARTY_LIMIT_REACHED = "partyLimitReached";
 
     // --- Index/Guest Attributes ---
-    public static final String PUBLIC_QUEUE = "publicQueue";
+    /** What plays now, the next guest songs and where the guest's own song waits ({@code GuestQueueService.GuestQueue}). */
+    public static final String GUEST_QUEUE = "guestQueue";
     public static final String ERROR_MESSAGE = "errorMessage";
+    /** The text of a request sent back to the form (a mood sent as a song), and the mode the form should then show. */
+    public static final String LAST_REQUEST = "lastRequest";
+    public static final String SUGGESTED_MODE = "suggestedMode";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";

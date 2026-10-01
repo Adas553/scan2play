@@ -144,6 +144,16 @@ public class DjPartySettingsController {
         String sanitized = (fallbackPlaylistUrl != null && !fallbackPlaylistUrl.isBlank())
                 ? fallbackPlaylistUrl.trim()
                 : null;
+        // A YouTube Mix cannot be read by the Data API: refused before anything is saved, so the party's playlist (and the track
+        // that plays from it) carries on, and nothing keeps trying to import it. X-Fallback-Saved: false tells the dashboard.
+        if (YouTubeUrls.isMix(YouTubeUrls.extractPlaylistId(sanitized))) {
+            log.info("Party [{}]: fallback playlist not saved — a YouTube Mix: {}", partyCode, sanitized);
+            return ResponseEntity.ok()
+                    .header("X-Fallback-Saved", "false")
+                    .header("X-Fallback-Import", "failed")
+                    .header("X-Fallback-Import-Reason", FallbackImportException.Reason.YOUTUBE_MIX.name())
+                    .build();
+        }
         PartySettingsEntity saved = partySettingsCommandService.updateSettings(partyCode,
                 s -> s.setFallbackPlaylistUrl(sanitized));
 

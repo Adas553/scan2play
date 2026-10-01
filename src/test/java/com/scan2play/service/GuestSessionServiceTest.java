@@ -96,6 +96,21 @@ class GuestSessionServiceTest {
         assertThat(service.tryAcquire(session, "OTHER", settings)).isEmpty();
     }
 
+    @Test
+    void theGuestsOwnRequests_areRemembered_perParty_andOnlyTheNewestOnes() {
+        assertThat(service.myRequestIds(session, PARTY_CODE)).isEmpty();
+
+        service.rememberRequest(session, PARTY_CODE, 7L);
+        service.rememberRequest(session, PARTY_CODE, null); // nothing saved: nothing remembered
+        service.rememberRequest(session, "OTHER", 8L);
+        assertThat(service.myRequestIds(session, PARTY_CODE)).containsExactly(7L);
+
+        for (long id = 100; id < 100 + GuestSessionService.MY_REQUESTS_KEPT; id++) {
+            service.rememberRequest(session, PARTY_CODE, id);
+        }
+        assertThat(service.myRequestIds(session, PARTY_CODE)).hasSize(GuestSessionService.MY_REQUESTS_KEPT).doesNotContain(7L);
+    }
+
     /**
      * The bug of review item 4.1: the limit was checked before and recorded after the 2–4 s evaluation, so requests sent in
      * parallel from one session all passed. Now only {@code requestLimit} of them do.

@@ -133,7 +133,7 @@
                 </form>
                 <!--/* What came of the import after Save (dashboard.js, showFallbackImportResult): the server answers ok / failed with a reason; the texts travel in data attributes */-->
                 <div id="fallbackImportStatus" class="small mt-2 d-none" role="status" aria-live="polite"
-                     th:attr="data-text-ok=#{dashboard.fallback.import.ok},data-text-noapikey=#{dashboard.fallback.import.noapikey},data-text-invalidplaylist=#{dashboard.fallback.import.invalidplaylist},data-text-apierror=#{dashboard.fallback.import.apierror},data-text-noplayabletracks=#{dashboard.fallback.import.noplayabletracks},data-text-unknown=#{dashboard.fallback.import.unknown}"></div>
+                     th:attr="data-text-ok=#{dashboard.fallback.import.ok},data-text-noapikey=#{dashboard.fallback.import.noapikey},data-text-invalidplaylist=#{dashboard.fallback.import.invalidplaylist},data-text-apierror=#{dashboard.fallback.import.apierror},data-text-noplayabletracks=#{dashboard.fallback.import.noplayabletracks},data-text-youtubemix=#{dashboard.fallback.import.youtubemix},data-text-unknown=#{dashboard.fallback.import.unknown}"></div>
                 <div class="form-check form-switch mt-2">
                     <input class="form-check-input" type="checkbox" role="switch"
                            id="fallbackShuffleToggle"
@@ -258,9 +258,9 @@
                    th:attr="data-playback-mode=${playbackMode},data-provider=${activeProvider}">
             <tr th:each="req : ${history}" th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl}">
                 <td class="text-secondary d-none d-md-table-cell" data-sort-value="time" th:attr="data-val=${req.requestedAt}" th:text="${#temporals.format(req.requestedAt, 'dd.MM.yyyy HH:mm:ss')}">12:00</td>
-                <td data-sort-value="song" th:attr="data-val=${req.songName}">
+                <td class="song-cell" data-sort-value="song" th:attr="data-val=${req.songName}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-                        <span class="fw-bold text-break" style="max-width: 100%;" th:text="${req.songName}">Song</span>
+                        <span class="fw-bold song-title" th:text="${req.songName}">Song</span>
                         <!--/* Track link: ▶ SPOTIFY (green) | ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL) */-->
                         <a th:if="${req.trackUrl != null}"
                            th:href="${req.trackUrl}"

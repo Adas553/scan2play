@@ -10,6 +10,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Service responsible for managing guest session state, specifically handling rate limiting for song requests.
@@ -51,5 +52,33 @@ public class GuestSessionService {
             session.setAttribute(sessionKey, requestTimestamps);
             return Optional.empty();
         }
+    }
+
+    /** How many of a guest's own requests the session remembers per party (the newest ones). */
+    static final int MY_REQUESTS_KEPT = 20;
+
+    /** Remembers that this guest sent the song request {@code requestId}, so the party page can say where it waits. */
+    public void rememberRequest(HttpSession session, String partyCode, Long requestId) {
+        if (requestId == null) {
+            return;
+        }
+        String key = "myRequests_" + partyCode;
+        synchronized (WebUtils.getSessionMutex(session)) {
+            @SuppressWarnings("unchecked")
+            List<Long> ids = (List<Long>) session.getAttribute(key);
+            List<Long> kept = ids == null ? new ArrayList<>() : new ArrayList<>(ids);
+            kept.add(requestId);
+            if (kept.size() > MY_REQUESTS_KEPT) {
+                kept = new ArrayList<>(kept.subList(kept.size() - MY_REQUESTS_KEPT, kept.size()));
+            }
+            session.setAttribute(key, kept);
+        }
+    }
+
+    /** The ids of the song requests this guest sent to the party (as far as the session remembers). */
+    public Set<Long> myRequestIds(HttpSession session, String partyCode) {
+        @SuppressWarnings("unchecked")
+        List<Long> ids = (List<Long>) session.getAttribute("myRequests_" + partyCode);
+        return ids == null ? Set.of() : Set.copyOf(ids);
     }
 }
