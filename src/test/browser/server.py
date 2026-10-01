@@ -69,6 +69,8 @@ def default_state():
         'guestLimits': 'none',
         # The X-Guest-Limits-Use header of every poll answer: '<busiest network>,<party>' — the requests used of each server limit
         'guestLimitsUse': '0,0',
+        # The X-Party-Active header of every poll answer: false = the DJ ended the party (in any window)
+        'partyActive': True,
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'queueVersion': 'v1',          # X-Queue-Version of GET fallback-queue
         'queueActionStatus': 204,      # the answer of POST fallback-queue/move|place|skip (409: the player took the track)
@@ -266,7 +268,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/updates':
             with stand.lock:
                 mode, queue = state['playbackMode'], list(state['queue'])
-                limits = {'X-Guest-Limits': state['guestLimits'], 'X-Guest-Limits-Use': state['guestLimitsUse']}
+                limits = {'X-Guest-Limits': state['guestLimits'], 'X-Guest-Limits-Use': state['guestLimitsUse'],
+                          'X-Party-Active': 'true' if state['partyActive'] else 'false'}
             # Like the real server: the ETag is a fingerprint of the guest queue only, so a change of the Auto-Pilot setting alone is
             # answered 304 — a window learns it from the lease answers. X-Guest-Limits(-Use) is on every answer, 304 too.
             etag = '"q-%08x"' % zlib.crc32(json.dumps(queue, sort_keys=True).encode('utf-8'))

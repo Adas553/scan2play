@@ -130,6 +130,28 @@ public class PlayerLeaseService {
         return !isLive(lease, clock.instant()) || lease.deviceId().equals(deviceId);
     }
 
+    /**
+     * A window asks for the next track (review item 2.4): it may when it holds the lease — and when nobody does it takes the lease
+     * in the same step, so two windows that ask before their first report (right after a restart of the server) cannot both get a
+     * track. Unlike {@link #report} it leaves the waiting command alone: that is for the holder's next report. A window without a
+     * valid id cannot hold a lease; it may ask only while nobody plays, as before.
+     */
+    public boolean claimToPlay(String partyCode, String deviceId) {
+        if (!isValidDeviceId(deviceId)) {
+            return mayPlay(partyCode, deviceId);
+        }
+        Instant now = clock.instant();
+        Lease result = leases.compute(partyCode, (code, current) -> {
+            if (isLive(current, now)) {
+                return current.deviceId().equals(deviceId) ? new Lease(deviceId, now, current.playing()) : current;
+            }
+            log.info("Party {}: player lease claimed by window {} asking for a track", partyCode, deviceId);
+            commands.remove(code);
+            return new Lease(deviceId, now, null);
+        });
+        return result.deviceId().equals(deviceId);
+    }
+
     /** The window is going away: give the lease up at once instead of after the timeout. Ignored unless it holds it. */
     public void release(String partyCode, String deviceId) {
         leases.computeIfPresent(partyCode, (code, current) -> {

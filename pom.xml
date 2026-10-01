@@ -134,32 +134,10 @@
 					</excludes>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.owasp</groupId>
-				<artifactId>dependency-check-maven</artifactId>
-				<version>10.0.3</version>
-			</plugin>
 		</plugins>
 	</build>
 
-	<repositories>
-		<repository>
-			<id>spring-milestones</id>
-			<name>Spring Milestones</name>
-			<url>https://repo.spring.io/milestone</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-		<repository>
-			<id>spring-snapshots</id>
-			<name>Spring Snapshots</name>
-			<url>https://repo.spring.io/snapshot</url>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-		</repository>
-	</repositories>
+	<!-- Everything comes from Maven Central: no milestone or snapshot repositories (review 6.4 — every dependency is a release). -->
 
 	<profiles>
 		<!-- The tests on a real PostgreSQL (*IT, base class PostgresIntegrationTest): mvnw verify -Pit. Each run creates and

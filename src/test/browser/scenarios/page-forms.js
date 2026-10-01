@@ -32,6 +32,27 @@
         }
     });
 
+    // The owner (2026-10-01): "End party" changed only the window it was pressed in; the phone kept showing the party open until a
+    // reload. Every answer of the queue poll now says whether the party is open (X-Party-Active), and every window follows it.
+    S2P.scenario({
+        name: 'party-closed-elsewhere',
+        title: 'the party ended (or resumed) in another window: this one shows the "closed" banner and hides "end party" within a poll — and back',
+        run: async function (t) {
+            const banner = document.getElementById('party-closed-banner');
+            const endForm = document.getElementById('end-party-form');
+            const shown = function (el) { return !el.classList.contains('d-none'); };
+            t.step('loaded open: no banner, "end party" shown', [shown(banner), shown(endForm)], [false, true]);
+
+            await t.stand.config({ partyActive: false });   // ended on the phone
+            await t.waitFor(function () { return shown(banner); }, 'the banner', 8000);
+            t.step('closed elsewhere: the banner, no "end party"', [shown(banner), shown(endForm)], [true, false]);
+
+            await t.stand.config({ partyActive: true });    // resumed on the phone
+            await t.waitFor(function () { return !shown(banner); }, 'the banner gone', 8000);
+            t.step('resumed elsewhere: back as it was', [shown(banner), shown(endForm)], [false, true]);
+        }
+    });
+
     S2P.scenario({
         name: 'account-buttons-ask-first',
         title: 'ending the party and logging out ask first; "cancel" sends nothing, "OK" ends the party',

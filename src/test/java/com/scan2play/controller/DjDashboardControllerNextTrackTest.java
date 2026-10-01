@@ -60,7 +60,7 @@ class DjDashboardControllerNextTrackTest {
     void setUp() {
         nextTrackService = mock(NextTrackService.class);
         playerLeaseService = mock(PlayerLeaseService.class);
-        when(playerLeaseService.mayPlay(any(), any())).thenReturn(true);
+        when(playerLeaseService.claimToPlay(any(), any())).thenReturn(true);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class),
@@ -131,13 +131,14 @@ class DjDashboardControllerNextTrackTest {
                         .principal(token).session(session))
                 .andExpect(status().isOk());
 
-        verify(playerLeaseService).mayPlay(PARTY, DEVICE);
+        // claimToPlay, not mayPlay: a free lease is taken by the window that asks (review 2.4)
+        verify(playerLeaseService).claimToPlay(PARTY, DEVICE);
     }
 
     @Test
     @DisplayName("409 Conflict and nothing handed out or marked played when another window holds the player lease")
     void shouldReturnConflict_whenAnotherWindowPlays() throws Exception {
-        when(playerLeaseService.mayPlay(PARTY, DEVICE)).thenReturn(false);
+        when(playerLeaseService.claimToPlay(PARTY, DEVICE)).thenReturn(false);
 
         mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).param("deviceId", DEVICE)
                         .principal(token).session(session))
@@ -150,7 +151,7 @@ class DjDashboardControllerNextTrackTest {
     @Test
     @DisplayName("a request without a window id is checked too — it counts as another window when a lease is live")
     void shouldCheckTheLease_evenWithoutADeviceId() throws Exception {
-        when(playerLeaseService.mayPlay(PARTY, null)).thenReturn(false);
+        when(playerLeaseService.claimToPlay(PARTY, null)).thenReturn(false);
 
         mockMvc.perform(post("/dj/dashboard/next-track").param("partyCode", PARTY).principal(token).session(session))
                 .andExpect(status().isConflict());

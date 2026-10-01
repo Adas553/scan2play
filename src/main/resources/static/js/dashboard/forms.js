@@ -3,7 +3,7 @@
  * DJ's windows — and the "copy" button of the party link.
  */
 import { EVENTS, emit, on } from './events.js';
-import { csrfHeaders, isYouTubeProvider } from './common.js';
+import { csrfHeaders, isYouTubeProvider, showPartyActive } from './common.js';
 import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue.js';
 
 // ==========================================================================
@@ -45,11 +45,7 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
         }).then(function(response) {
             // --- Party state toggle (end/start party) ---
             if (action.includes('/end-party') || action.includes('/start-party')) {
-                const isEnding = action.includes('/end-party');
-                const banner  = document.getElementById('party-closed-banner');
-                const endForm = document.getElementById('end-party-form');
-                if (banner)  banner.classList.toggle('d-none', !isEnding);
-                if (endForm) endForm.classList.toggle('d-none', isEnding);
+                showPartyActive(!action.includes('/end-party'));   // the other windows follow with their next poll
                 return; // no flash needed for these buttons
             }
 

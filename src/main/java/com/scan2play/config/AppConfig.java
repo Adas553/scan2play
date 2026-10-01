@@ -46,16 +46,16 @@ public class AppConfig {
      * </ul>
      */
     @Bean
-        public CacheManager cacheManager() {
-            SimpleCacheManager cacheManager = new SimpleCacheManager();
-            cacheManager.setCaches(List.of(
-                    buildCache("partySettings", Duration.ofHours(24), 500),
-                    buildCache("qr-codes", Duration.ofHours(24), 1000),
-                    buildCache("youtubeSearch", Duration.ofHours(24), 1000),
-                    buildCache("dashboardQueue", Duration.ofSeconds(3), 200)
-            ));
-            return cacheManager;
-        }
+    public CacheManager cacheManager() {
+        SimpleCacheManager cacheManager = new SimpleCacheManager();
+        cacheManager.setCaches(List.of(
+                buildCache("partySettings", Duration.ofHours(24), 500),
+                buildCache("qr-codes", Duration.ofHours(24), 1000),
+                buildCache("youtubeSearch", Duration.ofHours(24), 1000),
+                buildCache("dashboardQueue", Duration.ofSeconds(3), 200)
+        ));
+        return cacheManager;
+    }
 
     private CaffeineCache buildCache(String name, Duration ttl, int maxSize) {
         return new CaffeineCache(name, Caffeine.newBuilder()

@@ -81,6 +81,12 @@ public class DjDashboardController {
      */
     static final String GUEST_LIMITS_USE_HEADER = "X-Guest-Limits-Use";
 
+    /**
+     * On every answer of the queue poll, 304 too: {@code true} while the party is open, {@code false} once the DJ ended it — in any
+     * window, so a second window (the DJ's phone) shows the "party closed" banner without a reload.
+     */
+    static final String PARTY_ACTIVE_HEADER = "X-Party-Active";
+
     /** The history shows this many requests at first, and this many more each time the DJ asks for more. */
     static final int HISTORY_PAGE_SIZE = 50;
 
@@ -256,6 +262,7 @@ public class DjDashboardController {
         response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode, settings));
         response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
                 + "," + guestRequestLimiter.partyRequestsUsed(partyCode));
+        response.setHeader(PARTY_ACTIVE_HEADER, String.valueOf(settings.isActive()));
 
         // --- Lightweight fingerprint check (avoids full query + render) ---
         String fingerprint = djService.getQueueFingerprint(partyCode);
@@ -314,7 +321,7 @@ public class DjDashboardController {
                                                        OAuth2AuthenticationToken authentication,
                                                        HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
-        if (!playerLeaseService.mayPlay(partyCode, deviceId)) {
+        if (!playerLeaseService.claimToPlay(partyCode, deviceId)) {
             return ResponseEntity.status(409).build();
         }
         return nextTrackService.findNextTrack(partyCode, parseExcludeIds(exclude))

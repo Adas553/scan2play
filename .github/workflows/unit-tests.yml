@@ -24,6 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # .github/copilot-instructions.md is AGENTS.md for GitHub Copilot, word for word after its two-line header and a blank line
+      # (review 7.3: the copy had drifted). Both are committed with CRLF, hence tr.
+      - name: The Copilot instructions are AGENTS.md
+        run: diff <(tail -n +4 .github/copilot-instructions.md | tr -d '\r') <(tr -d '\r' < AGENTS.md)
+        shell: bash
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

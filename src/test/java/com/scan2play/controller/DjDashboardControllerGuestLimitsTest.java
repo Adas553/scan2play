@@ -107,6 +107,19 @@ class DjDashboardControllerGuestLimitsTest {
         assertThat(poll(false).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("24,5");
     }
 
+    /** The party ended in another window (the DJ's phone): every window learns it from its next poll, a 304 too. */
+    @Test
+    void whetherThePartyIsOpen_isOnEveryAnswer_a304Too() {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).activeProvider(MusicProviderType.YOUTUBE)
+                .active(true).build();
+        when(settingsService.getSettings(PARTY)).thenReturn(party);
+        assertThat(poll(true).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("true");
+
+        party.setActive(false);
+        assertThat(poll(true).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("false");
+        assertThat(poll(false).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("false");
+    }
+
     @Test
     void spentYouTubeSearches_doNotConcernASpotifyParty() {
         givenProvider(MusicProviderType.SPOTIFY);

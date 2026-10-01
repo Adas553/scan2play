@@ -408,6 +408,31 @@ class PlayerLeaseServiceTest {
     }
 
     @Test
+    @DisplayName("claimToPlay (review 2.4): a window that asks for a track while nobody plays takes the lease — a second window asking right after is refused")
+    void shouldTakeAFreeLease_whenAWindowAsksForATrack() {
+        assertThat(service.claimToPlay(PARTY, COMPUTER)).isTrue();
+        assertThat(service.claimToPlay(PARTY, PHONE)).as("the second window, before its first report").isFalse();
+        assertThat(service.report(PARTY, COMPUTER, WATCH).holder()).as("the first one holds the lease now").isTrue();
+        assertThat(service.claimToPlay(PARTY, null)).as("no id: another window").isFalse();
+
+        clock.advance(PlayerLeaseService.LEASE_TTL.plusSeconds(1));
+        assertThat(service.claimToPlay(PARTY, PHONE)).as("an expired lease is free again").isTrue();
+    }
+
+    @Test
+    @DisplayName("claimToPlay leaves the command waiting for the holder's next report, and renews the holder's lease")
+    void shouldKeepTheCommand_whenTheHolderAsksForATrack() {
+        service.report(PARTY, COMPUTER, CLAIM);
+        service.sendCommand(PARTY, PlayerCommand.NEXT);
+        clock.advance(Duration.ofSeconds(8));
+
+        assertThat(service.claimToPlay(PARTY, COMPUTER)).isTrue();
+        clock.advance(Duration.ofSeconds(8));   // 16 s since the report, 8 s since the ask: still live
+
+        assertThat(service.report(PARTY, COMPUTER, WATCH).command()).isEqualTo(PlayerCommand.NEXT);
+    }
+
+    @Test
     @DisplayName("release: the holder gives the lease up at once, so the next window that claims gets it")
     void shouldFreeTheLease_whenTheHolderReleasesIt() {
         service.report(PARTY, COMPUTER, CLAIM);

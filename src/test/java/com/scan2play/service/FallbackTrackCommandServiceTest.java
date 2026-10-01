@@ -574,6 +574,16 @@ class FallbackTrackCommandServiceTest {
         assertThat(FallbackTrackCommandService.queueLockKey("ABC12")).isEqualTo(FallbackTrackCommandService.queueLockKey("ABC12"));
     }
 
+    @Test
+    @DisplayName("review 1.7: two codes whose 32-bit hashes are equal still get two keys — a party code fits the key whole")
+    void codesWithTheSameHash_getTwoKeys() {
+        assertThat(("fallback-queue:" + "AP000").hashCode()).as("the old key: the same").isEqualTo(("fallback-queue:" + "B1000").hashCode());
+
+        assertThat(FallbackTrackCommandService.queueLockKey("AP000")).isNotEqualTo(FallbackTrackCommandService.queueLockKey("B1000"));
+        assertThat(FallbackTrackCommandService.queueLockKey("ZZZZZ") & 0xFFFF_FFFFL).isEqualTo(Long.parseLong("ZZZZZ", 36));
+        assertThat(FallbackTrackCommandService.queueLockKey("not a code")).isNotZero();
+    }
+
     // ---- placeTrack (the DJ drags a track to a new place) ----
 
     private void givenAnyTrackIsQueued(long... ids) {

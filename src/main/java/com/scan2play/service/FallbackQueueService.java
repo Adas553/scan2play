@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.scan2play.repository.FallbackTrackRepository.UPCOMING_ORDER;
 
@@ -88,12 +89,9 @@ public class FallbackQueueService {
      *         end); false if it cannot be moved — unknown, not this party's, or already taken by the player
      */
     public boolean moveTrack(String partyCode, Long trackId, MoveDirection direction) {
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String playlistId = YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl());
-        if (playlistId == null) {
-            return false;
-        }
-        return fallbackTrackCommandService.moveTrack(partyCode, playlistId, trackId, direction);
+        return currentPlaylist(partyCode)
+                .map(playlist -> fallbackTrackCommandService.moveTrack(partyCode, playlist.id(), trackId, direction))
+                .orElse(false);
     }
 
     /**
@@ -104,12 +102,9 @@ public class FallbackQueueService {
      *         party's current playlist
      */
     public boolean placeTrack(String partyCode, Long trackId, Long beforeTrackId) {
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String playlistId = YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl());
-        if (playlistId == null) {
-            return false;
-        }
-        return fallbackTrackCommandService.placeTrack(partyCode, playlistId, trackId, beforeTrackId);
+        return currentPlaylist(partyCode)
+                .map(playlist -> fallbackTrackCommandService.placeTrack(partyCode, playlist.id(), trackId, beforeTrackId))
+                .orElse(false);
     }
 
     /**
@@ -119,12 +114,20 @@ public class FallbackQueueService {
      *         skipped — unknown, not this party's, or already taken by the player
      */
     public boolean skipTrack(String partyCode, Long trackId) {
+        return currentPlaylist(partyCode)
+                .map(playlist -> fallbackTrackCommandService.skipTrack(partyCode, playlist.id(), trackId, playlist.shuffle()))
+                .orElse(false);
+    }
+
+    /** The party's fallback playlist (its id as the queue knows it) and the shuffle setting. */
+    private record CurrentPlaylist(String id, boolean shuffle) {
+    }
+
+    /** The playlist the DJ's changes to the queue apply to; empty when the party has none (review item 2.6: once four lines in each method). */
+    private Optional<CurrentPlaylist> currentPlaylist(String partyCode) {
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String playlistId = YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl());
-        if (playlistId == null) {
-            return false;
-        }
-        return fallbackTrackCommandService.skipTrack(partyCode, playlistId, trackId, settings.isFallbackShuffle());
+        return Optional.ofNullable(YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl()))
+                .map(id -> new CurrentPlaylist(id, settings.isFallbackShuffle()));
     }
 
     private static FallbackQueueView.Track toTrack(FallbackTrackEntity entity) {

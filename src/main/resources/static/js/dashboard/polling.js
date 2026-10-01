@@ -6,7 +6,7 @@
  * When the rows are new the player is told (EVENTS.GUEST_QUEUE_UPDATED): a guest song may be waiting.
  */
 import { EVENTS, emit } from './events.js';
-import { csrfHeaders, partyCode } from './common.js';
+import { csrfHeaders, partyCode, showPartyActive } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 
 let currentETag = null;
@@ -52,7 +52,8 @@ async function refreshTable() {
             headers['If-None-Match'] = currentETag;
         }
 
-        const response = await fetch('/dj/dashboard/updates?partyCode=' + party, {
+        const sentAt = Date.now();
+        const response = await fetch('/dj/dashboard/updates?partyCode=' + encodeURIComponent(party), {
             method: 'GET',
             headers: headers
         });
@@ -60,6 +61,9 @@ async function refreshTable() {
         // Every answer, 304 too, says which server limit stops guest songs now, and how much of each is used
         applyGuestLimits(response.headers.get('X-Guest-Limits'));
         applyGuestLimitsUse(response.headers.get('X-Guest-Limits-Use'));
+        // …and whether the party is open: it may have been ended or resumed in another window
+        const partyActive = response.headers.get('X-Party-Active');
+        if (partyActive === 'true' || partyActive === 'false') showPartyActive(partyActive === 'true', sentAt);
 
         // 304 Not Modified — queue unchanged, skip DOM replacement
         if (response.status === 304) {

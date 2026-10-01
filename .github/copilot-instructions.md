@@ -93,7 +93,7 @@ Details and the production first-deploy checklist: `PROJECT_CONTEXT.md`, Section
 ## Tests
 
 Unit tests are in `src/test/java` (`mvnw test`; the one `@SpringBootTest`-style test that needs a database is skipped unless asked
-for). The browser code (`youtube-autopilot.js`, `dashboard.js`) has **browser tests** in `src/test/browser`: the real scripts on the
+for). The browser code (`youtube-autopilot.js`, the modules of `js/dashboard/`) has **browser tests** in `src/test/browser`: the real scripts on the
 real rendered dashboard in a headless Chrome — `python src/test/browser/run.py` (guide: `src/test/browser/README.md`; it works in a
 copy of the repo, so it never runs Maven inside it). When you change those scripts or the dashboard template, run them, and give a
 change of behaviour a scenario. SQL that changes the queue needs a throw-away PostgreSQL database — see `CLAUDE.md`.

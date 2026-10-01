@@ -66,9 +66,21 @@ public class FallbackTrackCommandService {
         fallbackTrackRepository.lockQueue(queueLockKey(partyCode));
     }
 
-    /** The advisory-lock key of a party's queue (the prefix keeps it apart from other uses of the same lock space). */
+    /** The upper 32 bits of every queue's lock key: "S2PQ", apart from any other use of the advisory-lock space. */
+    private static final long QUEUE_LOCK_SPACE = 0x5332_5051L << 32;
+    private static final int PARTY_CODE_LENGTH = 5;
+
+    /**
+     * The advisory-lock key of a party's queue. A party code (5 characters of [A-Z0-9], {@code CodeGenerator}) read as a number in
+     * base 36 is below 36⁵ ≈ 60 million, so it fits the lower 32 bits whole: two parties never share a key (review item 1.7 —
+     * the 32-bit {@code hashCode} used before could make two parties wait for each other). Any other string falls back to its hash.
+     */
     static long queueLockKey(String partyCode) {
-        return ("fallback-queue:" + partyCode).hashCode();
+        if (partyCode != null && partyCode.length() == PARTY_CODE_LENGTH && partyCode.chars().allMatch(
+                c -> (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) {
+            return QUEUE_LOCK_SPACE | Long.parseLong(partyCode, 36);
+        }
+        return QUEUE_LOCK_SPACE | (("fallback-queue:" + partyCode).hashCode() & 0xFFFF_FFFFL);
     }
 
     /**
