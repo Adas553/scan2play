@@ -14,7 +14,9 @@
 **Scan2Play** is an AI-powered music request and virtual DJ platform for events. Guests scan a QR code and send song requests
 from a phone; Google Gemini decides whether each one fits the party's vibe. Accepted songs play on the DJ's side: through the
 Spotify API (server side) or in the YouTube IFrame Player embedded in the DJ's dashboard. When no guest song waits, a YouTube party
-plays the DJ's background ("fallback") playlist, served track by track by the server.
+plays the DJ's background ("fallback") playlist, served track by track by the server. A **requests-only** party (`REQUESTS_ONLY`, for
+DJs who play from their own software — VirtualDJ, Serato, rekordbox) has no player: Scan2Play collects and filters the requests, and
+the DJ marks each one played or skips it.
 
 **Production URL:** `https://www.scan2play.com.pl` (Railway, behind Cloudflare; paused at the moment — `main` is not live).
 
@@ -99,7 +101,7 @@ deleted every minute.
 
 ### 4.2 Enums
 
-`MusicProviderType` SPOTIFY / YOUTUBE · `PlaybackMode` MANUAL / AUTO · `RequestMode` SONG / MOOD · `FallbackTrackStatus`
+`MusicProviderType` SPOTIFY / YOUTUBE / REQUESTS_ONLY (the kind of party) · `PlaybackMode` MANUAL / AUTO · `RequestMode` SONG / MOOD · `FallbackTrackStatus`
 QUEUED / PLAYED / CANCELLED / SKIPPED · `PlayerLeaseMode` CLAIM / WATCH / TAKE_OVER · `PlayerCommand` NEXT / PREVIOUS /
 PREVIOUS_TRACK / RESTART / PAUSE / RESUME · `MoveDirection` UP / DOWN / TOP · `HistoryFilter` all / guest / background / played /
 rejected · `VibeType` ANY and 13 genres.
@@ -116,8 +118,20 @@ rejected · `VibeType` ANY and 13 genres.
 
 ### 5.1 DJ Flow
 
-Landing page `/` → "Start with Spotify" (`/oauth2/authorization/spotify`) or "with YouTube" (`/oauth2/authorization/google`) →
-`/dj/dashboard`; the party is created on the first login with the provider of that login. On the dashboard the DJ can: see the
+Landing page `/` → three tiles: "with YouTube" (`/start/youtube`), "collect guest requests" — the requests-only party —
+(`/start/requests`), both then Google's login, and "with Spotify" (`/oauth2/authorization/spotify`) → `/dj/dashboard`. `/start/{kind}`
+keeps the chosen kind in the session (it survives the login); `DjSessionHelper.getPartySettings` takes it once: a new DJ's party is
+created of that kind, and a DJ who has a party gets the same party (code, QR) switched between YouTube and requests-only (requests-only
+sets Auto-Pilot off). Without a choice the party is created with the provider of the login. A requests-only dashboard shows the
+guest queue with "Mark as played", "Skip" (`POST /dj/dashboard/dismiss`: the request leaves as rejected with the DJ's note) and
+"🔍 Preview" (a link to YouTube's search results — `RequestsOnlyMusicProvider`, no API call); no player, Auto-Pilot, background
+playlist or DJ pick, and neither the guest page nor the party's pages show the YouTube badge or the footer's YouTube API line.
+When the AI cannot be asked (an error, a timeout), a requests-only party passes the request on to the DJ unchecked — accepted, the
+guest's words, the note `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE" — while any other party
+refuses it (an accepted song could play without anyone looking at it). A requests-only party takes **songs only**: the guest page has
+no song / mood tiles, the server evaluates every request as a song, and a request the AI reads as a mood goes back to the form with
+`guest.error.song_only`. Its dashboard sends the forms in the background, as a YouTube party's does; a song played or skipped
+leaves the list at once. On the dashboard the DJ can: see the
 guest queue (polled every 3 s; sort, search), set the vibe and the guest limits, switch Auto-Pilot, add a DJ pick (YouTube; the AI
 only normalises the name), set the background playlist (YouTube) and see / reorder / skip its "up next" list, play / pause / skip
 / go back (the player controls), see the history (one timeline of what played and was rejected), print the QR code
@@ -143,9 +157,11 @@ request the AI reads as a mood in the song mode is not saved: the guest is back 
 decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else the guest's pick from `VibeType`, else `ANY`.
 
 **Limits** — each counted **before** the AI is asked:
-1. the guest's own: the DJ's `requestLimit` per `cooldownMinutes`, counted by the session's id in memory (`GuestSessionService.tryAcquire`,
-   one atomic `compute` — not in the session: with the sessions in the database every request works on its own copy, so parallel
-   requests could not see each other's count there) — `guest.error.rate_limit`;
+1. the guest's own: up to the DJ's `requestLimit` requests, then a wait of `cooldownMinutes` **from the last of them**, after which the
+   whole limit is back; counted by the session's id in memory (`GuestSessionService.tryAcquire`, one atomic `compute` — not in the
+   session: with the sessions in the database every request works on its own copy, so parallel requests could not see each other's
+   count there) — `guest.error.rate_limit`. A request that came to nothing gives its place back (`giveBack`: a mood sent back to
+   the form, the AI not answering — `DjResponse.KIND_AI_UNAVAILABLE`);
 2. client IP + party: `guest.limit.per-ip-party` (30) per `guest.limit.per-ip-window-minutes` (10) — loose, a venue's Wi-Fi is one
    address — `guest.error.too_many_requests`;
 3. party: `guest.limit.per-party-daily` (300) per 24 h — `guest.error.party_daily_limit`.
@@ -239,7 +255,7 @@ watch URL or `youtu.be` link (a single video, `V:<id>`), a raw playlist or video
 
 **Testing** — browser tests in `src/test/browser` (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the
 real rendered dashboard (`DashboardPageRenderTest` writes it) in a headless Chrome, with a fake YouTube player and a Python stand-in
-server that scenarios configure (or that replays a fixture of real answers recorded by `PlayLogFixtureRecorderTest`). 67 scenarios;
+server that scenarios configure (or that replays a fixture of real answers recorded by `PlayLogFixtureRecorderTest`). 71 scenarios;
 GitHub runs them (`browser-tests.yml`). The stand-in sends the real CSP **enforced** and every scenario fails on a violation; the guest
 page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest` write them) have a scenario each for that. They do **not** cover
 the real YouTube player (sound, autoplay policy), two real devices, how a page looks, and the guest's behaviour beyond the CSP. Gotchas of the real player: it needs a real click first, its methods exist only after `onReady`,
@@ -272,7 +288,8 @@ many videos have embedding disabled (error 150).
 | Class | Purpose |
 |-------|---------|
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`, prompts per mode and language) → track search → the video's title as the name → save → Spotify auto-queue; DJ pick name normalisation |
-| `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played (`markPlayed`), push to Spotify, DJ picks, the next playable guest song |
+| `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played (`markPlayed`), skip (`dismissSong`), push to Spotify, DJ picks, the next playable guest song |
+| `RequestsOnlyMusicProvider` | the `MusicProvider` of a requests-only party: a link to YouTube's search results, no queue |
 | `NextTrackService` | "what plays next" (Section 5.4) |
 | `FallbackPlaylistService` | imports the background playlist (API first, the database only after a complete result) |
 | `FallbackTrackCommandService` | every write of the background queue — replace, cancel, shuffle, move, place, skip, `takeNextTrack`, the nightly purge — each under the party's advisory lock (Section 14) |
@@ -310,7 +327,7 @@ page (`DashboardPageRenderTest.assertNothingInline`).
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms, Auto-Pilot switch, `data-auto-submit`), `tabs.js`, `polling.js` (the queue every 3 s and its headers), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms at a YouTube or a requests-only party — `submitsInPlace`, `<body data-party-kind>` —, Auto-Pilot switch, `data-auto-submit`; played / skipped / picked → `s2p:guest-queue-changed`), `tabs.js` (the history in place, every party), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed`), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/youtube-autopilot.js` | the player (Section 5.4), an ES module; its only global is `onYouTubeIframeAPIReady` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
@@ -365,7 +382,7 @@ stays in the queue with a note. Spotify's API allows only a few users for this a
 
 ## 8. Security Model
 
-Public: `/`, `/p/**`, `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**`, `/images/**`, `/error`,
+Public: `/`, `/start/**`, `/p/**`, `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**`, `/images/**`, `/error`,
 `POST /csp-report`. Everything else needs the DJ's login; `/dj/**` validates the party's ownership (`DjSessionHelper.validateOwnership`
 — IDOR). CSRF on (tokens in `<meta>` for AJAX, `_csrf` in the body of the release beacon; `/csp-report` is exempt). Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; titles from YouTube / iTunes are escaped.
@@ -450,10 +467,11 @@ Never set it to `update`: Hibernate would change the schema behind Flyway's back
 | V10 | `youtube_search_budget` |
 | V11 | `spring_session`, `spring_session_attributes` (Spring Session JDBC's schema, word for word) |
 | V12 | every `timestamp` → `timestamptz`; the old values read in the session's zone = the JVM's that wrote them (Polish time locally, UTC on Railway) |
+| V13 | `party_settings.active_provider` may be `REQUESTS_ONLY` (the check constraint) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub.
 
-**First production deploy checklist** (the next deploy applies V2..V12 at once): (1) back up the database; (2) dump the production
+**First production deploy checklist** (the next deploy applies V2..V13 at once): (1) back up the database; (2) dump the production
 schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or Hibernate's
 validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
 What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
@@ -489,6 +507,7 @@ GuestQueueService          → DjService, PlayHistoryService
 | Method | Path | Handler / notes |
 |--------|------|-----------------|
 | GET | `/` | `HomeController.home` |
+| GET | `/start/{kind}` | `youtube` / `requests`: the kind of party kept in the session → Google's login (anything else → `/`) |
 | GET | `/p/{partyCode}` | the guest's page (`party_ended` when closed) |
 | GET | `/p/{partyCode}/queue` | the guest's list alone (empty when closed, 404 for an unknown party) |
 | POST | `/p/{partyCode}/request` | a request: `songName`, `style`, `requestMode` = SONG / MOOD |
@@ -507,6 +526,7 @@ GuestQueueService          → DjService, PlayHistoryService
 | POST | `/dj/dashboard/player-command` | `command` → 204, 409 when nobody plays |
 | GET | `/dj/dashboard/recent-tracks` | the 30 newest playable entries of the timeline |
 | POST | `/dj/dashboard/play` | a guest song confirmed played |
+| POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ (requests-only dashboard) → rejected, the DJ's note |
 | GET | `/dj/dashboard/fallback-queue` | the "up next" fragment; `X-Queue-Version` |
 | POST | `/dj/dashboard/fallback-queue/move`, `/place`, `/skip` | 204, 409 when the track is no longer queued in the current playlist |
 | POST | `/dj/dashboard/fallback-playlist` | save + import (headers, Section 5.4) |
@@ -540,17 +560,17 @@ GuestQueueService          → DjService, PlayHistoryService
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 547, 1 skipped (the fixture recorder,
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 574, 1 skipped (the fixture recorder,
   `PlayLogFixtureRecorderTest`, runs only with `S2P_FIXTURE_OUT` and a throw-away `s2p_*` database). Pure Mockito, plus template
   rendering with the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest`
   with the real security chain).
-- **Database tests** (`mvnw verify -Pit`): 27 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 28 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `FallbackQueueIT`, `FallbackQueueConcurrencyIT` (fails
   with "deadlock detected" without the advisory lock), `SongRequestRepositoryIT`, `YouTubeSearchBudgetIT`, `ApplicationSetupIT`, `SessionStoreIT` (what the app keeps in a session survives
   the database and another repository; the cleanup of expired sessions), `TimestampMigrationIT` (its own database: V11, rows the old
   way, then V12 — the same moments; red when the old values are read as UTC).
   New queue SQL gets a test there.
-- **Browser tests**: 67 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
+- **Browser tests**: 71 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
