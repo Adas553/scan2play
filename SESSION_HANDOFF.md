@@ -10,8 +10,15 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   of the queue — tried by the owner). Check with `git status -sb` and `git log --oneline -5`.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs`): Unit tests
   and Browser tests green for every push up to `d0ca3c7` (checked 2026-10-01); look at the runs of the next push.
-- **COMMITTED and PUSHED on the owner's "ok, commituj i pushuj" (2026-10-01; code, then the docs)** — the session of 2026-10-01 (below). 537 unit tests and 24 database tests green in a
+- **COMMITTED and PUSHED on the owner's "ok, commituj i pushuj" (2026-10-01; code, then the docs)** — the session of 2026-10-01 (below). 513 unit tests and 24 database tests green in a
   scratch copy; JS and templates untouched, so the 47 browser scenarios were not run again.
+
+**The push of `cfef47e` was red twice, fixed in the commit after it** (the owner pasted the two logs — GitHub shows a log only
+when signed in): Unit tests — `-Dtest=!…` replaces surefire's name patterns, so the 24 `*IT` ran there without a database (now
+`!*IT` in the command, and `PostgresIntegrationTest` skips itself outside failsafe); Database tests — the plan test of `MigrationIT`
+ran after other tests had filled the table and the planner chose another index plus a one-row sort (now it asks with
+`enable_sort = off`, green in both class orders, still red without V9). Both workflows also annotate failed tests now
+(`.github/scripts/annotate-test-failures.py`): annotations are public, logs are not.
 
 ## The session of 2026-10-01 (committed and pushed)
 

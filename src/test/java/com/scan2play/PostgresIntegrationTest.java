@@ -1,5 +1,9 @@
 package com.scan2play;
 
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -23,7 +27,11 @@ import java.util.concurrent.ThreadLocalRandom;
  * tests keep apart by using their own party codes.
  * <p>
  * The external services get dummy credentials: nothing here calls Gemini, Spotify, Google login or the YouTube API.
+ * <p>
+ * They run only under failsafe, which sets {@code scan2play.it} (profile {@code it}): {@code mvnw test -Dtest=...} replaces
+ * surefire's own name patterns and so picks up {@code *IT} classes too — without a database they would fail; here they are skipped.
  */
+@ExtendWith(PostgresIntegrationTest.OnlyUnderFailsafe.class)   // @ExtendWith is inherited; @EnabledIfSystemProperty is not
 @SpringBootTest(properties = {
         "GOOGLE_AI_API_KEY=it-dummy",
         "SPOTIFY_CLIENT_ID=it-dummy",
@@ -81,6 +89,16 @@ public abstract class PostgresIntegrationTest {
             code.append(letters.charAt(ThreadLocalRandom.current().nextInt(letters.length())));
         }
         return code.toString();
+    }
+
+    /** Skips the class unless failsafe runs it (the property {@code scan2play.it} of the profile {@code it}). */
+    static class OnlyUnderFailsafe implements ExecutionCondition {
+        @Override
+        public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+            return "true".equals(System.getProperty("scan2play.it"))
+                    ? ConditionEvaluationResult.enabled("run by failsafe")
+                    : ConditionEvaluationResult.disabled("needs PostgreSQL: mvnw verify -Pit");
+        }
     }
 
     private static String env(String name, String fallback) {

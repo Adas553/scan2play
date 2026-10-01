@@ -179,6 +179,12 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-failsafe-plugin</artifactId>
+						<configuration>
+							<systemPropertyVariables>
+								<!-- PostgresIntegrationTest runs only with it (a surefire run skips the *IT classes) -->
+								<scan2play.it>true</scan2play.it>
+							</systemPropertyVariables>
+						</configuration>
 						<executions>
 							<execution>
 								<goals>

@@ -56,7 +56,11 @@ class MigrationIT extends PostgresIntegrationTest {
         List<String> plan = jdbc.execute((Connection connection) -> {
             connection.setAutoCommit(false);
             try (Statement statement = connection.createStatement()) {
-                statement.execute("SET LOCAL enable_seqscan = off");   // the table is empty; ask what the planner can do
+                // Ask what the planner CAN do, not what it picks for the rows other tests left (on GitHub it chose another index
+                // and a sort of one row): without a sequential scan and a sort, only an index in play order answers the query.
+                // Before V9 there was none, so the plan kept its Sort.
+                statement.execute("SET LOCAL enable_seqscan = off");
+                statement.execute("SET LOCAL enable_sort = off");
                 ResultSet rows = statement.executeQuery("EXPLAIN SELECT * FROM fallback_track WHERE party_code = 'ABCDE' "
                         + "AND playlist_id = 'PL1' AND status = 'QUEUED' ORDER BY play_order, playlist_position LIMIT 1");
                 List<String> lines = new ArrayList<>();

@@ -467,5 +467,6 @@ limitów gości nadal w pamięci.)*
 | — | Licznik wyszukiwań YouTube w bazie (`V10`, wiersz na dobę Google, atomowy `INSERT … ON CONFLICT … RETURNING`): restart nie oddaje budżetu, kilka instancji go nie przekroczy. | `YouTubeSearchBudget`, `V10__youtube_search_budget.sql` | `YouTubeSearchBudgetIT` 3 (restart, 40 równoległych prób na 3 instancjach = dokładnie budżet) |
 | 7.1 | `SESSION_HANDOFF.md` skrócony do stanu bieżącego (~90 linii); całość przeniesiona słowo w słowo do `docs/history/session-handoff-2026-09.md`. `PROJECT_CONTEXT.md` — osobno, później. | dokumenty | — |
 
-Testy jednostkowe: **537** (536 uruchomionych, 1 pominięty), `BUILD SUCCESS` w kopii repo; IT: **24**, wszystkie zielone na lokalnym
+Testy jednostkowe: **513** (512 uruchomionych, 1 pominięty; pierwsze liczenie, 537, obejmowało 24 IT — `-Dtest` wciągał je do
+surefire, co na GitHubie bez bazy dało czerwony workflow Unit tests; teraz IT poza failsafe są pomijane), `BUILD SUCCESS` w kopii repo; IT: **24**, wszystkie zielone na lokalnym
 PostgreSQL 18. JS i szablony bez zmian — scenariusze przeglądarkowe nie były uruchamiane ponownie.

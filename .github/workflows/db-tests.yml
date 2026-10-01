@@ -54,6 +54,11 @@ jobs:
       - name: Database tests
         run: sh mvnw -B -ntp verify -Pit
 
+      # The log needs a GitHub login; the annotations are public — the failed tests and their messages, readable by anyone.
+      - name: Name the failed tests
+        if: failure()
+        run: python3 .github/scripts/annotate-test-failures.py target/failsafe-reports
+
       - name: Keep the reports of a failed run
         if: failure()
         uses: actions/upload-artifact@v7

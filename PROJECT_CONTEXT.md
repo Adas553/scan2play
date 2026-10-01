@@ -1469,7 +1469,8 @@ PartySettingsQueryService
   40 concurrent takes on three instances take exactly the budget), `ApplicationSetupIT` (the bounded executor). On GitHub:
   `.github/workflows/db-tests.yml` with a `postgres:18` service (Railway's database is `postgres-ssl:18`). The ITs of 1.5, 1.4, 2.1
   were red before their change and green after.
-- **Total: 537 unit tests, 536 run and 1 skipped** after the review items of 2026-10-01 (1.2 `PartySettingsQueryServiceTest` 4,
+- **Total: 513 unit tests, 512 run and 1 skipped** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`; a first count of 537
+  included the 24 ITs, which `-Dtest` had pulled into surefire — they are now skipped outside failsafe) after the review items of 2026-10-01 (1.2 `PartySettingsQueryServiceTest` 4,
   `PartySettingsCommandServiceTest` +1; 4.5 `YouTubeMusicProviderTest` +2; 1.4 / 2.1 the mocked tests of the import and of the
   version rewritten for the new queries). **507, 506 run and 1 skipped** with the guest's view of the queue (`GuestQueueServiceTest` 5, `GuestPageRenderTest` +3 —
   also the fragment alone —, `GuestControllerTest` +3, `GuestSessionServiceTest` +1); **495** with a YouTube Mix refused (`DjPartySettingsControllerFallbackTest` +1,

@@ -31,8 +31,14 @@ jobs:
           cache: maven
 
       # mvnw is committed without the executable bit, hence sh; the single quotes keep the shell away from the !
+      # -Dtest replaces surefire's own patterns, so the database tests (*IT, db-tests.yml) are excluded by name too.
       - name: Unit tests
-        run: sh mvnw -B -ntp test '-Dtest=!Scan2playApplicationTests'
+        run: sh mvnw -B -ntp test '-Dtest=!Scan2playApplicationTests,!*IT'
+
+      # The log needs a GitHub login; the annotations are public — the failed tests and their messages, readable by anyone.
+      - name: Name the failed tests
+        if: failure()
+        run: python3 .github/scripts/annotate-test-failures.py target/surefire-reports
 
       # Which test failed and why, for a failure that cannot be reproduced at once.
       - name: Keep the reports of a failed run
