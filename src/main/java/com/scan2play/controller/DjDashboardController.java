@@ -203,6 +203,7 @@ public class DjDashboardController {
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
+        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         addHistory(model, partyCode, limit, filter);
 
         return "history";

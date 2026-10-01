@@ -34,7 +34,9 @@ public class GuestSessionService {
             .build();
 
     /**
-     * Counts one song request against the guest's limit ({@code requestLimit} per {@code cooldownMinutes}), if it is under it.
+     * Counts one song request against the guest's limit, if it is under it: up to {@code requestLimit} requests, then a wait of
+     * {@code cooldownMinutes} from the last of them, after which the whole limit is there again (what the dashboard's fields say:
+     * "max requests per guest", "cooldown").
      * <p>
      * The check and the record are one atomic step ({@code compute} of the map), and the request is counted <b>before</b> the
      * evaluation (2–4 s of AI): otherwise parallel requests of one session would all pass the check while the first is still
@@ -47,21 +49,36 @@ public class GuestSessionService {
      */
     public Optional<Long> tryAcquire(HttpSession session, String partyCode, PartySettingsEntity settings) {
         Instant now = Instant.now();
-        Instant cutoffTime = now.minus(settings.getCooldownMinutes(), ChronoUnit.MINUTES);
         Long[] wait = {null};
         requestTimes.asMap().compute(key(session.getId(), partyCode), (key, times) -> {
             List<Instant> kept = times == null ? new ArrayList<>() : new ArrayList<>(times);
-            kept.removeIf(t -> t.isBefore(cutoffTime));
+            // The wait runs from the LAST request: once the cooldown has passed since it, the guest has the whole limit again
+            if (!kept.isEmpty() && !kept.getLast().plus(settings.getCooldownMinutes(), ChronoUnit.MINUTES).isAfter(now)) {
+                kept.clear();
+            }
             if (!kept.isEmpty() && kept.size() >= settings.getRequestLimit()) {
-                Instant oldestRequest = kept.getFirst();
                 wait[0] = Math.max(0, ChronoUnit.SECONDS.between(now,
-                        oldestRequest.plus(settings.getCooldownMinutes(), ChronoUnit.MINUTES)));
+                        kept.getLast().plus(settings.getCooldownMinutes(), ChronoUnit.MINUTES)));
                 return kept;
             }
             kept.add(now);
             return kept;
         });
         return Optional.ofNullable(wait[0]);
+    }
+
+    /**
+     * Gives the newest counted request of this guest back: a request that came to nothing — nothing saved, nothing for the DJ (a
+     * mood sent back to the form, the AI not answering) — does not use the guest's limit up.
+     */
+    public void giveBack(HttpSession session, String partyCode) {
+        requestTimes.asMap().computeIfPresent(key(session.getId(), partyCode), (key, times) -> {
+            List<Instant> kept = new ArrayList<>(times);
+            if (!kept.isEmpty()) {
+                kept.removeLast();
+            }
+            return kept;
+        });
     }
 
     /** What {@link #tryAcquire} has counted for this session and party (tests). */

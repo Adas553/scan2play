@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -253,6 +254,7 @@ class SongEvaluationServiceTest {
         DjResponse response = answering(null).evaluateAndSaveSong(PARTY_CODE, "Wilki - Baśka", "ANY", RequestMode.SONG);
 
         assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.isAiUnavailable()).as("the guest's limit is given back").isTrue();
         assertThat(saved.getValue().getDjComment()).isEqualTo("AI offline");
         assertThat(saved.getValue().getSongName()).isEqualTo("Wilki - Baśka");
     }
@@ -344,5 +346,49 @@ class SongEvaluationServiceTest {
         service.handleAutoQueue(youtube, song, TRACK, FAILED_NOTE);
 
         verify(queueService, never()).addToQueue(PARTY_CODE, TRACK, MusicProviderType.YOUTUBE);
+    }
+
+    // ---- a requests-only party: the DJ plays from their own software ----
+
+    @Test
+    void handleAutoQueue_doesNothing_forARequestsOnlyParty_evenWithAutoPilotLeftOn() {
+        SongRequestEntity song = SongRequestEntity.builder().id(7L).decision(DECISION_ACCEPTED).build();
+        PartySettingsEntity requestsOnly = PartySettingsEntity.builder().partyCode(PARTY_CODE)
+                .activeProvider(MusicProviderType.REQUESTS_ONLY).playbackMode(PlaybackMode.AUTO).build();
+
+        service.handleAutoQueue(requestsOnly, song, TRACK, FAILED_NOTE);
+
+        verifyNoInteractions(queueService);
+        assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED);
+    }
+
+    @Test
+    void aLineOfLyrics_atARequestsOnlyParty_isLookedUpByTheGuestsWords() {
+        DjResponse lyrics = new DjResponse("accepted", "Great pick!", "Wilki - Baśka", 7, DjResponse.KIND_LYRICS);
+
+        assertThat(service.searchQueryFor(lyrics, " baśka miała fajny biust ", MusicProviderType.REQUESTS_ONLY, RequestMode.SONG))
+                .isEqualTo("baśka miała fajny biust");
+    }
+
+    @Test
+    void whenTheAiFails_atARequestsOnlyParty_theRequestGoesToTheDjUnchecked() {
+        when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(PartySettingsEntity.builder().partyCode(PARTY_CODE)
+                .activeProvider(MusicProviderType.REQUESTS_ONLY).playbackMode(PlaybackMode.MANUAL).build());
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+        when(messageSource.getMessage(any(String.class), any(), any(java.util.Locale.class)))
+                .thenAnswer(call -> "ai.unavailable.to_dj".equals(call.getArgument(0)) ? "Sent to the DJ" : "other note");
+        when(queueService.resolveTrack("sanah", MusicProviderType.REQUESTS_ONLY))
+                .thenReturn("https://www.youtube.com/results?search_query=sanah");
+
+        DjResponse response = answering(null).evaluateAndSaveSong(PARTY_CODE, "sanah", "ANY", RequestMode.SONG);
+
+        assertThat(response.decision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(response.isUnchecked()).isTrue();
+        assertThat(response.requestId()).isEqualTo(9L);
+        assertThat(saved.getValue().getDecision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(saved.getValue().getSongName()).isEqualTo("sanah");
+        assertThat(saved.getValue().getDjComment()).isEqualTo("Sent to the DJ");
+        assertThat(saved.getValue().getTrackUrl()).isEqualTo("https://www.youtube.com/results?search_query=sanah");
+        verify(queueService, never()).addToQueue(any(), any(), any());
     }
 }

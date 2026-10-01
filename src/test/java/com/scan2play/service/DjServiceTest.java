@@ -462,5 +462,38 @@ class DjServiceTest {
         assertThat(fresh.getPlayedAt()).isEqualTo(now);
         assertThat(replayed.getPlayedAt()).isEqualTo(now.minus(1, ChronoUnit.HOURS));
     }
-}
 
+    // ---- dismissSong: the DJ skips a waiting request (a requests-only party) ----
+
+    @Test
+    void dismissSong_takesAWaitingRequestOutOfTheQueue_asRejected_withTheDjsNote() {
+        SongRequestEntity song = SongRequestEntity.builder().id(5L).partyCode(PARTY_CODE).songName("Unknown Song")
+                .decision(DECISION_ACCEPTED).djComment("The AI liked it").build();
+        when(songRequestRepository.findById(5L)).thenReturn(Optional.of(song));
+        Cache queue = mock(Cache.class);
+        when(cacheManager.getCache("dashboardQueue")).thenReturn(queue);
+
+        djService.dismissSong(5L, PARTY_CODE);
+
+        assertThat(song.getDecision()).isEqualTo(DECISION_REJECTED);
+        assertThat(song.getDjComment()).isEqualTo(DjService.DJ_DISMISS_COMMENT);
+        assertThat(song.getPlayedAt()).isNull();
+        verify(songRequestRepository).save(song);
+        verify(queue).evict(PARTY_CODE);
+    }
+
+    @Test
+    void dismissSong_leavesAnotherPartysSong_andASongThatPlayed_asTheyAre() {
+        SongRequestEntity foreign = SongRequestEntity.builder().id(6L).partyCode("OTHER").decision(DECISION_ACCEPTED).build();
+        SongRequestEntity played = SongRequestEntity.builder().id(8L).partyCode(PARTY_CODE).decision(DECISION_PLAYED).build();
+        when(songRequestRepository.findById(6L)).thenReturn(Optional.of(foreign));
+        when(songRequestRepository.findById(8L)).thenReturn(Optional.of(played));
+
+        djService.dismissSong(6L, PARTY_CODE);
+        djService.dismissSong(8L, PARTY_CODE);
+
+        assertThat(foreign.getDecision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(played.getDecision()).isEqualTo(DECISION_PLAYED);
+        verify(songRequestRepository, never()).save(any());
+    }
+}

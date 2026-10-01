@@ -168,7 +168,10 @@ public class SongEvaluationService {
         String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, locale);
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, aiOfflineMsg, locale, mode);
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, locale, mode);
+        if (aiResponse == null) {
+            aiResponse = withoutTheAi(settings, songName, aiOfflineMsg, locale);
+        }
         if (mode == RequestMode.SONG && aiResponse.isMood()) {
             log.info("Party [{}]: '{}' was sent as a song but reads as a mood — not saved", partyCode, songName);
             return aiResponse;
@@ -210,8 +213,8 @@ public class SongEvaluationService {
         return recentSongs.isEmpty() ? "None" : recentSongs;
     }
 
-    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String aiOfflineMsg, Locale locale,
-                                      RequestMode mode) {
+    /** The AI's answer, or null when the AI could not be asked (an error, a timeout, an answer that is not JSON). */
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, Locale locale, RequestMode mode) {
         try {
             String prompt = buildPrompt(songName, style, recentSongs, locale, mode);
             DjResponse answer = objectMapper.readValue(askAi(prompt, aiJsonConfig), DjResponse.class);
@@ -220,8 +223,22 @@ public class SongEvaluationService {
             return (answer.songName() == null || answer.songName().isBlank()) ? answer.withSongName(songName) : answer;
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);
-            return new DjResponse(DECISION_REJECTED, aiOfflineMsg, songName, 0);
+            return null;
         }
+    }
+
+    /**
+     * The answer when the AI could not be asked. A requests-only party passes the request on to the DJ unchecked (accepted, the
+     * guest's own words, a note instead of the AI's comment): its DJ looks at every request anyway, and a wedding should not lose
+     * requests while the AI is down. Any other party refuses it — there an accepted song may play without anyone looking at it.
+     */
+    DjResponse withoutTheAi(PartySettingsEntity settings, String songName, String aiOfflineMsg, Locale locale) {
+        if (settings.getActiveProvider() == MusicProviderType.REQUESTS_ONLY) {
+            log.warn("Party [{}]: the AI could not be asked — '{}' goes to the DJ unchecked", settings.getPartyCode(), songName);
+            return new DjResponse(DECISION_ACCEPTED, messageSource.getMessage("ai.unavailable.to_dj", null, locale), songName, 0,
+                    DjResponse.KIND_UNCHECKED);
+        }
+        return new DjResponse(DECISION_REJECTED, aiOfflineMsg, songName, 0, DjResponse.KIND_AI_UNAVAILABLE);
     }
 
     /** One call to Gemini; the text of its answer. Package-private so a test can answer instead of Gemini. */
@@ -272,8 +289,8 @@ public class SongEvaluationService {
     }
 
     /**
-     * What the provider searches for: the AI's name of the song — except when the guest typed a line of the lyrics at a YouTube
-     * party, then the guest's own words. The AI does not know lyrics reliably (a line of a well-known Polish song got a different
+     * What the provider searches for: the AI's name of the song — except when the guest typed a line of the lyrics at a party whose
+     * links come from YouTube's search (YouTube, requests-only), then the guest's own words. The AI does not know lyrics reliably (a line of a well-known Polish song got a different
      * made-up artist and title on each try, and the search then found another song), while YouTube's search matches lyrics well.
      * Spotify's search does not, so a Spotify party keeps the AI's name. A mood is never searched by the guest's words: the AI
      * picked the song.
@@ -281,12 +298,17 @@ public class SongEvaluationService {
      * @param guestText what the guest typed
      */
     String searchQueryFor(DjResponse aiResponse, String guestText, MusicProviderType provider, RequestMode mode) {
-        if (mode == RequestMode.SONG && provider == MusicProviderType.YOUTUBE && aiResponse.isLyrics()
+        if (mode == RequestMode.SONG && searchesYouTube(provider) && aiResponse.isLyrics()
                 && guestText != null && !guestText.isBlank()) {
             log.info("Lyrics requested: searching YouTube for '{}' (the AI named it '{}')", guestText, aiResponse.songName());
             return guestText.strip();
         }
         return aiResponse.songName();
+    }
+
+    /** The parties whose song links come from YouTube's search: YouTube's (the API), and requests-only (a link to the results). */
+    private static boolean searchesYouTube(MusicProviderType provider) {
+        return provider == MusicProviderType.YOUTUBE || provider == MusicProviderType.REQUESTS_ONLY;
     }
 
     /**
@@ -336,8 +358,9 @@ public class SongEvaluationService {
             return;
         }
 
-        // YouTube Auto-Pilot is handled entirely client-side via IFrame API
-        if (settings.getActiveProvider() == MusicProviderType.YOUTUBE) {
+        // Only a Spotify party queues on the server: YouTube's Auto-Pilot is the page's player, and a requests-only party has no
+        // queue to add to (its DJ plays from their own software)
+        if (settings.getActiveProvider() != MusicProviderType.SPOTIFY) {
             return;
         }
 

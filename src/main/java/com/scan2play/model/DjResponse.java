@@ -9,7 +9,8 @@ package com.scan2play.model;
  * @param songName    The confirmed name of the song.
  * @param energyLevel The energy level of the song on a scale of 1-10.
  * @param requestKind What the guest typed, as the AI reads it: {@value #KIND_TITLE}, {@value #KIND_ARTIST}, {@value #KIND_LYRICS}
- *                    or {@value #KIND_MOOD}; null when the AI did not say (an older answer, an error). For {@value #KIND_LYRICS}
+ *                    or {@value #KIND_MOOD}; {@value #KIND_UNCHECKED} when the AI could not be asked and the request went to the
+ *                    DJ unchecked (a requests-only party); null when the AI did not say (an older answer, an error). For {@value #KIND_LYRICS}
  *                    the song is searched by the guest's own words, not by the AI's name of it (see SongEvaluationService).
  * @param requestId   The id of the saved song request; null when nothing was saved (and in the AI's own answer).
  */
@@ -26,6 +27,9 @@ public record DjResponse(
     public static final String KIND_ARTIST = "artist";
     public static final String KIND_LYRICS = "lyrics";
     public static final String KIND_MOOD = "mood";
+    public static final String KIND_UNCHECKED = "unchecked";
+    /** The AI could not be asked and the request was refused (a party other than requests-only). */
+    public static final String KIND_AI_UNAVAILABLE = "ai-unavailable";
 
     /** A response without the kind of the request (an error, a test). */
     public DjResponse(String decision, String comment, String songName, int energyLevel) {
@@ -45,6 +49,16 @@ public record DjResponse(
     /** Whether the AI read the request as a mood — in the song mode that means the guest chose the wrong mode. */
     public boolean isMood() {
         return KIND_MOOD.equalsIgnoreCase(requestKind);
+    }
+
+    /** Whether the request went to the DJ without the AI's check (the AI could not be asked). */
+    public boolean isUnchecked() {
+        return KIND_UNCHECKED.equals(requestKind);
+    }
+
+    /** Whether the request was refused because the AI could not be asked. */
+    public boolean isAiUnavailable() {
+        return KIND_AI_UNAVAILABLE.equals(requestKind);
     }
 
     /** The same response under another song name (what the found video is called). */

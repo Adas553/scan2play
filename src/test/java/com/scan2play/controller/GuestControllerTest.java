@@ -223,5 +223,60 @@ class GuestControllerTest {
                 .containsEntry(ViewAttributes.ERROR_MESSAGE, "switch to mood")
                 .containsEntry(ViewAttributes.LAST_REQUEST, "coś do tańca")
                 .containsEntry(ViewAttributes.SUGGESTED_MODE, "MOOD");
+        verify(guestSessionService).giveBack(session, PARTY);
+    }
+
+    /** A requests-only party takes specific songs only: a guest who sends the mood mode anyway is evaluated as a song. */
+    @Test
+    void aRequestsOnlyParty_evaluatesEveryRequestAsASong() throws Exception {
+        settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "sanah", "POP_AND_DANCE", RequestMode.SONG))
+                .thenReturn(new DjResponse("accepted", "ok", "sanah - Szampan", 7, "artist", 3L));
+
+        assertThat(request("sanah", "MOOD")).isEqualTo("result");
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), eq(RequestMode.MOOD));
+    }
+
+    /** …and a mood at such a party goes back to the form asking for a song — no mood mode to suggest. */
+    @Test
+    void aMoodAtARequestsOnlyParty_goesBackAskingForASong() throws Exception {
+        settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "POP_AND_DANCE", RequestMode.SONG))
+                .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", 0, "mood"));
+        when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
+
+        assertThat(request("coś do tańca", null)).isEqualTo("redirect:/p/" + PARTY);
+        assertThat(new java.util.HashMap<String, Object>(redirectAttributes.getFlashAttributes()))
+                .containsEntry(ViewAttributes.ERROR_MESSAGE, "type a song")
+                .containsEntry(ViewAttributes.LAST_REQUEST, "coś do tańca")
+                .doesNotContainKey(ViewAttributes.SUGGESTED_MODE);
+        verify(guestSessionService).giveBack(session, PARTY);
+    }
+
+    /** A request that came to nothing gives the guest's place back: the AI did not answer, or a mood went back to the form. */
+    @Test
+    void aRequestThatCameToNothing_givesTheGuestsPlaceBack() throws Exception {
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "POP_AND_DANCE", RequestMode.SONG))
+                .thenReturn(new DjResponse("rejected", "AI offline", "Song", 0, DjResponse.KIND_AI_UNAVAILABLE));
+
+        assertThat(request("Song", "SONG")).isEqualTo("result");
+        verify(guestSessionService).giveBack(session, PARTY);
+    }
+
+    @Test
+    void anEvaluatedRequest_keepsItsPlace_evenWhenRejected() throws Exception {
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "POP_AND_DANCE", RequestMode.SONG))
+                .thenReturn(new DjResponse("rejected", "Not tonight", "Song", 2, "title", 5L));
+
+        assertThat(request("Song", "SONG")).isEqualTo("result");
+        verify(guestSessionService, never()).giveBack(any(), anyString());
     }
 }

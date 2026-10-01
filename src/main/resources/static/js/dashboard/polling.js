@@ -5,7 +5,7 @@
  * reduces bandwidth. Every answer, 304 too, also carries the server's guest limits (X-Guest-Limits, X-Guest-Limits-Use).
  * When the rows are new the player is told (EVENTS.GUEST_QUEUE_UPDATED): a guest song may be waiting.
  */
-import { EVENTS, emit } from './events.js';
+import { EVENTS, emit, on } from './events.js';
 import { csrfHeaders, partyCode, showPartyActive } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 
@@ -42,7 +42,24 @@ function applyGuestLimitsUse(value) {
     });
 }
 
+// One chain of polls: the next one is scheduled when one ends; a poll asked for meanwhile (pollNow) comes right after it
+let nextPoll = null;
+let polling = false;
+let pollAgain = false;
+
+/** Fetches the queue now instead of at the next 3 s tick (EVENTS.GUEST_QUEUE_CHANGED: the DJ changed it here). */
+function pollNow() {
+    if (polling) {
+        pollAgain = true;
+        return;
+    }
+    clearTimeout(nextPoll);
+    refreshTable();
+}
+on(EVENTS.GUEST_QUEUE_CHANGED, pollNow);
+
 async function refreshTable() {
+    polling = true;
     try {
         const party = partyCode();
         if (!party) return;
@@ -105,7 +122,9 @@ async function refreshTable() {
     } catch (err) {
         console.error('[Polling] Refresh error:', err);
     } finally {
-        setTimeout(refreshTable, 3000);
+        polling = false;
+        nextPoll = setTimeout(refreshTable, pollAgain ? 0 : 3000);
+        pollAgain = false;
     }
 }
 
@@ -135,4 +154,4 @@ function updateGuestsWaiting() {
 }
 
 updateGuestsWaiting();
-setTimeout(refreshTable, 3000);
+nextPoll = setTimeout(refreshTable, 3000);

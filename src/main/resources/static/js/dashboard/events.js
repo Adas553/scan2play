@@ -11,6 +11,8 @@ export const EVENTS = Object.freeze({
     PLAYBACK_MODE_REPORTED: 's2p:playback-mode-reported',
     /** The guest queue table was replaced by a poll. Player: a song may be waiting. */
     GUEST_QUEUE_UPDATED: 's2p:guest-queue-updated',
+    /** The DJ changed the guest queue here (a song played, skipped or picked). Dashboard: fetch the queue now, not in 3 s. */
+    GUEST_QUEUE_CHANGED: 's2p:guest-queue-changed',
     /** The DJ saved another background playlist here. Player: drop the old track, start from the new one. */
     FALLBACK_PLAYLIST_SAVED: 's2p:fallback-playlist-saved',
     /** The DJ cleared the background playlist here (the server already has). Player: stop the background track. */

@@ -86,6 +86,47 @@ class GuestSessionServiceTest {
         assertThat(recorded()).hasSize(1);
     }
 
+    /**
+     * The wait runs from the guest's LAST request (the owner, 2026-10-01): two songs at 0:00 and 1:00, a third tried at 1:03 waits
+     * until 4:00 — about 177 s — not until 3:00, when the first one would leave a sliding window (117 s, what the guest was told).
+     */
+    @Test
+    void tryAcquire_theWaitRunsFromTheLastRequest() {
+        givenEarlierRequests(Instant.now().minusSeconds(63), Instant.now().minusSeconds(3));
+
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).hasValueSatisfying(wait -> assertThat(wait).isBetween(175L, 180L));
+    }
+
+    /** …so 100 s after the last request the guest still waits, even when the first one is older than the cooldown. */
+    @Test
+    void tryAcquire_aRequestBeforeTheCooldownAfterTheLastOne_stillWaits() {
+        givenEarlierRequests(Instant.now().minusSeconds(200), Instant.now().minusSeconds(100));
+
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).hasValueSatisfying(wait -> assertThat(wait).isBetween(78L, 80L));
+    }
+
+    /** Once the cooldown after the last request has passed, the whole limit is there again. */
+    @Test
+    void tryAcquire_afterTheCooldownFromTheLastRequest_theWholeLimitIsBack() {
+        givenEarlierRequests(Instant.now().minusSeconds(400), Instant.now().minusSeconds(181));
+
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).as("the third of the new round").isPresent();
+    }
+
+    /** A request that came to nothing (a mood sent back to the form, the AI not answering) gives its place back. */
+    @Test
+    void giveBack_returnsTheNewestCountedRequest() {
+        service.tryAcquire(session, PARTY_CODE, settings);
+        service.tryAcquire(session, PARTY_CODE, settings);
+
+        service.giveBack(session, PARTY_CODE);
+
+        assertThat(recorded()).hasSize(1);
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
+    }
+
     @Test
     void tryAcquire_keepsASeparateCountPerParty() {
         service.tryAcquire(session, PARTY_CODE, settings);

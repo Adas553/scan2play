@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,6 +45,28 @@ class SmokeTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Scan2Play")));
+    }
+
+    @Test
+    @DisplayName("The landing page offers three kinds of party; the two Google ones go through /start, which keeps the choice")
+    void landingPage_offersTheRequestsOnlyTile() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(content().string(containsString("href=\"/start/youtube\"")))
+                .andExpect(content().string(containsString("href=\"/start/requests\"")))
+                .andExpect(content().string(containsString("href=\"/oauth2/authorization/spotify\"")));
+    }
+
+    @Test
+    @DisplayName("GET /start/requests (public) keeps the choice in the session and goes on to Google's login; another kind goes home")
+    void start_keepsTheChosenKind_andGoesToGooglesLogin() throws Exception {
+        MvcResult result = mockMvc.perform(get("/start/requests"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/google"))
+                .andReturn();
+        assertThat(result.getRequest().getSession().getAttribute("djChosenProvider")).isEqualTo("REQUESTS_ONLY");
+
+        mockMvc.perform(get("/start/youtube")).andExpect(redirectedUrl("/oauth2/authorization/google"));
+        mockMvc.perform(get("/start/vinyl")).andExpect(redirectedUrl("/"));
     }
 
     @Test

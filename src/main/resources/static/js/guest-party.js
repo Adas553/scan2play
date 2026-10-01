@@ -2,13 +2,15 @@
 // of its own, not an inline script, for the Content-Security-Policy (review 5.1); the texts come in data attributes. Loaded at the end
 // of the body, so the elements are there.
 
-// The mode buttons: the help text follows the mode, and song suggestions are only offered for a song
+// The mode buttons: the help text follows the mode, and song suggestions are only offered for a song. A requests-only party has no
+// mode buttons (songs only): nothing to do.
 (function () {
     const input = document.getElementById('songInput');
     const help = document.getElementById('songInputHelp');
-    if (!input || !help) return;
+    const moodRadio = document.getElementById('modeMood');
+    if (!input || !help || !moodRadio) return;
     function applyMode() {
-        const mood = document.getElementById('modeMood').checked;
+        const mood = moodRadio.checked;
         help.textContent = mood ? help.dataset.textMood : help.dataset.textSong;
         input.dataset.autocompleteOff = String(mood);
     }

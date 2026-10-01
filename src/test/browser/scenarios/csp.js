@@ -84,3 +84,23 @@ S2P.scenario({
     page: 'qr-print-cards',
     run: printPageWorks
 });
+
+S2P.scenario({
+    name: 'guest-page-requests-only',
+    title: 'the guest page of a requests-only party: no mood tiles, and its scripts still run — the suggestions, the list refresh',
+    page: 'guest-requests',
+    run: async function (t) {
+        const asked = recordFetches();
+        t.check('no song / mood tiles', !document.getElementById('modeMood') && !document.getElementById('modeSong'));
+        const input = document.getElementById('songInput');
+        input.value = 'abba';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        await t.waitFor(function () { return asked.some(function (u) { return u.indexOf('https://itunes.apple.com/') === 0; }); },
+            'the song suggestions ask iTunes');
+        t.check('the song suggestions ask iTunes (song-autocomplete.js runs)', true);
+        document.querySelector('[data-guest-queue-refresh]').click();
+        await t.waitFor(function () { return asked.indexOf('/p/ABC12/queue') >= 0; }, 'the list is fetched again');
+        t.check('"↻" fetches the list again (guest-party.js runs past the missing tiles)', true);
+        await t.sleep(300);
+    }
+});

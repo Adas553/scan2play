@@ -45,8 +45,11 @@
                  guess which one a request is (a guess can take a line of lyrics for a mood). A mood sent as a song comes back here with
                  its text and the mood mode chosen (lastRequest, suggestedMode). */-->
             <!--/* Two tiles, not a segmented bar: a guest who sees the page for the first time has to notice there is a choice. The
-                 question above them, a line under each title, the chosen one green with a ✓. */-->
-            <div class="mb-4" role="radiogroup" aria-labelledby="requestModeLabel">
+                 question above them, a line under each title, the chosen one green with a ✓. A requests-only party takes songs
+                 only (its DJ sets the mood): no tiles, the song mode. */-->
+            <input th:if="${activeProvider != null and activeProvider.name() == 'REQUESTS_ONLY'}" type="hidden" name="requestMode" value="SONG">
+            <div class="mb-4" role="radiogroup" aria-labelledby="requestModeLabel"
+                 th:unless="${activeProvider != null and activeProvider.name() == 'REQUESTS_ONLY'}">
                 <div id="requestModeLabel" class="form-label fw-bold" th:text="#{home.form.mode.label}">What are you asking for?</div>
                 <div class="d-flex flex-column flex-sm-row gap-2">
                     <input type="radio" class="btn-check" name="requestMode" id="modeSong" value="SONG" autocomplete="off"

@@ -227,8 +227,33 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html, "AUTO");
         assertThat(html).contains("Song One", "Song Two");
+        assertThat(html).as("the footer's YouTube API attribution").contains("YouTube API Services");
         assertThat(html).contains(PLAYLIST);
         write("dashboard.html", html);
+    }
+
+    @Test
+    @DisplayName("a requests-only party (the DJ plays from their own software): the queue with Played / Skip / Preview, no player (written to target/browser-harness/dashboard-requests.html)")
+    void shouldRenderTheDashboardOfARequestsOnlyParty() throws IOException {
+        PartySettingsEntity party = youTubeParty(PlaybackMode.MANUAL, null);
+        party.setActiveProvider(MusicProviderType.REQUESTS_ONLY);
+        SongRequestEntity waiting = song(1, "Wilki - Baśka", "unused");
+        waiting.setTrackUrl("https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka");
+        String html = renderDashboard(party, List.of(waiting), PL);
+
+        assertThat(html).contains("Twój program DJ-a", "Grasz ze swojego programu");
+        assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">Pomiń<", "🔍 Podejrzyj",
+                "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
+        // no player, no Auto-Pilot, no background playlist, no DJ pick: the DJ's own software plays
+        assertThat(html).doesNotContain("id=\"yt-player\"", "/js/youtube-autopilot.js", "id=\"autoToggle\"", "id=\"fallbackQueue\"",
+                "id=\"dj-pick-form\"", "Powered by YouTube", "🔍 YOUTUBE", "YouTube API Services");
+        // what the dashboard's own scripts need: the party, the CSRF token, the polled queue, the lists and the tabs
+        assertThat(html).contains("id=\"partyCode\"", "name=\"_csrf\" content=\"harness-csrf-token\"", "id=\"song-list\"",
+                "data-provider=\"REQUESTS_ONLY\"", "id=\"queueList\"", "id=\"djTabBar\"",
+                "<script type=\"module\" src=\"/js/dashboard/main.js\">");
+        assertNothingInline(html);
+        assertThat(html).doesNotContain("??");
+        write("dashboard-requests.html", html);
     }
 
     @Test

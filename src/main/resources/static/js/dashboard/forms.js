@@ -3,21 +3,21 @@
  * DJ's windows — and the "copy" button of the party link.
  */
 import { EVENTS, emit, on } from './events.js';
-import { csrfHeaders, isYouTubeProvider, showPartyActive } from './common.js';
+import { csrfHeaders, isYouTubeProvider, showPartyActive, submitsInPlace } from './common.js';
 import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue.js';
 
 // ==========================================================================
-// AJAX FORM INTERCEPTOR (YouTube only)
+// AJAX FORM INTERCEPTOR (a YouTube or a requests-only party — submitsInPlace)
 //
-// When YouTube provider is active, most POST forms on the dashboard
-// are submitted via fetch() to avoid a full page reload that would
-// destroy the YouTube IFrame player.
+// Most POST forms on the dashboard are submitted via fetch(): a full page
+// reload would destroy the YouTube IFrame player, and at a requests-only
+// party it would take the DJ away from their place in the list.
 //
 // Excluded: logout, delete-account (page reload / redirect is expected).
 // ==========================================================================
 
 (function initAjaxFormInterceptor() {
-    if (!isYouTubeProvider()) return;
+    if (!submitsInPlace()) return;
 
     document.addEventListener('submit', function(e) {
         const form = e.target.closest('form');
@@ -43,6 +43,11 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
             body: new FormData(form),
             redirect: 'manual'
         }).then(function(response) {
+            // A song played, skipped or picked: the queue is fetched now, so the row goes (or comes) at once
+            if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/dj-pick')) {
+                emit(EVENTS.GUEST_QUEUE_CHANGED);
+            }
+
             // --- Party state toggle (end/start party) ---
             if (action.includes('/end-party') || action.includes('/start-party')) {
                 showPartyActive(!action.includes('/end-party'));   // the other windows follow with their next poll

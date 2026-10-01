@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
+import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.RequestMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
@@ -121,9 +122,21 @@ public class GuestController {
                     };
                 }
 
-                RequestMode mode = RequestMode.fromParam(requestMode);
+                // A requests-only party takes specific songs only (its DJ sets the mood): whatever the form sent, a song
+                boolean songsOnly = settings.getActiveProvider() == MusicProviderType.REQUESTS_ONLY;
+                RequestMode mode = songsOnly ? RequestMode.SONG : RequestMode.fromParam(requestMode);
                 DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
                         styleOf(settings, style, locale), mode);
+                // A request that came to nothing — a mood sent back to the form, the AI not answering — does not use the
+                // guest's limit up (the server's own limits keep counting it: they are against abuse)
+                if (response.isMood() || response.isAiUnavailable()) {
+                    guestSessionService.giveBack(session, partyCode);
+                }
+                if (songsOnly && response.isMood()) {
+                    // A mood at a party that takes songs only: nothing was saved. Back to the form with the text, asking for a song.
+                    redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
+                    return refuse(redirectAttributes, partyCode, "guest.error.song_only");
+                }
                 if (mode == RequestMode.SONG && response.isMood()) {
                     // A mood sent as a song: nothing was saved. Back to the form with the text and the mood mode chosen.
                     redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
@@ -135,6 +148,7 @@ public class GuestController {
                 guestSessionService.rememberRequest(session, partyCode, response.requestId());
                 model.addAttribute(RESPONSE, response);
                 model.addAttribute(PARTY_CODE, partyCode);
+                model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
                 model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
                 return "result";
             } catch (IllegalArgumentException e) {

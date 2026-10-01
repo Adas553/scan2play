@@ -4,11 +4,11 @@
  * Panel scrolls to the top of the page (the settings, the QR code, the player), Queue shows the queue and scrolls to it,
  * History shows the history and scrolls to it, so from anywhere on a long page the DJ can jump to any of them. The tab
  * that is lit follows the part of the page in view.
- * With YouTube the History tab loads its content via AJAX into #history-content and swaps it with #queue-content: the
- * player stays alive across tab switches. With Spotify, and on the standalone history page, History is a normal page
- * (and that page does not load this module: its tabs are plain links).
+ * The History tab loads its content via AJAX into #history-content and swaps it with #queue-content, for every kind of party:
+ * the page is not reloaded (a YouTube party's player stays alive, the DJ keeps their place). The standalone history page does not
+ * load this module: its tabs are plain links.
  */
-import { csrfHeaders, isYouTubeProvider, partyCode } from './common.js';
+import { csrfHeaders, partyCode } from './common.js';
 import { initSortableHeaders, restoreListState, setHistoryReloader } from './list-tools.js';
 
 (function initTabs() {
@@ -22,8 +22,7 @@ import { initSortableHeaders, restoreListState, setHistoryReloader } from './lis
     const historyContent = document.getElementById('history-content');
     if (!bar || !links.panel || !links.queue || !links.history || !queueContent || !historyContent) return;
 
-    const ajaxHistory = isYouTubeProvider();
-    let activeList = 'queue';   // the list that shows: 'queue' or 'history' (YouTube swaps them without leaving the page)
+    let activeList = 'queue';   // the list that shows: 'queue' or 'history' (swapped without leaving the page)
     let lit = 'panel';          // the tab that is lit
     // A smooth scroll started by a click passes other parts of the page on its way: they must not light their tabs meanwhile.
     let litLockedUntil = 0;
@@ -125,7 +124,7 @@ import { initSortableHeaders, restoreListState, setHistoryReloader } from './lis
             return false;
         });
     }
-    if (ajaxHistory) setHistoryReloader(reloadHistory);
+    setHistoryReloader(reloadHistory);
 
     // Panel: the top of the page. The list that shows stays as it is.
     links.panel.addEventListener('click', function(e) {
@@ -146,10 +145,9 @@ import { initSortableHeaders, restoreListState, setHistoryReloader } from './lis
         revealContent(queueContent);
     });
 
-    // History: with YouTube the history is loaded into the page and shown in place of the queue, and the page scrolls to
-    // it (also when it shows already: the DJ may be looking at the player); otherwise the link is a normal one.
+    // History: the history is loaded into the page and shown in place of the queue, and the page scrolls to it (also when
+    // it shows already: the DJ may be looking at the panel).
     links.history.addEventListener('click', function(e) {
-        if (!ajaxHistory) return;
         e.preventDefault();
         if (activeList === 'history') {
             setLit('history');

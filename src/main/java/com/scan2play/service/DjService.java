@@ -48,6 +48,8 @@ public class DjService {
 
     /** Default comment attached to manually added DJ picks. */
     private static final String DJ_PICK_COMMENT = "DJ's Choice 🎧";
+    /** The note of a request the DJ skipped (dismissSong), in place of the AI's comment. */
+    static final String DJ_DISMISS_COMMENT = "Skipped by the DJ ⏭";
 
     private final SongRequestRepository songRequestRepository;
     private final PartySettingsQueryService partySettingsQueryService;
@@ -147,6 +149,33 @@ public class DjService {
             songRequestRepository.save(song);
             evictDashboardQueueAfterCommit(song.getPartyCode());
             log.info("Marked song ID={} as PLAYED for party {}", id, song.getPartyCode());
+        });
+    }
+
+    /**
+     * The DJ skips a waiting request (a song they do not have, or do not want to play now): it leaves the queue as rejected, with
+     * the DJ's note instead of the AI's comment, and shows in the history's rejected requests. Only a waiting (accepted) request;
+     * one that played stays played. Validates that the song belongs to the given party (IDOR protection).
+     *
+     * @param id             The ID of the song request.
+     * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
+     */
+    @Transactional
+    public void dismissSong(Long id, String ownerPartyCode) {
+        songRequestRepository.findById(id).ifPresent(song -> {
+            if (!song.getPartyCode().equals(ownerPartyCode)) {
+                log.warn("IDOR blocked: DJ party {} tried to skip song {} (belongs to party {})",
+                        ownerPartyCode, id, song.getPartyCode());
+                return;
+            }
+            if (!DECISION_ACCEPTED.equals(song.getDecision())) {
+                return;
+            }
+            song.setDecision(DECISION_REJECTED);
+            song.setDjComment(DJ_DISMISS_COMMENT);
+            songRequestRepository.save(song);
+            evictDashboardQueueAfterCommit(song.getPartyCode());
+            log.info("Song ID={} skipped by the DJ of party {}", id, song.getPartyCode());
         });
     }
 

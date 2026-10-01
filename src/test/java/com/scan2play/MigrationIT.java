@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The migrations on an empty PostgreSQL: the application context of {@link PostgresIntegrationTest} starts only when Flyway has
@@ -75,6 +76,22 @@ class MigrationIT extends PostgresIntegrationTest {
         });
 
         assertThat(String.join("\n", plan)).contains("idx_fallback_track_queue").doesNotContain("Sort");
+    }
+
+    /** V13: a party of the kind REQUESTS_ONLY can be stored (the check on the provider column lets it in), a made-up kind cannot. */
+    @Test
+    void aRequestsOnlyPartyCanBeStored_aMadeUpKindCannot() {
+        String insert = "INSERT INTO party_settings (active, cooldown_minutes, duplicate_check_window, owner_id, party_code, request_limit,"
+                + " active_provider) VALUES (true, 10, 5, ?, ?, 2, ?)";
+        try {
+            jdbc.update(insert, "it-requests-owner", "ITRQ1", "REQUESTS_ONLY");
+            assertThat(jdbc.queryForObject("SELECT active_provider FROM party_settings WHERE party_code = 'ITRQ1'", String.class))
+                    .isEqualTo("REQUESTS_ONLY");
+            assertThatThrownBy(() -> jdbc.update(insert, "it-vinyl-owner", "ITRQ2", "VINYL"))
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        } finally {
+            jdbc.update("DELETE FROM party_settings WHERE party_code IN ('ITRQ1', 'ITRQ2')");
+        }
     }
 
     @Test

@@ -172,4 +172,38 @@ class GuestPageRenderTest {
         assertThat(tag(html, "songInput")).contains("value=\"coś do tańca\"");
         assertThat(html).contains("To wygląda na opis nastroju");
     }
+
+    private static String renderResult(com.scan2play.model.DjResponse response) {
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(Map.of("response", response, "partyCode", "ABC12", "activeProvider", MusicProviderType.REQUESTS_ONLY));
+        return engine.process("result", context);
+    }
+
+    /** The AI could not be asked at a requests-only party: the request went to the DJ — "sent", not "yes", and no energy. */
+    @Test
+    void aRequestPassedOnWithoutTheAi_saysItWentToTheDj() {
+        String unchecked = renderResult(new com.scan2play.model.DjResponse("accepted", "AI jest chwilowo niedostępne", "sanah", 0,
+                com.scan2play.model.DjResponse.KIND_UNCHECKED));
+        assertThat(unchecked).contains("PRZEKAZANE", "AI jest chwilowo niedostępne").doesNotContain("TAK!", "Energy:");
+        assertThat(unchecked).as("a requests-only party uses no YouTube API").doesNotContain("YouTube API Services");
+
+        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title"));
+        assertThat(accepted).contains("TAK!", "Energy:").doesNotContain("PRZEKAZANE");
+    }
+
+    /** A requests-only party takes specific songs only: no song / mood tiles, the song mode sent as a hidden field. */
+    @Test
+    void aRequestsOnlyParty_asksForASong_withoutTheMoodTiles() {
+        String html = render(PL, Map.of("activeProvider", MusicProviderType.REQUESTS_ONLY,
+                "guestQueue", new GuestQueue(null, List.of(song(1, "Wilki - Baśka")), Set.of(), null, null)));
+
+        assertThat(html).doesNotContain("id=\"modeMood\"", "id=\"modeSong\"", "Nastrój", "Powered by YouTube", "YouTube API Services");
+        assertThat(html).contains("type=\"hidden\" name=\"requestMode\" value=\"SONG\"", "id=\"songInput\"", "id=\"songInputHelp\"");
+        DashboardPageRenderTest.assertNothingInline(html);
+        writeForTheBrowserTests("guest-requests.html", html);
+
+        assertThat(render(PL, Map.of())).as("a YouTube party keeps the tiles").contains("id=\"modeMood\"");
+    }
 }

@@ -298,6 +298,11 @@ th[data-sort].sort-desc::after {
 }
 .provider-card--recommended:hover { border-color: var(--s2p-green-hover); }
 
+/* For DJs (requests only, no player) — the info colour of the badge */
+.provider-card--requests:hover { border-color: #0dcaf0; }
+.btn-requests { background-color: #0dcaf0; border: none; color: #111; font-weight: 700; }
+.btn-requests:hover { background-color: #31d2f2; color: #111; }
+
 /* Closed-beta provider (Spotify) — dimmed appearance */
 .provider-card--beta {
     opacity: 0.75;

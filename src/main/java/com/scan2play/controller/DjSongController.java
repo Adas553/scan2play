@@ -48,6 +48,21 @@ public class DjSongController {
     }
 
     /**
+     * Skips a waiting song request: it leaves the queue as rejected (a song the DJ does not have, or does not want now).
+     * Validates that the song belongs to the authenticated DJ's party (IDOR protection).
+     *
+     * @param id The ID of the song request.
+     * @return Redirects back to the dashboard.
+     */
+    @PostMapping("/dashboard/dismiss")
+    public String dismiss(@RequestParam Long id,
+                          OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        djService.dismissSong(id, ownerPartyCode);
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
      * Pushes a specific song to the Spotify queue manually.
      * Validates that the song belongs to the authenticated DJ's party (IDOR protection).
      *

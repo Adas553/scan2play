@@ -396,7 +396,11 @@ class Handler(BaseHTTPRequestHandler):
                 wanted = fields.get('mode')
                 state['playbackMode'] = wanted if wanted in ('AUTO', 'MANUAL') else ('MANUAL' if state['playbackMode'] == 'AUTO' else 'AUTO')
             return self._json({})
-        if path in ('/dj/dashboard/play', '/dj/dashboard/fallback-shuffle'):
+        if path in ('/dj/dashboard/play', '/dj/dashboard/dismiss'):   # the song leaves the queue, as on the real server
+            with stand.lock:
+                state['queue'] = [r for r in state['queue'] if str(r['id']) != str(fields.get('id'))]
+            return self._json({})
+        if path == '/dj/dashboard/fallback-shuffle':
             return self._json({})
         if path == '/dj/dashboard/player-command':      # the DJ's command for the window that plays (204 waiting, 409 nobody plays)
             return self._send(state['commandStatus'])
