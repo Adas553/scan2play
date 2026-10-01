@@ -470,3 +470,9 @@ limitów gości nadal w pamięci.)*
 Testy jednostkowe: **513** (512 uruchomionych, 1 pominięty; pierwsze liczenie, 537, obejmowało 24 IT — `-Dtest` wciągał je do
 surefire, co na GitHubie bez bazy dało czerwony workflow Unit tests; teraz IT poza failsafe są pomijane), `BUILD SUCCESS` w kopii repo; IT: **24**, wszystkie zielone na lokalnym
 PostgreSQL 18. JS i szablony bez zmian — scenariusze przeglądarkowe nie były uruchamiane ponownie.
+
+**3.2 — 2026-10-01, NIEZACOMMITOWANE (etap 1 z dwóch; 3.3 = etap 2, moduły ES):** stan utworu w playerze to jeden obiekt `current`
+(rodzaj GUEST / BACKGROUND / HISTORY / MANUAL, id prośby gościa, klucz osi czasu, playlista, numer raportu lease przy ładowaniu, numer
+ładowania, czas, czy ⏭ cofa się po historii, faza LOADING → RUNNING → OVER), tworzony wyłącznie przez `startTrack`; dawne flagi są
+funkcjami tego obiektu. Bez zmiany zachowania: 56/56 scenariuszy przeglądarkowych zielonych przed i po. Przed nim, w tej samej sesji:
+wznowienie przerwanego utworu po odświeżeniu, „Wznów” po odświeżeniu i wstrzymanie zapauzowanego utworu (zgłoszenie właściciela, +9 scenariuszy).

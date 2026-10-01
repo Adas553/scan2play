@@ -13,6 +13,28 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 - **COMMITTED and PUSHED on the owner's "ok, commituj i pushuj" (2026-10-01; code, then the docs)** — the session of 2026-10-01 (below). 513 unit tests and 24 database tests green in a
   scratch copy; JS and templates untouched, so the 47 browser scenarios were not run again.
 
+**UNCOMMITTED, for review — the resume of an interrupted track (2026-10-01, before 3.2/3.3 on the owner's word).** The owner's
+report: a track playing, Auto-Pilot switched off, a reload, Auto-Pilot on → the NEXT track played (the resume was dropped for a page
+loaded with Auto-Pilot off). Now the page that plays notes the interrupted track on `pagehide` (`sessionStorage`
+`scan2play.interruptedTrack`); after a reload only that track comes back (if it is still the newest of `recent-tracks` and started
+within 10 min), with Auto-Pilot off once it is switched on. This also stops a reload from replaying a track that had ended by itself.
+Then, on the owner's question ("a co z Wznów?") and choice "A": **"resume" right after a reload** brings the interrupted track back
+too (the player was empty and the button did nothing), and **a track the DJ had paused** is held after a reload — nothing starts,
+not even the queue with Auto-Pilot on — until "resume" (the note is `{key, paused}`). `youtube-autopilot.js` (`readInterruptedTrack`,
+`noteInterruptedTrack`, `resumeLastPlayed`, `isHeldByPause`, `resumeAfterReload`, `resumeHere`, `tryAutoPlay`); the harness takes
+`session` (sessionStorage before the player starts); `resume.js` +9 scenarios — the new behaviours red on the old script, all **56**
+green now; three old resume scenarios got the note. Not covered by a scenario: "resume" pressed on the phone while the computer is
+held (it goes through the same `resumeHere` as a command). Docs: `PROJECT_CONTEXT.md` 5.4 and 13, the browser README. The owner tried it: "działa bardzo dobrze".
+
+**UNCOMMITTED too, on top of it — review 3.2, stage 1 (on "możesz robić 3.2/3.3"):** the track in the player is one object
+`current` in `youtube-autopilot.js` (kind GUEST / BACKGROUND / HISTORY / MANUAL, `songId`, `key`, `playlistId`, `loadedAtSeq`,
+`loadNo`, `startedAt`, `retrace`, `phase` LOADING → RUNNING → OVER), created only by `startTrack` (`playTrack`, `replayTrack`,
+`playInEmbeddedPlayer` go through it); the old flags are functions of it (`isLoadingSong()`, `isBackgroundTrack()`,
+`runningGuestSongId()`, `nowPlayingKey()`, `isRetracing()`). No change of behaviour: all 56 scenarios green before and after. To commit
+the two apart, the script as it was after the resume change is in the session's scratch directory (`resume-snapshot/`); without
+it, one commit. **Next: stage 2 (3.3), ES modules** — the defaults the owner accepted: stage 1 reviewed first, full ES modules with
+import/export and `s2p:*` events, `wake-lock.js` and `song-autocomplete.js` stay classic scripts.
+
 **The push of `cfef47e` was red twice, fixed in the commit after it** (the owner pasted the two logs — GitHub shows a log only
 when signed in): Unit tests — `-Dtest=!…` replaces surefire's name patterns, so the 24 `*IT` ran there without a database (now
 `!*IT` in the command, and `PostgresIntegrationTest` skips itself outside failsafe); Database tests — the plan test of `MigrationIT`
