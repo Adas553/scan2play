@@ -13,7 +13,8 @@
  * playing waits for it to end, and a paused player is left alone — a pause is the DJ's choice.
  * With Auto-Pilot off nothing starts by itself when a track ends. After a reload, and in a window that has just taken playback
  * over from another device, the first track is the one that played last (from its start, if it started within 10 minutes), not
- * the next one — see resumeLastTrack.
+ * the next one — after a reload only if the reload interrupted it, and with Auto-Pilot off at the reload once it is switched on;
+ * see resumeLastTrack.
  *
  * Only ONE dashboard window plays (PROJECT_CONTEXT.md Section 5.4, "One window plays"). Every open dashboard has
  * its own player, and a second one — the DJ peeking from a phone — would take tracks off the queue that the first
@@ -91,14 +92,20 @@
     // at most RESUME_WITHIN_SECONDS ago — from its start, instead of the next one. Asking next-track then used up a track (it is marked
     // played when handed out): at load nobody heard it (the browser refuses sound in a page nobody has touched, so it was only
     // loaded), and a takeover skipped the track the other device was playing. Only for that first track: any load clears it
-    // (loadIntoPlayer), and so do a page loaded with Auto-Pilot off and an answer that another window plays; "play on this device"
-    // sets it again once this window holds the lease (takeOverPending, applyLease).
+    // (loadIntoPlayer), and so does an answer that another window plays; "play on this device" sets it again once this window holds
+    // the lease (takeOverPending, applyLease).
+    // After a reload (2026-10-01, the owner's report) only a track the reload INTERRUPTED comes back — the one the page before noted
+    // when it went away (INTERRUPTED_TRACK_KEY, see the pagehide handler): a track that had ended by itself is not played again. With
+    // Auto-Pilot off at the reload the resume waits until Auto-Pilot is switched on or "resume" is pressed (it used to be dropped, and
+    // the next track played); a track the DJ had paused waits for "resume" even with Auto-Pilot on (isHeldByPause).
     let resumeLastTrack = true;
     // "Play on this device" has been pressed and no answer has made this window the holder yet (applyLease).
     let takeOverPending = false;
     // The resume comes from "play on this device": it happens with Auto-Pilot off too (tryAutoPlay).
     let resumeWithoutAutoPilot = false;
     const RESUME_WITHIN_SECONDS = 600;
+    // sessionStorage (kept across a reload of the tab): the key of the track the page interrupted when it went away.
+    const INTERRUPTED_TRACK_KEY = 'scan2play.interruptedTrack';
     // Which window plays (see the file header): null = the server has not answered yet, true = this window plays,
     // false = another window or device does. Tracks are asked for only while it is true.
     let isPlayerDevice = null;
@@ -357,24 +364,18 @@
         // "Play on this device" brings the last track back even with Auto-Pilot off: the DJ asked for music here. Auto-Pilot only
         // decides what happens when it ends — the queue goes on (on) or the player stops (off).
         const takeOver = resumeLastTrack && resumeWithoutAutoPilot;
-        if (!isAutoPilotOn() && !takeOver) {
-            resumeLastTrack = false; // Auto-Pilot off: switching it on later starts from the queue
-            return;
-        }
+        // Auto-Pilot off: nothing starts by itself. A resume after a reload waits for Auto-Pilot to be switched on (or "resume").
+        if (!isAutoPilotOn() && !takeOver) return;
         if (!isPlayerIdle()) return;
+        // The reload interrupted a track the DJ had paused: held like a paused player — nothing starts, not even the queue,
+        // until "resume" (resumeHere). A pause is the DJ's choice (the owner's decision 2026-10-01, option A).
+        if (resumeLastTrack && !takeOver && isHeldByPause()) return;
         tryAutoPlayInFlight = true;
 
         try {
             if (resumeLastTrack) {
-                resumeLastTrack = false;
-                resumeWithoutAutoPilot = false;
-                const recent = await fetchRecentTracks();
-                const last = recent && recent[0];
-                if (last && typeof last.secondsAgo === 'number' && last.secondsAgo <= RESUME_WITHIN_SECONDS) {
-                    if (isPlayerDevice !== true || isLoadingSong || !(isAutoPilotOn() || takeOver) || !isPlayerIdle()) return;
-                    replayTrack(last); // as ⏮ does: not confirmed again, ⏭ goes on from the queue, so does its end
-                    return;
-                }
+                const outcome = await resumeLastPlayed(takeOver, function () { return isAutoPilotOn() || takeOver; });
+                if (outcome !== 'none') return; // resumed, or the situation changed while we asked
             }
             if (!isAutoPilotOn()) return; // a takeover with Auto-Pilot off plays the last track only, never the next one
             const track = await fetchNextTrack();
@@ -387,6 +388,54 @@
         } finally {
             tryAutoPlayInFlight = false;
         }
+    }
+
+    /**
+     * Brings back the track that played last (resumeLastTrack), from its start, as ⏮ does: not confirmed again, ⏭ and its end
+     * go on from the queue. A takeover carries on with whatever the other device played last; after a reload only the track the
+     * reload interrupted comes back (the note of the page before) — if it is still the newest entry of the timeline and started at
+     * most RESUME_WITHIN_SECONDS ago. Either way the resume is used up. The caller holds tryAutoPlayInFlight.
+     *
+     * @param {boolean} takeOver whether this is "play on this device"
+     * @param {function(): boolean} stillWanted asked again after the answer of recent-tracks (e.g. Auto-Pilot still on)
+     * @returns {Promise<'resumed'|'none'|'changed'>} 'none': nothing to bring back; 'changed': there was, but the player or the
+     *          lease changed while we asked
+     */
+    async function resumeLastPlayed(takeOver, stillWanted) {
+        resumeLastTrack = false;
+        resumeWithoutAutoPilot = false;
+        const interrupted = takeOver ? null : readInterruptedTrack();
+        if (!takeOver && !interrupted) return 'none';
+        const recent = await fetchRecentTracks();
+        const last = recent && recent[0];
+        if (!last || typeof last.secondsAgo !== 'number' || last.secondsAgo > RESUME_WITHIN_SECONDS) return 'none';
+        if (!takeOver && last.key !== interrupted.key) return 'none';
+        if (isPlayerDevice !== true || isLoadingSong || !stillWanted() || !isPlayerIdle()) return 'changed';
+        replayTrack(last);
+        return 'resumed';
+    }
+
+    /** A resume after a reload is pending for a track the DJ had paused (see tryAutoPlay). */
+    function isHeldByPause() {
+        const interrupted = readInterruptedTrack();
+        return interrupted !== null && interrupted.paused;
+    }
+
+    /**
+     * "Resume" in a window that has loaded nothing since a reload: the player is empty, so there is nothing to carry on — the track
+     * the reload interrupted comes back instead (with Auto-Pilot off, or paused before the reload). With nothing to bring back the
+     * resume is over: with Auto-Pilot on the queue goes on, with it off nothing plays (as before).
+     */
+    async function resumeAfterReload() {
+        if (tryAutoPlayInFlight) return;
+        tryAutoPlayInFlight = true;
+        let outcome;
+        try {
+            outcome = await resumeLastPlayed(false, function () { return true; });
+        } finally {
+            tryAutoPlayInFlight = false;
+        }
+        if (outcome === 'none') tryAutoPlay();
     }
 
     // ---- Which window plays (the player lease) ----
@@ -668,9 +717,17 @@
         if (player && playerReady && typeof player.pauseVideo === 'function') player.pauseVideo();
     }
 
-    /** Carries on after a pause. (A browser may refuse to start sound in a window nobody has touched — then it stays paused.) */
+    /**
+     * Carries on after a pause. (A browser may refuse to start sound in a window nobody has touched — then it stays paused.) Right
+     * after a reload the player is empty: then the track the reload interrupted comes back (resumeAfterReload).
+     */
     function resumeHere() {
-        if (player && playerReady && typeof player.playVideo === 'function') player.playVideo();
+        if (!player || !playerReady) return;
+        if (resumeLastTrack && !resumeWithoutAutoPilot && isPlayerDevice === true && !isLoadingSong && isPlayerIdle()) {
+            resumeAfterReload();
+            return;
+        }
+        if (typeof player.playVideo === 'function') player.playVideo();
     }
 
     /**
@@ -817,9 +874,43 @@
     const takeOverButton = document.getElementById('playerLeaseTakeover');
     if (takeOverButton) takeOverButton.addEventListener('click', takeOverPlayback);
 
+    /**
+     * The track the page before this one (a reload of the tab) interrupted when it went away: {key, paused} — paused when the DJ
+     * had paused it — or null.
+     */
+    function readInterruptedTrack() {
+        try {
+            const note = JSON.parse(window.sessionStorage.getItem(INTERRUPTED_TRACK_KEY));
+            return note && typeof note.key === 'string' ? { key: note.key, paused: note.paused === true } : null;
+        } catch (e) {
+            return null; // storage blocked or an unreadable note: a reload starts from the queue
+        }
+    }
+
+    /**
+     * Going away (a reload, the tab closed): note the track this page interrupts, for a reload of the tab (resumeLastTrack) — the
+     * track that plays, is paused or is loading, if this window plays and the timeline knows it (a track picked by hand does not
+     * count). Nothing is noted for a track that ended by itself or when another window plays. A page that has loaded nothing passes
+     * on the note it found (it was reloaded again before Auto-Pilot was switched on).
+     */
+    function noteInterruptedTrack() {
+        try {
+            const paused = playerState === YT.PlayerState.PAUSED;
+            const interrupted = isPlayerDevice === true && nowPlayingKey && (isPlayingOrLoading() || paused);
+            if (interrupted) {
+                window.sessionStorage.setItem(INTERRUPTED_TRACK_KEY, JSON.stringify({ key: nowPlayingKey, paused: paused }));
+            } else if (trackLoads > 0 || isPlayerDevice === false) {
+                window.sessionStorage.removeItem(INTERRUPTED_TRACK_KEY);
+            }
+        } catch (e) {
+            // storage blocked: nothing to note
+        }
+    }
+
     // Going away (tab closed, another page opened): give the lease up at once, so that the next window does not
     // have to wait for the timeout. sendBeacon cannot set headers, so the CSRF token goes in the body.
     window.addEventListener('pagehide', function () {
+        noteInterruptedTrack();
         if (isPlayerDevice !== true || !partyCodeValue || !navigator.sendBeacon) return;
         navigator.sendBeacon('/dj/dashboard/player-lease/release', new URLSearchParams({
             partyCode: partyCodeValue, deviceId: deviceId, _csrf: csrf.token

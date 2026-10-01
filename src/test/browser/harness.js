@@ -32,6 +32,8 @@
      *   page     which rendered page the scenario runs on (default 'dashboard': a YouTube party in Polish, Auto-Pilot on, a playlist
      *            saved; 'dashboard-manual': a brand-new party — Auto-Pilot off, no playlist); see DashboardPageRenderTest
      *   fake     properties for the fake YouTube player before it starts, e.g. { blockApi: true } (see fake-yt.js)
+     *   session  sessionStorage entries written before the player starts — what the page before a reload left, e.g.
+     *            { 'scan2play.interruptedTrack': 'B:9' }
      *   setup    what the stand-in server is told before the page starts (see server.py, POST /__config)
      *   run      async function (t): does something and records steps with t.step(...)
      *   control  optional: this scenario is a CONTROL — the same check with the problem put back, which must fail. It passes
@@ -178,6 +180,8 @@
             await post('/__reset');
             if (definition.setup) await stand.config(definition.setup);
             if (definition.fake) Object.assign(fake, definition.fake);
+            // what an earlier page of this tab left in sessionStorage (a reload keeps it; every scenario starts with an empty one)
+            Object.keys(definition.session || {}).forEach(function (key) { sessionStorage.setItem(key, definition.session[key]); });
             fake.start();   // now the script may ask for its first track
             await definition.run(t);
         } catch (e) {

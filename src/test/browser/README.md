@@ -71,6 +71,7 @@ S2P.scenario({
     title: 'one line: what it proves',
     page: 'dashboard-manual',            // optional: which rendered page (default 'dashboard')
     fake: { blockApi: true },            // optional: properties for the fake player before it starts
+    session: { 'scan2play.interruptedTrack': 'B:9' },   // optional: sessionStorage left by the page before a reload
     setup: { nextTracks: [ /* answers of next-track */ ], lease: { holder: true } },   // told to the stand-in first
     run: async function (t) {
         await t.waitForTrack(1);                                        // Auto-Pilot asked next-track and the fake plays it
