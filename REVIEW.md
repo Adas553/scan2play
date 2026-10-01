@@ -503,3 +503,19 @@ Testy jednostkowe: **531** (530 uruchomionych, 1 pominięty; było 516), `BUILD 
 przeglądarkowe: **58/58** zielone. **Nie zrobione:** 5.5 (hasło `1111` w `application.properties` — wymaga profilu `local` i zmiany
 konfiguracji uruchomieniowej w IntelliJ: decyzja właściciela), 5.1 etap 3–4 (egzekwowanie; klasy zamiast `style="…"`), 2.3, druga
 połowa 7.1.
+
+**Piąta paczka — 2.4, 1.7, 2.6, 3.5 (część), 6.4 (część), 7.3 (część); 2026-10-01, zacommitowane i wypchnięte:**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 2.4 | `next-track` woła `PlayerLeaseService.claimToPlay`: posiadacz lease albo okno, które bierze wolny lease w tym samym kroku — dwa okna pytające tuż po restarcie nie dostaną dwóch utworów. Czekająca komenda (⏭ z telefonu) zostaje dla następnego raportu posiadacza (dlatego nie `report(CLAIM)`). Okno bez id — jak dotąd (tylko gdy nikt nie gra). | `PlayerLeaseService`, `DjDashboardController` | `PlayerLeaseServiceTest` +2, `DjDashboardControllerNextTrackTest` |
+| 1.7 | Klucz blokady kolejki: „S2PQ” w górnych 32 bitach + kod imprezy w base 36 w dolnych (5 znaków [A-Z0-9] < 36⁵ ≈ 60 mln) — bez kolizji; inny napis → hash. | `FallbackTrackCommandService.queueLockKey` | +1 (para kodów o równym starym hashu: `AP000` / `B1000`); 24 IT zielone |
+| 2.6 | `FallbackQueueService`: `currentPlaylist(partyCode)` zamiast czterech powtarzanych linii w `moveTrack` / `placeTrack` / `skipTrack`. | `FallbackQueueService` | bez zmian (istniejące) |
+| 3.5 | `encodeURIComponent(partyCode)` w pollu. **Nie zrobione:** jedno źródło ID filmu (`data-video-id` z serwera) — dziś bezpieczne, dotyka trzech miejsc i scenariuszy. | `polling.js` | 58/58 scenariuszy |
+| 6.4 | Usunięte repozytoria `spring-milestones` / `spring-snapshots` i niepodpięty `dependency-check-maven` 10.0.3 — testy jednostkowe przeszły z **pustym** lokalnym repozytorium Maven (wszystko z Central). **Nie zrobione:** Dependabot / `dependency-review-action` (otwierałby PR-y — decyzja właściciela), JaCoCo. | `pom.xml` | — |
+| 7.3 | `.github/copilot-instructions.md` rozjechał się z `AGENTS.md` (jedno zdanie o testach przeglądarkowych) — zsynchronizowany, a workflow Unit tests sprawdza go `diff`-em. Wcięcie `AppConfig.cacheManager`. `HELP.md` nie jest w repo (`.gitignore`) — nic do zrobienia. **Nie zrobione:** statyczna metoda `DjDashboardController.extractPlaylistId` (ma własną klasę testów), konstruktory `FallbackQueueView`. | `.github/…`, `AppConfig` | — |
+
+Do tego (zgłoszenie właściciela): zamknięcie / wznowienie imprezy w jednym oknie dochodzi do pozostałych — nagłówek `X-Party-Active` w
+każdej odpowiedzi pollu kolejki (scenariusz `party-closed-elsewhere`, czerwony przed).
+
+Testy jednostkowe: **536** (535 uruchomionych, 1 pominięty), IT: **24**, scenariusze: **59/59** — wszystko zielone w kopiach repo.

@@ -6,12 +6,23 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `f14a779` (2026-10-01). Check with `git status -sb` and `git log --oneline -8`.
+- **Branch `dev`**, pushed up to `46d1ba4` (2026-10-01). Check with `git status -sb` and `git log --oneline -8`.
+- **Committed and pushed (2026-10-01):** the fifth package of the review (`REVIEW.md`, "Piąta paczka") — 2.4
+  `next-track` takes a free player lease (`PlayerLeaseService.claimToPlay`; a waiting command is kept), 1.7 a collision-free queue
+  lock key (the party code in base 36), 2.6 `FallbackQueueService.currentPlaylist`, 3.5 `encodeURIComponent` in the poll, 6.4
+  milestone/snapshot repositories and the unused `dependency-check` plugin removed from `pom.xml` (checked with an empty local Maven
+  repository), 7.3 `.github/copilot-instructions.md` synced with `AGENTS.md` and checked by the Unit tests workflow, an indentation.
+  **And the owner's report:** "End party" changed only the window it was pressed in — now every answer of the queue poll carries
+  `X-Party-Active` and every window shows the "party closed" banner / the "end party" button by it (within 3 s; a poll sent before
+  the DJ's own click is ignored). Scenario `party-closed-elsewhere` (red before), `DjDashboardControllerGuestLimitsTest` +1.
+  536 unit tests, 24 database tests, 59 browser scenarios — green in copies of the repo. To try: end the party on the phone, the
+  computer's dashboard shows it within 3 s, and back; two dashboard windows right after a restart of the app: only one plays.
 - **Committed and pushed (2026-10-01, tried by the owner: "działa"):** the fourth package of the review (below, "The third part of
   2026-10-01") — the CSP (report-only), the rejected song without a name, 4.6, 5.4, 1.6, 1.9 and tests of `SongEvaluationService`.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs`; logs need a
   GitHub login, but failed tests are written as public **annotations**: `.../check-runs/<id>/annotations`): three workflows —
-  Unit tests, Browser tests, Database tests. All three green for `f14a779` (2026-10-01).
+  Unit tests, Browser tests, Database tests. All three green for `46d1ba4` (2026-10-01). Unit tests now also check that the
+  Copilot copy of `AGENTS.md` matches it.
 - **Printing the QR code — tried by the owner ("działa"), COMMITTED and PUSHED (2026-10-01)** (the owner's wish, 2026-10-01: "zrób oba warianty, dwujęzyczna"): a "🖨" link
   under the dashboard's QR code opens `GET /dj/qr-print` in a new tab — `layout=poster` (one A4 poster, default) or `cards` (eight
   93 × 68 mm cards to cut out); the printed text is Polish **and** English (written in `qr-print.html`, each part with its own
@@ -73,12 +84,12 @@ and files: `REVIEW.md`, "Czwarta paczka".
 
 ## Next (the owner picks)
 
-1. Review and commit the third part of 2026-10-01 (above); after the push, look at the three workflows.
+1. After the push of the fifth package, look at the three workflows (the Unit tests one has a new step).
 2. **CSP step 3:** `CSP_ENFORCE=true` once the reports are quiet; then, optionally, the `style="…"` attributes as classes (drops
    `'unsafe-inline'` for styles) and Bootstrap from the app instead of the CDN.
 3. From `REVIEW.md`: **2.3** single instance (Spring Session JDBC would keep DJs logged in across a deploy — a separate decision);
-   **5.5** (needs the `local` profile in IntelliJ); the small N items left (1.7, 1.8, 2.4, 2.5, 2.6, 3.4, 3.5, 4.7, 5.3, 6.3, 6.4,
-   7.2, 7.3); **6.2** rest: `QrCodeService`, `FeedbackController`, Spotify (left for now — the owner).
+   **5.5** (needs the `local` profile in IntelliJ); the small N items left (1.8, 2.5, 3.4, 4.7, 5.3, 6.3, 7.2; what remains of
+   3.5 — one source of a video's id —, 6.4 — Dependabot (it would open PRs: the owner decides), JaCoCo — and 7.3); **6.2** rest: `QrCodeService`, `FeedbackController`, Spotify (left for now — the owner).
 4. `PROJECT_CONTEXT.md` (~1800 lines) — the other half of 7.1, a separate edit.
 
 ## The first half of 2026-10-01 (committed and pushed)
