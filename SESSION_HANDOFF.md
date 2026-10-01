@@ -12,7 +12,12 @@ first session (2026-09-28, remote) is summarised at the bottom.
   eighth" (after the seventh's section). Before it: `dev...origin/dev` at `847c872` (two commits past the `32ac785` the session's prompt
   named: the Auto-Pilot setting followed by every window), and both GitHub workflows green for `32ac785` and `847c872`. Afterwards:
   `GUEST_CLIENT_IP_HEADER` set on Railway, and the DJ's dashboard shows the server limits and warns when one stops guest songs.
-  **480** unit tests, **46** browser scenarios, all green. Next: the owner reviews the diff; then, from `REVIEW.md`, 6.1 (a lasting PostgreSQL test).
+- **AFTER that push (`ab94acb`) — tried by the owner, COMMITTED (code, then the docs) and PUSHED on "przetestowałem, możesz commitować
+  i pushować" (2026-10-01):** the video's title as the
+  song's name, lyrics searched by the guest's words, the two request modes on the guest form (🎵 Konkretna piosenka / ✨ Nastrój, tiles),
+  a YouTube Mix refused as the playlist, the queue's song column on a computer, and the guest's view of the queue with its refresh ("Teraz gra",
+  "Następne w kolejce", "Twoja piosenka — N. w kolejce"). All in "The session of 2026-09-30, the eighth", after "After the push".
+  **507** unit tests, **47** browser scenarios, all green. Next, from `REVIEW.md`: 6.1.
 - **The seventh session (2026-09-30): the whole-project review — `REVIEW.md` at the repo root, 39 ranked findings — and its first package of
   fixes (3.1, 4.3, 4.2, 1.1, 4.4, 2.2, 5.2), COMMITTED (code `57d3def`, the caption fix of the "up next" list `b00feec`, then the docs), and
   afterwards the resume of the last track after a reload and a takeover (`59c0944`, docs `d58bde2`) and the Auto-Pilot setting followed by
@@ -1178,6 +1183,71 @@ zagraną" in the queue — there is no delete button for a guest song). The alte
 `GuestRequestLimiterTest`, `YouTubeSearchBudgetTest`, `YouTubeMusicProviderCacheTest` (new), `GuestSessionServiceTest`,
 `YouTubeMusicProviderTest`, `DjServiceTest`; browser `server.py`, `run.py`, `README.md`, `scenarios/next-during-guest-song.js` (new);
 docs `PROJECT_CONTEXT.md` (5.2, 5.4, 6.2, 7.3, 9, 10, 11, 13), `REVIEW.md` (status), this file.
+
+### After the push: the video's title as the song's name (tried by the owner, committed and pushed 2026-10-01)
+
+The owner's find with `gemini-2.5-flash`: a line of lyrics was named "Janusz Rewiński - Chciałbym być marynarzem" by the AI, and
+YouTube's search played Krzysztof Krawczyk's "Chciałem być" — the right song, by luck; the lists showed the AI's wrong name. On
+"tak, chyba tak będzie lepiej": for a YouTube party the stored name is now the video's own title, cleaned of "(Official Video)" and the
+like (`SongEvaluationService.nameOfTrack`, `YouTubeUrls.cleanVideoTitle`; the guest's request and the DJ's pick). One `videos.list`
+call per accepted song (general pool). Without a key, a video or a title the AI's name stays. **Not tried against the real API** — the
+owner tries a guest request in IntelliJ. 483 unit tests; no JS or template change, so the browser scenarios were not run again.
+Files: `SongEvaluationService`, `DjService`, `YouTubeUrls`, `SongEvaluationServiceTest`, `DjServiceTest`, `YouTubeUrlsTest`,
+`PROJECT_CONTEXT.md` (7.1, 13), this file.
+
+**Then the owner's next try:** the same line now showed "Elektryczne gitary - Wytrąciłaś mnie z równowagi" (the name matched the video
+— that part works) while the AI's comment called the song "'Chciałbym być marynarzem' … od Elektrycznych Gitar": the AI made up yet
+another artist, and the search found another song. On "ok, zrób pierwszą propozycję": the AI says what the request is (`requestKind`
+in `DjResponse` and in the JSON of both prompts), a `lyrics` request at a YouTube party is searched by the guest's own words
+(`SongEvaluationService.searchQueryFor`), and the comment of an accepted request names no title or artist. **Not tried against the
+real API** — the owner tries the same line and a normal title and a mood in IntelliJ. 486 unit tests. Files added to the list above:
+`DjResponse`, `prompt-template_pl.txt`, `prompt-template_en.txt`.
+
+**The owner's try of that:** "baśka miała fajny biust" → Wilki - Baśka (right); "chciałbym być marynarzem" → "Morskie Opowieści" — the
+log showed the AI had read it as a MOOD, so the guest's words never reached YouTube (whose first result for them is Krawczyk). The owner
+asked whether dropping the mood would lose the app's main feature, then proposed letting the guest choose; "zrób jak napisałeś jak
+uważasz": **two request modes** on the guest's form — 🎵 Konkretna piosenka (default) / ✨ Nastrój (`requestMode`, `RequestMode`), a
+prompt for each (`prompt-template_*` rewritten for a song only; new `prompt-mood_*`), a mood sent as a song is not saved and comes back
+to the form with its text and the mood mode chosen (`guest.error.mood_in_song_mode`), song suggestions off in the mood mode. Both
+prompts also accept the style value `ANY` (the log showed the style arrives as `ANY`, which the old prompt did not name). 493 unit tests
+(`GuestPageRenderTest` new). **Not tried against the real API.** Files added: `RequestMode`, `GuestController`, `ViewAttributes`,
+`index.html`, `song-autocomplete.js`, `messages*.properties`, `prompt-mood_pl.txt`, `prompt-mood_en.txt`, the tests.
+
+**A YouTube Mix as the playlist** (the owner: "ta playlista nie może się zapisać" — a link with `list=RD3z-jNRAwSHk`): the Data API
+does not give out Mixes. On "ok, zrób to": the link is refused before saving, with its own message, and the playlist that plays is not
+touched (`YouTubeUrls.isMix`, `DjPartySettingsController`, `Reason.YOUTUBE_MIX`, `dashboard.js` `X-Fallback-Saved`, the message
+`dashboard.fallback.import.youtubemix`). New scenario `youtube-mix-refused` — red before (the old dashboard stopped the playing track,
+hid Stop and said nothing), green after; the stand-in's `fallbackSave.saved`. 47 scenarios, all green.
+
+**The mode buttons did not read as a choice** (the owner's screenshot: a segmented bar, half of it white): now two tiles under
+"Czego chcesz? Wybierz:", each with a line of what it means, the chosen one green with a ✓, stacked on a phone (`.mode-tile` in
+`app.css`, `home.form.mode.*.hint`). Looked at in the browser pane at 375 px: both states, the help text and the autocomplete switch
+follow. `GuestPageRenderTest` writes `target/guest-page/index.html` for such a look. 495 unit tests.
+
+**The song of a queue row broke letter by letter on a computer** (the owner's screenshot: "Wil / ki - / Bas / ka" beside a long AI
+comment): Bootstrap's `text-break` lets a word break anywhere, so the column shrank to one letter. Now `.song-title` breaks between
+words only and `.song-cell` keeps 16rem from the md breakpoint (`dashboard.html`, `app.css`); looked at in the browser pane at 1600 px.
+Also answered: the guest page never showed the playlist — its list is "🔥 Ostatnio zaakceptowane", the 5 newest accepted guest requests
+(`getPublicQueue`), shown only while any wait; local `main` = `origin/main`, nothing lost.
+
+**What the guest sees of the music** (asked "co widzieć: co będzie grane czy co ludzie wysyłają?"; the old list was newest first while
+the queue plays oldest first — a guest saw their song on top although it waited last). On "tak, z tym też „Twoja piosenka — N. w
+kolejce”": `GuestQueueService` + `fragments/guest-queue.html` — "Twoja piosenka „…” — N. w kolejce" (also on the result page),
+"🔊 Teraz gra" (newest timeline entry started ≤ 8 min ago), "Następne w kolejce" (5 guest songs in play order, the guest's marked
+"Twoja"); the guest's request ids in the session (`GuestSessionService.rememberRequest`, 20 per party; `DjResponse.requestId`). The
+old `getPublicQueue`, its query and the `publicQueue` cache removed. Then the owner: the list (and "Teraz gra") does not refresh — a
+refresh button instead of a timer? Agreed: no timer; `GET /p/{code}/queue` gives the fragment alone, and the page fetches it when the
+guest comes back to it (`visibilitychange`, at most once per 5 s; `pageshow` from the back-forward cache) and on "↻ Odśwież".
+Looked at in the browser pane at 375 px with a stand-in file for the endpoint: the button replaces "Teraz gra" and the list, and works
+again after the replacement. 507 unit tests. **Not tried against the running app** — on the phone: send two requests, go back to the
+party page, lock and unlock the phone.
+
+**2026-10-01: an unknown (new) song was rejected.** "Shakira & Burna Boy – Dai Dai" in the song mode → "NIE, takiego kawałka nie
+znajdziesz" (the song is real: the 2026 World Cup song, May 2026 — after the model's knowledge); "shakira dai dai" passed. The old
+rule "MUST exist, never invent collaborations" made the model reject what it did not know. Point 2 of both song prompts rewritten:
+never invent, but not knowing a song is no reason to reject it; unknown → the guest's name in `songName`, vibe by artist and genre.
+`SongEvaluationServiceTest` checks the sentence is in the prompt. **Not tried against the real API** — the owner retries the same
+request.
 
 ## Trying the DJ dashboard on a phone (Google login) — solved
 

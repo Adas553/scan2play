@@ -260,11 +260,33 @@ On the dashboard, the DJ can:
 
 ```
 QR Code Scan → /p/{partyCode}
-    → Guest sees request form + top 5 accepted songs
+    → Guest sees request form + what plays now, the next 5 guest songs in play order, and where their own song waits
     → Submits song request (name + optional style)
     → AI evaluates request via Gemini (async Callable — releases Tomcat thread)
     → Result page shows decision + DJ comment
 ```
+
+**What the guest sees of the music (2026-09-30, the owner's decision):** under the form (`fragments/guest-queue.html`,
+`GuestQueueService`) — "Twoja piosenka „…” — N. w kolejce" for the guest's first song still waiting (its position in the whole queue),
+"🔊 Teraz gra" (the newest entry of the play timeline, if it started at most 8 minutes ago — the server knows when a track started,
+not when it ended; the timeline covers what the embedded YouTube player played), and "Następne w kolejce": the first 5 accepted guest
+songs in the order they play (`DjService.getDashboardQueue`, oldest first, the 3 s cache), the guest's own marked "Twoja". The
+guest's requests are remembered in the session (`GuestSessionService.rememberRequest`, the newest 20 per party); the result page shows
+the position too. Background playlist tracks are not listed: they play only when no guest song waits. Before, the page listed the 5
+newest accepted requests newest first (`getPublicQueue`, removed with its query and the `publicQueue` cache) — while they play oldest
+first. **Refreshing without a timer** (the owner's choice): `GET /p/{partyCode}/queue` renders the fragment alone (empty for an ended
+party, 404 for an unknown one), and the page (`index.html`, `#guestQueueBox`) fetches it again when the guest comes back to it
+(`visibilitychange` to visible, at most once per 5 s; `pageshow` from the back-forward cache) and on its "↻ Odśwież" button — so a room
+of phones asks only when someone looks. "Teraz gra" is in the same fragment.
+
+**Two request modes (2026-09-30, the owner's decision):** above the field, under "Czego chcesz? Wybierz:", two tiles (`.mode-tile`
+in `app.css`: a line under each title, the chosen one green with a ✓, one under the other on a phone — a segmented bar did not read as
+a choice, the owner's report) — **🎵 Konkretna piosenka** (the default) and **✨ Nastrój** (form field `requestMode` = `SONG` | `MOOD`, `RequestMode`; a missing one is `SONG`). Each has its own prompt
+(`prompt-template_*.txt` for a song — title, artist or a line of the lyrics, never replaced by another song "in a similar vibe";
+`prompt-mood_*.txt` for a mood — the AI picks one song). The help text under the field follows the mode, and the song suggestions
+(`song-autocomplete.js`) are off in the mood mode (`data-autocomplete-off`). A request the AI reads as a mood in the song mode is not
+saved: the guest is back at the form with the text kept, the mood mode chosen and `guest.error.mood_in_song_mode`. Before, the AI
+guessed which of the two a request was and took a line of lyrics for a mood.
 
 No guest authentication required. A request passes three limits, each counted **before** the AI evaluates it (REVIEW.md 4.1,
 2026-09-30 — before, the session limit was checked before and recorded after the 2–4 s evaluation, and a request without the
@@ -1018,6 +1040,26 @@ fixture; skipped unless `S2P_FIXTURE_OUT` is set). The CI workflow that runs it 
 - **Prompt language:** Locale-aware (English + Polish). Prompt is selected based on guest's browser locale via `LocaleContextHolder`; unsupported locales fall back to English.
 - **Comment length:** AI instructed to keep comments under 300 characters; entity truncates at 500 as safety net
 - **Duplicate detection:** Configurable window — recent N songs are injected into the prompt
+- **An unknown song is not rejected (2026-10-01):** "Shakira & Burna Boy – Dai Dai" (released May 2026, after the model's knowledge)
+  was rejected as "it does not exist", while "shakira dai dai" passed — the old rule "the song MUST exist, never invent
+  collaborations" made the model reject what it did not know. Point 2 of the song prompt now says: never invent songs, but not
+  knowing one is no reason to reject it (the search checks it); an unknown song keeps the guest's name in `songName` and its vibe is
+  judged by the artist and the genre.
+- **A line of lyrics is searched by the guest's words (2026-09-30):** `gemini-2.5-flash` named the same line of a well-known
+  Polish song with a different made-up artist and title on each try, and YouTube then found another song. The AI's answer now says
+  what the request is — `requestKind`: `title` / `artist` / `lyrics` / `mood` (`DjResponse`; null in an answer without it) — and at a
+  YouTube party a `lyrics` request is searched by what the guest typed (`SongEvaluationService.searchQueryFor`; YouTube's search
+  matches lyrics well), everything else by the AI's name; Spotify's search does not match lyrics, so a Spotify party keeps the AI's
+  name. The prompt asks for `lyrics` even when the AI thinks it knows the song, and for no title or artist in the comment of an
+  accepted request (the found video may differ from its guess). The AI still decides whether the request fits the party.
+- **The name shown is the video's, not the AI's (2026-09-30):** the AI named a line of lyrics with a wrong artist and a made-up
+  title, and YouTube's search still found the right song — the lists said one thing and the player played another. For a YouTube
+  party, once a request (or a DJ pick) resolves to a video, `SongEvaluationService.nameOfTrack` takes the video's own title
+  (`YouTubePlaylistClient.findTitle`, one `videos.list` call, 1 unit from the general pool), cleans it of the upload's tags
+  (`YouTubeUrls.cleanVideoTitle`: "(Official Video)", "[HD]", "(Teledysk)"…; "(Da Ba Dee)" or "(Remix)" stay) and stores it as
+  `song_name` — the guest's result page, the DJ's queue, the history and the duplicate check all use it. The order of artist and
+  title is the uploader's. Without a key, a video or a title the AI's name stays; Spotify parties are unchanged. The AI's comment
+  may still mention its own name.
 - **Lyrics as a request (2026-09-30):** a guest typed a line of a well-known Polish song and the model said it knew no such song and
   picked another one. Point 1 of `prompt-template_{pl,en}.txt` now says a request may be a fragment of the lyrics, that the song it
   comes from is picked (not replaced), a mood only when it is neither title, artist nor lyrics, and an honest word in the comment when a
@@ -1066,6 +1108,12 @@ Two separate authentication flows:
   (the DJ can play it by hand, Auto-Pilot skips it — the owner's choice). A 403 `quotaExceeded` trips it at once. The count is in
   memory (a restart starts it over; the 403 is the backstop). Search links are not put into the `youtubeSearch` cache, so a
   song gets its video once the API can be asked again. **Raise the budget together with the quota** when Google grants more.
+- **A YouTube Mix is refused (2026-09-30):** a link with `list=RD…` (a Mix YouTube makes up for one viewer, e.g. opened from a video)
+  is not given out by the Data API. `POST /dj/dashboard/fallback-playlist` refuses it before saving anything (`YouTubeUrls.isMix`;
+  `RDCLAK…` YouTube Music lists are left to the import): `X-Fallback-Saved: false`, `X-Fallback-Import: failed`,
+  `X-Fallback-Import-Reason: YOUTUBE_MIX`; the dashboard shows `dashboard.fallback.import.youtubemix` and leaves the party's playlist,
+  the track that plays and the Stop button alone. Before, the link was saved, the import failed with the general API error and the
+  server kept retrying it.
 - **Playlist import (`YouTubePlaylistClient`, Phase 2):** when the DJ sets a fallback playlist the backend reads it once —
   at most 500 items = ≤ 10 `playlistItems` + ≤ 10 `videos` calls (≈ 20 units from the general pool, none from `search.list`);
   the video titles shown in the DJ's "up next" list come from the same `videos.list` calls (`part=status,snippet`, no extra
@@ -1109,11 +1157,11 @@ Uses **Caffeine** cache with per-cache TTL configuration.
 | `qr-codes`       | text+size  | 24h    | 1000     | `QrCodeService.generateQrCodeBase64()` (`@Cacheable`) |
 | `youtubeSearch`  | searchQuery| 24h    | 1000     | `YouTubeMusicProvider.findTrackUrl()` L1 cache — backed by permanent `youtube_cache` DB table (L2) |
 | `dashboardQueue` | partyCode  | 3s     | 200      | `DjService.getDashboardQueue()` (`@Cacheable`) — auto-expires for polling freshness; evicted after a song is confirmed played (`markSongAsPlayed`, `pushToSpotify`), because next-track reads it |
-| `publicQueue`    | partyCode  | 5s     | 200      | `DjService.getPublicQueue()` (`@Cacheable`) |
 
 Additional caching: DJ's `partyCode` is cached in `HttpSession` to avoid repeated `ownerId` → DB lookups.
 
-Account deletion (`AccountDeletionService`) evicts the party's code from `partySettings`, `dashboardQueue` and `publicQueue`
+Account deletion (`AccountDeletionService`) evicts the party's code from `partySettings` and `dashboardQueue` (and, until the guest
+page stopped using it on 2026-09-30, `publicQueue`)
 after its transaction commits — before 2026-09-30 the deleted party (with its Spotify tokens) stayed in `partySettings` for up
 to 24 h and guests could still send requests to it.
 
@@ -1313,6 +1361,7 @@ PartySettingsQueryService
 |--------|-----------------------------|----------------------------------|
 | GET    | `/`                         | `HomeController.home()`          |
 | GET    | `/p/{partyCode}`            | `GuestController.partyIndex()`   |
+| GET    | `/p/{partyCode}/queue`      | `GuestController.partyQueue()` — the guest's list alone (Section 5.2) |
 | POST   | `/p/{partyCode}/request`    | `GuestController.requestSong()`  |
 | GET    | `/privacy`                  | `LegalController.privacyPolicy()` |
 | GET    | `/terms`                    | `LegalController.termsOfService()` |
@@ -1385,7 +1434,13 @@ PartySettingsQueryService
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
 - **Unit tests (424 tests, one of them skipped unless asked for — see below)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch) and the play log it writes (a row per hand-out, under the party lock, one id per play; the purge; the account deletion), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the timeline of what played (`PlayHistoryService`: the merge, play time vs request time, the bound and `hasMore`, what ⏮ can play again; `DjService.markPlayed`; `YouTubeUrls`), the `limit` of the history endpoints, `recent-tracks` and the `PREVIOUS` command, the state of the player and the `PAUSE` / `RESUME` commands (`PlayerLeaseService`, `DjPlayerLeaseController`), and the rendering of `fragments/fallback-queue.html` (with its skip button and the skipped count), `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles; skipping a track for this round (`FallbackTrackCommandService.skipTrack`, `FallbackQueueService`, `DjFallbackQueueController`), the nightly purge of the song requests (`SongRequestRetentionService`: the cutoff, the batches, the bound, the schedule) and — through `DashboardPageRenderTest` — the whole `dashboard.html`, rendered from the model of the real controller, in both languages (the texts of the import result, the ids the scripts need, `<html lang>` = the language of the bundle — also for a locale that has no bundle) and the History tab's fragment for every filter through the real controller; `HtmlLangDeclarationTest` checks that every page of `templates/` that uses `#{…}` keys declares its language.
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 480 tests, 479 run and 1 skipped** with the limits on the DJ's dashboard (`DashboardPageRenderTest` +1: the colour of the
+- **Total: 507 tests, 506 run and 1 skipped** with the guest's view of the queue (`GuestQueueServiceTest` 5, `GuestPageRenderTest` +3 —
+  also the fragment alone —, `GuestControllerTest` +3, `GuestSessionServiceTest` +1); **495** with a YouTube Mix refused (`DjPartySettingsControllerFallbackTest` +1,
+  `YouTubeUrlsTest` +1); **493** with the two request modes (`GuestPageRenderTest` 2 — the guest page rendered in both
+  languages and after a mood sent as a song —, `RequestModeTest` 1, `GuestControllerTest` +2, `SongEvaluationServiceTest` +2);
+  **486** with lyrics searched by the guest's words (`SongEvaluationServiceTest` +3: the
+  answer read with and without `requestKind`, the search query); **483** with the video's title as the song's name
+  (`SongEvaluationServiceTest` +2, `YouTubeUrlsTest` +1); **480** with the limits on the DJ's dashboard (`DashboardPageRenderTest` +1: the colour of the
   badges; `DjDashboardControllerGuestLimitsTest` 5 — the `X-Guest-Limits-Use` header and the
   `X-Guest-Limits` header, on a 304 too — two more in `GuestRequestLimiterTest`, one in `YouTubeSearchBudgetTest`; `DashboardPageRenderTest`
   checks the new ids); **471** after review items 4.1 and 1.3 (2026-09-30, the eighth session: `GuestRequestLimiterTest` 9,
@@ -1396,7 +1451,7 @@ PartySettingsQueryService
   `secondsAgo` of `recent-tracks`); **442** after the review's first package (2026-09-30, the seventh session: 11 more —
   `SongEvaluationServiceTest` (the Spotify auto-queue), `YouTubeMusicProviderTest` (the key in a header), `SpotifyAuthControllerTest`
   (the OAuth state), one each in `DjServiceTest` and `AccountDeletionServiceTest`). Before it: **431 tests, 430 run and 1 skipped** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"` in a copy of the repo, counted 2026-09-30, after the sixth session: 429 before it, minus the 6 tests of the removed `next-guest-track` endpoint, plus 3 of `DashboardPageRenderTest`, 4 of `HtmlLangDeclarationTest` and 1 of `FallbackQueueFragmentTest`). No integration tests in the repo — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs), and `V8`, the skip and the purge of the song requests (Sections 4.1, 5.4, 10) were checked against a throw-away PostgreSQL database, not by a test that stays. The one exception is the **fixture recorder** `PlayLogFixtureRecorderTest`: a `@SpringBootTest` that is skipped (no Spring context is even started) unless `S2P_FIXTURE_OUT` is set, and that refuses a database whose name does not start with `s2p_`; it is compiled with the rest, so an API change that breaks it shows at once.
-- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 46 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **both green on GitHub for every push of 2026-09-30, the last one `847c872`**. What the browser tests do not cover is listed in Section 5.4.
+- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 47 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **both green on GitHub for every push of 2026-09-30, the last one `847c872`**. What the browser tests do not cover is listed in Section 5.4.
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
