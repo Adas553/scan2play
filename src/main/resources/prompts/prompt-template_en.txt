@@ -23,7 +23,7 @@ Reply ONLY in JSON format:
 {
   "decision": "accepted" or "rejected",
   "comment": "short DJ comment, MAX 300 chars (e.g. 'Kurt Cobain didn't play maracas, tonight we dance salsa!'). When accepted, do NOT name the song's title or artist in the comment — the track is searched separately and may differ from your guess; comment on the vibe of the request.",
-  "songName": "ARTIST - SONG TITLE" (only if accepted; if rejected, leave what the guest asked for),
+  "songName": "ARTIST - SONG TITLE" (if rejected, what the guest asked for — never leave it empty),
   "energyLevel": 1-10,
   "requestKind": "title" or "artist" or "lyrics" or "mood"
 }

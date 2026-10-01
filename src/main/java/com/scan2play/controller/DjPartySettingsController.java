@@ -38,6 +38,14 @@ import static com.scan2play.controller.ViewAttributes.*;
 @Slf4j
 public class DjPartySettingsController {
 
+    /** The most songs the duplicate check looks back at (each is a line of the AI's prompt for every guest's request). */
+    static final int MAX_DUPLICATE_CHECK_WINDOW = 50;
+    static final int MAX_REQUEST_LIMIT = 100;
+    /** A day. */
+    static final int MAX_COOLDOWN_MINUTES = 1440;
+    /** The length of the {@code fallback_playlist_url} column. */
+    static final int FALLBACK_URL_MAX = 500;
+
     private final PartySettingsCommandService partySettingsCommandService;
     private final AccountDeletionService accountDeletionService;
     private final DjSessionHelper sessionHelper;
@@ -90,10 +98,11 @@ public class DjPartySettingsController {
                                OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
 
-        // Convert to integers and ensure minimum values
-        int safeRequestLimit = Math.max(1, (int) Math.round(requestLimit));
-        int safeCooldownMinutes = Math.max(1, (int) Math.round(cooldownMinutes));
-        int safeDuplicateCheckWindow = Math.max(0, duplicateCheckWindow);
+        // Whole numbers within bounds (review item 5.4): the duplicate window is read from the database and sent to the AI with
+        // every guest's request, so it has a ceiling; the guest limit's own ceilings only keep the numbers sensible.
+        int safeRequestLimit = clamp((int) Math.round(requestLimit), 1, MAX_REQUEST_LIMIT);
+        int safeCooldownMinutes = clamp((int) Math.round(cooldownMinutes), 1, MAX_COOLDOWN_MINUTES);
+        int safeDuplicateCheckWindow = clamp(duplicateCheckWindow, 0, MAX_DUPLICATE_CHECK_WINDOW);
 
         partySettingsCommandService.updateSettings(partyCode, s -> {
             s.setRequestLimit(safeRequestLimit);
@@ -146,12 +155,17 @@ public class DjPartySettingsController {
                 : null;
         // A YouTube Mix cannot be read by the Data API: refused before anything is saved, so the party's playlist (and the track
         // that plays from it) carries on, and nothing keeps trying to import it. X-Fallback-Saved: false tells the dashboard.
-        if (YouTubeUrls.isMix(YouTubeUrls.extractPlaylistId(sanitized))) {
-            log.info("Party [{}]: fallback playlist not saved — a YouTube Mix: {}", partyCode, sanitized);
+        // A link longer than its column is no playlist link either (review item 5.4: it ended in a 500 from the database).
+        FallbackImportException.Reason refusal = sanitized != null && sanitized.length() > FALLBACK_URL_MAX
+                ? FallbackImportException.Reason.INVALID_PLAYLIST
+                : YouTubeUrls.isMix(YouTubeUrls.extractPlaylistId(sanitized)) ? FallbackImportException.Reason.YOUTUBE_MIX : null;
+        if (refusal != null) {
+            log.info("Party [{}]: fallback playlist not saved ({}): {}", partyCode, refusal,
+                    sanitized.substring(0, Math.min(sanitized.length(), 120)));
             return ResponseEntity.ok()
                     .header("X-Fallback-Saved", "false")
                     .header("X-Fallback-Import", "failed")
-                    .header("X-Fallback-Import-Reason", FallbackImportException.Reason.YOUTUBE_MIX.name())
+                    .header("X-Fallback-Import-Reason", refusal.name())
                     .build();
         }
         PartySettingsEntity saved = partySettingsCommandService.updateSettings(partyCode,
@@ -218,6 +232,10 @@ public class DjPartySettingsController {
             session.invalidate();
         }
         return REDIRECT_HOME;
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.min(max, Math.max(min, value));
     }
 }
 

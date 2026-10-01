@@ -84,6 +84,10 @@ class GuestPageRenderTest {
             assertThat(tag(html, "modeSong")).contains("name=\"requestMode\"", "value=\"SONG\"", "checked");
             assertThat(tag(html, "modeMood")).contains("value=\"MOOD\"").doesNotContain("checked");
             assertThat(tag(html, "songInputHelp")).contains("data-text-song=\"", "data-text-mood=\"");
+            // no inline script (CSP, review 5.1): the page's script is a file, its text a data attribute
+            DashboardPageRenderTest.assertNothingInline(html);
+            assertThat(html).contains("<script src=\"/js/guest-party.js\">");
+            assertThat(tag(html, "submitBtn")).contains("data-text-submitting=\"");
         }
         String pl = render(PL, Map.of());
         assertThat(pl).contains("Konkretna piosenka", "Nastrój", "Czego chcesz?");

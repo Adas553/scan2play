@@ -1,6 +1,7 @@
 package com.scan2play;
 
 import com.scan2play.config.SecurityConfig;
+import com.scan2play.controller.CspReportController;
 import com.scan2play.controller.HomeController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * and the security layer works as expected.
  * Uses @WebMvcTest (no DB, no external APIs — fast and reliable).
  */
-@WebMvcTest(HomeController.class)
+@WebMvcTest({HomeController.class, CspReportController.class})
 @Import(SecurityConfig.class)
 class SmokeTest {
 
@@ -42,6 +43,28 @@ class SmokeTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Scan2Play")));
+    }
+
+    @Test
+    @DisplayName("Every page carries the Content-Security-Policy — reported only, until it is switched on (review 5.1)")
+    void pages_shouldCarryTheContentSecurityPolicy_reportOnly() throws Exception {
+        mockMvc.perform(get("/"))
+                // no 'unsafe-inline' for scripts: the pages have no inline script and no inline handler
+                .andExpect(header().string("Content-Security-Policy-Report-Only", containsString(
+                        "script-src 'self' https://cdn.jsdelivr.net https://www.youtube.com https://s.ytimg.com;")))
+                .andExpect(header().string("Content-Security-Policy-Report-Only", containsString("object-src 'none'")))
+                .andExpect(header().string("Content-Security-Policy-Report-Only", containsString("report-uri /csp-report")))
+                .andExpect(header().doesNotExist("Content-Security-Policy"));
+    }
+
+    @Test
+    @DisplayName("A browser's CSP report is taken without a login or a CSRF token")
+    void cspReport_isTakenWithoutLoginOrCsrf() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/csp-report")
+                        .contentType("application/csp-report")
+                        .content("{\"csp-report\":{\"document-uri\":\"https://scan2play.com.pl/p/ABC12?x=1\","
+                                + "\"effective-directive\":\"script-src-elem\",\"blocked-uri\":\"inline\"}}"))
+                .andExpect(status().isNoContent());
     }
 
     @Test

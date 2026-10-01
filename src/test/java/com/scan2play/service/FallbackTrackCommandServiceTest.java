@@ -221,27 +221,13 @@ class FallbackTrackCommandServiceTest {
     }
 
     @Test
-    @DisplayName("losing the race for a track (someone else claimed it) retries with the next one")
-    void takeNextTrack_shouldRetry_whenTrackWasClaimedByAnotherCaller() {
-        FallbackTrackEntity lost = track(1);
-        FallbackTrackEntity won = track(2);
-        when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST))
-                .thenReturn(List.of(lost), List.of(won));
-        when(repository.claimQueuedTrack(eq(1L), any(), any(), any())).thenReturn(0);
-        when(repository.claimQueuedTrack(eq(2L), any(), any(), any())).thenReturn(1);
-        when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(1L);
-
-        assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).map(FallbackPlayEntity::getVideoId).contains(won.getVideoId());
-    }
-
-    @Test
-    @DisplayName("it gives up after a bounded number of lost races instead of looping forever")
-    void takeNextTrack_shouldGiveUp_afterTooManyLostRaces() {
+    @DisplayName("under the queue's lock nothing can take the track first: a track that was not claimed (the safety net) is not retried")
+    void takeNextTrack_shouldNotRetry_whenTheTrackWasNotClaimed() {
         when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(track(1)));
         when(repository.claimQueuedTrack(any(), any(), any(), any())).thenReturn(0);
 
         assertThat(service.takeNextTrack(PARTY, PLAYLIST, false)).isEmpty();
-        verify(repository, times(FallbackTrackCommandService.MAX_TAKE_ATTEMPTS)).claimQueuedTrack(any(), any(), any(), any());
+        verify(repository, times(1)).claimQueuedTrack(any(), any(), any(), any());
     }
 
     // ---- the play log: every hand-out is written down, so the history outlives the rounds ----
@@ -304,7 +290,7 @@ class FallbackTrackCommandServiceTest {
     }
 
     @Test
-    @DisplayName("a lost race, or nothing to play, writes nothing to the play log")
+    @DisplayName("a track that was not claimed, or nothing to play, writes nothing to the play log")
     void takeNextTrack_shouldNotWriteThePlayLog_whenNothingWasClaimed() {
         when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(track(1)));
         when(repository.claimQueuedTrack(any(), any(), any(), any())).thenReturn(0);

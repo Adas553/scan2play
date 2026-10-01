@@ -37,9 +37,16 @@
             <p class="error-code mt-2">
                 <span th:text="#{error.code.label}">Error</span> <span th:text="${status}">???</span>
             </p>
+            <!--/* A guest's page (/p/CODE/…) goes back to the party's own link; any other page is opened again. The landing page is
+                 for DJs (a Google login) — only a small link to it. */-->
             <div class="mt-4">
-                <a href="/" class="btn btn-home btn-lg px-5" th:text="#{error.btn.home}">Go Home</a>
+                <a th:href="${path != null and #strings.startsWith(path, '/p/') and #arrays.length(#strings.arraySplit(path, '/')) > 1}
+                            ? ${'/p/' + #strings.arraySplit(path, '/')[1]} : (${path != null} ? ${path} : '/')"
+                   id="retryBtn" class="btn btn-home btn-lg px-5" th:text="#{error.btn.retry}">↻ Try again</a>
             </div>
+            <p class="mt-4 mb-0 small">
+                <a href="/" class="text-secondary" th:text="#{error.btn.home}">Home page</a>
+            </p>
         </div>
         </div>
     </div>

@@ -29,7 +29,7 @@
                     <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0 d-flex align-items-center">
                         <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
                         <label for="vibeSelect" class="me-2 fw-bold text-light small text-nowrap" th:text="#{dashboard.vibe.label}">🌍 Global Vibe:</label>
-                        <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" onchange="this.form.requestSubmit()">
+                        <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" data-auto-submit>
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
                                     th:value="${vibe}"
                                     th:text="#{vibe.__${vibe}__}"
@@ -77,15 +77,15 @@
                     <input type="hidden" name="partyCode" th:value="${partyCode}">
                     <div class="col-md-3 mb-3 mb-md-0">
                         <label for="requestLimit" class="form-label text-light fw-bold" th:text="#{dashboard.ratelimit.limit}">Max requests per user:</label>
-                        <input type="number" id="requestLimit" name="requestLimit" class="form-control bg-black text-light border-secondary" min="1" step="1" th:value="${requestLimit}" required>
+                        <input type="number" id="requestLimit" name="requestLimit" class="form-control bg-black text-light border-secondary" min="1" max="100" step="1" th:value="${requestLimit}" required>
                     </div>
                     <div class="col-md-3 mb-3 mb-md-0">
                         <label for="cooldownMinutes" class="form-label text-light fw-bold" th:text="#{dashboard.ratelimit.cooldown}">Cooldown (minutes):</label>
-                        <input type="number" id="cooldownMinutes" name="cooldownMinutes" class="form-control bg-black text-light border-secondary" min="1" step="1" th:value="${cooldownMinutes}" required>
+                        <input type="number" id="cooldownMinutes" name="cooldownMinutes" class="form-control bg-black text-light border-secondary" min="1" max="1440" step="1" th:value="${cooldownMinutes}" required>
                     </div>
                     <div class="col-md-4 mb-3 mb-md-0">
                         <label for="duplicateCheckWindow" class="form-label text-light fw-bold" th:text="#{dashboard.limits.duplicates}">Block duplicates for last X songs:</label>
-                        <input type="number" id="duplicateCheckWindow" name="duplicateCheckWindow" class="form-control bg-black text-light border-secondary" min="0" step="1" th:value="${duplicateCheckWindow}" required>
+                        <input type="number" id="duplicateCheckWindow" name="duplicateCheckWindow" class="form-control bg-black text-light border-secondary" min="0" max="50" step="1" th:value="${duplicateCheckWindow}" required>
                     </div>
                     <div class="col-md-2 mt-2 mt-md-0 px-md-1">
                         <button type="submit" class="btn btn-outline-light w-100" th:text="#{dashboard.ratelimit.save}">Save</button>
@@ -122,7 +122,7 @@
                     <input type="text" name="fallbackPlaylistUrl" id="fallbackInput"
                            class="form-control form-control-sm bg-black text-light border-secondary flex-grow-1"
                            th:placeholder="#{dashboard.fallback.placeholder}"
-                           th:value="${fallbackPlaylistUrl}" autocomplete="off">
+                           th:value="${fallbackPlaylistUrl}" autocomplete="off" maxlength="500">
                     <button type="submit" class="btn btn-sm btn-outline-light flex-shrink-0"
                             th:text="#{dashboard.fallback.save}">Save</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"

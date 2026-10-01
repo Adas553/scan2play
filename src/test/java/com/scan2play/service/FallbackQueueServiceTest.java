@@ -60,13 +60,14 @@ class FallbackQueueServiceTest {
         givenSettings(PLAYLIST_URL, true);
         when(fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, UPCOMING))
                 .thenReturn(List.of(entity(5, "aaaaaaaaaaa", "Song A"), entity(9, "bbbbbbbbbbb", null)));
-        when(fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(37L);
 
         FallbackQueueView view = service.getUpcoming(PARTY);
 
         assertThat(view.hasPlaylist()).isTrue();
         assertThat(view.shuffle()).isTrue();
-        assertThat(view.remaining()).isEqualTo(37);
+        assertThat(view.remaining()).isEqualTo(2);
+        // the list is the whole round: nothing counts it again
+        verify(fallbackTrackRepository, never()).countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED);
         assertThat(view.tracks()).containsExactly(
                 new FallbackQueueView.Track(5L, "aaaaaaaaaaa", "Song A"),
                 new FallbackQueueView.Track(9L, "bbbbbbbbbbb", null));
@@ -170,11 +171,10 @@ class FallbackQueueServiceTest {
         givenSettings("https://youtu.be/dQw4w9WgXcQ", true);
         when(fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, "V:dQw4w9WgXcQ", QUEUED, UPCOMING))
                 .thenReturn(List.of(entity(1, "dQw4w9WgXcQ", "Never Gonna Give You Up")));
-        when(fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, "V:dQw4w9WgXcQ", QUEUED)).thenReturn(1L);
 
         assertThat(service.getUpcoming(PARTY).tracks()).hasSize(1);
 
-        verify(fallbackTrackRepository).countByPartyCodeAndPlaylistIdAndStatus(PARTY, "V:dQw4w9WgXcQ", QUEUED);
+        verify(fallbackTrackRepository).existsByPartyCodeAndPlaylistIdAndStatusAndManualMoveTrue(PARTY, "V:dQw4w9WgXcQ", QUEUED);
     }
 
     // ---- manual order flag ----
@@ -261,7 +261,6 @@ class FallbackQueueServiceTest {
         givenSettings(PLAYLIST_URL, false);
         when(fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, UPCOMING))
                 .thenReturn(List.of(entity(1, "aaaaaaaaaaa", "A")));
-        when(fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(3L);
         assertThat(service.getUpcoming(PARTY).skipped()).isZero();
 
         when(fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, FallbackTrackStatus.SKIPPED)).thenReturn(2L);

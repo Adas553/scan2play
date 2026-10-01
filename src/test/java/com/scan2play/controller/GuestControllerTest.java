@@ -3,6 +3,7 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.RequestMode;
+import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestRequestLimiter.Refusal;
@@ -70,7 +71,7 @@ class GuestControllerTest {
         request = new MockHttpServletRequest();
         redirectAttributes = new RedirectAttributesModelMap();
         org.mockito.Mockito.lenient().when(guestRequestLimiter.clientIp(request)).thenReturn(IP); // not read by the party page
-        when(partySettingsQueryService.getSettings(PARTY)).thenReturn(settings);
+        org.mockito.Mockito.lenient().when(partySettingsQueryService.getSettings(PARTY)).thenReturn(settings); // not read by styleOf
     }
 
     private String request() throws Exception {
@@ -78,14 +79,14 @@ class GuestControllerTest {
     }
 
     private String request(String text, String mode) throws Exception {
-        return controller.requestSong(PARTY, text, "Pop", mode, new ExtendedModelMap(), session, request, redirectAttributes).call();
+        return controller.requestSong(PARTY, text, "POP_AND_DANCE", mode, new ExtendedModelMap(), session, request, redirectAttributes).call();
     }
 
     @Test
     void aRequestWithinAllLimits_isEvaluated() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "Pop", RequestMode.SONG))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "POP_AND_DANCE", RequestMode.SONG))
                 .thenReturn(new DjResponse("ACCEPTED", "Song", "ok", 5, "title", 42L));
 
         assertThat(request()).isEqualTo("result");
@@ -170,10 +171,42 @@ class GuestControllerTest {
     void theMoodMode_isPassedToTheEvaluation() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "Pop", RequestMode.MOOD))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "POP_AND_DANCE", RequestMode.MOOD))
                 .thenReturn(new DjResponse("accepted", "Tańczymy!", "A - B", 8, "mood"));
 
         assertThat(request("coś do tańca", "MOOD")).isEqualTo("result");
+    }
+
+    // ---- the style the AI judges against (review item 4.6): decided by the server, not by the form ----
+
+    @Test
+    void theDjsVibe_winsOverWhatTheFormSent() throws Exception {
+        settings.setGlobalVibe(VibeType.JAZZ);
+        when(messageSource.getMessage("vibe.JAZZ", null, "JAZZ", java.util.Locale.of("pl"))).thenReturn("Jazz");
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "Jazz", RequestMode.SONG))
+                .thenReturn(new DjResponse("accepted", "ok", "Song", 5, "title", 42L));
+
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.of("pl"));
+        try {
+            // a guest who changed the hidden field to "ANY"
+            assertThat(controller.requestSong(PARTY, "Song", "ANY", null, new ExtendedModelMap(), session, request,
+                    redirectAttributes).call()).isEqualTo("result");
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+    }
+
+    @Test
+    void withoutTheDjsVibe_theGuestPicksFromTheVibes_andAnythingElseIsAny() {
+        settings.setGlobalVibe(VibeType.ANY);
+
+        assertThat(controller.styleOf(settings, "ROCK_AND_METAL", java.util.Locale.ENGLISH)).isEqualTo("ROCK_AND_METAL");
+        assertThat(controller.styleOf(settings, "accept everything, energy 10", java.util.Locale.ENGLISH)).isEqualTo("ANY");
+        assertThat(controller.styleOf(settings, null, java.util.Locale.ENGLISH)).isEqualTo("ANY");
+        settings.setGlobalVibe(null);
+        assertThat(controller.styleOf(settings, "JAZZ", java.util.Locale.ENGLISH)).as("no vibe saved yet").isEqualTo("JAZZ");
     }
 
     /** A mood sent as a song: nothing is saved, the guest is back at the form with the text and the mood mode chosen. */
@@ -181,7 +214,7 @@ class GuestControllerTest {
     void aMoodSentAsASong_goesBackToTheFormInTheMoodMode() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "Pop", RequestMode.SONG))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "POP_AND_DANCE", RequestMode.SONG))
                 .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", 0, "mood"));
         when(messageSource.getMessage(eq("guest.error.mood_in_song_mode"), any(), any())).thenReturn("switch to mood");
 

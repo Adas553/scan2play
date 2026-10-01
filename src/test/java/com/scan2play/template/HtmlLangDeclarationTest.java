@@ -121,6 +121,23 @@ class HtmlLangDeclarationTest {
         }
     }
 
+    @Test
+    @DisplayName("a guest's dead end leads back to the party's link, not to the DJs' login page (the owner, 2026-10-01)")
+    void shouldLeadTheGuestBackToTheParty() {
+        Context ended = new Context(PL);
+        ended.setVariable("partyCode", "ABC12");
+        assertThat(engine.process("party_ended", ended)).contains("href=\"/p/ABC12\" id=\"checkAgainBtn\"", "Sprawdź ponownie")
+                .doesNotContain("??");
+
+        Context error = new Context(PL);
+        error.setVariable("status", 500);
+        error.setVariable("path", "/p/ABC12/request");
+        assertThat(engine.process("error", error)).contains("href=\"/p/ABC12\"", "id=\"retryBtn\"", "Spróbuj ponownie")
+                .doesNotContain("??");
+        error.setVariable("path", "/dj/dashboard");
+        assertThat(engine.process("error", error)).contains("href=\"/dj/dashboard\"");
+    }
+
     private static String render(String page, Locale locale) {
         Context context = new Context(locale);
         context.setVariable("status", 404);   // what error.html reads; party_ended needs nothing

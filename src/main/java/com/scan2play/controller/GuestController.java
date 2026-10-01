@@ -3,6 +3,7 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.RequestMode;
+import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestSessionService;
@@ -21,6 +22,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
@@ -45,6 +48,7 @@ public class GuestController {
             PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
             if (!settings.isActive()) {
+                model.addAttribute(PARTY_CODE, partyCode);   // "check again" opens the party's link
                 return "party_ended";
             }
 
@@ -84,18 +88,20 @@ public class GuestController {
     @PostMapping("/{partyCode}/request")
     public Callable<String> requestSong(@PathVariable String partyCode,
                               @RequestParam String songName,
-                              @RequestParam(defaultValue = "90s Rock") String style,
+                              @RequestParam(required = false) String style,
                               @RequestParam(required = false) String requestMode,
                               Model model,
                               HttpSession session,
                               HttpServletRequest request,
                               RedirectAttributes redirectAttributes) {
         String clientIp = guestRequestLimiter.clientIp(request);
+        Locale locale = LocaleContextHolder.getLocale();
         return () -> {
             try {
                 PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
 
                 if (!settings.isActive()) {
+                    model.addAttribute(PARTY_CODE, partyCode);
                     return "party_ended";
                 }
 
@@ -116,7 +122,8 @@ public class GuestController {
                 }
 
                 RequestMode mode = RequestMode.fromParam(requestMode);
-                DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName, style, mode);
+                DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
+                        styleOf(settings, style, locale), mode);
                 if (mode == RequestMode.SONG && response.isMood()) {
                     // A mood sent as a song: nothing was saved. Back to the form with the text and the mood mode chosen.
                     redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
@@ -135,6 +142,23 @@ public class GuestController {
                 return REDIRECT_HOME;
             }
         };
+    }
+
+    /**
+     * The style the AI judges the request against (review item 4.6) — decided here, not by the form, whose fields a guest can
+     * change: the DJ's vibe when the DJ set one (by its name in the guest's language, as the form sent it), otherwise the
+     * guest's pick from the list of vibes ({@link VibeType} by name), and {@code ANY} for anything else.
+     */
+    String styleOf(PartySettingsEntity settings, String requested, Locale locale) {
+        VibeType partyVibe = settings.getGlobalVibe();
+        if (partyVibe != null && partyVibe != VibeType.ANY) {
+            return messageSource.getMessage("vibe." + partyVibe.name(), null, partyVibe.name(), locale);
+        }
+        return Arrays.stream(VibeType.values())
+                .map(VibeType::name)
+                .filter(name -> name.equals(requested))
+                .findFirst()
+                .orElse(VibeType.ANY.name());
     }
 
     /** Back to the party page with the message of the limit that refused the request. */

@@ -160,6 +160,12 @@ on(EVENTS.PLAYBACK_MODE_REPORTED, function (report) {
 const autoToggle = document.getElementById('autoToggle');
 if (autoToggle) autoToggle.addEventListener('change', function () { submitAutoPilotToggle(autoToggle); });
 
+// A select that saves as soon as the DJ picks (the party's vibe): requestSubmit, so the form goes through the submit listeners
+// above (fetch at a YouTube party) — data-auto-submit instead of an inline onchange (CSP, review 5.1).
+document.querySelectorAll('select[data-auto-submit]').forEach(function (select) {
+    select.addEventListener('change', function () { select.form.requestSubmit(); });
+});
+
 // ==========================================================================
 // COPY PARTY LINK
 // ==========================================================================

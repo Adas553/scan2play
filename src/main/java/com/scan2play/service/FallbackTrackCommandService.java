@@ -47,12 +47,6 @@ import static com.scan2play.repository.FallbackTrackRepository.UPCOMING_ORDER;
 @Slf4j
 public class FallbackTrackCommandService {
 
-    /**
-     * Upper bound of attempts when concurrent callers keep grabbing the track we picked. Everyone goes for the same
-     * head of the queue, so a caller loses at most once per other caller: 10 covers a handful of open dashboards.
-     */
-    static final int MAX_TAKE_ATTEMPTS = 10;
-
     /** Added to the order of the tracks before the anchor when the playlist order is rotated; above any position (max 500). */
     static final int ROTATION = 10_000;
 
@@ -288,8 +282,8 @@ public class FallbackTrackCommandService {
      *     <li>When that was the last queued track, the playlist starts a new round at once (played tracks go back
      *         into the queue, in playlist order or freshly shuffled), so there is always a "next" to show. A
      *         shuffled round never opens with the track that has just been handed out.</li>
-     *     <li>The track is claimed with a single conditional UPDATE, so two concurrent callers never get
-     *         the same one.</li>
+     *     <li>Two concurrent callers never get the same track: the queue's advisory lock makes them take turns (the
+     *         second one reads the queue after the first one's commit), and the claim is a conditional UPDATE.</li>
      *     <li>The claim and the log row are one transaction: a track is never handed out without being in the history,
      *         and never in the history without having been handed out. The row is a snapshot (video, title, when it was
      *         fetched), so it survives the next round, a replaced playlist and the purge of the track.</li>
@@ -305,39 +299,45 @@ public class FallbackTrackCommandService {
     @Transactional
     public Optional<FallbackPlayEntity> takeNextTrack(String partyCode, String playlistId, boolean shuffle) {
         lockQueue(partyCode);
-        boolean newRoundStarted = false;
-        for (int attempt = 0; attempt < MAX_TAKE_ATTEMPTS; attempt++) {
-            List<FallbackTrackEntity> next = fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(
-                    partyCode, playlistId, QUEUED, PageRequest.of(0, 1, UPCOMING_ORDER));
+        Optional<FallbackTrackEntity> next = firstQueued(partyCode, playlistId);
+        if (next.isEmpty()) {
+            // Normally the queue is refilled as soon as its last track is handed out (below); this covers
+            // a queue that is empty for another reason, e.g. it was emptied before this code existed.
+            if (!startNewRound(partyCode, playlistId, shuffle, null)) {
+                return Optional.empty();
+            }
+            next = firstQueued(partyCode, playlistId);
             if (next.isEmpty()) {
-                // Normally the queue is refilled as soon as its last track is handed out (below); this covers
-                // a queue that is empty for another reason, e.g. it was emptied before this code existed.
-                if (newRoundStarted || !startNewRound(partyCode, playlistId, shuffle, null)) {
-                    return Optional.empty();
-                }
-                newRoundStarted = true;
-                continue;
+                return Optional.empty();
             }
-
-            FallbackTrackEntity track = next.get(0);
-            LocalDateTime now = LocalDateTime.now();
-            int claimed = fallbackTrackRepository.claimQueuedTrack(track.getId(), QUEUED, PLAYED, now);
-            if (claimed == 1) {
-                FallbackPlayEntity play = fallbackPlayRepository.save(FallbackPlayEntity.builder()
-                        .partyCode(partyCode)
-                        .videoId(track.getVideoId())
-                        .title(track.getTitle())
-                        .fetchedAt(track.getFetchedAt())
-                        .playedAt(now)
-                        .build());
-                if (fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, QUEUED) == 0) {
-                    startNewRound(partyCode, playlistId, shuffle, track.getId());
-                }
-                return Optional.of(play);
-            }
-            // lost the race for this track — pick again
         }
-        return Optional.empty();
+
+        FallbackTrackEntity track = next.get();
+        LocalDateTime now = LocalDateTime.now();
+        // Under the queue's lock nobody can take the track between the read above and this update, so there is no race to
+        // retry (review item 1.6); the condition on the status stays as a safety net for a change made without the lock.
+        if (fallbackTrackRepository.claimQueuedTrack(track.getId(), QUEUED, PLAYED, now) != 1) {
+            log.warn("Party [{}]: the next track {} was no longer queued — the queue changed without its lock?",
+                    partyCode, track.getId());
+            return Optional.empty();
+        }
+        FallbackPlayEntity play = fallbackPlayRepository.save(FallbackPlayEntity.builder()
+                .partyCode(partyCode)
+                .videoId(track.getVideoId())
+                .title(track.getTitle())
+                .fetchedAt(track.getFetchedAt())
+                .playedAt(now)
+                .build());
+        if (fallbackTrackRepository.countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, QUEUED) == 0) {
+            startNewRound(partyCode, playlistId, shuffle, track.getId());
+        }
+        return Optional.of(play);
+    }
+
+    /** The queued track that plays next, if any. */
+    private Optional<FallbackTrackEntity> firstQueued(String partyCode, String playlistId) {
+        return fallbackTrackRepository.findByPartyCodeAndPlaylistIdAndStatus(
+                partyCode, playlistId, QUEUED, PageRequest.of(0, 1, UPCOMING_ORDER)).stream().findFirst();
     }
 
     /**

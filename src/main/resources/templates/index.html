@@ -95,7 +95,8 @@
                 <input type="hidden" name="style" th:value="#{vibe.__${globalVibe}__}">
             </div>
 
-            <button type="submit" id="submitBtn" class="btn btn-success w-100 fw-bold shadow-sm py-2">
+            <button type="submit" id="submitBtn" class="btn btn-success w-100 fw-bold shadow-sm py-2"
+                    th:attr="data-text-submitting=#{home.form.button.submitting}">
                 <span id="submitBtnText" th:text="#{home.form.button.submit}">Send to DJ!</span>
             </button>
         </form>
@@ -110,68 +111,7 @@
 
 </div>
 
-<script th:inline="javascript">
-    // The mode buttons: the help text follows the mode, and song suggestions are only offered for a song
-    (function () {
-        const input = document.getElementById('songInput');
-        const help = document.getElementById('songInputHelp');
-        function applyMode() {
-            const mood = document.getElementById('modeMood').checked;
-            help.textContent = mood ? help.dataset.textMood : help.dataset.textSong;
-            input.dataset.autocompleteOff = String(mood);
-        }
-        document.querySelectorAll('input[name="requestMode"]').forEach(function (radio) {
-            radio.addEventListener('change', function () { applyMode(); input.focus(); });
-        });
-        applyMode();
-    })();
-
-    // The list under the form (what plays, what comes next, where the guest's song waits) is fetched again — no timer — when the
-    // guest comes back to the page (a phone unlocked, the tab chosen again, "back" from another page) and on "↻ Odśwież".
-    (function () {
-        const box = document.getElementById('guestQueueBox');
-        if (!box) return;
-        let lastRefresh = Date.now();
-        async function refreshQueue(force) {
-            if (!force && Date.now() - lastRefresh < 5000) return; // a quick switch back and forth asks once
-            lastRefresh = Date.now();
-            try {
-                const response = await fetch(box.dataset.url, { headers: { 'Accept': 'text/html' } });
-                if (response.ok && !response.redirected) box.innerHTML = await response.text();
-            } catch (e) {
-                // offline for a moment: the list stays as it was
-            }
-        }
-        document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible') refreshQueue(false);
-        });
-        window.addEventListener('pageshow', function (e) { if (e.persisted) refreshQueue(true); });
-        box.addEventListener('click', function (e) {
-            const button = e.target.closest('[data-guest-queue-refresh]');
-            if (!button) return;
-            button.disabled = true;
-            refreshQueue(true);
-        });
-    })();
-
-    document.getElementById('requestForm').addEventListener('submit', function (e) {
-        const btn = document.getElementById('submitBtn');
-        const btnText = document.getElementById('submitBtnText');
-        const submittingText = [[#{home.form.button.submitting}]];
-
-        // Basic check for HTML5 validation
-        if (this.checkValidity()) {
-            // Disable button to prevent double submit
-            btn.disabled = true;
-
-            // Visual feedback: spinner + changing text
-            btnText.innerHTML = `
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                ${submittingText}
-            `;
-        }
-    });
-</script>
+<script src="/js/guest-party.js"></script>
 
 <script src="/js/song-autocomplete.js"></script>
 

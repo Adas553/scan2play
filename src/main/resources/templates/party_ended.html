@@ -16,9 +16,15 @@
                 <h2 class="mb-4 fw-bold text-light-custom" th:text="#{party.ended.title}">This party has ended</h2>
                 <p class="lead text-secondary-bright" th:text="#{party.ended.subtitle}">Thanks for partying with Scan2Play!</p>
                 <p class="text-secondary-bright mt-3" th:text="#{party.ended.see_you}">See you at the next event.</p>
+                <!--/* The DJ may resume the party: "check again" opens the party's own link, so the guest is back at the form without
+                     scanning the code again. The landing page is for DJs (a Google login) — only a small link to it. */-->
                 <div class="mt-4">
-                    <a href="/" class="btn btn-outline-light btn-lg px-5" th:text="#{party.ended.home_btn}">Go Home</a>
+                    <a th:href="${partyCode != null} ? ${'/p/' + partyCode} : '/'" id="checkAgainBtn"
+                       class="btn btn-outline-light btn-lg px-5" th:text="#{party.ended.check_again}">↻ Check again</a>
                 </div>
+                <p class="mt-4 mb-0 small">
+                    <a href="/" class="text-secondary-bright" th:text="#{party.ended.own_party}">Want this at your own party? Scan2Play</a>
+                </p>
             </div>
         </div>
     </div>

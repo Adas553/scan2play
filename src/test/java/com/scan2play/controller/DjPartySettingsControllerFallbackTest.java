@@ -205,4 +205,35 @@ class DjPartySettingsControllerFallbackTest {
 
         verify(sessionHelper).validateOwnership(PARTY, token, session);
     }
+
+    @Test
+    @DisplayName("a link longer than its column is refused before saving, like a Mix (it used to end in a 500 from the database)")
+    void shouldRefuseALinkLongerThanItsColumn() throws Exception {
+        setPlaylist("https://www.youtube.com/playlist?list=" + PLAYLIST_ID + "&x=" + "a".repeat(500))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Fallback-Saved", "false"))
+                .andExpect(header().string("X-Fallback-Import", "failed"))
+                .andExpect(header().string("X-Fallback-Import-Reason", Reason.INVALID_PLAYLIST.name()));
+
+        verify(settingsService, never()).updateSettings(any(), any());
+        verify(fallbackPlaylistService, never()).syncFallbackTracks(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    @DisplayName("the guest limits and the duplicate window are kept within bounds (review item 5.4)")
+    void shouldKeepTheLimitsWithinBounds() throws Exception {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).build();
+        when(settingsService.updateSettings(eq(PARTY), any())).thenAnswer(invocation -> {
+            invocation.<java.util.function.Consumer<PartySettingsEntity>>getArgument(1).accept(party);
+            return party;
+        });
+
+        mockMvc.perform(post("/dj/dashboard/limits").param("partyCode", PARTY).principal(token).session(session)
+                .param("requestLimit", "100000").param("cooldownMinutes", "0").param("duplicateCheckWindow", "100000"));
+
+        org.assertj.core.api.Assertions.assertThat(party.getRequestLimit()).isEqualTo(DjPartySettingsController.MAX_REQUEST_LIMIT);
+        org.assertj.core.api.Assertions.assertThat(party.getCooldownMinutes()).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(party.getDuplicateCheckWindow())
+                .isEqualTo(DjPartySettingsController.MAX_DUPLICATE_CHECK_WINDOW);
+    }
 }

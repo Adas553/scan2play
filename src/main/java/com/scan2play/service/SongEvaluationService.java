@@ -67,6 +67,9 @@ public class SongEvaluationService {
             .thinkingConfig(ThinkingConfig.builder().thinkingBudget(0).build())
             .build();
 
+    /** The longest guest's text that reaches the prompt ({@link #forPrompt}). */
+    static final int GUEST_TEXT_MAX = 150;
+
     private static final String DEFAULT_LANG = "en";
     private static final List<String> SUPPORTED_LANGS = List.of("en", "pl");
 
@@ -143,13 +146,15 @@ public class SongEvaluationService {
      * Core evaluation pipeline: AI evaluation → track resolution → save → optional auto-queue.
      *
      * @param partyCode The unique code of the party.
-     * @param songName  What the guest typed: a title, an artist or a line of the lyrics ({@link RequestMode#SONG}), or a mood.
+     * @param guestText What the guest typed: a title, an artist or a line of the lyrics ({@link RequestMode#SONG}), or a mood;
+     *                  cut to one short line before the AI sees it ({@link #forPrompt}).
      * @param style     Desired style / mood selected by the guest.
      * @param mode      What the guest chose to ask for; each has its own prompt.
      * @return Complete AI response (decision + comment + energy level). In the song mode a request the AI reads as a mood is
      *         <b>not saved</b> — the response says so ({@link DjResponse#isMood()}) and the caller asks the guest to switch modes.
      */
-    public DjResponse evaluateAndSaveSong(String partyCode, String songName, String style, RequestMode mode) {
+    public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style, RequestMode mode) {
+        String songName = forPrompt(guestText);
         log.info("Party [{}]: Evaluating {} request: '{}' with style: '{}'", partyCode, mode, songName, style);
 
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
@@ -209,12 +214,33 @@ public class SongEvaluationService {
                                       RequestMode mode) {
         try {
             String prompt = buildPrompt(songName, style, recentSongs, locale, mode);
-            GenerateContentResponse response = client.models.generateContent(modelName, prompt, aiJsonConfig);
-            return objectMapper.readValue(response.text(), DjResponse.class);
+            DjResponse answer = objectMapper.readValue(askAi(prompt, aiJsonConfig), DjResponse.class);
+            // The AI may leave the name of a rejected song empty (the Polish prompt once allowed it): the history would show a
+            // row without a song, so it keeps what the guest asked for.
+            return (answer.songName() == null || answer.songName().isBlank()) ? answer.withSongName(songName) : answer;
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);
             return new DjResponse(DECISION_REJECTED, aiOfflineMsg, songName, 0);
         }
+    }
+
+    /** One call to Gemini; the text of its answer. Package-private so a test can answer instead of Gemini. */
+    String askAi(String prompt, GenerateContentConfig config) {
+        GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
+        return response.text();
+    }
+
+    /**
+     * What the guest typed, as it goes into the prompt (review item 4.6): one line, at most {@value #GUEST_TEXT_MAX} characters,
+     * without the double quotes the prompt puts around it — a song name needs no more, and a longer text is only a way to steer
+     * the AI (or to pay for its tokens). The form allows up to 10 KB.
+     */
+    static String forPrompt(String guestText) {
+        if (guestText == null) {
+            return "";
+        }
+        String text = guestText.replace('"', '\'').replaceAll("\\s+", " ").strip();
+        return text.length() > GUEST_TEXT_MAX ? text.substring(0, GUEST_TEXT_MAX).strip() : text;
     }
 
     /** The prompt of the guest's mode in the guest's language, with the request, the style and the duplicate rule filled in. */
@@ -347,8 +373,7 @@ public class SongEvaluationService {
     public String normalizeSongName(String rawInput) {
         try {
             String prompt = String.format(normalizePromptTemplate, rawInput);
-            GenerateContentResponse response = client.models.generateContent(modelName, prompt, AI_NORMALIZE_CONFIG);
-            JsonNode json = objectMapper.readTree(response.text());
+            JsonNode json = objectMapper.readTree(askAi(prompt, AI_NORMALIZE_CONFIG));
             String normalized = json.path("songName").asText(null);
             if (normalized != null && !normalized.isBlank()) {
                 log.info("Song name normalized: '{}' → '{}'", rawInput, normalized);

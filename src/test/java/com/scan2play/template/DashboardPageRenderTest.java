@@ -180,6 +180,17 @@ class DashboardPageRenderTest {
     }
 
     /** The things every page the browser tests use must have: without them the scripts do nothing at all. */
+    /**
+     * The page runs under a Content-Security-Policy without {@code 'unsafe-inline'} for scripts (review 5.1): no {@code <script>}
+     * without {@code src}, no {@code on…=} attribute.
+     */
+    static void assertNothingInline(String html) {
+        assertThat(java.util.regex.Pattern.compile("<script(?![^>]*\\ssrc=)[^>]*>").matcher(html).find())
+                .as("an inline <script>").isFalse();
+        assertThat(java.util.regex.Pattern.compile("\\son[a-z]+\\s*=", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(html).find())
+                .as("an inline on…= handler").isFalse();
+    }
+
     private static void assertWhatTheScriptsNeed(String html, String autoPilot) {
         assertThat(html).contains("id=\"playerPreviousBtn\"", "id=\"playerPauseBtn\"", "id=\"playerNextBtn\"",
                 "id=\"playerBackBtn\"", "id=\"playerRestartBtn\"", "id=\"yt-player\"", "id=\"playerLeaseBanner\"", "id=\"fallbackQueue\"", "id=\"fallbackInput\"");
@@ -199,6 +210,10 @@ class DashboardPageRenderTest {
                 .isLessThan(html.indexOf("/js/youtube-autopilot.js"));
         // no inline handler calls a global function any more: the modules attach their listeners (a step towards a CSP, 5.1)
         assertThat(html).doesNotContain("submitAutoPilotToggle", "stopFallbackPlaylist", "toggleFallbackShuffle", "copyPartyLink(");
+        assertNothingInline(html);
+        // what came out of the inline scripts: the scroll memory, the DJ navigation (feedback, confirm), the vibe select
+        assertThat(html).contains("<script src=\"/js/scroll-restore.js\">", "<script src=\"/js/dj-nav.js\">", "data-auto-submit",
+                "data-confirm=\"");
         assertThat(html).doesNotContain("??");   // a message key that no bundle has renders as ??key_pl??
     }
 

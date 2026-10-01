@@ -52,8 +52,9 @@ public class FallbackQueueService {
                 .stream()
                 .map(FallbackQueueService::toTrack)
                 .toList();
-        long remaining = fallbackTrackRepository
-                .countByPartyCodeAndPlaylistIdAndStatus(partyCode, playlistId, FallbackTrackStatus.QUEUED);
+        // The list is the whole round (the limit is the most an import holds, and nothing adds to a round), so its size is
+        // everything still queued — no count of its own (review item 1.9).
+        long remaining = tracks.size();
         boolean manualOrder = fallbackTrackRepository.existsByPartyCodeAndPlaylistIdAndStatusAndManualMoveTrue(
                 partyCode, playlistId, FallbackTrackStatus.QUEUED);
         long skipped = fallbackTrackRepository

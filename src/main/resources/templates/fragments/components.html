@@ -7,29 +7,7 @@
         then reveals the page. Prevents any visible jump when switching between DJ panels.
     -->
     <th:block th:fragment="scroll-restore-script">
-        <script>
-            // Hide page before first paint to prevent scroll restoration flash
-            document.documentElement.style.visibility = 'hidden';
-
-            // Safety net: reveal page even if DOMContentLoaded never fires
-            setTimeout(function() { document.documentElement.style.visibility = ''; }, 2000);
-
-            document.addEventListener("DOMContentLoaded", function () {
-                var scrollKey = "scroll_" + window.location.pathname;
-                var savedScroll = sessionStorage.getItem(scrollKey);
-
-                // A link with an anchor (…/dj/dashboard#queue-content, #top) says where to go: the browser scrolls there.
-                if (savedScroll !== null && !window.location.hash) {
-                    window.scrollTo({ top: parseInt(savedScroll, 10), behavior: 'instant' });
-                }
-
-                document.documentElement.style.visibility = '';
-
-                window.addEventListener("beforeunload", function () {
-                    sessionStorage.setItem(scrollKey, window.scrollY);
-                });
-            });
-        </script>
+        <script src="/js/scroll-restore.js"></script>
     </th:block>
 </head>
 <body>
@@ -71,13 +49,13 @@
         <form id="end-party-form"
               th:classappend="${!isActive} ? 'd-none' : ''"
               th:action="@{/dj/end-party}" method="POST"
-              th:onsubmit="'return confirm(\'' + #{dashboard.confirm.end_party} + '\');'">
+              th:data-confirm="#{dashboard.confirm.end_party}">
             <button type="submit" class="btn btn-warning fw-bold btn-sm d-flex align-items-center gap-1" title="End Party">
                 <span class="d-sm-none">⏸</span>
                 <span class="d-none d-sm-inline" th:text="#{dashboard.button.end_party}">End Party</span>
             </button>
         </form>
-        <form th:action="@{/dj/logout}" method="POST" th:onsubmit="'return confirm(\'' + #{dashboard.confirm.logout} + '\');'">
+        <form th:action="@{/dj/logout}" method="POST" th:data-confirm="#{dashboard.confirm.logout}">
             <button type="submit" class="btn btn-danger fw-bold btn-sm d-flex align-items-center gap-1" title="Logout">
                 <span class="d-sm-none">⏏</span>
                 <span class="d-none d-sm-inline" th:text="#{dashboard.button.logout}">Logout</span>
@@ -86,7 +64,7 @@
 
         <!-- Delete Account — separated by a vertical divider to signal destructive action -->
         <div class="border-start border-secondary ms-1 ps-3">
-            <form th:action="@{/dj/delete-account}" method="POST" th:onsubmit="'return confirm(\'' + #{dashboard.confirm.delete_account} + '\');'">
+            <form th:action="@{/dj/delete-account}" method="POST" th:data-confirm="#{dashboard.confirm.delete_account}">
                 <button type="submit"
                         class="btn btn-sm fw-bold d-flex align-items-center gap-1"
                         style="color: #6c757d; border: 1px solid #6c757d;"
@@ -172,94 +150,8 @@
         </div>
     </div>
 
-    <!-- ================================================================
-         Feedback JS — self-contained, no dependency on dashboard.js
-         ================================================================ -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var textarea  = document.getElementById('feedbackMessage');
-            var submitBtn = document.getElementById('feedbackSubmitBtn');
-            var charCount = document.getElementById('feedbackCharCount');
-            var errorEl   = document.getElementById('feedbackError');
-            var toastEl   = document.getElementById('feedbackToast');
-            var toastBody = document.getElementById('feedbackToastBody');
-
-            if (!textarea || !submitBtn) return;
-
-            // --- Character counter ---
-            textarea.addEventListener('input', function () {
-                charCount.textContent = this.value.length;
-            });
-
-            // --- CSRF from <meta> tags (present on all DJ pages) ---
-            function getCsrf() {
-                var t = document.querySelector('meta[name="_csrf"]');
-                var h = document.querySelector('meta[name="_csrf_header"]');
-                return {
-                    token:  t ? t.getAttribute('content') : '',
-                    header: h ? h.getAttribute('content') : 'X-CSRF-TOKEN'
-                };
-            }
-
-            // --- Toast helper ---
-            function showToast(message, success) {
-                toastBody.textContent = message;
-                toastEl.className = 'toast text-white border-0 ' + (success ? 'bg-success' : 'bg-danger');
-                new bootstrap.Toast(toastEl, { delay: 4000 }).show();
-            }
-
-            // --- Submit ---
-            submitBtn.addEventListener('click', function () {
-                var message = textarea.value.trim();
-
-                // Reset validation state
-                errorEl.textContent = '';
-                errorEl.classList.add('d-none');
-
-                if (!message) {
-                    errorEl.textContent = textarea.getAttribute('placeholder') || 'Please enter a message.';
-                    errorEl.classList.remove('d-none');
-                    textarea.focus();
-                    return;
-                }
-
-                // partyCode is stored as data attribute on the button that opened the modal
-                var partyCode = document.querySelector('[data-bs-target="#feedbackModal"]')
-                                        ?.getAttribute('data-party-code') || '';
-
-                var csrf = getCsrf();
-                var fd   = new FormData();
-                fd.append('partyCode', partyCode);
-                fd.append('message', message);
-
-                submitBtn.disabled = true;
-
-                fetch('/dj/feedback', {
-                    method: 'POST',
-                    headers: { [csrf.header]: csrf.token },
-                    body: fd
-                })
-                .then(function (r) {
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
-                    return r.json();
-                })
-                .then(function () {
-                    var modal = bootstrap.Modal.getInstance(document.getElementById('feedbackModal'));
-                    if (modal) modal.hide();
-                    textarea.value = '';
-                    charCount.textContent = '0';
-                    showToast(submitBtn.getAttribute('data-success-msg'), true);
-                })
-                .catch(function (err) {
-                    console.error('[Feedback] Submission error:', err);
-                    showToast(submitBtn.getAttribute('data-error-msg'), false);
-                })
-                .finally(function () {
-                    submitBtn.disabled = false;
-                });
-            });
-        });
-    </script>
+    <!--/* The feedback form and the confirmations of the account buttons above: js/dj-nav.js (no inline script — CSP, review 5.1). */-->
+    <script src="/js/dj-nav.js"></script>
 
 </th:block>
 
