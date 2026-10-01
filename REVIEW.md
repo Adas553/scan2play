@@ -449,4 +449,23 @@ Testy jednostkowe: **480** (479 uruchomionych, 1 pominięty; było 450), `BUILD 
 zielone. CI na GitHubie (oba workflowy) zielone dla `32ac785` i `847c872`.
 
 Nie zrobione z 4.1: licznik bezpiecznika i okna limitów są w pamięci (restart je zeruje; 403 jest zabezpieczeniem) — trwały licznik w bazie
-to osobna decyzja, gdy będzie więcej niż jedna instancja (2.3).
+to osobna decyzja, gdy będzie więcej niż jedna instancja (2.3). *(Licznik bezpiecznika YouTube — zrobiony w trzeciej paczce, niżej; okna
+limitów gości nadal w pamięci.)*
+
+**Trzecia paczka — 6.1, potem 1.5, 1.4, 2.1, 7.1, 1.2, reszta 4.4 i 4.5, trwały licznik wyszukiwań; zrobione 2026-10-01, zacommitowane
+(kod, potem dokumenty) i wypchnięte:**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 6.1 | Stałe testy na prawdziwym PostgreSQL: `mvnw verify -Pit` (profil Maven, failsafe uruchamia `*IT`). Klasa bazowa zakłada i kasuje własną bazę `s2p_it_*` na serwerze z `PGHOST`… (lokalnie PG 18 — Docker niepotrzebny), cała aplikacja na niej: Flyway V1..V10 + walidacja Hibernate. Workflow `db-tests.yml` z usługą `postgres:18` (Railway: `postgres-ssl:18`). `CLAUDE.md` wskazuje te testy zamiast jednorazowego. | `pom.xml`, `PostgresIntegrationTest`, `.github/workflows/db-tests.yml`, `CLAUDE.md` | 24 IT: `MigrationIT` 4, `FallbackQueueIT` 12, `FallbackQueueConcurrencyIT` 1 (**bez blokady advisory: „deadlock detected”** — sprawdzone), `SongRequestRepositoryIT` 3, `YouTubeSearchBudgetIT` 3, `ApplicationSetupIT` 1 |
+| 1.5 | `V9`: `(party_code, playlist_id, status, play_order, playlist_position)` i `(party_code, fetched_at)`; usunięte `idx_fallback_track_party_status`, `idx_owner_id`, `idx_party_code`. Indeks pod czystkę `song_requests` celowo nie (zmierzony skip scan: 1,9 ms / 300 tys. wierszy). | `V9__queue_indexes.sql`, `@Index` w encjach | `MigrationIT`: indeksy + plan zapytania o następny utwór bez `Sort` — **czerwone przed V9** |
+| 1.4 | Import = jeden `INSERT … SELECT FROM unnest(…) WITH ORDINALITY`. | `FallbackTrackRepository.insertTracks`, `FallbackTrackCommandService` | IT liczy instrukcje (< 10 na 300 utworów) — **czerwone przed**; treść wierszy sprawdzona |
+| 2.1 | Wersja listy = jedno zapytanie agregujące (md5 id w kolejności + flagi ręcznego ruchu + liczba pominiętych), bez encji; lista wysyła wersję czytaną przed listą. | `FallbackTrackRepository.queueFingerprint`, `FallbackQueueService`, `DjFallbackQueueController` | IT: 0 encji, ≤ 1 instrukcja — **czerwone przed**; wersja zmienia się przy każdej zmianie kolejki i tylko wtedy |
+| 1.2 | `getSettings` daje kopię encji z cache; `updateSettings` czyści wpis po commicie (zamiast `@CachePut`); tokeny Spotify poza `toString`. | `PartySettingsQueryService`, `PartySettingsCommandService`, `PartySettingsEntity`, `AppConfig` | `PartySettingsQueryServiceTest` 4, `PartySettingsCommandServiceTest` +1 |
+| 4.4 | Pula async ograniczona: 16 / 32 wątki, kolejka 50 (`spring.task.execution.pool.*`, env `ASYNC_POOL_*`). | `application.properties` | `ApplicationSetupIT` |
+| 4.5 | Wyszukiwanie bez wyniku pamiętane 10 min (błędy nie). Flaga „quota exceeded” była już z 4.1. | `YouTubeMusicProvider` | `YouTubeMusicProviderTest` +2 — **czerwony przed** |
+| — | Licznik wyszukiwań YouTube w bazie (`V10`, wiersz na dobę Google, atomowy `INSERT … ON CONFLICT … RETURNING`): restart nie oddaje budżetu, kilka instancji go nie przekroczy. | `YouTubeSearchBudget`, `V10__youtube_search_budget.sql` | `YouTubeSearchBudgetIT` 3 (restart, 40 równoległych prób na 3 instancjach = dokładnie budżet) |
+| 7.1 | `SESSION_HANDOFF.md` skrócony do stanu bieżącego (~90 linii); całość przeniesiona słowo w słowo do `docs/history/session-handoff-2026-09.md`. `PROJECT_CONTEXT.md` — osobno, później. | dokumenty | — |
+
+Testy jednostkowe: **537** (536 uruchomionych, 1 pominięty), `BUILD SUCCESS` w kopii repo; IT: **24**, wszystkie zielone na lokalnym
+PostgreSQL 18. JS i szablony bez zmian — scenariusze przeglądarkowe nie były uruchamiane ponownie.

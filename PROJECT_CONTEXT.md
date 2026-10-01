@@ -171,8 +171,12 @@ here but in `fallback_play`. `SKIPPED` rows (the DJ's ✕, Section 5.4 "Skipping
 out the round and the next round re-queues them (`requeuePlayedTracks` takes both, and only those of the party's newest import — a
 row skipped from a playlist that was since replaced or imported again stays `SKIPPED` for good, until the 30-day purge). The
 `status` column has a check constraint (`fallback_track_status_check`, created by `V2`, widened by `V8` for `SKIPPED`). **Retention:** rows older than 30 days are purged daily at 04:30
-(`FallbackTrackCommandService.purgeStaleTracks`) and on account deletion. **Index:** `idx_fallback_track_party_status`
-on `(partyCode, status)`.
+(`FallbackTrackCommandService.purgeStaleTracks`) and on account deletion. **Indexes (`V9`, 2026-10-01):**
+`idx_fallback_track_queue` on `(party_code, playlist_id, status, play_order, playlist_position)` — every queue query, read in play
+order without a sort (`MigrationIT` checks the plan) — and `idx_fallback_track_party_fetched` on `(party_code, fetched_at)` — the
+newest import of a party, and the purge by a skip scan. (`V2`'s `(party_code, status)` was dropped.) **An import is one statement:**
+`FallbackTrackRepository.insertTracks` — `INSERT … SELECT FROM unnest(videoIds, titles) WITH ORDINALITY` (the position and the play
+order are the ordinal − 1) — instead of one INSERT per track under the queue's lock (identity ids cannot be batched; review 1.4).
 
 #### `FallbackPlayEntity` → table: `fallback_play` (Flyway `V7`)
 
@@ -658,9 +662,12 @@ and rejected rows, which is cheap next to the bound; add it if a party ever has 
 own window (page load, its own buttons, its own player taking a track), so after the DJ shuffled or moved tracks on the
 phone the computer's list stayed old until its next track, and the phone's list never noticed the computer taking
 tracks. The playback was right all along (the queue is on the server); only the display was stale. Now the lease answer
-carries `queueVersion` — a hash of the whole `FallbackQueueView` (`FallbackQueueService.getVersion`; the same bounded
-read the list does, ≤ 500 tracks, once per report) — and `GET /dj/dashboard/fallback-queue` sends the version of the list
-it returns in `X-Queue-Version`. A window remembers the version of the list it shows (`setKnownQueueVersion`, called by
+carries `queueVersion` (`FallbackQueueService.getVersion`) — since 2026-10-01 (review 2.1) one aggregate query: the database
+hashes the queued track ids in play order with their "moved by hand" flags and the skipped count
+(`FallbackTrackRepository.queueFingerprint`, md5, over `idx_fallback_track_queue`; no row is read into the application), and the
+service adds the playlist and the shuffle setting; before, every report read the whole list (≤ 500 entities, 4 queries) to hash
+it — and `GET /dj/dashboard/fallback-queue` sends `X-Queue-Version`, read **before** the list (a change between the two reads
+makes the window fetch once more instead of missing it). A window remembers the version of the list it shows (`setKnownQueueVersion`, called by
 `refreshFallbackQueue`) and fetches the list again when a report brings another one; the window that made the change
 already holds the new version, so nothing is fetched twice. The version does not survive a restart (one extra fetch).
 
@@ -922,8 +929,8 @@ fixture again. Its parts:
 |------------------------------|-------|---------|
 | `DjService`                  | 201   | Song queue queries (dashboard, public), queue fingerprint, and song actions (mark played, push to Spotify, DJ picks; a request becomes "played" only through `markPlayed`, which sets the decision and `playedAt`, and is also used by `SongEvaluationService` for the Spotify auto-queue) — all song actions validate partyCode ownership |
 | `SongEvaluationService`      | 280   | AI-powered song evaluation pipeline: Gemini AI → track resolution → save → optional auto-queue; includes **song name normalization** (temperature 0.0 for deterministic output) |
-| `PartySettingsCommandService`| 76    | Create/update party settings via generic `updateSettings()` lambda (write side, `@CachePut`) |
-| `PartySettingsQueryService`  | 31    | Read party settings (read side, `@Cacheable`) |
+| `PartySettingsCommandService`| ~100  | Create/update party settings via generic `updateSettings()` lambda (write side; evicts `partySettings` after the commit) |
+| `PartySettingsQueryService`  | ~45   | Read party settings (read side, the `partySettings` cache; every caller gets its own copy) |
 | `QueueService`               | 75    | Delegates to MusicProvider implementations (resolve track, add to queue) |
 | `SpotifyMusicProvider`       | 194   | Spotify integration: search tracks (Client Credentials), add to queue (User Auth) |
 | `YouTubeMusicProvider`       | ~220  | YouTube integration: Data API v3 with two-level cache (Caffeine L1 + PostgreSQL L2, 30-day TTL per YouTube API ToS) + daily scheduled cleanup; asks `YouTubeSearchBudget` before every API search (spent → the search link, not cached) |
@@ -1105,9 +1112,14 @@ Two separate authentication flows:
 - **Search fuse (`YouTubeSearchBudget`, REVIEW.md 4.1):** the `search.list` limit is one per Google project, shared by every
   party. The provider counts its real API searches per Google day (midnight to midnight `America/Los_Angeles`) and past
   `youtube.search.daily-budget` (80, env `YOUTUBE_SEARCH_DAILY_BUDGET`; 0 = off) stops asking: new songs get the search link
-  (the DJ can play it by hand, Auto-Pilot skips it — the owner's choice). A 403 `quotaExceeded` trips it at once. The count is in
-  memory (a restart starts it over; the 403 is the backstop). Search links are not put into the `youtubeSearch` cache, so a
+  (the DJ can play it by hand, Auto-Pilot skips it — the owner's choice). A 403 `quotaExceeded` trips it at once. **The count is in
+  the database since 2026-10-01** (`youtube_search_budget`, `V10`, one row per Google day; a search is taken with one
+  `INSERT … ON CONFLICT DO UPDATE … WHERE used < budget RETURNING used`, so a restart does not give the day's budget back and
+  concurrent requests or instances never take more; rows older than 30 days are deleted). Whether the day is spent is mirrored in
+  memory, because the DJ's dashboard asks on every poll. Search links are not put into the `youtubeSearch` cache, so a
   song gets its video once the API can be asked again. **Raise the budget together with the quota** when Google grants more.
+- **A search that found nothing is remembered for 10 minutes** (`YouTubeMusicProvider.notFound`, in memory, by normalised query;
+  review 4.5): asked again it would cost another search for the same empty answer. A failed call (network, 5xx) is not remembered.
 - **A YouTube Mix is refused (2026-09-30):** a link with `list=RD…` (a Mix YouTube makes up for one viewer, e.g. opened from a video)
   is not given out by the Data API. `POST /dj/dashboard/fallback-playlist` refuses it before saving anything (`YouTubeUrls.isMix`;
   `RDCLAK…` YouTube Music lists are left to the import): `X-Fallback-Saved: false`, `X-Fallback-Import: failed`,
@@ -1153,7 +1165,7 @@ Uses **Caffeine** cache with per-cache TTL configuration.
 
 | Cache Name       | Key        | TTL    | Max Size | Usage |
 |------------------|------------|--------|----------|-------|
-| `partySettings`  | partyCode  | 24h    | 500      | `PartySettingsQueryService.getSettings()` (`@Cacheable`) / `PartySettingsCommandService.updateSettings()` (`@CachePut`) |
+| `partySettings`  | partyCode  | 24h    | 500      | `PartySettingsQueryService.getSettings()` — every caller gets a **copy** of the cached entity (review 1.2: a `setX` on it changed what every request saw); `PartySettingsCommandService.updateSettings()` evicts the entry after its commit. The Spotify tokens are not in the entity's `toString` |
 | `qr-codes`       | text+size  | 24h    | 1000     | `QrCodeService.generateQrCodeBase64()` (`@Cacheable`) |
 | `youtubeSearch`  | searchQuery| 24h    | 1000     | `YouTubeMusicProvider.findTrackUrl()` L1 cache — backed by permanent `youtube_cache` DB table (L2) |
 | `dashboardQueue` | partyCode  | 3s     | 200      | `DjService.getDashboardQueue()` (`@Cacheable`) — auto-expires for polling freshness; evicted after a song is confirmed played (`markSongAsPlayed`, `pushToSpotify`), because next-track reads it |
@@ -1237,7 +1249,12 @@ Flyway applies pending files in order at startup, before Hibernate validates, an
   check constraint `fallback_track_status_check` of `V2` is dropped and created again with the fourth value, no data changes;
   verified against a real PostgreSQL 18 — V1–V8 on an empty database with Hibernate validation, and **V7 → V8 on data that already
   existed** through the Flyway API: exactly one migration executed, the rows and their statuses kept, `SKIPPED` refused at V7 and
-  accepted after, an unknown status still refused — and the skips themselves, see Section 5.4 "Skipping a track").
+  accepted after, an unknown status still refused — and the skips themselves, see Section 5.4 "Skipping a track"),
+  `V9__queue_indexes` (2026-10-01, review 1.5: `idx_fallback_track_queue` and `idx_fallback_track_party_fetched` created,
+  `idx_fallback_track_party_status`, `idx_owner_id` — a duplicate of the UNIQUE on `owner_id` — and `idx_party_code` — the leading
+  column of `idx_party_decision_time` — dropped, `IF EXISTS`), `V10__youtube_search_budget` (2026-10-01: the table of the daily
+  YouTube search count, Section 7.3; no entity maps it). From V9 on, migrations are checked by `MigrationIT` (`mvnw verify -Pit`,
+  Section 13 "Testing") on an empty PostgreSQL 18, locally and in `.github/workflows/db-tests.yml`.
 - **`spring.flyway.baseline-on-migrate=true`**: a database that already has tables but no history table
   (every database created before Flyway, including production) is recorded as version 1 *without running
   V1*, and only V2+ are applied. An empty database gets V1 applied in full. Both paths were verified
@@ -1425,8 +1442,13 @@ PartySettingsQueryService
   key. `HtmlLangDeclarationTest` scans `templates/` so that a new page with `#{…}` keys cannot forget the declaration.
 
 ### Scalability
-- **Guest rate limits are in memory** (the session, `GuestRequestLimiter`, `YouTubeSearchBudget`; Sections 5.2, 7.3): a restart
-  starts them over, and a second instance would have its own. Clearing cookies resets only the guest's own limit.
+- **Guest rate limits are in memory** (the session, `GuestRequestLimiter`; Section 5.2): a restart starts them over, and a second
+  instance would have its own. Clearing cookies resets only the guest's own limit. The YouTube search count is in the database
+  (`YouTubeSearchBudget`, Section 7.3).
+- **The async executor is bounded** (review 4.4, 2026-10-01): the guests' requests (`Callable`, Gemini up to 10 s) and `@Async`
+  run on Boot's `applicationTaskExecutor` with 16 core / 32 max threads and a queue of 50 (`spring.task.execution.pool.*`, env
+  `ASYNC_POOL_CORE_SIZE` / `ASYNC_POOL_MAX_SIZE` / `ASYNC_POOL_QUEUE_CAPACITY`); past that a request fails at once (an error page)
+  instead of waiting past its 30 s. Boot's default queue was unbounded.
 - **In-memory Caffeine cache** — not shared across instances. If horizontally scaled, consider Spring Session + Redis.
 - **Single-instance deployment** assumed. For multi-instance, caching and session management need Redis/JDBC backing. The player lease (which dashboard window plays, Section 5.4) is in memory too and would need the same.
 
@@ -1434,7 +1456,22 @@ PartySettingsQueryService
 - **Smoke test (7 tests)** — `SmokeTest` (`@WebMvcTest`, no DB): public routes, security redirects, YouTube IFrame not server-rendered.
 - **Unit tests (424 tests, one of them skipped unless asked for — see below)** covering core business logic: entity truncation, code generation, rate limiting, queue management, IDOR blocking, provider delegation, party lifecycle, playlist URL extraction, fallback playlist import (with titles), the server-side next-track decision (`NextTrackService`), the fallback queue order (`FallbackTrackCommandService`: playlist order, shuffle, rounds, shuffle switch) and the play log it writes (a row per hand-out, under the party lock, one id per play; the purge; the account deletion), the "up next" service/controller (listing and moving tracks, the queue lock), the player lease and its commands (`PlayerLeaseService` with a clock the test moves by hand, `DjPlayerLeaseController`, the 409 of `next-track`, the version of the "up next" list), the timeline of what played (`PlayHistoryService`: the merge, play time vs request time, the bound and `hasMore`, what ⏮ can play again; `DjService.markPlayed`; `YouTubeUrls`), the `limit` of the history endpoints, `recent-tracks` and the `PREVIOUS` command, the state of the player and the `PAUSE` / `RESUME` commands (`PlayerLeaseService`, `DjPlayerLeaseController`), and the rendering of `fragments/fallback-queue.html` (with its skip button and the skipped count), `fragments/player-lease-banner.html`, `fragments/player-controls.html`, the history fragment and the queue's polled `<tbody>` with the real message bundles; skipping a track for this round (`FallbackTrackCommandService.skipTrack`, `FallbackQueueService`, `DjFallbackQueueController`), the nightly purge of the song requests (`SongRequestRetentionService`: the cutoff, the batches, the bound, the schedule) and — through `DashboardPageRenderTest` — the whole `dashboard.html`, rendered from the model of the real controller, in both languages (the texts of the import result, the ids the scripts need, `<html lang>` = the language of the bundle — also for a locale that has no bundle) and the History tab's fragment for every filter through the real controller; `HtmlLangDeclarationTest` checks that every page of `templates/` that uses `#{…}` keys declares its language.
 - Unit tests are pure Mockito (no Spring context) — fast (~2s). Smoke test uses `@WebMvcTest` (~5s).
-- **Total: 507 tests, 506 run and 1 skipped** with the guest's view of the queue (`GuestQueueServiceTest` 5, `GuestPageRenderTest` +3 —
+- **Tests on a real PostgreSQL (2026-10-01, review 6.1): 24 `*IT` tests**, `mvnw verify -Pit` (a Maven profile: failsafe runs the
+  `*IT` classes, surefire is off; `mvnw test` stays without a database). The base class `PostgresIntegrationTest` creates a
+  throw-away `s2p_it_<time>_<random>` database on the server of `PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` (the defaults of
+  `application.properties`; `PGDATABASE` is ignored), starts the whole application on it with dummy credentials — Flyway V1..V10
+  and Hibernate validation — and drops it when the JVM ends. `MigrationIT` (every migration applied, the indexes, the plan of the
+  next-track query), `FallbackQueueIT` (the order, the rounds, a superseded playlist, shuffle, the DJ's moves, skips, the purge,
+  the version of the list and that it reads no track, the one-statement import — both counted with Hibernate statistics),
+  `FallbackQueueConcurrencyIT` (4 players × 35 hand-outs while 4 threads move, drag and re-order: no deadlock, every round holds
+  every track once — **with the advisory lock removed it fails with "deadlock detected"**, checked), `SongRequestRepositoryIT`
+  (the history's `COALESCE` order, the fingerprint, the batched purge), `YouTubeSearchBudgetIT` (the count survives a restart,
+  40 concurrent takes on three instances take exactly the budget), `ApplicationSetupIT` (the bounded executor). On GitHub:
+  `.github/workflows/db-tests.yml` with a `postgres:18` service (Railway's database is `postgres-ssl:18`). The ITs of 1.5, 1.4, 2.1
+  were red before their change and green after.
+- **Total: 537 unit tests, 536 run and 1 skipped** after the review items of 2026-10-01 (1.2 `PartySettingsQueryServiceTest` 4,
+  `PartySettingsCommandServiceTest` +1; 4.5 `YouTubeMusicProviderTest` +2; 1.4 / 2.1 the mocked tests of the import and of the
+  version rewritten for the new queries). **507, 506 run and 1 skipped** with the guest's view of the queue (`GuestQueueServiceTest` 5, `GuestPageRenderTest` +3 —
   also the fragment alone —, `GuestControllerTest` +3, `GuestSessionServiceTest` +1); **495** with a YouTube Mix refused (`DjPartySettingsControllerFallbackTest` +1,
   `YouTubeUrlsTest` +1); **493** with the two request modes (`GuestPageRenderTest` 2 — the guest page rendered in both
   languages and after a mood sent as a song —, `RequestModeTest` 1, `GuestControllerTest` +2, `SongEvaluationServiceTest` +2);
@@ -1450,8 +1487,8 @@ PartySettingsQueryService
   `DjPartySettingsControllerPlaybackModeTest`, one in `DjPlayerLeaseControllerTest`); **443** with the resume after a reload (one more in `DjPlayerLeaseControllerTest`:
   `secondsAgo` of `recent-tracks`); **442** after the review's first package (2026-09-30, the seventh session: 11 more —
   `SongEvaluationServiceTest` (the Spotify auto-queue), `YouTubeMusicProviderTest` (the key in a header), `SpotifyAuthControllerTest`
-  (the OAuth state), one each in `DjServiceTest` and `AccountDeletionServiceTest`). Before it: **431 tests, 430 run and 1 skipped** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"` in a copy of the repo, counted 2026-09-30, after the sixth session: 429 before it, minus the 6 tests of the removed `next-guest-track` endpoint, plus 3 of `DashboardPageRenderTest`, 4 of `HtmlLangDeclarationTest` and 1 of `FallbackQueueFragmentTest`). No integration tests in the repo — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs), and `V8`, the skip and the purge of the song requests (Sections 4.1, 5.4, 10) were checked against a throw-away PostgreSQL database, not by a test that stays. The one exception is the **fixture recorder** `PlayLogFixtureRecorderTest`: a `@SpringBootTest` that is skipped (no Spring context is even started) unless `S2P_FIXTURE_OUT` is set, and that refuses a database whose name does not start with `s2p_`; it is compiled with the rest, so an API change that breaks it shows at once.
-- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 47 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **both green on GitHub for every push of 2026-09-30, the last one `847c872`**. What the browser tests do not cover is listed in Section 5.4.
+  (the OAuth state), one each in `DjServiceTest` and `AccountDeletionServiceTest`). Before it: **431 tests, 430 run and 1 skipped** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"` in a copy of the repo, counted 2026-09-30, after the sixth session: 429 before it, minus the 6 tests of the removed `next-guest-track` endpoint, plus 3 of `DashboardPageRenderTest`, 4 of `HtmlLangDeclarationTest` and 1 of `FallbackQueueFragmentTest`). Until 2026-10-01 there were no integration tests in the repo (now: the `*IT` tests above) — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs), and `V8`, the skip and the purge of the song requests (Sections 4.1, 5.4, 10) were checked against a throw-away PostgreSQL database, not by a test that stays. The one exception is the **fixture recorder** `PlayLogFixtureRecorderTest`: a `@SpringBootTest` that is skipped (no Spring context is even started) unless `S2P_FIXTURE_OUT` is set, and that refuses a database whose name does not start with `s2p_`; it is compiled with the rest, so an API change that breaks it shows at once.
+- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 47 scenarios that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **both green on GitHub for every push up to `d0ca3c7` (2026-10-01)**; the database tests have a third, `.github/workflows/db-tests.yml` (above) — not run on GitHub yet. What the browser tests do not cover is listed in Section 5.4.
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
