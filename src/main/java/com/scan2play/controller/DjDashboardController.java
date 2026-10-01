@@ -141,7 +141,7 @@ public class DjDashboardController {
         model.addAttribute(PARTY_LIMIT_REACHED, guestRequestLimiter.isPartyLimitReached(partyCode));
 
         // --- QR Code ---
-        String guestUrl = cleanBaseUrl + "/p/" + partyCode;
+        String guestUrl = guestUrl(partyCode);
         String qrCodeBase64Str = qrCodeService.generateQrCodeBase64(guestUrl, 250, 250);
         model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
         model.addAttribute(PERMANENT_LINK, guestUrl);
@@ -150,6 +150,35 @@ public class DjDashboardController {
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
 
         return "dashboard";
+    }
+
+    /** The side of the QR code on the print page, in pixels: sharp on an A4 poster (the cards show it smaller). */
+    static final int QR_PRINT_SIZE = 1000;
+
+    /**
+     * The party's QR code to print and put up (the owner's wish, 2026-10-01): {@code layout=poster} — one A4 poster — or
+     * {@code cards} — eight cards to cut out and put on the tables. The texts of the code are in Polish and English at once
+     * (guests are of both); the bar above it, which is not printed, follows the DJ's language. Anything else than
+     * {@code cards} is the poster.
+     */
+    @GetMapping("/qr-print")
+    public String qrPrint(@RequestParam(defaultValue = "poster") String layout, Model model,
+                          OAuth2AuthenticationToken authentication, HttpSession session) {
+        if (authentication == null) {
+            return REDIRECT_LOGIN;
+        }
+        String partyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        String guestUrl = guestUrl(partyCode);
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(PERMANENT_LINK, guestUrl);
+        model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_PRINT_SIZE, QR_PRINT_SIZE));
+        model.addAttribute(QR_LAYOUT, "cards".equals(layout) ? "cards" : "poster");
+        return "qr-print";
+    }
+
+    /** The address the guests open: what the QR code holds. */
+    private String guestUrl(String partyCode) {
+        return cleanBaseUrl + "/p/" + partyCode;
     }
 
     /**

@@ -166,6 +166,9 @@
                 </div>
 
                 <p class="text-secondary mt-2 small" th:text="#{dashboard.qr.help}">Direct guests to scan this code.</p>
+                <!--/* The code to print and put up: an A4 poster or table cards, Polish and English (DjDashboardController.qrPrint) */-->
+                <a th:href="@{/dj/qr-print}" target="_blank" rel="noopener" id="qrPrintLink"
+                   class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.print}">🖨 Print</a>
             </div>
         </div>
     </div>
