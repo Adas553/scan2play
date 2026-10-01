@@ -56,18 +56,44 @@
 
     // ---- State ----
     let player = null, playerReady = false, playerState = -1;
-    // Song request ID of the guest song that is loading/playing; null for a background track
-    // or a track the DJ picked by hand.
-    let currentlyPlayingSongId = null, isLoadingSong = false;
-    // When the track that loads now was handed to the player (Date.now(); set by loadIntoPlayer).
-    let loadStartedAt = 0;
+
+    // The track in the player — everything about it in one object (REVIEW.md 3.2: it used to be ten variables, each place that
+    // loaded or stopped a track setting its own subset). Created only by startTrack, which every load goes through; its phase
+    // then moves LOADING → RUNNING (it reached PLAYING) → OVER (it ended, failed or was stopped). null before the first load.
+    //   kind         'GUEST' | 'BACKGROUND' | 'HISTORY' (came back through ⏮ or a resume) | 'MANUAL' (▶ picked by hand)
+    //   songId       the guest song's request id (GUEST): confirmed once it plays, excluded when ⏭ skips it
+    //   key          its entry in the server's timeline of what played ('G:<request id>' or 'B:<play id>' — a background
+    //                track's id is that of one *play*, so the same video in two rounds has two keys); null for MANUAL. It is kept
+    //                when the track is over: "back" from a track that ended starts there
+    //   playlistId   the playlist a BACKGROUND track came from (null: unknown)
+    //   loadedAtSeq  the number of the last lease report sent before it was loaded: only a report sent after it says anything
+    //                about it (dropStaleBackgroundTrack, notePlaylist)
+    //   loadNo       which load it was (loads counts them): a note about one track ("⏮ restarted it") ends with the next load
+    //   startedAt    when it was handed to the player (Date.now())
+    //   retrace      ⏭ retraces the timeline instead of asking for a new track (skipToNext): true for HISTORY until the DJ
+    //                changes the playlist or the window loses the lease
+    //   phase        'LOADING' | 'RUNNING' | 'OVER'
+    let current = null;
+    let loads = 0;
+
+    /** Whether a track has been handed to the player and has not reached PLAYING yet (nor ended, failed or been stopped). */
+    function isLoadingSong() { return current !== null && current.phase === 'LOADING'; }
+    /** Whether the player holds a background (fallback playlist) track that is loading or playing. */
+    function isBackgroundTrack() { return current !== null && current.kind === 'BACKGROUND' && current.phase !== 'OVER'; }
+    /** The request id of the guest song that is loading or playing, or null. */
+    function runningGuestSongId() { return current !== null && current.kind === 'GUEST' && current.phase !== 'OVER' ? current.songId : null; }
+    /** The timeline key of the track in the player (kept when it is over), or null. */
+    function nowPlayingKey() { return current !== null ? current.key : null; }
+    /** Whether ⏭ retraces the timeline (the track came back through ⏮). */
+    function isRetracing() { return current !== null && current.retrace; }
+    function endRetrace() { if (current !== null) current.retrace = false; }
+    function trackIsOver() { if (current !== null) current.phase = 'OVER'; }
+
     // How long a track that has been handed to the player but does not play yet still counts as "playing" for the pause button
     // and the lease reports (isPlayingOrLoading). Between two videos the player is UNSTARTED or CUED for a moment, and saying
     // "not playing" then made the button read "resume" right after the DJ had started a track. Only for a while: a browser that
     // refuses to start sound in a page nobody has touched leaves the player at CUED for good, and then "resume" is the way out.
     const LOADING_COUNTS_AS_PLAYING_MS = 10000;
-    // True while a background (fallback playlist) track is loading/playing.
-    let isBackgroundTrack = false;
     let tryAutoPlayInFlight = false;
     // Guards against calling markAsPlayed() again if PLAYING re-fires for the same video
     // (e.g. a brief buffering stall, or the DJ manually pausing/resuming) without a new
@@ -92,7 +118,7 @@
     // at most RESUME_WITHIN_SECONDS ago — from its start, instead of the next one. Asking next-track then used up a track (it is marked
     // played when handed out): at load nobody heard it (the browser refuses sound in a page nobody has touched, so it was only
     // loaded), and a takeover skipped the track the other device was playing. Only for that first track: any load clears it
-    // (loadIntoPlayer), and so does an answer that another window plays; "play on this device" sets it again once this window holds
+    // (startTrack), and so does an answer that another window plays; "play on this device" sets it again once this window holds
     // the lease (takeOverPending, applyLease).
     // After a reload (2026-10-01, the owner's report) only a track the reload INTERRUPTED comes back — the one the page before noted
     // when it went away (INTERRUPTED_TRACK_KEY, see the pagehide handler): a track that had ended by itself is not played again. With
@@ -114,20 +140,9 @@
     let leaseFree = false;
     // Numbers the lease reports so that an answer that arrives late cannot undo a newer one.
     let leaseRequestSeq = 0, leaseAppliedSeq = 0;
-    // The playlist the running background track came from (null: unknown, or not a background track), and the number
-    // of the last lease report sent before that track was loaded: only a report sent after it says anything about it.
-    let playingPlaylistId = null, trackLoadedAtLeaseSeq = 0;
     // Whether the window that plays says its player makes sound (true) or is paused (false), from the lease answers;
     // null = unknown. A window that does not play shows "pause" or "resume" by it (the window that plays looks at its own player).
     let holderPlaying = null;
-    // The key of the track that plays ('G:<request id>' or 'B:<play id>', the same keys the server's list of recently
-    // played tracks uses — a background track's id is that of one *play*, so the same video in two rounds of the playlist
-    // has two keys), or null for a track the DJ picked by hand — "back" finds its place in that list by it.
-    let nowPlayingKey = null;
-    // True while the track that plays came back through ⏮ (replayTrack): ⏭ then retraces the steps — it goes forward through
-    // what played, up to the newest entry — instead of asking the server for a new track (skipToNext). Any track the server
-    // hands out (playTrack) or the DJ picks by hand, and losing the lease, end it.
-    let playingFromHistory = false;
     // The playlist that the last lease answer named (undefined = no answer yet, null = the party has none): when an answer names
     // another one the DJ has replaced or cleared it (notePlaylist).
     let lastSeenPlaylistId;
@@ -239,8 +254,8 @@
      */
     function isPlayingOrLoading() {
         if (isPlaying()) return true;
-        return isLoadingSong && playerState !== YT.PlayerState.PAUSED
-            && Date.now() - loadStartedAt < LOADING_COUNTS_AS_PLAYING_MS;
+        return isLoadingSong() && playerState !== YT.PlayerState.PAUSED
+            && Date.now() - current.startedAt < LOADING_COUNTS_AS_PLAYING_MS;
     }
 
     // ---- Event Handlers ----
@@ -265,31 +280,29 @@
         }
 
         if (event.data === YT.PlayerState.PLAYING) {
-            isLoadingSong = false;
+            if (isLoadingSong()) current.phase = 'RUNNING';
             consecutiveErrors = 0;
 
             // Mark guest songs as played (once per song, see lastMarkedPlayedId above)
-            if (currentlyPlayingSongId && currentlyPlayingSongId !== lastMarkedPlayedId) {
-                lastMarkedPlayedId = currentlyPlayingSongId;
-                markAsPlayed(currentlyPlayingSongId);
+            const songId = runningGuestSongId();
+            if (songId && songId !== lastMarkedPlayedId) {
+                lastMarkedPlayedId = songId;
+                markAsPlayed(songId);
             }
         }
 
         if (event.data === YT.PlayerState.ENDED) {
-            if (isLoadingSong) return; // stale ENDED during transition
-            currentlyPlayingSongId = null;
-            isBackgroundTrack = false;
+            if (isLoadingSong()) return; // stale ENDED during transition
+            trackIsOver();
             tryAutoPlay();
         }
     }
 
     function onPlayerError(event) {
-        console.error('[YT] Player error ' + event.data + ' for '
-            + (currentlyPlayingSongId ? 'song ID=' + currentlyPlayingSongId : 'a background/manual track'));
-        if (currentlyPlayingSongId) erroredSongIds.add(currentlyPlayingSongId);
-        currentlyPlayingSongId = null;
-        isBackgroundTrack = false;
-        isLoadingSong = false;
+        const songId = runningGuestSongId();
+        console.error('[YT] Player error ' + event.data + ' for ' + (songId ? 'song ID=' + songId : 'a background/manual track'));
+        if (songId) erroredSongIds.add(songId);
+        trackIsOver();
         playerState = -1; // the failed video is not playing — do not wait for a state event that may not come
         if (++consecutiveErrors <= MAX_IMMEDIATE_RETRIES) tryAutoPlay();
         else askAgain = true; // no tight loop through unplayable videos: the next lease report asks
@@ -297,38 +310,46 @@
 
     // ---- Core Playback ----
 
-    // How many tracks have been loaded into the player. Every track goes in through loadIntoPlayer, so the number says
-    // which track is running: a note made about one track ("⏮ restarted it") stops being valid as soon as another loads.
-    let trackLoads = 0;
-
-    function loadIntoPlayer(videoId) {
+    /**
+     * Hands a track to the player — the one way every track goes in, so `current` always describes what the player holds.
+     * Any load also ends a pending resume (resumeLastTrack).
+     *
+     * @param {'GUEST'|'BACKGROUND'|'HISTORY'|'MANUAL'} kind
+     * @param {string} videoId
+     * @param {{songId?: number, key?: string, playlistId?: string}} [about]
+     */
+    function startTrack(kind, videoId, about) {
+        about = about || {};
         resumeLastTrack = resumeWithoutAutoPilot = false;
-        trackLoads++;
-        loadStartedAt = Date.now();
+        current = {
+            kind: kind,
+            songId: kind === 'GUEST' ? about.songId : null,
+            key: about.key || null,
+            playlistId: kind === 'BACKGROUND' ? (about.playlistId || null) : null,
+            loadedAtSeq: leaseRequestSeq,
+            loadNo: ++loads,
+            startedAt: Date.now(),
+            retrace: kind === 'HISTORY',
+            phase: 'LOADING'
+        };
         player.loadVideoById(videoId);
     }
 
+    /** A track the server handed out (next-track). */
     function playTrack(track) {
-        isLoadingSong = true;
-        isBackgroundTrack = track.source === 'BACKGROUND';
-        currentlyPlayingSongId = track.source === 'GUEST' ? track.id : null;
-        playingPlaylistId = isBackgroundTrack ? (track.playlistId || null) : null;
-        nowPlayingKey = (track.source === 'GUEST' ? 'G:' : 'B:') + track.id;
-        playingFromHistory = false;
-        trackLoadedAtLeaseSeq = leaseRequestSeq;
-        loadIntoPlayer(track.videoId);
+        const guest = track.source === 'GUEST';
+        startTrack(guest ? 'GUEST' : 'BACKGROUND', track.videoId,
+            { songId: track.id, key: (guest ? 'G:' : 'B:') + track.id, playlistId: track.playlistId });
         // The server has just taken a background track off the queue — let the dashboard show what comes next.
-        if (isBackgroundTrack && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
+        if (!guest && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
     }
 
     /** Stops a running background track (the DJ changed or cleared the playlist). A guest song keeps playing. */
     function stopBackgroundTrack() {
-        if (!isBackgroundTrack || !player) return;
+        if (!isBackgroundTrack() || !player) return;
         player.stopVideo();
         playerState = -1;
-        isBackgroundTrack = false;
-        isLoadingSong = false;
-        playingPlaylistId = null;
+        trackIsOver();
     }
 
     /**
@@ -337,15 +358,15 @@
      * that was sent before the running track was loaded may still describe the old playlist, so it is not trusted.
      */
     function dropStaleBackgroundTrack(currentPlaylistId, reportSeq) {
-        if (!isBackgroundTrack || playingPlaylistId === null || playingPlaylistId === currentPlaylistId) return;
-        if (reportSeq <= trackLoadedAtLeaseSeq) return;
+        if (!isBackgroundTrack() || current.playlistId === null || current.playlistId === currentPlaylistId) return;
+        if (reportSeq <= current.loadedAtSeq) return;
         stopBackgroundTrack();
         tryAutoPlay();
     }
 
     /**
      * The lease answer names the party's current playlist (the DJ can change it in another window). When it is another one than
-     * the last answer named, the playlist has been replaced or cleared, and the retracing of ⏭ ends (playingFromHistory): the
+     * the last answer named, the playlist has been replaced or cleared, and the retracing of ⏭ ends (endRetrace): the
      * tracks of the playlist that was left are not walked through again, ⏭ asks next-track at once and the new playlist starts.
      * The track that plays now — one that came back through ⏮ — is not interrupted, like a guest song. Like
      * dropStaleBackgroundTrack it trusts only a report sent after that track was loaded: an earlier one may be about a change
@@ -355,12 +376,12 @@
     function notePlaylist(currentPlaylistId, reportSeq) {
         const changed = lastSeenPlaylistId !== undefined && currentPlaylistId !== lastSeenPlaylistId;
         lastSeenPlaylistId = currentPlaylistId;
-        if (changed && reportSeq > trackLoadedAtLeaseSeq) playingFromHistory = false;
+        if (changed && current !== null && reportSeq > current.loadedAtSeq) endRetrace();
     }
 
     /** Main entry point — called by polling, on player ready, on ENDED and after a player error. */
     async function tryAutoPlay() {
-        if (isPlayerDevice !== true || !playerReady || !player || isLoadingSong || tryAutoPlayInFlight) return;
+        if (isPlayerDevice !== true || !playerReady || !player || isLoadingSong() || tryAutoPlayInFlight) return;
         // "Play on this device" brings the last track back even with Auto-Pilot off: the DJ asked for music here. Auto-Pilot only
         // decides what happens when it ends — the queue goes on (on) or the player stops (off).
         const takeOver = resumeLastTrack && resumeWithoutAutoPilot;
@@ -383,7 +404,7 @@
             // switched off, another window took the lease) — drop the answer. A guest song is only
             // consumed once it plays; a background track handed out here is skipped for this round of
             // the playlist.
-            if (!track || isPlayerDevice !== true || isLoadingSong || !isAutoPilotOn() || !isPlayerIdle()) return;
+            if (!track || isPlayerDevice !== true || isLoadingSong() || !isAutoPilotOn() || !isPlayerIdle()) return;
             playTrack(track);
         } finally {
             tryAutoPlayInFlight = false;
@@ -410,7 +431,7 @@
         const last = recent && recent[0];
         if (!last || typeof last.secondsAgo !== 'number' || last.secondsAgo > RESUME_WITHIN_SECONDS) return 'none';
         if (!takeOver && last.key !== interrupted.key) return 'none';
-        if (isPlayerDevice !== true || isLoadingSong || !stillWanted() || !isPlayerIdle()) return 'changed';
+        if (isPlayerDevice !== true || isLoadingSong() || !stillWanted() || !isPlayerIdle()) return 'changed';
         replayTrack(last);
         return 'resumed';
     }
@@ -492,10 +513,8 @@
     function stopPlaybackHere() {
         if (player && playerReady) player.stopVideo();
         playerState = -1;
-        currentlyPlayingSongId = null;
-        isBackgroundTrack = false;
-        isLoadingSong = false;
-        playingFromHistory = false;
+        trackIsOver();
+        endRetrace();
     }
 
     /** The server says who plays: the answer of every lease report, and a 409 from next-track. */
@@ -540,7 +559,7 @@
      * deliberate act of the DJ. Only the window that plays can do it; a window that does not sends the command to it
      * (onControlClick). When there is nothing to play (204) the track that plays now carries on.
      *
-     * After ⏮ it retraces the steps instead (playingFromHistory): the track that came back is followed by the entry of the
+     * After ⏮ it retraces the steps instead (isRetracing): the track that came back is followed by the entry of the
      * server's timeline that is one *newer* — so ⏮ then ⏭ returns to where the DJ was, guest song included (a guest song
      * that has played is no longer in the queue, so next-track would never hand it out again). Only at the newest entry
      * — or with a track the DJ picked by hand, which is not in the timeline — it asks next-track as usual. Like ⏮, it does
@@ -550,10 +569,11 @@
         if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
         tryAutoPlayInFlight = true;
         try {
-            if (playingFromHistory) {
+            if (isRetracing()) {
                 const recent = await fetchRecentTracks();
                 if (!recent || isPlayerDevice !== true) return; // the server could not say, or the lease moved while we asked
-                const position = nowPlayingKey ? recent.findIndex(function (t) { return t.key === nowPlayingKey; }) : -1;
+                const key = nowPlayingKey();
+                const position = key ? recent.findIndex(function (t) { return t.key === key; }) : -1;
                 if (position > 0) {   // newest first: the entry before this one is the newer one
                     replayTrack(recent[position - 1]);
                     return;
@@ -561,7 +581,7 @@
             }
             // The guest song that runs now is excluded: it leaves the queue only once the server has its confirmation (POST /play,
             // sent on PLAYING) — a ⏭ while it loads, or before the confirmation arrived, got the same song back.
-            const track = await fetchNextTrack(currentlyPlayingSongId);
+            const track = await fetchNextTrack(runningGuestSongId());
             if (!track || isPlayerDevice !== true) return; // nothing to play, or the lease moved while we asked
             playTrack(track);
         } finally {
@@ -581,7 +601,7 @@
     // apart — without this the previous track could never be reached from the phone. (The tooltip says "20 seconds".)
     const DOUBLE_PRESS_MS = 20000;
 
-    // The restart ⏮ caused last: the value of trackLoads then (so it counts only for that track) and the time.
+    // The restart ⏮ caused last: the number of the load it restarted (so it counts only for that track) and the time.
     let lastRestart = null;
 
     /** The tracks that played most recently and can be played again, newest first — null when the server could not say. */
@@ -606,19 +626,13 @@
 
     /** True when the track that runs now was restarted by ⏮ a moment ago (less than DOUBLE_PRESS_MS): a second ⏮ then goes back a track. */
     function restartedByBackJustNow() {
-        return lastRestart !== null && lastRestart.loads === trackLoads && Date.now() - lastRestart.at < DOUBLE_PRESS_MS;
+        return lastRestart !== null && current !== null && lastRestart.loadNo === current.loadNo
+            && Date.now() - lastRestart.at < DOUBLE_PRESS_MS;
     }
 
     /** Plays a track that has played before: nothing to confirm, not a background track, Auto-Pilot carries on when it ends. */
     function replayTrack(track) {
-        isLoadingSong = true;
-        isBackgroundTrack = false;
-        currentlyPlayingSongId = null;
-        playingPlaylistId = null;
-        nowPlayingKey = track.key;
-        playingFromHistory = true;
-        trackLoadedAtLeaseSeq = leaseRequestSeq;
-        loadIntoPlayer(track.videoId);
+        startTrack('HISTORY', track.videoId, { key: track.key });
     }
 
     /**
@@ -637,7 +651,7 @@
     async function skipToPrevious() {
         if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
         if (hasPlayedForAWhile() && !restartedByBackJustNow()) {
-            lastRestart = { loads: trackLoads, at: Date.now() };
+            lastRestart = { loadNo: current.loadNo, at: Date.now() };
             player.seekTo(0, true);
             return;
         }
@@ -656,7 +670,8 @@
         try {
             const recent = await fetchRecentTracks();
             if (!recent || isPlayerDevice !== true) return; // the server could not say, or the lease moved while we asked
-            const position = nowPlayingKey ? recent.findIndex(function (t) { return t.key === nowPlayingKey; }) : -1;
+            const key = nowPlayingKey();
+            const position = key ? recent.findIndex(function (t) { return t.key === key; }) : -1;
             const target = recent[isPlayerIdle() && position >= 0 ? position : position + 1];
             if (target) replayTrack(target);
             else player.seekTo(0, true);
@@ -673,16 +688,17 @@
      */
     async function restartTrack() {
         if (isPlayerDevice !== true || !playerReady || !player || tryAutoPlayInFlight) return;
-        if (!isPlayerIdle() || isLoadingSong) {
+        if (!isPlayerIdle() || isLoadingSong()) {
             player.seekTo(0, true);
             return;
         }
-        if (!nowPlayingKey) return;
+        const key = nowPlayingKey();
+        if (!key) return;
         tryAutoPlayInFlight = true;
         try {
             const recent = await fetchRecentTracks();
             if (!recent || isPlayerDevice !== true) return; // the server could not say, or the lease moved while we asked
-            const entry = recent.find(function (t) { return t.key === nowPlayingKey; });
+            const entry = recent.find(function (t) { return t.key === key; });
             if (entry) replayTrack(entry);
         } finally {
             tryAutoPlayInFlight = false;
@@ -723,7 +739,7 @@
      */
     function resumeHere() {
         if (!player || !playerReady) return;
-        if (resumeLastTrack && !resumeWithoutAutoPilot && isPlayerDevice === true && !isLoadingSong && isPlayerIdle()) {
+        if (resumeLastTrack && !resumeWithoutAutoPilot && isPlayerDevice === true && !isLoadingSong() && isPlayerIdle()) {
             resumeAfterReload();
             return;
         }
@@ -896,10 +912,10 @@
     function noteInterruptedTrack() {
         try {
             const paused = playerState === YT.PlayerState.PAUSED;
-            const interrupted = isPlayerDevice === true && nowPlayingKey && (isPlayingOrLoading() || paused);
+            const interrupted = isPlayerDevice === true && nowPlayingKey() && (isPlayingOrLoading() || paused);
             if (interrupted) {
-                window.sessionStorage.setItem(INTERRUPTED_TRACK_KEY, JSON.stringify({ key: nowPlayingKey, paused: paused }));
-            } else if (trackLoads > 0 || isPlayerDevice === false) {
+                window.sessionStorage.setItem(INTERRUPTED_TRACK_KEY, JSON.stringify({ key: nowPlayingKey(), paused: paused }));
+            } else if (loads > 0 || isPlayerDevice === false) {
                 window.sessionStorage.removeItem(INTERRUPTED_TRACK_KEY);
             }
         } catch (e) {
@@ -928,14 +944,14 @@
      * A track that came back through ⏮ keeps playing, but ⏭ no longer retraces the steps (notePlaylist) — it starts the new playlist.
      */
     window.updateFallbackSource = function () {
-        playingFromHistory = false;
+        endRetrace();
         stopBackgroundTrack();
         tryAutoPlay();
     };
 
     /** The DJ cleared the playlist: the running background track stops (a guest song plays on), and ⏭ no longer retraces (notePlaylist). */
     window.stopFallback = function () {
-        playingFromHistory = false;
+        endRetrace();
         stopBackgroundTrack();
     };
 
@@ -945,12 +961,7 @@
         const videoId = extractVideoId(trackUrl);
         if (!videoId) return false;
         // Picked by hand: nothing to confirm, not a background track. Auto-Pilot carries on when it ends.
-        currentlyPlayingSongId = null;
-        isBackgroundTrack = false;
-        nowPlayingKey = null;
-        playingFromHistory = false;
-        isLoadingSong = true;
-        loadIntoPlayer(videoId);
+        startTrack('MANUAL', videoId);
         return true;
     };
 
