@@ -14,7 +14,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -100,7 +101,7 @@ public class FallbackTrackCommandService {
         int inserted = fallbackTrackRepository.insertTracks(partyCode, playlistId,
                 tracks.stream().map(PlaylistTrack::videoId).toArray(String[]::new),
                 tracks.stream().map(PlaylistTrack::title).toArray(String[]::new),
-                QUEUED.name(), LocalDateTime.now());
+                QUEUED.name(), Instant.now());
         if (shuffle) {
             fallbackTrackRepository.shuffle(partyCode, playlistId, QUEUED.name());
         }
@@ -325,7 +326,7 @@ public class FallbackTrackCommandService {
         }
 
         FallbackTrackEntity track = next.get();
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         // Under the queue's lock nobody can take the track between the read above and this update, so there is no race to
         // retry (review item 1.6); the condition on the status stays as a safety net for a change made without the lock.
         if (fallbackTrackRepository.claimQueuedTrack(track.getId(), QUEUED, PLAYED, now) != 1) {
@@ -395,7 +396,7 @@ public class FallbackTrackCommandService {
     @Scheduled(cron = "0 30 4 * * *")
     @Transactional
     public void purgeStaleTracks() {
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(FallbackTrackEntity.MAX_AGE_DAYS);
+        Instant cutoff = Instant.now().minus(FallbackTrackEntity.MAX_AGE_DAYS, ChronoUnit.DAYS);
         int deleted = fallbackTrackRepository.deleteFetchedBefore(cutoff);
         int deletedPlays = fallbackPlayRepository.deleteFetchedBefore(cutoff);
         if (deleted > 0 || deletedPlays > 0) {

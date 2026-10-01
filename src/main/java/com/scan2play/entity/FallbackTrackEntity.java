@@ -4,7 +4,7 @@ import com.scan2play.model.FallbackTrackStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * One track of a party's fallback ("background music") playlist, stored server-side so the backend —
@@ -80,8 +80,8 @@ public class FallbackTrackEntity {
 
     /** When the track was fetched from the YouTube API (basis of the {@value #MAX_AGE_DAYS}-day retention). */
     @Column(nullable = false)
-    private LocalDateTime fetchedAt;
+    private Instant fetchedAt;
 
     /** When the player took the track in the current round; cleared when the playlist starts a new round. */
-    private LocalDateTime playedAt;
+    private Instant playedAt;
 }

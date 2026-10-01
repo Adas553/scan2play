@@ -112,8 +112,8 @@ async function refreshTable() {
 /**
  * The line above the "up next" list: how many guest songs wait — they play before the track marked "Next". Counted from the queue
  * table (accepted songs, refreshed by the poll above) — only the ones that have a YouTube video ID, i.e. that Auto-Pilot can play
- * (the same rule as extractVideoId in youtube-autopilot.js and YouTubeUrls.extractVideoId on the server); the ones with a search
- * link are for the DJ to play by hand. Hidden when there are none. The plural form is the browser's (Polish has three), the four texts
+ * (the row's data-video-id, set by the server — YouTubeUrls.extractVideoId); the ones with a search link are for the DJ to play by
+ * hand. Hidden when there are none. The plural form is the browser's (Polish has three), the four texts
  * travel in data attributes of the line (dashboard.html); there is no such line for a Spotify party.
  */
 function updateGuestsWaiting() {
@@ -121,7 +121,7 @@ function updateGuestsWaiting() {
     if (!line) return;
     let waiting = 0;
     document.querySelectorAll('#song-list tr[data-song-id]').forEach(function(row) {
-        if (/[?&]v=[A-Za-z0-9_-]{11}/.test(row.getAttribute('data-track-url') || '')) waiting++;
+        if (row.getAttribute('data-video-id')) waiting++;
     });
     if (waiting === 0) {
         line.classList.add('d-none');

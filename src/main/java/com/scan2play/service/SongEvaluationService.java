@@ -29,7 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -321,7 +321,7 @@ public class SongEvaluationService {
                 .djComment(aiResponse.comment())
                 .energyLevel(aiResponse.energyLevel())
                 .trackUrl(trackUrl)
-                .requestedAt(LocalDateTime.now())
+                .requestedAt(Instant.now())
                 .build();
 
         return transactionTemplate.execute(status -> songRequestRepository.save(entity));
@@ -351,7 +351,7 @@ public class SongEvaluationService {
                     transactionTemplate.executeWithoutResult(status ->
                             songRequestRepository.findById(savedRequest.getId()).ifPresent(song -> {
                                 if (ex == null) {
-                                    DjService.markPlayed(song, LocalDateTime.now());
+                                    DjService.markPlayed(song, Instant.now());
                                 } else {
                                     song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg);
                                 }

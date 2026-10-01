@@ -24,7 +24,8 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -74,7 +75,7 @@ class DjDashboardControllerHistoryTest {
 
     private static List<HistoryEntry> entries(int count) {
         return IntStream.range(0, count)
-                .mapToObj(i -> new HistoryEntry(Source.GUEST, (long) i, LocalDateTime.of(2026, 9, 29, 20, 0).minusMinutes(i),
+                .mapToObj(i -> new HistoryEntry(Source.GUEST, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES),
                         "Song " + i, null, null, "Pop", "played", "ok", 5))
                 .toList();
     }

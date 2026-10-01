@@ -21,7 +21,7 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -315,7 +315,7 @@ class DjPlayerLeaseControllerTest {
     // ---- recent-tracks: what "previous" walks back along ----
 
     private static HistoryEntry entry(Source source, long id, String videoId, String title) {
-        return new HistoryEntry(source, id, LocalDateTime.of(2026, 9, 29, 20, 0), title,
+        return new HistoryEntry(source, id, java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant(), title,
                 "https://www.youtube.com/watch?v=" + videoId, videoId, null, "played", null, null);
     }
 
@@ -342,7 +342,7 @@ class DjPlayerLeaseControllerTest {
     @Test
     @DisplayName("recent-tracks: each entry says how many seconds ago it started, by the server's clock (for the resume after a reload)")
     void shouldSayHowLongAgoEachRecentTrackStarted() throws Exception {
-        HistoryEntry justNow = new HistoryEntry(Source.BACKGROUND, 7L, LocalDateTime.now().minusSeconds(90), "Now",
+        HistoryEntry justNow = new HistoryEntry(Source.BACKGROUND, 7L, Instant.now().minusSeconds(90), "Now",
                 "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ", null, "played", null, null);
         when(historyService.getRecentlyPlayed(PARTY, 30)).thenReturn(List.of(justNow));
 

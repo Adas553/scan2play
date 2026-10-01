@@ -3,7 +3,7 @@ package com.scan2play.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * One time the player took a track from a party's background playlist — the log the DJ history and the "previous
@@ -50,9 +50,9 @@ public class FallbackPlayEntity {
 
     /** When the track was fetched from the YouTube API — the basis of the 30-day retention. */
     @Column(nullable = false)
-    private LocalDateTime fetchedAt;
+    private Instant fetchedAt;
 
     /** When the player took the track. */
     @Column(nullable = false)
-    private LocalDateTime playedAt;
+    private Instant playedAt;
 }

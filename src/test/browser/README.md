@@ -113,12 +113,12 @@ the play log (`V7`).
 
 **Record it again** when those answers change (a new field, another key scheme). Never in the repo, never on the `scan2play` database:
 in a copy of the repo, with a throw-away `s2p_*` database (PostgreSQL 18 at `C:\Program Files\PostgreSQL\18\bin`, user `postgres`,
-password `1111` as in `application.properties`); the recorder refuses any database whose name does not start with `s2p_`.
+password `1111` as in `application-local.properties` — the recorder does not use that profile, so set `PGUSER` and `PGPASSWORD`); the recorder refuses any database whose name does not start with `s2p_`.
 PowerShell does not keep environment variables between calls, so set them in the same call. `psql` inherits `PGDATABASE`, so
 `CREATE` and `DROP` need `-d postgres`:
 
 ```powershell
-$psql = "C:\Program Files\PostgreSQL\18\bin\psql.exe"; $env:PGPASSWORD = "1111"
+$psql = "C:\Program Files\PostgreSQL\18\bin\psql.exe"; $env:PGUSER = "postgres"; $env:PGPASSWORD = "1111"
 python src/test/browser/run.py --no-render boundary        # refreshes the copy of the repo in $env:TEMP\scan2play-browser-tests (and runs one scenario)
 try {
   & $psql -U postgres -d postgres -c "CREATE DATABASE s2p_fixture"

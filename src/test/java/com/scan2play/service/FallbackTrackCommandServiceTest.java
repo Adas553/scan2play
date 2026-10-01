@@ -18,7 +18,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -149,16 +150,16 @@ class FallbackTrackCommandServiceTest {
     void purgeStaleTracks_shouldUseThirtyDayCutoff() {
         when(repository.deleteFetchedBefore(any())).thenReturn(4);
         when(playRepository.deleteFetchedBefore(any())).thenReturn(9);
-        LocalDateTime before = LocalDateTime.now().minusDays(FallbackTrackEntity.MAX_AGE_DAYS);
+        Instant before = Instant.now().minus(FallbackTrackEntity.MAX_AGE_DAYS, ChronoUnit.DAYS);
 
         service.purgeStaleTracks();
 
-        LocalDateTime after = LocalDateTime.now().minusDays(FallbackTrackEntity.MAX_AGE_DAYS);
-        ArgumentCaptor<LocalDateTime> cutoff = ArgumentCaptor.forClass(LocalDateTime.class);
+        Instant after = Instant.now().minus(FallbackTrackEntity.MAX_AGE_DAYS, ChronoUnit.DAYS);
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
         verify(repository).deleteFetchedBefore(cutoff.capture());
         assertThat(cutoff.getValue()).isBetween(before, after);
         // the log is purged by the same clock (the fetch time of the data it copied), so it never outlives the tracks
-        ArgumentCaptor<LocalDateTime> playCutoff = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<Instant> playCutoff = ArgumentCaptor.forClass(Instant.class);
         verify(playRepository).deleteFetchedBefore(playCutoff.capture());
         assertThat(playCutoff.getValue()).isEqualTo(cutoff.getValue());
         assertThat(FallbackTrackEntity.MAX_AGE_DAYS).isEqualTo(30);
@@ -214,7 +215,7 @@ class FallbackTrackCommandServiceTest {
 
         assertThat(service.takeNextTrack(PARTY, PLAYLIST, true)).map(FallbackPlayEntity::getVideoId).contains(first.getVideoId());
 
-        verify(repository).claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), any(LocalDateTime.class));
+        verify(repository).claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), any(Instant.class));
         // more tracks are queued, so the round goes on — nothing is re-queued or re-ordered
         verify(repository, never()).requeuePlayedTracks(any(), any(), any(), any());
         verify(repository, never()).shuffle(any(), any(), any());
@@ -237,14 +238,14 @@ class FallbackTrackCommandServiceTest {
     void takeNextTrack_shouldWriteTheHandOutToThePlayLog() {
         FallbackTrackEntity first = track(11);
         first.setTitle("Song 11");
-        first.setFetchedAt(LocalDateTime.of(2026, 9, 1, 12, 0));
+        first.setFetchedAt(java.time.LocalDateTime.of(2026, 9, 1, 12, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
         when(repository.findByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED, FIRST)).thenReturn(List.of(first));
         when(repository.claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), any())).thenReturn(1);
         when(repository.countByPartyCodeAndPlaylistIdAndStatus(PARTY, PLAYLIST, QUEUED)).thenReturn(2L);
 
         FallbackPlayEntity play = service.takeNextTrack(PARTY, PLAYLIST, false).orElseThrow();
 
-        ArgumentCaptor<LocalDateTime> claimedAt = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<Instant> claimedAt = ArgumentCaptor.forClass(Instant.class);
         verify(repository).claimQueuedTrack(eq(11L), eq(QUEUED), eq(PLAYED), claimedAt.capture());
         ArgumentCaptor<FallbackPlayEntity> saved = ArgumentCaptor.forClass(FallbackPlayEntity.class);
         verify(playRepository).save(saved.capture());
@@ -253,7 +254,7 @@ class FallbackTrackCommandServiceTest {
         assertThat(play.getPartyCode()).isEqualTo(PARTY);
         assertThat(play.getVideoId()).isEqualTo("video11");
         assertThat(play.getTitle()).isEqualTo("Song 11");
-        assertThat(play.getFetchedAt()).isEqualTo(LocalDateTime.of(2026, 9, 1, 12, 0));
+        assertThat(play.getFetchedAt()).isEqualTo(java.time.LocalDateTime.of(2026, 9, 1, 12, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
         assertThat(play.getPlayedAt()).isEqualTo(claimedAt.getValue());   // the track and the log agree on when it was taken
     }
 

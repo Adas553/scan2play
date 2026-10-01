@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -87,5 +87,5 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     @Modifying
     @Query(value = "DELETE FROM song_requests WHERE id IN "
             + "(SELECT id FROM song_requests WHERE requested_at < :cutoff LIMIT :batchSize)", nativeQuery = true)
-    int deleteRequestedBefore(@Param("cutoff") LocalDateTime cutoff, @Param("batchSize") int batchSize);
+    int deleteRequestedBefore(@Param("cutoff") Instant cutoff, @Param("batchSize") int batchSize);
 }

@@ -2,7 +2,7 @@ package com.scan2play.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "song_requests", indexes = {
@@ -41,7 +41,7 @@ public class SongRequestEntity {
     private String djComment;
 
     private int energyLevel;
-    private LocalDateTime requestedAt;
+    private Instant requestedAt;
 
     @Column(length = TRACK_URL_MAX)
     private String trackUrl;
@@ -50,7 +50,7 @@ public class SongRequestEntity {
      * When the request became "played" (V6); {@code null} until then, for rejected requests, and for requests that
      * were played before V6 (the history then falls back to {@link #requestedAt}).
      */
-    private LocalDateTime playedAt;
+    private Instant playedAt;
 
     /**
      * Defensive truncation of all free-text fields before persist/update.

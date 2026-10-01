@@ -20,8 +20,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * The base of the tests that need a real PostgreSQL ({@code *IT}, run by {@code mvnw verify -Pit}; not by {@code mvnw test}).
  * <p>
  * The first such test of a run creates a throw-away database {@code s2p_it_<time>_<random>} on the server named by the usual
- * {@code PGHOST}, {@code PGPORT}, {@code PGUSER}, {@code PGPASSWORD} (the defaults of {@code application.properties}: the local
- * server, user {@code postgres}), points the whole application at it — so Flyway runs every migration on an empty database and
+ * {@code PGHOST}, {@code PGPORT}, {@code PGUSER}, {@code PGPASSWORD} (the defaults of the profile {@code local}: the local
+ * server, user {@code postgres}; this class sets the user and password itself), points the whole application at it — so Flyway runs every migration on an empty database and
  * Hibernate validates the result — and drops it when the JVM ends. {@code PGDATABASE} is ignored on purpose: these tests never
  * open the developer's own database. Every test class shares that one database and one Spring context (same configuration);
  * tests keep apart by using their own party codes.

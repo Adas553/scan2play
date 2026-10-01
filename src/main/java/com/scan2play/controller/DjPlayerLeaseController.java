@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -109,7 +109,7 @@ public class DjPlayerLeaseController {
                                           OAuth2AuthenticationToken authentication,
                                           HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
-        LocalDateTime now = LocalDateTime.now();   // the same clock that wrote played_at
+        Instant now = Instant.now();   // the same clock that wrote played_at
         return playHistoryService.getRecentlyPlayed(partyCode, RECENT_TRACKS_LIMIT).stream()
                 .map(entry -> new RecentTrack(entry.key(), entry.source().name(), entry.id(), entry.videoId(), entry.title(),
                         entry.at() == null ? null : Math.max(0, Duration.between(entry.at(), now).toSeconds())))

@@ -257,20 +257,34 @@
             </thead>
             <tbody id="song-list" th:fragment="songTableBody"
                    th:attr="data-playback-mode=${playbackMode},data-provider=${activeProvider}">
-            <tr th:each="req : ${history}" th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl}">
-                <td class="text-secondary d-none d-md-table-cell" data-sort-value="time" th:attr="data-val=${req.requestedAt}" th:text="${#temporals.format(req.requestedAt, 'dd.MM.yyyy HH:mm:ss')}">12:00</td>
+            <!--/* data-video-id: the YouTube video of the song, read by the server (YouTubeUrls.extractVideoId) — the one source the
+                 scripts use (the guests-waiting count, ▶ in the embedded player); none for a search link or a Spotify URI */-->
+            <tr th:each="req : ${history}" th:with="videoId=${T(com.scan2play.util.YouTubeUrls).extractVideoId(req.trackUrl).orElse(null)},
+                          shownAt=${T(com.scan2play.util.Times).display(req.requestedAt)},
+                          sortAt=${T(com.scan2play.util.Times).sortKey(req.requestedAt)}"
+                th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl},data-video-id=${videoId}">
+                <td class="text-secondary d-none d-md-table-cell" data-sort-value="time" th:attr="data-val=${sortAt}" th:text="${shownAt}">12:00</td>
                 <td class="song-cell" data-sort-value="song" th:attr="data-val=${req.songName}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                         <span class="fw-bold song-title" th:text="${req.songName}">Song</span>
-                        <!--/* Track link: ▶ SPOTIFY (green) | ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL) */-->
+                        <!--/* Track link: ▶ SPOTIFY (green) | ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL).
+                             ▶ YOUTUBE in the window that plays = play it to the party now (the song is confirmed played and leaves
+                             the queue); ↗ = only look at it on YouTube, in a new tab (the owner's wish, 2026-10-01). */-->
+                        <!--/* text-nowrap: the cell is as wide as ▶ YOUTUBE on one line, so ↗ never runs over the next column */-->
+                        <span class="d-flex align-items-center gap-1 flex-shrink-0 text-nowrap">
                         <a th:if="${req.trackUrl != null}"
                            th:href="${req.trackUrl}"
                            target="_blank"
                            class="btn btn-sm shadow-sm fw-bold flex-shrink-0 play-link"
-                           th:attr="data-track-url=${req.trackUrl}"
+                           th:title="${videoId != null} ? #{dashboard.queue.play} : null"
+                           th:attr="data-track-url=${req.trackUrl},data-video-id=${videoId}"
                            th:classappend="${#strings.contains(req.trackUrl, 'spotify') ? 'btn-success text-dark' : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? 'btn-danger text-white' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-outline-danger text-danger' : 'btn-secondary'))}"
                            th:text="${#strings.contains(req.trackUrl, 'spotify') ? '▶ SPOTIFY' : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? '▶ YOUTUBE' : (#strings.contains(req.trackUrl, 'youtube') ? '🔍 YOUTUBE' : '▶ PLAY'))}">
                         </a>
+                        <a th:if="${videoId != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
+                           class="text-light text-decoration-none fs-5 lh-1 px-1 youtube-preview"
+                           th:title="#{dashboard.queue.open}">↗</a>
+                        </span>
                     </div>
                 </td>
                 <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>

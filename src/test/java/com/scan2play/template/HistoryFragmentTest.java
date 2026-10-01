@@ -11,7 +11,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -48,12 +48,12 @@ class HistoryFragmentTest {
     }
 
     private static HistoryEntry guest(int i, String songName, String decision) {
-        return new HistoryEntry(Source.GUEST, (long) i, LocalDateTime.of(2026, 9, 29, 20, i % 60), songName,
+        return new HistoryEntry(Source.GUEST, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant(), songName,
                 "https://www.youtube.com/watch?v=hTWKbfoikeg", "hTWKbfoikeg", "Pop", decision, "ok", 7);
     }
 
     private static HistoryEntry background(int i, String title) {
-        return new HistoryEntry(Source.BACKGROUND, (long) i, LocalDateTime.of(2026, 9, 29, 20, i % 60), title,
+        return new HistoryEntry(Source.BACKGROUND, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant(), title,
                 "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ", null, "played", null, null);
     }
 
@@ -164,12 +164,12 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("the time of a row is the moment of the event (data-val, for sorting, is the same)")
+    @DisplayName("the time of a row is the moment of the event, shown in Polish time; data-val, for sorting, is the same moment in UTC")
     void shouldShowTheTimeOfTheEvent() {
         String html = render(List.of(guest(5, "Alpha", "played")), false, Locale.ENGLISH);
 
-        assertThat(html).contains("29.09.2026 20:05:00");
-        assertThat(html).contains("data-val=\"2026-09-29T20:05\"");
+        assertThat(html).contains("29.09.2026 20:05:00");   // 20:05 in Warsaw (summer time, UTC+2)
+        assertThat(html).contains("data-val=\"2026-09-29T18:05:00.000Z\"");
     }
 
     @Test

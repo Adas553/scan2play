@@ -3,7 +3,8 @@ package com.scan2play.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Persistent cache for YouTube video ID lookups (L2 cache layer).
@@ -45,14 +46,14 @@ public class YoutubeCacheEntity {
     private String videoId;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     /**
      * Returns {@code true} if this cache entry is older than {@value #MAX_AGE_DAYS} days
      * and must be refreshed via a new YouTube API call.
      */
     public boolean isExpired() {
-        return createdAt.plusDays(MAX_AGE_DAYS).isBefore(LocalDateTime.now());
+        return createdAt.plus(MAX_AGE_DAYS, ChronoUnit.DAYS).isBefore(Instant.now());
     }
 }
 

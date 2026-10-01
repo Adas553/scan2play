@@ -5,7 +5,7 @@ import com.scan2play.repository.PartySettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,7 +58,7 @@ class PartySettingsQueryServiceTest {
     @Test
     void theSpotifyTokensAreNotInToString() {
         PartySettingsEntity settings = PartySettingsEntity.builder().partyCode("ABC12").spotifyAccessToken("secret-access")
-                .spotifyRefreshToken("secret-refresh").spotifyTokenExpiresAt(LocalDateTime.now()).build();
+                .spotifyRefreshToken("secret-refresh").spotifyTokenExpiresAt(Instant.now()).build();
 
         assertThat(settings.toString()).contains("ABC12").doesNotContain("secret-access", "secret-refresh");
     }

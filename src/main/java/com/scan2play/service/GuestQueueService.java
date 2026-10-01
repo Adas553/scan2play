@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -64,7 +64,7 @@ public class GuestQueueService {
     private String nowPlaying(String partyCode) {
         List<HistoryEntry> last = playHistoryService.getRecentlyPlayed(partyCode, 1);
         if (last.isEmpty() || last.getFirst().at() == null
-                || last.getFirst().at().isBefore(LocalDateTime.now().minus(NOW_PLAYING_FOR))) {
+                || last.getFirst().at().isBefore(Instant.now().minus(NOW_PLAYING_FOR))) {
             return null;
         }
         return last.getFirst().title();

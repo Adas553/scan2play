@@ -277,8 +277,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(304, headers=dict(limits, ETag=etag))
             # a row has the song cell that the column sort reads (data-sort-value / data-val) and, after the rows, the real
             # "nothing matches" row that the search box shows and hides
-            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"><td data-sort-value="song" data-val="%s">%s</td></tr>'
-                           % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True), html.escape(r['name'], True), html.escape(r['name']))
+            # data-video-id as the real template sets it (YouTubeUrls.extractVideoId on the server): only for a watch URL
+            def video_attr(url):
+                m = re.search(r'[?&]v=([A-Za-z0-9_-]{11})', url)
+                return ' data-video-id="%s"' % m.group(1) if m else ''
+            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"%s><td data-sort-value="song" data-val="%s">%s</td></tr>'
+                           % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True), video_attr(r['url']),
+                              html.escape(r['name'], True), html.escape(r['name']))
                            for r in queue)
             body = '<tbody id="song-list" data-playback-mode="%s" data-provider="YOUTUBE">%s%s</tbody>' % (mode, rows, stand.nomatch_row())
             return self._send(200, body, 'text/html; charset=utf-8', dict(limits, ETag=etag))

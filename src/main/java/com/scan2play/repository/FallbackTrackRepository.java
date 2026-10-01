@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,7 +50,7 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
                      @Param("videoIds") String[] videoIds,
                      @Param("titles") String[] titles,
                      @Param("status") String status,
-                     @Param("fetchedAt") LocalDateTime fetchedAt);
+                     @Param("fetchedAt") Instant fetchedAt);
 
     long countByPartyCodeAndStatus(String partyCode, FallbackTrackStatus status);
 
@@ -226,7 +226,7 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
 
     /** When the newest import of this playlist for the party was fetched (empty if it was never imported). */
     @Query("SELECT MAX(t.fetchedAt) FROM FallbackTrackEntity t WHERE t.partyCode = :partyCode AND t.playlistId = :playlistId")
-    Optional<LocalDateTime> findLatestFetchedAt(@Param("partyCode") String partyCode,
+    Optional<Instant> findLatestFetchedAt(@Param("partyCode") String partyCode,
                                                 @Param("playlistId") String playlistId);
 
     /**
@@ -240,7 +240,7 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
     int claimQueuedTrack(@Param("id") Long id,
                          @Param("queued") FallbackTrackStatus queued,
                          @Param("played") FallbackTrackStatus played,
-                         @Param("now") LocalDateTime now);
+                         @Param("now") Instant now);
 
     /**
      * Puts the already-played tracks — and the ones the DJ skipped in this round — of the party's <em>newest</em> import
@@ -280,5 +280,5 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
      */
     @Modifying
     @Query("DELETE FROM FallbackTrackEntity t WHERE t.fetchedAt < :cutoff")
-    int deleteFetchedBefore(@Param("cutoff") LocalDateTime cutoff);
+    int deleteFetchedBefore(@Param("cutoff") Instant cutoff);
 }

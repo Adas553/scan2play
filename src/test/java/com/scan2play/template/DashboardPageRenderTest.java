@@ -43,7 +43,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -170,7 +171,7 @@ class DashboardPageRenderTest {
 
     private static SongRequestEntity song(long id, String name, String videoId) {
         return SongRequestEntity.builder().id(id).partyCode(PARTY).songName(name).style("Pop").decision("accepted")
-                .djComment("ok").energyLevel(7).requestedAt(LocalDateTime.of(2026, 9, 29, 20, 0, (int) id))
+                .djComment("ok").energyLevel(7).requestedAt(java.time.LocalDateTime.of(2026, 9, 29, 20, 0, (int) id).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant())
                 .trackUrl("https://www.youtube.com/watch?v=" + videoId).build();
     }
 
@@ -281,13 +282,13 @@ class DashboardPageRenderTest {
 
     /** A row of the sample timeline: {@code i} counts back from the newest (1) — every entry is a minute older than the one before. */
     private static HistoryEntry historyGuest(int i, String title, String decision) {
-        return new HistoryEntry(Source.GUEST, (long) i, LocalDateTime.of(2026, 9, 29, 22, 0).minusMinutes(i), title,
+        return new HistoryEntry(Source.GUEST, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 22, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES), title,
                 "https://www.youtube.com/watch?v=g" + String.format("%010d", i), "g" + String.format("%010d", i), "Pop", decision,
                 "ok", 5 + i % 5);
     }
 
     private static HistoryEntry historyBackground(int i, String title) {
-        return new HistoryEntry(Source.BACKGROUND, (long) i, LocalDateTime.of(2026, 9, 29, 22, 0).minusMinutes(i), title,
+        return new HistoryEntry(Source.BACKGROUND, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 22, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES), title,
                 "https://www.youtube.com/watch?v=b" + String.format("%010d", i), "b" + String.format("%010d", i), null, "played", null, null);
     }
 

@@ -7,7 +7,8 @@ import com.scan2play.service.GuestQueueService.GuestQueue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.LongStream;
@@ -43,7 +44,7 @@ class GuestQueueServiceTest {
                 .toList());
     }
 
-    private static HistoryEntry played(String title, LocalDateTime at) {
+    private static HistoryEntry played(String title, Instant at) {
         return new HistoryEntry(Source.BACKGROUND, 1L, at, title, null, "aaaaaaaaaaA", null, "played", null, null);
     }
 
@@ -79,7 +80,7 @@ class GuestQueueServiceTest {
     void whatPlaysNow_isTheLastTrackThatStarted_ifItStartedLately() {
         givenQueue();
         when(playHistoryService.getRecentlyPlayed(PARTY, 1))
-                .thenReturn(List.of(played("Wilki - Baśka", LocalDateTime.now().minusMinutes(2))));
+                .thenReturn(List.of(played("Wilki - Baśka", Instant.now().minus(2, ChronoUnit.MINUTES))));
 
         assertThat(service.view(PARTY, Set.of()).nowPlaying()).isEqualTo("Wilki - Baśka");
     }
@@ -88,7 +89,7 @@ class GuestQueueServiceTest {
     void aTrackThatStartedLongAgo_isNotShownAsPlaying() {
         givenQueue();
         when(playHistoryService.getRecentlyPlayed(PARTY, 1))
-                .thenReturn(List.of(played("Old", LocalDateTime.now().minusMinutes(20))));
+                .thenReturn(List.of(played("Old", Instant.now().minus(20, ChronoUnit.MINUTES))));
 
         assertThat(service.view(PARTY, Set.of()).nowPlaying()).isNull();
     }

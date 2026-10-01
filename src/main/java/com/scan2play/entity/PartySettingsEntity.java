@@ -11,7 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "party_settings")   // ownerId and partyCode are UNIQUE (their own indexes)
@@ -83,7 +83,7 @@ public class PartySettingsEntity {
     @Column(length = 2048)
     private String spotifyRefreshToken;
 
-    private LocalDateTime spotifyTokenExpiresAt;
+    private Instant spotifyTokenExpiresAt;
 
     @PrePersist
     public void generateCode() {

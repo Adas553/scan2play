@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -77,7 +77,7 @@ class YouTubeMusicProviderCacheTest {
     @Test
     void aVideo_isCached() {
         when(REPOSITORY.findBySearchQuery(anyString())).thenReturn(Optional.of(YoutubeCacheEntity.builder()
-                .searchQuery("some song").videoId("dQw4w9WgXcQ").createdAt(LocalDateTime.now()).build()));
+                .searchQuery("some song").videoId("dQw4w9WgXcQ").createdAt(Instant.now()).build()));
 
         provider.findTrackUrl("Some Song");
         String second = provider.findTrackUrl("Some Song");

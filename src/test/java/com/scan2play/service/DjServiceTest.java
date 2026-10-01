@@ -13,7 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -401,17 +402,17 @@ class DjServiceTest {
         SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
                 .decision(DECISION_ACCEPTED).build();
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
-        LocalDateTime before = LocalDateTime.now();
+        Instant before = Instant.now();
 
         djService.markSongAsPlayed(1L, PARTY_CODE);
 
-        assertThat(song.getPlayedAt()).isBetween(before, LocalDateTime.now());
+        assertThat(song.getPlayedAt()).isBetween(before, Instant.now());
     }
 
     @Test
     void markSongAsPlayed_shouldKeepTheFirstPlayTime_whenConfirmedAgain() {
         // the player confirms once per song, and the DJ may press "Mark Played" as well: the second one must not move it
-        LocalDateTime first = LocalDateTime.of(2026, 9, 29, 20, 0);
+        Instant first = java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
         SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
                 .decision(DECISION_PLAYED).playedAt(first).build();
         when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
@@ -449,17 +450,17 @@ class DjServiceTest {
 
     @Test
     void markPlayed_shouldSetTheDecisionAndTheMoment_andKeepAMomentThatIsAlreadySet() {
-        LocalDateTime now = LocalDateTime.of(2026, 9, 29, 21, 0);
+        Instant now = java.time.LocalDateTime.of(2026, 9, 29, 21, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
         SongRequestEntity fresh = SongRequestEntity.builder().decision(DECISION_ACCEPTED).build();
         SongRequestEntity replayed = SongRequestEntity.builder().decision(DECISION_PLAYED)
-                .playedAt(now.minusHours(1)).build();
+                .playedAt(now.minus(1, ChronoUnit.HOURS)).build();
 
         DjService.markPlayed(fresh, now);
         DjService.markPlayed(replayed, now);
 
         assertThat(fresh.getDecision()).isEqualTo(DECISION_PLAYED);
         assertThat(fresh.getPlayedAt()).isEqualTo(now);
-        assertThat(replayed.getPlayedAt()).isEqualTo(now.minusHours(1));
+        assertThat(replayed.getPlayedAt()).isEqualTo(now.minus(1, ChronoUnit.HOURS));
     }
 }
 

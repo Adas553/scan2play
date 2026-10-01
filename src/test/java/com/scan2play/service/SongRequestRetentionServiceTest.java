@@ -12,7 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import static com.scan2play.service.SongRequestRetentionService.BATCH_SIZE;
 import static com.scan2play.service.SongRequestRetentionService.MAX_BATCHES;
@@ -33,7 +34,7 @@ class SongRequestRetentionServiceTest {
     @InjectMocks
     private SongRequestRetentionService service;
 
-    private static final LocalDateTime CUTOFF = LocalDateTime.of(2026, 8, 30, 4, 45);
+    private static final Instant CUTOFF = java.time.LocalDateTime.of(2026, 8, 30, 4, 45).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
 
     @Test
     @DisplayName("requests are kept 30 days from requested_at (the privacy pages say the same)")
@@ -45,13 +46,13 @@ class SongRequestRetentionServiceTest {
     @DisplayName("the nightly run deletes what was requested more than 30 days ago — the cutoff is 30 days before now")
     void shouldPurgeWithACutoffThirtyDaysBack() {
         when(repository.deleteRequestedBefore(any(), eq(BATCH_SIZE))).thenReturn(0);
-        LocalDateTime before = LocalDateTime.now();
+        Instant before = Instant.now();
 
         service.purgeStaleRequests();
 
-        ArgumentCaptor<LocalDateTime> cutoff = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
         verify(repository).deleteRequestedBefore(cutoff.capture(), eq(BATCH_SIZE));
-        assertThat(Duration.between(cutoff.getValue(), before.minusDays(30)).abs()).isLessThan(Duration.ofMinutes(1));
+        assertThat(Duration.between(cutoff.getValue(), before.minus(30, ChronoUnit.DAYS)).abs()).isLessThan(Duration.ofMinutes(1));
     }
 
     @Test

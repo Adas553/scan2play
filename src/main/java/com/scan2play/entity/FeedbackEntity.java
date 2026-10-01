@@ -3,7 +3,7 @@ package com.scan2play.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "feedback", indexes = {
@@ -32,6 +32,6 @@ public class FeedbackEntity {
     @Column(nullable = false, length = 2000)
     private String message;
 
-    private LocalDateTime submittedAt;
+    private Instant submittedAt;
 }
 

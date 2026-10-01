@@ -15,7 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -90,8 +91,8 @@ public class NextTrackService {
 
     /** Re-imports a playlist whose tracks are close to the 30-day retention limit. */
     private void refreshIfStale(String partyCode, String playlistId, boolean shuffle) {
-        Optional<LocalDateTime> fetchedAt = fallbackTrackRepository.findLatestFetchedAt(partyCode, playlistId);
-        if (fetchedAt.isPresent() && fetchedAt.get().isBefore(LocalDateTime.now().minusDays(REFRESH_AFTER_DAYS))) {
+        Optional<Instant> fetchedAt = fallbackTrackRepository.findLatestFetchedAt(partyCode, playlistId);
+        if (fetchedAt.isPresent() && fetchedAt.get().isBefore(Instant.now().minus(REFRESH_AFTER_DAYS, ChronoUnit.DAYS))) {
             log.info("Party [{}]: fallback playlist {} was fetched at {} — refreshing", partyCode, playlistId, fetchedAt.get());
             tryImport(partyCode, playlistId, shuffle);
         }

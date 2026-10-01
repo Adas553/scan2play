@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -121,7 +121,7 @@ public class DjService {
      * The one place a request becomes "played": the decision, and the moment it happened (kept when it is already
      * set, so a second confirmation does not move a song in the history).
      */
-    static void markPlayed(SongRequestEntity song, LocalDateTime now) {
+    static void markPlayed(SongRequestEntity song, Instant now) {
         song.setDecision(DECISION_PLAYED);
         if (song.getPlayedAt() == null) {
             song.setPlayedAt(now);
@@ -143,7 +143,7 @@ public class DjService {
                         ownerPartyCode, id, song.getPartyCode());
                 return;
             }
-            markPlayed(song, LocalDateTime.now());
+            markPlayed(song, Instant.now());
             songRequestRepository.save(song);
             evictDashboardQueueAfterCommit(song.getPartyCode());
             log.info("Marked song ID={} as PLAYED for party {}", id, song.getPartyCode());
@@ -201,7 +201,7 @@ public class DjService {
                                 log.warn("Could not push song ID={} to the Spotify queue — it stays in the queue", id, error);
                                 return;
                             }
-                            markPlayed(song, LocalDateTime.now());
+                            markPlayed(song, Instant.now());
                             songRequestRepository.save(song);
                             evictDashboardQueueAfterCommit(partyCode);
                             log.info("Manually pushed song ID={} to Spotify queue and marked as PLAYED", id);
@@ -241,7 +241,7 @@ public class DjService {
                 .djComment(DJ_PICK_COMMENT)
                 .energyLevel(0)
                 .trackUrl(trackUrl)
-                .requestedAt(LocalDateTime.now())
+                .requestedAt(Instant.now())
                 .build();
 
         songRequestRepository.save(entity);

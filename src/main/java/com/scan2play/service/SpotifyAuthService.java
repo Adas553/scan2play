@@ -16,7 +16,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 
 import static com.scan2play.integration.SpotifyApiConstants.*;
@@ -103,7 +104,7 @@ public class SpotifyAuthService {
                     if (refreshToken != null && !refreshToken.isEmpty()) {
                         settings.setSpotifyRefreshToken(refreshToken);
                     }
-                    settings.setSpotifyTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
+                    settings.setSpotifyTokenExpiresAt(Instant.now().plusSeconds(expiresIn));
                 });
                 log.info("Spotify tokens updated for party: {}", partyCode);
             }
@@ -128,7 +129,7 @@ public class SpotifyAuthService {
         }
 
         // Check if token is about to expire in less than 5 minutes
-        if (settings.getSpotifyTokenExpiresAt() != null && settings.getSpotifyTokenExpiresAt().isAfter(LocalDateTime.now().plusMinutes(5))) {
+        if (settings.getSpotifyTokenExpiresAt() != null && settings.getSpotifyTokenExpiresAt().isAfter(Instant.now().plus(5, ChronoUnit.MINUTES))) {
             return settings.getSpotifyAccessToken();
         }
 
@@ -163,7 +164,7 @@ public class SpotifyAuthService {
                 partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> {
                     s.setSpotifyAccessToken(accessToken);
                     s.setSpotifyRefreshToken(newRefreshToken);
-                    s.setSpotifyTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
+                    s.setSpotifyTokenExpiresAt(Instant.now().plusSeconds(expiresIn));
                 });
                 return accessToken;
             }

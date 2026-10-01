@@ -7,7 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Deletes the guests' song requests {@value SongRequestEntity#MAX_AGE_DAYS} days after they were made — the retention the
@@ -39,7 +40,7 @@ public class SongRequestRetentionService {
     /** Runs daily at 04:45, after the YouTube cache cleanup (04:00) and the playlist purge (04:30). */
     @Scheduled(cron = "0 45 4 * * *")
     public void purgeStaleRequests() {
-        purgeRequestedBefore(LocalDateTime.now().minusDays(SongRequestEntity.MAX_AGE_DAYS));
+        purgeRequestedBefore(Instant.now().minus(SongRequestEntity.MAX_AGE_DAYS, ChronoUnit.DAYS));
     }
 
     /**
@@ -47,7 +48,7 @@ public class SongRequestRetentionService {
      *
      * @return how many were deleted
      */
-    int purgeRequestedBefore(LocalDateTime cutoff) {
+    int purgeRequestedBefore(Instant cutoff) {
         int deleted = 0;
         for (int batch = 0; batch < MAX_BATCHES; batch++) {
             int n = songRequestRepository.deleteRequestedBefore(cutoff, BATCH_SIZE);

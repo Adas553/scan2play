@@ -20,7 +20,8 @@ import org.springframework.web.client.RestClient;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /**
  * YouTube implementation of {@link MusicProvider}.
@@ -168,7 +169,7 @@ public class YouTubeMusicProvider implements MusicProvider {
     @Scheduled(cron = "0 0 4 * * *")
     @Transactional
     public void cleanupExpiredEntries() {
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(YoutubeCacheEntity.MAX_AGE_DAYS);
+        Instant cutoff = Instant.now().minus(YoutubeCacheEntity.MAX_AGE_DAYS, ChronoUnit.DAYS);
         int deleted = youtubeCacheRepository.deleteExpiredBefore(cutoff);
         if (deleted > 0) {
             log.info("YouTube cache cleanup: deleted {} expired entries (older than {} days)",
@@ -221,14 +222,14 @@ public class YouTubeMusicProvider implements MusicProvider {
             if (existingEntry != null) {
                 // Update expired row in place (same PK, fresh videoId + timestamp)
                 existingEntry.setVideoId(videoId);
-                existingEntry.setCreatedAt(LocalDateTime.now());
+                existingEntry.setCreatedAt(Instant.now());
                 youtubeCacheRepository.save(existingEntry);
                 log.debug("YouTube DB cache refreshed for '{}'", normalizedQuery);
             } else {
                 youtubeCacheRepository.save(YoutubeCacheEntity.builder()
                         .searchQuery(normalizedQuery)
                         .videoId(videoId)
-                        .createdAt(LocalDateTime.now())
+                        .createdAt(Instant.now())
                         .build());
             }
         } catch (Exception e) {

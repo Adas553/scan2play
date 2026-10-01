@@ -28,7 +28,6 @@ class GuestSessionServiceTest {
     private PartySettingsEntity settings;
 
     private static final String PARTY_CODE = "ABC12";
-    private static final String SESSION_KEY = "requests_" + PARTY_CODE;
 
     @BeforeEach
     void setUp() {
@@ -41,13 +40,12 @@ class GuestSessionServiceTest {
                 .build();
     }
 
-    @SuppressWarnings("unchecked")
     private List<Instant> recorded() {
-        return (List<Instant>) session.getAttribute(SESSION_KEY);
+        return service.countedRequests(session.getId(), PARTY_CODE);
     }
 
     private void givenEarlierRequests(Instant... times) {
-        session.setAttribute(SESSION_KEY, new ArrayList<>(List.of(times)));
+        service.countEarlierRequests(session.getId(), PARTY_CODE, List.of(times));
     }
 
     @Test
@@ -138,6 +136,38 @@ class GuestSessionServiceTest {
             }
             assertThat(passed).isEqualTo(2);
             assertThat(recorded()).hasSize(2);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    /**
+     * Review 2.3: with the sessions in the database (Spring Session JDBC) every request works on its own copy of the session, read
+     * at its start and written back at its end. The count kept in the session let all 16 through; counted by the session's id, 2.
+     */
+    @Test
+    void tryAcquire_letsOnlyTheLimitThrough_whenEachRequestHasItsOwnCopyOfTheSession() throws Exception {
+        int requests = 16;
+        ExecutorService pool = Executors.newFixedThreadPool(requests);
+        try {
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<Optional<Long>>> results = new ArrayList<>();
+            for (int i = 0; i < requests; i++) {
+                MockHttpSession copy = new MockHttpSession(null, session.getId());
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return service.tryAcquire(copy, PARTY_CODE, settings);
+                }));
+            }
+            start.countDown();
+
+            int passed = 0;
+            for (Future<Optional<Long>> result : results) {
+                if (result.get().isEmpty()) {
+                    passed++;
+                }
+            }
+            assertThat(passed).isEqualTo(2);
         } finally {
             pool.shutdownNow();
         }

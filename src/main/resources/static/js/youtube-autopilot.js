@@ -183,12 +183,6 @@ import { EVENTS, emit, on } from './dashboard/events.js';
 
     // ---- Helpers ----
 
-    function extractVideoId(url) {
-        if (!url) return null;
-        const m = url.match(/[?&]v=([A-Za-z0-9_-]{11})/);
-        return m ? m[1] : null;
-    }
-
     function markAsPlayed(songId) {
         const fd = new FormData();
         fd.append('id', songId);
@@ -967,13 +961,19 @@ import { EVENTS, emit, on } from './dashboard/events.js';
     });
 
     /** ▶ on a song of the lists: plays it here, picked by hand. Returns false when it cannot (the link then opens YouTube). */
-    function playInEmbeddedPlayer(trackUrl) {
+    function playInEmbeddedPlayer(videoId, guestSongId) {
         // A window that does not hold the lease must not start sound by a stray tap: the ▶ link then simply opens on YouTube.
         if (isPlayerDevice !== true || !playerReady || !player) return false;
-        const videoId = extractVideoId(trackUrl);
         if (!videoId) return false;
-        // Picked by hand: nothing to confirm, not a background track. Auto-Pilot carries on when it ends.
-        startTrack('MANUAL', videoId);
+        if (guestSongId) {
+            // A guest song of the queue, played to the party: like one Auto-Pilot handed out — confirmed played once it plays,
+            // so it leaves the queue (before, it stayed, and when it ended Auto-Pilot handed out the same song again; the
+            // owner, 2026-10-01). Looking at it without playing it is the ↗ link beside ▶.
+            startTrack('GUEST', videoId, { songId: guestSongId, key: 'G:' + guestSongId });
+        } else {
+            // Picked by hand, not a song of the queue: nothing to confirm, not a background track. Auto-Pilot carries on when it ends.
+            startTrack('MANUAL', videoId);
+        }
         return true;
     }
 
@@ -981,9 +981,10 @@ import { EVENTS, emit, on } from './dashboard/events.js';
     document.addEventListener('click', function (e) {
         const link = e.target.closest('a.play-link');
         if (!link) return;
-        const url = link.getAttribute('data-track-url');
-        if (!url || url.indexOf('youtube.com') < 0) return;
-        if (playInEmbeddedPlayer(url)) e.preventDefault();
+        // the video's id comes from the server (data-video-id, YouTubeUrls.extractVideoId): none for a search link or Spotify
+        const row = link.closest('#song-list tr[data-song-id]');   // a guest song waiting in the queue
+        const songId = row ? Number(row.getAttribute('data-song-id')) : null;
+        if (playInEmbeddedPlayer(link.getAttribute('data-video-id'), songId)) e.preventDefault();
     });
 
 })();

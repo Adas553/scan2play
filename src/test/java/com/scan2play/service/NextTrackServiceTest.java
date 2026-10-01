@@ -16,7 +16,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Set;
 
@@ -70,7 +71,7 @@ class NextTrackServiceTest {
     }
 
     private void givenFreshPlaylist() {
-        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(LocalDateTime.now().minusDays(1)));
+        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(Instant.now().minus(1, ChronoUnit.DAYS)));
     }
 
     // ---- guest first ----
@@ -128,7 +129,7 @@ class NextTrackServiceTest {
     void shouldUseSingleVideoId() {
         givenNoGuestWaiting();
         givenFallbackPlaylist("https://youtu.be/dQw4w9WgXcQ", true);
-        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, "V:dQw4w9WgXcQ")).thenReturn(Optional.of(LocalDateTime.now()));
+        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, "V:dQw4w9WgXcQ")).thenReturn(Optional.of(Instant.now()));
         when(fallbackTrackCommandService.takeNextTrack(PARTY, "V:dQw4w9WgXcQ", true)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).map(NextTrackResponse::playlistId).contains("V:dQw4w9WgXcQ");
@@ -205,7 +206,7 @@ class NextTrackServiceTest {
         givenNoGuestWaiting();
         givenFallbackPlaylist(PLAYLIST_URL, true);
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST))
-                .thenReturn(Optional.of(LocalDateTime.now().minusDays(NextTrackService.REFRESH_AFTER_DAYS).minusHours(1)));
+                .thenReturn(Optional.of(Instant.now().minus(NextTrackService.REFRESH_AFTER_DAYS, ChronoUnit.DAYS).minus(1, ChronoUnit.HOURS)));
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
@@ -220,7 +221,7 @@ class NextTrackServiceTest {
     void shouldNotRefreshFreshPlaylist() {
         givenNoGuestWaiting();
         givenFallbackPlaylist(PLAYLIST_URL, true);
-        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(LocalDateTime.now().minusDays(28)));
+        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(Instant.now().minus(28, ChronoUnit.DAYS)));
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
 
         service.findNextTrack(PARTY, Set.of());
@@ -233,7 +234,7 @@ class NextTrackServiceTest {
     void shouldKeepServingOldTracks_whenRefreshFails() {
         givenNoGuestWaiting();
         givenFallbackPlaylist(PLAYLIST_URL, true);
-        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(LocalDateTime.now().minusDays(29).minusHours(1)));
+        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(Instant.now().minus(29, ChronoUnit.DAYS).minus(1, ChronoUnit.HOURS)));
         when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST, true))
                 .thenThrow(new FallbackImportException(Reason.API_ERROR, "quota"));
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));

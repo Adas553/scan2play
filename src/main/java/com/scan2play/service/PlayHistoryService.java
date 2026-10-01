@@ -13,7 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -42,7 +42,7 @@ public class PlayHistoryService {
 
     /** Newest event first; ties (the same millisecond) by id, then by source, so the order is always the same. */
     private static final Comparator<HistoryEntry> NEWEST_FIRST = Comparator
-            .comparing(HistoryEntry::at, Comparator.nullsLast(Comparator.<LocalDateTime>reverseOrder()))
+            .comparing(HistoryEntry::at, Comparator.nullsLast(Comparator.<Instant>reverseOrder()))
             .thenComparing(HistoryEntry::id, Comparator.<Long>reverseOrder())
             .thenComparing(HistoryEntry::source);
 
@@ -122,7 +122,7 @@ public class PlayHistoryService {
     }
 
     private static HistoryEntry toEntry(SongRequestEntity song) {
-        LocalDateTime at = song.getPlayedAt() != null ? song.getPlayedAt() : song.getRequestedAt();
+        Instant at = song.getPlayedAt() != null ? song.getPlayedAt() : song.getRequestedAt();
         return new HistoryEntry(Source.GUEST, song.getId(), at, song.getSongName(), song.getTrackUrl(),
                 YouTubeUrls.extractVideoId(song.getTrackUrl()).orElse(null),
                 song.getStyle(), song.getDecision(), song.getDjComment(), song.getEnergyLevel());

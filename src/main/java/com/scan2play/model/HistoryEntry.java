@@ -1,6 +1,6 @@
 package com.scan2play.model;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * One line of the DJ's history — what played (or was rejected) and when: a guest's song request, or a track of the
@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
  * @param djComment   the AI's comment; {@code null} for a background track
  * @param energyLevel the AI's energy rating; {@code null} for a background track
  */
-public record HistoryEntry(Source source, Long id, LocalDateTime at, String title, String trackUrl, String videoId,
+public record HistoryEntry(Source source, Long id, Instant at, String title, String trackUrl, String videoId,
                            String style, String decision, String djComment, Integer energyLevel) {
 
     public enum Source {
