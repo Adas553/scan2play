@@ -190,7 +190,10 @@ nothing to play or the tracks are ≥ 29 days old (single flight per party + pla
   `scan2play.interruptedTrack` = `{key, paused}`). After the reload only that track comes back, from its start — when it is still the
   newest entry of `recent-tracks` and started ≤ 10 min ago; with Auto-Pilot off it waits until Auto-Pilot is switched on or "resume"
   is pressed; a track the DJ had paused is held until "resume". A track that ended by itself is not played again. **"Play on this
-  device"** (a takeover) brings back the track the other device was playing, likewise.
+  device"** (a takeover) brings back the track the other device was playing, likewise. On the empty player (nothing loaded since
+  the page opened) "resume" with nothing to bring back does nothing (`playVideo` there would show YouTube's error screen), and
+  **YouTube's own ▶** — which reports error 2 when the player is empty — starts the music, Auto-Pilot off too: the interrupted track
+  as "resume" would, otherwise the next track as ⏭ (`startFromEmptyPlayer`).
 
 **One window plays — the player lease** (`PlayerLeaseService`, in memory). Every window has a random id (`sessionStorage`) and
 reports `POST /dj/dashboard/player-lease` (`CLAIM` / `WATCH` / `TAKE_OVER`) every 3 s and at once on PLAYING / PAUSED; a lease
@@ -236,9 +239,10 @@ watch URL or `youtu.be` link (a single video, `V:<id>`), a raw playlist or video
 
 **Testing** — browser tests in `src/test/browser` (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the
 real rendered dashboard (`DashboardPageRenderTest` writes it) in a headless Chrome, with a fake YouTube player and a Python stand-in
-server that scenarios configure (or that replays a fixture of real answers recorded by `PlayLogFixtureRecorderTest`). 60 scenarios;
-GitHub runs them (`browser-tests.yml`). They do **not** cover the real YouTube player (sound, autoplay policy), two real devices, how
-a page looks, and the guest's page. Gotchas of the real player: it needs a real click first, its methods exist only after `onReady`,
+server that scenarios configure (or that replays a fixture of real answers recorded by `PlayLogFixtureRecorderTest`). 67 scenarios;
+GitHub runs them (`browser-tests.yml`). The stand-in sends the real CSP **enforced** and every scenario fails on a violation; the guest
+page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest` write them) have a scenario each for that. They do **not** cover
+the real YouTube player (sound, autoplay policy), two real devices, how a page looks, and the guest's behaviour beyond the CSP. Gotchas of the real player: it needs a real click first, its methods exist only after `onReady`,
 many videos have embedding disabled (error 150).
 
 ---
@@ -371,7 +375,8 @@ YouTube (`www.youtube.com`, `s.ytimg.com`) — **no `'unsafe-inline'` for script
 remain); images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; frames only YouTube; `object-src 'none'`,
 `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only** while
 `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. Switch it on once real use
-leaves the log quiet.
+leaves the log quiet. The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced (Section
+5.4, "Testing"); the standalone history page and the Spotify party are not covered by them.
 
 ---
 
@@ -426,8 +431,9 @@ The schema is a sequence of files `src/main/resources/db/migration/V<n>__<what>.
 validates; **never edit an applied one** — add the next. An entity change that touches the schema needs its migration in the same
 change, or the application does not start. `spring.flyway.baseline-on-migrate=true`: a database that had tables before Flyway
 (production) is recorded as V1 without running it.
-**`SPRING_JPA_HIBERNATE_DDL_AUTO` is set on Railway** (seen 2026-10-01, value not read): it overrides `validate` — check it is
-`validate` or remove it before the next deploy; `update` would let Hibernate change the schema behind Flyway's back.
+**`SPRING_JPA_HIBERNATE_DDL_AUTO`** on Railway was `validate`; the owner removed it (2026-10-01) — the removal is a **staged change**
+that Railway applies with the next deploy (with the rotated `YOUTUBE_API_KEY`; a `BASE_URL` the app does not read was staged too and taken out again).
+Never set it to `update`: Hibernate would change the schema behind Flyway's back.
 
 | Version | What |
 |---------|------|
@@ -449,6 +455,12 @@ Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL
 **First production deploy checklist** (the next deploy applies V2..V12 at once): (1) back up the database; (2) dump the production
 schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or Hibernate's
 validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
+What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
+2026-04-07 from `5314006`; the app and its `postgres-ssl:18` are paused (the database must run for steps 1–2). The entities did not
+change between `5314006` and V1 (only `@Builder.Default`), so V1 should match production; V9 drops only `IF EXISTS`. No `TZ` / `-Duser.timezone`
+on Railway: the JVM is UTC, which is what V12 assumes for the old values. `main` is an ancestor of `dev`: the merge is a fast-forward
+(74 commits). After it: `CSP_ENFORCE` stays off on Railway until a few days of real use leave the log quiet, then `true`;
+Dependabot alerts and security updates switched on in GitHub.
 
 ---
 
@@ -527,7 +539,7 @@ GuestQueueService          → DjService, PlayHistoryService
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 540, 1 skipped (the fixture recorder,
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 546, 1 skipped (the fixture recorder,
   `PlayLogFixtureRecorderTest`, runs only with `S2P_FIXTURE_OUT` and a throw-away `s2p_*` database). Pure Mockito, plus template
   rendering with the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest`
   with the real security chain).
@@ -537,7 +549,7 @@ GuestQueueService          → DjService, PlayHistoryService
   the database and another repository; the cleanup of expired sessions), `TimestampMigrationIT` (its own database: V11, rows the old
   way, then V12 — the same moments; red when the old values are read as UTC).
   New queue SQL gets a test there.
-- **Browser tests**: 60 scenarios (Section 5.4, "Testing").
+- **Browser tests**: 67 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**

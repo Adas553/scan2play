@@ -542,3 +542,23 @@ końcu Auto-Pilot podawał tę samą piosenkę drugi raz. Teraz ▶ = „zagraj 
 `play-link-plays-the-servers-video` rozszerzony — **czerwony przed** (brak potwierdzenia); `DashboardQueueFragmentTest`.
 
 Testy jednostkowe: **540** (539 uruchomionych, 1 pominięty), IT: **27**, scenariusze: **60/60** — wszystko zielone w kopiach repo.
+
+**Siódma paczka — 5.1 (krok 3: sprawdzenie przed egzekwowaniem), 6.2 (reszta poza Spotify), przygotowanie wdrożenia; 2026-10-01,
+NIEZACOMMITOWANE (do przejrzenia):**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 5.1 | Testy przeglądarkowe pod prawdziwą CSP, **egzekwowaną**: `DashboardPageRenderTest` zapisuje `SecurityConfig.CONTENT_SECURITY_POLICY` (teraz `public`) do `csp.txt`, stand-in wysyła ją z każdą stroną, `harness.js` łapie `securitypolicyviolation` i każdy scenariusz kończy krokiem „no CSP violation”. Do tego strona gościa (`GuestPageRenderTest` → `guest.html`) i wydruk QR (`QrPrintPageTest` → `qr-print-*.html`) z własnymi scenariuszami: przełącznik trybu, podpowiedzi iTunes, „↻”, „Drukuj”. W pełnym przebiegu żadnego naruszenia poza kontrolą. Właściciel: 0 × „CSP violation” w konsoli IntelliJ i 0 × „[Report Only]” w F12 po używaniu dashboardu. | `SecurityConfig`, `harness.js`, `server.py`, `run.py`, `scenarios/csp.js`, 3 testy szablonów | kontrola `csp-catches-inline-code` — **czerwona przed zmianą `harness.js`**; mutacje: skrypt inline w wyrenderowanym dashboardzie → `vibe-select-saves-on-change` czerwony; bez `itunes.apple.com` w `connect-src` → scenariusz gościa czerwony; bez `data:` w `img-src` → wydruk QR czerwony |
+| 6.2 | `QrCodeServiceTest` (PNG o zadanym rozmiarze odczytany ZXing-iem = link gościa; tekst za długi na kod → pusty napis), `FeedbackControllerTest` (zapis przycięty z imprezą, DJ-em i czasem; pusty / > 2000 znaków → 400 bez zapisu, 2000 przechodzi; cudza impreza → `AccessDeniedException` bez zapisu). Spotify — nadal pominięte (decyzja właściciela). | `src/test` | +5; mutacja (bez `trim()`, limit 2001) → 2 czerwone |
+| — | Przygotowanie wdrożenia: odczyt Railway (za zgodą) — usunięcie `SPRING_JPA_HIBERNATE_DDL_AUTO` jest zmianą *staged* (wejdzie z następnym deployem, razem z nowym `YOUTUBE_API_KEY`; `BASE_URL`, którego aplikacja nie czyta, właściciel usunął); serwis buduje `main`, ostatnio 2026-04-07 (`5314006`); encje bez zmian schematu między `5314006` a V1; brak `TZ` (V12 zakłada UTC — zgodne); `main` → `dev` to fast-forward (74 commity). Checklista w `PROJECT_CONTEXT.md` Sekcja 10. | dokumenty | — |
+
+Do tego (sprawdzenie właściciela z egzekwowaną CSP): drugie „Wznów” po odświeżeniu z pustym playerem wołało `playVideo` i YouTube pokazywał
+ekran błędu — teraz nic (`resumeHere`, scenariusz `resume-button-after-a-reload-without-a-note` +2 kroki, **czerwony przed**); duży ▶ samego
+YouTube na pustym playerze (błąd 2 i ekran błędu) uruchamia muzykę także bez Auto-Pilota — przerwaną piosenkę, a bez niej następną jak ⏭
+(decyzja właściciela; `startFromEmptyPlayer`, 3 scenariusze `youtube-play-on-an-empty-player-*`, **czerwone przed**); podgląd
+wydruku QR na telefonie mieści się w ekranie (`qr-print.css`, tylko `screen`). Zablokowane `*.map` Bootstrapa w F12 pobiera samo DevTools —
+polityka bez zmian.
+
+Testy jednostkowe: **546** (545 uruchomionych, 1 pominięty), scenariusze: **67/67**. Testy na bazie bez zmian (SQL nieruszany).
+`CSP_ENFORCE=true` lokalnie — ustawione przez właściciela w IntelliJ. **Nie zrobione:** 3.4, 2.5, 6.3 (powody w
+`SESSION_HANDOFF.md`).

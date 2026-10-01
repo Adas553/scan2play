@@ -6,7 +6,36 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `9b86aca` (2026-10-01). Check with `git status -sb` and `git log --oneline -8`.
+- **Branch `dev`**, pushed up to `1854802` (2026-10-01; all three workflows green for it). Check with `git status -sb` and
+  `git log --oneline -8`.
+- **UNCOMMITTED (2026-10-01, for review in IntelliJ) — the seventh package** (`REVIEW.md`, "Siódma paczka"):
+  - **CSP step 3, the check before enforcing:** the browser tests run under the real policy, **enforced** (`csp.txt` written by
+    `DashboardPageRenderTest` from `SecurityConfig.CONTENT_SECURITY_POLICY`, now `public`; `harness.js` fails every scenario on a
+    `securitypolicyviolation`), and the guest page and the QR print page have scenarios of their own (`scenarios/csp.js`; `run.py`
+    also runs `GuestPageRenderTest`, `QrPrintPageTest`). No violation anywhere except the control. Red seen first: the control before
+    the change of `harness.js`, and three mutations (an inline script in the dashboard, iTunes out of `connect-src`, `data:` out of
+    `img-src`). The owner found 0 "CSP violation" in IntelliJ's console and 0 "[Report Only]" in F12 after using the dashboard;
+    still to look at by hand: the guest page on a phone, the standalone history page.
+  - **`CSP_ENFORCE=true` is set in IntelliJ** (the owner, 2026-10-01): locally the policy blocks now. On Railway only after the
+    deploy and a few quiet days of real use.
+  - **6.2:** `QrCodeServiceTest` (2), `FeedbackControllerTest` (3). Spotify left out (the owner).
+  - **The owner's checks with the CSP enforced (2026-10-01):** a pause with Auto-Pilot on and a reload → "resume" plays the same
+    track (as designed); a track that ended and a reload with Auto-Pilot off → "resume" plays nothing, ⏭ goes on (as designed).
+    In F12 only the source maps of Bootstrap (`*.map`) are blocked by `connect-src` — DevTools fetches them, a guest's browser does
+    not; the policy is left as it is. **Fixed:** a second "resume" in that state called `playVideo` on the empty player and YouTube
+    showed its error screen — now nothing (`resumeHere`: `current === null`); scenario `resume-button-after-a-reload-without-a-note`
+    +2 steps, red before. **Fixed (the owner's decision: "like resume, then next"):** the error screen came from the big ▶ of
+    YouTube's own player on the empty player (it reports error 2); now it starts the music, Auto-Pilot off too — the interrupted
+    track, otherwise the next one (`startFromEmptyPlayer`; `fake.clickPlay()`, 3 scenarios `youtube-play-on-an-empty-player-*`, red
+    before). **Fixed:** the QR print page on a phone — the 2 × 93 mm grid of cards was wider than the screen and
+    `justify-content: center` pushed both QR codes out of reach; on a screen narrower than 200 mm the cards are one column and the
+    poster's code fits the width (`qr-print.css`, screen only — the print keeps A4); looked at in a 375 px and a 1280 px window.
+  - **Deploy prep (Railway read with the owner's consent, nothing changed):** the owner's removal of `SPRING_JPA_HIBERNATE_DDL_AUTO`
+    (it was `validate`) is a **staged** change with the new `YOUTUBE_API_KEY` (a staged `BASE_URL` — the app does not read it, the QR
+    link comes from `SCAN2PLAY_GUEST_URL` — was taken out by the owner): they apply with the next deploy —
+    and Railway's "Deploy" of staged changes deploys `main` as it is (the April code), so apply them together with `dev` → `main`.
+    Details and the checklist: `PROJECT_CONTEXT.md` Section 10.
+  - 546 unit tests, 67 browser scenarios — green in copies of the repo; the database tests not rerun (no SQL touched).
 - **Committed and pushed (2026-10-01, tried by the owner) — the sixth package** (`REVIEW.md`, "Szósta paczka"; the owner's
   order: 7.1, 5.5, Dependabot, 2.3, then the small items):
   - **7.1:** `PROJECT_CONTEXT.md` cut to the present (~570 lines instead of 1809; section numbers kept); the long version word for
@@ -29,7 +58,6 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   - The owner has set *Active profiles: local* in IntelliJ and ran the app: the queue shows Polish time (1.8 works).
   - 540 unit tests, 27 database tests, 60 browser scenarios — green in copies of the repo. To try: restart the app in IntelliJ with
     the dashboard open — it stays logged in; ▶ on a queue row; a guest's limit (e.g. 2 requests, the third refused).
-  - **Seen on Railway:** `SPRING_JPA_HIBERNATE_DDL_AUTO` is set — check it is `validate` (or remove it) before the next deploy.
   - **Not done, the owner decides:** 2.5, 6.3 (`REVIEW.md` says why), 3.4.
 - **Committed and pushed (2026-10-01):** the fifth package of the review (`REVIEW.md`, "Piąta paczka") — 2.4
   `next-track` takes a free player lease (`PlayerLeaseService.claimToPlay`; a waiting command is kept), 1.7 a collision-free queue
@@ -108,13 +136,15 @@ and files: `REVIEW.md`, "Czwarta paczka".
 
 ## Next (the owner picks)
 
-1. After the push of the sixth package, look at the three workflows (V11 and V12 run in the Database tests).
-2. **CSP step 3:** `CSP_ENFORCE=true` once the reports are quiet; then, optionally, the `style="…"` attributes as classes (drops
-   `'unsafe-inline'` for styles) and Bootstrap from the app instead of the CDN.
-3. **Before the next deploy:** the checklist of `PROJECT_CONTEXT.md` Section 10 (V2..V12 at once), `SPRING_JPA_HIBERNATE_DDL_AUTO` on
-   Railway, and `dev` → `main` (Dependabot starts working then).
-4. From `REVIEW.md`, the owner decides: **3.4** a hidden window polls less, 2.5, 4.7, 5.3, 6.3, 7.2, JaCoCo, the
-   rest of 7.3; **6.2** rest: `QrCodeService`, `FeedbackController`, Spotify (left for now — the owner).
+1. Review and commit the seventh package; after the push, look at the three workflows (Browser tests now has 67 scenarios).
+2. **CSP:** `CSP_ENFORCE=true` locally (IntelliJ), the guest page on a phone and the history page by hand; then, optionally, the
+   `style="…"` attributes as classes (drops `'unsafe-inline'` for styles) and Bootstrap from the app instead of the CDN.
+3. **Go-live** (the owner decides when): start the paused Postgres on Railway, back it up, `pg_dump --schema-only` compared with
+   `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log (Flyway V2..V12,
+   Hibernate validation); Dependabot switched on in GitHub.
+4. From `REVIEW.md`: **3.4** (a hidden window polls less — the gain is small with one DJ, and the window that plays must not slow
+   down: worth it only if the server load or a phone's battery shows it), 2.5 (an import inside `next-track`, only for a party older
+   than 29 days), 6.3 (only together with a change of the queue), 4.7 / 5.3 (Spotify), 7.2, JaCoCo, the rest of 7.3.
 
 ## The first half of 2026-10-01 (committed and pushed)
 
