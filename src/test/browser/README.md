@@ -43,6 +43,18 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest �
   `history-<filter>.html` / `history-<filter>-more.html` (the History tab's fragment for each of the five filters — the first page, and
   the longer list that "Show more" asks for — built by the real `DjDashboardController.historyFragment` from ten sample entries, with the
   real `HistoryFilter` deciding which of them a filter includes). It fails when the page loses something the scripts need.
+* **The Content-Security-Policy:** `DashboardPageRenderTest` writes the real server's policy (`SecurityConfig.CONTENT_SECURITY_POLICY`)
+  to `csp.txt`, and the stand-in sends it with every page — **enforced**, although the real server only reports until
+  `CSP_ENFORCE=true`. `harness.js` listens for `securitypolicyviolation` and ends every scenario with the step `no CSP violation`, so a
+  template or a script that needs an inline script, an `on…=` handler or a host the policy does not list fails whatever scenario
+  loads it. `csp-catches-inline-code` is the control (an inline script and handler: blocked, and the step fails). Checked: an inline
+  `<script>` put into the rendered dashboard fails an ordinary scenario; `itunes.apple.com` taken out of `connect-src` fails the guest
+  page's scenario, `data:` out of `img-src` the print page's.
+* **Other pages:** `GuestPageRenderTest` writes `guest.html` (the guest page with a queue) and `QrPrintPageTest` writes
+  `qr-print-poster.html` / `qr-print-cards.html`; a scenario names them with `page:` like the dashboards. Their scenarios
+  (`scenarios/csp.js`) use what the page's scripts do — the mode switch, the iTunes suggestions (the host is blocked in Chrome: the CSP
+  check comes before the network), "↻", "Print" — so their requests meet the policy too. The fake YouTube API is in every page; it
+  does nothing there.
 * **The stand-in** knows nothing about music. What `next-track` and `recent-tracks` answer is told by the scenario or **replayed from
   the fixture**. `POST /__config` merges a JSON object into its state (`server.py`, `default_state()`, lists the keys: `lease`,
   `commands`, `nextTracks`, `nextTrackStatus`, `recent`, `recentStatus`, `replay`, `delays`, `playbackMode`, `queue`,
@@ -55,7 +67,7 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest �
   over" is `stand.config({ lease: { holder: false } })`. The rules of the server (who gets the lease, the timeout) are unit-tested on the
   server side; the scenarios check what the *window* does with the answers.
 * **The fake player** (`fake-yt.js`) replaces the IFrame API: the real script never loads. `window.__fake`: `position`, `emit(state)`,
-  `end()`, `holdState = 'UNSTARTED' | 'CUED'` + `release()` (a load that waits — the real player does it between two videos),
+  `end()`, `clickPlay()` (YouTube's own ▶: on an empty player the real one reports error 2), `holdState = 'UNSTARTED' | 'CUED'` + `release()` (a load that waits — the real player does it between two videos),
   `advanceClock(ms)` (moves `Date.now()`, so nothing waits for real minutes), `blockApi` (the API never loads), `loads`, `seeks`,
   `calls`. The first lease report of the page waits until the scenario has configured the stand-in.
 * **Bootstrap from its CDN is not needed:** no script calls its API, it only styles the page, so `run.py` blocks the CDN and the
@@ -151,4 +163,4 @@ The unit tests have their own workflow, `.github/workflows/unit-tests.yml`.
 The real YouTube player (sound, the autoplay policy, the events between two videos — the fake does what the script relies on and no
 more), the real Spring Security chain (a `_csrf` sent by `sendBeacon`), two real devices — the lease scenarios script the server's
 answers, they do not run two windows — layout as the eye sees it (the scenarios measure positions and scrolling, not how a row looks),
-the guest side. Real devices remain the owner's part.
+the guest side beyond its CSP scenario. Real devices remain the owner's part.

@@ -183,6 +183,62 @@
             await t.sleep(3500);
             t.step('"resume" loads nothing', await t.press('playerPauseBtn', 800), 'nothing');
             t.step('and asks nothing', await t.stand.count(t.NEXT_TRACK), 0);
+            // the owner's report (2026-10-01): a second "resume" called playVideo on the empty player, and YouTube showed its error
+            // screen ("An error occurred… playback ID") instead of the black player
+            t.step('a second "resume" loads nothing either', await t.press('playerPauseBtn', 800), 'nothing');
+            t.step('and never starts the empty player', t.fake.calls.filter(function (c) { return c[0] === 'playVideo'; }).length, 0);
+        }
+    });
+
+    // The big ▶ of YouTube’s own player on an empty player (after a reload nothing is loaded): the real player reports error 2 and
+    // shows "An error occurred… playback ID" (the owner, 2026-10-01). The owner's decision: it starts the music — like "resume" (the
+    // track the reload interrupted comes back), and when there is nothing to bring back, like ⏭ — with Auto-Pilot off too.
+    S2P.scenario({
+        name: 'youtube-play-on-an-empty-player-resumes-the-interrupted-track',
+        title: 'after a reload with Auto-Pilot off, YouTube’s own ▶ on the empty player brings back the interrupted track',
+        page: 'dashboard-manual',
+        session: interrupted('B:9'),
+        setup: { playbackMode: 'MANUAL', lease: { fallbackPlaylistId: PLAYLIST }, recent: recent(30), nextTracks: [track(1, 'aaaaaaaaaaA')] },
+        run: async function (t) {
+            await t.sleep(3500);
+            t.step('nothing plays yet', t.fake.loads.length, 0);
+            t.fake.clickPlay();
+            await t.sleep(800);
+            t.step('the interrupted track comes back', t.fake.loads.map(t.letter), ['r']);
+            t.step('nothing was taken off the queue', await t.stand.count(t.NEXT_TRACK), 0);
+        }
+    });
+
+    S2P.scenario({
+        name: 'youtube-play-on-an-empty-player-plays-the-next-track',
+        title: 'after a reload that interrupted nothing, YouTube’s own ▶ on the empty player plays the next track, as ⏭ (Auto-Pilot off)',
+        page: 'dashboard-manual',
+        setup: { playbackMode: 'MANUAL', lease: { fallbackPlaylistId: PLAYLIST }, recent: recent(30),
+                 nextTracks: [track(1, 'aaaaaaaaaaA'), track(2, 'bbbbbbbbbbB')] },
+        run: async function (t) {
+            await t.sleep(3500);
+            t.fake.clickPlay();
+            await t.waitForTrack(1, 'the next track plays');
+            t.step('the next track of the queue plays', t.fake.loads.map(t.letter), ['a']);
+            t.step('asked once', await t.stand.count(t.NEXT_TRACK), 1);
+            t.fake.end();
+            await t.sleep(800);
+            t.step('Auto-Pilot is off: nothing follows it', t.fake.loads.map(t.letter), ['a']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'youtube-play-on-an-empty-player-resumes-a-paused-track',
+        title: 'a track paused before the reload waits (Auto-Pilot on); YouTube’s own ▶ on the empty player brings it back, as "resume"',
+        session: interrupted('B:9', true),
+        setup: { lease: { fallbackPlaylistId: PLAYLIST }, recent: recent(30), nextTracks: [track(1, 'aaaaaaaaaaA')] },
+        run: async function (t) {
+            await t.sleep(3500);
+            t.step('the paused track waits', t.fake.loads.length, 0);
+            t.fake.clickPlay();
+            await t.sleep(800);
+            t.step('it comes back', t.fake.loads.map(t.letter), ['r']);
+            t.step('nothing was taken off the queue', await t.stand.count(t.NEXT_TRACK), 0);
         }
     });
 

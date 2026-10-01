@@ -144,7 +144,8 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 93mm);
     grid-auto-rows: 68mm;
-    justify-content: center;
+    /* safe: a grid wider than the screen starts at its left edge instead of spilling out of reach on both sides */
+    justify-content: safe center;
     gap: 0;
     padding: 6mm 0;
 }
@@ -188,5 +189,24 @@ body {
 @media print {
     .cards {
         padding: 0;
+    }
+}
+
+/* ---- A phone: the preview fits the screen (the print itself keeps the A4 layout above) ---- */
+
+@media screen and (max-width: 200mm) {
+    .poster {
+        padding: 6mm 16px;
+    }
+
+    .poster .qr {
+        width: min(115mm, 100%);
+        height: auto;
+    }
+
+    .cards {
+        grid-template-columns: minmax(0, 93mm);
+        grid-auto-rows: minmax(68mm, auto);
+        padding: 6mm 16px;
     }
 }

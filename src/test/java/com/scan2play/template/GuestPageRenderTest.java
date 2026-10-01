@@ -105,6 +105,17 @@ class GuestPageRenderTest {
         }
     }
 
+    /** The page the browser tests open (src/test/browser, page 'guest'): it runs the real guest scripts under the real CSP. */
+    private static void writeForTheBrowserTests(String name, String html) {
+        try {
+            java.nio.file.Path out = java.nio.file.Path.of("target", "browser-harness", name);
+            java.nio.file.Files.createDirectories(out.getParent());
+            java.nio.file.Files.writeString(out, html, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+    }
+
     private static SongRequestEntity song(long id, String name) {
         return SongRequestEntity.builder().id(id).songName(name).build();
     }
@@ -115,6 +126,7 @@ class GuestPageRenderTest {
                 Set.of(2L), 2, "Mine");
         String html = render(PL, Map.of("guestQueue", queue));
         writePreview("index-with-queue.html", html);
+        writeForTheBrowserTests("guest.html", html);
 
         assertThat(html).doesNotContain("??");
         assertThat(html).contains("id=\"guestQueueBox\"", "data-url=\"/p/ABC12/queue\"");

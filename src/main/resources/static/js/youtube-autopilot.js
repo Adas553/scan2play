@@ -298,6 +298,12 @@ import { EVENTS, emit, on } from './dashboard/events.js';
     }
 
     function onPlayerError(event) {
+        // Nothing loaded since the page opened: the DJ clicked the big ▶ of YouTube's own player, which reports error 2 when it is
+        // empty (and shows its error screen until a video comes) — not a broken track.
+        if (current === null) {
+            startFromEmptyPlayer();
+            return;
+        }
         const songId = runningGuestSongId();
         console.error('[YT] Player error ' + event.data + ' for ' + (songId ? 'song ID=' + songId : 'a background/manual track'));
         if (songId) erroredSongIds.add(songId);
@@ -456,6 +462,26 @@ import { EVENTS, emit, on } from './dashboard/events.js';
             tryAutoPlayInFlight = false;
         }
         if (outcome === 'none') tryAutoPlay();
+    }
+
+    /**
+     * YouTube's own ▶ pressed on the empty player (onPlayerError): the DJ wants music, so it starts — with Auto-Pilot off too (the
+     * owner's decision 2026-10-01): the track a reload interrupted comes back as "resume" brings it back, otherwise the next track
+     * plays as ⏭ plays it.
+     */
+    async function startFromEmptyPlayer() {
+        if (isPlayerDevice !== true || tryAutoPlayInFlight) return;
+        if (resumeLastTrack) {
+            tryAutoPlayInFlight = true;
+            let outcome;
+            try {
+                outcome = await resumeLastPlayed(resumeWithoutAutoPilot, function () { return true; });
+            } finally {
+                tryAutoPlayInFlight = false;
+            }
+            if (outcome !== 'none') return;
+        }
+        skipToNext();
     }
 
     // ---- Which window plays (the player lease) ----
@@ -742,6 +768,8 @@ import { EVENTS, emit, on } from './dashboard/events.js';
             resumeAfterReload();
             return;
         }
+        // Nothing loaded since the reload: playVideo on the empty player shows YouTube's error screen (the owner, 2026-10-01)
+        if (current === null) return;
         if (typeof player.playVideo === 'function') player.playVideo();
     }
 

@@ -50,6 +50,7 @@ class QrPrintPageTest {
 
     private static final String PARTY = "PRNT1";
     private static final Path OUT = Path.of("target", "qr-print");
+    private static final Path BROWSER_HARNESS = Path.of("target", "browser-harness");
 
     private static SpringTemplateEngine engine;
 
@@ -95,6 +96,9 @@ class QrPrintPageTest {
                 html.replace("/css/qr-print.css", "../../src/main/resources/static/css/qr-print.css")
                         .replace("/js/qr-print.js", "../../src/main/resources/static/js/qr-print.js"),
                 StandardCharsets.UTF_8);
+        // as served, for the browser tests (src/test/browser, page 'qr-print-<layout>'): the real script under the real CSP
+        Files.createDirectories(BROWSER_HARNESS);
+        Files.writeString(BROWSER_HARNESS.resolve("qr-print-" + layout + ".html"), html, StandardCharsets.UTF_8);
         return html;
     }
 

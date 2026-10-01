@@ -14,6 +14,13 @@
     const steps = [];
     const errors = [];        // uncaught exceptions and unhandled rejections: none is expected
     const consoleErrors = []; // console.error / console.warn of the page, for information (some are by design)
+    // what the page's Content-Security-Policy blocked (the stand-in sends the real policy, enforced): every scenario fails on one
+    const cspViolations = [];
+
+    document.addEventListener('securitypolicyviolation', function (e) {
+        cspViolations.push(e.effectiveDirective + ' blocked ' + (e.blockedURI || '?') + ' @' + String(e.sourceFile || '').split('/').pop()
+            + ':' + e.lineNumber);
+    });
 
     window.addEventListener('error', function (e) { errors.push(String(e.message) + ' @' + String(e.filename).split('/').pop() + ':' + e.lineno); });
     window.addEventListener('unhandledrejection', function (e) { errors.push('unhandled rejection: ' + String(e.reason)); });
@@ -144,6 +151,9 @@
     };
 
     async function finish(definition) {
+        const recorded = steps.length;   // a scenario that recorded nothing fails, whatever the step below says
+        await sleep(50);   // a violation event of the last step may still be queued
+        step('no CSP violation', cspViolations, []);
         const control = definition.control || null;
         const failed = function (prefix) {
             return steps.some(function (s) { return s.label.indexOf(prefix) === 0 && !s.pass; });
@@ -152,7 +162,7 @@
         if (control) {
             pass = control.mustFail.every(failed) && errors.length === 0;
         } else {
-            pass = steps.length > 0 && steps.every(function (s) { return s.pass; }) && errors.length === 0;
+            pass = recorded > 0 && steps.every(function (s) { return s.pass; }) && errors.length === 0;
         }
         const log = await (await fetch('/__log')).json();
         const summary = {

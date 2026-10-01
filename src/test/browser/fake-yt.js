@@ -11,6 +11,8 @@
 //   release()         lets a held load go on (BUFFERING, then PLAYING)
 //   advanceClock(ms)  moves Date.now() forward, so that a scenario need not wait for real seconds (the script measures
 //                     "10 s after the restart" with Date.now())
+//   clickPlay()       the DJ clicks the big ▶ of YouTube's own player: with a video in it, it plays; on an EMPTY player (nothing
+//                     loaded since the page opened) the real one reports error 2 and shows its error screen
 //   loads, seeks      the video ids passed to loadVideoById, the positions passed to seekTo
 //   calls             every call, in order: [name, argument]
 //   blockApi          true: the IFrame API never loads (an ad blocker, Brave shields): the script's <script> tag is dropped, no
@@ -32,6 +34,10 @@
     }
     fake.emit = emit;
     fake.end = function () { emit(S.ENDED); };
+    fake.clickPlay = function () {
+        if (fake.video) { emit(S.PLAYING); return; }
+        if (fake.player && fake.player._events.onError) fake.player._events.onError({ data: 2 });
+    };
 
     // ---- the clock ----
     const realNow = Date.now.bind(Date);

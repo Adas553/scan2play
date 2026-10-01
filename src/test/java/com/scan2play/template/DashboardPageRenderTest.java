@@ -1,5 +1,6 @@
 package com.scan2play.template;
 
+import com.scan2play.config.SecurityConfig;
 import com.scan2play.controller.DjDashboardController;
 import com.scan2play.controller.DjSessionHelper;
 import com.scan2play.entity.PartySettingsEntity;
@@ -228,6 +229,13 @@ class DashboardPageRenderTest {
         assertThat(html).contains("Song One", "Song Two");
         assertThat(html).contains(PLAYLIST);
         write("dashboard.html", html);
+    }
+
+    @Test
+    @DisplayName("the Content-Security-Policy of the real server (written to target/browser-harness/csp.txt): the stand-in sends it, enforced")
+    void shouldWriteThePolicyForTheBrowserTests() throws IOException {
+        assertThat(SecurityConfig.CONTENT_SECURITY_POLICY).contains("script-src 'self'").doesNotContain("'unsafe-eval'");
+        write("csp.txt", SecurityConfig.CONTENT_SECURITY_POLICY);
     }
 
     @Test

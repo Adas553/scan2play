@@ -5,7 +5,9 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
 anything about music: what next-track and recent-tracks answer is either told by the scenario (POST /__config) or replayed
 from a fixture of answers that the REAL services gave (fixtures/*.json, recorded by PlayLogFixtureRecorderTest).
 
-  /dj/dashboard                      the page (with the fake YouTube API in <head>); ?scenario=NAME also adds the runner
+  /dj/dashboard                      the page (with the fake YouTube API in <head>); ?scenario=NAME also adds the runner; sent with
+                                     the real Content-Security-Policy (csp.txt), enforced
+  POST /csp-report                   204 (the page's violations are caught by harness.js)
   /js/*, /css/*                      src/main/resources/static
   /harness/*                         this directory (fake-yt.js, harness.js, scenarios/*.js)
   POST /__reset                      the default answers, an empty request log
@@ -116,6 +118,14 @@ class Stand:
             with open(os.path.join(self.browser, 'fixtures', name + '.json'), encoding='utf-8') as f:
                 self.fixtures[name] = json.load(f)
         return self.fixtures[name]
+
+    def csp(self):
+        """The real server's Content-Security-Policy (csp.txt, written by DashboardPageRenderTest), or None before a render."""
+        path = os.path.join(self.rendered, 'csp.txt')
+        if not os.path.isfile(path):
+            return None
+        with open(path, encoding='utf-8') as f:
+            return f.read().strip()
 
     def page(self, which, scenario):
         with open(os.path.join(self.rendered, which + '.html'), encoding='utf-8') as f:
@@ -248,7 +258,10 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         path, query = url.path, parse_qs(url.query)
         if path in ('/', '/dj/dashboard'):
-            return self._send(200, stand.page(query.get('page', ['dashboard'])[0], 'scenario' in query), 'text/html; charset=utf-8')
+            # the real policy, ENFORCED (the real server only reports until CSP_ENFORCE=true): harness.js fails a scenario on a violation
+            policy = stand.csp()
+            return self._send(200, stand.page(query.get('page', ['dashboard'])[0], 'scenario' in query), 'text/html; charset=utf-8',
+                              {'Content-Security-Policy': policy} if policy else None)
         if path.startswith('/js/') or path.startswith('/css/'):
             return self._file(stand.static, path[1:])
         if path.startswith('/harness/'):
@@ -318,6 +331,8 @@ class Handler(BaseHTTPRequestHandler):
         path, query = url.path, parse_qs(url.query)
         length = int(self.headers.get('Content-Length') or 0)
         body = self.rfile.read(length) if length else b''
+        if path == '/csp-report':        # the browser's report of a violation (harness.js has seen it already)
+            return self._send(204)
         if path == '/__reset':
             with stand.lock:
                 stand.state = default_state()
