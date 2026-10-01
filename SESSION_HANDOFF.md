@@ -6,11 +6,12 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `65609bf` (2026-10-01). Check with `git status -sb` and `git log --oneline -8`.
+- **Branch `dev`**, pushed up to `f14a779` (2026-10-01). Check with `git status -sb` and `git log --oneline -8`.
+- **Committed and pushed (2026-10-01, tried by the owner: "działa"):** the fourth package of the review (below, "The third part of
+  2026-10-01") — the CSP (report-only), the rejected song without a name, 4.6, 5.4, 1.6, 1.9 and tests of `SongEvaluationService`.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs`; logs need a
   GitHub login, but failed tests are written as public **annotations**: `.../check-runs/<id>/annotations`): three workflows —
-  Unit tests, Browser tests, Database tests. All three green for `65609bf` (2026-10-01). After the QR print (dashboard template
-  changed) the 56 browser scenarios were run again locally: green.
+  Unit tests, Browser tests, Database tests. All three green for `f14a779` (2026-10-01).
 - **Printing the QR code — tried by the owner ("działa"), COMMITTED and PUSHED (2026-10-01)** (the owner's wish, 2026-10-01: "zrób oba warianty, dwujęzyczna"): a "🖨" link
   under the dashboard's QR code opens `GET /dj/qr-print` in a new tab — `layout=poster` (one A4 poster, default) or `cards` (eight
   93 × 68 mm cards to cut out); the printed text is Polish **and** English (written in `qr-print.html`, each part with its own
@@ -19,6 +20,37 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   (escapes by a script), `QrPrintPageTest` (3; it writes `target/qr-print/*.html`). 516 unit tests green; both layouts looked at in
   a browser. Note: locally the QR code holds the LAN address
   (`http://192.168.100.184:…`, from `SCAN2PLAY_GUEST_URL` in IntelliJ) — a code printed from the local app works only on that Wi-Fi.
+
+## The third part of 2026-10-01 (committed and pushed)
+
+The owner's choice: the missing song name, then the CSP ("zrób jak uważasz, że jest lepiej"), then 6.2 and the small N items. Details
+and files: `REVIEW.md`, "Czwarta paczka".
+
+- **The rejected request without a song name** (the owner's screenshot, a row of 01.04.2026): the Polish prompt told the AI it may leave
+  `songName` empty on a rejection. The local `scan2play` database (read only) has 3 such rows, all 01–04.04.2026, all with Polish
+  comments; later rejections have names, but the prompt had not changed — it could happen today. Fixed in both prompts, and the code
+  saves the guest's text when the name is empty. The 3 old rows cannot be filled in (the guest's text is not stored).
+- **CSP, steps 1–2:** no page has an inline script or an `on…=` handler any more (`js/scroll-restore.js`, `js/dj-nav.js`,
+  `js/guest-party.js`, `data-auto-submit`, `data-confirm`); `Content-Security-Policy-Report-Only` on every response, reports to
+  `POST /csp-report`, logged as `CSP violation: …` (once an hour per violation). **Decisions taken:** scripts without `'unsafe-inline'`,
+  styles with it (the `style="…"` attributes stay for now), Bootstrap stays on the CDN, reports to the log. **Step 3 = `CSP_ENFORCE=true`**
+  (no code change) after the log stays quiet through real use.
+- **4.6:** the guest's text reaches the prompt as one line ≤ 150 characters; the style is decided by the server — the DJ's forced vibe
+  could be changed by a guest through the hidden form field before.
+- **5.4** bounds of the DJ's limits (also `max` in the form), an overlong playlist link refused; **1.6** `takeNextTrack` without the dead
+  retry loop; **1.9** one count less in the "up next" list; **6.2** `SongEvaluationService` tested end to end (`askAi` seam).
+- **The guest's page, the owner's two wishes (after trying it):** (1) a mode tile (song / mood) no longer puts the cursor in the field
+  on a phone — the keyboard opened and the page jumped (`guest-party.js`; with a mouse it still does); (2) the "party ended" page
+  says "DJ nie przyjmuje teraz próśb… sprawdź za chwilę" with **"↻ Sprawdź ponownie"** (the party's own link — the DJ may resume) and
+  only a small link to the landing page (it is the DJs' Google login); the error page has **"↻ Spróbuj ponownie"** (a guest's
+  `/p/CODE/…` goes back to `/p/CODE`, other pages are opened again) and a small "Strona główna". New keys `party.ended.check_again`,
+  `party.ended.own_party`, `error.btn.retry` (`party.ended.home_btn` removed). `HtmlLangDeclarationTest` +1.
+- 532 unit tests (was 516), 24 database tests, 58 browser scenarios (+2, `page-forms.js`) — all green in copies of the repo.
+- **For the owner to try:** a guest request (song, mood, a rejected one — the history shows its name), the vibe select, "end party" /
+  "log out" with cancel and OK, the feedback form, the scroll memory between Panel and History, the guest page's "sending…" button,
+  and **the browser console / the app log for `CSP violation`** on a YouTube party, a Spotify party and the guest page.
+- **Not done:** 5.5 (the DB password default needs a `local` profile and a change of the IntelliJ run configuration — the owner's
+  decision); 2.3; the other half of 7.1.
 
 ## The second half of 2026-10-01 (committed and pushed)
 
@@ -41,14 +73,13 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. From `REVIEW.md`: **5.1 CSP** — easier now (no inline handlers on the dashboard; still inline: the scripts in
-   `fragments/components.html` and `index.html`, inline `style` attributes, Bootstrap from a CDN); **6.2** tests of
-   `SongEvaluationService` / `GuestController` / `YouTubeMusicProvider` / Spotify; **2.3** single instance (Spring Session JDBC would
-   keep DJs logged in across a deploy); the small N items of its table (1.6, 1.7, 1.8, 1.9, 2.4, 2.5, 2.6, 3.4, 3.5, 4.6, 4.7, 5.3,
-   5.4, 5.5, 6.3, 6.4, 7.2, 7.3).
-2. Seen in the owner's screenshot of the history page: a rejected request of 01.04.2026 has no song name (the row shows only "ANY
-   ODRZUCONE" and the comment) — find out why the name is empty (an old row, or the AI answer without `songName` on a rejection).
-3. `PROJECT_CONTEXT.md` (~1760 lines) — the other half of 7.1, a separate edit.
+1. Review and commit the third part of 2026-10-01 (above); after the push, look at the three workflows.
+2. **CSP step 3:** `CSP_ENFORCE=true` once the reports are quiet; then, optionally, the `style="…"` attributes as classes (drops
+   `'unsafe-inline'` for styles) and Bootstrap from the app instead of the CDN.
+3. From `REVIEW.md`: **2.3** single instance (Spring Session JDBC would keep DJs logged in across a deploy — a separate decision);
+   **5.5** (needs the `local` profile in IntelliJ); the small N items left (1.7, 1.8, 2.4, 2.5, 2.6, 3.4, 3.5, 4.7, 5.3, 6.3, 6.4,
+   7.2, 7.3); **6.2** rest: `QrCodeService`, `FeedbackController`, Spotify (left for now — the owner).
+4. `PROJECT_CONTEXT.md` (~1800 lines) — the other half of 7.1, a separate edit.
 
 ## The first half of 2026-10-01 (committed and pushed)
 

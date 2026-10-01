@@ -270,6 +270,13 @@ QR Code Scan → /p/{partyCode}
     → Result page shows decision + DJ comment
 ```
 
+**What reaches the AI (2026-10-01, review 4.6):** the guest's text as one line of at most 150 characters, its double quotes made single
+(`SongEvaluationService.forPrompt` — the prompt puts the text in quotes; the form takes up to 10 KB). The style is decided by the server,
+not by the form (`GuestController.styleOf`): the DJ's vibe when one is set (its name in the guest's language, as the hidden field sent
+it — a guest could change that field), otherwise the guest's pick from the list (a `VibeType` name), anything else `ANY`. A rejected
+request is saved under the guest's text when the AI leaves `songName` empty (the Polish prompt used to allow it: rows of April 2026
+in the history had no song name).
+
 **What the guest sees of the music (2026-09-30, the owner's decision):** under the form (`fragments/guest-queue.html`,
 `GuestQueueService`) — "Twoja piosenka „…” — N. w kolejce" for the guest's first song still waiting (its position in the whole queue),
 "🔊 Teraz gra" (the newest entry of the play timeline, if it started at most 8 minutes ago — the server knows when a track started,
@@ -923,7 +930,8 @@ fixture again. Its parts:
 |-----------------------------|-------------------------|---------|
 | `HomeController`            | `GET /`                 | Landing page or redirect to dashboard if authenticated |
 | `DjDashboardController`     | `/dj/dashboard`, `/dj/history-view` | DJ dashboard view, AJAX polling updates (ETag), history view/fragment (`limit`: 50 at first, up to 300, "Show more"; `filter`: all / guest / background / played / rejected); `extractPlaylistId()` resolves YouTube URLs to playlist/video IDs |
-| `DjPartySettingsController` | `/dj/**`                | Start/end party, vibe, rate limits, playback mode, fallback playlist and shuffle (a shuffle switch re-orders the queue), account deletion |
+| `DjPartySettingsController` | `/dj/**`                | Start/end party, vibe, rate limits (bounded since 2026-10-01, review 5.4: requests 1–100, cooldown 1–1440 min, duplicate window 0–50), playback mode, fallback playlist (a link over 500 characters is refused like a Mix) and shuffle (a shuffle switch re-orders the queue), account deletion |
+| `CspReportController`       | `POST /csp-report`      | The browsers' Content-Security-Policy reports (public, no CSRF): each distinct violation logged once an hour as `CSP violation: …` (Section 8) |
 | `DjFallbackQueueController` | `/dj/dashboard/fallback-queue`, `POST .../move`, `POST .../place`, `POST .../skip` | The DJ's "up next" list of the fallback playlist as an HTML fragment (`fragments/fallback-queue.html`), and the DJ's changes to it (a track up / down / play next, dragged to a place, or skipped for this round) |
 | `DjPlayerLeaseController`   | `POST /dj/dashboard/player-lease`, `POST .../release`, `POST /dj/dashboard/player-command`, `GET /dj/dashboard/recent-tracks` | Which dashboard window plays (Section 5.4, "One window plays"): a window reports in and learns whether it is the holder (and gets the current playlist, the version of the "up next" list and a waiting command); the holder gives the lease up when it leaves the page; any window can give the one that plays a command (⏭ Next, ⏮ Back, ⏯ pause / resume); the tracks that played recently, for ⏮ |
 | `DjSongController`          | `/dj/**`                | Song queue actions: mark as played, push to Spotify, DJ picks |
@@ -1004,6 +1012,9 @@ fixture again. Its parts:
 | `css/app.css`           | Shared stylesheet with design tokens, page-scoped rules (`.page-dj`, `.page-guest`, etc.), `.list-scroll` (a long list in a box of fixed height with a sticky header), `.dj-tabbar` (the tab bar that stays in view) |
 | `js/dashboard/*.js`     | **The dashboard's script as ES modules** (since 2026-10-01, review 3.3; `<script type="module" src="/js/dashboard/main.js">`, no bundler — it replaced the 1284-line `dashboard.js`): `main.js` imports `list-tools.js` (sorting, search, filters, "Show more"; the standalone history page loads it alone), `fallback-queue.js` (the "up next" list, moves, drag, skip, Stop, shuffle, the import result), `forms.js` (AJAX forms, the Auto-Pilot switch, "copy" of the party link), `tabs.js` (Panel / Queue / History) and `polling.js` (the guest queue every 3 s, the guest limits). They and the player talk only through the events of **`events.js`** (`s2p:playback-mode`, `s2p:playback-mode-reported`, `s2p:guest-queue-updated`, `s2p:fallback-playlist-saved` / `-cleared`, `s2p:fallback-queue-stale`, `s2p:fallback-queue-version`) — before, about 15 functions were put on `window` and called after a `typeof … === 'function'`. The templates have no `onclick` / `onchange` calling a global any more. Everything the old file did, unchanged: Dashboard core: AJAX form interceptor (preserves YT player), the tabs (`initTabs`: Panel / Queue / History, the lit tab follows the scroll, the history loaded by AJAX with YouTube), table polling (3s, ETag/304), clipboard, client-side table sorting, search of the long lists and the history's filter buttons and "Show more" (`initListTools`; the buttons and "Show more" ask the server again: `reloadHistory`) |
 | `js/youtube-autopilot.js` | YouTube Auto-Pilot — **an ES module since 2026-10-01**, loaded after `js/dashboard/main.js`; its only global is `window.onYouTubeIframeAPIReady` — a "dumb player" (Section 14, stage 4): **the track in the player is one object, `current`** (since 2026-10-01, review 3.2: kind GUEST / BACKGROUND / HISTORY / MANUAL, guest song id, timeline key, playlist, lease seq at load, load number, start time, whether ⏭ retraces, phase LOADING → RUNNING → OVER), created only by `startTrack` — before, ten variables were set by hand in six places; when the player is idle / on `ENDED` / after a player error it asks `POST /dj/dashboard/next-track` and `loadVideoById()`s the answer; confirms guest songs via `/dj/dashboard/play`; never touches a paused or playing track; asks only while its window holds the player lease (`POST /dj/dashboard/player-lease` every 3 s), otherwise shows the banner |
+| `js/scroll-restore.js`  | The scroll memory of the DJ pages (`fragments/components.html`, `scroll-restore-script`, in `<head>`): hides the page until the saved scroll position is restored. Was an inline script until 2026-10-01 (CSP, review 5.1) |
+| `js/dj-nav.js`          | Loaded by the `dj-nav` fragment (dashboard and history): `form[data-confirm]` asks before it is sent (end the party, log out, delete the account — a `submit` listener in the capture phase, so it runs before `forms.js`), and the feedback form. Were inline `onsubmit` attributes and an inline script until 2026-10-01 |
+| `js/guest-party.js`     | The guest's party page (`index.html`): the song / mood switch (it focuses the field only with a mouse — on a phone the keyboard made the page jump), the list under the form fetched again when the guest comes back, the "sending…" button (its text in `data-text-submitting`). Was an inline script until 2026-10-01 |
 | `js/song-autocomplete.js` | Song autocomplete / typeahead via public iTunes Search API (client-side, debounced at 300ms, no server involvement, no YouTube quota) |
 | `js/qr-print.js` / `css/qr-print.css` | The print page of the QR code: the Print button (`window.print()`); A4 layout of the poster and the 2 × 4 cards, the bar hidden in print |
 | `js/wake-lock.js`       | Screen Wake Lock: keeps the display on while Auto-Pilot is on (it listens to the `s2p:playback-mode` event of the dashboard's modules — a classic script, by the event's name; the lock is re-acquired on `visibilitychange`; silent no-op stubs where the API is unavailable or the context is not secure). From the owner's commit `33eef2a` of 2026-04-06 |
@@ -1054,7 +1065,8 @@ fixture; skipped unless `S2P_FIXTURE_OUT` is set). The CI workflow that runs it 
 - **SDK:** `google-genai` Java SDK
 - **Response format:** JSON (`DjResponse` record)
 - **Temperature:** Default for evaluations (creative DJ comments), **0.0 for normalization** (deterministic)
-- **Fallback:** If AI fails → request is auto-rejected with "AI offline" message; normalization falls back to raw input
+- **Fallback:** If AI fails → request is auto-rejected with "AI offline" message; normalization falls back to raw input. An answer
+  without `songName` keeps the guest's text as the name (Section 5.2)
 - **Timeout:** 10 s per call (`GeminiConfig.TIMEOUT_MS`, `HttpOptions.timeout`); a call that takes longer fails like any other
   (before 2026-09-30 there was none, and a hanging call held one of the few threads that evaluate guests' requests)
 - **Prompt language:** Locale-aware (English + Polish). Prompt is selected based on guest's browser locale via `LocaleContextHolder`; unsupported locales fall back to English.
@@ -1159,6 +1171,7 @@ Two separate authentication flows:
 | `/oauth2/**`         | Public          |
 | `/login/**`          | Public          |
 | `/css/**`, `/js/**`  | Public          |
+| `POST /csp-report`   | Public, no CSRF (browsers' CSP reports) |
 | `/dj/**`             | Authenticated   |
 | Everything else      | Authenticated   |
 
@@ -1169,6 +1182,14 @@ Two separate authentication flows:
 - CSRF enabled (tokens in `<meta>` tags for AJAX, available on dashboard and history pages)
 - **IDOR protection:** All DJ endpoints that accept `partyCode` validate ownership via `DjSessionHelper.validateOwnership()` (compares request partyCode against session-cached partyCode)
 - **Spotify playback OAuth2** moved to `/dj/spotify/**` (authenticated, ownership-validated)
+- **Content-Security-Policy** (2026-10-01, review 5.1; `SecurityConfig.CONTENT_SECURITY_POLICY`): scripts only from the app,
+  `cdn.jsdelivr.net` (Bootstrap) and YouTube (`www.youtube.com`, `s.ytimg.com`) — no `'unsafe-inline'`: no page has an inline script
+  or an `on…=` handler (`DashboardPageRenderTest.assertNothingInline`, also for the guest page); styles also inline (the templates
+  have `style="…"` attributes); `connect-src` the app and `itunes.apple.com`; frames only YouTube; `object-src 'none'`,
+  `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Sent as
+  `Content-Security-Policy-Report-Only`** while `security.csp.enforce=false` (env `CSP_ENFORCE`): browsers report what it would
+  block, the log says `CSP violation: …`. Switch it on once real use (a party on YouTube, a Spotify party, the guest's page, the DJ's
+  login) leaves the log quiet.
 
 ---
 
@@ -1227,6 +1248,7 @@ debugging port forwarding) or a public HTTPS address such as a tunnel on your ow
 | `guest.limit.per-ip-party` / `guest.limit.per-ip-window-minutes` | `30` / `10` (env `GUEST_LIMIT_PER_IP_PARTY`, `GUEST_LIMIT_PER_IP_WINDOW_MINUTES`; Section 5.2) |
 | `guest.limit.per-party-daily`    | `300` (env `GUEST_LIMIT_PER_PARTY_DAILY`; Section 5.2) |
 | `guest.client-ip-header`         | empty (env `GUEST_CLIENT_IP_HEADER`; `CF-Connecting-IP` behind Cloudflare; Section 5.2) |
+| `security.csp.enforce`           | `false` = the CSP is only reported (env `CSP_ENFORCE`; Section 8) |
 | `server.shutdown`                | `graceful` (30s timeout)                 |
 | `server.tomcat.max-http-form-post-size` | `10KB`                             |
 | `spring.datasource.hikari.maximum-pool-size` | `15`                          |
@@ -1395,6 +1417,7 @@ PartySettingsQueryService
 | POST   | `/p/{partyCode}/request`    | `GuestController.requestSong()`  |
 | GET    | `/privacy`                  | `LegalController.privacyPolicy()` |
 | GET    | `/terms`                    | `LegalController.termsOfService()` |
+| POST   | `/csp-report`               | `CspReportController.report()` — a browser's CSP report (Section 8) |
 
 ### Authenticated (DJ Only)
 
@@ -1442,7 +1465,8 @@ PartySettingsQueryService
 
 ### Security
 - Spotify tokens are stored as plain text in the database (no encryption at rest).
-- No Content Security Policy (CSP) headers — should be added to restrict script sources (YouTube IFrame, iTunes API).
+- The Content-Security-Policy is only reported so far (Section 8): switching it on (`CSP_ENFORCE=true`) waits for quiet reports. Inline
+  styles stay allowed until the `style="…"` attributes become classes.
 - The whole-project review of 2026-09-30 (`REVIEW.md` at the repo root) lists what is still open, ranked, and what has been fixed.
 
 ### Frontend
@@ -1483,7 +1507,11 @@ PartySettingsQueryService
   40 concurrent takes on three instances take exactly the budget), `ApplicationSetupIT` (the bounded executor). On GitHub:
   `.github/workflows/db-tests.yml` with a `postgres:18` service (Railway's database is `postgres-ssl:18`). The ITs of 1.5, 1.4, 2.1
   were red before their change and green after.
-- **Total: 516 unit tests, 515 run and 1 skipped** (with `QrPrintPageTest` 3: the poster, the cards, the bar's language — rendered through the real controller and QR generator, written to `target/qr-print/`); before the QR print **513, 512 run and 1 skipped** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`; a first count of 537
+- **Total: 532 unit tests, 531 run and 1 skipped** (+1 `HtmlLangDeclarationTest`: the "party ended" and error pages lead a guest back to the party's link) (2026-10-01, the CSP and review items 4.6 / 5.4 / 1.6 / 1.9: `SongEvaluationServiceTest`
+  +7 — the whole pipeline with a test answering for Gemini (`askAi`), a rejection without a name, the guest's text in the prompt —,
+  `GuestControllerTest` +2 (the style), `CspReportControllerTest` 3, `SmokeTest` +2 (the header, the report), `DjPartySettingsControllerFallbackTest` +2, `FallbackTrackCommandServiceTest` −1 (the
+  two retry tests of 1.6 became one));
+  before, **516** (with `QrPrintPageTest` 3: the poster, the cards, the bar's language — rendered through the real controller and QR generator, written to `target/qr-print/`); before the QR print **513, 512 run and 1 skipped** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`; a first count of 537
   included the 24 ITs, which `-Dtest` had pulled into surefire — they are now skipped outside failsafe) after the review items of 2026-10-01 (1.2 `PartySettingsQueryServiceTest` 4,
   `PartySettingsCommandServiceTest` +1; 4.5 `YouTubeMusicProviderTest` +2; 1.4 / 2.1 the mocked tests of the import and of the
   version rewritten for the new queries). **507, 506 run and 1 skipped** with the guest's view of the queue (`GuestQueueServiceTest` 5, `GuestPageRenderTest` +3 —
@@ -1503,7 +1531,8 @@ PartySettingsQueryService
   `secondsAgo` of `recent-tracks`); **442** after the review's first package (2026-09-30, the seventh session: 11 more —
   `SongEvaluationServiceTest` (the Spotify auto-queue), `YouTubeMusicProviderTest` (the key in a header), `SpotifyAuthControllerTest`
   (the OAuth state), one each in `DjServiceTest` and `AccountDeletionServiceTest`). Before it: **431 tests, 430 run and 1 skipped** (`.\mvnw.cmd -B test "-Dtest=!Scan2playApplicationTests"` in a copy of the repo, counted 2026-09-30, after the sixth session: 429 before it, minus the 6 tests of the removed `next-guest-track` endpoint, plus 3 of `DashboardPageRenderTest`, 4 of `HtmlLangDeclarationTest` and 1 of `FallbackQueueFragmentTest`). Until 2026-10-01 there were no integration tests in the repo (now: the `*IT` tests above) — the queue SQL of Phase 3, the history queries and V6 of Phase 4 stage 2, the play log and V7 of the follow-up (the round boundary, the keys, the retention, 480 concurrent hand-outs), and `V8`, the skip and the purge of the song requests (Sections 4.1, 5.4, 10) were checked against a throw-away PostgreSQL database, not by a test that stays. The one exception is the **fixture recorder** `PlayLogFixtureRecorderTest`: a `@SpringBootTest` that is skipped (no Spring context is even started) unless `S2P_FIXTURE_OUT` is set, and that refuses a database whose name does not start with `s2p_`; it is compiled with the rest, so an API change that breaks it shows at once.
-- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 56 scenarios (9 added 2026-10-01 for the resume of an interrupted track, "resume" after a reload and a held pause, `resume.js`) that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **both green on GitHub for every push up to `d0ca3c7` (2026-10-01)**; the database tests have a third, `.github/workflows/db-tests.yml` (above) — not run on GitHub yet. What the browser tests do not cover is listed in Section 5.4.
+- **Browser tests** (`src/test/browser`, Section 5.4 "Testing", 6.8): 58 scenarios (`page-forms.js`, 2026-10-01: the vibe select and the
+  confirmations of the account buttons, which lost their inline handlers for the CSP — red with the new handlers removed; 9 added 2026-10-01 for the resume of an interrupted track, "resume" after a reload and a held pause, `resume.js`) that run the real `youtube-autopilot.js` and `dashboard.js` on the real rendered dashboard in a headless Chrome — **not part of `mvnw test`**, run by hand with `python src/test/browser/run.py` (a few minutes; needs Python 3, Java and Chrome or Edge, no Node, no other dependency). A GitHub Actions workflow runs them (`.github/workflows/browser-tests.yml`, on every push to `dev` / `main` and every pull request) — **first run on GitHub green (2026-09-30)**. The unit tests have their own workflow, `.github/workflows/unit-tests.yml` (same triggers) — **both green on GitHub for every push up to `d0ca3c7` (2026-10-01)**; the database tests have a third, `.github/workflows/db-tests.yml` (above) — not run on GitHub yet. What the browser tests do not cover is listed in Section 5.4.
 - `Scan2playApplicationTests` (`@SpringBootTest`) requires full context (DB, OAuth2, Gemini) — skipped in CI without database.
 
 ### AI
@@ -1632,8 +1661,9 @@ Details worth knowing:
   rows in different orders. A stress test with concurrent moves and takes against PostgreSQL did deadlock, so every
   method of `FallbackTrackCommandService` that changes the queue first takes `pg_advisory_xact_lock` for the party
   (`FallbackTrackRepository.lockQueue`); they run one after another, which costs nothing with one DJ.
-- Every caller goes for the same head of the queue, so `takeNextTrack` makes up to 10 attempts when concurrent callers
-  keep winning the conditional claim (one dashboard, at most a few tabs, in practice).
+- `takeNextTrack` reads the head of the queue and claims it under that lock, so no other caller can take it in between: one
+  attempt (since 2026-10-01, review 1.6 — the loop of up to 10 attempts predated the lock); the conditional claim stays as a
+  safety net and only logs a warning if it ever fails.
 - The fragment is sent whole on every refresh (about 1 KB per row, so up to ~500 KB for a 500-track playlist); the
   server compresses responses of 2 KB and more with gzip (`server.compression.*`, since the review's first package,
   2026-09-30), which makes a long list roughly ten times smaller on the wire.
