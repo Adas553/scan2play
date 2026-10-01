@@ -111,7 +111,7 @@ class DashboardPageRenderTest {
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsQueryService.class),
                 qrCodeService, sessionHelper, mock(NextTrackService.class), mock(PlayerLeaseService.class),
-                mock(PlayHistoryService.class), limiter, new YouTubeSearchBudget(80));
+                mock(PlayHistoryService.class), limiter, mock(YouTubeSearchBudget.class));   // not spent
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 

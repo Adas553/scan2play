@@ -45,8 +45,10 @@ public class DjFallbackQueueController {
                                 OAuth2AuthenticationToken authentication,
                                 HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
+        // the version first: if the queue changes between the two reads, the window holds an older version than its list
+        // and fetches the list once more on its next lease report — the other way round it would miss the change
+        response.setHeader(VERSION_HEADER, fallbackQueueService.getVersion(partyCode));
         FallbackQueueView queue = fallbackQueueService.getUpcoming(partyCode);
-        response.setHeader(VERSION_HEADER, FallbackQueueService.versionOf(queue));
         model.addAttribute(QUEUE_ATTRIBUTE, queue);
         return "fragments/fallback-queue :: queue";
     }

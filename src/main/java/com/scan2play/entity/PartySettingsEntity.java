@@ -9,17 +9,16 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "party_settings", indexes = {
-    @Index(name = "idx_owner_id", columnList = "ownerId")
-})
+@Table(name = "party_settings")   // ownerId and partyCode are UNIQUE (their own indexes)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)   // toBuilder: PartySettingsQueryService hands out copies of the cached settings
 public class PartySettingsEntity {
 
     @Id
@@ -75,10 +74,12 @@ public class PartySettingsEntity {
     @Column(nullable = false)
     private boolean fallbackShuffle = true;
 
-    // --- Spotify OAuth2 Credentials ---
+    // --- Spotify OAuth2 Credentials --- (never in toString: one logged entity would put them in the logs)
+    @ToString.Exclude
     @Column(length = 2048)
     private String spotifyAccessToken;
 
+    @ToString.Exclude
     @Column(length = 2048)
     private String spotifyRefreshToken;
 

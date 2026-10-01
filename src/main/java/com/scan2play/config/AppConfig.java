@@ -38,7 +38,9 @@ public class AppConfig {
     /**
      * Custom CacheManager with per-cache TTL configuration via Caffeine.
      * <ul>
-     *     <li>{@code partySettings} / {@code qrCodes} — long-lived, evicted manually via @CachePut</li>
+     *     <li>{@code partySettings} — long-lived; read through {@code PartySettingsQueryService} (a copy per caller),
+     *         evicted after every committed change ({@code PartySettingsCommandService.updateSettings})</li>
+     *     <li>{@code qr-codes} — long-lived</li>
      *     <li>{@code youtubeSearch} — 24h TTL, avoids redundant YouTube Data API calls (100 quota/search)</li>
      *     <li>{@code dashboardQueue} — 3s TTL, auto-expires to keep polling data fresh (the guest page reads it too)</li>
      * </ul>

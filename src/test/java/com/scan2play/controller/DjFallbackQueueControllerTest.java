@@ -6,6 +6,7 @@ import com.scan2play.service.FallbackQueueService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -75,9 +77,15 @@ class DjFallbackQueueControllerTest {
         FallbackQueueView queue = new FallbackQueueView(true, true, false, 12,
                 List.of(new FallbackQueueView.Track(1L, "dQw4w9WgXcQ", "Never Gonna Give You Up")));
         when(queueService.getUpcoming(PARTY)).thenReturn(queue);
+        when(queueService.getVersion(PARTY)).thenReturn("1a2b3c");
 
         mockMvc.perform(get("/dj/dashboard/fallback-queue").param("partyCode", PARTY).principal(token).session(session))
-                .andExpect(header().string("X-Queue-Version", FallbackQueueService.versionOf(queue)));
+                .andExpect(header().string("X-Queue-Version", "1a2b3c"));
+
+        // the version is read before the list: a change in between makes the window fetch once more, never miss it
+        InOrder order = inOrder(queueService);
+        order.verify(queueService).getVersion(PARTY);
+        order.verify(queueService).getUpcoming(PARTY);
     }
 
     @Test

@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
 import java.util.Optional;
 
@@ -26,6 +29,9 @@ class PartySettingsCommandServiceTest {
 
     @Mock
     private PartySettingsRepository partySettingsRepository;
+
+    @Spy
+    private CacheManager cacheManager = new ConcurrentMapCacheManager("partySettings");
 
     @InjectMocks
     private PartySettingsCommandService service;
@@ -89,6 +95,20 @@ class PartySettingsCommandServiceTest {
         assertThat(result.getGlobalVibe()).isEqualTo(VibeType.ROCK_AND_METAL);
         assertThat(result.getRequestLimit()).isEqualTo(5);
         verify(partySettingsRepository).save(existing);
+    }
+
+    @Test
+    void updateSettings_shouldDropTheCachedSettingsOfThatPartyOnly() {
+        cacheManager.getCache("partySettings").put("XYZ99", PartySettingsEntity.builder().partyCode("XYZ99").build());
+        cacheManager.getCache("partySettings").put("OTHER", PartySettingsEntity.builder().partyCode("OTHER").build());
+        when(partySettingsRepository.findByPartyCode("XYZ99"))
+                .thenReturn(Optional.of(PartySettingsEntity.builder().partyCode("XYZ99").build()));
+        when(partySettingsRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateSettings("XYZ99", s -> s.setRequestLimit(5));   // no transaction here: evicted at once
+
+        assertThat(cacheManager.getCache("partySettings").get("XYZ99")).isNull();
+        assertThat(cacheManager.getCache("partySettings").get("OTHER")).isNotNull();
     }
 
     @Test

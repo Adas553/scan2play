@@ -160,4 +160,36 @@
 			</releases>
 		</repository>
 	</repositories>
+
+	<profiles>
+		<!-- The tests on a real PostgreSQL (*IT, base class PostgresIntegrationTest): mvnw verify -Pit. Each run creates and
+		     drops its own s2p_it_* database on the server of PGHOST/PGPORT/PGUSER/PGPASSWORD. The unit tests are left out
+		     here (they are mvnw test); the workflow is .github/workflows/db-tests.yml. -->
+		<profile>
+			<id>it</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<skipTests>true</skipTests>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 </project>

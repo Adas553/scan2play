@@ -28,6 +28,30 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
                      @Param("from") FallbackTrackStatus from,
                      @Param("to") FallbackTrackStatus to);
 
+    /**
+     * Inserts an imported playlist in one statement: the i-th video gets playlist position and play order i (playlist order),
+     * all with the same status and fetch time. One round trip for up to 500 tracks, under the queue's lock — saving the
+     * entities was one INSERT per track, as identity ids cannot be batched.
+     *
+     * @param videoIds the videos in playlist order
+     * @param titles   their titles, same length (an element may be null)
+     * @param status   the {@link FallbackTrackStatus} name — a native query cannot bind the enum itself
+     * @return number of inserted rows
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "INSERT INTO fallback_track (party_code, playlist_id, video_id, title, playlist_position, play_order, status, "
+            + "fetched_at, manual_move) "
+            + "SELECT :partyCode, :playlistId, t.video_id, t.title, CAST(t.n - 1 AS integer), CAST(t.n - 1 AS integer), :status, "
+            + ":fetchedAt, false "
+            + "FROM unnest(CAST(:videoIds AS varchar[]), CAST(:titles AS varchar[])) WITH ORDINALITY AS t(video_id, title, n)",
+            nativeQuery = true)
+    int insertTracks(@Param("partyCode") String partyCode,
+                     @Param("playlistId") String playlistId,
+                     @Param("videoIds") String[] videoIds,
+                     @Param("titles") String[] titles,
+                     @Param("status") String status,
+                     @Param("fetchedAt") LocalDateTime fetchedAt);
+
     long countByPartyCodeAndStatus(String partyCode, FallbackTrackStatus status);
 
     long countByPartyCodeAndPlaylistIdAndStatus(String partyCode, String playlistId, FallbackTrackStatus status);
@@ -174,6 +198,24 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
                        @Param("from") int from,
                        @Param("to") int to,
                        @Param("delta") int delta);
+
+    /**
+     * A fingerprint of what the "up next" list of this playlist shows: the queued tracks in play order with their "moved by
+     * hand" flags, and how many are skipped — an md5 computed by the database, so no row leaves it. It changes with every
+     * hand-out, move, drag, skip, new order and import (new ids), and only then. Read on every lease report (every 3 s from
+     * every dashboard window), over {@code idx_fallback_track_queue}.
+     *
+     * @param queued  the {@link FallbackTrackStatus#QUEUED} name — a native query cannot bind the enum itself
+     * @param skipped the {@link FallbackTrackStatus#SKIPPED} name
+     */
+    @Query(value = "SELECT md5(COALESCE(string_agg(CASE WHEN status = :queued THEN id || CASE WHEN manual_move THEN 'm' ELSE '' END END, "
+            + "',' ORDER BY play_order, playlist_position), '') || '|' || count(*) FILTER (WHERE status = :skipped)) "
+            + "FROM fallback_track WHERE party_code = :partyCode AND playlist_id = :playlistId AND status IN (:queued, :skipped)",
+            nativeQuery = true)
+    String queueFingerprint(@Param("partyCode") String partyCode,
+                            @Param("playlistId") String playlistId,
+                            @Param("queued") String queued,
+                            @Param("skipped") String skipped);
 
     /** Whether the DJ has moved any of the queued tracks of this playlist by hand. */
     boolean existsByPartyCodeAndPlaylistIdAndStatusAndManualMoveTrue(String partyCode, String playlistId,

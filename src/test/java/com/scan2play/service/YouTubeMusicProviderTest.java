@@ -94,4 +94,29 @@ class YouTubeMusicProviderTest {
         assertThat(budget.tryAcquire()).isFalse();
         server.verify();
     }
+
+    /** Review item 4.5: a search that found nothing was asked again on every request — 100 quota units each time. */
+    @Test
+    void findTrackUrl_remembersASearchThatFoundNothing() {
+        when(youtubeCacheRepository.findBySearchQuery(anyString())).thenReturn(Optional.empty());
+        server.expect(ExpectedCount.once(), method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"items\":[]}", MediaType.APPLICATION_JSON));
+
+        assertThat(provider.findTrackUrl("No Such Song")).isNull();
+        assertThat(provider.findTrackUrl("  no such SONG ")).as("the same query, normalised: no second call").isNull();
+        assertThat(budget.tryAcquire()).as("one search counted, one left").isTrue();
+        server.verify();
+    }
+
+    @Test
+    void findTrackUrl_asksAgainAfterAFailure() {
+        when(youtubeCacheRepository.findBySearchQuery(anyString())).thenReturn(Optional.empty());
+        server.expect(ExpectedCount.once(), method(HttpMethod.GET)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        server.expect(ExpectedCount.once(), method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"items\":[{\"id\":{\"videoId\":\"dQw4w9WgXcQ\"}}]}", MediaType.APPLICATION_JSON));
+
+        assertThat(provider.findTrackUrl("Some Song")).as("a failure may be over in a moment: not remembered").isNull();
+        assertThat(provider.findTrackUrl("Some Song")).isEqualTo("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        server.verify();
+    }
 }

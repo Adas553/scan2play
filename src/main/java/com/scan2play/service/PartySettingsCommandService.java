@@ -8,9 +8,12 @@ import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.util.CodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.function.Consumer;
 
@@ -20,6 +23,7 @@ import java.util.function.Consumer;
 public class PartySettingsCommandService {
 
     private final PartySettingsRepository partySettingsRepository;
+    private final CacheManager cacheManager;
 
     /**
      * Retrieves the existing party for the given DJ (ownerId) or creates a new one if it doesn't exist.
@@ -57,19 +61,41 @@ public class PartySettingsCommandService {
     }
 
     /**
-     * Updates party settings and refreshes the cache with the new state.
+     * Updates party settings. The cached settings of the party are dropped once the change is committed, so the next
+     * {@link PartySettingsQueryService#getSettings} reads the new state (dropped before the commit, a concurrent read could
+     * put the old one back).
      *
      * @param partyCode The unique code of the party to update.
      * @param updater   A {@link Consumer} that applies the desired changes to the entity.
-     * @return The updated and re-cached {@link PartySettingsEntity}.
+     * @return The updated {@link PartySettingsEntity} (the caller's own; it is not the cached one).
      */
     @Transactional
-    @CachePut(value = "partySettings", key = "#partyCode")
     public PartySettingsEntity updateSettings(String partyCode, Consumer<PartySettingsEntity> updater) {
         PartySettingsEntity settings = partySettingsRepository.findByPartyCode(partyCode)
                 .orElseThrow(() -> new IllegalArgumentException("Party not found for update: " + partyCode));
 
         updater.accept(settings);
-        return partySettingsRepository.save(settings);
+        PartySettingsEntity saved = partySettingsRepository.save(settings);
+        evictAfterCommit(partyCode);
+        return saved;
+    }
+
+    private void evictAfterCommit(String partyCode) {
+        Runnable evict = () -> {
+            Cache cache = cacheManager.getCache(PartySettingsQueryService.CACHE);
+            if (cache != null) {
+                cache.evict(partyCode);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evict.run();
+                }
+            });
+        } else {
+            evict.run();   // no transaction (a unit test)
+        }
     }
 }

@@ -1,6 +1,8 @@
 package com.scan2play.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scan2play.entity.YoutubeCacheEntity;
 import com.scan2play.integration.MusicProvider;
@@ -17,6 +19,7 @@ import org.springframework.web.client.RestClient;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 /**
@@ -56,6 +59,18 @@ public class YouTubeMusicProvider implements MusicProvider {
     private final YouTubeSearchBudget searchBudget;
     private final String apiKey;
 
+    /**
+     * Searches the API answered with no video, by normalised query, for {@value #NOT_FOUND_MINUTES} minutes: asked again they
+     * would cost another 100 quota units for the same empty answer (a guest who sends the same request twice, several guests
+     * with the same typo). A failed call (network, 5xx) is not remembered — it may be over in a moment.
+     */
+    private final Cache<String, Boolean> notFound = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(NOT_FOUND_MINUTES))
+            .maximumSize(1000)
+            .build();
+
+    static final int NOT_FOUND_MINUTES = 10;
+
     public YouTubeMusicProvider(
             RestClient restClient,
             ObjectMapper objectMapper,
@@ -88,7 +103,8 @@ public class YouTubeMusicProvider implements MusicProvider {
      * <p>
      * When today's search budget is spent ({@link YouTubeSearchBudget}) the API is not called and the song gets the search link.
      * <p>
-     * {@code null} results (API failures) and search links are not cached, so the song gets its video once the API can be asked.
+     * {@code null} results and search links are not cached here, so the song gets its video once the API can be asked; a search
+     * that found nothing is not asked again for {@value #NOT_FOUND_MINUTES} minutes ({@link #notFound}).
      *
      * @param searchQuery the text to search for (e.g., song title and artist)
      * @return a YouTube video URL, or a search fallback URL, or null if search fails
@@ -119,6 +135,11 @@ public class YouTubeMusicProvider implements MusicProvider {
         if (apiKey == null || apiKey.isBlank()) {
             log.warn("YouTube API key not configured — returning search URL fallback for: '{}'", searchQuery);
             return buildSearchFallbackUrl(searchQuery);
+        }
+
+        if (notFound.getIfPresent(normalizedQuery) != null) {
+            log.debug("YouTube search for '{}' found nothing a few minutes ago — not asked again", searchQuery);
+            return null;
         }
 
         // The search limit is one per Google project, shared by every party: past today's budget, the song gets the search link
@@ -178,6 +199,7 @@ public class YouTubeMusicProvider implements MusicProvider {
                     return videoUrl;
                 }
             }
+            notFound.put(normalizedQuery, Boolean.TRUE);
             log.warn("No YouTube video found for: '{}'", searchQuery);
         } catch (HttpClientErrorException.Forbidden e) {
             if (e.getResponseBodyAsString().contains(QUOTA_EXCEEDED_REASON)) {

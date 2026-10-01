@@ -29,6 +29,7 @@ import static com.scan2play.service.FallbackTrackCommandService.ROTATION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -89,31 +90,18 @@ class FallbackTrackCommandServiceTest {
     void replaceTracks_shouldSoftInvalidateThenInsert() {
         List<PlaylistTrack> tracks = List.of(new PlaylistTrack("a", "Song A"), new PlaylistTrack("b", null),
                 new PlaylistTrack("c", "Song C"));
+        when(repository.insertTracks(any(), any(), any(), any(), any(), any())).thenReturn(3);
 
         int inserted = service.replaceTracks(PARTY, PLAYLIST, tracks, false);
 
         assertThat(inserted).isEqualTo(3);
 
+        // one statement for the whole import, the videos and their titles in playlist order (positions and the play order
+        // follow from that order in SQL — FallbackQueueIT checks the rows on a real database)
         InOrder order = inOrder(repository);
         order.verify(repository).updateStatus(PARTY, QUEUED, CANCELLED);
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<FallbackTrackEntity>> captor = ArgumentCaptor.forClass(List.class);
-        order.verify(repository).saveAll(captor.capture());
-
-        List<FallbackTrackEntity> saved = captor.getValue();
-        assertThat(saved).extracting(FallbackTrackEntity::getVideoId).containsExactly("a", "b", "c");
-        assertThat(saved).extracting(FallbackTrackEntity::getTitle).containsExactly("Song A", null, "Song C");
-        assertThat(saved).extracting(FallbackTrackEntity::getPlaylistPosition).containsExactly(0, 1, 2);
-        // playlist order unless shuffled
-        assertThat(saved).extracting(FallbackTrackEntity::getPlayOrder).containsExactly(0, 1, 2);
-        assertThat(saved).allSatisfy(t -> {
-            assertThat(t.getPartyCode()).isEqualTo(PARTY);
-            assertThat(t.getPlaylistId()).isEqualTo(PLAYLIST);
-            assertThat(t.getStatus()).isEqualTo(QUEUED);
-            assertThat(t.getPlayedAt()).isNull();
-        });
-        // one import = one fetch timestamp (basis of the 30-day retention, and how a batch is identified)
-        assertThat(saved).extracting(FallbackTrackEntity::getFetchedAt).doesNotContainNull().containsOnly(saved.get(0).getFetchedAt());
+        order.verify(repository).insertTracks(eq(PARTY), eq(PLAYLIST), eq(new String[]{"a", "b", "c"}),
+                eq(new String[]{"Song A", null, "Song C"}), eq(QUEUED_NAME), notNull());
         verify(repository, never()).shuffle(any(), any(), any());
     }
 
@@ -123,7 +111,7 @@ class FallbackTrackCommandServiceTest {
         service.replaceTracks(PARTY, PLAYLIST, List.of(new PlaylistTrack("a", null), new PlaylistTrack("b", null)), true);
 
         InOrder order = inOrder(repository);
-        order.verify(repository).saveAll(any());
+        order.verify(repository).insertTracks(any(), any(), any(), any(), any(), any());
         order.verify(repository).shuffle(PARTY, PLAYLIST, QUEUED_NAME);
     }
 
@@ -142,7 +130,7 @@ class FallbackTrackCommandServiceTest {
         service.cancelQueuedTracks(PARTY);
 
         verify(repository).updateStatus(PARTY, QUEUED, CANCELLED);
-        verify(repository, never()).saveAll(any());
+        verify(repository, never()).insertTracks(any(), any(), any(), any(), any(), any());
     }
 
     @Test

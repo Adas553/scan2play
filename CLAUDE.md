@@ -28,10 +28,13 @@
   happened once), keep the CRLF, and check `git diff`. A long Python heredoc in Bash may be rejected: write the script to a
   file with the Write tool and run it.
 - **Queue SQL needs a check against a real PostgreSQL.** Mocked unit tests cannot show locking problems — a deadlock in
-  `FallbackTrackCommandService` was found only by a stress test on a real database. After touching that class or
-  `FallbackTrackRepository`, run a throw-away `@SpringBootTest` in the scratch copy (not in the repo) with `PGDATABASE=s2p_...`
-  and dummy `GOOGLE_AI_API_KEY`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`;
-  startup runs Flyway and Hibernate validation. Drop the database afterwards.
+  `FallbackTrackCommandService` was found only by a stress test on a real database. The `*IT` tests do it (base class
+  `PostgresIntegrationTest`; `FallbackQueueIT`, `FallbackQueueConcurrencyIT` — red if the advisory lock goes —, `MigrationIT`,
+  `SongRequestRepositoryIT`): in the scratch copy, `.\mvnw.cmd -B -ntp verify -Pit` (only the ITs; the local PostgreSQL 18, user
+  `postgres`, or `PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD`). Each run creates and drops its own `s2p_it_*` database — never the
+  developer's. GitHub runs them in `.github/workflows/db-tests.yml` (PostgreSQL 18, as on Railway). After touching that class,
+  `FallbackTrackRepository` or a migration, run them, and give new queue SQL a test there. When copying the repo to the scratch
+  directory, delete its `target/classes`: a copy that keeps the old file times leaves Maven's stale classes in place.
 - **Browser tests** (`src/test/browser`, guide in its `README.md`): `python src/test/browser/run.py` runs the real
   `youtube-autopilot.js` / `dashboard.js` on the real rendered dashboard in a headless Chrome. It copies the repo to a work directory
   (`%TEMP%\scan2play-browser-tests`) and runs Maven there — never in the repo — so it is safe while the app runs. `--no-render`

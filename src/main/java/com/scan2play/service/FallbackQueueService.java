@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 import static com.scan2play.repository.FallbackTrackRepository.UPCOMING_ORDER;
 
@@ -67,16 +68,16 @@ public class FallbackQueueService {
      * report and fetch the "up next" list again when it changes, so a change made in one window shows up in the
      * others (nothing else refreshes the list of a window that does not play).
      * <p>
-     * It is a hash of the whole view (at most {@value #UPCOMING_LIMIT} tracks — the same bounded read the list
-     * itself does), so it is only good for "did it change"; it does not survive a restart of the application.
+     * It is asked for on every lease report (every 3 s from every window), so it reads no track: the database hashes the
+     * queue ({@link FallbackTrackRepository#queueFingerprint}) and this adds the playlist and the shuffle setting. Only
+     * good for "did it change". The titles are not in it: a track's title never changes (a new import is new rows).
      */
     public String getVersion(String partyCode) {
-        return versionOf(getUpcoming(partyCode));
-    }
-
-    /** The version of a view that was already read — sent along with the list itself, so that its window knows it. */
-    public static String versionOf(FallbackQueueView view) {
-        return Integer.toHexString(view.hashCode());
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        String playlistId = YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl());
+        String queue = playlistId == null ? "" : fallbackTrackRepository.queueFingerprint(partyCode, playlistId,
+                FallbackTrackStatus.QUEUED.name(), FallbackTrackStatus.SKIPPED.name());
+        return Integer.toHexString(Objects.hash(playlistId, settings.isFallbackShuffle(), queue));
     }
 
     /**

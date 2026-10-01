@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "song_requests", indexes = {
-    @Index(name = "idx_party_code", columnList = "partyCode"),
     @Index(name = "idx_party_decision_time", columnList = "partyCode, decision, requestedAt DESC")
 })
 @Getter

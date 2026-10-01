@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
 
 import static com.scan2play.model.FallbackTrackStatus.CANCELLED;
 import static com.scan2play.model.FallbackTrackStatus.PLAYED;
@@ -92,27 +91,17 @@ public class FallbackTrackCommandService {
         lockQueue(partyCode);
         int cancelled = fallbackTrackRepository.updateStatus(partyCode, QUEUED, CANCELLED);
 
-        LocalDateTime fetchedAt = LocalDateTime.now();
-        List<FallbackTrackEntity> entities = IntStream.range(0, tracks.size())
-                .mapToObj(i -> FallbackTrackEntity.builder()
-                        .partyCode(partyCode)
-                        .playlistId(playlistId)
-                        .videoId(tracks.get(i).videoId())
-                        .title(tracks.get(i).title())
-                        .playlistPosition(i)
-                        .playOrder(i)
-                        .status(QUEUED)
-                        .fetchedAt(fetchedAt)
-                        .build())
-                .toList();
-        fallbackTrackRepository.saveAll(entities);
+        int inserted = fallbackTrackRepository.insertTracks(partyCode, playlistId,
+                tracks.stream().map(PlaylistTrack::videoId).toArray(String[]::new),
+                tracks.stream().map(PlaylistTrack::title).toArray(String[]::new),
+                QUEUED.name(), LocalDateTime.now());
         if (shuffle) {
             fallbackTrackRepository.shuffle(partyCode, playlistId, QUEUED.name());
         }
 
         log.info("Party [{}]: fallback playlist {} imported — {} track(s) queued ({}), {} previous track(s) cancelled",
-                partyCode, playlistId, entities.size(), shuffle ? "shuffled" : "playlist order", cancelled);
-        return entities.size();
+                partyCode, playlistId, inserted, shuffle ? "shuffled" : "playlist order", cancelled);
+        return inserted;
     }
 
     /** The DJ cleared the fallback playlist: nothing queued stays queued. */

@@ -19,11 +19,12 @@ import java.time.LocalDateTime;
  * <b>YouTube API ToS compliance:</b> only the video ID and its title are stored, and rows older than
  * {@value #MAX_AGE_DAYS} days are purged (same rule as {@link YoutubeCacheEntity}).
  * The schema is created by Flyway migrations {@code V2__create_fallback_track.sql} and
- * {@code V4__fallback_track_order_and_title.sql} and {@code V5__fallback_track_manual_move.sql}.
+ * {@code V4__fallback_track_order_and_title.sql} and {@code V5__fallback_track_manual_move.sql}; its indexes by {@code V9}.
  */
 @Entity
 @Table(name = "fallback_track", indexes = {
-        @Index(name = "idx_fallback_track_party_status", columnList = "partyCode, status")
+        @Index(name = "idx_fallback_track_queue", columnList = "partyCode, playlistId, status, playOrder, playlistPosition"),
+        @Index(name = "idx_fallback_track_party_fetched", columnList = "partyCode, fetchedAt")
 })
 @Getter
 @Setter
