@@ -142,9 +142,9 @@ function setPlaybackMode(mode) {
 
 /**
  * The party's Auto-Pilot setting as the server says it (every lease answer carries it — youtube-autopilot.js): one setting for
- * all the DJ's windows, so a change made on another device reaches this one within a report. Before, a window knew only the value
- * it was loaded with (the queue poll brings a new one only when the guest queue changes), and a window that took the playback
- * over with a stale "off" left its player empty. An answer to a report sent before the DJ flipped the switch here is ignored: it
+ * all the DJ's windows, so a change made on another device reaches this one within a report — the value the page was loaded with
+ * goes stale (the queue poll brings a new one only when the guest queue changes), and a window that took the playback over with
+ * a stale "off" would leave its player empty. An answer to a report sent before the DJ flipped the switch here is ignored: it
  * may still say the old value.
  */
 on(EVENTS.PLAYBACK_MODE_REPORTED, function (report) {

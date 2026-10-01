@@ -37,8 +37,8 @@ public class GuestSessionService {
      * Counts one song request against the guest's limit ({@code requestLimit} per {@code cooldownMinutes}), if it is under it.
      * <p>
      * The check and the record are one atomic step ({@code compute} of the map), and the request is counted <b>before</b> the
-     * evaluation (2–4 s of AI): before, parallel requests of one session all passed the check while the first was still being
-     * evaluated (review 4.1).
+     * evaluation (2–4 s of AI): otherwise parallel requests of one session would all pass the check while the first is still
+     * being evaluated.
      *
      * @param session   the guest's HTTP session (only its id is used)
      * @param partyCode the unique code of the party

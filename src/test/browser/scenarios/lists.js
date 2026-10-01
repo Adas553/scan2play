@@ -97,7 +97,7 @@
             tab.click();
             await waitForList(function () { return true; }, 'the history to arrive');
             t.step('the History tab asked for the first page of the whole history (no limit, no filter)', (await fetches()).map(function (r) { return [r.q.partyCode, r.q.limit || null, r.q.filter || null]; }), [['HARN1', null, null]]);
-            t.step('the history shows in place of the queue', [box.style.display, document.getElementById('queue-content').style.display], ['', 'none']);
+            t.step('the history shows in place of the queue', [getComputedStyle(box).display !== 'none', getComputedStyle(document.getElementById('queue-content')).display !== 'none'], [true, false]);
             t.step('the History tab is the lit one', [tab.classList.contains('active'), tab.getAttribute('aria-current')], [true, 'page']);
             t.check('the list arrives with a heading of its own ("Historia imprezy")', /Historia imprezy/.test(list().querySelector('h4') ? list().querySelector('h4').textContent : ''));
             t.step('the newest four entries, the count says there are older ones ("4+")', [titles(), count(list())], [['Żółć — piosenka', 'Playlist Alpha', 'Rejected Beat', 'Playlist Bravo'], '4+']);

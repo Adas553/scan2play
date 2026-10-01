@@ -22,8 +22,7 @@
 
     <div id="party-closed-banner"
          th:classappend="${isActive} ? 'd-none' : ''"
-         class="alert alert-warning text-center border-warning mb-4 shadow"
-         style="background-color: #2b2000; color: #ffca2c;">
+         class="alert alert-warning text-center border-warning mb-4 shadow s2p-alert-closed">
         <h3 class="fw-bold mb-3" th:text="#{dashboard.alert.party_closed.title}">⚠️ Party is CLOSED</h3>
         <p th:text="#{dashboard.alert.party_closed.description}">Guests scanning your QR code will see that the party has ended. They cannot add new songs.</p>
 
@@ -35,7 +34,7 @@
     </div>
 
     <!--/* The account and party buttons: a row of their own above the tab bar, so that only the tabs need to stay in view. */-->
-    <div class="d-flex gap-2 justify-content-md-end mb-2" style="z-index: 10;">
+    <div class="d-flex gap-2 justify-content-md-end mb-2 s2p-z-10">
 
         <!-- Feedback button -->
         <button type="button"
@@ -66,8 +65,7 @@
         <div class="border-start border-secondary ms-1 ps-3">
             <form th:action="@{/dj/delete-account}" method="POST" th:data-confirm="#{dashboard.confirm.delete_account}">
                 <button type="submit"
-                        class="btn btn-sm fw-bold d-flex align-items-center gap-1"
-                        style="color: #6c757d; border: 1px solid #6c757d;"
+                        class="btn btn-sm fw-bold d-flex align-items-center gap-1 s2p-btn-muted"
                         th:title="#{dashboard.button.delete_account}">
                     🗑 <span class="d-none d-sm-inline" th:text="#{dashboard.button.delete_account}">Delete Account</span>
                 </button>
@@ -139,7 +137,7 @@
     <!-- ================================================================
          Feedback Toast (bottom-right, above everything)
          ================================================================ -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+    <div class="position-fixed bottom-0 end-0 p-3 s2p-z-toast">
         <div id="feedbackToast" class="toast text-white border-0"
              role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
@@ -159,7 +157,7 @@
      Footer Fragment — Legal links (YouTube ToS, Google Privacy, Scan2Play legal pages)
      Required by YouTube API Terms of Service (Section III) and Google OAuth compliance.
      ====================================================================== -->
-<footer th:fragment="footer" class="text-center py-4 mt-5 border-top border-secondary" style="color: #6c757d; font-size: 0.85rem;">
+<footer th:fragment="footer" class="text-center py-4 mt-5 border-top border-secondary s2p-footer">
     <div class="container">
         <p class="mb-2">
             <a href="/privacy" class="text-secondary me-3" th:text="#{footer.privacy}">Privacy Policy</a>

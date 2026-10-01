@@ -22,14 +22,14 @@ public class SecurityConfig {
     /**
      * The Content-Security-Policy of every page (review item 5.1). The pages have no inline script and no inline handler; what
      * comes from elsewhere: Bootstrap (cdn.jsdelivr.net), the YouTube IFrame API and its player, the iTunes search of the song
-     * suggestions. Inline styles are still allowed — the templates have {@code style="…"} attributes, and an inline style cannot
-     * run code. Violations go to {@link com.scan2play.controller.CspReportController}. Public for the browser tests: their stand-in
+     * suggestions. No inline style either: no {@code style="…"} attribute and no {@code <style>} element (the classes are in
+     * {@code app.css}; scripts change styles through {@code element.style}, which the policy allows). Violations go to {@link com.scan2play.controller.CspReportController}. Public for the browser tests: their stand-in
      * server sends this same policy (written by {@code DashboardPageRenderTest}), enforced.
      */
     public static final String CONTENT_SECURITY_POLICY = String.join("; ",
             "default-src 'self'",
             "script-src 'self' https://cdn.jsdelivr.net https://www.youtube.com https://s.ytimg.com",
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+            "style-src 'self' https://cdn.jsdelivr.net",
             "img-src 'self' data:",
             "font-src 'self' https://cdn.jsdelivr.net",
             "connect-src 'self' https://itunes.apple.com",

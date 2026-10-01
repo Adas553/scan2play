@@ -1,7 +1,7 @@
 /**
  * The events the dashboard's modules and the player (youtube-autopilot.js) tell each other with — the whole contract between them
- * in one place (REVIEW.md 3.3: it used to be functions put on `window` and called after a `typeof … === 'function'`, so a typo
- * switched a feature off without a word). An event is a CustomEvent on `document`; nobody listening is fine — a Spotify party's
+ * in one place, instead of functions put on `window` and called after a `typeof … === 'function'`, where a typo switches a
+ * feature off without a word. An event is a CustomEvent on `document`; nobody listening is fine — a Spotify party's
  * dashboard has no player. wake-lock.js, a classic script, listens to PLAYBACK_MODE by its name.
  */
 export const EVENTS = Object.freeze({

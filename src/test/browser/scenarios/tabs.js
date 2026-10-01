@@ -10,7 +10,7 @@
     const lit = function () { return ['panel', 'queue', 'history'].filter(function (n) { return link(n).classList.contains('active'); }); };
     const bar = function () { return document.getElementById('djTabBar'); };
     const top = function (id) { return document.getElementById(id).getBoundingClientRect().top; };
-    const shown = function (id) { return document.getElementById(id).style.display !== 'none'; };
+    const shown = function (id) { return getComputedStyle(document.getElementById(id)).display !== 'none'; };   // what the DJ sees
     // "just under the bar, in the upper part of the screen": what the DJ needs to see the list without scrolling
     const inUpperPart = function (id) {
         const t = top(id);

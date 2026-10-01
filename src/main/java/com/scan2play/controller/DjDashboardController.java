@@ -162,7 +162,7 @@ public class DjDashboardController {
     static final int QR_PRINT_SIZE = 1000;
 
     /**
-     * The party's QR code to print and put up (the owner's wish, 2026-10-01): {@code layout=poster} — one A4 poster — or
+     * The party's QR code to print and put up: {@code layout=poster} — one A4 poster — or
      * {@code cards} — eight cards to cut out and put on the tables. The texts of the code are in Polish and English at once
      * (guests are of both); the bar above it, which is not printed, follows the DJ's language. Anything else than
      * {@code cards} is the poster.

@@ -25,7 +25,7 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
                 <h1 class="mb-0 text-center text-md-start" th:text="#{dashboard.title}">🎧 DJ Dashboard</h1>
 
-                <div class="bg-dark p-2 rounded border border-secondary w-100" style="max-width: 350px;">
+                <div class="bg-dark p-2 rounded border border-secondary w-100 s2p-mw-350">
                     <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0 d-flex align-items-center">
                         <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
                         <label for="vibeSelect" class="me-2 fw-bold text-light small text-nowrap" th:text="#{dashboard.vibe.label}">🌍 Global Vibe:</label>
@@ -63,7 +63,7 @@
                                 <input class="form-check-input" type="checkbox" id="autoToggle"
                                        th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
                                 <label class="form-check-label fw-bold" for="autoToggle"
-                                       th:style="${activeProvider.name() == 'SPOTIFY' ? 'color: #1DB954' : 'color: #FF0000'}">
+                                       th:classappend="${activeProvider.name() == 'SPOTIFY'} ? 's2p-text-spotify' : 's2p-text-youtube'">
                                     Auto-Pilot (Queue)
                                 </label>
                             </div>
@@ -151,8 +151,7 @@
                 <img th:if="${qrCodeBase64}"
                      th:src="${'data:image/png;base64,' + qrCodeBase64}"
                      th:alt="#{dashboard.qr.alt}"
-                     class="img-fluid rounded border border-light"
-                     style="max-width: 200px; height: auto;" />
+                     class="img-fluid rounded border border-light s2p-dashboard-qr" />
 
                 <div class="mt-3">
                     <p class="text-secondary mb-1 small" th:text="#{dashboard.qr.link}">Your Party Link:</p>
@@ -179,7 +178,7 @@
         <div th:replace="~{fragments/player-lease-banner :: banner}"></div>
 
         <div class="d-flex flex-wrap gap-3 align-items-start">
-            <div class="flex-grow-1" style="flex-basis: 400px; max-width: 640px;">
+            <div class="flex-grow-1 s2p-player-column">
                 <div class="ratio ratio-16x9">
                     <div id="yt-player"></div>
                 </div>
@@ -187,7 +186,7 @@
             </div>
 
             <!--/* "Up next" of the fallback playlist, beside the player: filled by dashboard.js (refreshFallbackQueue) from /dj/dashboard/fallback-queue; on a narrow screen it wraps below the player */-->
-            <div class="flex-grow-1" style="flex-basis: 300px; max-width: 640px;">
+            <div class="flex-grow-1 s2p-side-column">
                 <h6 class="text-light small mb-1" th:text="#{dashboard.fallback.queue.title}">Up next from the playlist</h6>
                 <p class="text-secondary small mb-2" th:text="#{dashboard.fallback.queue.hint}">Guest requests always play before the playlist.</p>
                 <!--/* How many guest songs wait (dashboard.js, updateGuestsWaiting): they play before the track marked "Next" below. The plural form is picked in the browser (Intl.PluralRules of data-lang), the four texts travel in data attributes. */-->
@@ -227,10 +226,10 @@
                 <span th:text="#{dashboard.active.queue}">Active Queue</span>
                 <span class="badge text-bg-secondary ms-1" data-list-count th:text="${#lists.size(history)}">0</span>
             </h4>
-            <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary"
-                   style="max-width: 16rem;" th:placeholder="#{dashboard.list.search}" autocomplete="off">
+            <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
+                   th:placeholder="#{dashboard.list.search}" autocomplete="off">
         </div>
-        <!--/* A server limit that stops guest songs now (REVIEW.md 4.1): shown from the page's model, then shown / hidden by
+        <!--/* A server limit that stops guest songs now: shown from the page's model, then shown / hidden by
              dashboard.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
         <div id="guestLimitWarnings">
             <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="search-spent"
@@ -269,7 +268,7 @@
                         <span class="fw-bold song-title" th:text="${req.songName}">Song</span>
                         <!--/* Track link: ▶ SPOTIFY (green) | ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL).
                              ▶ YOUTUBE in the window that plays = play it to the party now (the song is confirmed played and leaves
-                             the queue); ↗ = only look at it on YouTube, in a new tab (the owner's wish, 2026-10-01). */-->
+                             the queue); ↗ = only look at it on YouTube, in a new tab. */-->
                         <!--/* text-nowrap: the cell is as wide as ▶ YOUTUBE on one line, so ↗ never runs over the next column */-->
                         <span class="d-flex align-items-center gap-1 flex-shrink-0 text-nowrap">
                         <a th:if="${req.trackUrl != null}"
@@ -290,9 +289,9 @@
                 <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}">
                     <span class="d-none d-md-inline" th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</span>
-                    <span class="d-inline d-md-none" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}" style="font-size: 1.2rem;"></span>
+                    <span class="d-inline d-md-none s2p-decision-icon" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}"></span>
                 </td>
-                <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
+                <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap s2p-comment-cell" th:text="${req.djComment}">Comment</td>
                 <td class="d-none d-md-table-cell" data-sort-value="energy" th:attr="data-val=${req.energyLevel}"><span class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span></td>
                 <td>
                     <div class="d-flex gap-2">
@@ -311,10 +310,10 @@
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(history)}">
-                <td colspan="7" class="text-center text-light py-4" style="background: #232323;" th:text="#{dashboard.empty.queue}">No pending requests. Queue is empty! 🎵</td>
+                <td colspan="7" class="text-center text-light py-4 s2p-empty-row" th:text="#{dashboard.empty.queue}">No pending requests. Queue is empty! 🎵</td>
             </tr>
             <tr data-nomatch class="d-none">
-                <td colspan="7" class="text-center text-secondary py-3" style="background: #232323;" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
+                <td colspan="7" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
             </tr>
             </tbody>
         </table>
@@ -323,7 +322,7 @@
     </div>
 
     <!-- History content loaded via AJAX (preserves YouTube player) -->
-    <div id="history-content" style="display: none;"></div>
+    <div id="history-content" hidden></div>
 </div>
 
 <!-- Screen Wake Lock — keeps display on while Auto-Pilot is running (graceful degradation; follows the s2p:playback-mode event) -->

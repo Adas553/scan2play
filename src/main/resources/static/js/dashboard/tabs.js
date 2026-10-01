@@ -138,8 +138,8 @@ import { initSortableHeaders, restoreListState, setHistoryReloader } from './lis
     links.queue.addEventListener('click', function(e) {
         e.preventDefault();
         if (activeList === 'history') {
-            queueContent.style.display = '';
-            historyContent.style.display = 'none';
+            queueContent.hidden = false;
+            historyContent.hidden = true;
             activeList = 'queue';
         }
         setLit('queue');
@@ -160,8 +160,8 @@ import { initSortableHeaders, restoreListState, setHistoryReloader } from './lis
         fetchHistory()
         .then(function(html) {
             historyContent.innerHTML = html;
-            queueContent.style.display = 'none';
-            historyContent.style.display = '';
+            queueContent.hidden = true;
+            historyContent.hidden = false;
             activeList = 'history';
             setLit('history');
             // Init sorting on dynamically loaded history table

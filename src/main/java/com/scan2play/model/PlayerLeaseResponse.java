@@ -19,8 +19,8 @@ package com.scan2play.model;
  *                           said. A window that does not play shows "pause" or "resume" by it.
  * @param playbackMode       the party's Auto-Pilot setting ({@code AUTO} / {@code MANUAL}) — one setting for every window.
  *                           Each window follows it (its switch and what its player does when a track ends), so a change
- *                           made on another device reaches it within one report; before, a window only knew the value
- *                           it was loaded with.
+ *                           made on another device reaches it within one report, not only the value the window was
+ *                           loaded with.
  */
 public record PlayerLeaseResponse(boolean holder, boolean free, String fallbackPlaylistId, String queueVersion,
                                   PlayerCommand command, Boolean playing, PlaybackMode playbackMode) {

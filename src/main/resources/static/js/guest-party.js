@@ -13,7 +13,7 @@
         input.dataset.autocompleteOff = String(mood);
     }
     // With a mouse the field takes the cursor at once; on a phone it does not: focus opens the keyboard and the page jumps under the
-    // guest's finger (the owner, 2026-10-01) — the guest taps the field when ready to type.
+    // guest's finger — the guest taps the field when ready to type.
     const typesWithAMouse = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     document.querySelectorAll('input[name="requestMode"]').forEach(function (radio) {
         radio.addEventListener('change', function () {

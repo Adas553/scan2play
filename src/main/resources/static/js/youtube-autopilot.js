@@ -62,8 +62,8 @@ import { EVENTS, emit, on } from './dashboard/events.js';
     // ---- State ----
     let player = null, playerReady = false, playerState = -1;
 
-    // The track in the player — everything about it in one object (REVIEW.md 3.2: it used to be ten variables, each place that
-    // loaded or stopped a track setting its own subset). Created only by startTrack, which every load goes through; its phase
+    // The track in the player — everything about it in one object, so that no place that loads or stops a track can leave part of
+    // it stale. Created only by startTrack, which every load goes through; its phase
     // then moves LOADING → RUNNING (it reached PLAYING) → OVER (it ended, failed or was stopped). null before the first load.
     //   kind         'GUEST' | 'BACKGROUND' | 'HISTORY' (came back through ⏮ or a resume) | 'MANUAL' (▶ picked by hand)
     //   songId       the guest song's request id (GUEST): confirmed once it plays, excluded when ⏭ skips it
@@ -118,17 +118,17 @@ import { EVENTS, emit, on } from './dashboard/events.js';
     // MAX_IMMEDIATE_RETRIES errors: the next lease report (every 3 s) asks again. Nothing else would — the dashboard's poll asks
     // only when the guest queue has changed, so an idle player stayed silent until a guest added a song.
     let askAgain = false;
-    // Resume the track that played last (the owner's decisions 2026-09-30): after a reload, and after "play on this device", the
-    // first track this window plays by itself is the one that played last — the newest entry of the server's timeline, if it started
-    // at most RESUME_WITHIN_SECONDS ago — from its start, instead of the next one. Asking next-track then used up a track (it is marked
-    // played when handed out): at load nobody heard it (the browser refuses sound in a page nobody has touched, so it was only
-    // loaded), and a takeover skipped the track the other device was playing. Only for that first track: any load clears it
+    // Resume the track that played last: after a reload, and after "play on this device", the first track this window plays by
+    // itself is the one that played last — the newest entry of the server's timeline, if it started at most RESUME_WITHIN_SECONDS
+    // ago — from its start, instead of the next one. Asking next-track would use up a track (it is marked played when handed out):
+    // at load nobody hears it (the browser refuses sound in a page nobody has touched, so it is only loaded), and a takeover would
+    // skip the track the other device was playing. Only for that first track: any load clears it
     // (startTrack), and so does an answer that another window plays; "play on this device" sets it again once this window holds
     // the lease (takeOverPending, applyLease).
-    // After a reload (2026-10-01, the owner's report) only a track the reload INTERRUPTED comes back — the one the page before noted
-    // when it went away (INTERRUPTED_TRACK_KEY, see the pagehide handler): a track that had ended by itself is not played again. With
-    // Auto-Pilot off at the reload the resume waits until Auto-Pilot is switched on or "resume" is pressed (it used to be dropped, and
-    // the next track played); a track the DJ had paused waits for "resume" even with Auto-Pilot on (isHeldByPause).
+    // After a reload only a track the reload INTERRUPTED comes back — the one the page before noted when it went away
+    // (INTERRUPTED_TRACK_KEY, see the pagehide handler): a track that had ended by itself is not played again. With Auto-Pilot off at
+    // the reload the resume waits until Auto-Pilot is switched on or "resume" is pressed (not dropped: the DJ would lose the track);
+    // a track the DJ had paused waits for "resume" even with Auto-Pilot on (isHeldByPause).
     let resumeLastTrack = true;
     // "Play on this device" has been pressed and no answer has made this window the holder yet (applyLease).
     let takeOverPending = false;
@@ -394,7 +394,7 @@ import { EVENTS, emit, on } from './dashboard/events.js';
         if (!isAutoPilotOn() && !takeOver) return;
         if (!isPlayerIdle()) return;
         // The reload interrupted a track the DJ had paused: held like a paused player — nothing starts, not even the queue,
-        // until "resume" (resumeHere). A pause is the DJ's choice (the owner's decision 2026-10-01, option A).
+        // until "resume" (resumeHere). A pause is the DJ's choice.
         if (resumeLastTrack && !takeOver && isHeldByPause()) return;
         tryAutoPlayInFlight = true;
 
@@ -465,9 +465,8 @@ import { EVENTS, emit, on } from './dashboard/events.js';
     }
 
     /**
-     * YouTube's own ▶ pressed on the empty player (onPlayerError): the DJ wants music, so it starts — with Auto-Pilot off too (the
-     * owner's decision 2026-10-01): the track a reload interrupted comes back as "resume" brings it back, otherwise the next track
-     * plays as ⏭ plays it.
+     * YouTube's own ▶ pressed on the empty player (onPlayerError): the DJ wants music, so it starts — with Auto-Pilot off too: the
+     * track a reload interrupted comes back as "resume" brings it back, otherwise the next track plays as ⏭ plays it.
      */
     async function startFromEmptyPlayer() {
         if (isPlayerDevice !== true || tryAutoPlayInFlight) return;
@@ -521,8 +520,8 @@ import { EVENTS, emit, on } from './dashboard/events.js';
      * A window that does not play has two buttons for "back" instead of the single ⏮: the previous track (always) and the
      * current track from the start. The single ⏮ has rules — a track that has played for a while starts again, a second press
      * within 20 s goes back a track — that work at the computer, where two presses are a moment apart, but are hard to use from
-     * a remote (the DJ's report, 2026-09-30: "wstecz nie jest intuicyjne"). The window that plays, and a window that does not
-     * know yet (the first answer of the server is on its way), shows the single ⏮ as before.
+     * a remote. The window that plays, and a window that does not know yet (the first answer of the server is on its way), shows
+     * the single ⏮.
      */
     function renderBackButtons() {
         const remote = isPlayerDevice === false;
@@ -768,7 +767,7 @@ import { EVENTS, emit, on } from './dashboard/events.js';
             resumeAfterReload();
             return;
         }
-        // Nothing loaded since the reload: playVideo on the empty player shows YouTube's error screen (the owner, 2026-10-01)
+        // Nothing loaded since the page opened: playVideo on the empty player would show YouTube's error screen
         if (current === null) return;
         if (typeof player.playVideo === 'function') player.playVideo();
     }
@@ -995,8 +994,8 @@ import { EVENTS, emit, on } from './dashboard/events.js';
         if (!videoId) return false;
         if (guestSongId) {
             // A guest song of the queue, played to the party: like one Auto-Pilot handed out — confirmed played once it plays,
-            // so it leaves the queue (before, it stayed, and when it ended Auto-Pilot handed out the same song again; the
-            // owner, 2026-10-01). Looking at it without playing it is the ↗ link beside ▶.
+            // so it leaves the queue (otherwise Auto-Pilot would hand out the same song again when it ends). Looking at it
+            // without playing it is the ↗ link beside ▶.
             startTrack('GUEST', videoId, { songId: guestSongId, key: 'G:' + guestSongId });
         } else {
             // Picked by hand, not a song of the queue: nothing to confirm, not a background track. Auto-Pilot carries on when it ends.

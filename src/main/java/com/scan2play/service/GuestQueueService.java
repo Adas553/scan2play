@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * What a guest sees of the music on the party page (the owner's decision, 2026-09-30): what plays now, the guest songs that come
- * next in the order they will play, and where the guest's own song waits. Before, the page listed the five newest accepted
- * requests, newest first — while they play oldest first, so a guest saw their song on top although it waited at the end.
+ * What a guest sees of the music on the party page: what plays now, the guest songs that come next in the order they will play
+ * (oldest first — a list of the newest would show a guest their song on top although it waits at the end), and where the guest's
+ * own song waits.
  * <p>
  * The tracks of the background playlist are left out of "next": they play only when no guest song waits, and listing them would
  * make a guest think their song comes after them.

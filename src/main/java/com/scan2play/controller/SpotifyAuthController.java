@@ -26,8 +26,8 @@ import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
  * <b>Security:</b> Both endpoints require authentication and validate that the
  * {@code partyCode} belongs to the logged-in DJ (IDOR protection).
  * The callback checks the OAuth {@code state}: a random value made for this login and kept in the DJ's session, used once.
- * (It used to be the party code, which is public — it is in the QR code — so a DJ could be sent a callback link carrying someone
- * else's authorization code, and their party would then have queued songs to that other person's Spotify.)
+ * Not the party code: that is public (it is in the QR code), so a DJ could be sent a callback link carrying someone else's
+ * authorization code, and their party would then queue songs to that other person's Spotify.
  */
 @Controller
 @RequestMapping("/dj/spotify")

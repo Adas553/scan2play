@@ -62,8 +62,8 @@
                             th:text="#{history.filter.rejected}">Rejected</button>
                 </div>
             </div>
-            <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary"
-                   style="max-width: 16rem;" th:placeholder="#{dashboard.list.search}" autocomplete="off">
+            <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
+                   th:placeholder="#{dashboard.list.search}" autocomplete="off">
         </div>
         <div class="table-responsive list-scroll">
         <table class="table table-dark table-hover table-sm align-middle">
@@ -93,8 +93,7 @@
                         <a th:if="${req.trackUrl != null}"
                            th:href="${req.trackUrl}"
                            target="_blank"
-                           class="btn btn-sm btn-secondary shadow-sm fw-bold flex-shrink-0"
-                           style="font-size: 0.7rem;">
+                           class="btn btn-sm btn-secondary shadow-sm fw-bold flex-shrink-0 s2p-link-small">
                             LINK
                         </a>
                     </div>
@@ -106,19 +105,19 @@
                 </td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}">
                     <span class="d-none d-md-inline" th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</span>
-                    <span class="d-inline d-md-none" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}" style="font-size: 1.2rem;"></span>
+                    <span class="d-inline d-md-none s2p-decision-icon" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}"></span>
                 </td>
-                <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap" style="min-width: 200px;" th:text="${req.djComment}">Comment</td>
+                <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap s2p-comment-cell" th:text="${req.djComment}">Comment</td>
                 <td class="d-none d-md-table-cell" data-sort-value="energy" th:attr="data-val=${req.energyLevel != null ? req.energyLevel : 0}">
                     <span th:if="${req.energyLevel != null}" class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span>
                     <span th:if="${req.energyLevel == null}" class="text-secondary">—</span>
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(history)}">
-                <td colspan="6" class="text-center text-light py-4" style="background: #232323;" th:text="#{history.empty}">History is empty.</td>
+                <td colspan="6" class="text-center text-light py-4 s2p-empty-row" th:text="#{history.empty}">History is empty.</td>
             </tr>
             <tr data-nomatch class="d-none">
-                <td colspan="6" class="text-center text-secondary py-3" style="background: #232323;" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
+                <td colspan="6" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
             </tr>
             </tbody>
         </table>

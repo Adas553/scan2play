@@ -18,8 +18,7 @@
 
             <!-- YouTube branding badge — required by YouTube API Terms of Service (Section 4d) -->
             <div th:if="${activeProvider != null and activeProvider.name() == 'YOUTUBE'}"
-                 class="d-inline-flex align-items-center gap-2 mt-2 px-3 py-1 rounded-pill"
-                 style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);">
+                 class="d-inline-flex align-items-center gap-2 mt-2 px-3 py-1 rounded-pill s2p-provider-pill">
                 <!-- Official YouTube "play button" logo (SVG inline — no external dependency) -->
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 20" height="18" aria-label="YouTube" role="img">
                     <rect width="28" height="20" rx="4" fill="#FF0000"/>
@@ -28,7 +27,7 @@
                           font-family="Roboto,Arial,Helvetica,sans-serif"
                           font-size="14" font-weight="bold" fill="white">YouTube</text>
                 </svg>
-                <span style="font-size: 0.72rem; color: #999; letter-spacing: 0.03em;">Powered by YouTube</span>
+                <span class="s2p-powered-by">Powered by YouTube</span>
             </div>
         </div>
 
@@ -42,11 +41,11 @@
             <!-- Hidden Party Code Input -->
             <input type="hidden" name="partyCode" th:value="${partyCode}" />
 
-            <!--/* What the guest asks for: a specific song (the default) or a mood. The AI gets a prompt for each, so it no longer
-                 guesses which one a request is (it took a line of lyrics for a mood). A mood sent as a song comes back here with
+            <!--/* What the guest asks for: a specific song (the default) or a mood. The AI gets a prompt for each, so it does not
+                 guess which one a request is (a guess can take a line of lyrics for a mood). A mood sent as a song comes back here with
                  its text and the mood mode chosen (lastRequest, suggestedMode). */-->
-            <!--/* Two tiles, not a segmented bar: a guest who sees the page for the first time has to notice there is a choice (the
-                 owner's report). The question above them, a line under each title, the chosen one green with a ✓. */-->
+            <!--/* Two tiles, not a segmented bar: a guest who sees the page for the first time has to notice there is a choice. The
+                 question above them, a line under each title, the chosen one green with a ✓. */-->
             <div class="mb-4" role="radiogroup" aria-labelledby="requestModeLabel">
                 <div id="requestModeLabel" class="form-label fw-bold" th:text="#{home.form.mode.label}">What are you asking for?</div>
                 <div class="d-flex flex-column flex-sm-row gap-2">
@@ -104,7 +103,7 @@
 
     <!--/* The music as a guest sees it (GuestQueueService): where the guest's own song waits, what plays now, and the next guest
          songs in the order they play — the guest's own marked. */-->
-    <div id="guestQueueBox" class="w-100" style="max-width: 500px;"
+    <div id="guestQueueBox" class="w-100 s2p-mw-500"
          th:attr="data-url=@{/p/{code}/queue(code=${partyCode})}">
         <div th:replace="~{fragments/guest-queue :: guestQueue}"></div>
     </div>

@@ -42,7 +42,6 @@
 
     // -------------------------------------------------------------------------
     // Module-level debounce utility — standard pattern with own timer closure.
-    // Fix: previously defined inside createInstance and mutated outer-scope state.
     // -------------------------------------------------------------------------
     function debounce(fn, ms) {
         let timer = null;
@@ -76,8 +75,7 @@
 
         // --- Build dropdown element and append into input's wrapper ---
         function buildDropdown() {
-            // Fix: removed redundant wrapper.style.position = 'relative' —
-            // already handled by .song-autocomplete-wrapper CSS class.
+            // the wrapper is positioned by the .song-autocomplete-wrapper class
             dropdown = document.createElement('div');
             dropdown.id        = dropdownId;
             dropdown.className = 'song-autocomplete-dropdown';
@@ -103,7 +101,6 @@
             url.searchParams.set('limit',  String(MAX_RESULTS));
 
             try {
-                // Fix: fetch() accepts URL objects natively — .toString() is redundant
                 const response = await fetch(url, { signal: currentController.signal });
                 if (!response.ok) return [];
                 const data = await response.json();
@@ -136,7 +133,6 @@
                 item.className = 'song-autocomplete-item';
                 item.setAttribute('role',       'option');
                 item.setAttribute('data-label', label);
-                // Fix: removed unused data-index attribute (dead code)
 
                 item.innerHTML =
                     `<span class="ac-artist">${escapeHtml(artist)}</span>` +
@@ -222,7 +218,7 @@
         }, DEBOUNCE_MS);
 
         // --- Close on outside click/touch ---
-        // Fix: store reference so it can be removed when input is removed from DOM.
+        // a named function, so that it can be removed when the input leaves the page
         function onDocumentClick(e) {
             if (dropdown && !dropdown.contains(e.target) && e.target !== input) {
                 closeDropdown();

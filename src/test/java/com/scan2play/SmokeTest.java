@@ -52,6 +52,10 @@ class SmokeTest {
                 // no 'unsafe-inline' for scripts: the pages have no inline script and no inline handler
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString(
                         "script-src 'self' https://cdn.jsdelivr.net https://www.youtube.com https://s.ytimg.com;")))
+                // and none for styles: the templates have no style="…" (NoInlineCodeInTemplatesTest)
+                .andExpect(header().string("Content-Security-Policy-Report-Only", containsString(
+                        "style-src 'self' https://cdn.jsdelivr.net;")))
+                .andExpect(header().string("Content-Security-Policy-Report-Only", not(containsString("'unsafe-inline'"))))
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString("object-src 'none'")))
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString("report-uri /csp-report")))
                 .andExpect(header().doesNotExist("Content-Security-Policy"));

@@ -50,6 +50,14 @@ class FallbackQueueFragmentTest {
         return engine.process("fragments/fallback-queue", context);
     }
 
+    private static String appCss() {
+        try (var in = FallbackQueueFragmentTest.class.getResourceAsStream("/static/css/app.css")) {
+            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+    }
+
     private static FallbackQueueView queue(boolean shuffle, long remaining, Track... tracks) {
         return new FallbackQueueView(true, shuffle, false, remaining, List.of(tracks));
     }
@@ -78,7 +86,8 @@ class FallbackQueueFragmentTest {
 
         String html = render(queue(true, 500, many), Locale.ENGLISH);
 
-        assertThat(html).contains("max-height: 17rem").contains("overflow-y: auto");
+        assertThat(html).contains("s2p-up-next-list");                // the class of app.css: fixed height, own scrollbar
+        assertThat(appCss()).containsPattern("[.]s2p-up-next-list +[{][^}]*max-height: 17rem[^}]*overflow-y: auto");
         assertThat(html.split("<li", -1)).hasSize(501);          // every one of the 500 tracks is in the list
         assertThat(html).contains("Song 0", "Song 499");
     }
@@ -232,7 +241,8 @@ class FallbackQueueFragmentTest {
     void shouldPrepareTheListForDragging() {
         String html = render(queue(false, 1, new Track(1L, "aaaaaaaaaaa", "Song")), Locale.ENGLISH);
 
-        assertThat(html).contains("cursor: grab", "user-select: none", "-webkit-touch-callout: none");
+        assertThat(html).contains("s2p-up-next-list");
+        assertThat(appCss()).contains("cursor: grab !important", "user-select: none !important", "-webkit-touch-callout: none !important");
     }
 
     @Test
@@ -307,7 +317,8 @@ class FallbackQueueFragmentTest {
                 new Track(2L, "bbbbbbbbbbb", "The second song")), Locale.ENGLISH);
 
         assertThat(count(html, "d-flex flex-wrap align-items-center gap-2")).as("every row may wrap").isEqualTo(2);
-        assertThat(count(html, "flex: 1 1 10rem")).as("every title keeps its room").isEqualTo(2);
+        assertThat(count(html, "s2p-up-next-title")).as("every title keeps its room").isEqualTo(2);
+        assertThat(appCss()).contains("flex: 1 1 10rem !important");
         assertThat(count(html, "flex-shrink-0 ms-auto")).as("every row has one group of controls that moves as a whole").isEqualTo(2);
         // in the first row: the title, then the group with the badge, the link and the buttons (skip last)
         int title = html.indexOf("A rather long title");

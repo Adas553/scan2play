@@ -498,3 +498,31 @@ th[data-sort].sort-desc::after {
 .text-light-custom     { color: #f8f9fa !important; }
 .text-secondary-bright { color: #cfcfcf !important; }
 
+/* --- Classes instead of style="…" in the templates (the CSP allows no inline style). !important: they stand for inline styles,
+       which win over Bootstrap's rules. --- */
+.s2p-mw-350          { max-width: 350px !important; }
+.s2p-mw-500          { max-width: 500px !important; }
+.s2p-mw-800          { max-width: 800px !important; }
+.s2p-z-10            { z-index: 10 !important; }
+.s2p-z-toast         { z-index: 1090 !important; }
+.s2p-text-spotify    { color: #1DB954 !important; }
+.s2p-text-youtube    { color: #FF0000 !important; }
+.s2p-dashboard-qr    { max-width: 200px !important; height: auto !important; }
+.s2p-player-column   { flex-basis: 400px !important; max-width: 640px !important; }
+.s2p-side-column     { flex-basis: 300px !important; max-width: 640px !important; }
+.s2p-list-search     { max-width: 16rem !important; }
+.s2p-decision-icon   { font-size: 1.2rem !important; }
+.s2p-comment-cell    { min-width: 200px !important; }
+.s2p-empty-row       { background: #232323 !important; }
+.s2p-link-small      { font-size: 0.7rem !important; }
+.s2p-provider-pill   { background: rgba(255, 255, 255, 0.06) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; }
+.s2p-powered-by      { font-size: 0.72rem !important; color: #999 !important; letter-spacing: 0.03em !important; }
+.s2p-hint            { color: #adb5bd !important; }
+.s2p-hint-note       { font-size: 0.8rem !important; max-width: 260px !important; margin-inline: auto !important; }
+.s2p-alert-closed    { background-color: #2b2000 !important; color: #ffca2c !important; }
+.s2p-btn-muted       { color: #6c757d !important; border: 1px solid #6c757d !important; }
+.s2p-footer          { color: #6c757d !important; font-size: 0.85rem !important; }
+/* the "up next" list: a fixed height with its own scrollbar (up to 500 tracks); dragged rows, no text selection */
+.s2p-up-next-list    { max-height: 17rem !important; overflow-y: auto !important; cursor: grab !important; user-select: none !important;
+                       -webkit-user-select: none !important; -webkit-touch-callout: none !important; }
+.s2p-up-next-title   { flex: 1 1 10rem !important; min-width: 0 !important; }
