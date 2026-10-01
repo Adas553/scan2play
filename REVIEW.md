@@ -519,3 +519,26 @@ Do tego (zgłoszenie właściciela): zamknięcie / wznowienie imprezy w jednym o
 każdej odpowiedzi pollu kolejki (scenariusz `party-closed-elsewhere`, czerwony przed).
 
 Testy jednostkowe: **536** (535 uruchomionych, 1 pominięty), IT: **24**, scenariusze: **59/59** — wszystko zielone w kopiach repo.
+
+**Szósta paczka — 7.1 (druga połowa), 5.5, Dependabot (6.4), 2.3, jedno źródło ID filmu (3.5); 2026-10-01, sprawdzone przez właściciela,
+zacommitowane i wypchnięte:**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 7.1 | `PROJECT_CONTEXT.md` skrócony do stanu bieżącego: 1809 → ~570 linii, 194 → ~43 KB (numery sekcji bez zmian — kod się do nich odwołuje); całość słowo w słowo w `docs/history/project-context-2026-10-01.md`. Przy okazji poprawione nieaktualne rzeczy (model `gemini-2.5-flash-lite` w tabeli właściwości, `DB_PASSWORD` zamiast `PG*`, graf zależności). | dokumenty, `CLAUDE.md` | — |
+| 5.5 | `application.properties` bez domyślnego użytkownika i hasła bazy (`${PGUSER}`, `${PGPASSWORD}`) — bez nich aplikacja nie wystartuje; `postgres` / `1111` w nowym `application-local.properties` (profil `local`). Railway ma `PGUSER` / `PGPASSWORD` (sprawdzone przez konektor — tylko nazwy). **Właściciel: w IntelliJ Active profiles = `local`.** | `application*.properties`, `CLAUDE.md`, README testów | `DatabaseCredentialsTest` 2 |
+| 6.4 | Dependabot tylko dla poprawek bezpieczeństwa (`.github/dependabot.yml`, `open-pull-requests-limit: 0` dla Maven i GitHub Actions). Działa z gałęzi domyślnej (`main`) i po włączeniu „Dependabot alerts / security updates” w ustawieniach repozytorium. | `.github/dependabot.yml` | — |
+| 2.3 | Sesje HTTP w PostgreSQL (`spring-boot-starter-session-jdbc`, `V11` = schemat Spring Session słowo w słowo, `initialize-schema=never`): deploy nie wylogowuje DJ-ów. Limit gościa (z 4.1) przeniesiony z sesji do pamięci po id sesji (Caffeine, atomowe `compute`) — z sesjami w bazie każde żądanie ma własną kopię sesji i równoległe prośby jednego gościa przeszłyby wszystkie. | `pom.xml`, `V11__spring_session.sql`, `application.properties`, `GuestSessionService` | `SessionStoreIT` 2 (logowanie DJ-a, kod imprezy, token CSRF i lista gościa przeżywają zapis i odczyt przez drugie repozytorium; sprzątanie wygasłych), `GuestSessionServiceTest` +1 (16 równoległych żądań z kopiami jednej sesji → 2 przechodzą — **czerwony na starym kodzie**: przechodziło więcej) |
+| 1.8 | Czas ze strefą: wszystkie kolumny czasu `timestamptz` (`V12`; stare wartości czytane w strefie sesji = strefie JVM, która je zapisała — lokalnie czas polski, na Railway UTC), w Javie `Instant` zamiast `LocalDateTime` (22 klasy), wyświetlanie zawsze w czasie polskim (`util/Times`; `data-val` do sortowania — stała szerokość, UTC). Godzina, która się powtarza przy zmianie czasu, nie miesza już historii ani ⏮; na produkcji historia nie pokaże już godzin UTC. | encje, repozytoria, serwisy, `dashboard.html`, `history.html`, `V12__timestamps_with_time_zone.sql`, `Times` | `TimestampMigrationIT` (V11 → wiersze po staremu → V12: te same chwile; **czerwony**, gdy migracja czyta stare wartości jako UTC), `HistoryFragmentTest` (20:05 w Warszawie = 18:05Z), testy przestawione na `Instant` |
+| 3.5 | Jedno źródło ID filmu: serwer daje `data-video-id` wierszowi kolejki i jego linkowi ▶ (`YouTubeUrls.extractVideoId`); `youtube-autopilot.js` i `polling.js` nie parsują już URL-i. | `dashboard.html`, `youtube-autopilot.js`, `polling.js`, stand-in `server.py` | `DashboardQueueFragmentTest` +1 (**czerwony przed**), scenariusz `play-link-plays-the-servers-video` |
+
+**Nie zrobione, do decyzji:** 2.5 (import w tle — rzadki przypadek
+imprezy > 29 dni), 6.3 (przepisanie testów kolejki — zachowanie pokrywają już `FallbackQueueIT`), 3.4. Zauważone przy okazji:
+`SPRING_JPA_HIBERNATE_DDL_AUTO` ustawione na Railway — sprawdzić, że to `validate` (albo usunąć) przed wdrożeniem.
+
+Do tego (pytanie właściciela): **▶ przy piosence gościa w kolejce** grał ją, ale jej nie potwierdzał — zostawała w kolejce, a po jej
+końcu Auto-Pilot podawał tę samą piosenkę drugi raz. Teraz ▶ = „zagraj imprezie”: potwierdzona jako zagrana, znika z kolejki; obok
+**↗** = tylko podgląd na YouTube w nowej karcie (nowe teksty `dashboard.queue.play` / `.open`). Scenariusz
+`play-link-plays-the-servers-video` rozszerzony — **czerwony przed** (brak potwierdzenia); `DashboardQueueFragmentTest`.
+
+Testy jednostkowe: **540** (539 uruchomionych, 1 pominięty), IT: **27**, scenariusze: **60/60** — wszystko zielone w kopiach repo.

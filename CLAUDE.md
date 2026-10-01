@@ -4,8 +4,9 @@
 
 ## Read first
 
-- `PROJECT_CONTEXT.md` — architecture, domain model, endpoints. **Section 14** is the "Master Queue" roadmap
-  with a stage table (which stage is done, what is next); Section 10 covers Flyway migrations.
+- `PROJECT_CONTEXT.md` — architecture, domain model, endpoints, as they are now (~550 lines); Section 5.4 is the YouTube
+  player, Section 10 Flyway migrations and the deploy checklist. Keep it to what is true now: the history (decisions, reports,
+  how things were verified) goes to `docs/history/` — `project-context-2026-10-01.md` is the long version, word for word.
 - `SESSION_HANDOFF.md` — the current state of the work, the next step and open items.
 
 ## Working agreements (the project owner's preferences)
@@ -18,8 +19,8 @@
   `-Dtest` replaces surefire's own name patterns, so the `*IT` database tests must be excluded by name — without it they are
   skipped anyway, outside failsafe, and counted as skipped).
 - **Never touch the developer's own database `scan2play`** (read-only inspection is fine). For anything that writes,
-  create a throwaway `s2p_*` database in the local PostgreSQL (defaults from `application.properties`: user
-  `postgres`, password `1111`) and drop it afterwards.
+  create a throwaway `s2p_*` database in the local PostgreSQL (user `postgres`, password `1111` — the
+  defaults of `application-local.properties`, the profile `local`) and drop it afterwards.
 - **Line endings:** some files are committed with CRLF (`PROJECT_CONTEXT.md`, `AGENTS.md`), `core.autocrlf=true`.
   Edit with the Edit tool; do not use `sed -i` (it converts CRLF to LF and turns the diff into a whole-file rewrite).
   After a scripted edit check `git ls-files --eol <file>` and `git diff --stat`.

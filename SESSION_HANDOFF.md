@@ -6,7 +6,31 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `46d1ba4` (2026-10-01). Check with `git status -sb` and `git log --oneline -8`.
+- **Branch `dev`**, pushed up to `9b86aca` (2026-10-01). Check with `git status -sb` and `git log --oneline -8`.
+- **Committed and pushed (2026-10-01, tried by the owner) — the sixth package** (`REVIEW.md`, "Szósta paczka"; the owner's
+  order: 7.1, 5.5, Dependabot, 2.3, then the small items):
+  - **7.1:** `PROJECT_CONTEXT.md` cut to the present (~570 lines instead of 1809; section numbers kept); the long version word for
+    word in `docs/history/project-context-2026-10-01.md`.
+  - **5.5 — ACTION BEFORE THE NEXT BUILD IN INTELLIJ:** `application.properties` has no default DB user / password any more; the
+    local ones are in `application-local.properties`. **Set the run configuration's *Active profiles* to `local`** (or
+    `SPRING_PROFILES_ACTIVE=local`) — otherwise the app does not start (`Could not resolve placeholder 'PGUSER'`). Railway has
+    `PGUSER` / `PGPASSWORD` (names checked through the connector).
+  - **2.3:** HTTP sessions in PostgreSQL (Spring Session JDBC, migration **`V11`** — the next start in IntelliJ applies it to the
+    local `scan2play` database: two new tables, no data touched). A restart or a deploy keeps the DJ logged in. The guest's own
+    limit is now counted in memory by the session id (with JDBC sessions each request has its own copy of the session).
+  - **Dependabot** (`.github/dependabot.yml`): security fixes only. Works from `main` and after "Dependabot alerts" and "Dependabot
+    security updates" are switched on in GitHub → Settings → Code security.
+  - **3.5:** the video id comes from the server (`data-video-id`); the scripts parse no URL.
+  - **1.8 (the owner: "zrób to"):** every time column is `timestamptz` (migration **`V12`** — the next start converts the local
+    database's columns; the old values are read as Polish time, the zone they were written in), `Instant` in the code, the pages show
+    Polish time (`util/Times`). Production's history will no longer show UTC times.
+  - **▶ on a guest song of the queue** (the owner's question): it now counts as played and leaves the queue — before, it stayed and
+    Auto-Pilot played it again when it ended; **↗** beside it only opens YouTube in a new tab (a preview).
+  - The owner has set *Active profiles: local* in IntelliJ and ran the app: the queue shows Polish time (1.8 works).
+  - 540 unit tests, 27 database tests, 60 browser scenarios — green in copies of the repo. To try: restart the app in IntelliJ with
+    the dashboard open — it stays logged in; ▶ on a queue row; a guest's limit (e.g. 2 requests, the third refused).
+  - **Seen on Railway:** `SPRING_JPA_HIBERNATE_DDL_AUTO` is set — check it is `validate` (or remove it) before the next deploy.
+  - **Not done, the owner decides:** 2.5, 6.3 (`REVIEW.md` says why), 3.4.
 - **Committed and pushed (2026-10-01):** the fifth package of the review (`REVIEW.md`, "Piąta paczka") — 2.4
   `next-track` takes a free player lease (`PlayerLeaseService.claimToPlay`; a waiting command is kept), 1.7 a collision-free queue
   lock key (the party code in base 36), 2.6 `FallbackQueueService.currentPlaylist`, 3.5 `encodeURIComponent` in the poll, 6.4
@@ -21,7 +45,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   2026-10-01") — the CSP (report-only), the rejected song without a name, 4.6, 5.4, 1.6, 1.9 and tests of `SongEvaluationService`.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs`; logs need a
   GitHub login, but failed tests are written as public **annotations**: `.../check-runs/<id>/annotations`): three workflows —
-  Unit tests, Browser tests, Database tests. All three green for `46d1ba4` (2026-10-01). Unit tests now also check that the
+  Unit tests, Browser tests, Database tests. All three green for `9b86aca` (2026-10-01). Unit tests now also check that the
   Copilot copy of `AGENTS.md` matches it.
 - **Printing the QR code — tried by the owner ("działa"), COMMITTED and PUSHED (2026-10-01)** (the owner's wish, 2026-10-01: "zrób oba warianty, dwujęzyczna"): a "🖨" link
   under the dashboard's QR code opens `GET /dj/qr-print` in a new tab — `layout=poster` (one A4 poster, default) or `cards` (eight
@@ -84,13 +108,13 @@ and files: `REVIEW.md`, "Czwarta paczka".
 
 ## Next (the owner picks)
 
-1. After the push of the fifth package, look at the three workflows (the Unit tests one has a new step).
+1. After the push of the sixth package, look at the three workflows (V11 and V12 run in the Database tests).
 2. **CSP step 3:** `CSP_ENFORCE=true` once the reports are quiet; then, optionally, the `style="…"` attributes as classes (drops
    `'unsafe-inline'` for styles) and Bootstrap from the app instead of the CDN.
-3. From `REVIEW.md`: **2.3** single instance (Spring Session JDBC would keep DJs logged in across a deploy — a separate decision);
-   **5.5** (needs the `local` profile in IntelliJ); the small N items left (1.8, 2.5, 3.4, 4.7, 5.3, 6.3, 7.2; what remains of
-   3.5 — one source of a video's id —, 6.4 — Dependabot (it would open PRs: the owner decides), JaCoCo — and 7.3); **6.2** rest: `QrCodeService`, `FeedbackController`, Spotify (left for now — the owner).
-4. `PROJECT_CONTEXT.md` (~1800 lines) — the other half of 7.1, a separate edit.
+3. **Before the next deploy:** the checklist of `PROJECT_CONTEXT.md` Section 10 (V2..V12 at once), `SPRING_JPA_HIBERNATE_DDL_AUTO` on
+   Railway, and `dev` → `main` (Dependabot starts working then).
+4. From `REVIEW.md`, the owner decides: **3.4** a hidden window polls less, 2.5, 4.7, 5.3, 6.3, 7.2, JaCoCo, the
+   rest of 7.3; **6.2** rest: `QrCodeService`, `FeedbackController`, Spotify (left for now — the owner).
 
 ## The first half of 2026-10-01 (committed and pushed)
 
