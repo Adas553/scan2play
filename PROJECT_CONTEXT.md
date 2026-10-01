@@ -371,8 +371,9 @@ Public: `/`, `/p/**`, `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`
 /dj/logout`. `th:utext` only for texts of our own bundles; titles from YouTube / iTunes are escaped.
 
 **Content-Security-Policy** (`SecurityConfig.CONTENT_SECURITY_POLICY`): scripts from the app, `cdn.jsdelivr.net` (Bootstrap) and
-YouTube (`www.youtube.com`, `s.ytimg.com`) — **no `'unsafe-inline'` for scripts**; styles also inline (`style="…"` attributes
-remain); images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; frames only YouTube; `object-src 'none'`,
+YouTube (`www.youtube.com`, `s.ytimg.com`), styles from the app and `cdn.jsdelivr.net` — **no `'unsafe-inline'` at all**: no
+inline script, no `on…=` handler, no `style="…"` (the templates use `s2p-…` classes of `app.css`; scripts change styles through
+`element.style`, which the policy allows), checked over every template by `NoInlineCodeInTemplatesTest`; images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; frames only YouTube; `object-src 'none'`,
 `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only** while
 `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. Switch it on once real use
 leaves the log quiet. The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced (Section
@@ -531,7 +532,7 @@ GuestQueueService          → DjService, PlayHistoryService
 
 ### Security
 - Spotify tokens in plain text in the database (review 5.3).
-- The CSP is report-only until switched on; inline styles stay allowed until the `style="…"` attributes become classes.
+- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on); Bootstrap still comes from its CDN.
 - `REVIEW.md` lists what else is open.
 
 ### Front end
@@ -539,7 +540,7 @@ GuestQueueService          → DjService, PlayHistoryService
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 546, 1 skipped (the fixture recorder,
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 547, 1 skipped (the fixture recorder,
   `PlayLogFixtureRecorderTest`, runs only with `S2P_FIXTURE_OUT` and a throw-away `s2p_*` database). Pure Mockito, plus template
   rendering with the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest`
   with the real security chain).

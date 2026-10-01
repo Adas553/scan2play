@@ -544,7 +544,7 @@ końcu Auto-Pilot podawał tę samą piosenkę drugi raz. Teraz ▶ = „zagraj 
 Testy jednostkowe: **540** (539 uruchomionych, 1 pominięty), IT: **27**, scenariusze: **60/60** — wszystko zielone w kopiach repo.
 
 **Siódma paczka — 5.1 (krok 3: sprawdzenie przed egzekwowaniem), 6.2 (reszta poza Spotify), przygotowanie wdrożenia; 2026-10-01,
-NIEZACOMMITOWANE (do przejrzenia):**
+sprawdzone przez właściciela, zacommitowane (`39c92e3`, `96f8221`) i wypchnięte; CI zielone:**
 
 | # | Co zmieniono | Pliki | Testy |
 |---|--------------|-------|-------|
@@ -562,3 +562,13 @@ polityka bez zmian.
 Testy jednostkowe: **546** (545 uruchomionych, 1 pominięty), scenariusze: **67/67**. Testy na bazie bez zmian (SQL nieruszany).
 `CSP_ENFORCE=true` lokalnie — ustawione przez właściciela w IntelliJ. **Nie zrobione:** 3.4, 2.5, 6.3 (powody w
 `SESSION_HANDOFF.md`).
+
+**Ósma paczka — 5.1 (ostatni krok: style), 7.2, favicon; 2026-10-01, NIEZACOMMITOWANE (do przejrzenia):**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 5.1 | CSP bez `'unsafe-inline'` także dla stylów: 34 `style="…"` / `th:style` w 10 szablonach → klasy `s2p-…` na końcu `app.css` (z `!important`, bo styl inline wygrywał z Bootstrapem — wygląd bez zmian, zmierzony w oknie 1280 px z prawdziwym Bootstrapem); `#history-content` przełączany atrybutem `hidden` (`tabs.js`). Zmiany przez `element.style` (CSSOM) polityka dopuszcza. | `SecurityConfig`, `app.css`, 10 szablonów, `tabs.js` | najpierw zaostrzona polityka → scenariusze dashboardu i strony gościa **czerwone**; potem zielone 67/67. Nowy `NoInlineCodeInTemplatesTest` (wszystkie szablony, także strona startowa, prawne i błędów) — **czerwony na starych szablonach**; `SmokeTest`: brak `'unsafe-inline'`; `FallbackQueueFragmentTest` sprawdza klasy i reguły `app.css`; scenariusze `tabs` / `history-tab` sprawdzają widoczność (`getComputedStyle`) zamiast `style.display` |
+| 7.2 | Komentarze: powód zostaje, „kto / kiedy / co było wcześniej” wyrzucone (~25 miejsc: Java, JS, szablony, `application.properties`; komentarze „Fix: …” w `song-autocomplete.js`). Migracje nietknięte (sumy kontrolne Flyway). Długi nagłówek `youtube-autopilot.js` zostaje — opisuje działanie, nie historię. | różne | bez zmian zachowania: 547 / 67 zielone |
+| — | `static/favicon.ico` (16/32/48 px) — koniec 404 w konsoli. | `static/` | — |
+
+Testy jednostkowe: **547** (546 uruchomionych, 1 pominięty), scenariusze: **67/67**. **5.1 i 7.2 — zamknięte.**

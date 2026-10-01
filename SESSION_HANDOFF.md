@@ -6,9 +6,23 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `1854802` (2026-10-01; all three workflows green for it). Check with `git status -sb` and
+- **Branch `dev`**, pushed up to `96f8221` (2026-10-01; all three workflows green for it). Check with `git status -sb` and
   `git log --oneline -8`.
-- **UNCOMMITTED (2026-10-01, for review in IntelliJ) — the seventh package** (`REVIEW.md`, "Siódma paczka"):
+- **UNCOMMITTED (2026-10-01, for review in IntelliJ) — the eighth package** (`REVIEW.md`, "Ósma paczka"; the owner: "zrób 2 i 7.2"):
+  - **The CSP without `'unsafe-inline'` for styles (5.1, the last step):** the 34 `style="…"` / `th:style` of 10 templates are
+    `s2p-…` classes at the end of `app.css` (`!important`, as an inline style beat Bootstrap — the look is the same: measured in a
+    1280 px window with the real Bootstrap); `#history-content` is shown / hidden by `hidden` (`tabs.js`), not `style.display`.
+    Red first: the browser tests under the stricter policy failed everywhere on the dashboard and the guest page; green after.
+    `NoInlineCodeInTemplatesTest` checks every template (also the landing, legal and error pages no browser test opens) — red on
+    the old templates. `SmokeTest`: no `'unsafe-inline'` in the header.
+  - **7.2:** comments keep the reason, not who asked / when / what the code did before (about 25 places in Java, JS, templates,
+    `application.properties`; the migrations untouched — Flyway checksums). The long header of `youtube-autopilot.js` stays: it
+    says how the player works, not its history.
+  - **A favicon** (`static/favicon.ico`, 16 / 32 / 48 px: a light play triangle on a dark rounded square) — the 404 is gone.
+  - **To look at in IntelliJ / the browser:** the dashboard, the guest page, the landing page and the legal pages look as before;
+    with `CSP_ENFORCE=true` F12 shows no "style-src" errors (only DevTools' `*.map`).
+  - 547 unit tests, 67 browser scenarios — green in copies of the repo.
+- **Committed and pushed (`39c92e3`, `96f8221`, 2026-10-01) — the seventh package** (`REVIEW.md`, "Siódma paczka"):
   - **CSP step 3, the check before enforcing:** the browser tests run under the real policy, **enforced** (`csp.txt` written by
     `DashboardPageRenderTest` from `SecurityConfig.CONTENT_SECURITY_POLICY`, now `public`; `harness.js` fails every scenario on a
     `securitypolicyviolation`), and the guest page and the QR print page have scenarios of their own (`scenarios/csp.js`; `run.py`
@@ -136,15 +150,15 @@ and files: `REVIEW.md`, "Czwarta paczka".
 
 ## Next (the owner picks)
 
-1. Review and commit the seventh package; after the push, look at the three workflows (Browser tests now has 67 scenarios).
-2. **CSP:** `CSP_ENFORCE=true` locally (IntelliJ), the guest page on a phone and the history page by hand; then, optionally, the
-   `style="…"` attributes as classes (drops `'unsafe-inline'` for styles) and Bootstrap from the app instead of the CDN.
-3. **Go-live** (the owner decides when): start the paused Postgres on Railway, back it up, `pg_dump --schema-only` compared with
-   `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log (Flyway V2..V12,
-   Hibernate validation); Dependabot switched on in GitHub.
-4. From `REVIEW.md`: **3.4** (a hidden window polls less — the gain is small with one DJ, and the window that plays must not slow
-   down: worth it only if the server load or a phone's battery shows it), 2.5 (an import inside `next-track`, only for a party older
-   than 29 days), 6.3 (only together with a change of the queue), 4.7 / 5.3 (Spotify), 7.2, JaCoCo, the rest of 7.3.
+1. Review and commit the eighth package; after the push, look at the three workflows.
+2. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
+   compared with `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
+   (Flyway V2..V12, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
+3. **A product idea talked over (2026-10-01):** wedding DJs play from their own software, not YouTube — a "requests only" mode
+   (the guest page, the AI, the queue on the DJ's phone, no player) would fit them; the owner has not decided.
+4. From `REVIEW.md`: **3.4** (a hidden window polls less — small gain with one DJ), 2.5 (an import inside `next-track`, only for a
+   party older than 29 days), 6.3 (only together with a change of the queue), 4.7 / 5.3 (Spotify), JaCoCo, the rest of 7.3,
+   Bootstrap from the app instead of the CDN.
 
 ## The first half of 2026-10-01 (committed and pushed)
 
