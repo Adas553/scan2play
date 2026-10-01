@@ -1,6 +1,7 @@
 # Browser tests of the DJ dashboard
 
-The real `youtube-autopilot.js` and `dashboard.js`, running on the **real rendered `dashboard.html`** in a headless Chrome, against a
+The real `youtube-autopilot.js` and the dashboard's modules (`js/dashboard/*.js`, once one `dashboard.js` — older notes in the
+scenarios still name it), running on the **real rendered `dashboard.html`** in a headless Chrome, against a
 small stand-in for the server and a fake YouTube player. No Node, no new dependency — Python 3 (standard library only), the Java that
 `mvnw` uses, and Chrome or Edge.
 

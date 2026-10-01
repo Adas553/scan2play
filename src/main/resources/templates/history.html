@@ -133,14 +133,8 @@
     </div>
 </div>
 
-<!-- Reuse dashboard.js for sorting support on history page -->
-<script src="/js/dashboard.js"></script>
-<script>
-    // Init sort headers on the history table (dashboard.js exposes initSortableHeaders)
-    if (typeof window.initSortableHeaders === 'function') {
-        window.initSortableHeaders(document.querySelector('.table-responsive'));
-    }
-</script>
+<!-- The dashboard's list tools: sorting, search, filters and "Show more" (it sets up the table's headers itself) -->
+<script type="module" src="/js/dashboard/list-tools.js"></script>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 

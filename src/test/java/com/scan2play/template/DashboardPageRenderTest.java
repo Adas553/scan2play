@@ -192,9 +192,13 @@ class DashboardPageRenderTest {
         // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
         assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"search-spent\"", "data-guest-limit=\"party-full\"",
                 "id=\"serverLimitsInfo\"");
-        assertThat(html).contains("/js/dashboard.js", "/js/youtube-autopilot.js");
-        assertThat(html.indexOf("/js/dashboard.js")).as("dashboard.js goes before youtube-autopilot.js")
+        // the scripts are ES modules (REVIEW.md 3.3): main.js imports the dashboard's parts, the player comes after it
+        assertThat(html).contains("<script type=\"module\" src=\"/js/dashboard/main.js\">",
+                "<script type=\"module\" src=\"/js/youtube-autopilot.js\">");
+        assertThat(html.indexOf("/js/dashboard/main.js")).as("the dashboard's modules go before the player")
                 .isLessThan(html.indexOf("/js/youtube-autopilot.js"));
+        // no inline handler calls a global function any more: the modules attach their listeners (a step towards a CSP, 5.1)
+        assertThat(html).doesNotContain("submitAutoPilotToggle", "stopFallbackPlaylist", "toggleFallbackShuffle", "copyPartyLink(");
         assertThat(html).doesNotContain("??");   // a message key that no bundle has renders as ??key_pl??
     }
 

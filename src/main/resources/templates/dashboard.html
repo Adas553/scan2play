@@ -61,7 +61,6 @@
                             <input type="hidden" name="partyCode" th:value="${partyCode}">
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" id="autoToggle"
-                                       onchange="submitAutoPilotToggle(this)"
                                        th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
                                 <label class="form-check-label fw-bold" for="autoToggle"
                                        th:style="${activeProvider.name() == 'SPOTIFY' ? 'color: #1DB954' : 'color: #FF0000'}">
@@ -128,7 +127,7 @@
                             th:text="#{dashboard.fallback.save}">Save</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
                             th:classappend="${fallbackPlaylistId == null ? 'd-none' : ''}"
-                            id="fallbackStopBtn" onclick="stopFallbackPlaylist()"
+                            id="fallbackStopBtn"
                             th:text="#{dashboard.fallback.stop}">⏹ Stop</button>
                 </form>
                 <!--/* What came of the import after Save (dashboard.js, showFallbackImportResult): the server answers ok / failed with a reason; the texts travel in data attributes */-->
@@ -138,8 +137,7 @@
                     <input class="form-check-input" type="checkbox" role="switch"
                            id="fallbackShuffleToggle"
                            th:checked="${fallbackShuffle}"
-                           th:attr="data-confirm=#{dashboard.fallback.shuffle.confirm}"
-                           onchange="toggleFallbackShuffle()">
+                           th:attr="data-confirm=#{dashboard.fallback.shuffle.confirm}">
                     <label class="form-check-label text-secondary small" for="fallbackShuffleToggle"
                            th:text="#{dashboard.fallback.shuffle}">🔀 Shuffle</label>
                 </div>
@@ -161,7 +159,7 @@
                     <div class="input-group input-group-sm mb-2">
                         <input type="text" class="form-control bg-dark text-light border-secondary"
                                th:value="${permanentLink}" id="partyLinkInput" readonly>
-                        <button class="btn btn-outline-secondary" type="button" onclick="copyPartyLink()" th:text="#{dashboard.qr.copy}" th:attr="data-copied=#{dashboard.qr.copied}">
+                        <button class="btn btn-outline-secondary" type="button" id="copyPartyLinkBtn" th:text="#{dashboard.qr.copy}" th:attr="data-copied=#{dashboard.qr.copied}">
                             Copy
                         </button>
                     </div>
@@ -311,18 +309,18 @@
     <div id="history-content" style="display: none;"></div>
 </div>
 
-<!-- Screen Wake Lock — keeps display on while Auto-Pilot is running (graceful degradation) -->
+<!-- Screen Wake Lock — keeps display on while Auto-Pilot is running (graceful degradation; follows the s2p:playback-mode event) -->
 <script src="/js/wake-lock.js"></script>
 
-<!-- Dashboard core JS (polling, AJAX forms, tabs, clipboard) -->
-<script src="/js/dashboard.js"></script>
+<!-- Dashboard core JS (polling, AJAX forms, tabs, lists, the background playlist) — ES modules, js/dashboard/main.js imports the rest -->
+<script type="module" src="/js/dashboard/main.js"></script>
 
 <!-- Song Autocomplete — DJ Pick form (iTunes Search API, no backend queries) -->
 <script src="/js/song-autocomplete.js"></script>
 
-<!-- YouTube Auto-Pilot (only loaded for YouTube provider) -->
+<!-- YouTube Auto-Pilot (only loaded for YouTube provider) — a module too, after main.js; they talk through js/dashboard/events.js -->
 <th:block th:if="${activeProvider.name() == 'YOUTUBE'}">
-    <script src="/js/youtube-autopilot.js"></script>
+    <script type="module" src="/js/youtube-autopilot.js"></script>
 </th:block>
 
 <div th:replace="~{fragments/components :: footer}"></div>

@@ -49,8 +49,13 @@
  * actually reaches PLAYING. Background tracks need no confirmation and no error report: a track
  * that fails to play is already PLAYED, so the client just asks for the next one.
  *
- * Exposes: checkYouTubeAutoPlay, playInEmbeddedPlayer, updateFallbackSource, stopFallback, setKnownQueueVersion
+ * A module (dashboard.html loads it after js/dashboard/main.js, a YouTube party only). It talks with the dashboard only through
+ * the events of js/dashboard/events.js — it listens to PLAYBACK_MODE, GUEST_QUEUE_UPDATED, FALLBACK_PLAYLIST_SAVED,
+ * FALLBACK_PLAYLIST_CLEARED and FALLBACK_QUEUE_VERSION, and sends FALLBACK_QUEUE_STALE and PLAYBACK_MODE_REPORTED. The one global it
+ * sets is window.onYouTubeIframeAPIReady, which the YouTube IFrame API calls.
  */
+import { EVENTS, emit, on } from './dashboard/events.js';
+
 (function () {
     'use strict';
 
@@ -341,7 +346,7 @@
         startTrack(guest ? 'GUEST' : 'BACKGROUND', track.videoId,
             { songId: track.id, key: (guest ? 'G:' : 'B:') + track.id, playlistId: track.playlistId });
         // The server has just taken a background track off the queue — let the dashboard show what comes next.
-        if (!guest && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
+        if (!guest) emit(EVENTS.FALLBACK_QUEUE_STALE);
     }
 
     /** Stops a running background track (the DJ changed or cleared the playlist). A guest song keeps playing. */
@@ -541,15 +546,15 @@
 
     // ---- The "up next" list of a window that did not change it itself ----
 
-    /** The list was fetched (dashboard.js) with this version: remember it, so that the next lease answer does not ask for it again. */
-    window.setKnownQueueVersion = function (version) {
-        lastQueueVersion = version;
-    };
+    /** The list was fetched (fallback-queue.js) with this version: remember it, so that the next lease answer does not ask for it again. */
+    on(EVENTS.FALLBACK_QUEUE_VERSION, function (list) {
+        lastQueueVersion = list.version;
+    });
 
     function noteQueueVersion(version) {
         const changedElsewhere = lastQueueVersion !== null && version !== lastQueueVersion;
         lastQueueVersion = version;
-        if (changedElsewhere && typeof window.refreshFallbackQueue === 'function') window.refreshFallbackQueue();
+        if (changedElsewhere) emit(EVENTS.FALLBACK_QUEUE_STALE);
     }
 
     // ---- Next: skip to the next track, from any window ----
@@ -856,7 +861,7 @@
             leaseAppliedSeq = seq;
             // The party's Auto-Pilot setting, one for all windows (dashboard.js) — before applyLease, so that a window that has just
             // become the holder decides with the current value.
-            if (lease.playbackMode && typeof window.applyPlaybackMode === 'function') window.applyPlaybackMode(lease.playbackMode, sentAt);
+            if (lease.playbackMode) emit(EVENTS.PLAYBACK_MODE_REPORTED, { mode: lease.playbackMode, sentAt: sentAt });
             applyLease(lease.holder === true, lease.free === true);
             notePlaylist(lease.fallbackPlaylistId || null, seq);
             if (lease.holder === true) dropStaleBackgroundTrack(lease.fallbackPlaylistId || null, seq);
@@ -935,27 +940,34 @@
 
     leaseLoop();
 
-    // ---- Public API ----
+    // ---- What the dashboard tells the player (js/dashboard/events.js) ----
 
-    window.checkYouTubeAutoPlay = tryAutoPlay;
+    // A poll replaced the guest queue: a song may be waiting.
+    on(EVENTS.GUEST_QUEUE_UPDATED, function () { tryAutoPlay(); });
+
+    // Auto-Pilot was switched on (here or, through a lease answer, on another device): start if the player is idle.
+    on(EVENTS.PLAYBACK_MODE, function (change) {
+        if (change.mode === 'AUTO') tryAutoPlay();
+    });
 
     /**
      * The DJ saved a different background playlist (the server already switched): drop the old track, start from the new one.
      * A track that came back through ⏮ keeps playing, but ⏭ no longer retraces the steps (notePlaylist) — it starts the new playlist.
      */
-    window.updateFallbackSource = function () {
+    on(EVENTS.FALLBACK_PLAYLIST_SAVED, function () {
         endRetrace();
         stopBackgroundTrack();
         tryAutoPlay();
-    };
+    });
 
     /** The DJ cleared the playlist: the running background track stops (a guest song plays on), and ⏭ no longer retraces (notePlaylist). */
-    window.stopFallback = function () {
+    on(EVENTS.FALLBACK_PLAYLIST_CLEARED, function () {
         endRetrace();
         stopBackgroundTrack();
-    };
+    });
 
-    window.playInEmbeddedPlayer = function (trackUrl) {
+    /** ▶ on a song of the lists: plays it here, picked by hand. Returns false when it cannot (the link then opens YouTube). */
+    function playInEmbeddedPlayer(trackUrl) {
         // A window that does not hold the lease must not start sound by a stray tap: the ▶ link then simply opens on YouTube.
         if (isPlayerDevice !== true || !playerReady || !player) return false;
         const videoId = extractVideoId(trackUrl);
@@ -963,17 +975,15 @@
         // Picked by hand: nothing to confirm, not a background track. Auto-Pilot carries on when it ends.
         startTrack('MANUAL', videoId);
         return true;
-    };
+    }
+
+    // ▶ YOUTUBE links play in the embedded player
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest('a.play-link');
+        if (!link) return;
+        const url = link.getAttribute('data-track-url');
+        if (!url || url.indexOf('youtube.com') < 0) return;
+        if (playInEmbeddedPlayer(url)) e.preventDefault();
+    });
 
 })();
-
-// ---- Click handler: ▶ YOUTUBE links play in embedded player ----
-document.addEventListener('click', function (e) {
-    const link = e.target.closest('a.play-link');
-    if (!link) return;
-    const url = link.getAttribute('data-track-url');
-    if (!url || url.indexOf('youtube.com') < 0) return;
-    if (typeof window.playInEmbeddedPlayer === 'function' && window.playInEmbeddedPlayer(url)) {
-        e.preventDefault();
-    }
-});

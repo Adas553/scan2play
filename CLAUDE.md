@@ -38,7 +38,8 @@
   `FallbackTrackRepository` or a migration, run them, and give new queue SQL a test there. When copying the repo to the scratch
   directory, delete its `target/classes`: a copy that keeps the old file times leaves Maven's stale classes in place.
 - **Browser tests** (`src/test/browser`, guide in its `README.md`): `python src/test/browser/run.py` runs the real
-  `youtube-autopilot.js` / `dashboard.js` on the real rendered dashboard in a headless Chrome. It copies the repo to a work directory
+  `youtube-autopilot.js` / `js/dashboard/*.js` (ES modules; they talk through the `s2p:*` events of `js/dashboard/events.js`, never
+  through `window`) on the real rendered dashboard in a headless Chrome. It copies the repo to a work directory
   (`%TEMP%\scan2play-browser-tests`) and runs Maven there — never in the repo — so it is safe while the app runs. `--no-render`
   skips Maven (a quick loop while editing scenarios). A new behaviour of those scripts gets a scenario, seen red before green. The
   fixture of real answers is recorded by `PlayLogFixtureRecorderTest` against a throw-away `s2p_*` database (README).

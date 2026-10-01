@@ -7,20 +7,18 @@
  * as long as Auto-Pilot is still enabled.
  *
  * Graceful degradation: when the Screen Wake Lock API is unavailable (older
- * browsers, non-secure contexts) the module installs silent no-op stubs so the
- * rest of the codebase can call syncWakeLock() unconditionally without guards.
+ * browsers, non-secure contexts) the script does nothing.
  *
- * Public API (attached to window):
- *   syncWakeLock(isAutoPilotOn: boolean) — primary entry point; call after every
- *                                          Auto-Pilot toggle.
+ * It follows the Auto-Pilot switch through the dashboard's event 's2p:playback-mode'
+ * ({mode: 'AUTO'|'MANUAL'}, js/dashboard/events.js, PLAYBACK_MODE) — a classic script,
+ * so it listens by the event's name; nothing calls it.
  */
 (function () {
     'use strict';
 
     // ---- Graceful degradation: API unavailable ----
     if (!('wakeLock' in navigator)) {
-        window.syncWakeLock = function () {};
-        console.info('[WakeLock] Screen Wake Lock API not supported — no-op installed.');
+        console.info('[WakeLock] Screen Wake Lock API not supported — nothing to do.');
         return;
     }
 
@@ -87,22 +85,19 @@
         }
     });
 
-    // ---- Public API ----
+    // ---- Follow the Auto-Pilot switch ----
 
     /**
-     * Syncs wake lock state with the Auto-Pilot toggle.
-     * Call this every time Auto-Pilot is enabled or disabled.
-     *
-     * @param {boolean} autoPilotOn  true → request/keep the lock; false → release it.
+     * Syncs wake lock state with the Auto-Pilot setting: on → request/keep the lock; off → release it.
      */
-    window.syncWakeLock = function (autoPilotOn) {
-        if (autoPilotOn) {
+    document.addEventListener('s2p:playback-mode', function (e) {
+        if (e.detail && e.detail.mode === 'AUTO') {
             desired = true;
             acquire();
         } else {
             release();
         }
-    };
+    });
 
     // ---- Initial sync on page load ----
     // Scripts are placed at the bottom of <body>, so the DOM is fully parsed here.

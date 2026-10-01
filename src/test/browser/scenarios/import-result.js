@@ -46,7 +46,7 @@ S2P.scenario({
 
         await save({ import: 'ok', tracks: 3 });
         t.check('a good import after a failed one replaces the message', box.textContent === box.dataset.textOk.replace('{0}', '3') && box.classList.contains('text-success'));
-        window.stopFallbackPlaylist();   // the real Stop button
+        document.getElementById('fallbackStopBtn').click();   // the real Stop button
         await t.sleep(400);
         t.check('Stop clears the message', !shown() && box.textContent === '');
 

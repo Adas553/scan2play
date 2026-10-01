@@ -68,7 +68,7 @@
         run: async function (t) {
             await wentBackTwice(t);
             await t.stand.config({ nextTracks: [guest()] });   // what next-track has for a party without a playlist: a guest song
-            window.stopFallbackPlaylist();                      // the real Stop button of the page
+            document.getElementById('fallbackStopBtn').click(); // the real Stop button of the page
             await t.sleep(700);
             t.step('the playlist was cleared (POST fallback-playlist)', await t.stand.count('POST /dj/dashboard/fallback-playlist'), 1);
             await nextAsksAtOnce(t, 'g', 'plays the waiting guest song at once (not B)');

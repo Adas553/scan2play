@@ -54,7 +54,9 @@ class SmokeTest {
     @Test
     @DisplayName("Static JS asset is accessible")
     void staticJs_shouldBeAccessible() throws Exception {
-        mockMvc.perform(get("/js/dashboard.js"))
+        mockMvc.perform(get("/js/dashboard/main.js"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/js/dashboard/events.js"))   // a module imported by the others
                 .andExpect(status().isOk());
     }
 
