@@ -26,7 +26,18 @@ not even the queue with Auto-Pilot on — until "resume" (the note is `{key, pau
 green now; three old resume scenarios got the note. Not covered by a scenario: "resume" pressed on the phone while the computer is
 held (it goes through the same `resumeHere` as a command). Docs: `PROJECT_CONTEXT.md` 5.4 and 13, the browser README. The owner tried it: "działa bardzo dobrze".
 
-**UNCOMMITTED too, on top of it — review 3.2, stage 1 (on "możesz robić 3.2/3.3"):** the track in the player is one object
+**COMMITTED (not pushed) on "działa, commituj":** the resume (`e4b002f`), 3.2 (`063464f`), docs (`b8a1d30`).
+
+**Review 3.3, stage 2 — tried by the owner (YouTube dashboard: no errors in the console; the standalone history page works), COMMITTED and PUSHED:** `dashboard.js` is gone; the dashboard's
+script is ES modules in `js/dashboard/` (`main.js` imports `list-tools.js`, `fallback-queue.js`, `forms.js`, `tabs.js`,
+`polling.js`; `common.js`; `events.js` = the 7 `s2p:*` events between the dashboard and the player). `youtube-autopilot.js` is a
+module talking only through those events (its one global: `window.onYouTubeIframeAPIReady`). `wake-lock.js` listens to
+`s2p:playback-mode`. `history.html` loads `list-tools.js` alone (no inline script). The inline `onclick` / `onchange` of
+`dashboard.html` are gone (`copyPartyLinkBtn` got an id). 56/56 scenarios, 513 unit tests. **Not covered by tests — try by hand:**
+the standalone history page (sort, filters, "Show more") and the dashboard of a Spotify party (Auto-Pilot switch reloads, queue
+poll). Two scenarios click the Stop button instead of calling `window.stopFallbackPlaylist()`.
+
+**Earlier (committed, see above) — review 3.2, stage 1 (on "możesz robić 3.2/3.3"):** the track in the player is one object
 `current` in `youtube-autopilot.js` (kind GUEST / BACKGROUND / HISTORY / MANUAL, `songId`, `key`, `playlistId`, `loadedAtSeq`,
 `loadNo`, `startedAt`, `retrace`, `phase` LOADING → RUNNING → OVER), created only by `startTrack` (`playTrack`, `replayTrack`,
 `playInEmbeddedPlayer` go through it); the old flags are functions of it (`isLoadingSong()`, `isBackgroundTrack()`,

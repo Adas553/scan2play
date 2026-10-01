@@ -471,8 +471,17 @@ Testy jednostkowe: **513** (512 uruchomionych, 1 pominięty; pierwsze liczenie, 
 surefire, co na GitHubie bez bazy dało czerwony workflow Unit tests; teraz IT poza failsafe są pomijane), `BUILD SUCCESS` w kopii repo; IT: **24**, wszystkie zielone na lokalnym
 PostgreSQL 18. JS i szablony bez zmian — scenariusze przeglądarkowe nie były uruchamiane ponownie.
 
-**3.2 — 2026-10-01, NIEZACOMMITOWANE (etap 1 z dwóch; 3.3 = etap 2, moduły ES):** stan utworu w playerze to jeden obiekt `current`
+**3.2 — 2026-10-01, zacommitowane i wypchnięte (etap 1 z dwóch; 3.3 = etap 2, moduły ES):** stan utworu w playerze to jeden obiekt `current`
 (rodzaj GUEST / BACKGROUND / HISTORY / MANUAL, id prośby gościa, klucz osi czasu, playlista, numer raportu lease przy ładowaniu, numer
 ładowania, czas, czy ⏭ cofa się po historii, faza LOADING → RUNNING → OVER), tworzony wyłącznie przez `startTrack`; dawne flagi są
 funkcjami tego obiektu. Bez zmiany zachowania: 56/56 scenariuszy przeglądarkowych zielonych przed i po. Przed nim, w tej samej sesji:
 wznowienie przerwanego utworu po odświeżeniu, „Wznów” po odświeżeniu i wstrzymanie zapauzowanego utworu (zgłoszenie właściciela, +9 scenariuszy).
+
+**3.3 — 2026-10-01, zacommitowane i wypchnięte (etap 2):** `dashboard.js` (1284 linie) podzielony na moduły ES w `js/dashboard/`
+(`main.js`, `list-tools.js`, `fallback-queue.js`, `forms.js`, `tabs.js`, `polling.js`, `common.js`, `events.js`), bez bundlera;
+`youtube-autopilot.js` to też moduł. Zamiast ~15 funkcji na `window` i `typeof … === 'function'` — jawne `import` w dashboardzie i 7
+zdarzeń `s2p:*` (`events.js`) między dashboardem a playerem (na imprezie Spotify playera nie ma — nikt nie słucha, nic nie pęka).
+`wake-lock.js` słucha `s2p:playback-mode`; `history.html` ładuje sam `list-tools.js` (bez skryptu inline). Z szablonu zniknęły
+`onclick`/`onchange` wołające globalne funkcje (krok w stronę CSP, 5.1). 56/56 scenariuszy przeglądarkowych i 513 testów
+jednostkowych zielonych (`DashboardPageRenderTest` sprawdza `type="module"`, kolejność i brak handlerów inline). Bez pokrycia
+testami: samodzielna strona historii i dashboard imprezy Spotify — do sprawdzenia ręcznie.
