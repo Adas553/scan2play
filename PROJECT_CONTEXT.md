@@ -28,7 +28,7 @@ the DJ marks each one played or skips it.
 |------------------|------------|
 | Language         | Java 21 |
 | Framework        | Spring Boot 4.0.3 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA) |
-| Front end        | Thymeleaf pages, Bootstrap 5 (CDN), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
+| Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
 | AI               | Google Gemini (`google-genai` 1.38.0), model `gemini-2.5-flash` |
 | Music            | Spotify Web API (`spotify-web-api-java` 8.4.1); YouTube Data API v3 (`RestClient`) + IFrame Player API |
@@ -51,7 +51,8 @@ integration/  MusicProvider, Spotify constants      config/  Spring beans      u
 
 Server-rendered pages with AJAX: the DJ dashboard polls the guest queue every 3 s (ETag / 304), sends its forms by `fetch` at a
 YouTube party (a page reload would stop the embedded player), and each dashboard window reports to the server every 3 s which
-window plays (the player lease, Section 5.4). **Single instance by design** (Section 13): the player lease, the caches and the guest
+window plays (the player lease, Section 5.4). A hidden window that does not play rests (review 3.4): no poll of the queue, a lease
+report every 15 s, and both at once when it is shown again; the window that plays goes on every 3 s, hidden or not. **Single instance by design** (Section 13): the player lease, the caches and the guest
 limits are in memory. The HTTP sessions are in PostgreSQL (Spring Session JDBC, `V11`; review 2.3): a deploy or a restart does not
 log the DJs out.
 
@@ -72,7 +73,9 @@ never changed), `playbackMode` (`MANUAL` / `AUTO` = Auto-Pilot), `requestLimit` 
 `spotifyAccessToken` / `spotifyRefreshToken` (plain text, 2048) / `spotifyTokenExpiresAt`.
 
 **`SongRequestEntity` → `song_requests`** — a guest's request or a DJ pick. `partyCode`, `songName` (255; for a YouTube party the
-found video's cleaned title, Section 7.1), `style` (the vibe it was judged against, or "DJ Pick"), `decision` (`accepted` /
+found video's cleaned title, Section 7.1), `guestText` (150, V14: what the guest typed, as typed — one line, what the AI is given;
+null for a DJ pick and older requests; the queue and the history show it under the song when it says something else,
+`util/GuestWords`), `style` (the vibe it was judged against, or "DJ Pick"), `decision` (`accepted` /
 `rejected` / `played`), `djComment` (500), `energyLevel`, `requestedAt`, `trackUrl` (500; a YouTube watch URL, a YouTube search
 link, or a Spotify URI), `playedAt` (V6; set only by `DjService.markPlayed`). Index `idx_party_decision_time (party_code, decision,
 requested_at DESC)`. `@PrePersist` truncates the long fields. **Retention: 30 days from `requestedAt`** —
@@ -161,7 +164,8 @@ decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else 
    whole limit is back; counted by the session's id in memory (`GuestSessionService.tryAcquire`, one atomic `compute` — not in the
    session: with the sessions in the database every request works on its own copy, so parallel requests could not see each other's
    count there) — `guest.error.rate_limit`. A request that came to nothing gives its place back (`giveBack`: a mood sent back to
-   the form, the AI not answering — `DjResponse.KIND_AI_UNAVAILABLE`);
+   the form, the AI not answering — `DjResponse.KIND_AI_UNAVAILABLE`). The guest reads the wait of this limit and of the next one
+   as `GuestController.waitText` says it: whole minutes rounded up from a minute on ("3 min"), seconds below it ("45 s");
 2. client IP + party: `guest.limit.per-ip-party` (30) per `guest.limit.per-ip-window-minutes` (10) — loose, a venue's Wi-Fi is one
    address — `guest.error.too_many_requests`;
 3. party: `guest.limit.per-party-daily` (300) per 24 h — `guest.error.party_daily_limit`.
@@ -212,7 +216,8 @@ nothing to play or the tracks are ≥ 29 days old (single flight per party + pla
   as "resume" would, otherwise the next track as ⏭ (`startFromEmptyPlayer`).
 
 **One window plays — the player lease** (`PlayerLeaseService`, in memory). Every window has a random id (`sessionStorage`) and
-reports `POST /dj/dashboard/player-lease` (`CLAIM` / `WATCH` / `TAKE_OVER`) every 3 s and at once on PLAYING / PAUSED; a lease
+reports `POST /dj/dashboard/player-lease` (`CLAIM` / `WATCH` / `TAKE_OVER`) every 3 s and at once on PLAYING / PAUSED (a hidden
+window that only watches: every 15 s, and at once when shown); a lease
 not renewed for 10 s is free. The answer `{holder, free, fallbackPlaylistId, queueVersion, command, playing, playbackMode}` tells the
 window whether it plays, the current playlist (the window that plays stops a background track of a replaced playlist), the version
 of the "up next" list, a command waiting for it, whether the holder's player makes sound, and the Auto-Pilot setting. `next-track`
@@ -327,7 +332,7 @@ page (`DashboardPageRenderTest.assertNothingInline`).
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms at a YouTube or a requests-only party — `submitsInPlace`, `<body data-party-kind>` —, Auto-Pilot switch, `data-auto-submit`; played / skipped / picked → `s2p:guest-queue-changed`), `tabs.js` (the history in place, every party), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed`), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms at a YouTube or a requests-only party — `submitsInPlace`, `<body data-party-kind>` —, Auto-Pilot switch, `data-auto-submit`; played / skipped / picked → `s2p:guest-queue-changed`), `tabs.js` (the history in place, every party), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden unless this window plays — `s2p:player-role`), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/youtube-autopilot.js` | the player (Section 5.4), an ES module; its only global is `onYouTubeIframeAPIReady` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
@@ -387,8 +392,8 @@ Public: `/`, `/start/**`, `/p/**`, `/privacy`, `/terms`, `/oauth2/**`, `/login/*
 — IDOR). CSRF on (tokens in `<meta>` for AJAX, `_csrf` in the body of the release beacon; `/csp-report` is exempt). Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; titles from YouTube / iTunes are escaped.
 
-**Content-Security-Policy** (`SecurityConfig.CONTENT_SECURITY_POLICY`): scripts from the app, `cdn.jsdelivr.net` (Bootstrap) and
-YouTube (`www.youtube.com`, `s.ytimg.com`), styles from the app and `cdn.jsdelivr.net` — **no `'unsafe-inline'` at all**: no
+**Content-Security-Policy** (`SecurityConfig.CONTENT_SECURITY_POLICY`): scripts from the app (Bootstrap too, `/webjars/**`, public)
+and YouTube (`www.youtube.com`, `s.ytimg.com`), styles and fonts from the app only — **no `'unsafe-inline'` at all**: no
 inline script, no `on…=` handler, no `style="…"` (the templates use `s2p-…` classes of `app.css`; scripts change styles through
 `element.style`, which the policy allows), checked over every template by `NoInlineCodeInTemplatesTest`; images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; frames only YouTube; `object-src 'none'`,
 `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only** while
@@ -468,10 +473,11 @@ Never set it to `update`: Hibernate would change the schema behind Flyway's back
 | V11 | `spring_session`, `spring_session_attributes` (Spring Session JDBC's schema, word for word) |
 | V12 | every `timestamp` → `timestamptz`; the old values read in the session's zone = the JVM's that wrote them (Polish time locally, UTC on Railway) |
 | V13 | `party_settings.active_provider` may be `REQUESTS_ONLY` (the check constraint) |
+| V14 | `song_requests.guest_text` varchar(150), nullable (no back-fill: the words of older requests were never kept) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub.
 
-**First production deploy checklist** (the next deploy applies V2..V13 at once): (1) back up the database; (2) dump the production
+**First production deploy checklist** (the next deploy applies V2..V14 at once): (1) back up the database; (2) dump the production
 schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or Hibernate's
 validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
 What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
@@ -548,15 +554,15 @@ GuestQueueService          → DjService, PlayHistoryService
   tracks are, after 30 days).
 - **Single instance:** the player lease, the caches and the guest limits (except the YouTube search count) are in memory — a second
   instance would need them shared. The HTTP sessions are in the database (review 2.3); each request with a session reads it and
-  writes its last access time (the dashboard: two requests per window every 3 s).
+  writes its last access time (the dashboard: two requests per shown window every 3 s; a hidden one that does not play, one per 15 s).
 
 ### Security
 - Spotify tokens in plain text in the database (review 5.3).
-- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on); Bootstrap still comes from its CDN.
+- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on).
 - `REVIEW.md` lists what else is open.
 
 ### Front end
-- Polling every 3 s (ETag / 304), no WebSockets. A window that does not play still polls at full speed while hidden (review 3.4).
+- Polling every 3 s (ETag / 304), no WebSockets; a hidden window that does not play rests until it is shown (review 3.4).
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing

@@ -563,7 +563,7 @@ Testy jednostkowe: **546** (545 uruchomionych, 1 pominięty), scenariusze: **67/
 `CSP_ENFORCE=true` lokalnie — ustawione przez właściciela w IntelliJ. **Nie zrobione:** 3.4, 2.5, 6.3 (powody w
 `SESSION_HANDOFF.md`).
 
-**Ósma paczka — 5.1 (ostatni krok: style), 7.2, favicon; 2026-10-01, NIEZACOMMITOWANE (do przejrzenia):**
+**Ósma paczka — 5.1 (ostatni krok: style), 7.2, favicon; 2026-10-01, zacommitowane (`33e9aad`, `30ccec2`) i wypchnięte; CI zielone:**
 
 | # | Co zmieniono | Pliki | Testy |
 |---|--------------|-------|-------|
@@ -572,3 +572,19 @@ Testy jednostkowe: **546** (545 uruchomionych, 1 pominięty), scenariusze: **67/
 | — | `static/favicon.ico` (16/32/48 px) — koniec 404 w konsoli. | `static/` | — |
 
 Testy jednostkowe: **547** (546 uruchomionych, 1 pominięty), scenariusze: **67/67**. **5.1 i 7.2 — zamknięte.**
+
+Po ósmej paczce (2026-10-01, zacommitowane w `fbc3f01`, `4a364b1`): impreza „tylko prośby” — poza przeglądem, opis w `SESSION_HANDOFF.md`.
+
+**Dziewiąta paczka — 3.4, Bootstrap z aplikacji, czas oczekiwania gościa w minutach; 2026-10-01, sprawdzone przez właściciela („działa”), zacommitowane (`591fdf3`) i wypchnięte:**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 3.4 | Ukryte okno, które nie gra, odpoczywa: bez pollu kolejki, raport lease co 15 s zamiast 3 s; po pokazaniu jedno i drugie od razu. Okno, które gra (nowe zdarzenie `s2p:player-role` z odpowiedzi lease), pyta jak dotąd co 3 s, także ukryte — jego poll mówi playerowi, że czeka piosenka gościa. Dashboard bez playera (Spotify, „tylko prośby”) w tle nie pyta wcale. | `polling.js`, `youtube-autopilot.js`, `events.js` | scenariusze `background-watcher-asks-less`, `background-requests-only-asks-at-once-when-shown` — **czerwone przed**; `background-player-keeps-asking` (okno grające ukryte: pyta dalej i gra piosenkę gościa, która przyszła w tle) — **czerwony pod mutacją** (okno nigdy nie wie, że gra) |
+| — | Bootstrap z aplikacji: webjar `org.webjars:bootstrap` 5.3.8 (było 5.3.0 z cdn.jsdelivr.net) + `webjars-locator-lite` — adres bez wersji (`/webjars/bootstrap/…`), wersja tylko w `pom.xml`; `/webjars/**` publiczne. CSP bez CDN (`script-src`, `style-src`, `font-src`). Zastępca serwera w testach przeglądarkowych podaje prawdziwego Bootstrapa z webjara w `~/.m2` (opcja `--cdn` usunięta) — polityka sprawdzana także na nim. | `pom.xml`, `SecurityConfig`, 11 szablonów, `server.py`, `run.py`, README testów | `SmokeTest` +1 (pliki bez logowania), CSP bez `cdn.jsdelivr.net`; 71/71 scenariuszy zielonych z prawdziwym Bootstrapem |
+| — | Czas oczekiwania gościa: pełne minuty w górę od minuty („spróbuj za 3 min”), sekundy poniżej („45 s”) — `GuestController.waitText`, oba limity, każda impreza. | `GuestController`, `messages*.properties` | `GuestControllerTest` +4 — **czerwone przed** (stary tekst: „za 3 min sekund”) |
+
+Do tego, poza przeglądem (pomysł właściciela): DJ widzi oryginalne słowa gościa pod piosenką w kolejce i historii, gdy mówią coś
+innego niż nazwa (`song_requests.guest_text`, **V14**; `util/GuestWords`); opis w `SESSION_HANDOFF.md`.
+
+Testy jednostkowe: **586** (585 uruchomionych, 1 pominięty), testy na bazie: **29** (z V14), scenariusze: **74/74**.
+**Nie zrobione:** 2.5, 6.3, 4.7 / 5.3 (Spotify), JaCoCo, reszta 7.3.

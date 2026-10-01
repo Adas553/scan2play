@@ -6,8 +6,30 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after `fbc3f01` (2026-10-01). Check with `git status -sb` and
+- **Branch `dev`**, pushed up to the documentation commit after `591fdf3` (2026-10-01; `4a364b1` had all three workflows green). Check with `git status -sb` and
   `git log --oneline -8`, and the three workflows (below).
+- **Committed and pushed (`591fdf3`, 2026-10-01, evening; tried by the owner: "działa") — a small package:**
+  - **The guest's wait in minutes:** `guest.error.rate_limit` / `too_many_requests` say "spróbuj za 3 min" — whole minutes rounded
+    up from a minute on, "45 s" below it (`GuestController.waitText`; every party). `GuestControllerTest` +4 — **red before**.
+  - **Bootstrap from the app** (webjar `org.webjars:bootstrap` 5.3.8 — was 5.3.0 from cdn.jsdelivr.net — and `webjars-locator-lite`:
+    `/webjars/bootstrap/css/bootstrap.min.css`, the version only in `pom.xml`; `/webjars/**` public). The CSP lists no CDN any more.
+    `SmokeTest` +1 (served without a login; no `cdn.jsdelivr.net` in the policy). The browser tests' stand-in now serves the real
+    Bootstrap from the webjar in `~/.m2` (the `--cdn` option is gone), so the policy is checked against it — 71/71 green with it.
+    **To look at:** the pages look the same (5.3.0 → 5.3.8 are bug fixes).
+  - **Review 3.4 — a hidden window that does not play rests:** no queue poll, a lease report every 15 s instead of 3 s; both at once
+    when it is shown again. The window that plays (new event `s2p:player-role`) goes on every 3 s, hidden or not. Scenarios
+    `background-*` (3): the watcher and the requests-only ones **red before**; the player one guards that the playing window keeps
+    asking — **red under a mutation** (the window never learns it plays).
+  - **The guest's own words for the DJ (the owner's idea; option "a"; every party):** `song_requests.guest_text` (**V14**,
+    varchar 150 — the next start in IntelliJ applies it to the local `scan2play`, no data touched) keeps what the guest typed, as
+    typed (one line, ≤ 150 characters; `SongEvaluationService.asTyped` — the prompt still gets it without double quotes). The queue
+    and the history show it in a small grey line under the song — "gość napisał: „ta z Shreka…”" (`dashboard.guest_text`) — only
+    when it says something else than the song's name (`util/GuestWords`: case, accents, punctuation ignored). Not for a DJ pick, not
+    for requests from before V14, never on the guests' page. The privacy pages (PL / EN) say that the text is kept as typed and
+    shown to the party's DJ. Tests: `GuestWordsTest` 3, `SongEvaluationServiceTest` +1, `PlayHistoryServiceTest` +1,
+    `DashboardQueueFragmentTest` +1 and `HistoryFragmentTest` +1 (**red on the old templates**), `DashboardPageRenderTest` (the
+    requests-only sample has the line), `MigrationIT` +1.
+  - 586 unit tests (585 run, 1 skipped), 74 browser scenarios.
 - **Committed and pushed (`fbc3f01`, 2026-10-01; tried by the owner: "działa") — the requests-only party, for wedding DJs** (the owner: "zrób to, później
   pokażę DJom"; they play from VirtualDJ / Serato / rekordbox, not YouTube):
   - **The kind `REQUESTS_ONLY`** (`MusicProviderType`, migration **`V13`** — the check constraint; the next start in IntelliJ applies
@@ -59,22 +81,31 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   on a phone) — the day's details in `docs/history/session-handoff-2026-10-01.md`, earlier days in `docs/history/session-handoff-2026-09.md`.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs`; logs need a
   GitHub login, but failed tests are written as public **annotations**: `.../check-runs/<id>/annotations`): three workflows —
-  Unit tests, Browser tests, Database tests. All three green up to `30ccec2` (2026-10-01; `fbc3f01` — see the next session). Unit tests also check that the
+  Unit tests, Browser tests, Database tests. All three green up to `4a364b1` (2026-10-01; it carried `fbc3f01` — V13 and 71 scenarios). Unit tests also check that the
   Copilot copy of `AGENTS.md` matches it.
 
 ## Next (the owner picks)
 
-1. **Check the workflows of `fbc3f01`** (and its documentation commit): the Database tests run V13, the Browser tests 71 scenarios.
-   Then the owner shows the requests-only party to DJs — with a separate Google account (the owner's own party has the YouTube history).
-2. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
+1. **Check the workflows of `591fdf3`** and its documentation commit (Database tests: V14, 29 IT; Browser tests: 74 scenarios, now
+   with the real Bootstrap from the webjar in the runner's `~/.m2`).
+2. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
+   history) — and tells what they said. (The guest's own words beside the song — done, above.)
+3. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
    compared with `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
-   (Flyway V2..V13, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
-3. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
-   it" beside each request; the queue on the phone as the main view; the guest's wait shown in minutes ("spróbuj za 3 min") rather
-   than seconds; Spotify's dashboard forms in the background too (today only YouTube and requests-only — Spotify has no tests).
-4. From `REVIEW.md`: **3.4** (a hidden window polls less — small gain with one DJ), 2.5 (an import inside `next-track`, only for a
-   party older than 29 days), 6.3 (only together with a change of the queue), 4.7 / 5.3 (Spotify), JaCoCo, the rest of 7.3,
-   Bootstrap from the app instead of the CDN.
+   (Flyway V2..V14, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
+4. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
+   it" beside each request; the queue on the phone as the main view; Spotify's dashboard forms in the background too (today only
+   YouTube and requests-only — Spotify has no tests). (The wait in minutes — done.)
+5. From `REVIEW.md`: 2.5 (an import inside `next-track`, only for a party older than 29 days), 6.3 (only together with a change of
+   the queue), 4.7 / 5.3 (Spotify), JaCoCo, the rest of 7.3. (3.4 and Bootstrap from the app — done.)
+6. **YouTube and the rules (the owner's question, 2026-10-01):** there is no "licence" to ask YouTube for — what counts is the
+   API's Developer Policies (III.I.7 no separating audio from video: the visible embedded player whose sound goes to the speakers is
+   not that; III.I.9 no background player: Auto-Pilot in a hidden tab / a locked phone looks like one; III.F.3.a / III.G.1.b no
+   charge for watching / selling API access) and YouTube's own terms (personal, non-commercial use — a paid DJ at a wedding is a
+   public, commercial performance; Premium changes nothing, and cannot be checked). The plan talked about: the requests-only party
+   as the product for paid DJs; YouTube free, for private parties. More API quota: the audit and quota-extension form — after
+   go-live, with a privacy policy and terms; the auditors look at exactly those points. Not legal advice — the owner may ask a
+   lawyer before taking money.
 
 ## Waiting for the owner (not code)
 
@@ -83,7 +114,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 - **The old `YOUTUBE_API_KEY`** (rotated 2026-09-29): delete it in Google Cloud Console and check the new one is restricted to the
   YouTube Data API v3. The disabled OAuth client secret `****IgiS` can be deleted; `****pfTe` is the one in use.
 - **Production** (Railway paused): at the next go-live, the Flyway checklist of `PROJECT_CONTEXT.md` Section 10 first — the first
-  deploy applies V2..V13 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
+  deploy applies V2..V14 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
   Railway already.
 - **Try on the phone:** the wake lock (Auto-Pilot on, the screen should not dim), ✕ on an "up next" row, Save with a private / wrong
   playlist link.
