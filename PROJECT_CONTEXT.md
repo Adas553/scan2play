@@ -67,7 +67,9 @@ server in UTC; the pages show them in Polish time (`util/Times`: `display`, and 
 
 **`PartySettingsEntity` → `party_settings`** — one party, owned by one DJ (`owner_id` UNIQUE: one party per DJ).
 `partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code), `ownerId` (the OAuth2 subject), `active` (accepting requests),
-`globalVibe` (`VibeType`; `ANY` = the guests choose), `activeProvider` (`SPOTIFY` / `YOUTUBE`, set at creation by the login used,
+`globalVibe` (`VibeType`; `ANY` = the guests choose — at a requests-only party the AI judges by the DJ's note alone), `vibeNote`
+(V16, ≤ 150: the DJ's own words about the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en}`, the
+guests see them above the form; `POST /dj/dashboard/vibe-note`, one line, empty clears), `activeProvider` (`SPOTIFY` / `YOUTUBE`, set at creation by the login used,
 never changed), `playbackMode` (`MANUAL` / `AUTO` = Auto-Pilot), `requestLimit` / `cooldownMinutes` (the guest's own limit, 1–100 /
 1–1440), `duplicateCheckWindow` (0–50 recent songs the AI must not repeat), `fallbackPlaylistUrl` (≤ 500), `fallbackShuffle`,
 `spotifyAccessToken` / `spotifyRefreshToken` (plain text, 2048) / `spotifyTokenExpiresAt`.
@@ -118,7 +120,8 @@ deleted every minute.
 `MusicProviderType` SPOTIFY / YOUTUBE / REQUESTS_ONLY (the kind of party) · `PlaybackMode` MANUAL / AUTO · `RequestMode` SONG / MOOD · `FallbackTrackStatus`
 QUEUED / PLAYED / CANCELLED / SKIPPED · `PlayerLeaseMode` CLAIM / WATCH / TAKE_OVER · `PlayerCommand` NEXT / PREVIOUS /
 PREVIOUS_TRACK / RESTART / PAUSE / RESUME · `MoveDirection` UP / DOWN / TOP · `HistoryFilter` all / guest / background / played /
-rejected · `VibeType` ANY and 13 genres.
+rejected · `VibeType` ANY and 16 genres (V16: Polish hits, 2000s/2010s, R&B & soul, folk / biesiada, kids added; bachata,
+salsa and reggaeton merged into LATINO — the rows moved by the migration).
 
 ### 4.3 Records
 
@@ -170,7 +173,8 @@ request the AI reads as a mood in the song mode is not saved: the guest is back 
 "DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
 
 **What reaches the AI:** the guest's text as one line ≤ 150 characters, `"` made `'` (`SongEvaluationService.forPrompt`); the style
-decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else the guest's pick from `VibeType`, else `ANY`.
+decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else the guest's pick from `VibeType`, else `ANY`; a
+requests-only party's guests pick none (no list on the page; `ANY` whatever the form sent).
 
 **Limits** — each counted **before** the AI is asked:
 1. the guest's own: up to the DJ's `requestLimit` requests, then a wait of `cooldownMinutes` **from the last of them**, after which the
@@ -289,7 +293,7 @@ many videos have embedding disabled (error 150).
 |-------|---------|
 | `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ |
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), `next-track`, the history page and fragment, the QR print page |
-| `DjPartySettingsController` | start / end party, vibe, limits (bounded), Auto-Pilot, background playlist + shuffle, account deletion |
+| `DjPartySettingsController` | start / end party, vibe and vibe note, limits (bounded), Auto-Pilot, background playlist + shuffle, account deletion |
 | `DjFallbackQueueController` | the "up next" fragment, move / place / skip |
 | `DjPlayerLeaseController` | the player lease, its release, the player commands, `recent-tracks` |
 | `DjSongController` | mark played, push to Spotify, DJ pick |
@@ -489,10 +493,11 @@ Never set it to `update`: Hibernate would change the schema behind Flyway's back
 | V13 | `party_settings.active_provider` may be `REQUESTS_ONLY` (the check constraint) |
 | V14 | `song_requests.guest_text` varchar(150), nullable (no back-fill: the words of older requests were never kept) |
 | V15 | `song_requests.votes` integer NOT NULL DEFAULT 1 |
+| V16 | `party_settings.global_vibe`: BACHATA_AND_KIZOMBA / SALSA_AND_TIMBA / REGGAETON_AND_DANCEHALL → LATINO, the check constraint with the new list; `party_settings.vibe_note` varchar(150) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub.
 
-**First production deploy checklist** (the next deploy applies V2..V15 at once): (1) back up the database; (2) dump the production
+**First production deploy checklist** (the next deploy applies V2..V16 at once): (1) back up the database; (2) dump the production
 schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or Hibernate's
 validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
 What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
@@ -553,7 +558,7 @@ GuestQueueService          → DjService, PlayHistoryService
 | POST | `/dj/dashboard/fallback-queue/move`, `/place`, `/skip` | 204, 409 when the track is no longer queued in the current playlist |
 | POST | `/dj/dashboard/fallback-playlist` | save + import (headers, Section 5.4) |
 | POST | `/dj/dashboard/fallback-shuffle` | toggle + re-order; `X-Fallback-Shuffle` |
-| POST | `/dj/dashboard/vibe`, `/limits`, `/playback-mode` | settings (`mode` = AUTO / MANUAL; without it a toggle) |
+| POST | `/dj/dashboard/vibe`, `/vibe-note`, `/limits`, `/playback-mode` | settings (`mode` = AUTO / MANUAL; without it a toggle) |
 | POST | `/dj/dashboard/dj-pick` | YouTube only, no AI judgement |
 | POST | `/dj/requests/{id}/push-to-spotify` | |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |

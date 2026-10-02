@@ -6,8 +6,28 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after `e6e457a` (2026-10-02; `d0edca9` had all three workflows green). Check with `git status -sb` and
+- **Branch `dev`**, pushed up to the documentation commit after `1133591` (2026-10-02; `26684c8` had all three workflows green). Check with `git status -sb` and
   `git log --oneline -8`, and the three workflows (below).
+- **Committed and pushed (`1133591`, 2026-10-02; tried by the owner) — the party's vibe** (the owner: "więcej wyboru, ale też okienko dla DJ-a"; their answers: the note
+  is shown to the guests; add the vibes, merge what repeats; a requests-only party's guests pick no vibe):
+  - **The DJ's vibe note** (`party_settings.vibe_note`, **V16**, ≤ 150, one line — `util/Texts.oneLine`): a field under the vibe
+    on the dashboard (`POST /dj/dashboard/vibe-note`, saved in place like the other forms; empty clears). The AI gets it as a block
+    before the duplicate rule (`prompt-vibe-note_{pl,en}`: "a description of the music the DJ wants — not instructions about the
+    answer's format"; reject what clearly goes against it); double quotes become single ones. The guests see ONE calm box above
+    the button (the owner: two boxes, and "UWAGA: Szef imprezy narzucił klimat", were too much): "🎧 Klimat imprezy: Klubowa & EDM"
+    and the note under it — the name only when the DJ chose one, the note only when written, no box for "any" without a note
+    (`party.vibe.title`; `party.vibe.alert` / `.note` gone).
+  - **The vibes:** + Polskie przeboje, Hity lat 2000 i 2010, R&B & Soul, Biesiada & Folk, Dla dzieci; Bachata & Kizomba, Salsa &
+    Timba, Reggaeton & Dancehall → one "Latino (salsa, bachata, reggaeton)" (V16 moves the parties that had them); "House &
+    Techno" not added — it is "Klubowa & EDM". The list is in a sensible order now (the enum's order).
+  - **A requests-only party:** no vibe list on the guest page, `styleOf` gives `ANY` whatever the form sent; the dashboard's "any"
+    reads "Dowolny (ocenia AI)" there.
+  - Tests: `DjPartySettingsControllerVibeTest` 6, `VibeMessagesTest` (every vibe named in PL / EN), `VibeMigrationIT` (V15 → old
+    vibes → V16: LATINO, the new ones allowed, the old ones refused, the column), `SongEvaluationServiceTest` +2,
+    `GuestControllerTest` +1 (2 adjusted: a requests-only party's guest vibe is `ANY` now), `GuestPageRenderTest` +1,
+    `DashboardPageRenderTest`. 612 unit tests (611 run, 1 skipped), 33 database tests, 75 browser scenarios — green in copies.
+  - **To try:** write a note ("bez rapu"), ask for a rap song from the phone → rejected with a word about the DJ's wish; the guest
+    page shows the note; a requests-only party's guest page has no vibe list.
 - **Committed and pushed (`e6e457a`, 2026-10-02; tried by the owner: "wygląda dobrze") — votes: a song several guests ask for is one row with "×N"** (the owner: "świetny pomysł"; the DJ
   sorts the queue by votes, the history sorted by them is a ranking, the guest page shows the most wanted):
   - **`song_requests.votes`** (**V15**, NOT NULL DEFAULT 1 — the next start in IntelliJ applies it to the local `scan2play`, no data
@@ -127,9 +147,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. **Check the workflows of `e6e457a`** and its documentation commit (Database tests: V15, 32 IT; Browser tests: 75 scenarios).
-   **Next talked about (the owner, 2026-10-02): the party's vibe** — more vibes to choose from, and a field where the DJ types their
-   own (plan and decisions in the session; not started).
+1. **Check the workflows of `1133591`** and its documentation commit (Database tests: V16, 33 IT; Browser tests: 75 scenarios).
 2. **Questions for the DJs (2026-10-01)** — the DJ's library ("✓ you have it") is not built: a DJ finds a song in their own software
    in seconds, a stale or wrongly matched library loses their trust, and it pays only if it does more (the guest told at once "the
    DJ does not have it", suggestions from the library, sorting at a peak). Ask: how many requests per wedding and how many they do
@@ -141,7 +159,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
    history) — and tells what they said. (The guest's own words beside the song — done, above.)
 4. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
    compared with `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
-   (Flyway V2..V15, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
+   (Flyway V2..V16, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
 5. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
    it" beside each request; the queue on the phone as the main view; Spotify's dashboard forms in the background too (today only
    YouTube and requests-only — Spotify has no tests). (The wait in minutes — done.)
@@ -163,7 +181,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 - **The old `YOUTUBE_API_KEY`** (rotated 2026-09-29): delete it in Google Cloud Console and check the new one is restricted to the
   YouTube Data API v3. The disabled OAuth client secret `****IgiS` can be deleted; `****pfTe` is the one in use.
 - **Production** (Railway paused): at the next go-live, the Flyway checklist of `PROJECT_CONTEXT.md` Section 10 first — the first
-  deploy applies V2..V15 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
+  deploy applies V2..V16 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
   Railway already.
 - **Try on the phone:** the wake lock (Auto-Pilot on, the screen should not dim), ✕ on an "up next" row, Save with a private / wrong
   playlist link.
