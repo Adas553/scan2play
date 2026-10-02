@@ -1,5 +1,5 @@
 
-Here is the list of recently accepted songs at this party: [%s].
+Here is the list of songs that played recently at this party: [%s].
 
 Additional rule (NO DUPLICATES):
 Before accepting a song, check the list above. If the user asks for a track that IS ON THIS LIST

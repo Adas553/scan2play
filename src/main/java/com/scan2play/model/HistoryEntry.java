@@ -24,14 +24,23 @@ import java.time.Instant;
  * @param energyLevel the AI's energy rating; {@code null} for a background track
  * @param guestText   what the guest typed (V14), shown beside {@code title} when it says something else; {@code null} for a
  *                    background track, a DJ's pick and a request from before V14
+ * @param votes       how many guests asked for the song (V15); {@code null} for a background track
  */
 public record HistoryEntry(Source source, Long id, Instant at, String title, String trackUrl, String videoId,
-                           String style, String decision, String djComment, Integer energyLevel, String guestText) {
+                           String style, String decision, String djComment, Integer energyLevel, String guestText,
+                           Integer votes) {
 
     /** An entry without the guest's words: a background track (or a request that has none). */
     public HistoryEntry(Source source, Long id, Instant at, String title, String trackUrl, String videoId,
                         String style, String decision, String djComment, Integer energyLevel) {
         this(source, id, at, title, trackUrl, videoId, style, decision, djComment, energyLevel, null);
+    }
+
+    /** An entry with the guest's words, one guest's: a request nobody else asked for. */
+    public HistoryEntry(Source source, Long id, Instant at, String title, String trackUrl, String videoId,
+                        String style, String decision, String djComment, Integer energyLevel, String guestText) {
+        this(source, id, at, title, trackUrl, videoId, style, decision, djComment, energyLevel, guestText,
+                source == Source.GUEST ? 1 : null);
     }
 
     public enum Source {

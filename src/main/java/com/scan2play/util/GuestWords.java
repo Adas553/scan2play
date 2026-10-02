@@ -1,8 +1,5 @@
 package com.scan2play.util;
 
-import java.text.Normalizer;
-import java.util.Locale;
-
 /**
  * The guest's own words beside the song the AI made of them, on the DJ's queue and history: the DJ checks the AI against what the
  * guest asked for ("ta piosenka z Shreka co leci na weselach" → "Smash Mouth - All Star").
@@ -21,14 +18,6 @@ public final class GuestWords {
         if (guestText == null || guestText.isBlank()) {
             return null;
         }
-        return comparable(guestText).equals(comparable(songName)) ? null : guestText;
-    }
-
-    private static String comparable(String text) {
-        if (text == null) {
-            return "";
-        }
-        String plain = Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "").replace('ł', 'l').replace('Ł', 'L');
-        return plain.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
+        return SongNames.comparable(guestText).equals(SongNames.comparable(songName)) ? null : guestText;
     }
 }

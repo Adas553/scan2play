@@ -12,7 +12,7 @@
     <div class="card p-4 p-md-5 bg-dark text-light border-secondary">
 
         <h1 class="fw-bold mb-4">Polityka Prywatności</h1>
-        <p class="text-secondary mb-4">Ostatnia aktualizacja: kwiecień 2026</p>
+        <p class="text-secondary mb-4">Ostatnia aktualizacja: październik 2026</p>
 
         <h3>1. Wprowadzenie</h3>
         <p>Scan2Play („my", „nasz") to platforma do zamawiania muzyki na imprezach, wykorzystująca sztuczną inteligencję. Niniejsza Polityka Prywatności wyjaśnia, jakie dane zbieramy, jak je wykorzystujemy i jak je chronimy podczas korzystania z serwisu scan2play.com.pl.</p>
@@ -28,14 +28,15 @@
         <p><strong>Dla gości (anonimowi użytkownicy):</strong></p>
         <ul>
             <li>Tekst zamówienia piosenki (artysta/tytuł/opis) — zapisywany tak, jak go wpisano (do 150 znaków), i widoczny dla DJ-a tej imprezy obok piosenki wybranej przez AI; nie wpisuj w nim danych osobowych</li>
-            <li>Identyfikatory sesji do limitowania prób (bez danych osobowych)</li>
+            <li>Identyfikator sesji (ciasteczko) — do limitu próśb i do rozpoznania Twoich wcześniejszych próśb na tej imprezie (oznaczenie „Twoja”, głos liczony raz); bez danych osobowych</li>
         </ul>
 
         <h3>3. Jak wykorzystujemy Twoje dane</h3>
         <ul>
             <li>Do uwierzytelniania DJ-ów i zarządzania sesjami imprez</li>
             <li>Do przetwarzania zamówień piosenek i oceny muzyki przez AI</li>
-            <li>Do wyszukiwania muzyki przez YouTube Data API v3 i Spotify API</li>
+            <li>Do wyszukiwania muzyki przez YouTube Data API v3 i Spotify API (na imprezie „Twój program DJ-a” serwis niczego nie odtwarza i nie wyszukuje przez API — pokazuje DJ-owi tylko link do wyników wyszukiwania YouTube)</li>
+            <li>Do łączenia próśb o tę samą piosenkę w głosy i pokazywania gościom piosenek z największą liczbą głosów (liczba głosów nie zawiera danych osobowych)</li>
             <li>Do egzekwowania limitów i zapobiegania nadużyciom</li>
         </ul>
 
@@ -50,11 +51,12 @@
             <li>Zamówienia piosenek: usuwane automatycznie po 30 dniach od zamówienia (albo wcześniej, gdy DJ usunie swoje konto)</li>
             <li>Utwory z playlisty DJ-a w tle i dziennik tego, co z niej zagrało (identyfikatory i tytuły filmów z YouTube): usuwane automatycznie po 30 dniach</li>
             <li>Cache wyszukiwań YouTube: automatycznie usuwany po 30 dniach</li>
+            <li>Sesje (logowanie DJ-a, identyfikator sesji gościa): przechowywane w bazie danych i usuwane po 30 minutach bez aktywności</li>
             <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
         </ul>
 
         <h3>6. Udostępnianie danych</h3>
-        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (YouTube API, OAuth), Spotify (jeśli podłączony) i Google Gemini (ocena piosenek przez AI) w zakresie niezbędnym do działania serwisu.</p>
+        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (YouTube API, OAuth), Spotify (jeśli podłączony) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa) w zakresie niezbędnym do działania serwisu.</p>
 
         <h3>7. Twoje prawa — Usuwanie danych</h3>
         <p>Możesz usunąć wszystkie swoje dane w dowolnym momencie, klikając <strong>„Usuń konto"</strong> w Panelu DJ-a.

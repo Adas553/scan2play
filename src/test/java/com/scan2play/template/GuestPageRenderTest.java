@@ -193,6 +193,55 @@ class GuestPageRenderTest {
         assertThat(accepted).contains("TAK!", "Energy:").doesNotContain("PRZEKAZANE");
     }
 
+    /** The songs more than one guest asked for, listed with their votes above the queue; the queue's songs show theirs too. */
+    @Test
+    void theMostWantedSongs_areListedWithTheirVotes() {
+        SongRequestEntity wilki = SongRequestEntity.builder().id(1L).songName("Wilki - Baśka").votes(4).build();
+        SongRequestEntity sanah = SongRequestEntity.builder().id(2L).songName("sanah - Szampan").votes(2).build();
+        GuestQueue queue = new GuestQueue(null, List.of(sanah, wilki, song(3, "Alone")), Set.of(), null, null, List.of(wilki, sanah), true);
+        String html = render(PL, Map.of("guestQueue", queue));
+
+        assertThat(html).contains("id=\"mostWanted\"", "🔥 Najwięcej głosów", "👍 4", "👍 2").doesNotContain("??");
+        String mostWanted = html.substring(html.indexOf("id=\"mostWanted\""), html.indexOf("id=\"upNext\""));
+        assertThat(mostWanted.indexOf("Wilki - Baśka")).as("the most votes first").isLessThan(mostWanted.indexOf("sanah - Szampan"));
+        assertThat(mostWanted).doesNotContain("Alone");
+        assertThat(html.substring(html.indexOf("id=\"upNext\""))).as("one guest's song has no badge").contains("👍 4", "👍 2")
+                .doesNotContain("👍 1");
+    }
+
+    /** A requests-only party: no order to tell — the requests sent lately, unnumbered, and the guest's own "waits for the DJ". */
+    @Test
+    void aRequestsOnlyParty_listsTheRequestsSentLately_andTheGuestsWaitsForTheDj() {
+        GuestQueue queue = new GuestQueue(null, List.of(song(2, "Newest"), song(1, "Mine")), Set.of(1L), 2, "Mine", List.of(), false);
+        String html = render(PL, Map.of("guestQueue", queue));
+
+        assertThat(html).contains("Ostatnio wysłane", "Twoja prośba „Mine” czeka u DJ-a").doesNotContain("Następne w kolejce", "w kolejce", "??");
+        assertThat(html).containsPattern("<ol class=\"list-group shadow-sm\" id=\"upNext\">");
+
+        String inOrder = render(PL, Map.of("guestQueue", new GuestQueue(null, List.of(song(1, "Mine")), Set.of(1L), 1, "Mine")));
+        assertThat(inOrder).contains("Następne w kolejce", "Twoja piosenka „Mine” — 1. w kolejce", "list-group-numbered");
+    }
+
+    @Test
+    void noSongWithMoreThanOneVote_noMostWantedList() {
+        String html = render(PL, Map.of("guestQueue", new GuestQueue(null, List.of(song(1, "Alone")), Set.of(), null, null)));
+
+        assertThat(html).doesNotContain("id=\"mostWanted\"", "Najwięcej głosów", "👍");
+    }
+
+    /** The same song already waited: the guest's request was one more vote on it — or it was their own, and nothing changed. */
+    @Test
+    void aVote_andTheGuestsOwnSongAskedForAgain_sayWhatHappened() {
+        String vote = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 3, false));
+        assertThat(vote).contains("Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: 3").doesNotContain("id=\"voteOwn\"");
+
+        String own = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 2, true));
+        assertThat(own).contains("Twoja prośba o tę piosenkę już czeka w kolejce. Głosów: 2").doesNotContain("id=\"voteAdded\"");
+
+        String first = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 1, false));
+        assertThat(first).doesNotContain("id=\"voteAdded\"", "id=\"voteOwn\"");
+    }
+
     /** A requests-only party takes specific songs only: no song / mood tiles, the song mode sent as a hidden field. */
     @Test
     void aRequestsOnlyParty_asksForASong_withoutTheMoodTiles() {

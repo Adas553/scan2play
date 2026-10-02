@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
@@ -96,6 +97,7 @@ public class SongEvaluationService {
     private final ResourceLoader resourceLoader;
     private final PlatformTransactionManager transactionManager;
     private final YouTubePlaylistClient youTubePlaylistClient;
+    private final SongRequestCommandService songRequestCommandService;
 
     private TransactionTemplate transactionTemplate;
 
@@ -154,6 +156,14 @@ public class SongEvaluationService {
      *         <b>not saved</b> — the response says so ({@link DjResponse#isMood()}) and the caller asks the guest to switch modes.
      */
     public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style, RequestMode mode) {
+        return evaluateAndSaveSong(partyCode, guestText, style, mode, Set.of());
+    }
+
+    /**
+     * The same, for a guest whose earlier requests at the party are known: an accepted song that already waits in the queue is
+     * counted as one more vote on it ({@link SongRequestCommandService}), unless it is one of {@code guestsOwnIds}.
+     */
+    public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style, RequestMode mode, Set<Long> guestsOwnIds) {
         String songName = forPrompt(guestText);
         log.info("Party [{}]: Evaluating {} request: '{}' with style: '{}'", partyCode, mode, songName, style);
 
@@ -186,24 +196,32 @@ public class SongEvaluationService {
             aiResponse = aiResponse.withSongName(nameOfTrack(aiResponse.songName(), trackUrl, settings.getActiveProvider()));
         }
 
-        // 3. Database Operations: Safe, quick transaction
-        SongRequestEntity savedRequest = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl);
+        // 3. Database Operations: a new row, or one more vote on the same song waiting in the queue
+        SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds);
+        SongRequestEntity savedRequest = saved.request();
 
-        // 4. External API Call: Add to Queue (If Accepted & Auto-Pilot is enabled)
-        handleAutoQueue(settings, savedRequest, trackUrl, autopilotErrorMsg);
+        // 4. External API Call: Add to Queue (If Accepted & Auto-Pilot is enabled) — a vote's song is in the queue already
+        if (saved.outcome() == SongRequestCommandService.Outcome.NEW) {
+            handleAutoQueue(settings, savedRequest, trackUrl, autopilotErrorMsg);
+        }
 
-        return aiResponse.withRequestId(savedRequest != null ? savedRequest.getId() : null);
+        return aiResponse.savedAs(savedRequest.getId(), savedRequest.getSongName(), savedRequest.getVotes(),
+                saved.outcome() == SongRequestCommandService.Outcome.ALREADY_YOURS);
     }
 
     // ---- Private helpers ----
 
+    /**
+     * The songs the AI must not accept again: the party's recently PLAYED ones. A song that still waits is not on the list — a
+     * request for it becomes one more vote on it ({@link SongRequestCommandService}).
+     */
     private String getRecentSongsContext(String partyCode, int duplicateCheckWindow) {
         if (duplicateCheckWindow <= 0) {
             return null;
         }
 
         List<SongRequestEntity> recentRequests = songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
-                partyCode, List.of(DECISION_ACCEPTED, DECISION_PLAYED), PageRequest.of(0, duplicateCheckWindow)
+                partyCode, List.of(DECISION_PLAYED), PageRequest.of(0, duplicateCheckWindow)
         );
 
         String recentSongs = recentRequests.stream()
@@ -342,7 +360,8 @@ public class SongEvaluationService {
         return title.orElse(name);
     }
 
-    private SongRequestEntity saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style, String trackUrl) {
+    private SongRequestCommandService.Saved saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style,
+                                                            String trackUrl, Set<Long> guestsOwnIds) {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
                 .songName(aiResponse.songName())
@@ -355,7 +374,7 @@ public class SongEvaluationService {
                 .requestedAt(Instant.now())
                 .build();
 
-        return transactionTemplate.execute(status -> songRequestRepository.save(entity));
+        return songRequestCommandService.saveOrVote(entity, guestsOwnIds);
     }
 
     /**

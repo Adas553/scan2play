@@ -168,6 +168,19 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("a guest's song shows its votes (the history sorted by them is the party's ranking); a background track none")
+    void shouldShowTheVotes() {
+        HistoryEntry wanted = new HistoryEntry(Source.GUEST, 1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Wanted",
+                null, null, "Pop", "played", "ok", 7, null, 12);
+        String html = render(List.of(wanted, background(2, "Intro")), false, Locale.ENGLISH);
+
+        assertThat(html).contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Votes<");
+        assertThat(html).contains("data-sort-value=\"votes\" data-val=\"12\"").containsPattern("text-bg-warning\">12<");
+        String intro = html.substring(html.indexOf("data-song-name=\"Intro\""));
+        assertThat(intro.substring(0, intro.indexOf("</tr>"))).contains("data-val=\"0\"").doesNotContain("badge text-bg-secondary\">1<", "text-bg-warning");
+    }
+
+    @Test
     @DisplayName("a song name is never rendered as HTML, not even inside an attribute (it comes from guests)")
     void shouldEscapeTheTitle() {
         String html = render(List.of(guest(1, "\"><script>alert(1)</script>", "played")), false, Locale.ENGLISH);

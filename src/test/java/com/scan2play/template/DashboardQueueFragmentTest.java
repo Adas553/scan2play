@@ -130,6 +130,19 @@ class DashboardQueueFragmentTest {
     }
 
     @Test
+    @DisplayName("each row has its votes, sortable as a number; a song of more than one guest stands out")
+    void shouldShowTheVotes() {
+        SongRequestEntity wanted = accepted(1, "Wanted");
+        wanted.setVotes(12);
+        String html = render(List.of(wanted, accepted(2, "Alone")), PL);
+
+        assertThat(html).doesNotContain("??");
+        String first = html.substring(html.indexOf("data-song-id=\"1\""), html.indexOf("data-song-id=\"2\""));
+        assertThat(first).contains("data-sort-value=\"votes\" data-val=\"12\"").containsPattern("text-bg-warning\">12<");
+        assertThat(html.substring(html.indexOf("data-song-id=\"2\""))).contains("data-val=\"1\"").containsPattern("text-bg-secondary\">1<");
+    }
+
+    @Test
     @DisplayName("the guest's own words under the song when they say something else — escaped; none when they are the song's name or missing")
     void shouldShowTheGuestsWords_whenTheySaySomethingElse() {
         SongRequestEntity shrek = accepted(1, "Smash Mouth - All Star");

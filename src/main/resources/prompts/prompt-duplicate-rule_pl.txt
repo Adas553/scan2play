@@ -1,5 +1,5 @@
 
-Oto lista ostatnio zaakceptowanych piosenek na tej imprezie: [%s].
+Oto lista piosenek, które ostatnio zagrały na tej imprezie: [%s].
 
 Dodatkowa zasada (ZAKAZ DUPLIKATÓW):
 Zanim zaakceptujesz piosenkę, sprawdź powyższą listę. Jeśli użytkownik prosi o utwór, który JEST NA TEJ LIŚCIE

@@ -148,4 +148,25 @@
             t.step('the server failed: the previous button is the lit one again and the list is the one that was there', [litFilter(), titles().length], [['guest'], 6]);
         }
     });
+    S2P.scenario({
+        name: 'history-sorted-by-votes',
+        title: 'the History sorted by votes: the first click on "Votes" puts the most wanted song first (12 before 3: as numbers), the second the other way',
+        setup: {},
+        run: async function (t) {
+            const box = document.getElementById('history-content');
+            const list = function () { return box.querySelector('[data-list]'); };
+            const titles = function () { return names(list().querySelectorAll('tbody tr[data-song-name]')); };
+            document.querySelector('[data-dj-tab="history"]').click();
+            await t.waitFor(function () { return list(); }, 'the history', 5000);
+            list().querySelector('[data-history-more]').click();
+            await t.waitFor(function () { return titles().length === 10; }, 'the longer history', 5000);
+
+            const votes = list().querySelector('th[data-sort="votes"]');
+            votes.click();
+            t.step('one click: the most votes first (Guest Charlie 12, Guest Foxtrot 3)', titles().slice(0, 2), ['Guest Charlie', 'Guest Foxtrot']);
+            t.check('the header shows the descending sort', votes.classList.contains('sort-desc'));
+            votes.click();
+            t.step('a second click: the fewest first, the most wanted last', titles().slice(-2), ['Guest Foxtrot', 'Guest Charlie']);
+        }
+    });
 })();

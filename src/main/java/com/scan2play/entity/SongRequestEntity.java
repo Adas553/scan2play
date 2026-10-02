@@ -43,6 +43,14 @@ public class SongRequestEntity {
     @Column(length = GUEST_TEXT_MAX)
     private String guestText;
 
+    /**
+     * How many guests asked for this song (V15): a request for a song that already waits in the queue adds a vote here instead of
+     * a row of its own ({@code SongRequestCommandService}). 1 for a new request and for a DJ's pick.
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private int votes = 1;
+
     private String style;
     private String decision;
 

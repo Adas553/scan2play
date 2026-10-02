@@ -65,7 +65,7 @@ class DjServiceTest {
 
         String result = djService.getQueueFingerprint(PARTY_CODE);
 
-        assertThat(result).isEqualTo("0-0");
+        assertThat(result).isEqualTo("0-0-0");
     }
 
     // ---- markSongAsPlayed ----

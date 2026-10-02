@@ -55,17 +55,42 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                         Pageable pageable);
 
     /**
-     * Computes a lightweight fingerprint of the queue state (count + maxId).
+     * Computes a lightweight fingerprint of the queue state (count + maxId + the votes, which change no row count).
      * Used for ETag-based 304 Not Modified responses during AJAX polling.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include.
-     * @return A string like "12-487" (count-maxId), or "0-0" if empty.
+     * @return A string like "12-487-15" (count-maxId-votes), or "0-0-0" if empty.
      */
-    @Query("SELECT CONCAT(COUNT(s), '-', COALESCE(MAX(s.id), 0)) " +
+    @Query("SELECT CONCAT(COUNT(s), '-', COALESCE(MAX(s.id), 0), '-', COALESCE(SUM(s.votes), 0)) " +
            "FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN :decisions")
     String computeFingerprint(@Param("partyCode") String partyCode,
                               @Param("decisions") Collection<String> decisions);
+
+    /**
+     * Takes a transaction-scoped PostgreSQL advisory lock on the party's guest requests: saving a request and adding a vote to a
+     * waiting one take turns, so two guests who ask for the same song at the same moment make one row with two votes, not two
+     * rows. Released when the transaction ends.
+     *
+     * @param key identifies the party's requests, see {@code SongRequestCommandService#lockKey}
+     * @return always 1 (the select only exists to run the locking function)
+     */
+    @Query(value = "SELECT 1 FROM (SELECT pg_advisory_xact_lock(:key)) l", nativeQuery = true)
+    int lockRequests(@Param("key") long key);
+
+    /**
+     * One more guest asked for this song — only while it still waits ({@code accepted}): a song that has just been played or
+     * skipped is not counted.
+     *
+     * Clears the persistence context afterwards: the caller's copy of the row is then detached, so changing its count in memory
+     * never writes the whole row back (it could put back a decision the DJ has just changed).
+     *
+     * @return 1 when the vote was added, 0 when the song no longer waits
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.votes = s.votes + 1 WHERE s.id = :id AND s.decision = 'accepted'")
+    int addVote(@Param("id") Long id);
 
     /**
      * Deletes all song requests associated with a specific party.

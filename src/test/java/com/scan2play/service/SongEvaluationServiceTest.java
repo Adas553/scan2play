@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
@@ -66,7 +67,8 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used by the auto-queue; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                queueService, messageSource, new DefaultResourceLoader(), transactionManager, youTubePlaylistClient);
+                queueService, messageSource, new DefaultResourceLoader(), transactionManager, youTubePlaylistClient,
+                new SongRequestCommandService(songRequestRepository));
         service.init();
     }
 
@@ -165,7 +167,7 @@ class SongEvaluationServiceTest {
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, queueService, messageSource, new DefaultResourceLoader(), transactionManager,
-                youTubePlaylistClient) {
+                youTubePlaylistClient, new SongRequestCommandService(songRequestRepository)) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -246,6 +248,62 @@ class SongEvaluationServiceTest {
         assertThat(prompts.get(0)).as("the prompt still gets no double quotes").contains("ta 'z Shreka' na wesele");
     }
 
+    /** The same song waits in the queue already (another guest's request): this one is a vote on it, not a row of its own. */
+    private SongRequestEntity waitingWilki() {
+        SongRequestEntity waiting = SongRequestEntity.builder().id(5L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
+                .decision(DECISION_ACCEPTED).trackUrl("https://www.youtube.com/watch?v=abcdefghijk").votes(2).build();
+        when(songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
+                .thenReturn(List.of(waiting));
+        when(queueService.resolveTrack("Wilki - Baśka", MusicProviderType.YOUTUBE))
+                .thenReturn("https://www.youtube.com/watch?v=abcdefghijk");
+        return waiting;
+    }
+
+    private static final String WILKI_ACCEPTED = "{\"decision\":\"accepted\",\"comment\":\"Klasyk!\",\"songName\":\"Wilki - Baśka\","
+            + "\"energyLevel\":7,\"requestKind\":\"title\"}";
+
+    @Test
+    void theSameSongAskedForWhileItWaits_isOneMoreVoteOnIt_notARowOfItsOwn() {
+        aYouTubeParty(0);
+        waitingWilki();
+        when(songRequestRepository.addVote(5L)).thenReturn(1);
+
+        DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", RequestMode.SONG, Set.of(1L));
+
+        assertThat(response.isVote()).isTrue();
+        assertThat(response.votes()).isEqualTo(3);
+        assertThat(response.requestId()).as("the waiting song's id: the guest's page marks it as theirs").isEqualTo(5L);
+        verify(songRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void theGuestsOwnWaitingSong_askedForAgain_isNeitherSavedNorCounted() {
+        aYouTubeParty(0);
+        waitingWilki();
+
+        DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", RequestMode.SONG, Set.of(5L));
+
+        assertThat(response.ownSong()).isTrue();
+        assertThat(response.isVote()).isFalse();
+        assertThat(response.votes()).isEqualTo(2);
+        verify(songRequestRepository, never()).addVote(any());
+        verify(songRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void aSongPlayedOrSkippedJustBeforeTheVote_getsARowOfItsOwn() {
+        aYouTubeParty(0);
+        waitingWilki();
+        when(songRequestRepository.addVote(5L)).thenReturn(0);   // the DJ marked it played meanwhile
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+
+        DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", RequestMode.SONG, Set.of());
+
+        assertThat(saved.getValue().getSongName()).isEqualTo("Wilki - Baśka");
+        assertThat(response.isVote()).isFalse();
+        assertThat(response.requestId()).isEqualTo(9L);
+    }
+
     @Test
     void aMoodSentAsASong_isNotSaved() {
         aYouTubeParty(0);
@@ -274,11 +332,12 @@ class SongEvaluationServiceTest {
     }
 
     @Test
-    void thePrompt_getsTheRecentSongs_forTheDuplicateRule() {
+    void thePrompt_getsTheRecentlyPlayedSongs_forTheDuplicateRule_notTheWaitingOnes() {
         aYouTubeParty(2);
         savesWithId();
+        // a waiting song is not a duplicate: asked for again, it gets one more vote (SongRequestCommandService)
         when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(eq(PARTY_CODE),
-                eq(List.of(DECISION_ACCEPTED, DECISION_PLAYED)), eq(PageRequest.of(0, 2))))
+                eq(List.of(DECISION_PLAYED)), eq(PageRequest.of(0, 2))))
                 .thenReturn(List.of(SongRequestEntity.builder().songName("A - One").build(),
                         SongRequestEntity.builder().songName("B - Two").build()));
 

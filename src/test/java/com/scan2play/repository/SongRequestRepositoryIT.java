@@ -41,13 +41,16 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
     @Test
     void theFingerprintFollowsTheQueue() {
         String party = newPartyCode();
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("0-0");
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("0-0-0");
 
         SongRequestEntity first = save(party, "one", "accepted", Instant.now(), null);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("1-" + first.getId());
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("1-" + first.getId() + "-1");
 
         SongRequestEntity second = save(party, "two", "accepted", Instant.now(), null);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId());
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-2");
+        // a vote changes no row count and no id — the fingerprint still moves, so the DJ's page fetches the queue again
+        assertThat(requests.addVote(first.getId())).isEqualTo(1);
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-3");
         assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
                 .extracting(SongRequestEntity::getSongName).containsExactly("one", "two");
     }

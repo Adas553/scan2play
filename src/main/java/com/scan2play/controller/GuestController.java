@@ -125,11 +125,12 @@ public class GuestController {
                 // A requests-only party takes specific songs only (its DJ sets the mood): whatever the form sent, a song
                 boolean songsOnly = settings.getActiveProvider() == MusicProviderType.REQUESTS_ONLY;
                 RequestMode mode = songsOnly ? RequestMode.SONG : RequestMode.fromParam(requestMode);
+                // The guest's earlier requests: the same song asked for again while it waits is not one more vote
                 DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
-                        styleOf(settings, style, locale), mode);
-                // A request that came to nothing — a mood sent back to the form, the AI not answering — does not use the
-                // guest's limit up (the server's own limits keep counting it: they are against abuse)
-                if (response.isMood() || response.isAiUnavailable()) {
+                        styleOf(settings, style, locale), mode, guestSessionService.myRequestIds(session, partyCode));
+                // A request that came to nothing — a mood sent back to the form, the AI not answering, the guest's own song
+                // asked for again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
+                if (response.isMood() || response.isAiUnavailable() || response.ownSong()) {
                     guestSessionService.giveBack(session, partyCode);
                 }
                 if (songsOnly && response.isMood()) {

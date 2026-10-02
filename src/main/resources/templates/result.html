@@ -20,6 +20,12 @@
             </h1>
         </div>
 
+        <!--/* The same song already waited: this request was one more vote on it — or it was the guest's own (SongRequestCommandService) */-->
+        <div th:if="${response.vote}" id="voteAdded" class="alert alert-warning fw-bold py-2 mt-4 mb-0" role="status"
+             th:text="#{result.vote.added(${response.votes})}">Someone already asked for it — your vote is in!</div>
+        <div th:if="${response.ownSong}" id="voteOwn" class="alert alert-info fw-bold py-2 mt-4 mb-0" role="status"
+             th:text="#{result.vote.own(${response.votes})}">Your request for this song is already waiting.</div>
+
         <p class="mt-4 lead fst-italic text-light" th:text="${response.comment}">DJ's Comment</p>
 
         <div class="mt-4" th:unless="${response.unchecked}">
@@ -29,7 +35,8 @@
         <!--/* Where the guest's song waits (GuestQueueService): the first of the guest's songs still in the queue */-->
         <div th:if="${guestQueue != null and guestQueue.myPosition() != null}" id="myPosition"
              class="alert alert-success fw-bold py-2 mt-4 mb-0" role="status"
-             th:text="#{home.queue.my_position(${guestQueue.mySong()}, ${guestQueue.myPosition()})}">Your song is number 3 in the queue</div>
+             th:text="${guestQueue.inOrder()} ? #{home.queue.my_position(${guestQueue.mySong()}, ${guestQueue.myPosition()})}
+                                             : #{home.queue.my_waiting(${guestQueue.mySong()})}">Your song is number 3 in the queue</div>
 
         <a th:href="@{/p/{code}(code=${partyCode})}" class="btn btn-outline-light mt-5" th:text="#{result.button.suggest_another}">Suggest another one</a>
     </div>

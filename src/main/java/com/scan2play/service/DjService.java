@@ -65,11 +65,11 @@ public class DjService {
      * and Thymeleaf rendering when the queue hasn't changed between polls.
      *
      * @param partyCode The unique code of the party.
-     * @return A fingerprint string (e.g. "12-487").
+     * @return A fingerprint string (e.g. "12-487-15": count, max id, votes).
      */
     public String getQueueFingerprint(String partyCode) {
         String raw = songRequestRepository.computeFingerprint(partyCode, List.of(DECISION_ACCEPTED));
-        return raw != null ? raw : "0-0";
+        return raw != null ? raw : "0-0-0";
     }
 
     /**

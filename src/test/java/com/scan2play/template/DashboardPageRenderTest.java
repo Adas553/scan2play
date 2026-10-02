@@ -227,6 +227,7 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html, "AUTO");
         assertThat(html).contains("Song One", "Song Two");
+        assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         assertThat(html).as("the footer's YouTube API attribution").contains("YouTube API Services");
         assertThat(html).contains(PLAYLIST);
         write("dashboard.html", html);
@@ -319,7 +320,7 @@ class DashboardPageRenderTest {
     private static HistoryEntry historyGuest(int i, String title, String decision) {
         return new HistoryEntry(Source.GUEST, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 22, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES), title,
                 "https://www.youtube.com/watch?v=g" + String.format("%010d", i), "g" + String.format("%010d", i), "Pop", decision,
-                "ok", 5 + i % 5);
+                "ok", 5 + i % 5, null, i == 5 ? 12 : i == 8 ? 3 : 1);   // the votes: a ranking to sort (12 before 3 — as numbers)
     }
 
     private static HistoryEntry historyBackground(int i, String title) {

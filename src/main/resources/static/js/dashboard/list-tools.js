@@ -5,7 +5,8 @@
  * TABLE SORTING — persistent across polling refreshes
  *   - Each sortable <th> has a data-sort attribute (e.g. "time", "song", "energy")
  *   - Each sortable <td> has data-sort-value + data-val with the raw value
- *   - Clicking a header toggles ASC → DESC → (reset to default server order)
+ *   - Clicking a header toggles ASC → DESC → (reset to default server order); a header with data-sort-first="desc" starts
+ *     with DESC (the votes: the most wanted song first)
  *   - Sort state for the queue table is remembered and re-applied after each polling cycle (3 s) via reapplySort()
  *   - The history table (loaded by AJAX in the History tab) gets its click handlers via initSortableHeaders()
  *
@@ -33,7 +34,7 @@ let queueSortDir    = null;   // "asc" or "desc"
 function sortTbody(tbody, colKey, direction) {
     if (!tbody || !colKey || !direction) return;
 
-    const isNumeric = (colKey === 'energy');
+    const isNumeric = (colKey === 'energy' || colKey === 'votes');
 
     // Pre-extract { row, value } pairs — O(N) DOM reads, then pure array sort
     const items = [];
@@ -103,12 +104,14 @@ export function initSortableHeaders(container) {
                 curDir = thead.getAttribute('data-sort-dir');
             }
 
-            // Cycle: none → asc → desc → none
+            // Cycle: none → asc → desc → none (or none → desc → asc → none for data-sort-first="desc")
+            const first = this.getAttribute('data-sort-first') === 'desc' ? 'desc' : 'asc';
+            const second = first === 'asc' ? 'desc' : 'asc';
             let newDir;
             if (curCol !== colKey) {
-                newDir = 'asc';
-            } else if (curDir === 'asc') {
-                newDir = 'desc';
+                newDir = first;
+            } else if (curDir === first) {
+                newDir = second;
             } else {
                 newDir = null; // reset
             }

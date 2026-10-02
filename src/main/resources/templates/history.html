@@ -71,6 +71,8 @@
             <tr>
                 <th class="d-none d-md-table-cell" data-sort="time" th:text="#{dashboard.table.header.time}">Time</th>
                 <th data-sort="song" th:text="#{dashboard.table.header.song}">Song</th>
+                <!--/* how many guests asked for the song; none for a background track — the history sorted by it is the party's ranking */-->
+                <th data-sort="votes" data-sort-first="desc" class="text-center" th:text="#{dashboard.table.header.votes}">Votes</th>
                 <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.vibe}">Vibe</th>
                 <th>
                     <span class="d-none d-md-inline" th:text="#{dashboard.table.header.decision}">Status</span>
@@ -103,6 +105,10 @@
                         </a>
                     </div>
                 </td>
+                <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes != null ? req.votes : 0}">
+                    <span th:if="${req.votes != null}" class="badge" th:classappend="${req.votes > 1} ? 'text-bg-warning' : 'text-bg-secondary'"
+                          th:text="${req.votes}">1</span>
+                </td>
                 <td class="d-none d-md-table-cell">
                     <span th:if="${req.source.name() == 'GUEST'}" class="badge text-bg-secondary" th:text="${req.style}">Style</span>
                     <span th:unless="${req.source.name() == 'GUEST'}" class="badge text-bg-dark border border-secondary"
@@ -119,10 +125,10 @@
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(history)}">
-                <td colspan="6" class="text-center text-light py-4 s2p-empty-row" th:text="#{history.empty}">History is empty.</td>
+                <td colspan="7" class="text-center text-light py-4 s2p-empty-row" th:text="#{history.empty}">History is empty.</td>
             </tr>
             <tr data-nomatch class="d-none">
-                <td colspan="6" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
+                <td colspan="7" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
             </tr>
             </tbody>
         </table>

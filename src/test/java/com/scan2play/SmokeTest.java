@@ -57,6 +57,21 @@ class SmokeTest {
     }
 
     @Test
+    @DisplayName("The tile for DJs (requests only) comes first, on a row of its own, recommended; YouTube and Spotify follow")
+    void landingPage_putsTheTileForDjsFirst() throws Exception {
+        String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        int requests = html.indexOf("href=\"/start/requests\"");
+        int lineBreak = html.indexOf("provider-cards-break");
+        assertThat(requests).isPositive().isLessThan(lineBreak);
+        assertThat(lineBreak).isLessThan(html.indexOf("href=\"/start/youtube\""));
+        assertThat(html.indexOf("href=\"/start/youtube\"")).isLessThan(html.indexOf("href=\"/oauth2/authorization/spotify\""));
+        // the recommended one is the tile for DJs, and only it
+        assertThat(html).containsOnlyOnce("provider-card--recommended");
+        assertThat(html.indexOf("provider-card--recommended")).isLessThan(lineBreak);
+    }
+
+    @Test
     @DisplayName("GET /start/requests (public) keeps the choice in the session and goes on to Google's login; another kind goes home")
     void start_keepsTheChosenKind_andGoesToGooglesLogin() throws Exception {
         MvcResult result = mockMvc.perform(get("/start/requests"))
