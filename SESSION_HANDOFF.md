@@ -6,8 +6,10 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after `1133591` (2026-10-02; `26684c8` had all three workflows green). Check with `git status -sb` and
+- **Branch `dev`**, pushed up to the documentation commit after `0bb9463` (2026-10-02; `26684c8` had all three workflows green). Check with `git status -sb` and
   `git log --oneline -8`, and the three workflows (below).
+- **Committed and pushed (`0bb9463`, 2026-10-02):** the dashboard shows "🎵 Scan2Play" (as on the guest page) above a smaller grey
+  "Panel DJ-a" — the vibe box grew with the note and left the left side empty on a computer (the owner: "dobrze").
 - **Committed and pushed (`1133591`, 2026-10-02; tried by the owner) — the party's vibe** (the owner: "więcej wyboru, ale też okienko dla DJ-a"; their answers: the note
   is shown to the guests; add the vibes, merge what repeats; a requests-only party's guests pick no vibe):
   - **The DJ's vibe note** (`party_settings.vibe_note`, **V16**, ≤ 150, one line — `util/Texts.oneLine`): a field under the vibe
@@ -147,7 +149,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. **Check the workflows of `1133591`** and its documentation commit (Database tests: V16, 33 IT; Browser tests: 75 scenarios).
+1. **Check the workflows of `0bb9463`** and its documentation commit (Database tests: V16, 33 IT; Browser tests: 75 scenarios).
 2. **Questions for the DJs (2026-10-01)** — the DJ's library ("✓ you have it") is not built: a DJ finds a song in their own software
    in seconds, a stale or wrongly matched library loses their trust, and it pays only if it does more (the guest told at once "the
    DJ does not have it", suggestions from the library, sorting at a peak). Ask: how many requests per wedding and how many they do
