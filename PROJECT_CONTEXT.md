@@ -75,11 +75,22 @@ never changed), `playbackMode` (`MANUAL` / `AUTO` = Auto-Pilot), `requestLimit` 
 **`SongRequestEntity` → `song_requests`** — a guest's request or a DJ pick. `partyCode`, `songName` (255; for a YouTube party the
 found video's cleaned title, Section 7.1), `guestText` (150, V14: what the guest typed, as typed — one line, what the AI is given;
 null for a DJ pick and older requests; the queue and the history show it under the song when it says something else,
-`util/GuestWords`), `style` (the vibe it was judged against, or "DJ Pick"), `decision` (`accepted` /
+`util/GuestWords`), `votes` (V15, ≥ 1: how many guests asked for it — see below), `style` (the vibe it was judged against, or "DJ Pick"), `decision` (`accepted` /
 `rejected` / `played`), `djComment` (500), `energyLevel`, `requestedAt`, `trackUrl` (500; a YouTube watch URL, a YouTube search
 link, or a Spotify URI), `playedAt` (V6; set only by `DjService.markPlayed`). Index `idx_party_decision_time (party_code, decision,
 requested_at DESC)`. `@PrePersist` truncates the long fields. **Retention: 30 days from `requestedAt`** —
 `SongRequestRetentionService` deletes nightly at 04:45 in batches of 1000, at most 200 batches a night; and with the account.
+
+**Votes** (`SongRequestCommandService.saveOrVote`, V15): an accepted request for a song that already waits in the party's queue (the
+same YouTube video, or the same name by `util/SongNames.comparable` — case, accents, punctuation ignored) is not a row of its own: the
+waiting song gets `votes + 1` (a conditional `UPDATE … WHERE decision = 'accepted'`; when the DJ played it meanwhile, the request is a
+new row) and keeps its name, link and first guest's words. The guest's own waiting song asked for again changes nothing and gives the
+guest's limit back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests asking at once make one row
+(`SongRequestVotesIT`, 20 rounds × 16 guests — red without the lock). A rejected request is always its own row. The AI's duplicate
+rule lists only PLAYED songs (a waiting one is a vote). The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes).
+The DJ's queue and history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history
+sorted by it is the party's ranking); the guest page lists "🔥 Najwięcej głosów" — up to 3 waiting songs with more than one vote —
+and the result page says "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N". Auto-Pilot's order is not changed by votes.
 
 **`FallbackTrackEntity` → `fallback_track`** (V2, V4, V5, V8) — the server's copy of a YouTube party's background playlist.
 `partyCode`, `playlistId` (playlist id, or `V:<videoId>` for a single video), `videoId`, `title`, `playlistPosition`, `playOrder`
@@ -151,8 +162,10 @@ there at once; an answer to a request sent before that click is ignored.
 `/p/{partyCode}` (no login) → the form: two tiles **🎵 Konkretna piosenka** (a title, an artist or a line of the lyrics; song
 suggestions from iTunes) and **✨ Nastrój** (the AI picks a song); the vibe list when the DJ has not forced one → `POST
 /p/{partyCode}/request` (an async `Callable`) → the result page (decision, the AI's comment, where the song waits). Under the form:
-"🔊 Teraz gra", the next 5 guest songs in play order, and the guest's own song with its place (`GuestQueueService`; the guest's
+"🔊 Teraz gra", "🔥 Najwięcej głosów", the next 5 guest songs in play order (with their votes), and the guest's own song with its place (`GuestQueueService`; the guest's
 requests are remembered in the session) — fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. A
+requests-only party has no play order (its DJ picks): "Ostatnio wysłane" — the 5 newest waiting requests, unnumbered — and "Twoja
+prośba „…” czeka u DJ-a" instead of a place (`GuestQueue.inOrder`). A
 request the AI reads as a mood in the song mode is not saved: the guest is back at the form in the mood mode. An ended party shows
 "DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
 
@@ -301,7 +314,8 @@ many videos have embedding disabled (error 150).
 | `FallbackQueueService` | the "up next" view, its version, and the DJ's changes resolved to the current playlist |
 | `PlayHistoryService` | the timeline (Section 5.4) |
 | `PlayerLeaseService` | the player lease and the commands (in memory; a `Clock` for tests) |
-| `GuestQueueService` | what the guest sees under the form |
+| `GuestQueueService` | what the guest sees under the form (with the most wanted songs) |
+| `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock) |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `QueueService` | delegates to the `MusicProvider` of the party |
@@ -359,8 +373,8 @@ for a song, `prompt-mood_{en,pl}`, `prompt-duplicate-rule_{en,pl}`, `prompt-norm
   is no reason to reject it; on a rejection `songName` is what the guest asked for (the code also falls back to the guest's text).
 - A YouTube party searches a `lyrics` request by the guest's own words, everything else by the AI's name; the stored name is then
   the found video's own title, cleaned of "(Official Video)" and the like (`YouTubeUrls.cleanVideoTitle`, one `videos.list` call).
-- AI down → the request is rejected with "AI offline" (no retry). Duplicates: the last `duplicateCheckWindow` accepted / played
-  songs go into the prompt.
+- AI down → the request is rejected with "AI offline" (no retry). Duplicates: the last `duplicateCheckWindow` played songs go into
+  the prompt (a waiting song asked for again is a vote, not a duplicate).
 
 ### 7.2 Spotify Web API
 
@@ -474,10 +488,11 @@ Never set it to `update`: Hibernate would change the schema behind Flyway's back
 | V12 | every `timestamp` → `timestamptz`; the old values read in the session's zone = the JVM's that wrote them (Polish time locally, UTC on Railway) |
 | V13 | `party_settings.active_provider` may be `REQUESTS_ONLY` (the check constraint) |
 | V14 | `song_requests.guest_text` varchar(150), nullable (no back-fill: the words of older requests were never kept) |
+| V15 | `song_requests.votes` integer NOT NULL DEFAULT 1 |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub.
 
-**First production deploy checklist** (the next deploy applies V2..V14 at once): (1) back up the database; (2) dump the production
+**First production deploy checklist** (the next deploy applies V2..V15 at once): (1) back up the database; (2) dump the production
 schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or Hibernate's
 validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
 What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
@@ -499,7 +514,8 @@ DjPlayerLeaseController    → PlayerLeaseService, FallbackQueueService, PlayHis
 DjPartySettingsController  → PartySettingsCommandService, FallbackPlaylistService, AccountDeletionService, DjSessionHelper
 DjFallbackQueueController  → FallbackQueueService, DjSessionHelper
 NextTrackService           → DjService, FallbackPlaylistService, FallbackTrackCommandService, FallbackTrackRepository
-SongEvaluationService      → Gemini Client, QueueService, YouTubePlaylistClient, SongRequestRepository, PartySettingsQueryService
+SongEvaluationService      → Gemini Client, QueueService, YouTubePlaylistClient, SongRequestRepository, SongRequestCommandService,
+                             PartySettingsQueryService
 QueueService               → SpotifyMusicProvider (→ SpotifyAuthService), YouTubeMusicProvider (→ YouTubeSearchBudget)
 GuestQueueService          → DjService, PlayHistoryService
 ```

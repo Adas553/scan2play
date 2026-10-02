@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-01
+# Session Handoff — 2026-10-02
 
 The current state only: the branch, what waits for the owner, what comes next. **The history of every session up to 2026-10-01**
 (decisions, the owner's words, what was tried) is in `docs/history/session-handoff-2026-09.md` — read it only when a question
@@ -6,8 +6,49 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after `591fdf3` (2026-10-01; `4a364b1` had all three workflows green). Check with `git status -sb` and
+- **Branch `dev`**, pushed up to the documentation commit after `e6e457a` (2026-10-02; `d0edca9` had all three workflows green). Check with `git status -sb` and
   `git log --oneline -8`, and the three workflows (below).
+- **Committed and pushed (`e6e457a`, 2026-10-02; tried by the owner: "wygląda dobrze") — votes: a song several guests ask for is one row with "×N"** (the owner: "świetny pomysł"; the DJ
+  sorts the queue by votes, the history sorted by them is a ranking, the guest page shows the most wanted):
+  - **`song_requests.votes`** (**V15**, NOT NULL DEFAULT 1 — the next start in IntelliJ applies it to the local `scan2play`, no data
+    touched). **`SongRequestCommandService.saveOrVote`**: an accepted request for a song that already waits (the same YouTube video,
+    or the same name by `util/SongNames` — case, accents, punctuation ignored; `GuestWords` uses it too) adds a vote to it instead of
+    a row; under a per-party advisory lock ("S2PR"); the DJ playing it meanwhile → a new row; the guest's own waiting song again →
+    nothing, and the guest's limit is given back (`DjResponse.ownSong`); a rejected request is always a row. Defaults taken without the
+    owner's answer (asked, not answered yet — change them if the owner wants otherwise): **a vote uses the guest's limit**; **votes do not
+    reorder the queue or Auto-Pilot** — the DJ sorts.
+  - **The AI's duplicate rule lists only played songs** (it listed accepted + played: a waiting song asked for again was rejected
+    as a duplicate; now it is a vote). Prompts `prompt-duplicate-rule_{pl,en}` say "played recently".
+  - **The queue's ETag counts the votes** (`computeFingerprint`: count-maxId-votes) — a vote changes no row count and no id.
+  - **Looks:** a "Głosy" column in the DJ's queue and history (a yellow badge from 2; the first click sorts the most first —
+    `data-sort-first="desc"` in `list-tools.js`); the guest page: "🔥 Najwięcej głosów" (up to 3 waiting songs with > 1 vote) above
+    the queue, "👍 N" beside a queue song; the result page: "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N" / "Twoja prośba o
+    tę piosenkę już czeka w kolejce".
+  - Tests: `SongRequestVotesIT` 3 (20 rounds × 16 guests at once → one row with 16 votes — **red without the lock**, in round 1;
+    name / video / own / played / rejected; a vote never writes the row back — the vote's `UPDATE` clears the persistence context),
+    `SongRequestRepositoryIT` (the fingerprint moves on a vote), `SongEvaluationServiceTest` +3, `GuestControllerTest` +1,
+    `GuestQueueServiceTest` +2, `GuestPageRenderTest` +3, `DashboardQueueFragmentTest` +1, `HistoryFragmentTest` +1,
+    `DashboardPageRenderTest` (the history samples have 12 and 3 votes); browser scenario `history-sorted-by-votes` — **red on the old
+    `list-tools.js`**. 597 unit tests (596 run, 1 skipped), 32 database tests, 75 browser scenarios — green in copies.
+  - **Then (the owner: "wygląda dobrze"; the 👍 vanished on the yellow badge on a computer):** the guest page's vote badges are a
+    dark pill with a yellow edge (`s2p-vote-badge` in `app.css`; the DJ's yellow number badges stay). **A requests-only party's guest
+    page has no order to tell** (the owner: "ostatnio wysłane"): "Ostatnio wysłane" — the 5 newest waiting requests, unnumbered —
+    and "Twoja prośba „…” czeka u DJ-a" instead of "N. w kolejce", on the party page and the result page (`GuestQueue.inOrder`,
+    from the party's kind; `GuestQueueServiceTest` +2, `GuestPageRenderTest` +1). **The legal pages and the guide** (October 2026):
+    the privacy policy says what the session cookie is for (the limit, "Twoja", a vote counted once), that sessions are in the
+    database for 30 min without activity, that Gemini gets the request text, that a requests-only party searches through no API,
+    and that votes hold no personal data; the terms describe the requests-only mode and votes, and say that YouTube's / Spotify's
+    terms may limit their content to personal, non-commercial use — the DJ is responsible (both PL / EN). The landing page's guide:
+    step 2 — the duplicate memory blocks songs that played lately, more requests for a waiting song become votes; step 4 — playing
+    from your own software: "Zagrane" / "Pomiń" and the "Głosy" column. The dashboard: "Blokuj powtórki (ostatnie X zagranych
+    piosenek)", the requests-only help mentions the votes. 600 unit tests, 75 browser scenarios.
+    **The landing page:** the "Zbieraj prośby gości" tile first, on a row of its own (`provider-cards-break`), and the recommended
+    one ("✅ Polecane" and the green glow moved from YouTube to it — the owner's choice), YouTube ("🏠 Na prywatne imprezy" — a badge keeps it level with Spotify's)
+    and Spotify under it. **The DJ's grey texts a little brighter** (the owner: hard to read in daylight): `.page-dj
+    .text-secondary` #6c757d → #8a939b in `app.css` — the hints, the server limits, the times, the AI's comments (dashboard, history) — on a phone too (the owner: the one a subscription may be for one day; the comment saying so is a Thymeleaf one, not in
+    the page's source). `SmokeTest` +1 (the order). "🔍 Podejrzyj" stays: a plain link to YouTube's search results, no API.
+  - **To try:** two phones (or a phone and a private window) ask for the same song → one row "2" on the dashboard, "Głosy" sorts,
+    the guest page shows "🔥 Najwięcej głosów"; the same phone asks again → "już czeka", no vote.
 - **Committed and pushed (`591fdf3`, 2026-10-01, evening; tried by the owner: "działa") — a small package:**
   - **The guest's wait in minutes:** `guest.error.rate_limit` / `too_many_requests` say "spróbuj za 3 min" — whole minutes rounded
     up from a minute on, "45 s" below it (`GuestController.waitText`; every party). `GuestControllerTest` +4 — **red before**.
@@ -86,19 +127,27 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. **Check the workflows of `591fdf3`** and its documentation commit (Database tests: V14, 29 IT; Browser tests: 74 scenarios, now
-   with the real Bootstrap from the webjar in the runner's `~/.m2`).
-2. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
+1. **Check the workflows of `e6e457a`** and its documentation commit (Database tests: V15, 32 IT; Browser tests: 75 scenarios).
+   **Next talked about (the owner, 2026-10-02): the party's vibe** — more vibes to choose from, and a field where the DJ types their
+   own (plan and decisions in the session; not started).
+2. **Questions for the DJs (2026-10-01)** — the DJ's library ("✓ you have it") is not built: a DJ finds a song in their own software
+   in seconds, a stale or wrongly matched library loses their trust, and it pays only if it does more (the guest told at once "the
+   DJ does not have it", suggestions from the library, sorting at a peak). Ask: how many requests per wedding and how many they do
+   not have; is searching a pain at all; should a guest hear "the DJ does not have it" at once. Likely cheaper wins to ask about:
+   the queue on the phone (the owner is not sure: the "Kolejka" tab already jumps there), "play later" without rejecting. Repeats
+   grouped — done (votes, above). A sound / a count in the tab title on a new request — dropped by the owner (the sound goes to the
+   computer's default output, maybe the PA; a hidden tab wakes at most once a minute). If the library comes back: migration V16.
+3. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
    history) — and tells what they said. (The guest's own words beside the song — done, above.)
-3. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
+4. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
    compared with `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
-   (Flyway V2..V14, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
-4. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
+   (Flyway V2..V15, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
+5. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
    it" beside each request; the queue on the phone as the main view; Spotify's dashboard forms in the background too (today only
    YouTube and requests-only — Spotify has no tests). (The wait in minutes — done.)
-5. From `REVIEW.md`: 2.5 (an import inside `next-track`, only for a party older than 29 days), 6.3 (only together with a change of
+6. From `REVIEW.md`: 2.5 (an import inside `next-track`, only for a party older than 29 days), 6.3 (only together with a change of
    the queue), 4.7 / 5.3 (Spotify), JaCoCo, the rest of 7.3. (3.4 and Bootstrap from the app — done.)
-6. **YouTube and the rules (the owner's question, 2026-10-01):** there is no "licence" to ask YouTube for — what counts is the
+7. **YouTube and the rules (the owner's question, 2026-10-01):** there is no "licence" to ask YouTube for — what counts is the
    API's Developer Policies (III.I.7 no separating audio from video: the visible embedded player whose sound goes to the speakers is
    not that; III.I.9 no background player: Auto-Pilot in a hidden tab / a locked phone looks like one; III.F.3.a / III.G.1.b no
    charge for watching / selling API access) and YouTube's own terms (personal, non-commercial use — a paid DJ at a wedding is a
@@ -114,7 +163,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 - **The old `YOUTUBE_API_KEY`** (rotated 2026-09-29): delete it in Google Cloud Console and check the new one is restricted to the
   YouTube Data API v3. The disabled OAuth client secret `****IgiS` can be deleted; `****pfTe` is the one in use.
 - **Production** (Railway paused): at the next go-live, the Flyway checklist of `PROJECT_CONTEXT.md` Section 10 first — the first
-  deploy applies V2..V14 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
+  deploy applies V2..V15 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
   Railway already.
 - **Try on the phone:** the wake lock (Auto-Pilot on, the screen should not dim), ✕ on an "up next" row, Save with a private / wrong
   playlist link.
