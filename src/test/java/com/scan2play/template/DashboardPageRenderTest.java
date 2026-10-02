@@ -227,6 +227,7 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html, "AUTO");
         assertThat(html).contains("Song One", "Song Two");
+        assertThat(html).as("the app's name above the page's heading").contains("🎵 Scan2Play", "<h1 class=\"h4 mb-0 text-secondary\">Panel DJ-a</h1>");
         assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         assertThat(html).as("the footer's YouTube API attribution").contains("YouTube API Services");
         assertThat(html).contains(PLAYLIST);
