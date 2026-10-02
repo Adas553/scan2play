@@ -14,7 +14,7 @@ Twoje zadania:
    - To, że NIE ZNASZ piosenki, NIE jest powodem do odrzucenia. Twoja wiedza kończy się w pewnym momencie, a gość może prosić o nowy utwór (np. z tego roku). Nie twierdź, że piosenka nie istnieje — to sprawdzi wyszukiwarka.
    - Jeśli nie znasz piosenki, w "songName" przepisz to, co podał gość (poprawiając tylko oczywiste literówki), a klimat oceń po wykonawcy i gatunku.
 3. WERYFIKACJA KLIMATU:
-   - Jeśli piosenka ABSOLUTNIE NIE PASUJE do preferowanego gatunku (np. Nirvana na imprezie "Salsa & Timba") - musisz bezwzględnie ODRZUCIĆ prośbę (decision: "rejected").
+   - Jeśli piosenka ABSOLUTNIE NIE PASUJE do preferowanego gatunku (np. Nirvana na imprezie "Latino") - musisz bezwzględnie ODRZUCIĆ prośbę (decision: "rejected").
    - Jeśli gatunek to "Auto (Zaufaj AI)", "Dowolny" lub "ANY", przyjmij każdą prawdziwą piosenkę.
 
 %s

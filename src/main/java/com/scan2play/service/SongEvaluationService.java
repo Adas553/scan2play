@@ -13,6 +13,7 @@ import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.RequestMode;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.Texts;
 import com.scan2play.util.YouTubeUrls;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -107,6 +108,8 @@ public class SongEvaluationService {
     private Map<String, String> moodPromptTemplates;
     /** Duplicate rule template per language code. */
     private Map<String, String> duplicateRuleTemplates;
+    /** The DJ's vibe note in the prompt, per language code. */
+    private Map<String, String> vibeNoteTemplates;
     /** Lightweight prompt for normalizing raw song names to "ARTIST - TITLE" format. */
     private String normalizePromptTemplate;
 
@@ -124,7 +127,9 @@ public class SongEvaluationService {
             var prompts = new java.util.HashMap<String, String>();
             var moodPrompts = new java.util.HashMap<String, String>();
             var duplicates = new java.util.HashMap<String, String>();
+            var vibeNotes = new java.util.HashMap<String, String>();
             for (String lang : SUPPORTED_LANGS) {
+                vibeNotes.put(lang, loadResource("classpath:prompts/prompt-vibe-note_" + lang + ".txt"));
                 prompts.put(lang, loadResource("classpath:prompts/prompt-template_" + lang + ".txt"));
                 moodPrompts.put(lang, loadResource("classpath:prompts/prompt-mood_" + lang + ".txt"));
                 duplicates.put(lang, loadResource("classpath:prompts/prompt-duplicate-rule_" + lang + ".txt"));
@@ -132,6 +137,7 @@ public class SongEvaluationService {
             this.promptTemplates = Map.copyOf(prompts);
             this.moodPromptTemplates = Map.copyOf(moodPrompts);
             this.duplicateRuleTemplates = Map.copyOf(duplicates);
+            this.vibeNoteTemplates = Map.copyOf(vibeNotes);
             this.normalizePromptTemplate = loadResource("classpath:prompts/prompt-normalize.txt");
         } catch (IOException e) {
             log.error("Failed to load prompt templates", e);
@@ -178,7 +184,7 @@ public class SongEvaluationService {
         String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, locale);
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, locale, mode);
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), locale, mode);
         if (aiResponse == null) {
             aiResponse = withoutTheAi(settings, songName, aiOfflineMsg, locale);
         }
@@ -232,9 +238,10 @@ public class SongEvaluationService {
     }
 
     /** The AI's answer, or null when the AI could not be asked (an error, a timeout, an answer that is not JSON). */
-    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, Locale locale, RequestMode mode) {
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String vibeNote, Locale locale,
+                                      RequestMode mode) {
         try {
-            String prompt = buildPrompt(songName, style, recentSongs, locale, mode);
+            String prompt = buildPrompt(songName, style, recentSongs, vibeNote, locale, mode);
             DjResponse answer = objectMapper.readValue(askAi(prompt, aiJsonConfig), DjResponse.class);
             // The AI may leave the name of a rejected song empty (the Polish prompt once allowed it): the history would show a
             // row without a song, so it keeps what the guest asked for.
@@ -279,21 +286,28 @@ public class SongEvaluationService {
      * guest's double quotes.
      */
     static String asTyped(String guestText) {
-        if (guestText == null) {
-            return "";
-        }
-        String text = guestText.replaceAll("\\s+", " ").strip();
-        return text.length() > GUEST_TEXT_MAX ? text.substring(0, GUEST_TEXT_MAX).strip() : text;
+        return Texts.oneLine(guestText, GUEST_TEXT_MAX);
     }
 
     /** The prompt of the guest's mode in the guest's language, with the request, the style and the duplicate rule filled in. */
     String buildPrompt(String songName, String style, String recentSongs, Locale locale, RequestMode mode) {
+        return buildPrompt(songName, style, recentSongs, null, locale, mode);
+    }
+
+    /**
+     * The same, with the DJ's vibe note (V16) before the duplicate rule: one line of at most
+     * {@value PartySettingsEntity#VIBE_NOTE_MAX} characters, without double quotes (the prompt puts it in quotes); nothing when
+     * the DJ wrote none.
+     */
+    String buildPrompt(String songName, String style, String recentSongs, String vibeNote, Locale locale, RequestMode mode) {
         String lang = resolvePromptLanguage(locale);
+        String note = Texts.oneLine(vibeNote, PartySettingsEntity.VIBE_NOTE_MAX).replace('"', '\'');
+        String vibeRule = note.isEmpty() ? "" : String.format(vibeNoteTemplates.get(lang), note);
         String duplicateRule = (recentSongs != null)
                 ? String.format(duplicateRuleTemplates.get(lang), recentSongs)
                 : "";
         Map<String, String> templates = mode == RequestMode.MOOD ? moodPromptTemplates : promptTemplates;
-        return String.format(templates.get(lang), songName, style, duplicateRule);
+        return String.format(templates.get(lang), songName, style, vibeRule + duplicateRule);
     }
 
     /**

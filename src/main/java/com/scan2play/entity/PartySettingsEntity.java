@@ -21,6 +21,9 @@ import java.time.Instant;
 @Builder(toBuilder = true)   // toBuilder: PartySettingsQueryService hands out copies of the cached settings
 public class PartySettingsEntity {
 
+    /** The longest vibe note (the column, V16). */
+    public static final int VIBE_NOTE_MAX = 150;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -41,6 +44,13 @@ public class PartySettingsEntity {
 
     @Enumerated(EnumType.STRING)
     private VibeType globalVibe;
+
+    /**
+     * The DJ's own words about the vibe (V16): one line of at most {@value #VIBE_NOTE_MAX} characters, e.g. "wesele 40+, bez rapu".
+     * The AI is given it with every request, the guests see it on the party page. {@code null} when the DJ wrote nothing.
+     */
+    @Column(length = VIBE_NOTE_MAX)
+    private String vibeNote;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

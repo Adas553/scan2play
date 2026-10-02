@@ -242,6 +242,28 @@ class GuestPageRenderTest {
         assertThat(first).doesNotContain("id=\"voteAdded\"", "id=\"voteOwn\"");
     }
 
+    /** The DJ's vibe note (V16) is shown above the form's vibe; a requests-only party's guests pick no vibe. */
+    @Test
+    void theDjsVibeNote_isShown_andARequestsOnlyPartysGuestsPickNoVibe() {
+        String withNote = render(PL, Map.of("vibeNote", "wesele 40+, <b>bez rapu</b>"));
+        assertThat(withNote).contains("id=\"vibeNote\"", "🎧 Klimat imprezy", "wesele 40+, &lt;b&gt;bez rapu&lt;/b&gt;", "id=\"styleInput\"")
+                .doesNotContain("??");
+        assertThat(withNote).as("the new vibes are offered").contains("Polskie przeboje", "Latino (salsa, bachata, reggaeton)", "Dla dzieci")
+                .doesNotContain("Salsa & Timba");
+
+        assertThat(withNote).as("no vibe of the list: no name after the title").doesNotContain("id=\"partyVibeName\"");
+
+        // the vibe of the list and the note in ONE box — no second, alarming one
+        String both = render(PL, Map.of("vibeNote", "wesele +40", "globalVibe", VibeType.CLUB_AND_EDM));
+        assertThat(both).containsOnlyOnce("id=\"partyVibe\"").contains("id=\"partyVibeName\">Klubowa &amp; EDM<", "wesele +40")
+                .doesNotContain("UWAGA", "id=\"styleInput\"");
+        assertThat(both).as("the forced vibe still goes with the form").contains("name=\"style\" value=\"Klubowa &amp; EDM\"");
+        assertThat(render(PL, Map.of())).as("any vibe, no note: no box").doesNotContain("id=\"partyVibe\"");
+
+        String requestsOnly = render(PL, Map.of("activeProvider", MusicProviderType.REQUESTS_ONLY));
+        assertThat(requestsOnly).doesNotContain("id=\"styleInput\"", "id=\"vibeNote\"");
+    }
+
     /** A requests-only party takes specific songs only: no song / mood tiles, the song mode sent as a hidden field. */
     @Test
     void aRequestsOnlyParty_asksForASong_withoutTheMoodTiles() {

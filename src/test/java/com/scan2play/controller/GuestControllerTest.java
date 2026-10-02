@@ -255,6 +255,15 @@ class GuestControllerTest {
         assertThat(controller.styleOf(settings, "JAZZ", java.util.Locale.ENGLISH)).as("no vibe saved yet").isEqualTo("JAZZ");
     }
 
+    /** A requests-only party: its guests pick no vibe — whatever the form sent, the AI judges by the DJ's vibe (or none). */
+    @Test
+    void atARequestsOnlyParty_theGuestsPickIsIgnored() {
+        settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
+        settings.setGlobalVibe(VibeType.ANY);
+
+        assertThat(controller.styleOf(settings, "ROCK_AND_METAL", java.util.Locale.ENGLISH)).isEqualTo("ANY");
+    }
+
     /** A mood sent as a song: nothing is saved, the guest is back at the form with the text and the mood mode chosen. */
     @Test
     void aMoodSentAsASong_goesBackToTheFormInTheMoodMode() throws Exception {
@@ -272,13 +281,14 @@ class GuestControllerTest {
         verify(guestSessionService).giveBack(session, PARTY);
     }
 
-    /** A requests-only party takes specific songs only: a guest who sends the mood mode anyway is evaluated as a song. */
+    /** A requests-only party takes specific songs only: a guest who sends the mood mode anyway is evaluated as a song (and with
+     *  no vibe of the guest's: the form's one is ignored there). */
     @Test
     void aRequestsOnlyParty_evaluatesEveryRequestAsASong() throws Exception {
         settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "sanah", "POP_AND_DANCE", RequestMode.SONG, java.util.Set.of()))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "sanah", "ANY", RequestMode.SONG, java.util.Set.of()))
                 .thenReturn(new DjResponse("accepted", "ok", "sanah - Szampan", 7, "artist", 3L));
 
         assertThat(request("sanah", "MOOD")).isEqualTo("result");
@@ -291,7 +301,7 @@ class GuestControllerTest {
         settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "POP_AND_DANCE", RequestMode.SONG, java.util.Set.of()))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", RequestMode.SONG, java.util.Set.of()))
                 .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", 0, "mood"));
         when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
 

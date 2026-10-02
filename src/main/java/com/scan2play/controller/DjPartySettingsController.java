@@ -7,6 +7,7 @@ import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.FallbackImportException;
 import com.scan2play.service.FallbackPlaylistService;
 import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.util.Texts;
 import com.scan2play.util.YouTubeUrls;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -84,6 +85,19 @@ public class DjPartySettingsController {
                                    OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setGlobalVibe(newVibe));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The DJ's own words about the vibe (V16): one line, at most {@value PartySettingsEntity#VIBE_NOTE_MAX} characters; empty
+     * clears it. The AI is given it with every request, the guests see it on the party page.
+     */
+    @PostMapping("/dashboard/vibe-note")
+    public String updateVibeNote(@RequestParam String partyCode, @RequestParam(required = false) String vibeNote,
+                                 OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        String note = Texts.oneLine(vibeNote, PartySettingsEntity.VIBE_NOTE_MAX);
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setVibeNote(note.isEmpty() ? null : note));
         return REDIRECT_DASHBOARD;
     }
 

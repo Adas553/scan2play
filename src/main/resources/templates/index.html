@@ -79,7 +79,18 @@
                      th:text="#{home.form.input.help.song}">A title, an artist or a line of the lyrics</div>
             </div>
 
-            <div class="mb-4" th:if="${globalVibe.name() == 'ANY'}">
+            <!--/* The party's vibe as the DJ set it, in one box: the vibe of the list (when not "any") and the DJ's own words (V16) */-->
+            <div class="alert alert-info text-dark text-center shadow-sm mb-4" id="partyVibe"
+                 th:if="${vibeNote != null or globalVibe.name() != 'ANY'}">
+                <div class="fw-bold">
+                    <span th:text="#{party.vibe.title}">🎧 Tonight's vibe</span><th:block th:if="${globalVibe.name() != 'ANY'}">: <span
+                        id="partyVibeName" th:text="#{vibe.__${globalVibe}__}">Club & EDM</span></th:block>
+                </div>
+                <div th:if="${vibeNote != null}" id="vibeNote" th:text="${vibeNote}">40+ wedding, Polish hits, no rap</div>
+            </div>
+
+            <!--/* The guests pick a vibe only when the DJ left it to them — and never at a requests-only party (its DJ sets it) */-->
+            <div class="mb-4" th:if="${globalVibe.name() == 'ANY' and (activeProvider == null or activeProvider.name() != 'REQUESTS_ONLY')}">
                 <label for="styleInput" class="form-label fw-bold" th:text="#{home.form.vibe.label}">Choose the vibe (optional)</label>
                 <select id="styleInput" name="style" class="form-select">
                     <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
@@ -89,13 +100,7 @@
                 </select>
             </div>
 
-            <div class="mb-4" th:unless="${globalVibe.name() == 'ANY'}">
-                <div class="alert alert-warning text-dark text-center fw-bold shadow-sm">
-                    <span th:text="#{party.vibe.alert}">🛑 WARNING: The DJ forced the vibe:</span><br>
-                    <span class="fs-4 text-uppercase" th:text="#{vibe.__${globalVibe}__}">JAZZ</span>
-                </div>
-                <input type="hidden" name="style" th:value="#{vibe.__${globalVibe}__}">
-            </div>
+            <input th:unless="${globalVibe.name() == 'ANY'}" type="hidden" name="style" th:value="#{vibe.__${globalVibe}__}">
 
             <button type="submit" id="submitBtn" class="btn btn-success w-100 fw-bold shadow-sm py-2"
                     th:attr="data-text-submitting=#{home.form.button.submitting}">

@@ -30,12 +30,24 @@
                         <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
                         <label for="vibeSelect" class="me-2 fw-bold text-light small text-nowrap" th:text="#{dashboard.vibe.label}">🌍 Global Vibe:</label>
                         <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" data-auto-submit>
+                            <!--/* "Any" means "the guests choose" — except at a requests-only party, whose guests pick no vibe */-->
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
                                     th:value="${vibe}"
-                                    th:text="#{vibe.__${vibe}__}"
+                                    th:text="${vibe.name() == 'ANY' and activeProvider.name() == 'REQUESTS_ONLY'} ? #{vibe.ANY.requests} : #{vibe.__${vibe}__}"
                                     th:selected="${vibe == globalVibe}">
                             </option>
                         </select>
+                    </form>
+                    <!--/* The DJ's own words about the vibe (V16): the AI is given them, the guests see them; empty clears them */-->
+                    <form th:action="@{/dj/dashboard/vibe-note}" method="POST" class="m-0 mt-2" id="vibeNoteForm">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <label for="vibeNoteInput" class="form-label text-secondary small mb-1" th:text="#{dashboard.vibe.note.label}">Your vibe notes</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="vibeNoteInput" name="vibeNote" maxlength="150" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary"
+                                   th:value="${vibeNote}" th:placeholder="#{dashboard.vibe.note.placeholder}">
+                            <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
+                        </div>
                     </form>
                 </div>
             </div>

@@ -74,6 +74,31 @@ class SongEvaluationServiceTest {
 
     // ---- buildPrompt: each mode has its own prompt ----
 
+    /** The DJ's vibe note (V16) goes into the prompt as one line without double quotes, in both modes; none, no block. */
+    @Test
+    void theDjsVibeNote_isGivenToTheAi_onOneLine_withoutDoubleQuotes() {
+        String song = service.buildPrompt("sanah", "ANY", null, "wesele 40+, \"bez rapu\"" + System.lineSeparator() + " i bez disco polo",
+                java.util.Locale.of("pl"), RequestMode.SONG);
+        String moodEn = service.buildPrompt("to dance", "ANY", "A - B", "no rap tonight", java.util.Locale.ENGLISH, RequestMode.MOOD);
+        String none = service.buildPrompt("sanah", "ANY", null, "   ", java.util.Locale.of("pl"), RequestMode.SONG);
+
+        assertThat(song).contains("Wskazówki DJ-a o klimacie", "\"wesele 40+, 'bez rapu' i bez disco polo\"").doesNotContain("%s");
+        assertThat(moodEn).contains("The DJ's notes about this party's vibe", "\"no rap tonight\"", "A - B").doesNotContain("%s");
+        assertThat(none).doesNotContain("Wskazówki DJ-a");
+    }
+
+    @Test
+    void theSavedVibeNote_reachesThePromptOfARequest() {
+        when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(PartySettingsEntity.builder().partyCode(PARTY_CODE)
+                .activeProvider(MusicProviderType.REQUESTS_ONLY).duplicateCheckWindow(0).vibeNote("bez rapu").build());
+        savesWithId();
+
+        answering("{\"decision\":\"rejected\",\"comment\":\"Dziś bez rapu\",\"songName\":\"Rap\",\"energyLevel\":0}")
+                .evaluateAndSaveSong(PARTY_CODE, "jakiś rap", "ANY", RequestMode.SONG);
+
+        assertThat(prompts.getFirst()).contains("\"bez rapu\"");
+    }
+
     @Test
     void theSongMode_asksForTheSongTheGuestMeans_theMoodMode_forASongThatFitsTheMood() {
         String song = service.buildPrompt("chciałbym być marynarzem", "ANY", null, java.util.Locale.of("pl"), RequestMode.SONG);

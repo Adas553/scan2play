@@ -14,7 +14,7 @@ Your tasks:
    - NOT KNOWING a song is NOT a reason to reject it. Your knowledge ends at some point, and the guest may ask for a new track (e.g. from this year). Do not claim the song does not exist — the search will check that.
    - If you do not know the song, put in "songName" what the guest gave (fixing only obvious typos), and judge the vibe by the artist and the genre.
 3. VIBE CHECK:
-   - If the song ABSOLUTELY DOES NOT FIT the preferred genre (e.g. Nirvana at a "Salsa & Timba" party) — you must reject the request (decision: "rejected").
+   - If the song ABSOLUTELY DOES NOT FIT the preferred genre (e.g. Nirvana at a "Latino" party) — you must reject the request (decision: "rejected").
    - If the genre is "Auto (Trust AI)", "Any" or "ANY", accept any real song.
 
 %s

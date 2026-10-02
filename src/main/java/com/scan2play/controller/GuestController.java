@@ -54,6 +54,7 @@ public class GuestController {
             }
 
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
+            model.addAttribute(VIBE_NOTE, settings.getVibeNote());
             model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
             model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
             model.addAttribute(PARTY_CODE, partyCode);
@@ -162,12 +163,16 @@ public class GuestController {
     /**
      * The style the AI judges the request against (review item 4.6) — decided here, not by the form, whose fields a guest can
      * change: the DJ's vibe when the DJ set one (by its name in the guest's language, as the form sent it), otherwise the
-     * guest's pick from the list of vibes ({@link VibeType} by name), and {@code ANY} for anything else.
+     * guest's pick from the list of vibes ({@link VibeType} by name), and {@code ANY} for anything else. At a requests-only party
+     * the guests pick no vibe (its DJ sets it, or the AI judges by the DJ's vibe note): {@code ANY} whatever the form sent.
      */
     String styleOf(PartySettingsEntity settings, String requested, Locale locale) {
         VibeType partyVibe = settings.getGlobalVibe();
         if (partyVibe != null && partyVibe != VibeType.ANY) {
             return messageSource.getMessage("vibe." + partyVibe.name(), null, partyVibe.name(), locale);
+        }
+        if (settings.getActiveProvider() == MusicProviderType.REQUESTS_ONLY) {
+            return VibeType.ANY.name();
         }
         return Arrays.stream(VibeType.values())
                 .map(VibeType::name)

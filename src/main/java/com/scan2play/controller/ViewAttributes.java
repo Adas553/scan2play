@@ -17,6 +17,7 @@ public final class ViewAttributes {
 
     // --- Common Attributes ---
     public static final String GLOBAL_VIBE = "globalVibe";
+    public static final String VIBE_NOTE = "vibeNote";
     public static final String ACTIVE_PROVIDER = "activeProvider";
     public static final String PARTY_CODE = "partyCode";
     public static final String IS_ACTIVE = "isActive";

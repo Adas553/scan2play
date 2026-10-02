@@ -244,6 +244,8 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party, List.of(waiting), PL);
 
         assertThat(html).contains("Twój program DJ-a", "Grasz ze swojego programu");
+        // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
+        assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
         assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
         assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">Pomiń<", "🔍 Podejrzyj",
                 "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
