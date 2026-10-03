@@ -6,8 +6,20 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after `de27bb8` (2026-10-03; workflows green up to `76d420d` — check
-  `de27bb8` and its docs commit). Check with `git status -sb` and `git log --oneline -8`. Nothing uncommitted.
+- **Branch `dev`**, pushed up to `e52314f` (2026-10-03; workflows green up to `76d420d` — check `de27bb8`, `0588c8a`, `e52314f`).
+  Check with `git status -sb` and `git log --oneline -8`. **Uncommitted, for the owner's review:** a revoked Spotify refresh token
+  is forgotten (the owner, trying Spotify locally: `invalid_grant`, "Refresh token revoked" — the tokens stayed, the dashboard
+  kept saying connected, with no "Connect Spotify" to press). `SpotifyAuthService.forgetTokens` on a 400 `invalid_grant`; a 5xx /
+  network error keeps them. `SpotifyAuthServiceTest` +2 (the revoked one **red before**). The owner then connected Spotify locally
+  through the tunnel: a guest's request reached the Spotify queue once the Spotify app was playing ("No active device found" while
+  it was paused). The song's note on a failed push now says so: "Spotify nie przyjął piosenki — włącz odtwarzanie w aplikacji
+  Spotify … i dodaj ją przyciskiem 🎵 Spotify" (`dashboard.error.autopilot_failed`, PL / EN).
+  **The background playlist's field refuses what is no YouTube link** (the owner: "Hahaha" was saved and the playing playlist
+  stopped; "tak, odrzucaj przed zapisem"): reason `NOT_A_LINK` (also for a link over 500 characters, which was `INVALID_PLAYLIST`),
+  `YouTubeUrls.looksLikePlaylistOrVideo` (a link with `list=` / `v=` / `youtu.be/`, a bare `PL…` / `UU…` / `OL…` ID, an
+  11-character video ID), its own message `dashboard.fallback.import.notalink`; the party's playlist plays on. A typo in the domain
+  ("youlaaaatube.com/…?list=PL…") still loads the playlist — only the ID counts (the owner saw it; kept). `YouTubeUrlsTest` +1,
+  `DjPartySettingsControllerFallbackTest` +1, browser scenario `not-a-link-refused`. 636 unit tests, 84 browser scenarios.
 - **Committed and pushed (`de27bb8`, 2026-10-03; the owner tried it: "działa")** (the owner: "zrób a i b — zgodnie z Twoimi
   sugestiami, zrób też podział historii na dni"):
   - **Before starting the app: add `SPOTIFY_TOKEN_KEY` to IntelliJ's run configuration** (base64 of 32 random bytes — PowerShell:
@@ -261,18 +273,24 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
    as the product for paid DJs; YouTube free, for private parties. More API quota: the audit and quota-extension form — after
    go-live, with a privacy policy and terms; the auditors look at exactly those points. Not legal advice — the owner may ask a
    lawyer before taking money.
+   **Spotify (the owner's question, 2026-10-03: does it need a footer like YouTube's?):** no footer, but the Developer Policy
+   applies in development mode too: Spotify content shown (titles, covers) attributed with the Spotify marks and linked back to
+   Spotify (the "▶ SPOTIFY" links do it; the official icon would be better before go-live); personal, non-commercial use only — no
+   playing in public / for businesses; no DJ / mixing apps, nothing that mimics Spotify's AI DJ. Development mode = a few testers
+   the owner adds; a wider release needs Spotify's approval, unlikely for this use. The same conclusion as for YouTube: Spotify for
+   private parties and tests; paid DJs use the requests-only party.
 
 ## Waiting for the owner (not code)
 
-- **The Auto-Pilot hint / IFrame-API message** — not built until the friend's case is reproduced (which state it was: Auto-Pilot
-  off, the IFrame API blocked, another window holding the lease). The `silent-*` browser scenarios show today's behaviour.
-- **The old `YOUTUBE_API_KEY`** (rotated 2026-09-29): delete it in Google Cloud Console and check the new one is restricted to the
-  YouTube Data API v3. The disabled OAuth client secret `****IgiS` can be deleted; `****pfTe` is the one in use.
+- **The OAuth client "Klient internetowy 1"** shows a warning in Google Cloud Console (2026-10-03 screenshot): probably the disabled
+  secret `****IgiS` — delete it (`****pfTe` is the one in use). The old `YOUTUBE_API_KEY` is gone; "Klucz API 2" is restricted to
+  the YouTube Data API v3 (seen 2026-10-03). No application restriction: a server key on Railway has no fixed IP to restrict to.
 - **Production** (Railway paused): at the next go-live, the Flyway checklist of `PROJECT_CONTEXT.md` Section 10 first — the first
   deploy applies V2..V16 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
   Railway already.
 - **Try on the phone:** the wake lock (Auto-Pilot on, the screen should not dim), ✕ on an "up next" row, Save with a private / wrong
   playlist link.
+- (The Auto-Pilot hint for the friend's case — dropped: "działa u znajomej", 2026-10-03.)
 - **`SCAN2PLAY_GUEST_URL` in IntelliJ** holds the computer's address in the local network (the QR code's link): it changes with
   the network — 2026-10-03 the computer was 192.168.68.54, the run configuration still said 192.168.100.184 and the QR link did not
   open. Change it in Run → Edit Configurations when the network changes (detecting it automatically was offered, not asked for).

@@ -210,7 +210,8 @@ grey, yellow from 80 %, red) and a warning above the queue while a limit or the 
 
 `/dj/spotify/login` → Spotify (playback scopes) → `/dj/spotify/callback`; the tokens go to the party (`SpotifyAuthService`, refreshed
 5 minutes before they expire, one refresh per party at a time — the others wait and use the saved tokens), encrypted in the
-database (Section 4.1; `SpotifyTokenEncryptionOnStartup` encrypts, at start, tokens still in plain text). Spotify has no endpoint to
+database (Section 4.1; `SpotifyTokenEncryptionOnStartup` encrypts, at start, tokens still in plain text). A refresh token
+Spotify revoked (400 `invalid_grant`) is forgotten with the access token: the dashboard offers "Connect Spotify" again. Spotify has no endpoint to
 revoke them: the privacy page tells the DJ to remove the app in their Spotify account after deleting theirs. Both endpoints need the DJ's login. The OAuth `state` is 32 random bytes kept in the session and
 accepted once (review 5.2). The Spotify redirect URI must be registered in the Spotify Developer Dashboard.
 
@@ -297,8 +298,9 @@ a change refreshes its list at once; the others when the lease answer brings ano
 
 **Saving the playlist** (`POST /dj/dashboard/fallback-playlist`): the URL is saved and imported at once (best effort); the answer says
 how in headers (`X-Fallback-Id`, `X-Fallback-Import: ok|failed`, `X-Fallback-Tracks`, `X-Fallback-Import-Reason`) and the dashboard
-shows it under the form. A YouTube Mix (`list=RD…`) and a link over 500 characters are refused before saving
-(`X-Fallback-Saved: false`). URL formats (`YouTubeUrls.extractPlaylistId`, server side only): playlist URL, watch URL with `list=`,
+shows it under the form. A YouTube Mix (`list=RD…`, reason `YOUTUBE_MIX`), what is no YouTube link at all ("Hahaha") and a link
+over 500 characters (reason `NOT_A_LINK`, `YouTubeUrls.looksLikePlaylistOrVideo`) are refused before saving
+(`X-Fallback-Saved: false`): the party's playlist plays on. Only the ID counts — a typo elsewhere in a link still finds it. URL formats (`YouTubeUrls.extractPlaylistId`, server side only): playlist URL, watch URL with `list=`,
 watch URL or `youtu.be` link (a single video, `V:<id>`), a raw playlist or video id.
 
 **Testing** — browser tests in `src/test/browser` (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the
@@ -616,7 +618,7 @@ GuestQueueService          → DjService, PlayHistoryService
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 632, 1 skipped (the fixture recorder,
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 636, 1 skipped (the fixture recorder,
   `PlayLogFixtureRecorderTest`, runs only with `S2P_FIXTURE_OUT` and a throw-away `s2p_*` database). Pure Mockito, plus template
   rendering with the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest`
   with the real security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`;
@@ -628,7 +630,7 @@ GuestQueueService          → DjService, PlayHistoryService
   way, then V12 — the same moments; red when the old values are read as UTC), `SongRequestVotesIT` (votes under the lock),
   `VibeMigrationIT` (V16), `SpotifyTokenEncryptionIT` (no plain token in the column; old plain rows encrypted at start).
   New queue SQL gets a test there.
-- **Browser tests**: 83 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
+- **Browser tests**: 84 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
