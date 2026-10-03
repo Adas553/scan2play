@@ -213,7 +213,20 @@ class DjPartySettingsControllerFallbackTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Fallback-Saved", "false"))
                 .andExpect(header().string("X-Fallback-Import", "failed"))
-                .andExpect(header().string("X-Fallback-Import-Reason", Reason.INVALID_PLAYLIST.name()));
+                .andExpect(header().string("X-Fallback-Import-Reason", Reason.NOT_A_LINK.name()));
+
+        verify(settingsService, never()).updateSettings(any(), any());
+        verify(fallbackPlaylistService, never()).syncFallbackTracks(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    @DisplayName("what is no YouTube link at all (\"Hahaha\") is refused before saving: the party's playlist plays on (the owner, 2026-10-03)")
+    void shouldRefuseWhatIsNoYouTubeLink() throws Exception {
+        setPlaylist("Hahaha")
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Fallback-Saved", "false"))
+                .andExpect(header().string("X-Fallback-Import", "failed"))
+                .andExpect(header().string("X-Fallback-Import-Reason", Reason.NOT_A_LINK.name()));
 
         verify(settingsService, never()).updateSettings(any(), any());
         verify(fallbackPlaylistService, never()).syncFallbackTracks(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());

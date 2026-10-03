@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -190,10 +191,30 @@ public class SpotifyAuthService {
                 });
                 return accessToken;
             }
+        } catch (HttpClientErrorException.BadRequest e) {
+            if (e.getResponseBodyAsString().contains("invalid_grant")) {
+                forgetTokens(settings.getPartyCode());
+            } else {
+                log.error("Party [{}]: Error refreshing token", settings.getPartyCode(), e);
+            }
         } catch (Exception e) {
             log.error("Party [{}]: Error refreshing token", settings.getPartyCode(), e);
         }
         return null;
+    }
+
+    /**
+     * Spotify revoked the refresh token (invalid_grant: the DJ removed the app in their Spotify account, or the token is too old):
+     * it will never work again. Kept, it made the dashboard say "connected" for ever, with no way to connect again — forgotten,
+     * the dashboard offers "Connect Spotify". A failure that may pass (a network error, 5xx) keeps the tokens.
+     */
+    private void forgetTokens(String partyCode) {
+        log.warn("Party [{}]: Spotify revoked the refresh token — the tokens are forgotten, the DJ connects Spotify again", partyCode);
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setSpotifyAccessToken(null);
+            s.setSpotifyRefreshToken(null);
+            s.setSpotifyTokenExpiresAt(null);
+        });
     }
 
     /**

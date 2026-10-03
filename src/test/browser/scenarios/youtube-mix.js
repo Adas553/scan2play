@@ -33,4 +33,26 @@
             t.step('the Stop button of the playlist stays as it was', !stopButton.classList.contains('d-none'), stopShownBefore);
         }
     });
+
+    // The owner (2026-10-03): "Hahaha" was saved as the playlist, and the one that played stopped. Now the server refuses what is no
+    // YouTube link before saving (reason NOT_A_LINK), as it refuses a Mix: its own message, the playlist plays on.
+    S2P.scenario({
+        name: 'not-a-link-refused',
+        title: 'what is no YouTube link ("Hahaha") is refused with its own message; the playlist that plays is not touched',
+        setup: { lease: { fallbackPlaylistId: PLAYLIST }, nextTracks: [background(1, 'aaaaaaaaaaA'), background(2, 'bbbbbbbbbbB')] },
+        run: async function (t) {
+            const fake = t.fake;
+            const box = document.getElementById('fallbackImportStatus');
+            await t.waitForTrack(1, 'a track of the playlist');
+
+            await t.stand.config({ fallbackSave: { saved: false, import: 'failed', reason: 'NOT_A_LINK' } });
+            document.getElementById('fallbackInput').value = 'Hahaha';
+            document.getElementById('fallbackForm').requestSubmit();
+            await t.sleep(600);
+
+            t.check('the bundle has a text for it', !!box.dataset.textNotalink);
+            t.step('the dashboard says it is no YouTube link and nothing was saved', box.textContent, box.dataset.textNotalink);
+            t.step('the track of the playlist plays on', [fake.loads.length, fake.state], [1, 1]);
+        }
+    });
 })();

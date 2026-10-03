@@ -341,7 +341,7 @@ class DashboardPageRenderTest {
             String html = renderDashboard(youTubeParty(PlaybackMode.AUTO, null), List.of(), locale);
 
             assertThat(html).as(locale.toString()).contains("id=\"fallbackImportStatus\"", "data-text-ok=\"", "data-text-noapikey=\"",
-                    "data-text-invalidplaylist=\"", "data-text-apierror=\"", "data-text-noplayabletracks=\"", "data-text-unknown=\"");
+                    "data-text-invalidplaylist=\"", "data-text-notalink=\"", "data-text-apierror=\"", "data-text-noplayabletracks=\"", "data-text-unknown=\"");
             assertThat(html).as(locale.toString()).doesNotContain("??");
         }
         assertThat(renderDashboard(youTubeParty(PlaybackMode.AUTO, null), List.of(), Locale.ENGLISH))

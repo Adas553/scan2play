@@ -30,7 +30,29 @@ public final class YouTubeUrls {
                     + "visuali[sz]er|music video)\\b[^()\\[\\]]*[)\\]]",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
 
+    /**
+     * A bare playlist ID as the DJ may paste it without the link: YouTube's kinds of lists — PL (a playlist), UU / FL / LL (a
+     * channel's uploads, favourites, likes), OL (an album), RD (a Mix, refused later) — and at least ten more characters.
+     */
+    private static final Pattern RAW_PLAYLIST_ID_PATTERN = Pattern.compile("(PL|UU|FL|LL|OL|RD)[A-Za-z0-9_-]{10,62}");
+
     private YouTubeUrls() {
+    }
+
+    /**
+     * Whether the background playlist's field holds something that can be a YouTube playlist or video: a link with
+     * {@code list=}, {@code v=} or {@code youtu.be/}, a bare playlist ID ({@code PL…}) or an 11-character video ID. Anything else
+     * ("Hahaha") is refused before it is saved, so the party's playlist plays on (the owner, 2026-10-03). Only the ID counts:
+     * a typo in the rest of a link ("youlaaaatube.com/…?list=PL…") still finds the playlist.
+     */
+    public static boolean looksLikePlaylistOrVideo(String input) {
+        if (input == null || input.isBlank()) {
+            return false;
+        }
+        String trimmed = input.trim();
+        return PLAYLIST_ID_PATTERN.matcher(trimmed).find() || VIDEO_ID_V_PATTERN.matcher(trimmed).find()
+                || VIDEO_ID_SHORT_PATTERN.matcher(trimmed).find() || RAW_PLAYLIST_ID_PATTERN.matcher(trimmed).matches()
+                || trimmed.matches("[A-Za-z0-9_-]{11}");
     }
 
     /**

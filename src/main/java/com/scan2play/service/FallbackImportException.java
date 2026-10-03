@@ -25,7 +25,12 @@ public class FallbackImportException extends RuntimeException {
          * A YouTube Mix ({@code list=RD…}): made up by YouTube for one viewer, not given out by the Data API. Refused before the link
          * is saved (the party keeps its playlist).
          */
-        YOUTUBE_MIX
+        YOUTUBE_MIX,
+        /**
+         * Not a YouTube playlist or video link at all ("Hahaha"), or longer than its column: refused before it is saved (the party
+         * keeps its playlist), see {@code YouTubeUrls.looksLikePlaylistOrVideo}.
+         */
+        NOT_A_LINK
     }
 
     private final Reason reason;

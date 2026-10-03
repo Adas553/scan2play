@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -29,6 +30,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
@@ -100,6 +103,33 @@ class SpotifyAuthServiceTest {
         assertThat(service.getRefreshedAccessToken(PARTY)).isEqualTo("new-access");
         assertThat(stored.get().getSpotifyRefreshToken()).isEqualTo("new-refresh");
         assertThat(stored.get().getSpotifyTokenExpiresAt()).isAfter(Instant.now().plus(50, ChronoUnit.MINUTES));
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("a refresh token Spotify revoked (invalid_grant) is forgotten: the dashboard offers \"Connect Spotify\" again")
+    void shouldForgetTheTokens_whenSpotifyRevokedTheRefreshToken() {
+        // the owner, 2026-10-03: "Refresh token revoked" — the tokens stayed, the dashboard kept saying connected, no way to reconnect
+        givenTokenExpiringAt(Instant.now().minus(1, ChronoUnit.MINUTES));
+        server.expect(ExpectedCount.once(), requestTo(TOKEN_URI)).andRespond(withBadRequest()
+                .body("{\"error\":\"invalid_grant\",\"error_description\":\"Refresh token revoked\"}")
+                .contentType(MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> service.getRefreshedAccessToken(PARTY)).isInstanceOf(IllegalStateException.class);
+        assertThat(stored.get().getSpotifyAccessToken()).isNull();
+        assertThat(stored.get().getSpotifyRefreshToken()).isNull();
+        assertThat(stored.get().getSpotifyTokenExpiresAt()).isNull();
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("Spotify failing for a while (5xx) keeps the tokens: the next request tries again")
+    void shouldKeepTheTokens_whenSpotifyFails() {
+        givenTokenExpiringAt(Instant.now().minus(1, ChronoUnit.MINUTES));
+        server.expect(ExpectedCount.once(), requestTo(TOKEN_URI)).andRespond(withServerError());
+
+        assertThatThrownBy(() -> service.getRefreshedAccessToken(PARTY)).isInstanceOf(IllegalStateException.class);
+        assertThat(stored.get().getSpotifyRefreshToken()).isEqualTo("old-refresh");
         server.verify();
     }
 

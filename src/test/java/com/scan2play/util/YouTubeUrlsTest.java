@@ -56,6 +56,26 @@ class YouTubeUrlsTest {
     }
 
     @Test
+    @DisplayName("the background playlist's field: links and bare IDs pass, what is no YouTube link (\"Hahaha\") does not")
+    void looksLikePlaylistOrVideo_tellsALinkFromAnythingElse() {
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf")).isTrue();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("https://www.youlaaaatube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"))
+                .as("only the ID counts: a typo elsewhere in the link finds the same playlist").isTrue();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).isTrue();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("https://youtu.be/dQw4w9WgXcQ?si=abc")).isTrue();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo(" PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf ")).isTrue();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("OLAK5uy_kXcRZ5bTSJm8eP0Bpn5N9ujLqJmOI7yeE")).as("an album").isTrue();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("dQw4w9WgXcQ")).isTrue();
+
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("Hahaha")).isFalse();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("my wedding playlist")).isFalse();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M")).isFalse();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("PLshort")).isFalse();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo("  ")).isFalse();
+        assertThat(YouTubeUrls.looksLikePlaylistOrVideo(null)).isFalse();
+    }
+
+    @Test
     void isMix_tellsAYouTubeMixFromAPlaylist() {
         assertThat(YouTubeUrls.isMix(YouTubeUrls.extractPlaylistId("https://www.youtube.com/watch?v=3z-jNRAwSHk&list=RD3z-jNRAwSHk"))).isTrue();
         assertThat(YouTubeUrls.isMix("RDMM")).isTrue();

@@ -168,9 +168,11 @@ public class DjPartySettingsController {
                 : null;
         // A YouTube Mix cannot be read by the Data API: refused before anything is saved, so the party's playlist (and the track
         // that plays from it) carries on, and nothing keeps trying to import it. X-Fallback-Saved: false tells the dashboard.
-        // A link longer than its column is no playlist link either (review item 5.4: it ended in a 500 from the database).
-        FallbackImportException.Reason refusal = sanitized != null && sanitized.length() > FALLBACK_URL_MAX
-                ? FallbackImportException.Reason.INVALID_PLAYLIST
+        // Nor is what is no YouTube link at all ("Hahaha" — before, it was saved and the party's playlist stopped), or a link longer
+        // than its column (review item 5.4: it ended in a 500 from the database).
+        FallbackImportException.Reason refusal = sanitized != null
+                && (sanitized.length() > FALLBACK_URL_MAX || !YouTubeUrls.looksLikePlaylistOrVideo(sanitized))
+                ? FallbackImportException.Reason.NOT_A_LINK
                 : YouTubeUrls.isMix(YouTubeUrls.extractPlaylistId(sanitized)) ? FallbackImportException.Reason.YOUTUBE_MIX : null;
         if (refusal != null) {
             log.info("Party [{}]: fallback playlist not saved ({}): {}", partyCode, refusal,
