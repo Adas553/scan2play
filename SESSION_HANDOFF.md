@@ -6,9 +6,10 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `76d420d` (docs of `94c240f`; all three workflows green on `76d420d` — `94c240f` went in the same
-  push, so it has no runs of its own). Check with `git status -sb` and `git log --oneline -8`. **Uncommitted, for the owner's review
-  in IntelliJ** (2026-10-03, the owner: "zrób a i b — zgodnie z Twoimi sugestiami, zrób też podział historii na dni"):
+- **Branch `dev`**, pushed up to the documentation commit after `de27bb8` (2026-10-03; workflows green up to `76d420d` — check
+  `de27bb8` and its docs commit). Check with `git status -sb` and `git log --oneline -8`. Nothing uncommitted.
+- **Committed and pushed (`de27bb8`, 2026-10-03; the owner tried it: "działa")** (the owner: "zrób a i b — zgodnie z Twoimi
+  sugestiami, zrób też podział historii na dni"):
   - **Before starting the app: add `SPOTIFY_TOKEN_KEY` to IntelliJ's run configuration** (base64 of 32 random bytes — PowerShell:
     `$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)`,
     or `openssl rand -base64 32`). Without it the app does not
@@ -227,8 +228,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. **The owner reviews the uncommitted work (above)** — first `SPOTIFY_TOKEN_KEY` in IntelliJ; then commit and push on the owner's
-   word, and check the three workflows (Unit tests 632, Database tests 40 IT, Browser tests 83 scenarios).
+1. **Check the workflows of `de27bb8` and its docs commit** (Unit tests 632, Database tests 40 IT, Browser tests 83 scenarios).
 2. **The owner's answers (2026-10-03):** "play later" without rejecting — **not to be built**; the DJ's library — **dropped for now**;
    votes — nothing to build; the defaults stay unless the owner says otherwise (a vote uses the guest's limit — it costs an AI call
    anyway; votes do not reorder the queue or Auto-Pilot);
@@ -276,8 +276,11 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 - **`SCAN2PLAY_GUEST_URL` in IntelliJ** holds the computer's address in the local network (the QR code's link): it changes with
   the network — 2026-10-03 the computer was 192.168.68.54, the run configuration still said 192.168.100.184 and the QR link did not
   open. Change it in Run → Edit Configurations when the network changes (detecting it automatically was offered, not asked for).
-- **Spotify locally:** the redirect `https://dev.scan2play.com.pl/dj/spotify/callback` would have to be added in the Spotify
-  Developer Dashboard.
+- **Spotify locally** (not tried yet): the playback-connect redirect is `spotify.oauth.redirect-uri` (production's address in
+  `application.properties`); the environment variable `SPOTIFY_OAUTH_REDIRECT_URI` overrides it (Spring's relaxed binding). To
+  try: the app through the `https://dev.scan2play.com.pl` tunnel (registered with Google), `SPOTIFY_OAUTH_REDIRECT_URI=
+  https://dev.scan2play.com.pl/dj/spotify/callback` in IntelliJ, that URI added in the Spotify Developer Dashboard, the Spotify
+  account on the app's user list (development mode), Spotify Premium and an open Spotify app (a device) for the queue.
 - **`origin/backup/local-main-2026-04`** holds two old local commits of `main`; never push `main` from it. Can be deleted once the
   `guest-url` design is decided.
 - **`D:\Users`**: an empty directory tree left by a mistaken path in an earlier session; safe to delete by hand.
