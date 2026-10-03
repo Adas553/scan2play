@@ -52,6 +52,64 @@ public interface FallbackTrackRepository extends JpaRepository<FallbackTrackEnti
                      @Param("status") String status,
                      @Param("fetchedAt") Instant fetchedAt);
 
+    /**
+     * The rows of the party's <em>newest</em> import (the same "newest" as {@link #requeuePlayedTracks}: party-wide) when it is
+     * of this playlist, without the cancelled ones, in playlist order. Empty when the newest import is of another playlist.
+     */
+    @Query("SELECT t FROM FallbackTrackEntity t WHERE t.partyCode = :partyCode AND t.playlistId = :playlistId "
+            + "AND t.status <> :cancelled "
+            + "AND t.fetchedAt = (SELECT MAX(x.fetchedAt) FROM FallbackTrackEntity x WHERE x.partyCode = :partyCode) "
+            + "ORDER BY t.playlistPosition")
+    List<FallbackTrackEntity> findNewestImport(@Param("partyCode") String partyCode,
+                                               @Param("playlistId") String playlistId,
+                                               @Param("cancelled") FallbackTrackStatus cancelled,
+                                               Pageable pageable);
+
+    /**
+     * A refreshed fetch for tracks that are still in the playlist: the i-th id gets the i-th playlist position and title, all
+     * of them the new fetch time. Status, play order and the "moved by hand" flag stay — the round goes on. One statement.
+     *
+     * @return number of updated rows
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE fallback_track t SET playlist_position = u.pos, title = u.title, fetched_at = :fetchedAt "
+            + "FROM unnest(CAST(:ids AS bigint[]), CAST(:positions AS integer[]), CAST(:titles AS varchar[])) "
+            + "AS u(id, pos, title) WHERE t.id = u.id", nativeQuery = true)
+    int refreshTracks(@Param("ids") Long[] ids,
+                      @Param("positions") Integer[] positions,
+                      @Param("titles") String[] titles,
+                      @Param("fetchedAt") Instant fetchedAt);
+
+    /**
+     * Inserts videos new to a refreshed playlist at the end of its queue: the i-th video gets the i-th playlist position and
+     * the play orders after the last queued track, in the given order. One statement.
+     *
+     * @param status the {@link FallbackTrackStatus} name of the new rows (and of the queue they join)
+     * @return number of inserted rows
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "INSERT INTO fallback_track (party_code, playlist_id, video_id, title, playlist_position, play_order, status, "
+            + "fetched_at, manual_move) "
+            + "SELECT :partyCode, :playlistId, t.video_id, t.title, t.pos, "
+            + "CAST(q.last + t.n AS integer), :status, :fetchedAt, false "
+            + "FROM unnest(CAST(:videoIds AS varchar[]), CAST(:titles AS varchar[]), CAST(:positions AS integer[])) "
+            + "WITH ORDINALITY AS t(video_id, title, pos, n), "
+            + "(SELECT COALESCE(MAX(play_order), -1) AS last FROM fallback_track "
+            + "WHERE party_code = :partyCode AND playlist_id = :playlistId AND status = :status) q",
+            nativeQuery = true)
+    int appendTracks(@Param("partyCode") String partyCode,
+                     @Param("playlistId") String playlistId,
+                     @Param("videoIds") String[] videoIds,
+                     @Param("titles") String[] titles,
+                     @Param("positions") Integer[] positions,
+                     @Param("status") String status,
+                     @Param("fetchedAt") Instant fetchedAt);
+
+    /** Sets the status of the given tracks (a refreshed playlist cancels the videos it no longer has). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE FallbackTrackEntity t SET t.status = :to WHERE t.id IN :ids")
+    int updateStatusOf(@Param("ids") List<Long> ids, @Param("to") FallbackTrackStatus to);
+
     long countByPartyCodeAndStatus(String partyCode, FallbackTrackStatus status);
 
     long countByPartyCodeAndPlaylistIdAndStatus(String partyCode, String playlistId, FallbackTrackStatus status);

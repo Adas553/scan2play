@@ -392,12 +392,12 @@ class DashboardPageRenderTest {
     @DisplayName("the \"up next\" list as the dashboard fetches it: four tracks, one skipped in this round (written to target/browser-harness/fallback-queue.html)")
     void shouldRenderTheUpNextListForTheBrowserTests() throws IOException {
         ConcurrentModel model = new ConcurrentModel();
-        model.addAttribute("queue", new FallbackQueueView(true, false, false, 4, 1, List.of(
+        model.addAttribute("queue", FallbackQueueView.builder().hasPlaylist(true).remaining(4).skipped(1).tracks(List.of(
                 // titles as a real playlist has them — long ones, with an ampersand, Polish letters — so that a look at the page shows how a row copes
                 new FallbackQueueView.Track(11L, "aaaaaaaaaaA", "Warren - Ordinary (Official Video)"),
                 new FallbackQueueView.Track(12L, "bbbbbbbbbbB", "Justin Bieber - DAISIES (Audio)"),
                 new FallbackQueueView.Track(13L, "cccccccccCc", "MAZUREK & STANOWSKI #117: WAŁĘSA ANALFABETĄ, CZARZASTY W POLU, POKAZ MODY W MINISTERSTWIE"),
-                new FallbackQueueView.Track(14L, "ddddddddddD", "Short one"))));
+                new FallbackQueueView.Track(14L, "ddddddddddD", "Short one"))).build());
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(
                 JakartaServletWebApplication.buildApplication(servletContext)

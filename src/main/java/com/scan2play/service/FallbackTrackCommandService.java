@@ -16,7 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.scan2play.model.FallbackTrackStatus.CANCELLED;
@@ -109,6 +114,72 @@ public class FallbackTrackCommandService {
         log.info("Party [{}]: fallback playlist {} imported — {} track(s) queued ({}), {} previous track(s) cancelled",
                 partyCode, playlistId, inserted, shuffle ? "shuffled" : "playlist order", cancelled);
         return inserted;
+    }
+
+    /**
+     * Brings the party's current import of the playlist up to date with a fresh fetch <em>without</em> starting a new round
+     * (review item 2.5 — a re-import cancelled the queue and put every track back, in the middle of a party): a video that is
+     * still in the playlist keeps its row — its status, its place in the queue, the DJ's moves — and gets the new title,
+     * playlist position and fetch time; a new video joins the end of the queue; a video gone from the playlist is cancelled.
+     * Every row of the import then has the same fetch time again, which is what the next round looks for
+     * ({@link FallbackTrackRepository#requeuePlayedTracks}), and the 30-day purge starts counting anew.
+     * <p>
+     * When the party's newest import is not of this playlist (nothing to keep), the tracks are imported as by
+     * {@link #replaceTracks}.
+     *
+     * @param tracks the videos in playlist order, as fetched just now
+     * @return number of tracks the playlist has now
+     */
+    @Transactional
+    public int refreshTracks(String partyCode, String playlistId, List<PlaylistTrack> tracks, boolean shuffle) {
+        lockQueue(partyCode);
+        List<FallbackTrackEntity> current = fallbackTrackRepository.findNewestImport(
+                partyCode, playlistId, CANCELLED, PageRequest.of(0, MAX_QUEUE));
+        if (current.isEmpty()) {
+            return replaceTracks(partyCode, playlistId, tracks, shuffle);
+        }
+
+        // The same video may be in a playlist twice: each fetched occurrence takes the next row of that video.
+        Map<String, Deque<FallbackTrackEntity>> rowsByVideo = new HashMap<>();
+        for (FallbackTrackEntity row : current) {
+            rowsByVideo.computeIfAbsent(row.getVideoId(), v -> new ArrayDeque<>()).add(row);
+        }
+        List<Long> keptIds = new ArrayList<>();
+        List<Integer> keptPositions = new ArrayList<>();
+        List<String> keptTitles = new ArrayList<>();
+        List<Integer> newPositions = new ArrayList<>();
+        List<PlaylistTrack> newTracks = new ArrayList<>();
+        for (int position = 0; position < tracks.size(); position++) {
+            PlaylistTrack track = tracks.get(position);
+            Deque<FallbackTrackEntity> rows = rowsByVideo.get(track.videoId());
+            FallbackTrackEntity row = rows == null ? null : rows.poll();
+            if (row != null) {
+                keptIds.add(row.getId());
+                keptPositions.add(position);
+                keptTitles.add(track.title());
+            } else {
+                newPositions.add(position);
+                newTracks.add(track);
+            }
+        }
+        List<Long> goneIds = rowsByVideo.values().stream().flatMap(Deque::stream).map(FallbackTrackEntity::getId).toList();
+
+        Instant now = Instant.now();
+        fallbackTrackRepository.refreshTracks(keptIds.toArray(Long[]::new), keptPositions.toArray(Integer[]::new),
+                keptTitles.toArray(String[]::new), now);
+        if (!newTracks.isEmpty()) {
+            fallbackTrackRepository.appendTracks(partyCode, playlistId,
+                    newTracks.stream().map(PlaylistTrack::videoId).toArray(String[]::new),
+                    newTracks.stream().map(PlaylistTrack::title).toArray(String[]::new),
+                    newPositions.toArray(Integer[]::new), QUEUED.name(), now);
+        }
+        if (!goneIds.isEmpty()) {
+            fallbackTrackRepository.updateStatusOf(goneIds, CANCELLED);
+        }
+
+        log.info("Party [{}]: fallback playlist {} refreshed in place — {} track(s) kept, {} added, {} gone from the playlist",
+                partyCode, playlistId, keptIds.size(), newTracks.size(), goneIds.size());
+        return tracks.size();
     }
 
     /** The DJ cleared the fallback playlist: nothing queued stays queued. */

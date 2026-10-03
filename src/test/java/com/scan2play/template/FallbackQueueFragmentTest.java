@@ -59,7 +59,7 @@ class FallbackQueueFragmentTest {
     }
 
     private static FallbackQueueView queue(boolean shuffle, long remaining, Track... tracks) {
-        return new FallbackQueueView(true, shuffle, false, remaining, List.of(tracks));
+        return FallbackQueueView.builder().hasPlaylist(true).shuffle(shuffle).remaining(remaining).tracks(List.of(tracks)).build();
     }
 
     @Test
@@ -140,7 +140,7 @@ class FallbackQueueFragmentTest {
     @Test
     @DisplayName("a playlist without queued tracks explains that the import failed or is still running")
     void shouldShowWarning_whenThePlaylistHasNoTracks() {
-        String html = render(new FallbackQueueView(true, true, false, 0, List.of()), Locale.ENGLISH);
+        String html = render(FallbackQueueView.builder().hasPlaylist(true).shuffle(true).tracks(List.of()).build(), Locale.ENGLISH);
 
         assertThat(html).contains("No tracks in the queue").contains("save the playlist again").doesNotContain("<ol");
     }
@@ -190,7 +190,7 @@ class FallbackQueueFragmentTest {
         Track track = new Track(1L, "aaaaaaaaaaa", "Song");
 
         assertThat(render(queue(true, 1, track), Locale.ENGLISH)).contains("data-manual=\"false\"");
-        assertThat(render(new FallbackQueueView(true, true, true, 1, List.of(track)), Locale.ENGLISH))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).shuffle(true).manualOrder(true).remaining(1).tracks(List.of(track)).build(), Locale.ENGLISH))
                 .contains("data-manual=\"true\"");
     }
 
@@ -199,13 +199,13 @@ class FallbackQueueFragmentTest {
     void shouldSayTheOrderWasChangedByHand() {
         Track track = new Track(1L, "aaaaaaaaaaa", "Song");
 
-        assertThat(render(new FallbackQueueView(true, true, true, 1, List.of(track)), Locale.ENGLISH))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).shuffle(true).manualOrder(true).remaining(1).tracks(List.of(track)).build(), Locale.ENGLISH))
                 .contains("Random order, changed by hand");
-        assertThat(render(new FallbackQueueView(true, false, true, 1, List.of(track)), Locale.ENGLISH))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).manualOrder(true).remaining(1).tracks(List.of(track)).build(), Locale.ENGLISH))
                 .contains("Playlist order, changed by hand");
-        assertThat(render(new FallbackQueueView(true, false, true, 1, List.of(track)), PL))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).manualOrder(true).remaining(1).tracks(List.of(track)).build(), PL))
                 .contains("Kolejność z playlisty, zmieniona ręcznie");
-        assertThat(render(new FallbackQueueView(true, true, true, 1, List.of(track)), PL))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).shuffle(true).manualOrder(true).remaining(1).tracks(List.of(track)).build(), PL))
                 .contains("Losowa kolejność, zmieniona ręcznie");
         // without manual moves the plain captions stay
         assertThat(render(queue(true, 1, track), Locale.ENGLISH)).contains("Random order").doesNotContain("changed by hand");
@@ -214,7 +214,7 @@ class FallbackQueueFragmentTest {
     @Test
     @DisplayName("without tracks there are no buttons")
     void shouldRenderNoButtons_whenThereAreNoTracks() {
-        assertThat(render(new FallbackQueueView(true, true, false, 0, List.of()), Locale.ENGLISH)).doesNotContain("<button");
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).shuffle(true).tracks(List.of()).build(), Locale.ENGLISH)).doesNotContain("<button");
         assertThat(render(FallbackQueueView.noPlaylist(true), Locale.ENGLISH)).doesNotContain("<button");
     }
 
@@ -273,11 +273,11 @@ class FallbackQueueFragmentTest {
     void shouldShowHowManyTracksWereSkipped() {
         Track track = new Track(1L, "aaaaaaaaaaa", "Song");
 
-        assertThat(render(new FallbackQueueView(true, false, false, 3, 2, List.of(track)), Locale.ENGLISH))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).remaining(3).skipped(2).tracks(List.of(track)).build(), Locale.ENGLISH))
                 .contains("3 left in this round", "Skipped this round: 2");
-        assertThat(render(new FallbackQueueView(true, false, false, 3, 2, List.of(track)), PL))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).remaining(3).skipped(2).tracks(List.of(track)).build(), PL))
                 .contains("Zostało w tej rundzie: 3", "Pominięte w tej rundzie: 2");
-        assertThat(render(new FallbackQueueView(true, false, false, 3, 0, List.of(track)), Locale.ENGLISH))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).remaining(3).tracks(List.of(track)).build(), Locale.ENGLISH))
                 .contains("3 left in this round").doesNotContain("Skipped");
     }
 
@@ -294,7 +294,7 @@ class FallbackQueueFragmentTest {
     @DisplayName("a single video (the DJ pasted a video link, not a playlist): the skip button is off, and its tooltip says why — there is nothing to skip to, Stop removes it")
     void shouldSwitchOffTheSkipButton_forASingleVideo() {
         Track only = new Track(1L, "aaaaaaaaaaa", "Only video");
-        FallbackQueueView single = new FallbackQueueView(true, false, false, 1, 0, true, List.of(only));
+        FallbackQueueView single = FallbackQueueView.builder().hasPlaylist(true).remaining(1).singleVideo(true).tracks(List.of(only)).build();
 
         assertThat(skipButton(render(single, Locale.ENGLISH))).contains("disabled=\"disabled\"")
                 .contains("title=\"This is the only track, so there is nothing to skip to. Stop removes it.\"");
@@ -334,14 +334,14 @@ class FallbackQueueFragmentTest {
     @DisplayName("the caption wraps: the order and the counts side by side with a gap when they fit, one under the other on a phone; a count never breaks inside, so its number is not left alone on a line")
     void shouldLetTheCaptionWrap_soThatItsPartsNeverTouch() {
         // 80 left and 3 skipped, as on the DJ's phone: the order text and the two counts touched, and "… w tej rundzie:" / "3" broke apart
-        String html = render(new FallbackQueueView(true, false, false, 80, 3, List.of(new Track(1L, "aaaaaaaaaaa", "Song"))), PL);
+        String html = render(FallbackQueueView.builder().hasPlaylist(true).remaining(80).skipped(3).tracks(List.of(new Track(1L, "aaaaaaaaaaa", "Song"))).build(), PL);
 
         assertThat(html).contains("d-flex flex-wrap justify-content-between align-items-center column-gap-3");
         // the two counts are whole parts (text-nowrap) in a group of their own, and no " · " joins them any more
         assertThat(html).containsPattern("<span class=\"text-nowrap\">Zostało w tej rundzie: 80</span>\\s*<span class=\"text-nowrap\">Pominięte w tej rundzie: 3</span>");
         assertThat(html).doesNotContain(" · ");
         // without skipped tracks there is one part only
-        assertThat(render(new FallbackQueueView(true, false, false, 80, 0, List.of(new Track(1L, "aaaaaaaaaaa", "Song"))), PL))
+        assertThat(render(FallbackQueueView.builder().hasPlaylist(true).remaining(80).tracks(List.of(new Track(1L, "aaaaaaaaaaa", "Song"))).build(), PL))
                 .contains("<span class=\"text-nowrap\">Zostało w tej rundzie: 80</span>").doesNotContain("Pominięte");
     }
 }

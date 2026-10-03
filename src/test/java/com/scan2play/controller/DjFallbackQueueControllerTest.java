@@ -61,8 +61,8 @@ class DjFallbackQueueControllerTest {
     @Test
     @DisplayName("renders the queue fragment with the party's upcoming tracks")
     void shouldRenderTheFragmentWithTheQueue() throws Exception {
-        FallbackQueueView queue = new FallbackQueueView(true, true, false, 12,
-                List.of(new FallbackQueueView.Track(1L, "dQw4w9WgXcQ", "Never Gonna Give You Up")));
+        FallbackQueueView queue = FallbackQueueView.builder().hasPlaylist(true).shuffle(true).remaining(12)
+                .tracks(List.of(new FallbackQueueView.Track(1L, "dQw4w9WgXcQ", "Never Gonna Give You Up"))).build();
         when(queueService.getUpcoming(PARTY)).thenReturn(queue);
 
         mockMvc.perform(get("/dj/dashboard/fallback-queue").param("partyCode", PARTY).principal(token).session(session))
@@ -74,8 +74,8 @@ class DjFallbackQueueControllerTest {
     @Test
     @DisplayName("the list comes with its version, the same one the lease reports carry, so its window knows it is up to date")
     void shouldSendTheVersionOfTheList() throws Exception {
-        FallbackQueueView queue = new FallbackQueueView(true, true, false, 12,
-                List.of(new FallbackQueueView.Track(1L, "dQw4w9WgXcQ", "Never Gonna Give You Up")));
+        FallbackQueueView queue = FallbackQueueView.builder().hasPlaylist(true).shuffle(true).remaining(12)
+                .tracks(List.of(new FallbackQueueView.Track(1L, "dQw4w9WgXcQ", "Never Gonna Give You Up"))).build();
         when(queueService.getUpcoming(PARTY)).thenReturn(queue);
         when(queueService.getVersion(PARTY)).thenReturn("1a2b3c");
 

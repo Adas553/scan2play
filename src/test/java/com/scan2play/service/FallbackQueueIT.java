@@ -161,6 +161,62 @@ class FallbackQueueIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void aRefreshKeepsTheRoundAndTheDjsMoves() {
+        String party = newPartyCode();
+        commands.replaceTracks(party, PLAYLIST, videos("a", "b", "c", "d", "e"), false);
+        take(party, 1);
+        assertThat(commands.skipTrack(party, PLAYLIST, id(party, "b"), false)).isTrue();
+        assertThat(commands.moveTrack(party, PLAYLIST, id(party, "e"), MoveDirection.TOP)).isTrue();
+        jdbc.update("UPDATE fallback_track SET fetched_at = now() - interval '29 days' WHERE party_code = ?", party);
+        Long idOfC = id(party, "c");
+
+        // d left the playlist, f joined it, the titles changed
+        commands.refreshTracks(party, PLAYLIST, List.of(new PlaylistTrack("a", "New a"), new PlaylistTrack("b", "New b"),
+                new PlaylistTrack("c", "New c"), new PlaylistTrack("e", "New e"), new PlaylistTrack("f", "New f")), false);
+
+        assertThat(upcoming(party)).as("the round goes on: the DJ's move stays, the new video comes last")
+                .containsExactly("e", "c", "f");
+        assertThat(id(party, "c")).as("a kept track keeps its row").isEqualTo(idOfC);
+        assertThat(tracks.existsByPartyCodeAndPlaylistIdAndStatusAndManualMoveTrue(party, PLAYLIST, QUEUED)).isTrue();
+        assertThat(jdbc.queryForMap("SELECT status, title FROM fallback_track WHERE party_code = ? AND video_id = 'a'", party))
+                .as("the track that played stays played").containsEntry("status", "PLAYED").containsEntry("title", "New a");
+        assertThat(statuses(party, PLAYLIST)).containsEntry(FallbackTrackStatus.SKIPPED, 1L).containsEntry(CANCELLED, 1L);
+        assertThat(jdbc.queryForObject("SELECT status FROM fallback_track WHERE party_code = ? AND video_id = 'd'", String.class, party))
+                .isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForList("SELECT DISTINCT fetched_at > now() - interval '1 minute' FROM fallback_track "
+                + "WHERE party_code = ? AND status <> 'CANCELLED'", Boolean.class, party))
+                .as("one fetch time, the new one: the purge starts counting anew").containsExactly(true);
+
+        assertThat(take(party, 3)).containsExactly("e", "c", "f");
+        assertThat(upcoming(party)).as("the next round is the refreshed playlist, in its new order")
+                .containsExactly("a", "b", "c", "e", "f");
+    }
+
+    @Test
+    void aRefreshMatchesAVideoThatIsInThePlaylistTwice() {
+        String party = newPartyCode();
+        commands.replaceTracks(party, PLAYLIST, videos("a", "b", "a"), false);
+        take(party, 1);
+
+        commands.refreshTracks(party, PLAYLIST, videos("a", "b", "a", "c"), false);
+
+        assertThat(upcoming(party)).containsExactly("b", "a", "c");
+        assertThat(statuses(party, PLAYLIST)).doesNotContainKey(CANCELLED);
+    }
+
+    @Test
+    void aRefreshOfAPlaylistThatIsNotTheNewestImportImportsIt() {
+        String party = newPartyCode();
+        commands.replaceTracks(party, PLAYLIST, videos("a", "b"), false);
+        commands.replaceTracks(party, OTHER_PLAYLIST, videos("x", "y"), false);
+
+        commands.refreshTracks(party, PLAYLIST, videos("a", "b", "c"), false);
+
+        assertThat(upcoming(party)).containsExactly("a", "b", "c");
+        assertThat(statuses(party, OTHER_PLAYLIST)).containsOnlyKeys(CANCELLED);
+    }
+
+    @Test
     void thePurgeDeletesTracksAndPlaysFetchedMoreThan30DaysAgo() {
         String old = newPartyCode();
         String fresh = newPartyCode();

@@ -1,7 +1,11 @@
 package com.scan2play.util;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,5 +75,104 @@ class YouTubeUrlsTest {
         assertThat(YouTubeUrls.cleanVideoTitle("Videoclub - Amour plastique")).as("a word outside brackets stays")
                 .isEqualTo("Videoclub - Amour plastique");
         assertThat(YouTubeUrls.cleanVideoTitle(null)).isNull();
+    }
+
+    @Nested
+    @DisplayName("extractPlaylistId")
+    class ExtractPlaylistIdFormats {
+
+        // --- Null / blank → null ---
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @ValueSource(strings = {"   ", "\t"})
+        @DisplayName("should return null for blank or null input")
+        void blankInput(String input) {
+            assertThat(YouTubeUrls.extractPlaylistId(input)).isNull();
+        }
+
+        // --- Playlist URLs ---
+
+        @Test
+        @DisplayName("should extract playlist ID from full playlist URL")
+        void fullPlaylistUrl() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"))
+                    .isEqualTo("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        }
+
+        @Test
+        @DisplayName("should extract playlist ID from watch URL with list parameter")
+        void watchUrlWithList() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://www.youtube.com/watch?v=KD5fLb-WgBU&list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"))
+                    .isEqualTo("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        }
+
+        @Test
+        @DisplayName("should extract playlist ID when list param is first")
+        void listParamFirst() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://www.youtube.com/watch?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf&v=KD5fLb-WgBU"))
+                    .isEqualTo("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        }
+
+        @Test
+        @DisplayName("should handle raw playlist ID")
+        void rawPlaylistId() {
+            assertThat(YouTubeUrls.extractPlaylistId("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"))
+                    .isEqualTo("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        }
+
+        // --- Single video URLs ---
+
+        @Test
+        @DisplayName("should extract video ID from standard watch URL")
+        void standardWatchUrl() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://www.youtube.com/watch?v=KD5fLb-WgBU"))
+                    .isEqualTo("V:KD5fLb-WgBU");
+        }
+
+        @Test
+        @DisplayName("should extract video ID from short youtu.be URL")
+        void shortUrl() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://youtu.be/KD5fLb-WgBU"))
+                    .isEqualTo("V:KD5fLb-WgBU");
+        }
+
+        @Test
+        @DisplayName("should extract video ID from short youtu.be URL with si parameter")
+        void shortUrlWithSiParam() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://youtu.be/KD5fLb-WgBU?si=JLIFbZgk-6E8jCJq"))
+                    .isEqualTo("V:KD5fLb-WgBU");
+        }
+
+        @Test
+        @DisplayName("should extract video ID from watch URL with extra params")
+        void watchUrlWithExtraParams() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://www.youtube.com/watch?v=KD5fLb-WgBU&t=120"))
+                    .isEqualTo("V:KD5fLb-WgBU");
+        }
+
+        @Test
+        @DisplayName("should handle raw 11-char video ID")
+        void rawVideoId() {
+            assertThat(YouTubeUrls.extractPlaylistId("KD5fLb-WgBU"))
+                    .isEqualTo("V:KD5fLb-WgBU");
+        }
+
+        // --- Priority: playlist > video ---
+
+        @Test
+        @DisplayName("should prefer playlist ID over video ID when both present")
+        void playlistPriorityOverVideo() {
+            assertThat(YouTubeUrls.extractPlaylistId(
+                    "https://www.youtube.com/watch?v=KD5fLb-WgBU&list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"))
+                    .isEqualTo("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        }
     }
 }

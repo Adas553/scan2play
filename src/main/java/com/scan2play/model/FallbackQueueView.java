@@ -1,5 +1,7 @@
 package com.scan2play.model;
 
+import lombok.Builder;
+
 import java.util.List;
 
 /**
@@ -13,18 +15,9 @@ import java.util.List;
  * @param singleVideo whether the "playlist" is one video (the DJ pasted a video link, not a playlist): there is nothing to skip to
  * @param tracks      the queued tracks, in the order they will play; a waiting guest song still plays before them
  */
+@Builder   // the tests set only what they look at; the flags and counts left out are false / 0
 public record FallbackQueueView(boolean hasPlaylist, boolean shuffle, boolean manualOrder, long remaining, long skipped,
                                 boolean singleVideo, List<Track> tracks) {
-
-    /** A playlist proper, in which {@code skipped} tracks were skipped. */
-    public FallbackQueueView(boolean hasPlaylist, boolean shuffle, boolean manualOrder, long remaining, long skipped, List<Track> tracks) {
-        this(hasPlaylist, shuffle, manualOrder, remaining, skipped, false, tracks);
-    }
-
-    /** A playlist proper, in a round in which nothing was skipped. */
-    public FallbackQueueView(boolean hasPlaylist, boolean shuffle, boolean manualOrder, long remaining, List<Track> tracks) {
-        this(hasPlaylist, shuffle, manualOrder, remaining, 0, false, tracks);
-    }
 
     /**
      * @param id      the {@code fallback_track} id

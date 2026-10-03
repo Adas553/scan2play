@@ -19,6 +19,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.scan2play.integration.SpotifyApiConstants.*;
 
@@ -48,6 +50,9 @@ public class SpotifyAuthService {
     private String tokenUri;
 
     private String basicAuthHeader;
+
+    /** A lock per party that refreshes its token; the parties connected to Spotify are few, so the map stays small. */
+    private final Map<String, Object> refreshLocks = new ConcurrentHashMap<>();
 
     /**
      * Pre-calculates the Basic Auth header for Spotify API requests.
@@ -122,23 +127,40 @@ public class SpotifyAuthService {
      * @return A valid Spotify access token.
      */
     public String getRefreshedAccessToken(String partyCode) {
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-
-        if (settings.getSpotifyAccessToken() == null) {
-            throw new IllegalStateException("Spotify not connected for party: " + partyCode);
-        }
-
-        // Check if token is about to expire in less than 5 minutes
-        if (settings.getSpotifyTokenExpiresAt() != null && settings.getSpotifyTokenExpiresAt().isAfter(Instant.now().plus(5, ChronoUnit.MINUTES))) {
+        PartySettingsEntity settings = connectedSettings(partyCode);
+        if (isFresh(settings)) {
             return settings.getSpotifyAccessToken();
         }
 
-        log.info("Party [{}]: Access token expired or about to expire. Refreshing...", partyCode);
-        String refreshedToken = refreshAccessToken(settings);
-        if (refreshedToken == null) {
-            throw new IllegalStateException("Failed to refresh Spotify token for party: " + partyCode);
+        // One refresh per party at a time (review item 4.7): Spotify may revoke the old refresh token when it issues a new one,
+        // so a second refresh with it would fail — or its answer, saved last, would overwrite the newer tokens. The callers that
+        // waited read the tokens the first one saved (the settings cache is evicted when they are).
+        synchronized (refreshLocks.computeIfAbsent(partyCode, code -> new Object())) {
+            settings = connectedSettings(partyCode);
+            if (isFresh(settings)) {
+                return settings.getSpotifyAccessToken();
+            }
+            log.info("Party [{}]: Access token expired or about to expire. Refreshing...", partyCode);
+            String refreshedToken = refreshAccessToken(settings);
+            if (refreshedToken == null) {
+                throw new IllegalStateException("Failed to refresh Spotify token for party: " + partyCode);
+            }
+            return refreshedToken;
         }
-        return refreshedToken;
+    }
+
+    private PartySettingsEntity connectedSettings(String partyCode) {
+        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        if (settings.getSpotifyAccessToken() == null) {
+            throw new IllegalStateException("Spotify not connected for party: " + partyCode);
+        }
+        return settings;
+    }
+
+    /** Whether the access token is good for more than 5 minutes. */
+    private static boolean isFresh(PartySettingsEntity settings) {
+        return settings.getSpotifyTokenExpiresAt() != null
+                && settings.getSpotifyTokenExpiresAt().isAfter(Instant.now().plus(5, ChronoUnit.MINUTES));
     }
 
     /**

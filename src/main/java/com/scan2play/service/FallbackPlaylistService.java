@@ -5,9 +5,11 @@ import com.scan2play.service.FallbackImportException.Reason;
 import com.scan2play.util.YouTubeUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Keeps a party's server-side fallback tracks (table {@code fallback_track}) in sync with the
@@ -41,6 +43,30 @@ public class FallbackPlaylistService {
             return 0;
         }
 
+        return trackCommandService.replaceTracks(partyCode, playlistId, fetchTracks(playlistId), shuffle);
+    }
+
+    /**
+     * Fetches the playlist again and brings its tracks up to date <em>in place</em>, on a background thread: the round goes on
+     * (no track comes back, the DJ's moves stay — {@link FallbackTrackCommandService#refreshTracks}). The tracks are refreshed
+     * a day before the 30-day retention limit would purge them ({@code NextTrackService}); the player keeps taking the old ones
+     * meanwhile, so a slow YouTube API never holds up the music (review item 2.5).
+     *
+     * @return the number of tracks the playlist has now; completes exceptionally with a {@link FallbackImportException} if the
+     *         playlist could not be fetched — the existing tracks are untouched then
+     */
+    @Async
+    public CompletableFuture<Integer> refreshFallbackTracksInBackground(String partyCode, String playlistId, boolean shuffle) {
+        return CompletableFuture.completedFuture(
+                trackCommandService.refreshTracks(partyCode, playlistId, fetchTracks(playlistId), shuffle));
+    }
+
+    /**
+     * The playlist's playable tracks, in playlist order.
+     *
+     * @throws FallbackImportException if there are none, or the API failed
+     */
+    private List<PlaylistTrack> fetchTracks(String playlistId) {
         // A single video needs no API call to be played (and therefore no API key); its title is looked up
         // best-effort, so without a key it is simply stored without one.
         List<PlaylistTrack> tracks;
@@ -55,7 +81,7 @@ public class FallbackPlaylistService {
             throw new FallbackImportException(Reason.NO_PLAYABLE_TRACKS,
                     "Playlist has no public, embeddable videos");
         }
-        return trackCommandService.replaceTracks(partyCode, playlistId, tracks, shuffle);
+        return tracks;
     }
 
     /**

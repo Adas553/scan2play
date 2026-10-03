@@ -11,21 +11,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.task.TaskRejectedException;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -200,20 +200,76 @@ class NextTrackServiceTest {
         verify(fallbackPlaylistService).syncFallbackTracks("OTHER", PLAYLIST, true);
     }
 
-    @Test
-    @DisplayName("tracks close to the 30-day retention limit are refreshed before serving")
-    void shouldRefreshStalePlaylist() {
-        givenNoGuestWaiting();
-        givenFallbackPlaylist(PLAYLIST_URL, true);
+    private void givenStalePlaylist() {
         when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST))
                 .thenReturn(Optional.of(Instant.now().minus(NextTrackService.REFRESH_AFTER_DAYS, ChronoUnit.DAYS).minus(1, ChronoUnit.HOURS)));
+    }
+
+    @Test
+    @DisplayName("tracks close to the 30-day retention limit are refreshed in the background — the old ones are served meanwhile")
+    void shouldRefreshStalePlaylistInTheBackground() {
+        givenNoGuestWaiting();
+        givenFallbackPlaylist(PLAYLIST_URL, true);
+        givenStalePlaylist();
+        when(fallbackPlaylistService.refreshFallbackTracksInBackground(PARTY, PLAYLIST, true)).thenReturn(new CompletableFuture<>());
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
+
+        assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
+
+        verify(fallbackPlaylistService).refreshFallbackTracksInBackground(PARTY, PLAYLIST, true);
+        verify(fallbackPlaylistService, never()).syncFallbackTracks(anyString(), anyString(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("while a refresh runs, the next requests do not start another one; once it is done, a stale playlist may be refreshed again")
+    void shouldRunOneRefreshAtATime() {
+        givenNoGuestWaiting();
+        givenFallbackPlaylist(PLAYLIST_URL, true);
+        givenStalePlaylist();
+        CompletableFuture<Integer> refresh = new CompletableFuture<>();
+        when(fallbackPlaylistService.refreshFallbackTracksInBackground(PARTY, PLAYLIST, true)).thenReturn(refresh);
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
+
+        service.findNextTrack(PARTY, Set.of());
+        service.findNextTrack(PARTY, Set.of());
+        verify(fallbackPlaylistService, times(1)).refreshFallbackTracksInBackground(PARTY, PLAYLIST, true);
+
+        refresh.complete(12);
+        service.findNextTrack(PARTY, Set.of());
+        verify(fallbackPlaylistService, times(2)).refreshFallbackTracksInBackground(PARTY, PLAYLIST, true);
+    }
+
+    @Test
+    @DisplayName("if refreshing a stale playlist fails, the existing tracks keep playing and it is not retried for a few minutes")
+    void shouldKeepServingOldTracks_whenRefreshFails() {
+        givenNoGuestWaiting();
+        givenFallbackPlaylist(PLAYLIST_URL, true);
+        givenStalePlaylist();
+        when(fallbackPlaylistService.refreshFallbackTracksInBackground(PARTY, PLAYLIST, true))
+                .thenReturn(CompletableFuture.failedFuture(new FallbackImportException(Reason.API_ERROR, "quota")));
+        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
+
+        assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
+        assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
+
+        verify(fallbackPlaylistService, times(1)).refreshFallbackTracksInBackground(PARTY, PLAYLIST, true);
+    }
+
+    @Test
+    @DisplayName("a refresh the executor refuses (it is full) is tried again on the next request")
+    void shouldTryAgain_whenTheRefreshCannotStart() {
+        givenNoGuestWaiting();
+        givenFallbackPlaylist(PLAYLIST_URL, true);
+        givenStalePlaylist();
+        when(fallbackPlaylistService.refreshFallbackTracksInBackground(PARTY, PLAYLIST, true))
+                .thenThrow(new TaskRejectedException("full"))
+                .thenReturn(new CompletableFuture<>());
         when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
 
         assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
+        assertThat(service.findNextTrack(PARTY, Set.of())).isPresent();
 
-        InOrder order = inOrder(fallbackPlaylistService, fallbackTrackCommandService);
-        order.verify(fallbackPlaylistService).syncFallbackTracks(PARTY, PLAYLIST, true);
-        order.verify(fallbackTrackCommandService).takeNextTrack(PARTY, PLAYLIST, true);
+        verify(fallbackPlaylistService, times(2)).refreshFallbackTracksInBackground(PARTY, PLAYLIST, true);
     }
 
     @Test
@@ -227,18 +283,6 @@ class NextTrackServiceTest {
         service.findNextTrack(PARTY, Set.of());
 
         verify(fallbackPlaylistService, never()).syncFallbackTracks(anyString(), anyString(), anyBoolean());
-    }
-
-    @Test
-    @DisplayName("if refreshing a stale playlist fails, the existing tracks keep playing")
-    void shouldKeepServingOldTracks_whenRefreshFails() {
-        givenNoGuestWaiting();
-        givenFallbackPlaylist(PLAYLIST_URL, true);
-        when(fallbackTrackRepository.findLatestFetchedAt(PARTY, PLAYLIST)).thenReturn(Optional.of(Instant.now().minus(29, ChronoUnit.DAYS).minus(1, ChronoUnit.HOURS)));
-        when(fallbackPlaylistService.syncFallbackTracks(PARTY, PLAYLIST, true))
-                .thenThrow(new FallbackImportException(Reason.API_ERROR, "quota"));
-        when(fallbackTrackCommandService.takeNextTrack(PARTY, PLAYLIST, true)).thenReturn(Optional.of(play));
-
-        assertThat(service.findNextTrack(PARTY, Set.of())).contains(new NextTrackResponse(Source.BACKGROUND, 7L, "dQw4w9WgXcQ", PLAYLIST));
+        verify(fallbackPlaylistService, never()).refreshFallbackTracksInBackground(anyString(), anyString(), anyBoolean());
     }
 }

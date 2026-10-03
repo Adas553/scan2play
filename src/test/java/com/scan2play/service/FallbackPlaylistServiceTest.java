@@ -67,6 +67,29 @@ class FallbackPlaylistServiceTest {
     }
 
     @Test
+    @DisplayName("a refresh fetches the playlist again and updates the tracks in place — not as a new import")
+    void shouldRefreshInPlace() {
+        when(playlistClient.fetchPlayableTracks("PLx")).thenReturn(TRACKS);
+        when(trackCommandService.refreshTracks(PARTY, "PLx", TRACKS, true)).thenReturn(3);
+
+        assertThat(service.refreshFallbackTracksInBackground(PARTY, "PLx", true)).isCompletedWithValue(3);
+
+        verify(trackCommandService).refreshTracks(PARTY, "PLx", TRACKS, true);
+        verifyNoMoreInteractions(trackCommandService);
+    }
+
+    @Test
+    @DisplayName("a refresh that finds no playable videos fails and keeps the current tracks")
+    void shouldNotRefresh_whenThePlaylistHasNoPlayableVideos() {
+        when(playlistClient.fetchPlayableTracks("PLx")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.refreshFallbackTracksInBackground(PARTY, "PLx", true))
+                .isInstanceOf(FallbackImportException.class);
+
+        verifyNoInteractions(trackCommandService);
+    }
+
+    @Test
     @DisplayName("a playlist without playable videos is an error and does not wipe the current tracks")
     void shouldRejectEmptyResult_andKeepExistingTracks() {
         when(playlistClient.fetchPlayableTracks("PLx")).thenReturn(List.of());

@@ -41,6 +41,18 @@ jobs:
       - name: Unit tests
         run: sh mvnw -B -ntp test '-Dtest=!Scan2playApplicationTests,!*IT'
 
+      # Coverage is a report, not a gate (review 6.4): the totals and the packages in the run's summary, the HTML as an artifact.
+      - name: Coverage summary
+        run: python3 .github/scripts/coverage-summary.py target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: target/site/jacoco/
+          if-no-files-found: ignore
+          retention-days: 14
+
       # The log needs a GitHub login; the annotations are public — the failed tests and their messages, readable by anyone.
       - name: Name the failed tests
         if: failure()

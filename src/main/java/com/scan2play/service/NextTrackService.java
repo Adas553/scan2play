@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,13 +30,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ol>
  * <p>
  * Background tracks normally exist already — they are imported when the DJ sets the playlist. This class
- * additionally imports <b>lazily</b> when there is nothing to play: a playlist set before server-side import
- * existed, an earlier import that failed, or tracks older than 29 days (they must be refreshed before the
- * 30-day retention limit purges them).
+ * additionally imports <b>lazily</b> when there is nothing to play (a playlist set before server-side import existed, an
+ * earlier import that failed) — on the request thread, as there is nothing else to play meanwhile — and <b>refreshes</b>
+ * tracks older than {@value #REFRESH_AFTER_DAYS} days (before the 30-day retention limit purges them) on a background
+ * thread, in place: the old tracks keep playing while the YouTube API answers, and the round goes on (review item 2.5).
  * <p>
- * A lazy import calls the YouTube API from a request thread, so it is guarded: at most one import per
- * party+playlist at a time, and after a failure no new attempt for {@value #RETRY_COOLDOWN_MINUTES} minutes
- * (a missing API key or an exhausted quota must not be re-tried on every request).
+ * Both are guarded: at most one import or refresh per party+playlist at a time, and after a failure no new attempt for
+ * {@value #RETRY_COOLDOWN_MINUTES} minutes (a missing API key or an exhausted quota must not be re-tried on every request).
  */
 @Service
 @RequiredArgsConstructor
@@ -89,12 +90,45 @@ public class NextTrackService {
         return play.map(p -> new NextTrackResponse(Source.BACKGROUND, p.getId(), p.getVideoId(), playlistId));
     }
 
-    /** Re-imports a playlist whose tracks are close to the 30-day retention limit. */
+    /**
+     * Starts a background refresh of a playlist whose tracks are close to the 30-day retention limit and returns at once:
+     * the caller goes on with the tracks there are.
+     */
     private void refreshIfStale(String partyCode, String playlistId, boolean shuffle) {
         Optional<Instant> fetchedAt = fallbackTrackRepository.findLatestFetchedAt(partyCode, playlistId);
-        if (fetchedAt.isPresent() && fetchedAt.get().isBefore(Instant.now().minus(REFRESH_AFTER_DAYS, ChronoUnit.DAYS))) {
-            log.info("Party [{}]: fallback playlist {} was fetched at {} — refreshing", partyCode, playlistId, fetchedAt.get());
-            tryImport(partyCode, playlistId, shuffle);
+        if (fetchedAt.isEmpty() || !fetchedAt.get().isBefore(Instant.now().minus(REFRESH_AFTER_DAYS, ChronoUnit.DAYS))) {
+            return;
+        }
+        String key = partyCode + ':' + playlistId;
+        if (recentImportFailures.getIfPresent(key) != null || !importsInFlight.add(key)) {
+            return;
+        }
+        log.info("Party [{}]: fallback playlist {} was fetched at {} — refreshing in the background",
+                partyCode, playlistId, fetchedAt.get());
+        try {
+            fallbackPlaylistService.refreshFallbackTracksInBackground(partyCode, playlistId, shuffle)
+                    .whenComplete((count, failure) -> {
+                        importsInFlight.remove(key);
+                        if (failure != null) {
+                            refreshFailed(key, partyCode, playlistId, failure);
+                        }
+                    });
+        } catch (RuntimeException e) {
+            // the executor refused the task (it is full) — the next request tries again
+            importsInFlight.remove(key);
+            log.warn("Party [{}]: the refresh of fallback playlist {} could not be started: {}", partyCode, playlistId, e.toString());
+        }
+    }
+
+    private void refreshFailed(String key, String partyCode, String playlistId, Throwable failure) {
+        Throwable cause = failure instanceof CompletionException && failure.getCause() != null ? failure.getCause() : failure;
+        recentImportFailures.put(key, Boolean.TRUE);
+        if (cause instanceof FallbackImportException e) {
+            log.warn("Party [{}]: the refresh of fallback playlist {} failed ({}): {} — the old tracks play on, not retrying for {} min",
+                    partyCode, playlistId, e.getReason(), e.getMessage(), RETRY_COOLDOWN_MINUTES);
+        } else {
+            log.error("Party [{}]: the refresh of fallback playlist {} failed — the old tracks play on, not retrying for {} min",
+                    partyCode, playlistId, RETRY_COOLDOWN_MINUTES, cause);
         }
     }
 

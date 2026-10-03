@@ -134,7 +134,7 @@ public class DjDashboardController {
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
-        model.addAttribute(FALLBACK_PLAYLIST_ID, extractPlaylistId(settings.getFallbackPlaylistUrl()));
+        model.addAttribute(FALLBACK_PLAYLIST_ID, YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl()));
         model.addAttribute(FALLBACK_PLAYLIST_URL, settings.getFallbackPlaylistUrl());
         model.addAttribute(FALLBACK_SHUFFLE, settings.isFallbackShuffle());
 
@@ -344,27 +344,6 @@ public class DjDashboardController {
             }
         }
         return ids;
-    }
-
-    /**
-     * Extracts a YouTube playlist ID or video ID from a URL or raw input.
-     * <p>
-     * Supported formats:
-     * <ul>
-     *     <li>Playlist URL: {@code https://youtube.com/playlist?list=PLxxx} → {@code PLxxx}</li>
-     *     <li>Watch URL with playlist: {@code https://youtube.com/watch?v=abc&list=PLxxx} → {@code PLxxx}</li>
-     *     <li>Watch URL (single video): {@code https://youtube.com/watch?v=KD5fLb-WgBU} → {@code V:KD5fLb-WgBU}</li>
-     *     <li>Short URL: {@code https://youtu.be/KD5fLb-WgBU?si=...} → {@code V:KD5fLb-WgBU}</li>
-     *     <li>Raw playlist ID: {@code PLxxx} → {@code PLxxx}</li>
-     *     <li>Raw video ID (11 chars): {@code KD5fLb-WgBU} → {@code V:KD5fLb-WgBU}</li>
-     * </ul>
-     * Video IDs are prefixed with {@code V:} so the frontend can distinguish them from playlist IDs
-     * and use the correct YouTube IFrame Player API method.
-     *
-     * @return extracted ID (with {@code V:} prefix for single videos), or null if input is blank.
-     */
-    static String extractPlaylistId(String input) {
-        return YouTubeUrls.extractPlaylistId(input);
     }
 }
 
