@@ -398,7 +398,7 @@ nie osobno. **Nakład:** S (przy okazji).
 | 4.5 | N | Brak cache'u negatywnego / flagi „quota exceeded” | `YouTubeMusicProvider.java:86-168` | S |
 | 4.6 | N | `songName`/`style` gościa bez limitu wprost do promptu | `SongEvaluationService.java:173-178` | XS |
 | 4.7 | N | Wyścig przy odświeżaniu tokenu Spotify | `SpotifyAuthService.java:151-169` | XS |
-| 5.3 | N | Tokeny Spotify jawnym tekstem (znane) | `PartySettingsEntity.java` | S |
+| 5.3 | N | Tokeny Spotify jawnym tekstem (znane) — **zrobione** (jedenasta paczka) | `PartySettingsEntity.java` | S |
 | 5.4 | N | Brak górnych granic ustawień DJ-a (`duplicateCheckWindow`) | `DjPartySettingsController.java:85-104` | XS |
 | 5.5 | N | Domyślne hasło bazy `1111` w głównym pliku konfiguracji | `application.properties:47-49` | XS |
 | 1.6 | N | Martwa pętla 10 prób pod advisory lockiem | `FallbackTrackCommandService.java:317-352` | XS |
@@ -591,7 +591,7 @@ Testy jednostkowe: **586** (585 uruchomionych, 1 pominięty), testy na bazie: **
 Po dziewiątej paczce (2026-10-01/02, zacommitowane do `7ee3185`): głosy, klimat imprezy, V15–V16 — poza przeglądem, opis w
 `SESSION_HANDOFF.md`.
 
-**Dziesiąta paczka — 2.5, 4.7, JaCoCo, reszta 7.3; 2026-10-03, niezacommitowane (do przejrzenia):**
+**Dziesiąta paczka — 2.5, 4.7, JaCoCo, reszta 7.3; 2026-10-03, zacommitowana (`5e2392d`, dokumenty `bbbe6ea`) i wypchnięta:**
 
 | # | Co zmieniono | Pliki | Testy |
 |---|--------------|-------|-------|
@@ -602,3 +602,18 @@ Po dziewiątej paczce (2026-10-01/02, zacommitowane do `7ee3185`): głosy, klima
 
 Testy jednostkowe: **619** (618 uruchomionych, 1 pominięty), testy na bazie: **36**, scenariusze: **75/75** — zielone w kopiach.
 **Nie zrobione:** 6.3 (tylko razem ze zmianą kolejki), 5.3 (Spotify — szyfrowanie tokenów, nowa zmienna z kluczem).
+
+Po dziesiątej paczce (2026-10-03, `94c240f`): panel na telefonie, numery i „Wyczyść kolejkę”, godzina — poza przeglądem, opis w
+`SESSION_HANDOFF.md`.
+
+**Jedenasta paczka — 5.3; 2026-10-03, niezacommitowana (do przejrzenia):**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 5.3 | Tokeny Spotify **zaszyfrowane w bazie**: `SpotifyTokenConverter` (JPA `AttributeConverter`, AES-256-GCM, losowy nonce, kolumna `enc:v1:` + base64; Hibernate bierze go ze Springa, więc klucz jest wstrzyknięty) na `spotifyAccessToken` / `spotifyRefreshToken`. Klucz: **`SPOTIFY_TOKEN_KEY`** (base64 z 32 losowych bajtów) — **wymagany**, bez niego aplikacja nie startuje (decyzja właściciela). Wartość bez prefiksu = token sprzed szyfrowania, czytany jak jest; `SpotifyTokenEncryptionOnStartup` szyfruje takie wiersze po starcie (natywny SQL, tylko dwie kolumny, partie po 100). Kolumna, której klucz nie otwiera (zmieniony klucz) → brak tokenu: impreza działa, DJ łączy Spotify jeszcze raz (wyjątek zepsułby każdą stronę imprezy). Bez migracji (2048 znaków wystarcza). Strona prywatności (PL / EN): tokeny zaszyfrowane, usuwane z kontem; Spotify nie pozwala ich unieważnić — DJ usuwa aplikację w „Zarządzaj aplikacjami” na koncie Spotify. | `SpotifyTokenConverter`, `SpotifyTokenEncryptionOnStartup`, `PartySettingsEntity`, `PartySettingsRepository`, `application.properties`, `privacy*.html` | `SpotifyTokenConverterTest` 5 (nowy: szyfruje i odczytuje, nowy nonce za każdym razem, stary jawny token, inny klucz / uszkodzona wartość → brak, zły klucz → nie startuje); `SpotifyTokenEncryptionIT` 3 (nowy: w kolumnie nie ma jawnego tokenu, encja ma jawny; jawne wiersze zaszyfrowane po starcie; wartość z innym kluczem → brak) |
+
+Testy jednostkowe: **632** (631 uruchomionych, 1 pominięty), testy na bazie: **40**, scenariusze: **83/83** — zielone w kopiach
+(liczby z całą niezacommitowaną pracą tego dnia, także spoza przeglądu — `SESSION_HANDOFF.md`).
+**Do zrobienia przez właściciela:** `SPOTIFY_TOKEN_KEY` w konfiguracji uruchomienia w IntelliJ (bez niej aplikacja nie wystartuje)
+i jako zmienna staged na Railway (inna wartość niż lokalna).
+**Nie zrobione:** 6.3 (tylko razem ze zmianą kolejki).

@@ -6,9 +6,38 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after `94c240f` (2026-10-03; workflows green up to `7ee3185` — check
-  `5e2392d`, `bbbe6ea`, `94c240f` and its docs commit). Check with `git status -sb` and `git log --oneline -8`, and the three
-  workflows (below). Nothing uncommitted.
+- **Branch `dev`**, pushed up to `76d420d` (docs of `94c240f`; all three workflows green on `76d420d` — `94c240f` went in the same
+  push, so it has no runs of its own). Check with `git status -sb` and `git log --oneline -8`. **Uncommitted, for the owner's review
+  in IntelliJ** (2026-10-03, the owner: "zrób a i b — zgodnie z Twoimi sugestiami, zrób też podział historii na dni"):
+  - **Before starting the app: add `SPOTIFY_TOKEN_KEY` to IntelliJ's run configuration** (base64 of 32 random bytes — PowerShell:
+    `$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)`,
+    or `openssl rand -base64 32`). Without it the app does not
+    start (the owner's choice). Railway: the same variable, another value, staged before the next deploy.
+  - **A Spotify party's forms are sent in place** (as at YouTube and requests-only): "Oznacz jako zagrane", "🎵 Spotify", the limits,
+    the vibe, "Wyczyść kolejkę", end / resume, and the Auto-Pilot switch — no page reload, so the DJ keeps their place and, on a
+    phone, the settings stay as they were. "🎵 Spotify" asks for the queue at once (`s2p:guest-queue-changed`; Spotify takes the
+    song a moment later — a row still there goes with the next poll). Connecting Spotify (a link), logout and account deletion still
+    reload. `common.js` lost `submitsInPlace`; `forms.js`. Browser scenarios `spotify-forms-in-place`, `spotify-autopilot-in-place`
+    (new `scenarios/spotify.js`) — **red before** (the clicks navigated the page away); the stand-in answers `push-to-spotify`, `limits`.
+  - **Review 5.3 — the Spotify tokens encrypted in the database** (`SpotifyTokenConverter`, AES-256-GCM; `SpotifyTokenEncryptionOnStartup`
+    encrypts old plain rows at start; a column the key cannot open = no token, the DJ reconnects; the privacy page tells the DJ to
+    remove the app in their Spotify account). Details: `REVIEW.md`, "Jedenasta paczka". `SpotifyTokenConverterTest` 5,
+    `SpotifyTokenEncryptionIT` 3.
+  - **The history split by day**: a heading row where a new day starts (Polish time): "dziś — sobota, 03.10", "wczoraj — piątek,
+    02.10", "wtorek, 29.09" (`history.html`, `Times.dayKey` / `weekday`, `app.css` `.s2p-day-heading`). The search hides a day with
+    nothing left; a sort by a column hides the headings, and undoing the sort (third click) now puts the server's order back (before,
+    the history stayed sorted until reloaded). Every party, the History tab and the standalone page. `TimesTest` +1,
+    `DashboardPageRenderTest` (the sample timeline now spans two days), browser scenario `history-by-day` — **red before**.
+  - **The owner's two reports while reviewing (2026-10-03):** (1) "Playlista" among the history's filters at a party without a player
+    — now only at a YouTube party (`historyHasPlaylist` from `DjDashboardController.addHistory`; a party switched from YouTube still
+    lists its old tracks under "Wszystkie"); `HistoryFragmentTest` +1, `DjDashboardControllerHistoryTest` +1. (2) "jak naciskam
+    pokaż więcej, to filtr znika" — the filter button and the search text were kept, **the sort by a column was lost**; now "Pokaż
+    więcej" and a filter button keep it (`captureListState` / `restoreListState`, `tabs.js`); on the standalone history page, which
+    loads itself again, the search and the sort go through `sessionStorage` once (not covered by the browser tests). Scenario
+    `history-more-keeps-the-sort` — **red before**. If the owner meant something else by "filtr", ask.
+  - Tests: 632 unit tests (631 run, 1 skipped), 40 database tests, 83 browser scenarios — green in copies.
+  - **To look at:** a Spotify party's dashboard (clicks without a reload — Spotify locally needs the redirect, below — or just its
+    switch and "Played"); the history with entries of several days; the privacy page's new paragraph.
 - **Committed and pushed (`94c240f`, 2026-10-03; seen by the owner on the phone) — the dashboard on a phone** (first a trial for the requests-only party; the owner: "bardzo fajne",
   then "zrób to samo dla YouTube i Spotify"): on a screen narrower than 768 px, every kind of party, the vibe, the limits, the kind
   of party, the background playlist and the QR code fold under one button "⚙️ Ustawienia, klimat i kod QR" right under the heading;
@@ -198,8 +227,8 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. **Check the workflows of `5e2392d`, `bbbe6ea`, `94c240f` and its docs commit** (Unit tests: the new coverage summary — the first
-   run of JaCoCo on GitHub; Database tests: 37 IT; Browser tests: 79 scenarios, among them the phone ones at 390 × 844).
+1. **The owner reviews the uncommitted work (above)** — first `SPOTIFY_TOKEN_KEY` in IntelliJ; then commit and push on the owner's
+   word, and check the three workflows (Unit tests 632, Database tests 40 IT, Browser tests 83 scenarios).
 2. **The owner's answers (2026-10-03):** "play later" without rejecting — **not to be built**; the DJ's library — **dropped for now**;
    votes — nothing to build; the defaults stay unless the owner says otherwise (a vote uses the guest's limit — it costs an AI call
    anyway; votes do not reorder the queue or Auto-Pilot);
@@ -207,8 +236,8 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
    "Wyczyść kolejkę" — built (only the button: ending the party never clears the queue — a pause or a limit may end it; cleared =
    rejected). **One Google account = one party** (switching the tile switches the same party: code, queue, history, open / closed)
    — kept; a separate account for showing it to DJs; no hint on the dashboard for now. **The history** — kept as it is: it cleans
-   itself after 30 days (requests 04:45, background plays 04:30; the privacy policy says so, YouTube data may not stay longer). If DJs
-   find the parties of a month mixed in it: headings / a filter by day ("dziś", "wczoraj", "29.09") — no "clear the history" button.
+   itself after 30 days (requests 04:45, background plays 04:30; the privacy policy says so, YouTube data may not stay longer); split
+   by day with headings (built, above) — no "clear the history" button, no filter by day (not asked for).
 3. **Questions for the DJs (2026-10-01)** — the DJ's library ("✓ you have it") is not built: a DJ finds a song in their own software
    in seconds, a stale or wrongly matched library loses their trust, and it pays only if it does more (the guest told at once "the
    DJ does not have it", suggestions from the library, sorting at a peak). Ask: how many requests per wedding and how many they do
@@ -219,13 +248,11 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 4. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
    history) — and tells what they said. (The guest's own words beside the song — done, above.)
 5. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
-   compared with `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
+   compared with `V1__baseline.sql`; `SPOTIFY_TOKEN_KEY` staged (a new value); `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
    (Flyway V2..V16, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
 6. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
-   it" beside each request; Spotify's dashboard forms in the background too (today only YouTube and requests-only; Spotify now has a
-   rendered page and a phone scenario, but no end-to-end test). (The wait in minutes, the queue on the phone — done.)
-7. From `REVIEW.md`: 6.3 (only together with a change of the queue), 5.3 (Spotify tokens encrypted — needs a key variable, locally
-   and staged on Railway). (2.5, 4.7, JaCoCo, 7.3 — the tenth package, above.)
+   it" beside each request. (The wait in minutes, the queue on the phone, Spotify's forms in the background — done.)
+7. From `REVIEW.md`: 6.3 (only together with a change of the queue). (5.3 — the eleventh package, above.)
 8. **YouTube and the rules (the owner's question, 2026-10-01):** there is no "licence" to ask YouTube for — what counts is the
    API's Developer Policies (III.I.7 no separating audio from video: the visible embedded player whose sound goes to the speakers is
    not that; III.I.9 no background player: Auto-Pilot in a hidden tab / a locked phone looks like one; III.F.3.a / III.G.1.b no
