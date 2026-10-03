@@ -6,9 +6,43 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `7ee3185` (2026-10-02; all three workflows green for `b1ab34c` and `7ee3185`). Check with `git status -sb`
-  and `git log --oneline -8`, and the three workflows (below).
-- **Uncommitted (2026-10-03), for the owner's review in IntelliJ — the tenth review package** (`REVIEW.md`, "Dziesiąta paczka"; the
+- **Branch `dev`**, pushed up to the documentation commit after `94c240f` (2026-10-03; workflows green up to `7ee3185` — check
+  `5e2392d`, `bbbe6ea`, `94c240f` and its docs commit). Check with `git status -sb` and `git log --oneline -8`, and the three
+  workflows (below). Nothing uncommitted.
+- **Committed and pushed (`94c240f`, 2026-10-03; seen by the owner on the phone) — the dashboard on a phone** (first a trial for the requests-only party; the owner: "bardzo fajne",
+  then "zrób to samo dla YouTube i Spotify"): on a screen narrower than 768 px, every kind of party, the vibe, the limits, the kind
+  of party, the background playlist and the QR code fold under one button "⚙️ Ustawienia, klimat i kod QR" right under the heading;
+  the Auto-Pilot switch (YouTube, Spotify) stays; a YouTube party shows the player with "up next" next, then the DJ pick and the queue.
+  Every waiting request is a card with big buttons ("Oznacz jako zagrane", "Pomiń" / "🎵 Spotify"); the list scrolls with the page.
+  The same page and URL; the queue still refreshes every 3 s. The button keeps its look after a tap (the owner saw Bootstrap's white
+  hover stay on the phone). Opened or folded is kept for the tab (`sessionStorage`), since a Spotify party's forms reload the page.
+  Files: `dashboard.html` (the button, `.s2p-phone-settings` on five parts — the provider card whole only at a requests-only party),
+  `app.css` (the last block), new `js/dashboard/settings-toggle.js` (imported by `main.js`), `dashboard.settings.toggle` (PL / EN).
+  A wide screen is unchanged. Tests: browser scenarios in the new `scenarios/phone.js` — `requests-only-phone` (**red before**),
+  `youtube-phone`, `spotify-phone` (on the new rendered `dashboard-spotify.html`); `run.py` reads a scenario's `viewport`;
+  `requests-only-dashboard` +1 (a wide screen: nothing folded); `DashboardPageRenderTest` +1 (Spotify) and the folded parts. 620 unit
+  tests, 78 browser scenarios — green. **To try:** each kind of party on the phone (or Chrome DevTools' device mode).
+- **In the same commit (`94c240f`) — numbers, "Wyczyść kolejkę", the time, two guest-page fixes** (the owner: "numery i opcja wyczyść
+  wszystko"; only a button — "zatrzymywanie imprezy może być spowodowane limitami albo przerwami DJ-a" —; cleared requests "jako
+  odrzucone"; then "datę i godzinę można by ładniej"):
+  - **Numbers** in the active queue, every party: a CSS counter (`app.css`) — follows the poll, the sort and the search by itself.
+  - **"🧹 Wyczyść kolejkę"** beside the queue's heading, shown only while a request waits (`:has`), asks first (`data-confirm`):
+    `POST /dj/dashboard/clear-queue` → `DjService.clearQueue` → `SongRequestRepository.rejectWaiting` (one `UPDATE` of the DJ's own
+    party: accepted → rejected, "Cleared by the DJ 🧹"); sent in place (`forms.js` fires `s2p:guest-queue-changed`), a Spotify party
+    reloads.
+  - **The time** in the queue and the history: "20:04" with "dziś" / "wczoraj" / "29.09" under it (`Times.clock` / `daysAgo` / `day`,
+    fragment `components :: moment`, `time.today` / `time.yesterday`); the full moment is the cell's title.
+  - Tests: `TimesTest` 2, `DjServiceTest` +1, `SongRequestRepositoryIT` +1, `DashboardPageRenderTest` (the button, the time); browser
+    scenario `queue-numbers-and-clear` — **red before** (the stand-in's rows now carry `.song-title`; it answers `clear-queue`). 623 unit
+    tests, 37 database tests, 79 browser scenarios — green.
+  - **Fix: "Teraz gra" on a requests-only party's guest page** (the owner's screenshot: "Lady Gaga - Abracadabra (Official Music
+    Video)"): `GuestQueueService` asked the timeline whatever the kind of party, and the party had been a YouTube party minutes before
+    (the same party, switched) — its player's last track was still within the 8 minutes. Now never at a requests-only party.
+    `GuestQueueServiceTest` +1 — **red before**. 624 unit tests.
+  - **The guest page's vibe box:** "🎧 Klimat imprezy:" with the colon also when the DJ wrote only a note (it was there only before
+    a vibe's name). `GuestPageRenderTest` (both cases). The owner, on one Google account = one party: keep it (a separate account for
+    showing it to DJs); no hint on the dashboard for now.
+- **Committed and pushed (`5e2392d`, docs `bbbe6ea`, 2026-10-03) — the tenth review package** (`REVIEW.md`, "Dziesiąta paczka"; the
   owner: "możesz zacząć" / "możesz zrobić"):
   - **2.5 — the background playlist is refreshed in the background and in place.** Tracks ≥ 29 days old: `next-track` hands out the
     old track at once and the refresh runs on an `@Async` thread (`FallbackPlaylistService.refreshFallbackTracksInBackground`); it
@@ -164,17 +198,22 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. **Check the workflows** after the owner commits the tenth package (Unit tests: the new coverage summary; Database tests: 36 IT).
+1. **Check the workflows of `5e2392d`, `bbbe6ea`, `94c240f` and its docs commit** (Unit tests: the new coverage summary — the first
+   run of JaCoCo on GitHub; Database tests: 37 IT; Browser tests: 79 scenarios, among them the phone ones at 390 × 844).
 2. **The owner's answers (2026-10-03):** "play later" without rejecting — **not to be built**; the DJ's library — **dropped for now**;
    votes — nothing to build; the defaults stay unless the owner says otherwise (a vote uses the guest's limit — it costs an AI call
    anyway; votes do not reorder the queue or Auto-Pilot);
-   **the queue on the phone** — the owner asked how it would look (a phone layout of the same dashboard vs. a separate requests-only
-   page, and whether it refreshes) — waiting for the owner's choice.
+   **the queue on the phone** — built (above): the owner liked the trial and asked for YouTube and Spotify too; queue numbers and
+   "Wyczyść kolejkę" — built (only the button: ending the party never clears the queue — a pause or a limit may end it; cleared =
+   rejected). **One Google account = one party** (switching the tile switches the same party: code, queue, history, open / closed)
+   — kept; a separate account for showing it to DJs; no hint on the dashboard for now. **The history** — kept as it is: it cleans
+   itself after 30 days (requests 04:45, background plays 04:30; the privacy policy says so, YouTube data may not stay longer). If DJs
+   find the parties of a month mixed in it: headings / a filter by day ("dziś", "wczoraj", "29.09") — no "clear the history" button.
 3. **Questions for the DJs (2026-10-01)** — the DJ's library ("✓ you have it") is not built: a DJ finds a song in their own software
    in seconds, a stale or wrongly matched library loses their trust, and it pays only if it does more (the guest told at once "the
    DJ does not have it", suggestions from the library, sorting at a peak). Ask: how many requests per wedding and how many they do
    not have; is searching a pain at all; should a guest hear "the DJ does not have it" at once. Likely cheaper wins to ask about:
-   the queue on the phone (the owner is not sure: the "Kolejka" tab already jumps there), "play later" without rejecting. Repeats
+   the queue on the phone (done), "play later" without rejecting (not to be built). Repeats
    grouped — done (votes, above). A sound / a count in the tab title on a new request — dropped by the owner (the sound goes to the
    computer's default output, maybe the PA; a hidden tab wakes at most once a minute). If the library comes back: migration V16.
 4. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
@@ -183,8 +222,8 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
    compared with `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
    (Flyway V2..V16, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
 6. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
-   it" beside each request; the queue on the phone as the main view; Spotify's dashboard forms in the background too (today only
-   YouTube and requests-only — Spotify has no tests). (The wait in minutes — done.)
+   it" beside each request; Spotify's dashboard forms in the background too (today only YouTube and requests-only; Spotify now has a
+   rendered page and a phone scenario, but no end-to-end test). (The wait in minutes, the queue on the phone — done.)
 7. From `REVIEW.md`: 6.3 (only together with a change of the queue), 5.3 (Spotify tokens encrypted — needs a key variable, locally
    and staged on Railway). (2.5, 4.7, JaCoCo, 7.3 — the tenth package, above.)
 8. **YouTube and the rules (the owner's question, 2026-10-01):** there is no "licence" to ask YouTube for — what counts is the
@@ -207,6 +246,9 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   Railway already.
 - **Try on the phone:** the wake lock (Auto-Pilot on, the screen should not dim), ✕ on an "up next" row, Save with a private / wrong
   playlist link.
+- **`SCAN2PLAY_GUEST_URL` in IntelliJ** holds the computer's address in the local network (the QR code's link): it changes with
+  the network — 2026-10-03 the computer was 192.168.68.54, the run configuration still said 192.168.100.184 and the QR link did not
+  open. Change it in Run → Edit Configurations when the network changes (detecting it automatically was offered, not asked for).
 - **Spotify locally:** the redirect `https://dev.scan2play.com.pl/dj/spotify/callback` would have to be added in the Spotify
   Developer Dashboard.
 - **`origin/backup/local-main-2026-04`** holds two old local commits of `main`; never push `main` from it. Can be deleted once the

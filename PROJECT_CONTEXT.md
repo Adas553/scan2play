@@ -63,7 +63,9 @@ log the DJs out.
 ### 4.1 Entities (database tables)
 
 **Every moment is a `timestamptz` column and an `Instant` in Java** (`V12`, review 1.8) — the same on a machine in Poland and on a
-server in UTC; the pages show them in Polish time (`util/Times`: `display`, and a fixed-width UTC `sortKey` for the lists' `data-val`).
+server in UTC; the pages show them in Polish time (`util/Times`: the lists show `clock` — "20:04" — with the day under it, "dziś" / "wczoraj" / `day` "29.09"
+(`daysAgo`; fragment `components :: moment`), and `display` — "29.09.2026 20:04:59" — as the cell's title; a fixed-width UTC
+`sortKey` for the lists' `data-val`).
 
 **`PartySettingsEntity` → `party_settings`** — one party, owned by one DJ (`owner_id` UNIQUE: one party per DJ).
 `partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code), `ownerId` (the OAuth2 subject), `active` (accepting requests),
@@ -155,6 +157,17 @@ only normalises the name), set the background playlist (YouTube) and see / reord
 (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English), connect Spotify for playback (Section 5.3), send feedback,
 end / resume the party, delete the account, log out.
 
+**On a phone** (narrower than 768 px), every kind of party: the vibe, the limits, the kind of party, the background playlist and the
+QR code fold under one button "⚙️ Ustawienia, klimat i kod QR" (`.s2p-phone-settings`; folded by `app.css` alone, `settings-toggle.js`
+opens them and keeps the choice for the tab in `sessionStorage` — a Spotify party's forms reload the page). The Auto-Pilot switch
+(YouTube, Spotify) stays; then the YouTube player with "up next", the DJ pick, the queue. Every waiting request is a card with big
+buttons ("Oznacz jako zagrane", "Pomiń" / "🎵 Spotify"); the list scrolls with the page.
+
+**The active queue**, every party: each request has its number — a CSS counter in `app.css`, so it follows the polled list, the sort
+and the search by itself (at a YouTube party the list's own order is the order of play). "🧹 Wyczyść kolejkę" beside the heading
+(shown only while a request waits — `:has`) asks first (`data-confirm`) and sends `POST /dj/dashboard/clear-queue`: the waiting
+requests go to the history's rejected ones. Ending the party does not clear the queue (the DJ may pause it for a break or a limit).
+
 Every dashboard window follows the party's state within one poll or one lease report: Auto-Pilot (`playbackMode` in the lease
 answer), the party open or closed (`X-Party-Active` of the queue poll — the "party closed" banner and the "end party" button), the
 guest limits (`X-Guest-Limits`, `X-Guest-Limits-Use`), the "up next" list (`queueVersion`). A change the DJ makes in a window shows
@@ -168,7 +181,8 @@ suggestions from iTunes) and **✨ Nastrój** (the AI picks a song); the vibe li
 "🔊 Teraz gra", "🔥 Najwięcej głosów", the next 5 guest songs in play order (with their votes), and the guest's own song with its place (`GuestQueueService`; the guest's
 requests are remembered in the session) — fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. A
 requests-only party has no play order (its DJ picks): "Ostatnio wysłane" — the 5 newest waiting requests, unnumbered — and "Twoja
-prośba „…” czeka u DJ-a" instead of a place (`GuestQueue.inOrder`). A
+prośba „…” czeka u DJ-a" instead of a place (`GuestQueue.inOrder`), and no "Teraz gra" (nothing is known about what its DJ
+plays — not even the last track of the party's player when it was a YouTube party minutes ago). A
 request the AI reads as a mood in the song mode is not saved: the guest is back at the form in the mood mode. An ended party shows
 "DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
 
@@ -354,7 +368,7 @@ page (`DashboardPageRenderTest.assertNothingInline`).
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms at a YouTube or a requests-only party — `submitsInPlace`, `<body data-party-kind>` —, Auto-Pilot switch, `data-auto-submit`; played / skipped / picked → `s2p:guest-queue-changed`), `tabs.js` (the history in place, every party), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden unless this window plays — `s2p:player-role`), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms at a YouTube or a requests-only party — `submitsInPlace`, `<body data-party-kind>` —, Auto-Pilot switch, `data-auto-submit`; played / skipped / picked → `s2p:guest-queue-changed`), `tabs.js` (the history in place, every party), `settings-toggle.js` (on a phone: the settings folded), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden unless this window plays — `s2p:player-role`), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/youtube-autopilot.js` | the player (Section 5.4), an ES module; its only global is `onYouTubeIframeAPIReady` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
@@ -558,6 +572,7 @@ GuestQueueService          → DjService, PlayHistoryService
 | GET | `/dj/dashboard/recent-tracks` | the 30 newest playable entries of the timeline |
 | POST | `/dj/dashboard/play` | a guest song confirmed played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ (requests-only dashboard) → rejected, the DJ's note |
+| POST | `/dj/dashboard/clear-queue` | "🧹 Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, "Cleared by the DJ 🧹" (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
 | GET | `/dj/dashboard/fallback-queue` | the "up next" fragment; `X-Queue-Version` |
 | POST | `/dj/dashboard/fallback-queue/move`, `/place`, `/skip` | 204, 409 when the track is no longer queued in the current playlist |
 | POST | `/dj/dashboard/fallback-playlist` | save + import (headers, Section 5.4) |
@@ -591,19 +606,19 @@ GuestQueueService          → DjService, PlayHistoryService
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 619, 1 skipped (the fixture recorder,
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 624, 1 skipped (the fixture recorder,
   `PlayLogFixtureRecorderTest`, runs only with `S2P_FIXTURE_OUT` and a throw-away `s2p_*` database). Pure Mockito, plus template
   rendering with the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest`
   with the real security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`;
   the Unit tests workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 36 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 37 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `FallbackQueueIT`, `FallbackQueueConcurrencyIT` (fails
   with "deadlock detected" without the advisory lock), `SongRequestRepositoryIT`, `YouTubeSearchBudgetIT`, `ApplicationSetupIT`, `SessionStoreIT` (what the app keeps in a session survives
   the database and another repository; the cleanup of expired sessions), `TimestampMigrationIT` (its own database: V11, rows the old
   way, then V12 — the same moments; red when the old values are read as UTC), `SongRequestVotesIT` (votes under the lock),
   `VibeMigrationIT` (V16).
   New queue SQL gets a test there.
-- **Browser tests**: 75 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
+- **Browser tests**: 79 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
