@@ -326,7 +326,11 @@
                            th:title="${videoId != null} ? #{dashboard.queue.play} : null"
                            th:attr="data-track-url=${req.trackUrl},data-video-id=${videoId}"
                            th:classappend="${#strings.contains(req.trackUrl, 'spotify') ? 'btn-success text-dark' : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? 'btn-danger text-white' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-outline-danger text-danger' : 'btn-secondary'))}"
-                           th:text="${activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.queue.preview') : (#strings.contains(req.trackUrl, 'spotify') ? '▶ SPOTIFY' : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? '▶ YOUTUBE' : (#strings.contains(req.trackUrl, 'youtube') ? '🔍 YOUTUBE' : '▶ PLAY')))}">
+                           th:with="spotifyLink=${activeProvider.name() != 'REQUESTS_ONLY' and #strings.contains(req.trackUrl, 'spotify')}">
+                            <!--/* a Spotify track: the Spotify icon (black on green), its Developer Policy's attribution */-->
+                            <th:block th:if="${spotifyLink}"><svg th:replace="~{fragments/components :: spotify-icon}"></svg> SPOTIFY</th:block>
+                            <th:block th:unless="${spotifyLink}"
+                                      th:text="${activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.queue.preview') : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? '▶ YOUTUBE' : (#strings.contains(req.trackUrl, 'youtube') ? '🔍 YOUTUBE' : '▶ PLAY'))}">▶ YOUTUBE</th:block>
                         </a>
                         <a th:if="${videoId != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
                            class="text-light text-decoration-none fs-5 lh-1 px-1 youtube-preview"
@@ -362,7 +366,7 @@
                         <form th:if="${req.decision == 'accepted' and activeProvider.name() == 'SPOTIFY' and isSpotifyConnected and #strings.contains(req.trackUrl, 'spotify')}"
                               th:action="@{/dj/requests/{id}/push-to-spotify(id=${req.id})}" method="post" class="m-0">
                              <button type="submit" class="btn btn-sm btn-outline-success" th:title="#{dashboard.button.push_to_spotify}">
-                                🎵 <span th:text="#{dashboard.button.spotify}">Spotify</span>
+                                <svg th:replace="~{fragments/components :: spotify-icon}"></svg> <span th:text="#{dashboard.button.spotify}">Spotify</span>
                             </button>
                         </form>
                     </div>

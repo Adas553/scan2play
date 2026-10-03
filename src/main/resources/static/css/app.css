@@ -622,3 +622,17 @@ th[data-sort].sort-desc::after {
     border-bottom-color: #444 !important;
 }
 .s2p-sorted .s2p-day-heading { display: none; }
+
+/* --- The Spotify icon (fragment components :: spotify-icon): Spotify's branding asks for at least 21 px and only Spotify Green,
+       black or white — black on the green "SPOTIFY" link (its text colour), Spotify Green on the outlined push button, white
+       when that button is filled on hover. --- */
+.s2p-spotify-icon {
+    width: 21px;
+    height: 21px;
+    fill: currentColor;
+    vertical-align: -5px;
+    flex-shrink: 0;
+}
+.btn-outline-success .s2p-spotify-icon { color: #1ED760; }
+.btn-outline-success:hover .s2p-spotify-icon,
+.btn-outline-success:active .s2p-spotify-icon { color: #fff; }

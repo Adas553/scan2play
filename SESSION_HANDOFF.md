@@ -6,8 +6,9 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to `e52314f` (2026-10-03; workflows green up to `76d420d` — check `de27bb8`, `0588c8a`, `e52314f`).
-  Check with `git status -sb` and `git log --oneline -8`. **Uncommitted, for the owner's review:** a revoked Spotify refresh token
+- **Branch `dev`**, pushed up to the documentation commit after the Spotify icon (2026-10-03; workflows green up to `76d420d` —
+  check the commits after it). Check with `git status -sb` and `git log --oneline -8`. Nothing uncommitted.
+- **Committed and pushed (`aba50fc` and after, 2026-10-03, the owner: "commituj i push"):** a revoked Spotify refresh token
   is forgotten (the owner, trying Spotify locally: `invalid_grant`, "Refresh token revoked" — the tokens stayed, the dashboard
   kept saying connected, with no "Connect Spotify" to press). `SpotifyAuthService.forgetTokens` on a 400 `invalid_grant`; a 5xx /
   network error keeps them. `SpotifyAuthServiceTest` +2 (the revoked one **red before**). The owner then connected Spotify locally
@@ -20,6 +21,10 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   11-character video ID), its own message `dashboard.fallback.import.notalink`; the party's playlist plays on. A typo in the domain
   ("youlaaaatube.com/…?list=PL…") still loads the playlist — only the ID counts (the owner saw it; kept). `YouTubeUrlsTest` +1,
   `DjPartySettingsControllerFallbackTest` +1, browser scenario `not-a-link-refused`. 636 unit tests, 84 browser scenarios.
+  **The Spotify icon** (the owner: "jak jest łatwe to dodaj" — Spotify's attribution rule): the official icon (an inline SVG,
+  fragment `components :: spotify-icon`, the path from Simple Icons, CC0; `app.css` `.s2p-spotify-icon`, 21 px, black on the green
+  "SPOTIFY" link, Spotify Green on the outlined push button) in place of "▶" and "🎵". `DashboardPageRenderTest` (two icons). The
+  requests-only party keeps no YouTube footer on purpose — it uses no YouTube API (the owner noticed, agreed).
 - **Committed and pushed (`de27bb8`, 2026-10-03; the owner tried it: "działa")** (the owner: "zrób a i b — zgodnie z Twoimi
   sugestiami, zrób też podział historii na dni"):
   - **Before starting the app: add `SPOTIFY_TOKEN_KEY` to IntelliJ's run configuration** (base64 of 32 random bytes — PowerShell:

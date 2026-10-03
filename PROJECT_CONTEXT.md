@@ -212,7 +212,8 @@ grey, yellow from 80 %, red) and a warning above the queue while a limit or the 
 5 minutes before they expire, one refresh per party at a time — the others wait and use the saved tokens), encrypted in the
 database (Section 4.1; `SpotifyTokenEncryptionOnStartup` encrypts, at start, tokens still in plain text). A refresh token
 Spotify revoked (400 `invalid_grant`) is forgotten with the access token: the dashboard offers "Connect Spotify" again. Spotify has no endpoint to
-revoke them: the privacy page tells the DJ to remove the app in their Spotify account after deleting theirs. Both endpoints need the DJ's login. The OAuth `state` is 32 random bytes kept in the session and
+revoke them: the privacy page tells the DJ to remove the app in their Spotify account after deleting theirs. Spotify tracks in the
+queue carry the Spotify icon (`components :: spotify-icon`, Spotify's attribution rule; `.s2p-spotify-icon`, ≥ 21 px). Both endpoints need the DJ's login. The OAuth `state` is 32 random bytes kept in the session and
 accepted once (review 5.2). The Spotify redirect URI must be registered in the Spotify Developer Dashboard.
 
 ### 5.4 YouTube Auto-Pilot — the server decides what plays, the browser plays it

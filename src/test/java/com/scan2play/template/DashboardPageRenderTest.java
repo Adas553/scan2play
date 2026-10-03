@@ -250,7 +250,10 @@ class DashboardPageRenderTest {
         waiting.setTrackUrl("spotify:track:0DiWol3AO6WpXZgp0goxAV");
         String html = renderDashboard(party, List.of(waiting), PL);
 
-        assertThat(html).contains("▶ SPOTIFY", "action=\"/dj/dashboard/play\"", "action=\"/dj/requests/1/push-to-spotify\"",
+        // the Spotify icon beside what comes from Spotify (its Developer Policy): on the track's link and on the push button
+        assertThat(html.split("class=\"s2p-spotify-icon\"", -1).length - 1).as("the Spotify icons").isEqualTo(2);
+        assertThat(html).contains("aria-label=\"Spotify\"", "</svg> SPOTIFY").doesNotContain("▶ SPOTIFY", "🎵 <span");
+        assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/requests/1/push-to-spotify\"",
                 "id=\"autoToggle\"", "id=\"settingsToggle\"");
         assertThat(html).doesNotContain("id=\"yt-player\"", "/js/youtube-autopilot.js", "id=\"fallbackQueue\"");
         assertThat(html).contains("id=\"partyCode\"", "id=\"song-list\"", "data-provider=\"SPOTIFY\"", "id=\"queueList\"",
