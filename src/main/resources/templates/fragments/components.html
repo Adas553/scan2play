@@ -153,6 +153,14 @@
 
 </th:block>
 
+<!--/* A moment in the DJ's lists (queue, history): the time, and the day under it — "dziś", "wczoraj" or "29.09" (Times); the
+     cell's title has the full date and time. */-->
+<th:block th:fragment="moment(at)" th:with="ago=${T(com.scan2play.util.Times).daysAgo(at)}">
+    <span class="d-block fw-semibold text-light" th:text="${T(com.scan2play.util.Times).clock(at)}">20:00</span>
+    <span class="d-block small text-secondary"
+          th:text="${ago == 0} ? #{time.today} : (${ago == 1} ? #{time.yesterday} : ${T(com.scan2play.util.Times).day(at)})">today</span>
+</th:block>
+
 <!-- ======================================================================
      Footer Fragment — Legal links (YouTube ToS, Google Privacy, Scan2Play legal pages)
      Required by YouTube API Terms of Service (Section III) and Google OAuth compliance.

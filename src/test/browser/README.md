@@ -83,6 +83,7 @@ S2P.scenario({
     name: 'my-scenario',                 // the URL (?scenario=) and the result file
     title: 'one line: what it proves',
     page: 'dashboard-manual',            // optional: which rendered page (default 'dashboard')
+    viewport: '390,844',                 // optional: the browser window's size (default 1280,900) — a phone's screen; run.py reads it
     fake: { blockApi: true },            // optional: properties for the fake player before it starts
     session: { 'scan2play.interruptedTrack': 'B:9' },   // optional: sessionStorage left by the page before a reload
     setup: { nextTracks: [ /* answers of next-track */ ], lease: { holder: true } },   // told to the stand-in first

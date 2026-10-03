@@ -93,6 +93,18 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int addVote(@Param("id") Long id);
 
     /**
+     * The DJ clears the queue: every waiting (accepted) request of the party leaves it as rejected, with the DJ's note in place of
+     * the AI's comment — it stays in the history's rejected requests. One statement; a song that played stays played.
+     *
+     * @return number of requests taken out of the queue
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.decision = 'rejected', s.djComment = :comment "
+            + "WHERE s.partyCode = :partyCode AND s.decision = 'accepted'")
+    int rejectWaiting(@Param("partyCode") String partyCode, @Param("comment") String comment);
+
+    /**
      * Deletes all song requests associated with a specific party.
      * Used during account deletion to comply with GDPR / Google API data deletion requirements.
      *

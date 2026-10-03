@@ -82,8 +82,9 @@
             <!--/* The party's vibe as the DJ set it, in one box: the vibe of the list (when not "any") and the DJ's own words (V16) */-->
             <div class="alert alert-info text-dark text-center shadow-sm mb-4" id="partyVibe"
                  th:if="${vibeNote != null or globalVibe.name() != 'ANY'}">
+                <!--/* the colon always: the vibe's name or the DJ's words follow it */-->
                 <div class="fw-bold">
-                    <span th:text="#{party.vibe.title}">🎧 Tonight's vibe</span><th:block th:if="${globalVibe.name() != 'ANY'}">: <span
+                    <span th:text="#{party.vibe.title}">🎧 Tonight's vibe</span>:<th:block th:if="${globalVibe.name() != 'ANY'}"> <span
                         id="partyVibeName" th:text="#{vibe.__${globalVibe}__}">Club & EDM</span></th:block>
                 </div>
                 <div th:if="${vibeNote != null}" id="vibeNote" th:text="${vibeNote}">40+ wedding, Polish hits, no rap</div>

@@ -43,8 +43,9 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
             body: new FormData(form),
             redirect: 'manual'
         }).then(function(response) {
-            // A song played, skipped or picked: the queue is fetched now, so the row goes (or comes) at once
-            if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/dj-pick')) {
+            // A song played, skipped or picked, or the queue cleared: the queue is fetched now, so the rows go (or come) at once
+            if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/dj-pick')
+                    || action.includes('/dashboard/clear-queue')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
 

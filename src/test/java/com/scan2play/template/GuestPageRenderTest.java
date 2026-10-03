@@ -251,11 +251,13 @@ class GuestPageRenderTest {
         assertThat(withNote).as("the new vibes are offered").contains("Polskie przeboje", "Latino (salsa, bachata, reggaeton)", "Dla dzieci")
                 .doesNotContain("Salsa & Timba");
 
-        assertThat(withNote).as("no vibe of the list: no name after the title").doesNotContain("id=\"partyVibeName\"");
+        assertThat(withNote).as("no vibe of the list: no name after the title, the colon still — the note follows it")
+                .doesNotContain("id=\"partyVibeName\"").contains("🎧 Klimat imprezy</span>:");
 
         // the vibe of the list and the note in ONE box — no second, alarming one
         String both = render(PL, Map.of("vibeNote", "wesele +40", "globalVibe", VibeType.CLUB_AND_EDM));
         assertThat(both).containsOnlyOnce("id=\"partyVibe\"").contains("id=\"partyVibeName\">Klubowa &amp; EDM<", "wesele +40")
+                .contains("🎧 Klimat imprezy</span>: <span")
                 .doesNotContain("UWAGA", "id=\"styleInput\"");
         assertThat(both).as("the forced vibe still goes with the form").contains("name=\"style\" value=\"Klubowa &amp; EDM\"");
         assertThat(render(PL, Map.of())).as("any vibe, no note: no box").doesNotContain("id=\"partyVibe\"");

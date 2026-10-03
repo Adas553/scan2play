@@ -63,6 +63,19 @@ public class DjSongController {
     }
 
     /**
+     * Clears the DJ's queue: every waiting request leaves it as rejected (it stays in the history). Only the authenticated DJ's own
+     * party — the party code comes from the session, never from the form.
+     *
+     * @return Redirects back to the dashboard.
+     */
+    @PostMapping("/dashboard/clear-queue")
+    public String clearQueue(OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        djService.clearQueue(ownerPartyCode);
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
      * Pushes a specific song to the Spotify queue manually.
      * Validates that the song belongs to the authenticated DJ's party (IDOR protection).
      *

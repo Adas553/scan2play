@@ -109,6 +109,22 @@ def scenario_names():
     return names
 
 
+def scenario_viewports():
+    """The window size a scenario asks for (S2P.scenario({ name: '...', viewport: '390,844', ... })) — a phone's screen; the others
+    run at the default size."""
+    sizes = {}
+    for path in sorted((HERE / 'scenarios').glob('*.js')):
+        for block in re.split(r'S2P\.scenario\(\{', path.read_text(encoding='utf-8'))[1:]:
+            name = re.match(r"\s*name:\s*'([^']+)'", block)
+            size = re.search(r"^\s*viewport:\s*'(\d+,\d+)'", block, re.M)
+            if name and size:
+                sizes[name.group(1)] = size.group(1)
+    return sizes
+
+
+DEFAULT_WINDOW = '1280,900'
+
+
 def kill(process):
     if process.poll() is not None:
         return
@@ -122,7 +138,7 @@ def kill(process):
         process.kill()
 
 
-def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False):
+def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DEFAULT_WINDOW):
     """Opens the scenario in a fresh headless Chrome and waits for its verdict; None when none came (or the browser is gone)."""
     event = stand.event(name)
     event.clear()
@@ -130,7 +146,7 @@ def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False):
     profile = tempfile.mkdtemp(prefix='s2p-chrome-')
     flags = ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-extensions',
              '--disable-background-networking', '--disable-component-update', '--disable-sync', '--mute-audio',
-             '--window-size=1280,900', '--user-data-dir=' + profile]
+             '--window-size=' + window, '--user-data-dir=' + profile]
     if no_sandbox:
         flags.append('--no-sandbox')   # a CI runner may forbid the sandbox's user namespaces; the browser opens only pages of this stand-in
     # Nothing here needs the network: the YouTube API is faked, Bootstrap comes from the stand-in (its webjar), and the guest page's
@@ -202,6 +218,7 @@ def main():
     args = parser.parse_args()
 
     known = scenario_names()
+    viewports = scenario_viewports()
     if args.list:
         print('\n'.join(known))
         return 0
@@ -234,7 +251,8 @@ def main():
 
     passed = True
     for name in wanted:
-        passed = show(name, run_scenario(stand, port, name, chrome, args.timeout, args.no_sandbox)) and passed
+        passed = show(name, run_scenario(stand, port, name, chrome, args.timeout, args.no_sandbox,
+                                           viewports.get(name, DEFAULT_WINDOW))) and passed
     httpd.shutdown()
     print('\n%s — results: %s' % ('all scenarios passed' if passed else 'SOME SCENARIOS FAILED', stand.results))
     return 0 if passed else 1

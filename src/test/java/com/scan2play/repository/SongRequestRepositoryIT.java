@@ -56,6 +56,28 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void clearingTheQueueRejectsOnlyThePartysWaitingRequests() {
+        String party = newPartyCode();
+        String other = newPartyCode();
+        save(party, "waiting one", "accepted", Instant.now(), null);
+        save(party, "waiting two", "accepted", Instant.now(), null);
+        save(party, "played", "played", Instant.now(), Instant.now());
+        save(party, "rejected by the AI", "rejected", Instant.now(), null);
+        save(other, "another party's", "accepted", Instant.now(), null);
+
+        assertThat(requests.rejectWaiting(party, "Cleared")).isEqualTo(2);
+
+        assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted"))).isEmpty();
+        assertThat(jdbc.queryForList("SELECT song_name || ':' || decision || ':' || coalesce(dj_comment, '') FROM song_requests "
+                + "WHERE party_code = ? ORDER BY song_name", String.class, party))
+                .containsExactly("played:played:", "rejected by the AI:rejected:", "waiting one:rejected:Cleared",
+                        "waiting two:rejected:Cleared");
+        assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(other, List.of("accepted")))
+                .as("another party's queue is untouched").hasSize(1);
+        assertThat(requests.rejectWaiting(party, "Cleared")).as("nothing left to clear").isZero();
+    }
+
+    @Test
     void thePurgeDeletesOldRequestsInBatches() {
         String party = newPartyCode();
         Instant old = Instant.now().minus(40, ChronoUnit.DAYS);

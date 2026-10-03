@@ -321,7 +321,7 @@ class Handler(BaseHTTPRequestHandler):
             def video_attr(url):
                 m = re.search(r'[?&]v=([A-Za-z0-9_-]{11})', url)
                 return ' data-video-id="%s"' % m.group(1) if m else ''
-            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"%s><td data-sort-value="song" data-val="%s">%s</td></tr>'
+            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"%s><td class="song-cell" data-sort-value="song" data-val="%s"><span class="song-title">%s</span></td></tr>'
                            % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True), video_attr(r['url']),
                               html.escape(r['name'], True), html.escape(r['name']))
                            for r in queue)
@@ -426,6 +426,10 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/dj/dashboard/play', '/dj/dashboard/dismiss'):   # the song leaves the queue, as on the real server
             with stand.lock:
                 state['queue'] = [r for r in state['queue'] if str(r['id']) != str(fields.get('id'))]
+            return self._json({})
+        if path == '/dj/dashboard/clear-queue':       # every waiting request leaves the queue (as rejected, on the real server)
+            with stand.lock:
+                state['queue'] = []
             return self._json({})
         if path == '/dj/dashboard/fallback-shuffle':
             return self._json({})

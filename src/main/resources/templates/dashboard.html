@@ -29,7 +29,14 @@
                     <h1 class="h4 mb-0 text-secondary" th:text="#{dashboard.title}">DJ Dashboard</h1>
                 </div>
 
-                <div class="bg-dark p-2 rounded border border-secondary w-100 s2p-mw-350">
+                <!--/* On a phone the settings, the vibe, the background playlist and the QR code (.s2p-phone-settings) fold under this
+                     button, so the player (YouTube) and the queue come right under the heading (app.css; settings-toggle.js opens and
+                     closes them). On a wide screen the button is hidden and they always show. */-->
+                <button type="button" id="settingsToggle"
+                        class="btn btn-outline-light w-100 s2p-settings-toggle" aria-expanded="false"
+                        th:text="#{dashboard.settings.toggle}">⚙️ Settings, vibe and QR code</button>
+
+                <div class="bg-dark p-2 rounded border border-secondary w-100 s2p-mw-350 s2p-phone-settings">
                     <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0 d-flex align-items-center">
                         <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
                         <label for="vibeSelect" class="me-2 fw-bold text-light small text-nowrap" th:text="#{dashboard.vibe.label}">🌍 Global Vibe:</label>
@@ -56,9 +63,12 @@
                 </div>
             </div>
 
-            <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
+            <!--/* folded on a phone only at a requests-only party: elsewhere it holds the Auto-Pilot switch / "Connect Spotify" */-->
+            <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm"
+                 th:classappend="${activeProvider.name() == 'REQUESTS_ONLY'} ? 's2p-phone-settings'">
                 <div class="row align-items-center">
-                    <div class="col-md-6 mb-3 mb-md-0 d-flex align-items-center">
+                    <!--/* on a phone only the switch stays: the kind of party is folded with the settings */-->
+                    <div class="col-md-6 mb-3 mb-md-0 d-flex align-items-center s2p-phone-settings">
                         <span class="fw-bold text-light me-3" th:text="#{dashboard.provider.label}">🎵 Playback source:</span>
                         <span class="badge fs-6 px-3 py-2"
                               th:classappend="${activeProvider.name() == 'SPOTIFY' ? 'bg-success' : (activeProvider.name() == 'REQUESTS_ONLY' ? 'bg-info text-dark' : 'bg-danger')}"
@@ -91,7 +101,7 @@
                 </div>
             </div>
 
-            <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
+            <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm s2p-phone-settings">
                 <form th:action="@{/dj/dashboard/limits}" method="POST" class="row align-items-end mx-0">
                     <input type="hidden" name="partyCode" th:value="${partyCode}">
                     <div class="col-md-3 mb-3 mb-md-0">
@@ -133,7 +143,7 @@
             </div>
 
             <!-- Fallback Playlist (YouTube only) — background music when guest queue is empty -->
-            <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
+            <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm s2p-phone-settings">
                 <h6 class="text-light mb-2">🎶 <span th:text="#{dashboard.fallback.title}">Fallback Playlist</span></h6>
                 <p class="text-secondary small mb-2" th:text="#{dashboard.fallback.help}">Plays automatically when the guest queue is empty.</p>
                 <form th:action="@{/dj/dashboard/fallback-playlist}" method="POST" class="d-flex gap-2" id="fallbackForm">
@@ -164,7 +174,7 @@
         </div>
 
         <!-- QR Code Section -->
-        <div class="col-md-4 text-center">
+        <div class="col-md-4 text-center s2p-phone-settings">
             <div class="card bg-dark border-secondary p-3 shadow-sm qr-card-center">
                 <h5 class="text-light mb-3" th:text="#{dashboard.qr.title}">Scan to Request Songs</h5>
                 <img th:if="${qrCodeBase64}"
@@ -241,10 +251,20 @@
          the list keeps its scroll position and the filter is applied again after each refresh. */-->
     <div class="mb-4" id="queueList" data-list>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-            <h4 class="text-white mb-0">
-                <span th:text="#{dashboard.active.queue}">Active Queue</span>
-                <span class="badge text-bg-secondary ms-1" data-list-count th:text="${#lists.size(history)}">0</span>
-            </h4>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <h4 class="text-white mb-0">
+                    <span th:text="#{dashboard.active.queue}">Active Queue</span>
+                    <span class="badge text-bg-secondary ms-1" data-list-count th:text="${#lists.size(history)}">0</span>
+                </h4>
+                <!--/* Every waiting request out of the queue at once (a party code is permanent: what waited at the last party would wait
+                     at the next one) — as rejected, so it stays in the history; asks first (data-confirm, dj-nav.js). Shown only while
+                     a request waits (app.css, :has). */-->
+                <form th:action="@{/dj/dashboard/clear-queue}" method="post" class="m-0 s2p-clear-queue"
+                      th:attr="data-confirm=#{dashboard.queue.clear.confirm}">
+                    <button type="submit" id="clearQueueBtn" class="btn btn-sm btn-outline-danger"
+                            th:text="#{dashboard.queue.clear}">🧹 Clear the queue</button>
+                </form>
+            </div>
             <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
                    th:placeholder="#{dashboard.list.search}" autocomplete="off">
         </div>
@@ -283,7 +303,9 @@
                           shownAt=${T(com.scan2play.util.Times).display(req.requestedAt)},
                           sortAt=${T(com.scan2play.util.Times).sortKey(req.requestedAt)}"
                 th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl},data-video-id=${videoId}">
-                <td class="text-secondary d-none d-md-table-cell" data-sort-value="time" th:attr="data-val=${sortAt}" th:text="${shownAt}">12:00</td>
+                <td class="d-none d-md-table-cell text-nowrap" data-sort-value="time" th:attr="data-val=${sortAt}" th:title="${shownAt}">
+                    <th:block th:replace="~{fragments/components :: moment(${req.requestedAt})}"></th:block>
+                </td>
                 <td class="song-cell" data-sort-value="song" th:attr="data-val=${req.songName}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                         <!--/* Under the song, the guest's own words when they say something else (GuestWords): the DJ checks the AI */-->

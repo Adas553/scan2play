@@ -50,6 +50,7 @@ public class DjService {
     private static final String DJ_PICK_COMMENT = "DJ's Choice 🎧";
     /** The note of a request the DJ skipped (dismissSong), in place of the AI's comment. */
     static final String DJ_DISMISS_COMMENT = "Skipped by the DJ ⏭";
+    static final String DJ_CLEAR_COMMENT = "Cleared by the DJ 🧹";
 
     private final SongRequestRepository songRequestRepository;
     private final PartySettingsQueryService partySettingsQueryService;
@@ -177,6 +178,21 @@ public class DjService {
             evictDashboardQueueAfterCommit(song.getPartyCode());
             log.info("Song ID={} skipped by the DJ of party {}", id, song.getPartyCode());
         });
+    }
+
+    /**
+     * The DJ clears the queue ("Wyczyść kolejkę"): every waiting request leaves it as rejected, as if skipped one by one, and shows
+     * in the history's rejected requests. Songs that played stay played; the one playing now has been confirmed played already.
+     *
+     * @param ownerPartyCode the partyCode of the authenticated DJ (from the session) — only their own queue
+     * @return number of requests taken out of the queue
+     */
+    @Transactional
+    public int clearQueue(String ownerPartyCode) {
+        int cleared = songRequestRepository.rejectWaiting(ownerPartyCode, DJ_CLEAR_COMMENT);
+        evictDashboardQueueAfterCommit(ownerPartyCode);
+        log.info("Party [{}]: the DJ cleared the queue — {} waiting request(s) rejected", ownerPartyCode, cleared);
+        return cleared;
     }
 
     /**

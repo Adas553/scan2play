@@ -538,3 +538,76 @@ th[data-sort].sort-desc::after {
 .s2p-up-next-title   { flex: 1 1 10rem !important; min-width: 0 !important; }
 /* a song's votes on the guest page: a dark pill with a yellow edge — the 👍 emoji is yellow itself and vanished on a yellow one */
 .s2p-vote-badge      { background: #2b2000 !important; color: #ffca2c !important; border: 1px solid #ffc107 !important; }
+
+/* --- The dashboard on a phone (dashboard.html; the DJ in the booth, phone in hand): the settings, the vibe, the background playlist
+       and the QR code (.s2p-phone-settings) fold under one button, settings-toggle.js opens them (<body class="s2p-settings-open">),
+       so what the DJ works with comes right under the heading — the player first at a YouTube party, then the queue — and every
+       waiting request is a card with big buttons. Folded by CSS alone, so nothing jumps while the page loads. The polled <tbody> is
+       replaced every 3 s; these rules style whatever it brings. --- */
+.s2p-settings-toggle { display: none !important; }
+/* its own colours: Bootstrap's outline button fills white on hover and focus, and on a phone the tap leaves it so until the next
+   tap elsewhere; the keyboard's focus ring stays */
+.s2p-settings-toggle {
+    --bs-btn-hover-bg: transparent;
+    --bs-btn-hover-color: #f8f9fa;
+    --bs-btn-hover-border-color: #f8f9fa;
+    --bs-btn-active-bg: rgba(255, 255, 255, 0.12);
+    --bs-btn-active-color: #f8f9fa;
+    --bs-btn-active-border-color: #f8f9fa;
+}
+@media (max-width: 767.98px) {
+    .page-dj .s2p-settings-toggle { display: block !important; }
+    .page-dj .s2p-settings-toggle::after { content: " \25BE"; }
+    .page-dj.s2p-settings-open .s2p-settings-toggle::after { content: " \25B4"; }
+    .page-dj:not(.s2p-settings-open) .s2p-phone-settings { display: none !important; }
+
+    /* the list scrolls with the page: a box of its own inside a phone's screen leaves too little to see */
+    .page-dj #queueList .list-scroll { max-height: none; overflow: visible; }
+    .page-dj #queueList thead { display: none; }
+    .page-dj #queueList table,
+    .page-dj #song-list { display: block; }
+    .page-dj #song-list > tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        background: #232323;
+        border: 1px solid var(--s2p-border);
+        border-radius: 12px;
+    }
+    .page-dj #song-list > tr > td {
+        display: block;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+    .page-dj #song-list > tr > td.song-cell { flex: 1 1 0; min-width: 0; }
+    .page-dj #song-list .song-title { font-size: 1.1rem; }
+    /* a waiting request is accepted: its ✔ says nothing */
+    .page-dj #song-list td.status-accepted { display: none; }
+    .page-dj #song-list td[data-sort-value="votes"] .badge { font-size: 1rem; }
+    /* the buttons: a row across the card, each half of it, big enough for a thumb */
+    .page-dj #song-list > tr > td:last-child { flex: 1 1 100%; }
+    .page-dj #song-list > tr > td:last-child form { flex: 1 1 0; }
+    .page-dj #song-list > tr > td:last-child .btn {
+        width: 100%;
+        min-height: 48px;
+        font-size: 1rem;
+    }
+}
+
+/* --- The active queue (dashboard.html): every request has its number — a CSS counter, so it follows the polled <tbody>, the sort
+       and the search by itself (a row the search hides does not count). At a YouTube party the list's own order is the order of
+       play. "Wyczyść kolejkę" shows only while a request waits. --- */
+#song-list { counter-reset: s2p-queue; }
+#song-list > tr[data-song-id] { counter-increment: s2p-queue; }
+#song-list > tr[data-song-id] .song-title::before {
+    content: counter(s2p-queue) ". ";
+    color: var(--s2p-text-muted);
+    font-weight: 600;
+}
+#queueList .s2p-clear-queue { display: none; }
+#queueList:has(#song-list > tr[data-song-id]) .s2p-clear-queue { display: block; }

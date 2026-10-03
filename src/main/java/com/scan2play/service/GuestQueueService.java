@@ -40,8 +40,8 @@ public class GuestQueueService {
     private final PartySettingsQueryService partySettingsQueryService;
 
     /**
-     * @param nowPlaying the title of what plays now, or null when nothing started lately (or the party's player is not the
-     *                   embedded one — the timeline knows only what that player played)
+     * @param nowPlaying the title of what plays now, or null when nothing started lately or the party is a requests-only one (or
+     *                   the party's player is not the embedded one — the timeline knows only what that player played)
      * @param upNext     the next guest songs, in the order they will play
      * @param myIds      the guest's own requests (to mark them in the list)
      * @param myPosition where the guest's first waiting song is in the whole queue (1 = next), or null
@@ -78,7 +78,10 @@ public class GuestQueueService {
         List<SongRequestEntity> shown = inOrder
                 ? queue.subList(0, Math.min(UP_NEXT_SHOWN, queue.size()))
                 : queue.reversed().subList(0, Math.min(UP_NEXT_SHOWN, queue.size()));   // sent lately: the newest first
-        return new GuestQueue(nowPlaying(partyCode), shown, myIds, myPosition, mySong, mostWanted(queue), inOrder);
+        // A requests-only party's DJ plays from their own software: nothing is known about what plays now. The timeline may still
+        // hold the last track of the party's player from minutes ago, when it was a YouTube party (the same party, switched).
+        String nowPlaying = inOrder ? nowPlaying(partyCode) : null;
+        return new GuestQueue(nowPlaying, shown, myIds, myPosition, mySong, mostWanted(queue), inOrder);
     }
 
     /** The waiting songs more than one guest asked for, the most votes first, the longer waiting first among equals. */

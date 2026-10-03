@@ -12,6 +12,9 @@ S2P.scenario({
         t.check('a waiting request can be skipped ("Pomiń")', dismiss && dismiss.textContent.trim() === 'Pomiń');
         t.check('and marked as played', !!document.querySelector('form[action="/dj/dashboard/play"]'));
         t.check('there is no player on the page', !document.getElementById('yt-player') && !window.onYouTubeIframeAPIReady);
+        const fold = document.getElementById('settingsToggle');
+        t.check('on a wide screen the settings show and the button that folds them on a phone does not',
+            document.getElementById('vibeSelect').getClientRects().length > 0 && !!fold && fold.getClientRects().length === 0);
 
         await t.waitFor(function () { return document.querySelector('#song-list [data-song-id="1"]'); }, 'the queue poll', 8000);
         t.step('the queue is polled and shown', document.querySelector('#song-list [data-song-id="1"]').getAttribute('data-song-name'),
@@ -82,5 +85,47 @@ S2P.scenario({
         t.check('the list lost it at once, not with the next 3 s poll', !document.querySelector('#song-list tr[data-song-id="1"]')
             && performance.now() - clickedAt < 2500);
         t.check('the other request stays', !!document.querySelector('#song-list tr[data-song-id="2"]'));
+    }
+});
+
+S2P.scenario({
+    name: 'queue-numbers-and-clear',
+    title: 'the active queue: every request has its number; "Wyczyść kolejkę" asks first, then empties the queue in place, and is gone with nothing to clear',
+    page: 'dashboard-requests',
+    setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
+                     { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
+    run: async function (t) {
+        const shows = function (element) { return !!element && element.getClientRects().length > 0; };
+        await t.waitFor(function () { return document.querySelector('#song-list [data-song-id="2"]'); }, 'the queue poll', 8000);
+        // the numbers are a CSS counter: a row counts itself, its song cell shows the count (a hidden row does not count)
+        const row = document.querySelector('#song-list tr[data-song-id="2"]');
+        const cell = row.querySelector('.song-title');
+        t.step('every request is numbered (a counter the rows count up, shown before the song)',
+            [/s2p-queue/.test(getComputedStyle(row).counterIncrement), /counter\(s2p-queue\)/.test(getComputedStyle(cell, '::before').content)],
+            [true, true]);
+
+        const button = document.getElementById('clearQueueBtn');
+        t.check('"Wyczyść kolejkę" shows while requests wait', shows(button));
+
+        const asked = [];
+        let answer = false;
+        window.confirm = function (text) { asked.push(text); return answer; };
+        let handledInPlace = null;
+        document.addEventListener('submit', function (e) { handledInPlace = e.defaultPrevented; e.preventDefault(); });
+
+        button.click();
+        await t.sleep(300);
+        t.step('it asks first; "no" sends nothing',
+            [asked.length, /historii/.test(asked[0] || ''), await t.stand.count('POST /dj/dashboard/clear-queue')], [1, true, 0]);
+
+        answer = true;
+        const clickedAt = performance.now();
+        button.click();
+        t.step('"yes": the page stays (the form goes in the background)', handledInPlace, true);
+        await t.waitFor(function () { return !document.querySelector('#song-list tr[data-song-id]'); }, 'the queue to empty', 2500).catch(function () {});
+        t.step('the server was told once', await t.stand.count('POST /dj/dashboard/clear-queue'), 1);
+        t.check('the queue emptied at once, not with the next 3 s poll',
+            !document.querySelector('#song-list tr[data-song-id]') && performance.now() - clickedAt < 2500);
+        t.check('with nothing to clear the button is gone', !shows(button));
     }
 });

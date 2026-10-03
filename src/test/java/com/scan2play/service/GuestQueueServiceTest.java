@@ -17,6 +17,7 @@ import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -133,6 +134,20 @@ class GuestQueueServiceTest {
                 .thenReturn(List.of(played("Wilki - Baśka", Instant.now().minus(2, ChronoUnit.MINUTES))));
 
         assertThat(service.view(PARTY, Set.of()).nowPlaying()).isEqualTo("Wilki - Baśka");
+    }
+
+    /**
+     * A requests-only party: the DJ plays from their own software, so nothing is known about what plays — not even when the party
+     * was a YouTube party a few minutes ago (the same party, switched) and its player's last track is still in the timeline.
+     */
+    @Test
+    void aRequestsOnlyParty_neverSaysWhatPlaysNow() {
+        settings.setActiveProvider(MusicProviderType.REQUESTS_ONLY);
+        givenQueue();
+        lenient().when(playHistoryService.getRecentlyPlayed(PARTY, 1))   // it need not even be asked
+                .thenReturn(List.of(played("Lady Gaga - Abracadabra (Official Music Video)", Instant.now().minus(2, ChronoUnit.MINUTES))));
+
+        assertThat(service.view(PARTY, Set.of()).nowPlaying()).isNull();
     }
 
     @Test

@@ -227,11 +227,37 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html, "AUTO");
         assertThat(html).contains("Song One", "Song Two");
+        assertThat(html).as("the time of a request: the clock, the day under it, the full moment in the title")
+                .contains("title=\"29.09.2026 20:00:01\"", ">20:00</span>", ">29.09</span>").doesNotContain(">29.09.2026 20:00:01<");
         assertThat(html).as("the app's name above the page's heading").contains("🎵 Scan2Play", "<h1 class=\"h4 mb-0 text-secondary\">Panel DJ-a</h1>");
         assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         assertThat(html).as("the footer's YouTube API attribution").contains("YouTube API Services");
         assertThat(html).contains(PLAYLIST);
+        // on a phone the settings, the vibe, the background playlist and the QR code fold under one button; the Auto-Pilot switch
+        // stays (app.css)
+        assertThat(html).contains("id=\"settingsToggle\"");
+        assertThat(html.split("s2p-phone-settings", -1).length - 1).as("the folded parts: vibe, the kind of party, limits, playlist, QR code").isEqualTo(5);
         write("dashboard.html", html);
+    }
+
+    @Test
+    @DisplayName("a Spotify party, connected: the queue with Played / push to Spotify, no YouTube player (written to target/browser-harness/dashboard-spotify.html)")
+    void shouldRenderTheDashboardOfASpotifyParty() throws IOException {
+        PartySettingsEntity party = youTubeParty(PlaybackMode.MANUAL, null);
+        party.setActiveProvider(MusicProviderType.SPOTIFY);
+        party.setSpotifyAccessToken("token");
+        SongRequestEntity waiting = song(1, "Daft Punk - One More Time", "unused");
+        waiting.setTrackUrl("spotify:track:0DiWol3AO6WpXZgp0goxAV");
+        String html = renderDashboard(party, List.of(waiting), PL);
+
+        assertThat(html).contains("▶ SPOTIFY", "action=\"/dj/dashboard/play\"", "action=\"/dj/requests/1/push-to-spotify\"",
+                "id=\"autoToggle\"", "id=\"settingsToggle\"");
+        assertThat(html).doesNotContain("id=\"yt-player\"", "/js/youtube-autopilot.js", "id=\"fallbackQueue\"");
+        assertThat(html).contains("id=\"partyCode\"", "id=\"song-list\"", "data-provider=\"SPOTIFY\"", "id=\"queueList\"",
+                "<script type=\"module\" src=\"/js/dashboard/main.js\">");
+        assertNothingInline(html);
+        assertThat(html).doesNotContain("??");
+        write("dashboard-spotify.html", html);
     }
 
     @Test
@@ -248,6 +274,11 @@ class DashboardPageRenderTest {
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
         assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
         assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
+        // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)
+        assertThat(html).contains("id=\"settingsToggle\"", "⚙️ Ustawienia, klimat i kod QR", "s2p-phone-settings");
+        // "Wyczyść kolejkę": the DJ's own queue (no party code in the form), asks first
+        assertThat(html).contains("action=\"/dj/dashboard/clear-queue\"", "id=\"clearQueueBtn\"", "🧹 Wyczyść kolejkę",
+                "data-confirm=\"Usunąć wszystkie czekające prośby z kolejki?");
         assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">Pomiń<", "🔍 Podejrzyj",
                 "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
         // no player, no Auto-Pilot, no background playlist, no DJ pick: the DJ's own software plays
