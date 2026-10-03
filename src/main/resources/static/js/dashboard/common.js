@@ -37,11 +37,3 @@ export function showPartyActive(active, pollSentAt) {
 export function isYouTubeProvider() {
     return !!document.getElementById('yt-player-card');
 }
-
-/**
- * True when the dashboard's forms are sent in the background (forms.js): at a YouTube party, so that the player keeps playing,
- * and at a requests-only party, so that the DJ keeps their place in the list (<body data-party-kind>, which no poll replaces).
- */
-export function submitsInPlace() {
-    return isYouTubeProvider() || document.body.dataset.partyKind === 'REQUESTS_ONLY';
-}

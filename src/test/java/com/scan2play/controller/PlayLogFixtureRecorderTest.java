@@ -48,7 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * The short version, in a copy of the repo (never {@code mvnw} in the repo — the app runs from it), with a throw-away database:
  * <pre>
  * psql -U postgres -d postgres -c "CREATE DATABASE s2p_fixture"
- * set PGDATABASE=s2p_fixture  (+ dummy GOOGLE_AI_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+ * set PGDATABASE=s2p_fixture  (+ dummy GOOGLE_AI_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET;
+ *      SPOTIFY_TOKEN_KEY = any base64 of 32 bytes — the README has one)
  * set S2P_FIXTURE_OUT=&lt;copy&gt;\src\test\browser\fixtures\play-log-boundary.json
  * mvnw test -Dtest=PlayLogFixtureRecorderTest
  * psql -U postgres -d postgres -c "DROP DATABASE s2p_fixture"

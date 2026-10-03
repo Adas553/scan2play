@@ -84,12 +84,15 @@ public class PartySettingsEntity {
     @Column(nullable = false)
     private boolean fallbackShuffle = true;
 
-    // --- Spotify OAuth2 Credentials --- (never in toString: one logged entity would put them in the logs)
+    // --- Spotify OAuth2 Credentials --- (never in toString: one logged entity would put them in the logs; encrypted in the
+    // database, SpotifyTokenConverter — a token of a few hundred characters takes about 4/3 of its length + 40 there)
     @ToString.Exclude
+    @Convert(converter = SpotifyTokenConverter.class)
     @Column(length = 2048)
     private String spotifyAccessToken;
 
     @ToString.Exclude
+    @Convert(converter = SpotifyTokenConverter.class)
     @Column(length = 2048)
     private String spotifyRefreshToken;
 

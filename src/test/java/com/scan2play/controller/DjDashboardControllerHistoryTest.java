@@ -4,6 +4,7 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryEntry;
 import com.scan2play.model.HistoryEntry.Source;
 import com.scan2play.model.HistoryFilter;
+import com.scan2play.model.MusicProviderType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
@@ -115,6 +116,22 @@ class DjDashboardControllerHistoryTest {
                 .andExpect(model().attribute("historyHeading", true));
         mockMvc.perform(get("/dj/history-view").principal(token).session(session))
                 .andExpect(model().attributeDoesNotExist("historyHeading"));
+    }
+
+    @Test
+    @DisplayName("the \"Playlist\" filter only at a YouTube party (the others have no background playlist) — the fragment and the page")
+    void shouldOfferThePlaylistFilterOnlyAtAYouTubeParty() throws Exception {
+        givenHistory(50, 3, false);
+        for (MusicProviderType provider : MusicProviderType.values()) {
+            when(sessionHelper.getPartySettings(token, session))
+                    .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).activeProvider(provider).build());
+            boolean youTube = provider == MusicProviderType.YOUTUBE;
+
+            mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).principal(token).session(session))
+                    .andExpect(model().attribute("historyHasPlaylist", youTube));
+            mockMvc.perform(get("/dj/history-view").principal(token).session(session))
+                    .andExpect(model().attribute("historyHasPlaylist", youTube));
+        }
     }
 
     @Test

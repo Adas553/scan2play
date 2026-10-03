@@ -66,6 +66,7 @@ class HistoryFragmentTest {
         context.setVariable("history", history);
         context.setVariable("historyHasMore", hasMore);
         context.setVariable("historyNextLimit", 100);
+        context.setVariable("historyHasPlaylist", true);   // a YouTube party (with a background playlist), unless a test says otherwise
         if (heading) {
             context.setVariable("historyHeading", true);
         }
@@ -119,7 +120,22 @@ class HistoryFragmentTest {
         context.setVariable("historyHasMore", false);
         context.setVariable("historyNextLimit", 100);
         context.setVariable("historyFilter", filter);
+        context.setVariable("historyHasPlaylist", true);
         return engine.process("history", Set.of("historyTableContent"), context);
+    }
+
+    @Test
+    @DisplayName("the \"Playlist\" filter only where the party has a background playlist (a YouTube party, historyHasPlaylist)")
+    void shouldOfferThePlaylistFilterOnlyAtAYouTubeParty() {
+        assertThat(renderWithFilter("all")).contains("data-list-filter=\"background\"");
+
+        Context context = new Context(Locale.ENGLISH);   // a Spotify or a requests-only party: no historyHasPlaylist
+        context.setVariable("history", List.of(guest(1, "Alpha", "played")));
+        context.setVariable("historyHasMore", false);
+        context.setVariable("historyNextLimit", 100);
+        assertThat(engine.process("history", Set.of("historyTableContent"), context))
+                .doesNotContain("data-list-filter=\"background\"", ">Playlist<")
+                .contains("data-list-filter=\"all\"", "data-list-filter=\"guest\"", "data-list-filter=\"played\"", "data-list-filter=\"rejected\"");
     }
 
     @Test

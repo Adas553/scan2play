@@ -30,6 +30,8 @@ public final class ViewAttributes {
     public static final String HISTORY_NEXT_LIMIT = "historyNextLimit";
     public static final String HISTORY_HEADING = "historyHeading";
     public static final String HISTORY_FILTER = "historyFilter";
+    /** Whether the history offers the "Playlist" filter: only a YouTube party has a background playlist. */
+    public static final String HISTORY_HAS_PLAYLIST = "historyHasPlaylist";
     public static final String QR_CODE_BASE64 = "qrCodeBase64";
     public static final String PERMANENT_LINK = "permanentLink";
     /** The page to print the QR code on: "poster" (one A4 poster) or "cards" (eight cards to cut out). */

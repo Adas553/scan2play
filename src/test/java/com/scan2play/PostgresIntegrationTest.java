@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
         "GOOGLE_AI_API_KEY=it-dummy",
         "SPOTIFY_CLIENT_ID=it-dummy",
         "SPOTIFY_CLIENT_SECRET=it-dummy",
+        "SPOTIFY_TOKEN_KEY=" + PostgresIntegrationTest.TEST_TOKEN_KEY,
         "GOOGLE_CLIENT_ID=it-dummy",
         "GOOGLE_CLIENT_SECRET=it-dummy",
         "youtube.api-key=",   // even if the machine has a real key in YOUTUBE_API_KEY
@@ -44,6 +45,9 @@ import java.util.concurrent.ThreadLocalRandom;
         "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN"
 })
 public abstract class PostgresIntegrationTest {
+
+    /** The key of the Spotify tokens here: base64 of 32 bytes 0..31 — a test key, never a real one. */
+    protected static final String TEST_TOKEN_KEY = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
 
     private static final String HOST = env("PGHOST", "localhost");
     private static final String PORT = env("PGPORT", "5432");

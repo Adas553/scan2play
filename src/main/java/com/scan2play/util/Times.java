@@ -5,7 +5,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
+import java.util.Locale;
 
 /**
  * How a moment is shown (review item 1.8). The database keeps moments as {@code timestamptz} and the code as {@link Instant} —
@@ -57,6 +59,19 @@ public final class Times {
             return "";
         }
         return moment.atZone(DISPLAY_ZONE).getYear() == today.getYear() ? DAY.format(moment) : DAY_WITH_YEAR.format(moment);
+    }
+
+    /**
+     * The day of the moment in Polish time, "2026-10-03" — what the history compares to start a new day's heading; empty for no
+     * moment.
+     */
+    public static String dayKey(Instant moment) {
+        return moment == null ? "" : moment.atZone(DISPLAY_ZONE).toLocalDate().toString();
+    }
+
+    /** The day of the week of the moment in Polish time, in the page's language: "sobota" / "Saturday"; empty for no moment. */
+    public static String weekday(Instant moment, Locale locale) {
+        return moment == null ? "" : moment.atZone(DISPLAY_ZONE).getDayOfWeek().getDisplayName(TextStyle.FULL, locale);
     }
 
     /** A text that sorts like the moment; empty for no moment. */

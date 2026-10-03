@@ -128,8 +128,7 @@ public class DjPartySettingsController {
 
     /**
      * Sets the playback mode (Auto-Pilot) of the party: to {@code mode} when it is given — what the dashboard's switch sends,
-     * the state it shows — or, without it, the other one of the two (a page opened before the switch sent the mode, and the
-     * Spotify dashboard's plain form). A toggle alone inverted the setting when the DJ clicked the switch of a window that
+     * the state it shows — or, without it, the other one of the two (a page opened before the switch sent the mode). A toggle alone inverted the setting when the DJ clicked the switch of a window that
      * showed an old state (the setting had been changed on another device).
      */
     @PostMapping("/dashboard/playback-mode")

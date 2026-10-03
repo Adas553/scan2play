@@ -133,8 +133,9 @@
             // "Show more" of a list that a filter has narrowed: the filter goes with it (the server reads that kind, further back)
             list().querySelector('[data-list-filter="guest"]').click();
             await waitForList(function () { return litFilter()[0] === 'guest' && titles().length === 4; }, 'the guests\' entries');
-            t.step('the "Guests" filter: the first four entries of that kind, and the button offers more', [titles(), list().querySelector('[data-history-more]').getAttribute('data-limit')],
-                [['Żółć — piosenka', 'Rejected Beat', 'Guest Charlie', 'Rejected Delta'], '100']);
+            // the sort by "Song" (descending, above) is kept across the new list (2026-10-03: the owner saw it lost)
+            t.step('the "Guests" filter: the first four entries of that kind, still sorted by song, and the button offers more', [titles(), list().querySelector('[data-history-more]').getAttribute('data-limit')],
+                [['Żółć — piosenka', 'Rejected Delta', 'Rejected Beat', 'Guest Charlie'], '100']);
             list().querySelector('[data-history-more]').click();
             await waitForList(function () { return titles().length === 6; }, 'the longer list of guests\' entries');
             t.step('"Show more" asked for the chosen filter as well as the longer limit', (await fetches()).slice(-1).map(function (r) { return [r.q.limit, r.q.filter]; }), [['100', 'guest']]);

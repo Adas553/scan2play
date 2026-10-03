@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,10 +31,24 @@ class TimesTest {
     }
 
     @Test
+    @DisplayName("the history's day headings: the day and its weekday in Polish time, in the page's language")
+    void shouldNameTheDayOfAMoment() {
+        Instant afterMidnight = Instant.parse("2026-10-02T22:30:00Z");    // 00:30 on Saturday the 3rd in Warsaw
+        Instant beforeMidnight = Instant.parse("2026-10-02T21:59:00Z");   // 23:59 on Friday the 2nd
+
+        assertThat(Times.dayKey(afterMidnight)).isEqualTo("2026-10-03");
+        assertThat(Times.dayKey(beforeMidnight)).as("a wedding's night after midnight is a new day").isEqualTo("2026-10-02");
+        assertThat(Times.weekday(afterMidnight, Locale.forLanguageTag("pl"))).isEqualTo("sobota");
+        assertThat(Times.weekday(beforeMidnight, Locale.ENGLISH)).isEqualTo("Friday");
+    }
+
+    @Test
     @DisplayName("no moment: nothing shown")
     void shouldShowNothingForNoMoment() {
         assertThat(Times.clock(null)).isEmpty();
         assertThat(Times.day(null, TODAY)).isEmpty();
         assertThat(Times.daysAgo(null, TODAY)).isEqualTo(-1);
+        assertThat(Times.dayKey(null)).isEmpty();
+        assertThat(Times.weekday(null, Locale.ENGLISH)).isEmpty();
     }
 }

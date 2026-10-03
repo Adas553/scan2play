@@ -51,7 +51,8 @@
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="guest"
                             th:classappend="${activeFilter == 'guest'} ? 'active'"
                             th:text="#{history.filter.guest}">Guests</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="background"
+                    <!--/* only at a YouTube party: the others have no background playlist */-->
+                    <button th:if="${historyHasPlaylist}" type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="background"
                             th:classappend="${activeFilter == 'background'} ? 'active'"
                             th:text="#{history.filter.background}">Playlist</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="played"
@@ -83,8 +84,20 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="req : ${history}" th:attr="data-song-name=${req.title},data-decision=${req.decision}"
-                th:with="shownAt=${T(com.scan2play.util.Times).display(req.at)},sortAt=${T(com.scan2play.util.Times).sortKey(req.at)}">
+            <th:block th:each="req, iter : ${history}" th:with="times=${T(com.scan2play.util.Times)}">
+            <!--/* A heading where a new day starts (Polish time; the list comes newest first): "dziś — sobota, 03.10". Parties of a
+                 month share the history (it cleans itself after 30 days). list-tools.js hides a heading whose rows the search hid,
+                 and every heading while the list is sorted by a column. */-->
+            <tr th:if="${req.at != null and (iter.first or times.dayKey(history[iter.index - 1].at) != times.dayKey(req.at))}"
+                class="s2p-day-heading" data-day-heading th:with="ago=${times.daysAgo(req.at)}">
+                <td colspan="7">
+                    <span th:if="${ago == 0 or ago == 1}" class="fw-semibold text-light"
+                          th:text="${ago == 0} ? #{time.today} + ' —' : #{time.yesterday} + ' —'">dziś —</span>
+                    <span th:text="${times.weekday(req.at, #locale) + ', ' + times.day(req.at)}">sobota, 03.10</span>
+                </td>
+            </tr>
+            <tr th:attr="data-song-name=${req.title},data-decision=${req.decision}"
+                th:with="shownAt=${times.display(req.at)},sortAt=${times.sortKey(req.at)}">
                 <td class="d-none d-md-table-cell text-nowrap" data-sort-value="time" th:attr="data-val=${sortAt}" th:title="${shownAt}">
                     <th:block th:replace="~{fragments/components :: moment(${req.at})}"></th:block>
                 </td>
@@ -126,6 +139,7 @@
                     <span th:if="${req.energyLevel == null}" class="text-secondary">—</span>
                 </td>
             </tr>
+            </th:block>
             <tr th:if="${#lists.isEmpty(history)}">
                 <td colspan="7" class="text-center text-light py-4 s2p-empty-row" th:text="#{history.empty}">History is empty.</td>
             </tr>

@@ -611,3 +611,14 @@ th[data-sort].sort-desc::after {
 }
 #queueList .s2p-clear-queue { display: none; }
 #queueList:has(#song-list > tr[data-song-id]) .s2p-clear-queue { display: block; }
+
+/* --- The history's day headings (history.html): a row where a new day starts. Hidden while the list is sorted by a column
+       (list-tools.js puts .s2p-sorted on the table): the rows of a day are no longer together then. --- */
+.s2p-day-heading > td {
+    background: #1b1b1b !important;
+    color: var(--s2p-text-muted) !important;
+    font-size: 0.85rem;
+    padding-top: 0.6rem !important;
+    border-bottom-color: #444 !important;
+}
+.s2p-sorted .s2p-day-heading { display: none; }

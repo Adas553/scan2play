@@ -350,15 +350,24 @@ class DashboardPageRenderTest {
                 .contains("data-text-ok=\"Playlista zapisana. Utworów w kolejce: {0}.\"");
     }
 
-    /** A row of the sample timeline: {@code i} counts back from the newest (1) — every entry is a minute older than the one before. */
+    /**
+     * When the entry {@code i} of the sample timeline happened, counting back from the newest (1): every entry a minute older than
+     * the one before, the first five on Tuesday 29.09, the rest on Monday 28.09 — two days, so the history has two day headings.
+     */
+    private static Instant historyAt(int i) {
+        java.time.LocalDateTime start = i <= 5 ? java.time.LocalDateTime.of(2026, 9, 29, 22, 0) : java.time.LocalDateTime.of(2026, 9, 28, 23, 30);
+        return start.atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES);
+    }
+
+    /** A row of the sample timeline: {@code i} counts back from the newest (1), see {@link #historyAt}. */
     private static HistoryEntry historyGuest(int i, String title, String decision) {
-        return new HistoryEntry(Source.GUEST, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 22, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES), title,
+        return new HistoryEntry(Source.GUEST, (long) i, historyAt(i), title,
                 "https://www.youtube.com/watch?v=g" + String.format("%010d", i), "g" + String.format("%010d", i), "Pop", decision,
                 "ok", 5 + i % 5, null, i == 5 ? 12 : i == 8 ? 3 : 1);   // the votes: a ranking to sort (12 before 3 — as numbers)
     }
 
     private static HistoryEntry historyBackground(int i, String title) {
-        return new HistoryEntry(Source.BACKGROUND, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 22, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES), title,
+        return new HistoryEntry(Source.BACKGROUND, (long) i, historyAt(i), title,
                 "https://www.youtube.com/watch?v=b" + String.format("%010d", i), "b" + String.format("%010d", i), null, "played", null, null);
     }
 
@@ -374,8 +383,10 @@ class DashboardPageRenderTest {
     private static String renderHistory(HistoryFilter filter, int limit, List<HistoryEntry> entries, boolean hasMore) {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(PARTY, limit, filter)).thenReturn(new PlayHistoryService.Page(entries, hasMore));
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);   // a YouTube party: the sample has background tracks
+        when(sessionHelper.getPartySettings(any(), any())).thenReturn(youTubeParty(PlaybackMode.AUTO, null));
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                mock(QrCodeService.class), mock(DjSessionHelper.class), mock(NextTrackService.class), mock(PlayerLeaseService.class), history,
+                mock(QrCodeService.class), sessionHelper, mock(NextTrackService.class), mock(PlayerLeaseService.class), history,
                 mock(GuestRequestLimiter.class), mock(YouTubeSearchBudget.class));
 
         ConcurrentModel model = new ConcurrentModel();
@@ -414,6 +425,13 @@ class DashboardPageRenderTest {
                 assertThat(first).contains("data-limit=\"100\"");
             }
             assertThat(more).as(filter.param() + " (more)").doesNotContain("data-history-more").doesNotContain("??");
+            if (filter == HistoryFilter.ALL) {
+                // a heading where a new day starts (Polish weekday names: the fragment is rendered in Polish)
+                assertThat(first.split("data-day-heading", -1).length - 1).as("the first page: one day").isEqualTo(1);
+                assertThat(more.split("data-day-heading", -1).length - 1).as("the whole timeline: two days").isEqualTo(2);
+                assertThat(more).contains("wtorek, 29.09", "poniedziałek, 28.09");
+                assertThat(more.indexOf("wtorek, 29.09")).isLessThan(more.indexOf("poniedziałek, 28.09"));
+            }
             write("history-" + filter.param() + ".html", first);
             write("history-" + filter.param() + "-more.html", more);
         }

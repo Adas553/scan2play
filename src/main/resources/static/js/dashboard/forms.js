@@ -3,22 +3,22 @@
  * DJ's windows — and the "copy" button of the party link.
  */
 import { EVENTS, emit, on } from './events.js';
-import { csrfHeaders, isYouTubeProvider, showPartyActive, submitsInPlace } from './common.js';
+import { csrfHeaders, showPartyActive } from './common.js';
 import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue.js';
 
 // ==========================================================================
-// AJAX FORM INTERCEPTOR (a YouTube or a requests-only party — submitsInPlace)
+// AJAX FORM INTERCEPTOR (every kind of party)
 //
 // Most POST forms on the dashboard are submitted via fetch(): a full page
-// reload would destroy the YouTube IFrame player, and at a requests-only
-// party it would take the DJ away from their place in the list.
+// reload would destroy the YouTube IFrame player, and at every party it
+// would take the DJ away from their place in the list (and, on a phone,
+// fold the settings away).
 //
 // Excluded: logout, delete-account (page reload / redirect is expected).
+// Connecting Spotify is a link, not a form.
 // ==========================================================================
 
 (function initAjaxFormInterceptor() {
-    if (!submitsInPlace()) return;
-
     document.addEventListener('submit', function(e) {
         const form = e.target.closest('form');
         if (!form || form.method.toLowerCase() !== 'post') return;
@@ -43,9 +43,10 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
             body: new FormData(form),
             redirect: 'manual'
         }).then(function(response) {
-            // A song played, skipped or picked, or the queue cleared: the queue is fetched now, so the rows go (or come) at once
+            // A song played, skipped, picked or sent to Spotify, or the queue cleared: the queue is fetched now, so the rows go (or
+            // come) at once (Spotify takes the song a moment later — a row still there goes with the next poll)
             if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/dj-pick')
-                    || action.includes('/dashboard/clear-queue')) {
+                    || action.includes('/dashboard/clear-queue') || action.includes('/push-to-spotify')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
 
@@ -99,18 +100,13 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
 // ==========================================================================
 // AUTO-PILOT TOGGLE
 //
-// The switch #autoToggle. YouTube: AJAX POST + local UI update (no reload). Spotify: standard form submit (page reload is fine).
+// The switch #autoToggle (a YouTube party, a connected Spotify party): AJAX POST + local UI update (no reload).
 // ==========================================================================
 
 /** When the DJ last flipped the Auto-Pilot switch in this window (Date.now()), see the PLAYBACK_MODE_REPORTED listener. */
 let playbackModeChangedHereAt = 0;
 
 function submitAutoPilotToggle(checkbox) {
-    if (!isYouTubeProvider()) {
-        checkbox.form.submit();
-        return;
-    }
-
     const formData = new FormData(checkbox.form);
     // The state the switch shows now, not "toggle": a window whose switch showed an old state (Auto-Pilot changed on another
     // device) would otherwise have inverted the setting.

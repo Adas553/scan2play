@@ -205,7 +205,7 @@ public class DjDashboardController {
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
-        addHistory(model, partyCode, limit, filter);
+        addHistory(model, settings, limit, filter);
 
         return "history";
     }
@@ -223,7 +223,7 @@ public class DjDashboardController {
                                   @RequestParam(required = false) String filter, Model model,
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
-        addHistory(model, partyCode, limit, filter);
+        addHistory(model, sessionHelper.getPartySettings(authentication, session), limit, filter);
         // The fragment lands under the dashboard's other panels: it gets a heading of its own (the standalone page has one)
         model.addAttribute(HISTORY_HEADING, true);
         return "history :: historyTableContent";
@@ -234,12 +234,14 @@ public class DjDashboardController {
      * and tracks of the background playlist, on one timeline — at least one page, at most {@value #HISTORY_MAX_LIMIT}
      * (the queries are always bounded) — and what the "Show more" button needs: whether there are older ones to show
      * and the limit to ask for next. The entries are of the kind the filter says (a missing or unknown filter is
-     * "all"); the filter goes into the model too, so that its button is the lit one.
+     * "all"); the filter goes into the model too, so that its button is the lit one. The "Playlist" button only at a YouTube
+     * party: only it has a background playlist (a party switched from YouTube still lists the old tracks under "All").
      */
-    private void addHistory(Model model, String partyCode, int requestedLimit, String filterParam) {
+    private void addHistory(Model model, PartySettingsEntity settings, int requestedLimit, String filterParam) {
         int limit = Math.max(HISTORY_PAGE_SIZE, Math.min(requestedLimit, HISTORY_MAX_LIMIT));
         HistoryFilter filter = HistoryFilter.fromParam(filterParam);
-        PlayHistoryService.Page page = playHistoryService.getHistory(partyCode, limit, filter);
+        PlayHistoryService.Page page = playHistoryService.getHistory(settings.getPartyCode(), limit, filter);
+        model.addAttribute(HISTORY_HAS_PLAYLIST, settings.getActiveProvider() == MusicProviderType.YOUTUBE);
         model.addAttribute(HISTORY_FILTER, filter.param());
         model.addAttribute(HISTORY, page.entries());
         model.addAttribute(HISTORY_HAS_MORE, page.hasMore() && limit < HISTORY_MAX_LIMIT);

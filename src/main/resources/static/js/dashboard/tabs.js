@@ -9,7 +9,7 @@
  * load this module: its tabs are plain links.
  */
 import { csrfHeaders, partyCode } from './common.js';
-import { initSortableHeaders, restoreListState, setHistoryReloader } from './list-tools.js';
+import { captureListState, initSortableHeaders, restoreListState, setHistoryReloader } from './list-tools.js';
 
 (function initTabs() {
     const bar = document.getElementById('djTabBar');
@@ -96,17 +96,17 @@ import { initSortableHeaders, restoreListState, setHistoryReloader } from './lis
     /**
      * "Show more" and the filter buttons of the History tab: ask for a longer history ({@code limit}) and/or another
      * kind of entries ({@code filter}; none = the one that is chosen) and put the answer in place, keeping what the DJ had
-     * set up — the search text, and the scroll position unless the filter changed (the new list starts at its top).
+     * set up — the search text, the sort by a column, and the scroll position unless the filter changed (the new list starts at
+     * its top).
      * Only the newest answer is shown. Resolves to true when the list was replaced, false when the request failed, and
      * null when a newer request took over (its answer decides). (The standalone history page has no such function; there
-     * the buttons reload the page — see list-tools.js. Nor has a Spotify party's dashboard.)
+     * the buttons reload the page — see list-tools.js.)
      */
     function reloadHistory(limit, filter) {
         const list = historyContent.querySelector('[data-list]');
-        const searchInput = list && list.querySelector('[data-list-search]');
-        const activeFilter = list && list.querySelector('[data-list-filter].active');
-        const chosen = activeFilter ? activeFilter.getAttribute('data-list-filter') : 'all';
-        const state = { search: searchInput ? searchInput.value : '', filter: filter || chosen };
+        const state = captureListState(list);       // the search, the filter, the sort
+        const chosen = state.filter;
+        state.filter = filter || chosen;
         const box = historyContent.querySelector('.list-scroll');
         const scrollTop = box && state.filter === chosen ? box.scrollTop : 0;
         const request = ++historyRequest;

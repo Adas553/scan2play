@@ -20,11 +20,17 @@
  * by tabs.js with setHistoryReloader; a page load on the standalone page). The queue's <tbody> is replaced by every poll, so
  * applyListFilters(list) is called again after each refresh. The listeners are delegated, so a list that arrives by AJAX (the
  * History tab) needs no set-up.
+ *
+ * DAY HEADINGS — the history's tr[data-day-heading] (history.html), one where a new day starts. The search hides a heading with
+ * no row left under it; a sort by a column hides them all (the table gets .s2p-sorted), undoing it brings them back in place.
  */
 
 // Sort state for the main queue table (survives polling refreshes)
 let queueSortColumn = null;   // e.g. "time", "song", "energy"
 let queueSortDir    = null;   // "asc" or "desc"
+
+/** The rows of a <tbody> in the server's order, kept at its first sort, so that undoing the sort puts them back (restoreServerOrder). */
+const serverOrders = new WeakMap();
 
 /**
  * Sorts the rows of a <tbody> by the given column key and direction.
@@ -33,6 +39,7 @@ let queueSortDir    = null;   // "asc" or "desc"
  */
 function sortTbody(tbody, colKey, direction) {
     if (!tbody || !colKey || !direction) return;
+    if (!serverOrders.has(tbody)) serverOrders.set(tbody, Array.from(tbody.children));
 
     const isNumeric = (colKey === 'energy' || colKey === 'votes');
 
@@ -62,6 +69,16 @@ function sortTbody(tbody, colKey, direction) {
         tbody.appendChild(items[j].row);
     }
     parent.insertBefore(tbody, next);
+}
+
+/** Undoes the sort of a <tbody>: its rows in the server's order again, the history's day headings among them. */
+function restoreServerOrder(tbody) {
+    const rows = serverOrders.get(tbody);
+    if (!rows) return;
+    serverOrders.delete(tbody);
+    for (let i = 0; i < rows.length; i++) {
+        tbody.appendChild(rows[i]);
+    }
 }
 
 /** Updates the visual state of <th> sort indicators within a <thead>. */
@@ -125,14 +142,16 @@ export function initSortableHeaders(container) {
                 thead.setAttribute('data-sort-dir', newDir || '');
             }
 
-            // Apply
+            // Apply. Sorted by a column, the history's day headings hide (app.css, .s2p-sorted): the rows of a day are no longer
+            // together. Reset (newDir === null) puts the server's order back, headings and all.
             updateHeaderIndicators(thead, newDir ? colKey : null, newDir);
+            table.classList.toggle('s2p-sorted', !!newDir);
             if (newDir) {
                 sortTbody(tbody, colKey, newDir);
+            } else {
+                restoreServerOrder(tbody);
+                applyListFilters(table.closest('[data-list]'));
             }
-            // When reset (newDir === null), the server order is already
-            // the order from the last polling refresh — no action needed
-            // (next poll will restore original order).
         });
     }
 }
@@ -175,6 +194,21 @@ export function applyListFilters(list) {
         if (visible) shown++;
     }
 
+    // A day heading of the history shows while a row under it (up to the next heading) does
+    let heading = null;
+    let headingHasRows = false;
+    const allRows = list.querySelectorAll('tbody tr');
+    for (let i = 0; i <= allRows.length; i++) {
+        const row = allRows[i];
+        if (!row || row.hasAttribute('data-day-heading')) {
+            if (heading) heading.classList.toggle('d-none', !headingHasRows);
+            heading = row || null;
+            headingHasRows = false;
+        } else if (row.hasAttribute('data-song-name') && !row.classList.contains('d-none')) {
+            headingHasRows = true;
+        }
+    }
+
     const noMatch = list.querySelector('tr[data-nomatch]');
     if (noMatch) noMatch.classList.toggle('d-none', shown > 0 || rows.length === 0);
 
@@ -185,7 +219,22 @@ export function applyListFilters(list) {
     }
 }
 
-/** Puts a list back in a state saved earlier ({search, filter}) — after it was replaced by a freshly loaded one. */
+/**
+ * What the DJ has set up in a history list: {search, filter, sortCol, sortDir} — kept when the list is replaced by a longer one
+ * ("Show more") or one of another kind (a filter button). The sort of a history table lives on its <thead> (data-sort-col / -dir).
+ */
+export function captureListState(list) {
+    const searchInput = list && list.querySelector('[data-list-search]');
+    const thead = list && list.querySelector('thead');
+    return {
+        search: searchInput ? searchInput.value : '',
+        filter: chosenFilter(list),
+        sortCol: thead ? thead.getAttribute('data-sort-col') || '' : '',
+        sortDir: thead ? thead.getAttribute('data-sort-dir') || '' : ''
+    };
+}
+
+/** Puts a list back in a state saved earlier (captureListState) — after it was replaced by a freshly loaded one. */
 export function restoreListState(list, state) {
     if (!list || !state) return;
     const searchInput = list.querySelector('[data-list-search]');
@@ -194,13 +243,46 @@ export function restoreListState(list, state) {
     for (let i = 0; i < buttons.length; i++) {
         buttons[i].classList.toggle('active', buttons[i].getAttribute('data-list-filter') === (state.filter || 'all'));
     }
+    const table = list.querySelector('table');
+    if (table && state.sortCol && state.sortDir) {
+        const thead = table.querySelector('thead');
+        thead.setAttribute('data-sort-col', state.sortCol);
+        thead.setAttribute('data-sort-dir', state.sortDir);
+        updateHeaderIndicators(thead, state.sortCol, state.sortDir);
+        table.classList.add('s2p-sorted');
+        sortTbody(table.querySelector('tbody'), state.sortCol, state.sortDir);
+    }
     applyListFilters(list);
 }
 
 /**
- * How the History tab of a YouTube dashboard asks for its list again — (limit, filter) → a promise of true (replaced), false
- * (failed) or null (a newer request took over) — set by tabs.js. Null elsewhere (a Spotify dashboard, the standalone history
- * page): there the buttons load the page again.
+ * The standalone history page asks for a longer list or another kind by a page load: what the DJ had set up (the search, the
+ * sort) waits in sessionStorage for the next page and is put back there once (the filter and the limit are in the address).
+ */
+const PAGE_STATE_KEY = 'scan2play.historyListState';
+
+function keepForNextPage(list) {
+    try {
+        sessionStorage.setItem(PAGE_STATE_KEY, JSON.stringify(captureListState(list)));
+    } catch (e) { /* storage blocked: the next page starts plain */ }
+}
+
+function restoreFromPreviousPage() {
+    let saved = null;
+    try {
+        saved = JSON.parse(sessionStorage.getItem(PAGE_STATE_KEY) || 'null');
+        sessionStorage.removeItem(PAGE_STATE_KEY);
+    } catch (e) { return; }
+    const list = document.querySelector('[data-list] [data-list-filter]');
+    if (!saved || !list) return;
+    const history = list.closest('[data-list]');
+    restoreListState(history, Object.assign(saved, { filter: chosenFilter(history) }));
+}
+
+/**
+ * How the dashboard's History tab asks for its list again — (limit, filter) → a promise of true (replaced), false
+ * (failed) or null (a newer request took over) — set by tabs.js, at every party. Null on the standalone history page: there the
+ * buttons load the page again.
  */
 let historyReloader = null;
 
@@ -252,6 +334,7 @@ document.addEventListener('click', function(e) {
                 }
             });
         } else {
+            keepForNextPage(list);
             window.location.href = historyPageUrl(null, value);
         }
         return;
@@ -266,10 +349,13 @@ document.addEventListener('click', function(e) {
             more.disabled = true;               // one request at a time
             historyReloader(limit, chosen).then(function() { more.disabled = false; }); // the History tab: replace in place
         } else {
+            keepForNextPage(more.closest('[data-list]'));
             window.location.href = historyPageUrl(limit, chosen); // the standalone page
         }
     }
 });
 
-// The tables on the page as it loads: the queue on the dashboard, the history on the standalone page.
+// The tables on the page as it loads: the queue on the dashboard, the history on the standalone page (with the search and the
+// sort of the page before it, when "Show more" or a filter button loaded it).
 initSortableHeaders(document.body);
+restoreFromPreviousPage();

@@ -138,6 +138,7 @@ try {
   $env:PGDATABASE = "s2p_fixture"
   $env:GOOGLE_AI_API_KEY = "dummy"; $env:SPOTIFY_CLIENT_ID = "dummy"; $env:SPOTIFY_CLIENT_SECRET = "dummy"
   $env:GOOGLE_CLIENT_ID = "dummy"; $env:GOOGLE_CLIENT_SECRET = "dummy"
+  $env:SPOTIFY_TOKEN_KEY = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="   # a test key (32 bytes, base64), never a real one
   $env:S2P_FIXTURE_OUT = "D:\Coding\scan2play\src\test\browser\fixtures\play-log-boundary.json"   # the file to write: the repo's
   Push-Location "$env:TEMP\scan2play-browser-tests"
   & .\mvnw.cmd -B -ntp test "-Dtest=PlayLogFixtureRecorderTest"
