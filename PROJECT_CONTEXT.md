@@ -194,7 +194,7 @@ grey, yellow from 80 %, red) and a warning above the queue while a limit or the 
 ### 5.3 Spotify Playback Auth (a second OAuth2)
 
 `/dj/spotify/login` → Spotify (playback scopes) → `/dj/spotify/callback`; the tokens go to the party (`SpotifyAuthService`, refreshed
-5 minutes before they expire). Both endpoints need the DJ's login. The OAuth `state` is 32 random bytes kept in the session and
+5 minutes before they expire, one refresh per party at a time — the others wait and use the saved tokens). Both endpoints need the DJ's login. The OAuth `state` is 32 random bytes kept in the session and
 accepted once (review 5.2). The Spotify redirect URI must be registered in the Spotify Developer Dashboard.
 
 ### 5.4 YouTube Auto-Pilot — the server decides what plays, the browser plays it
@@ -213,8 +213,12 @@ playlistId}`, 204 nothing to play, 409 another window holds the lease.
 **What the server answers** (`NextTrackService`): 1) the oldest accepted guest song with a video id, minus `exclude`
 (`DjService.findNextPlayableGuestTrack`, read only — the client confirms it with `POST /dj/dashboard/play` on PLAYING); 2) else the
 next QUEUED track of the current background playlist (`FallbackTrackCommandService.takeNextTrack`: claimed PLAYED and written to the
-play log; the next round is prepared as soon as the last track is taken); 3) else 204. It imports the playlist lazily when there is
-nothing to play or the tracks are ≥ 29 days old (single flight per party + playlist, 5 minutes' pause after a failure).
+play log; the next round is prepared as soon as the last track is taken); 3) else 204. When there is nothing to play it imports the
+playlist on the spot; tracks ≥ 29 days old are **refreshed in the background** (`FallbackPlaylistService.refreshFallbackTracksInBackground`,
+`@Async`) while the old ones keep playing, and **in place** (`FallbackTrackCommandService.refreshTracks`): a video still in the playlist
+keeps its row, status, place and the DJ's moves and gets the new title, position and fetch time; a new video joins the end of the
+queue; a video gone from the playlist is cancelled — the round goes on. Single flight per party + playlist, 5 minutes' pause after a
+failure.
 
 **Rules of the player** (agreed with the owner):
 - A running track is never interrupted by Auto-Pilot; a guest song that arrives waits for it. A paused player is left alone.
@@ -587,17 +591,19 @@ GuestQueueService          → DjService, PlayHistoryService
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 574, 1 skipped (the fixture recorder,
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 619, 1 skipped (the fixture recorder,
   `PlayLogFixtureRecorderTest`, runs only with `S2P_FIXTURE_OUT` and a throw-away `s2p_*` database). Pure Mockito, plus template
   rendering with the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest`
-  with the real security chain).
-- **Database tests** (`mvnw verify -Pit`): 28 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+  with the real security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`;
+  the Unit tests workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
+- **Database tests** (`mvnw verify -Pit`): 36 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `FallbackQueueIT`, `FallbackQueueConcurrencyIT` (fails
   with "deadlock detected" without the advisory lock), `SongRequestRepositoryIT`, `YouTubeSearchBudgetIT`, `ApplicationSetupIT`, `SessionStoreIT` (what the app keeps in a session survives
   the database and another repository; the cleanup of expired sessions), `TimestampMigrationIT` (its own database: V11, rows the old
-  way, then V12 — the same moments; red when the old values are read as UTC).
+  way, then V12 — the same moments; red when the old values are read as UTC), `SongRequestVotesIT` (votes under the lock),
+  `VibeMigrationIT` (V16).
   New queue SQL gets a test there.
-- **Browser tests**: 71 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
+- **Browser tests**: 75 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**

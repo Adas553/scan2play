@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-02
+# Session Handoff — 2026-10-03
 
 The current state only: the branch, what waits for the owner, what comes next. **The history of every session up to 2026-10-01**
 (decisions, the owner's words, what was tried) is in `docs/history/session-handoff-2026-09.md` — read it only when a question
@@ -6,8 +6,23 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after `0bb9463` (2026-10-02; `26684c8` had all three workflows green). Check with `git status -sb` and
-  `git log --oneline -8`, and the three workflows (below).
+- **Branch `dev`**, pushed up to `7ee3185` (2026-10-02; all three workflows green for `b1ab34c` and `7ee3185`). Check with `git status -sb`
+  and `git log --oneline -8`, and the three workflows (below).
+- **Uncommitted (2026-10-03), for the owner's review in IntelliJ — the tenth review package** (`REVIEW.md`, "Dziesiąta paczka"; the
+  owner: "możesz zacząć" / "możesz zrobić"):
+  - **2.5 — the background playlist is refreshed in the background and in place.** Tracks ≥ 29 days old: `next-track` hands out the
+    old track at once and the refresh runs on an `@Async` thread (`FallbackPlaylistService.refreshFallbackTracksInBackground`); it
+    no longer cancels the queue and starts a new round (`FallbackTrackCommandService.refreshTracks`: kept rows keep status, place
+    and the DJ's moves; new videos join the end; videos gone are cancelled). No migration.
+  - **4.7 — one Spotify token refresh per party at a time** (`SpotifyAuthService`).
+  - **JaCoCo** (a report, not a gate; the Unit tests workflow's summary and the artifact `coverage-report`; locally lines 83 %,
+    branches 79 %) and **the rest of 7.3** (`DjDashboardController.extractPlaylistId` gone, its tests in `YouTubeUrlsTest`;
+    `FallbackQueueView` has a `@Builder` instead of two test constructors).
+  - Tests: 619 unit tests (618 run, 1 skipped), 36 database tests (`FallbackQueueIT` +3), 75 browser scenarios — green in copies;
+    `SpotifyAuthServiceTest` red on the old service.
+  - **To look at:** nothing visible changes. A refresh happens only for a playlist imported ≥ 29 days ago — to see it, a throw-away
+    database: `UPDATE fallback_track SET fetched_at = now() - interval '29 days'` for a party, then let Auto-Pilot take a track
+    (the log says "refreshing in the background", then "refreshed in place — N kept, N added, N gone").
 - **Committed and pushed (`0bb9463`, 2026-10-02):** the dashboard shows "🎵 Scan2Play" (as on the guest page) above a smaller grey
   "Panel DJ-a" — the vibe box grew with the note and left the left side empty on a computer (the owner: "dobrze").
 - **Committed and pushed (`1133591`, 2026-10-02; tried by the owner) — the party's vibe** (the owner: "więcej wyboru, ale też okienko dla DJ-a"; their answers: the note
@@ -149,25 +164,30 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Next (the owner picks)
 
-1. **Check the workflows of `0bb9463`** and its documentation commit (Database tests: V16, 33 IT; Browser tests: 75 scenarios).
-2. **Questions for the DJs (2026-10-01)** — the DJ's library ("✓ you have it") is not built: a DJ finds a song in their own software
+1. **Check the workflows** after the owner commits the tenth package (Unit tests: the new coverage summary; Database tests: 36 IT).
+2. **The owner's answers (2026-10-03):** "play later" without rejecting — **not to be built**; the DJ's library — **dropped for now**;
+   votes — nothing to build; the defaults stay unless the owner says otherwise (a vote uses the guest's limit — it costs an AI call
+   anyway; votes do not reorder the queue or Auto-Pilot);
+   **the queue on the phone** — the owner asked how it would look (a phone layout of the same dashboard vs. a separate requests-only
+   page, and whether it refreshes) — waiting for the owner's choice.
+3. **Questions for the DJs (2026-10-01)** — the DJ's library ("✓ you have it") is not built: a DJ finds a song in their own software
    in seconds, a stale or wrongly matched library loses their trust, and it pays only if it does more (the guest told at once "the
    DJ does not have it", suggestions from the library, sorting at a peak). Ask: how many requests per wedding and how many they do
    not have; is searching a pain at all; should a guest hear "the DJ does not have it" at once. Likely cheaper wins to ask about:
    the queue on the phone (the owner is not sure: the "Kolejka" tab already jumps there), "play later" without rejecting. Repeats
    grouped — done (votes, above). A sound / a count in the tab title on a new request — dropped by the owner (the sound goes to the
    computer's default output, maybe the PA; a hidden tab wakes at most once a minute). If the library comes back: migration V16.
-3. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
+4. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
    history) — and tells what they said. (The guest's own words beside the song — done, above.)
-4. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
+5. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
    compared with `V1__baseline.sql`; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
    (Flyway V2..V16, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
-5. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
+6. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
    it" beside each request; the queue on the phone as the main view; Spotify's dashboard forms in the background too (today only
    YouTube and requests-only — Spotify has no tests). (The wait in minutes — done.)
-6. From `REVIEW.md`: 2.5 (an import inside `next-track`, only for a party older than 29 days), 6.3 (only together with a change of
-   the queue), 4.7 / 5.3 (Spotify), JaCoCo, the rest of 7.3. (3.4 and Bootstrap from the app — done.)
-7. **YouTube and the rules (the owner's question, 2026-10-01):** there is no "licence" to ask YouTube for — what counts is the
+7. From `REVIEW.md`: 6.3 (only together with a change of the queue), 5.3 (Spotify tokens encrypted — needs a key variable, locally
+   and staged on Railway). (2.5, 4.7, JaCoCo, 7.3 — the tenth package, above.)
+8. **YouTube and the rules (the owner's question, 2026-10-01):** there is no "licence" to ask YouTube for — what counts is the
    API's Developer Policies (III.I.7 no separating audio from video: the visible embedded player whose sound goes to the speakers is
    not that; III.I.9 no background player: Auto-Pilot in a hidden tab / a locked phone looks like one; III.F.3.a / III.G.1.b no
    charge for watching / selling API access) and YouTube's own terms (personal, non-commercial use — a paid DJ at a wedding is a

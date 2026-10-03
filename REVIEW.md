@@ -587,4 +587,18 @@ Do tego, poza przeglądem (pomysł właściciela): DJ widzi oryginalne słowa go
 innego niż nazwa (`song_requests.guest_text`, **V14**; `util/GuestWords`); opis w `SESSION_HANDOFF.md`.
 
 Testy jednostkowe: **586** (585 uruchomionych, 1 pominięty), testy na bazie: **29** (z V14), scenariusze: **74/74**.
-**Nie zrobione:** 2.5, 6.3, 4.7 / 5.3 (Spotify), JaCoCo, reszta 7.3.
+
+Po dziewiątej paczce (2026-10-01/02, zacommitowane do `7ee3185`): głosy, klimat imprezy, V15–V16 — poza przeglądem, opis w
+`SESSION_HANDOFF.md`.
+
+**Dziesiąta paczka — 2.5, 4.7, JaCoCo, reszta 7.3; 2026-10-03, niezacommitowane (do przejrzenia):**
+
+| # | Co zmieniono | Pliki | Testy |
+|---|--------------|-------|-------|
+| 2.5 | Playlista tła starsza niż 29 dni odświeża się **w tle** (`@Async`, `FallbackPlaylistService.refreshFallbackTracksInBackground`) — `next-track` od razu oddaje stary utwór, wolne API YouTube nie wstrzymuje muzyki. Odświeżenie **w miejscu** (`FallbackTrackCommandService.refreshTracks`, pod blokadą kolejki): utwór, który nadal jest na playliście, zostaje ze swoim wierszem, statusem, miejscem w kolejce i ruchami DJ-a, dostaje nowy tytuł, pozycję i czas pobrania; nowy film dołącza na koniec kolejki; film, którego już nie ma, jest anulowany — runda trwa dalej. Trzy instrukcje SQL (`refreshTracks`, `appendTracks`, `updateStatusOf`). Jedno odświeżenie naraz na imprezę + playlistę, 5 min przerwy po błędzie; executor pełny → próba przy następnym żądaniu. Import „nie ma czego grać” zostaje synchroniczny (nie ma nic innego do zagrania). | `NextTrackService`, `FallbackPlaylistService`, `FallbackTrackCommandService`, `FallbackTrackRepository` | `FallbackQueueIT` +3 (runda i ruch DJ-a zostają, pominięty zostaje pominięty, nowy na końcu, usunięty anulowany, jeden nowy czas pobrania, następna runda w nowej kolejności; film dwa razy na playliście; playlista, która nie jest najnowszym importem → import); `NextTrackServiceTest` (w tle, jedno naraz, błąd → stare grają i 5 min przerwy, odmowa executora → ponowna próba); `FallbackPlaylistServiceTest` +2 |
+| 4.7 | Odświeżanie tokenu Spotify: jedno naraz na imprezę (`synchronized` na obiekcie z `ConcurrentHashMap` per `partyCode`); kto czekał, czyta ustawienia jeszcze raz i bierze zapisany nowy token zamiast odświeżać starym refresh tokenem. | `SpotifyAuthService` | `SpotifyAuthServiceTest` 3 (nowy; `MockRestServiceServer`) — dwa żądania z wygasłym tokenem → jedno odświeżenie: **czerwony na starym serwisie** („No further requests expected”) |
+| 6.4 | JaCoCo 0.8.15 — raport, nie bramka: `target/site/jacoco/` po `mvnw test`; workflow Unit tests zapisuje sumy per pakiet w podsumowaniu przebiegu (`.github/scripts/coverage-summary.py`) i trzyma raport jako artefakt `coverage-report`. Lokalnie: linie 83%, gałęzie 79%. | `pom.xml`, `unit-tests.yml`, skrypt | — |
+| 7.3 | Usunięta statyczna `DjDashboardController.extractPlaylistId` (tylko delegowała) — jej testy przeniesione do `YouTubeUrlsTest` (zagnieżdżona klasa); `FallbackQueueView`: dwa konstruktory dla testów zastąpione `@Builder` (testy ustawiają tylko to, na co patrzą). | `DjDashboardController`, `FallbackQueueView`, testy | — |
+
+Testy jednostkowe: **619** (618 uruchomionych, 1 pominięty), testy na bazie: **36**, scenariusze: **75/75** — zielone w kopiach.
+**Nie zrobione:** 6.3 (tylko razem ze zmianą kolejki), 5.3 (Spotify — szyfrowanie tokenów, nowa zmienna z kluczem).
