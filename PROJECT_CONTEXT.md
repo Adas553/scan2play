@@ -227,7 +227,8 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
 `qr-print.html`, `index.html` (the guest's page), `result.html`, `party_ended.html`, `error.html`, `privacy[_pl].html`,
 `terms[_pl].html`; `fragments/`: `components.html` (`dj-nav`: the account buttons, the sticky tabs Panel / Kolejka / Historia, the
-feedback modal; `scroll-restore-script`; `moment`; `footer`), `guest-queue.html`. Texts the scripts need travel in `data-*`
+feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
+dashboard and the guest page; `footer`), `guest-queue.html`. Texts the scripts need travel in `data-*`
 attributes. **No inline script, no `on…=` handler and no `style="…"`** on any page (`NoInlineCodeInTemplatesTest`).
 
 ### 6.5 Static assets
@@ -240,6 +241,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side) |
 | `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles |
+| `images/logo.svg`, `favicon.ico` | our mark: three QR finder corners and a cyan play triangle on the dark tile (2026-10-04); on the landing page, the dashboard, the guest page, the QR poster and cards; the favicon is the same mark at 16 / 32 / 48 px |
 
 ### 6.6 Resources
 

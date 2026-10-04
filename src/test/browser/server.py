@@ -6,7 +6,7 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
   /dj/dashboard                      the page; ?scenario=NAME also adds the runner; sent with the real Content-Security-Policy
                                      (csp.txt), enforced
   POST /csp-report                   204 (the page's violations are caught by harness.js)
-  /js/*, /css/*                      src/main/resources/static
+  /js/*, /css/*, /images/*           src/main/resources/static
   /webjars/bootstrap/*               Bootstrap from its webjar in the local Maven repository (the version the pom names), as
                                      the real server serves it — so the policy is checked against Bootstrap's CSS and script too
   /harness/*                         this directory (harness.js, scenarios/*.js)
@@ -36,7 +36,7 @@ from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TYPES = {'.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-         '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8'}
+         '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml'}
 
 
 def default_state():
@@ -212,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
             policy = stand.csp()
             return self._send(200, stand.page(query.get('page', ['dashboard'])[0], 'scenario' in query), 'text/html; charset=utf-8',
                               {'Content-Security-Policy': policy} if policy else None)
-        if path.startswith('/js/') or path.startswith('/css/'):
+        if path.startswith('/js/') or path.startswith('/css/') or path.startswith('/images/'):
             return self._file(stand.static, path[1:])
         if path.startswith('/harness/'):
             return self._file(stand.browser, path[len('/harness/'):])

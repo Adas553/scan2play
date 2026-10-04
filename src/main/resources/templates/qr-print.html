@@ -29,8 +29,8 @@
         <span lang="pl">Zeskanuj i zamów piosenkę</span>
         <span lang="en" class="second">Scan to request a song</span>
     </h1>
-    <!--/* our logo, the wordmark of the app's pages (home.title), right above the code it belongs to */-->
-    <p class="logo">🎵 Scan2Play</p>
+    <!--/* our logo (static/images/logo.svg and the name), right above the code it belongs to */-->
+    <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
     <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
     <ol class="steps">
         <li><span lang="pl">Zeskanuj kod aparatem telefonu</span> <span lang="en" class="second">Scan the code with your phone camera</span></li>
@@ -48,6 +48,7 @@
     <section class="card" th:each="card : ${#numbers.sequence(1, 8)}">
         <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
         <div class="text">
+            <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
             <p class="title"><span lang="pl">Zeskanuj i zamów piosenkę</span><br>
                 <span lang="en" class="second">Scan to request a song</span></p>
             <p class="small"><span lang="pl">Tytuł, wykonawca albo fragment tekstu</span><br>

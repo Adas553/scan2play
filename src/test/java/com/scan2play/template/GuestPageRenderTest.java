@@ -86,6 +86,8 @@ class GuestPageRenderTest {
             assertThat(html).contains("id=\"songInput\"", "id=\"songInputHelp\"")
                     .doesNotContain("id=\"modeMood\"", "id=\"modeSong\"", "name=\"requestMode\"", "name=\"style\"", "id=\"styleInput\"");
             assertThat(html).as("no YouTube on the page").doesNotContain("Powered by YouTube", "YouTube API Services");
+            assertThat(html).as("our logo is the page's heading").containsPattern(
+                    "<h1 class=\"display-4 fw-bold\"><span class=\"s2p-logo\"><img src=\"/images/logo.svg\"[^>]*><span>Scan<span class=\"s2p-logo-two\">2</span>Play</span></span></h1>");
             // no inline script (CSP, review 5.1): the page's script is a file
             DashboardPageRenderTest.assertNothingInline(html);
             assertThat(html).contains("<script src=\"/js/guest-party.js\">");

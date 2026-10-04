@@ -106,7 +106,7 @@ class QrPrintPageTest {
         assertThat(html).contains("https://www.scan2play.com.pl/p/" + PARTY, ">" + PARTY + "<");
         assertThat(html).contains("<span lang=\"pl\">Zeskanuj i zamów piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>");
         // our logo once, between the title and the code
-        assertThat(html).containsOnlyOnce("Scan2Play</p>").contains("<p class=\"logo\">🎵 Scan2Play</p>");
+        assertThat(html).containsOnlyOnce("<p class=\"logo\"><img src=\"/images/logo.svg\" alt=\"\"><span>Scan<span class=\"two\">2</span>Play</span></p>");
         assertThat(html.indexOf("</h1>")).isLessThan(html.indexOf("class=\"logo\""));
         assertThat(html.indexOf("class=\"logo\"")).isLessThan(html.indexOf("class=\"qr\""));
         assertThat(html).doesNotContain("class=\"cards\"", "??");
@@ -119,6 +119,7 @@ class QrPrintPageTest {
         assertThat(html).contains("class=\"layout-cards\"", "<main class=\"cards\">");
         assertThat(html.split("<section class=\"card\">", -1)).hasSize(9);
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
+        assertThat(html.split("<p class=\"logo\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
         assertThat(html).contains("Zeskanuj i zamów piosenkę", "Scan to request a song").doesNotContain("??");
     }
 

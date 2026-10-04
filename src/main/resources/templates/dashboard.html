@@ -25,7 +25,7 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
                 <!--/* The app's name as on the guest page, the page's own heading under it */-->
                 <div class="text-center text-md-start">
-                    <div class="display-5 fw-bold text-white" th:text="#{home.title}">🎵 Scan2Play</div>
+                    <div class="display-5 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
                     <h1 class="h4 mb-0 text-secondary" th:text="#{dashboard.title}">DJ Dashboard</h1>
                 </div>
 

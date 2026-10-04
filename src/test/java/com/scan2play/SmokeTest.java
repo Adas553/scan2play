@@ -54,6 +54,7 @@ class SmokeTest {
 
         assertThat(html).containsOnlyOnce("href=\"/start\"").containsOnlyOnce("class=\"provider-card ")
                 .doesNotContain("/start/youtube", "/start/requests", "spotify", "YouTube API Services");
+        assertThat(html).as("our mark above the title").contains("<img src=\"/images/logo.svg\" alt=\"\" class=\"s2p-hero-mark mb-4\">");
     }
 
     @Test

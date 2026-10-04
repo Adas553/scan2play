@@ -161,6 +161,10 @@
           th:text="${ago == 0} ? #{time.today} : (${ago == 1} ? #{time.yesterday} : ${T(com.scan2play.util.Times).day(at)})">today</span>
 </th:block>
 
+<!--/* Our logo: the mark (static/images/logo.svg — QR corners and a play triangle) and the name with a cyan "2". Sized by the
+     font of the element it replaces (the mark is 1.15em); the name is one span, so the flex gap stays between mark and name. */-->
+<span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
+
 <!-- ======================================================================
      Footer Fragment — Scan2Play's legal pages (required for Google OAuth verification)
      ====================================================================== -->

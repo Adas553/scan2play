@@ -61,6 +61,9 @@ async function printPageWorks(t) {
     const codes = Array.prototype.slice.call(document.querySelectorAll('img.qr'));
     await t.waitFor(function () { return codes.length > 0 && codes.every(function (img) { return img.complete; }); }, 'the codes load');
     t.check('every QR code shows', codes.every(function (img) { return img.naturalWidth > 0; }));
+    const logos = Array.prototype.slice.call(document.querySelectorAll('.logo img'));
+    await t.waitFor(function () { return logos.length > 0 && logos.every(function (img) { return img.complete; }); }, 'the logos load');
+    t.check('our logo shows (' + logos.length + ')', logos.every(function (img) { return img.naturalWidth > 0; }));
     let printed = 0;
     window.print = function () { printed++; };   // the real one would block the page with a dialog
     document.getElementById('printBtn').click();
