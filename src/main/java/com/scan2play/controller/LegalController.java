@@ -5,7 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
- * Serves legal pages required for YouTube API compliance and Google OAuth verification.
+ * Serves the legal pages (privacy policy, terms), required for Google OAuth verification.
  * These pages must be publicly accessible (no authentication required).
  * <p>
  * Templates are per-language (e.g. privacy.html / privacy_pl.html) — no i18n keys needed

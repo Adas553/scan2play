@@ -1,11 +1,7 @@
 package com.scan2play.service;
 
-import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
-import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.repository.SongRequestRepository;
-import com.scan2play.util.YouTubeUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -18,8 +14,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 /**
  * Service responsible for song queue management and direct song actions.
@@ -28,7 +22,6 @@ import java.util.Set;
  * <ul>
  *     <li>Queue queries (Dashboard, History, Public)</li>
  *     <li>Song status changes (mark as played, skip, clear)</li>
- *     <li>DJ manual picks (bypass AI)</li>
  * </ul>
  * <p>
  * AI evaluation is handled by {@link SongEvaluationService}.
@@ -43,19 +36,11 @@ public class DjService {
     public static final String DECISION_REJECTED = "rejected";
     public static final String DECISION_PLAYED = "played";
 
-    /** Default style label for manually added DJ picks. */
-    private static final String DJ_PICK_STYLE = "DJ Pick";
-
-    /** Default comment attached to manually added DJ picks. */
-    private static final String DJ_PICK_COMMENT = "DJ's Choice 🎧";
     /** The note of a request the DJ skipped (dismissSong), in place of the AI's comment. */
     static final String DJ_DISMISS_COMMENT = "Skipped by the DJ ⏭";
     static final String DJ_CLEAR_COMMENT = "Cleared by the DJ 🧹";
 
     private final SongRequestRepository songRequestRepository;
-    private final PartySettingsQueryService partySettingsQueryService;
-    private final QueueService queueService;
-    private final SongEvaluationService songEvaluationService;
     private final CacheManager cacheManager;
 
     // ---- Queue Queries ----
@@ -86,36 +71,6 @@ public class DjService {
         return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 partyCode, List.of(DECISION_ACCEPTED)
         );
-    }
-
-    /**
-     * Finds the oldest accepted, not-yet-played guest song that has a playable YouTube
-     * video ID — the server-side replacement for the YouTube Auto-Pilot's old client-side
-     * DOM scan of the queue table (see PROJECT_CONTEXT.md Section 14).
-     * <p>
-     * Does <b>not</b> mark anything as played — the client still confirms that via the
-     * existing {@link #markSongAsPlayed} once the video actually starts. That keeps this
-     * method a safe, repeatable read: {@link NextTrackService} asks it whenever the player is about
-     * to load a track, and it reuses {@link #getDashboardQueue} (already {@code @Cacheable}, 3s TTL)
-     * so most calls are a cache hit rather than a fresh query.
-     *
-     * @param partyCode The unique code of the party.
-     * @param excludeIds Song IDs to skip even though they're accepted+resolvable — the
-     *                   client adds one here when {@code loadVideoById} itself errors on
-     *                   it (video removed/private/region-blocked), so Auto-Pilot doesn't
-     *                   retry the same broken video forever. Session-only on the client,
-     *                   not persisted: a page reload will offer it again.
-     * @return The next playable guest track, if one is waiting.
-     */
-    public Optional<NextGuestTrackResponse> findNextPlayableGuestTrack(String partyCode, Set<Long> excludeIds) {
-        return getDashboardQueue(partyCode).stream()
-                .filter(song -> !excludeIds.contains(song.getId()))
-                // A song's trackUrl can also be a YouTube *search-results* URL (no video ID) when the Data API had no
-                // key or failed to resolve it (PROJECT_CONTEXT.md Section 7.3): the player cannot play those, skip them.
-                .flatMap(song -> YouTubeUrls.extractVideoId(song.getTrackUrl())
-                        .map(videoId -> new NextGuestTrackResponse(song.getId(), videoId))
-                        .stream())
-                .findFirst();
     }
 
     // ---- Song Actions ----
@@ -196,8 +151,8 @@ public class DjService {
     }
 
     /**
-     * A song that has played leaves the queue at once, not when the 3 s cache of {@link #getDashboardQueue} expires: next-track
-     * reads that cache, and a ⏭ in those seconds handed the song that had just started out again. After the commit, not
+     * A song that has played (or was skipped) leaves the queue at once, not when the 3 s cache of {@link #getDashboardQueue}
+     * expires: the dashboard asks for the queue right after the click. After the commit, not
      * before: a request that read the queue while this transaction was still open would put the old list back. Without a
      * transaction the cache is evicted at once.
      */
@@ -215,52 +170,6 @@ public class DjService {
             });
         } else {
             evict.run();
-        }
-    }
-
-    /**
-     * Adds a song directly to the party queue as a DJ Pick, bypassing AI evaluation.
-     * The song is saved immediately as ACCEPTED so it appears in the next polling cycle
-     * and the YouTube Auto-Pilot can pick it up.
-     *
-     * @param partyCode The unique code of the party.
-     * @param songName  The name of the song to add (must not be blank).
-     */
-    @Transactional
-    public void addDjPick(String partyCode, String songName) {
-        log.info("Party [{}]: DJ manually adding track: '{}'", partyCode, songName);
-
-        // Normalize raw input via AI to canonical "ARTIST - TITLE" format.
-        // This ensures consistent YouTube cache keys (e.g. "nirvanna smells" → "Nirvana - Smells Like Teen Spirit").
-        String normalizedName = songEvaluationService.normalizeSongName(songName);
-
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String trackUrl = resolveTrackUrl(normalizedName, settings.getActiveProvider());
-        // The queue shows what will play: the video's own title when there is one
-        String playedName = songEvaluationService.nameOfTrack(normalizedName, trackUrl, settings.getActiveProvider());
-
-        SongRequestEntity entity = SongRequestEntity.builder()
-                .partyCode(partyCode)
-                .songName(playedName)
-                .style(DJ_PICK_STYLE)
-                .decision(DECISION_ACCEPTED)
-                .djComment(DJ_PICK_COMMENT)
-                .energyLevel(0)
-                .trackUrl(trackUrl)
-                .requestedAt(Instant.now())
-                .build();
-
-        songRequestRepository.save(entity);
-        log.info("Party [{}]: DJ pick '{}' → '{}' saved. Track URL: {}", partyCode, songName, normalizedName, trackUrl);
-    }
-
-    private String resolveTrackUrl(String songName, MusicProviderType provider) {
-        try {
-            log.debug("Resolving track '{}' using provider: {}", songName, provider);
-            return queueService.resolveTrack(songName, provider);
-        } catch (Exception e) {
-            log.warn("Failed to resolve track URL for '{}'", songName, e);
-            return null;
         }
     }
 }

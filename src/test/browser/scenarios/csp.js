@@ -36,15 +36,11 @@ function recordFetches() {
 
 S2P.scenario({
     name: 'guest-page-under-csp',
-    title: 'the guest page under the real policy: the mode switch, the song suggestions (iTunes) and the refresh of the list work',
+    title: 'the guest page under the real policy: no song / mood tiles, the song suggestions (iTunes) and the refresh of the list work',
     page: 'guest',
     run: async function (t) {
         const asked = recordFetches();
-        const help = document.getElementById('songInputHelp');
-        document.getElementById('modeMood').click();
-        t.step('the mood mode changes the help text (guest-party.js runs)', help.textContent, help.dataset.textMood);
-        document.getElementById('modeSong').click();
-        t.step('the song mode brings it back', help.textContent, help.dataset.textSong);
+        t.check('no song / mood tiles (one kind of request: a song)', !document.getElementById('modeMood') && !document.getElementById('modeSong'));
 
         const input = document.getElementById('songInput');
         input.value = 'abba';
@@ -55,7 +51,7 @@ S2P.scenario({
 
         document.querySelector('[data-guest-queue-refresh]').click();
         await t.waitFor(function () { return asked.indexOf('/p/ABC12/queue') >= 0; }, 'the list is fetched again');
-        t.check('"↻" fetches the list again', true);
+        t.check('"↻" fetches the list again (guest-party.js runs)', true);
         await t.sleep(300);   // the answers (a refused name, a 404 of the stand-in) arrive
     }
 });
@@ -83,24 +79,4 @@ S2P.scenario({
     title: 'the QR print page (eight cards) under the real policy: the codes show, "Print" opens the print window',
     page: 'qr-print-cards',
     run: printPageWorks
-});
-
-S2P.scenario({
-    name: 'guest-page-requests-only',
-    title: 'the guest page of a requests-only party: no mood tiles, and its scripts still run — the suggestions, the list refresh',
-    page: 'guest-requests',
-    run: async function (t) {
-        const asked = recordFetches();
-        t.check('no song / mood tiles', !document.getElementById('modeMood') && !document.getElementById('modeSong'));
-        const input = document.getElementById('songInput');
-        input.value = 'abba';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        await t.waitFor(function () { return asked.some(function (u) { return u.indexOf('https://itunes.apple.com/') === 0; }); },
-            'the song suggestions ask iTunes');
-        t.check('the song suggestions ask iTunes (song-autocomplete.js runs)', true);
-        document.querySelector('[data-guest-queue-refresh]').click();
-        await t.waitFor(function () { return asked.indexOf('/p/ABC12/queue') >= 0; }, 'the list is fetched again');
-        t.check('"↻" fetches the list again (guest-party.js runs past the missing tiles)', true);
-        await t.sleep(300);
-    }
 });

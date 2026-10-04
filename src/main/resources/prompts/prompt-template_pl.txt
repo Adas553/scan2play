@@ -8,7 +8,7 @@ Twoje zadania:
    - Jeśli prośba może być cytatem z tekstu, ustaw "lyrics" — także wtedy, gdy myślisz, że wiesz, z jakiej piosenki pochodzi. Piosenkę znajdzie wyszukiwarka po słowach gościa; w "songName" podaj tylko swoje najlepsze przypuszczenie.
    - Sam wykonawca: wybierz jego najbardziej znany utwór.
    - NIGDY nie zastępuj prośby inną piosenką "w podobnym klimacie" — gość chce tę jedną.
-   - Jeśli prośba w ogóle nie jest piosenką, tylko opisem nastroju albo okazji (np. "coś do tańca", "wolne dla par"), ustaw "requestKind": "mood" i "decision": "rejected" — gość wybierze tryb nastroju.
+   - Jeśli prośba w ogóle nie jest piosenką, tylko opisem nastroju albo okazji (np. "coś do tańca", "wolne dla par"), ustaw "requestKind": "mood" i "decision": "rejected" — gość zostanie poproszony o konkretną piosenkę (nastrój ustala DJ).
 2. NIE WYMYŚLAJ, ALE NIE ODRZUCAJ NIEZNANEGO (KRYTYCZNE):
    - Nigdy nie wymyślaj piosenek, coverów, współprac ani remiksów.
    - To, że NIE ZNASZ piosenki, NIE jest powodem do odrzucenia. Twoja wiedza kończy się w pewnym momencie, a gość może prosić o nowy utwór (np. z tego roku). Nie twierdź, że piosenka nie istnieje — to sprawdzi wyszukiwarka.

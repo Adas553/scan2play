@@ -1,8 +1,6 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.PlaybackMode;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
 import jakarta.servlet.http.HttpSession;
@@ -27,8 +25,6 @@ import org.springframework.stereotype.Component;
 public class DjSessionHelper {
 
     static final String SESSION_PARTY_CODE = "djPartyCode";
-    /** The kind of party the DJ chose on the landing page before Google's login (HomeController.start); used once. */
-    static final String SESSION_CHOSEN_PROVIDER = "djChosenProvider";
 
     private final PartySettingsQueryService partySettingsQueryService;
     private final PartySettingsCommandService partySettingsCommandService;
@@ -43,12 +39,11 @@ public class DjSessionHelper {
      * @return The PartySettingsEntity for this DJ.
      */
     public PartySettingsEntity getPartySettings(OAuth2AuthenticationToken authentication, HttpSession session) {
-        MusicProviderType chosen = takeChosenProvider(session);
         String cachedPartyCode = (String) session.getAttribute(SESSION_PARTY_CODE);
 
         if (cachedPartyCode != null) {
             try {
-                return giveChosenKind(partySettingsQueryService.getSettings(cachedPartyCode), chosen);
+                return partySettingsQueryService.getSettings(cachedPartyCode);
             } catch (IllegalArgumentException e) {
                 log.warn("Cached partyCode '{}' no longer valid, falling back to ownerId lookup", cachedPartyCode);
                 session.removeAttribute(SESSION_PARTY_CODE);
@@ -56,45 +51,9 @@ public class DjSessionHelper {
         }
 
         String ownerId = authentication.getName();
-        MusicProviderType provider = chosen != null ? chosen : MusicProviderType.YOUTUBE;
-        PartySettingsEntity settings = giveChosenKind(partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider), chosen);
+        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
         session.setAttribute(SESSION_PARTY_CODE, settings.getPartyCode());
         return settings;
-    }
-
-    /**
-     * The kind of party chosen on the landing page before this login (HomeController.start), taken out of the session: it counts
-     * once.
-     */
-    private MusicProviderType takeChosenProvider(HttpSession session) {
-        Object chosen = session.getAttribute(SESSION_CHOSEN_PROVIDER);
-        if (chosen == null) {
-            return null;
-        }
-        session.removeAttribute(SESSION_CHOSEN_PROVIDER);
-        try {
-            return MusicProviderType.valueOf(chosen.toString());
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    /**
-     * The DJ's party, of the kind they chose: one DJ has one party, so a DJ with a YouTube party who picks the requests-only tile
-     * (or back) gets the same party — the same code, the same QR — of the other kind. A requests-only party has no player, so
-     * its Auto-Pilot is off.
-     */
-    private PartySettingsEntity giveChosenKind(PartySettingsEntity settings, MusicProviderType chosen) {
-        if (chosen == null || settings.getActiveProvider() == chosen) {
-            return settings;
-        }
-        log.info("Party [{}]: {} -> {} (the DJ's choice on the landing page)", settings.getPartyCode(), settings.getActiveProvider(), chosen);
-        return partySettingsCommandService.updateSettings(settings.getPartyCode(), party -> {
-            party.setActiveProvider(chosen);
-            if (chosen == MusicProviderType.REQUESTS_ONLY) {
-                party.setPlaybackMode(PlaybackMode.MANUAL);
-            }
-        });
     }
 
     /**

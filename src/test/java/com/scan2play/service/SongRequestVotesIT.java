@@ -28,7 +28,7 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
 
     private static final int GUESTS = 16;
     private static final int ROUNDS = 20;
-    private static final String VIDEO = "https://www.youtube.com/watch?v=abcdefghijk";
+    private static final String LINK = "https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka";
 
     @Autowired SongRequestCommandService commands;
     @Autowired JdbcTemplate jdbc;
@@ -54,7 +54,7 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
                 for (int i = 0; i < GUESTS; i++) {
                     asks.add(pool.submit(() -> {
                         start.await();
-                        return commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", VIDEO), Set.of()).outcome();
+                        return commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).outcome();
                     }));
                 }
                 start.countDown();
@@ -72,23 +72,23 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void theSameSongByNameOrVideo_isAVote_theGuestsOwn_aPlayedOne_andARejectedOne_areNot() {
+    void theSameSongByName_isAVote_theGuestsOwn_aPlayedOne_andARejectedOne_areNot() {
         String party = newPartyCode();
-        SongRequestEntity first = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", VIDEO), Set.of()).request();
+        SongRequestEntity first = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request();
 
-        // the same video under another name, and the same name without a video (a requests-only party's search link)
-        assertThat(commands.saveOrVote(request(party, "Wilki – Baśka (Official)", "accepted", VIDEO), Set.of()).outcome())
+        // the same name written another way (case, accents, punctuation), and the same name without a link
+        assertThat(commands.saveOrVote(request(party, "WILKI – Baśka!", "accepted", LINK), Set.of()).outcome())
                 .isEqualTo(Outcome.VOTE);
         assertThat(commands.saveOrVote(request(party, "wilki baśka", "accepted", null), Set.of()).outcome()).isEqualTo(Outcome.VOTE);
         // the guest who asked first asks again: nothing changes
-        SongRequestCommandService.Saved own = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", VIDEO), Set.of(first.getId()));
+        SongRequestCommandService.Saved own = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of(first.getId()));
         assertThat(own.outcome()).isEqualTo(Outcome.ALREADY_YOURS);
         assertThat(own.request().getVotes()).isEqualTo(3);
         // a rejected request is a row of its own (the history shows it)
         assertThat(commands.saveOrVote(request(party, "Wilki - Baśka", "rejected", null), Set.of()).outcome()).isEqualTo(Outcome.NEW);
         // played: the next request for it is a new row
         jdbc.update("UPDATE song_requests SET decision = 'played' WHERE id = ?", first.getId());
-        assertThat(commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", VIDEO), Set.of()).outcome()).isEqualTo(Outcome.NEW);
+        assertThat(commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.NEW);
 
         assertThat(rows(party)).extracting(row -> row.get("decision") + " " + row.get("votes"))
                 .containsExactly("played 3", "rejected 1", "accepted 1");
@@ -97,9 +97,9 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
     @Test
     void aVoteNeverWritesTheWholeRowBack() {
         String party = newPartyCode();
-        SongRequestEntity first = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", VIDEO), Set.of()).request();
+        SongRequestEntity first = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request();
 
-        SongRequestCommandService.Saved vote = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", VIDEO), Set.of());
+        SongRequestCommandService.Saved vote = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of());
 
         assertThat(vote.outcome()).isEqualTo(Outcome.VOTE);
         assertThat(vote.request().getId()).isEqualTo(first.getId());

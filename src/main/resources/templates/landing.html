@@ -20,10 +20,8 @@
             </p>
 
             <div class="provider-cards">
-                <!--/* For DJs: no player — the DJ plays from their own software, Scan2Play collects the guests' requests (Google login).
-                     First, on a row of its own: the product a subscription may be for one day; the break below puts the other two under it */-->
-                <a href="/start/requests" class="provider-card provider-card--recommended provider-card--requests text-center">
-                    <span class="badge bg-success mb-2" th:text="#{landing.badge.recommended}">✅ Recommended</span>
+                <!--/* For DJs: no player — the DJ plays from their own software, Scan2Play collects the guests' requests (Google login) */-->
+                <a href="/start" class="provider-card provider-card--recommended provider-card--requests text-center">
                     <span class="badge bg-info text-dark mb-2" th:text="#{landing.badge.requests}">🎧 For DJs</span>
                     <div class="icon">🎧</div>
                     <div class="btn btn-requests btn-lg w-100" th:text="#{landing.btn.start.requests}">
@@ -35,18 +33,6 @@
                         You play from your own software. Guests request songs by QR code, the AI filters out the junk. No player.
                     </small>
                 </a>
-                <div class="provider-cards-break"></div>
-
-                <!-- YouTube: the embedded player — available to everyone -->
-                <a href="/start/youtube" class="provider-card text-center">
-                    <span class="badge bg-secondary mb-2" th:text="#{landing.badge.youtube}">🏠 For private parties</span>
-                    <div class="icon">▶️</div>
-                    <div class="btn btn-youtube btn-lg w-100" th:text="#{landing.btn.start.youtube}">
-                        Start Party with YouTube
-                    </div>
-                    <small class="d-block mt-2 s2p-hint" th:text="#{landing.hint.youtube}">Requires Google account</small>
-                </a>
-
             </div>
 
             <div th:if="${param.error}" class="alert alert-danger mt-4" role="alert" th:text="#{landing.error.login}">

@@ -1,13 +1,9 @@
 package com.scan2play.service;
 
-import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
-import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.NextGuestTrackResponse;
 import com.scan2play.repository.SongRequestRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,7 +13,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static com.scan2play.service.DjService.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,12 +26,6 @@ class DjServiceTest {
 
     @Mock
     private SongRequestRepository songRequestRepository;
-    @Mock
-    private PartySettingsQueryService partySettingsQueryService;
-    @Mock
-    private QueueService queueService;
-    @Mock
-    private SongEvaluationService songEvaluationService;
     @Mock
     private CacheManager cacheManager;
 
@@ -124,163 +113,6 @@ class DjServiceTest {
 
         assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED); // unchanged
         verify(songRequestRepository, never()).save(any());
-    }
-
-    // ---- addDjPick ----
-
-    @Test
-    void addDjPick_shouldNormalizeNameAndSaveWithResolvedTrack() {
-        PartySettingsEntity settings = PartySettingsEntity.builder()
-                .partyCode(PARTY_CODE)
-                .activeProvider(MusicProviderType.YOUTUBE)
-                .build();
-
-        when(songEvaluationService.normalizeSongName("nirvanna smells"))
-                .thenReturn("Nirvana - Smells Like Teen Spirit");
-        when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
-        when(queueService.resolveTrack("Nirvana - Smells Like Teen Spirit", MusicProviderType.YOUTUBE))
-                .thenReturn("https://www.youtube.com/watch?v=hTWKbfoikeg");
-        // the queue shows the video's own title
-        when(songEvaluationService.nameOfTrack("Nirvana - Smells Like Teen Spirit", "https://www.youtube.com/watch?v=hTWKbfoikeg",
-                MusicProviderType.YOUTUBE)).thenReturn("Nirvana - Smells Like Teen Spirit");
-
-        djService.addDjPick(PARTY_CODE, "nirvanna smells");
-
-        ArgumentCaptor<SongRequestEntity> captor = ArgumentCaptor.forClass(SongRequestEntity.class);
-        verify(songRequestRepository).save(captor.capture());
-
-        SongRequestEntity saved = captor.getValue();
-        assertThat(saved.getPartyCode()).isEqualTo(PARTY_CODE);
-        assertThat(saved.getSongName()).isEqualTo("Nirvana - Smells Like Teen Spirit");
-        assertThat(saved.getDecision()).isEqualTo(DECISION_ACCEPTED);
-        assertThat(saved.getStyle()).isEqualTo("DJ Pick");
-        assertThat(saved.getDjComment()).contains("DJ");
-        assertThat(saved.getEnergyLevel()).isZero();
-        assertThat(saved.getTrackUrl()).isEqualTo("https://www.youtube.com/watch?v=hTWKbfoikeg");
-        assertThat(saved.getRequestedAt()).isNotNull();
-    }
-
-    @Test
-    void addDjPick_shouldStillSave_whenTrackResolutionFails() {
-        PartySettingsEntity settings = PartySettingsEntity.builder()
-                .partyCode(PARTY_CODE)
-                .activeProvider(MusicProviderType.YOUTUBE)
-                .build();
-
-        when(songEvaluationService.normalizeSongName("Some Song")).thenReturn("Some Song");
-        when(partySettingsQueryService.getSettings(PARTY_CODE)).thenReturn(settings);
-        when(queueService.resolveTrack(any(), any())).thenThrow(new RuntimeException("API down"));
-        when(songEvaluationService.nameOfTrack("Some Song", null, MusicProviderType.YOUTUBE)).thenReturn("Some Song");
-
-        djService.addDjPick(PARTY_CODE, "Some Song");
-
-        ArgumentCaptor<SongRequestEntity> captor = ArgumentCaptor.forClass(SongRequestEntity.class);
-        verify(songRequestRepository).save(captor.capture());
-
-        SongRequestEntity saved = captor.getValue();
-        assertThat(saved.getSongName()).isEqualTo("Some Song");
-        assertThat(saved.getTrackUrl()).isNull();
-        assertThat(saved.getDecision()).isEqualTo(DECISION_ACCEPTED);
-    }
-
-    // ---- findNextPlayableGuestTrack (server-side "what's next" for YouTube Auto-Pilot) ----
-
-    private static SongRequestEntity accepted(long id, String trackUrl) {
-        return SongRequestEntity.builder()
-                .id(id)
-                .partyCode(PARTY_CODE)
-                .songName("Song " + id)
-                .decision(DECISION_ACCEPTED)
-                .trackUrl(trackUrl)
-                .build();
-    }
-
-    private void givenQueue(SongRequestEntity... songs) {
-        when(songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
-                PARTY_CODE, List.of(DECISION_ACCEPTED)))
-                .thenReturn(List.of(songs));
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldReturnOldestAcceptedSongWithVideoId() {
-        givenQueue(
-                accepted(1, "https://www.youtube.com/watch?v=hTWKbfoikeg"),
-                accepted(2, "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
-
-        Optional<NextGuestTrackResponse> next = djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of());
-
-        assertThat(next).contains(new NextGuestTrackResponse(1L, "hTWKbfoikeg"));
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldReturnEmpty_whenQueueIsEmpty() {
-        givenQueue();
-
-        assertThat(djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of())).isEmpty();
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldSkipSongsWithoutPlayableVideoId() {
-        // Older songs are not playable by Auto-Pilot: no URL, a YouTube *search* URL (Data API had no
-        // key / failed), a Spotify URL — the first song that does have a video ID must win.
-        givenQueue(
-                accepted(1, null),
-                accepted(2, "https://www.youtube.com/results?search_query=some+song"),
-                accepted(3, "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC"),
-                accepted(4, "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
-
-        Optional<NextGuestTrackResponse> next = djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of());
-
-        assertThat(next).contains(new NextGuestTrackResponse(4L, "dQw4w9WgXcQ"));
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldReturnEmpty_whenNoSongIsPlayable() {
-        givenQueue(
-                accepted(1, null),
-                accepted(2, "https://www.youtube.com/results?search_query=some+song"));
-
-        assertThat(djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of())).isEmpty();
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldSkipExcludedSongs() {
-        // The client excludes songs the YouTube player itself errored on (removed/private/blocked video)
-        givenQueue(
-                accepted(1, "https://www.youtube.com/watch?v=hTWKbfoikeg"),
-                accepted(2, "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
-
-        Optional<NextGuestTrackResponse> next = djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of(1L));
-
-        assertThat(next).contains(new NextGuestTrackResponse(2L, "dQw4w9WgXcQ"));
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldReturnEmpty_whenEverySongIsExcluded() {
-        givenQueue(
-                accepted(1, "https://www.youtube.com/watch?v=hTWKbfoikeg"),
-                accepted(2, "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
-
-        assertThat(djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of(1L, 2L))).isEmpty();
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldFindVideoIdRegardlessOfQueryParamOrder() {
-        givenQueue(accepted(1, "https://www.youtube.com/watch?feature=share&v=hTWKbfoikeg&t=42"));
-
-        assertThat(djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of()))
-                .contains(new NextGuestTrackResponse(1L, "hTWKbfoikeg"));
-    }
-
-    @Test
-    void findNextPlayableGuestTrack_shouldOnlyQueryAcceptedSongsOfThatParty() {
-        givenQueue();
-
-        djService.findNextPlayableGuestTrack(PARTY_CODE, Set.of());
-
-        verify(songRequestRepository).findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
-                PARTY_CODE, List.of(DECISION_ACCEPTED));
-        verifyNoMoreInteractions(songRequestRepository);
     }
 
     // ---- the moment a request was played (V6): the history and "previous track" order by it ----

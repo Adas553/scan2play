@@ -29,32 +29,32 @@
             document.querySelector('[data-dj-tab="history"]').click();
             await t.waitFor(function () { return list(); }, 'the history', 5000);
             t.step('the first page: one day, its heading on top', seen(),
-                ['# wtorek, 29.09', 'Żółć — piosenka', 'Playlist Alpha', 'Rejected Beat', 'Playlist Bravo']);
+                ['# wtorek, 29.09', 'Żółć — piosenka', 'Played Alpha', 'Rejected Beat', 'Played Bravo']);
 
             list().querySelector('[data-history-more]').click();
             await t.waitFor(function () { return titles().length === 10; }, 'the longer history', 5000);
             t.step('the whole timeline: a second heading where Monday starts', seen(),
-                ['# wtorek, 29.09', 'Żółć — piosenka', 'Playlist Alpha', 'Rejected Beat', 'Playlist Bravo', 'Guest Charlie',
-                 '# poniedziałek, 28.09', 'Rejected Delta', 'Playlist Echo', 'Guest Foxtrot', 'Rejected Golf', 'Playlist Hotel']);
+                ['# wtorek, 29.09', 'Żółć — piosenka', 'Played Alpha', 'Rejected Beat', 'Played Bravo', 'Guest Charlie',
+                 '# poniedziałek, 28.09', 'Rejected Delta', 'Played Echo', 'Guest Foxtrot', 'Rejected Golf', 'Played Hotel']);
 
             const search = list().querySelector('[data-list-search]');
-            type(search, 'playlist');
+            type(search, 'played');
             t.step('a search that finds rows of both days keeps both headings', seen(),
-                ['# wtorek, 29.09', 'Playlist Alpha', 'Playlist Bravo', '# poniedziałek, 28.09', 'Playlist Echo', 'Playlist Hotel']);
+                ['# wtorek, 29.09', 'Played Alpha', 'Played Bravo', '# poniedziałek, 28.09', 'Played Echo', 'Played Hotel']);
             type(search, 'echo');
-            t.step('a search that finds rows of one day shows only its heading', seen(), ['# poniedziałek, 28.09', 'Playlist Echo']);
+            t.step('a search that finds rows of one day shows only its heading', seen(), ['# poniedziałek, 28.09', 'Played Echo']);
             type(search, 'nothing like this');
             t.step('nothing found: no heading either', seen(), []);
             type(search, '');
 
             const songHeader = list().querySelector('th[data-sort="song"]');
             songHeader.click();
-            t.step('sorted by song: no headings (the days are mixed)', seen().slice(0, 3), ['Guest Charlie', 'Guest Foxtrot', 'Playlist Alpha']);
+            t.step('sorted by song: no headings (the days are mixed)', seen().slice(0, 3), ['Guest Charlie', 'Guest Foxtrot', 'Played Alpha']);
             songHeader.click();
             songHeader.click();
             t.step('the sort undone (third click): the server\'s order and the headings are back', seen(),
-                ['# wtorek, 29.09', 'Żółć — piosenka', 'Playlist Alpha', 'Rejected Beat', 'Playlist Bravo', 'Guest Charlie',
-                 '# poniedziałek, 28.09', 'Rejected Delta', 'Playlist Echo', 'Guest Foxtrot', 'Rejected Golf', 'Playlist Hotel']);
+                ['# wtorek, 29.09', 'Żółć — piosenka', 'Played Alpha', 'Rejected Beat', 'Played Bravo', 'Guest Charlie',
+                 '# poniedziałek, 28.09', 'Rejected Delta', 'Played Echo', 'Guest Foxtrot', 'Rejected Golf', 'Played Hotel']);
         }
     });
 
@@ -78,7 +78,7 @@
             const songHeader = function () { return list().querySelector('th[data-sort="song"]'); };
             songHeader().click();
             songHeader().click();
-            t.step('sorted by song, Z to A', titles(), ['Żółć — piosenka', 'Rejected Beat', 'Playlist Bravo', 'Playlist Alpha']);
+            t.step('sorted by song, Z to A', titles(), ['Żółć — piosenka', 'Rejected Beat', 'Played Bravo', 'Played Alpha']);
 
             list().querySelector('[data-history-more]').click();
             await t.waitFor(function () { return titles().length === 10; }, 'the longer history', 5000);

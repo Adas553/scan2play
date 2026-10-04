@@ -7,10 +7,7 @@ import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.util.List;
@@ -18,22 +15,7 @@ import java.util.List;
 @Configuration
 @EnableCaching
 @EnableScheduling
-@EnableAsync
 public class AppConfig {
-
-    /**
-     * Shared RestClient with connect/read timeouts.
-     * Prevents hung threads when external APIs (YouTube) are slow or unreachable.
-     */
-    @Bean
-    public RestClient restClient() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(5));
-        factory.setReadTimeout(Duration.ofSeconds(10));
-        return RestClient.builder()
-                .requestFactory(factory)
-                .build();
-    }
 
     /**
      * Custom CacheManager with per-cache TTL configuration via Caffeine.
@@ -41,7 +23,6 @@ public class AppConfig {
      *     <li>{@code partySettings} — long-lived; read through {@code PartySettingsQueryService} (a copy per caller),
      *         evicted after every committed change ({@code PartySettingsCommandService.updateSettings})</li>
      *     <li>{@code qr-codes} — long-lived</li>
-     *     <li>{@code youtubeSearch} — 24h TTL, avoids redundant YouTube Data API calls (100 quota/search)</li>
      *     <li>{@code dashboardQueue} — 3s TTL, auto-expires to keep polling data fresh (the guest page reads it too)</li>
      * </ul>
      */
@@ -51,7 +32,6 @@ public class AppConfig {
         cacheManager.setCaches(List.of(
                 buildCache("partySettings", Duration.ofHours(24), 500),
                 buildCache("qr-codes", Duration.ofHours(24), 1000),
-                buildCache("youtubeSearch", Duration.ofHours(24), 1000),
                 buildCache("dashboardQueue", Duration.ofSeconds(3), 200)
         ));
         return cacheManager;

@@ -1,8 +1,6 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.repository.FallbackPlayRepository;
-import com.scan2play.repository.FallbackTrackRepository;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
@@ -36,13 +34,11 @@ public class AccountDeletionService {
     private final PartySettingsRepository partySettingsRepository;
     private final SongRequestRepository songRequestRepository;
     private final FeedbackRepository feedbackRepository;
-    private final FallbackTrackRepository fallbackTrackRepository;
-    private final FallbackPlayRepository fallbackPlayRepository;
     private final CacheManager cacheManager;
 
     /**
      * Deletes all data associated with the given DJ (owner).
-     * This includes: song requests, fallback tracks and their play log, feedback, and party settings.
+     * This includes: song requests, feedback, and party settings.
      *
      * @param ownerId The OAuth2 owner ID (the Google subject).
      */
@@ -60,23 +56,15 @@ public class AccountDeletionService {
             songRequestRepository.deleteByPartyCode(partyCode);
             log.info("Deleted song requests for partyCode={}", partyCode);
 
-            // 3. Delete the server-side fallback playlist tracks
-            fallbackTrackRepository.deleteByPartyCode(partyCode);
-            log.info("Deleted fallback tracks for partyCode={}", partyCode);
-
-            // 3b. ... and the log of what they played (the history of the background playlist)
-            fallbackPlayRepository.deleteByPartyCode(partyCode);
-            log.info("Deleted fallback play log for partyCode={}", partyCode);
-
-            // 4. Delete party settings
+            // 3. Delete party settings
             partySettingsRepository.delete(partyOpt.get());
             log.info("Deleted party settings for partyCode={}", partyCode);
 
-            // 4b. ... and forget the party in memory
+            // 3b. ... and forget the party in memory
             evictPartyCachesAfterCommit(partyCode);
         }
 
-        // 5. Delete all feedback from this owner
+        // 4. Delete all feedback from this owner
         feedbackRepository.deleteByOwnerId(ownerId);
         log.info("Deleted feedback for ownerId={}", ownerId);
 

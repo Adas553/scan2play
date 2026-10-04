@@ -34,8 +34,6 @@ public record DjResponse(
     public static final String KIND_LYRICS = "lyrics";
     public static final String KIND_MOOD = "mood";
     public static final String KIND_UNCHECKED = "unchecked";
-    /** The AI could not be asked and the request was refused (a party other than requests-only). */
-    public static final String KIND_AI_UNAVAILABLE = "ai-unavailable";
 
     /** A response before it is saved, or one that was saved as a new request (votes untold). */
     public DjResponse(String decision, String comment, String songName, int energyLevel, String requestKind, Long requestId) {
@@ -57,7 +55,7 @@ public record DjResponse(
         return KIND_LYRICS.equalsIgnoreCase(requestKind);
     }
 
-    /** Whether the AI read the request as a mood — in the song mode that means the guest chose the wrong mode. */
+    /** Whether the AI read the request as a mood, not a song — the guest is asked for a song (the DJ sets the mood). */
     public boolean isMood() {
         return KIND_MOOD.equalsIgnoreCase(requestKind);
     }
@@ -65,11 +63,6 @@ public record DjResponse(
     /** Whether the request went to the DJ without the AI's check (the AI could not be asked). */
     public boolean isUnchecked() {
         return KIND_UNCHECKED.equals(requestKind);
-    }
-
-    /** Whether the request was refused because the AI could not be asked. */
-    public boolean isAiUnavailable() {
-        return KIND_AI_UNAVAILABLE.equals(requestKind);
     }
 
     /** Whether the request was counted as one more vote on the same song waiting in the queue. */

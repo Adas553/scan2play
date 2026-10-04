@@ -11,18 +11,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 class HistoryFilterTest {
 
     @Test
-    @DisplayName("each filter reads exactly the kinds of entries its button promises")
+    @DisplayName("each filter reads exactly the requests its button promises")
     void shouldSayWhatEachFilterReads() {
-        assertThat(kinds(HistoryFilter.ALL)).containsExactly(true, true, true);
-        assertThat(kinds(HistoryFilter.GUEST)).containsExactly(true, true, false);
-        assertThat(kinds(HistoryFilter.BACKGROUND)).containsExactly(false, false, true);
-        assertThat(kinds(HistoryFilter.PLAYED)).containsExactly(true, false, true);
-        assertThat(kinds(HistoryFilter.REJECTED)).containsExactly(false, true, false);
+        assertThat(kinds(HistoryFilter.ALL)).containsExactly(true, true);
+        assertThat(kinds(HistoryFilter.PLAYED)).containsExactly(true, false);
+        assertThat(kinds(HistoryFilter.REJECTED)).containsExactly(false, true);
     }
 
-    /** guests played, guests rejected, playlist tracks */
+    /** played, rejected */
     private static Boolean[] kinds(HistoryFilter filter) {
-        return new Boolean[] {filter.includesGuestsPlayed(), filter.includesGuestsRejected(), filter.includesBackgroundTracks()};
+        return new Boolean[] {filter.includesPlayed(), filter.includesRejected()};
     }
 
     @Test
@@ -35,12 +33,14 @@ class HistoryFilterTest {
     }
 
     @Test
-    @DisplayName("a missing, empty or unknown value is All; case and surrounding blanks do not matter")
+    @DisplayName("a missing, empty, unknown or old value (\"guest\", \"background\") is All; case and surrounding blanks do not matter")
     void shouldFallBackToAll() {
         assertThat(HistoryFilter.fromParam(null)).isEqualTo(HistoryFilter.ALL);
         assertThat(HistoryFilter.fromParam("")).isEqualTo(HistoryFilter.ALL);
         assertThat(HistoryFilter.fromParam("everything")).isEqualTo(HistoryFilter.ALL);
-        assertThat(HistoryFilter.fromParam("GUEST")).isEqualTo(HistoryFilter.GUEST);
+        assertThat(HistoryFilter.fromParam("guest")).isEqualTo(HistoryFilter.ALL);
+        assertThat(HistoryFilter.fromParam("background")).isEqualTo(HistoryFilter.ALL);
+        assertThat(HistoryFilter.fromParam("PLAYED")).isEqualTo(HistoryFilter.PLAYED);
         assertThat(HistoryFilter.fromParam("  rejected ")).isEqualTo(HistoryFilter.REJECTED);
     }
 }

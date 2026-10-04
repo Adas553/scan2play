@@ -1,13 +1,11 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.model.MusicProviderType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.QrCodeService;
-import com.scan2play.service.YouTubeSearchBudget;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -33,23 +31,20 @@ class DjDashboardControllerGuestLimitsTest {
     private DjService djService;
     private PartySettingsQueryService settingsService;
     private GuestRequestLimiter limiter;
-    private YouTubeSearchBudget budget;
     private DjDashboardController controller;
+    private PartySettingsEntity party;
 
     @BeforeEach
     void setUp() {
         djService = mock(DjService.class);
         settingsService = mock(PartySettingsQueryService.class);
         limiter = mock(GuestRequestLimiter.class);
-        budget = mock(YouTubeSearchBudget.class);
         controller = new DjDashboardController(djService, settingsService, mock(QrCodeService.class), mock(DjSessionHelper.class),
-                mock(PlayHistoryService.class), limiter, budget);
+                mock(PlayHistoryService.class), limiter);
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getDashboardQueue(PARTY)).thenReturn(List.of());
-    }
-
-    private void givenProvider(MusicProviderType provider) {
-        when(settingsService.getSettings(PARTY)).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).activeProvider(provider).build());
+        party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
+        when(settingsService.getSettings(PARTY)).thenReturn(party);
     }
 
     /** Polls the queue; {@code unchanged} = the client already has this version (the answer is a 304). */
@@ -63,8 +58,6 @@ class DjDashboardControllerGuestLimitsTest {
 
     @Test
     void noLimitReached_sayNone() {
-        givenProvider(MusicProviderType.YOUTUBE);
-
         MockHttpServletResponse response = poll(true);
 
         assertThat(response.getStatus()).isEqualTo(304);
@@ -73,31 +66,27 @@ class DjDashboardControllerGuestLimitsTest {
 
     @Test
     void aReachedLimit_isOnA304_too() {
-        givenProvider(MusicProviderType.YOUTUBE);
-        when(budget.isSpent()).thenReturn(true);
         when(limiter.isPartyLimitReached(PARTY)).thenReturn(true);
 
         MockHttpServletResponse response = poll(true);
 
         assertThat(response.getStatus()).isEqualTo(304);
-        assertThat(response.getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("search-spent,party-full");
+        assertThat(response.getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("party-full");
     }
 
     @Test
     void aFullAnswer_carriesTheHeader() {
-        givenProvider(MusicProviderType.YOUTUBE);
-        when(budget.isSpent()).thenReturn(true);
+        when(limiter.isPartyLimitReached(PARTY)).thenReturn(true);
 
         MockHttpServletResponse response = poll(false);
 
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeader("ETag")).isEqualTo(ETAG);
-        assertThat(response.getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("search-spent");
+        assertThat(response.getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("party-full");
     }
 
     @Test
     void theUseOfTheLimits_isOnEveryAnswer_a304Too() {
-        givenProvider(MusicProviderType.YOUTUBE);
         when(limiter.busiestClientRequestsUsed(PARTY)).thenReturn(24);
         when(limiter.partyRequestsUsed(PARTY)).thenReturn(5);
 
@@ -108,21 +97,10 @@ class DjDashboardControllerGuestLimitsTest {
     /** The party ended in another window (the DJ's phone): every window learns it from its next poll, a 304 too. */
     @Test
     void whetherThePartyIsOpen_isOnEveryAnswer_a304Too() {
-        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).activeProvider(MusicProviderType.YOUTUBE)
-                .active(true).build();
-        when(settingsService.getSettings(PARTY)).thenReturn(party);
         assertThat(poll(true).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("true");
 
         party.setActive(false);
         assertThat(poll(true).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("false");
         assertThat(poll(false).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("false");
-    }
-
-    @Test
-    void spentYouTubeSearches_doNotConcernARequestsOnlyParty() {
-        givenProvider(MusicProviderType.REQUESTS_ONLY);
-        when(budget.isSpent()).thenReturn(true);
-
-        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("none");
     }
 }

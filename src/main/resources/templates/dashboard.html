@@ -14,7 +14,7 @@
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
     <link href="/css/app.css" rel="stylesheet">
 </head>
-<body class="page-dj" th:attr="data-party-kind=${activeProvider}">
+<body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
 
     <!-- Navigation and Alert Fragment -->
@@ -41,10 +41,10 @@
                         <input type="hidden" id="partyCode" name="partyCode" th:value="${partyCode}">
                         <label for="vibeSelect" class="me-2 fw-bold text-light small text-nowrap" th:text="#{dashboard.vibe.label}">🌍 Global Vibe:</label>
                         <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" data-auto-submit>
-                            <!--/* "Any" means "the guests choose" — except at a requests-only party, whose guests pick no vibe */-->
+                            <!--/* "Any": the guests pick no vibe, the AI judges by the DJ's note (if any) */-->
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
                                     th:value="${vibe}"
-                                    th:text="${vibe.name() == 'ANY' and activeProvider.name() == 'REQUESTS_ONLY'} ? #{vibe.ANY.requests} : #{vibe.__${vibe}__}"
+                                    th:text="${vibe.name() == 'ANY'} ? #{vibe.ANY.requests} : #{vibe.__${vibe}__}"
                                     th:selected="${vibe == globalVibe}">
                             </option>
                         </select>
@@ -185,8 +185,6 @@
         <!--/* A server limit that stops guest songs now: shown from the page's model, then shown / hidden by
              dashboard.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
         <div id="guestLimitWarnings">
-            <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="search-spent"
-                 th:classappend="${searchBudgetSpent} ? '' : 'd-none'" th:text="#{dashboard.warning.search_spent}">YouTube searches spent</div>
             <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="party-full"
                  th:classappend="${partyLimitReached} ? '' : 'd-none'"
                  th:text="#{dashboard.warning.party_full(${serverLimitPerParty})}">Party limit reached</div>
@@ -209,7 +207,7 @@
                 <th th:text="#{dashboard.table.header.action}">Action</th>
             </tr>
             </thead>
-            <tbody id="song-list" th:fragment="songTableBody" th:attr="data-provider=${activeProvider}">
+            <tbody id="song-list" th:fragment="songTableBody">
             <tr th:each="req : ${history}" th:with="shownAt=${T(com.scan2play.util.Times).display(req.requestedAt)},
                           sortAt=${T(com.scan2play.util.Times).sortKey(req.requestedAt)}"
                 th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl}">

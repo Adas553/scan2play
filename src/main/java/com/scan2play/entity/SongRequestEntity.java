@@ -17,8 +17,7 @@ public class SongRequestEntity {
 
     /**
      * How long a request is kept, counted from {@link #requestedAt}: a request older than this many days is deleted
-     * (nightly, see {@code SongRequestRetentionService}). {@link #trackUrl} holds YouTube video IDs that came from the
-     * YouTube API, which may be kept for 30 calendar days at most; the privacy pages say the same.
+     * (nightly, see {@code SongRequestRetentionService}); the privacy pages say the same.
      */
     public static final int MAX_AGE_DAYS = 30;
 

@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -48,39 +47,22 @@ class SmokeTest {
     }
 
     @Test
-    @DisplayName("The landing page offers two kinds of party, both through /start, which keeps the choice; no Spotify any more")
-    void landingPage_offersTheRequestsOnlyTile() throws Exception {
-        mockMvc.perform(get("/"))
-                .andExpect(content().string(containsString("href=\"/start/youtube\"")))
-                .andExpect(content().string(containsString("href=\"/start/requests\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("spotify"))));
-    }
-
-    @Test
-    @DisplayName("The tile for DJs (requests only) comes first, on a row of its own, recommended; YouTube follows")
-    void landingPage_putsTheTileForDjsFirst() throws Exception {
+    @DisplayName("The landing page offers one kind of party, the one for DJs, through /start; no YouTube, no Spotify")
+    void landingPage_offersTheTileForDjs() throws Exception {
         String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
 
-        int requests = html.indexOf("href=\"/start/requests\"");
-        int lineBreak = html.indexOf("provider-cards-break");
-        assertThat(requests).isPositive().isLessThan(lineBreak);
-        assertThat(lineBreak).isLessThan(html.indexOf("href=\"/start/youtube\""));
-        // the recommended one is the tile for DJs, and only it
-        assertThat(html).containsOnlyOnce("provider-card--recommended");
-        assertThat(html.indexOf("provider-card--recommended")).isLessThan(lineBreak);
+        assertThat(html).containsOnlyOnce("href=\"/start\"").containsOnlyOnce("class=\"provider-card ")
+                .doesNotContain("/start/youtube", "/start/requests", "spotify", "YouTube API Services");
     }
 
     @Test
-    @DisplayName("GET /start/requests (public) keeps the choice in the session and goes on to Google's login; another kind goes home")
-    void start_keepsTheChosenKind_andGoesToGooglesLogin() throws Exception {
-        MvcResult result = mockMvc.perform(get("/start/requests"))
+    @DisplayName("GET /start (public) goes on to Google's login; so do the old links of the tiles")
+    void start_goesToGooglesLogin() throws Exception {
+        mockMvc.perform(get("/start"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/oauth2/authorization/google"))
-                .andReturn();
-        assertThat(result.getRequest().getSession().getAttribute("djChosenProvider")).isEqualTo("REQUESTS_ONLY");
-
+                .andExpect(redirectedUrl("/oauth2/authorization/google"));
+        mockMvc.perform(get("/start/requests")).andExpect(redirectedUrl("/oauth2/authorization/google"));
         mockMvc.perform(get("/start/youtube")).andExpect(redirectedUrl("/oauth2/authorization/google"));
-        mockMvc.perform(get("/start/vinyl")).andExpect(redirectedUrl("/"));
     }
 
     @Test

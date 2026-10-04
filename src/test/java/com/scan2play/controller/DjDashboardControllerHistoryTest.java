@@ -2,13 +2,10 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryEntry;
-import com.scan2play.model.HistoryEntry.Source;
 import com.scan2play.model.HistoryFilter;
-import com.scan2play.model.MusicProviderType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
-import com.scan2play.service.YouTubeSearchBudget;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PlayHistoryService.Page;
 import com.scan2play.service.QrCodeService;
@@ -63,7 +60,7 @@ class DjDashboardControllerHistoryTest {
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class), sessionHelper,
                 historyService,
-                mock(GuestRequestLimiter.class), mock(YouTubeSearchBudget.class))).build();
+                mock(GuestRequestLimiter.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
@@ -74,8 +71,8 @@ class DjDashboardControllerHistoryTest {
 
     private static List<HistoryEntry> entries(int count) {
         return IntStream.range(0, count)
-                .mapToObj(i -> new HistoryEntry(Source.GUEST, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES),
-                        "Song " + i, null, null, "Pop", "played", "ok", 5))
+                .mapToObj(i -> new HistoryEntry((long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES),
+                        "Song " + i, null, "Pop", "played", "ok", 5, null))
                 .toList();
     }
 
@@ -114,22 +111,6 @@ class DjDashboardControllerHistoryTest {
                 .andExpect(model().attribute("historyHeading", true));
         mockMvc.perform(get("/dj/history-view").principal(token).session(session))
                 .andExpect(model().attributeDoesNotExist("historyHeading"));
-    }
-
-    @Test
-    @DisplayName("the \"Playlist\" filter only at a YouTube party (the others have no background playlist) — the fragment and the page")
-    void shouldOfferThePlaylistFilterOnlyAtAYouTubeParty() throws Exception {
-        givenHistory(50, 3, false);
-        for (MusicProviderType provider : MusicProviderType.values()) {
-            when(sessionHelper.getPartySettings(token, session))
-                    .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).activeProvider(provider).build());
-            boolean youTube = provider == MusicProviderType.YOUTUBE;
-
-            mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).principal(token).session(session))
-                    .andExpect(model().attribute("historyHasPlaylist", youTube));
-            mockMvc.perform(get("/dj/history-view").principal(token).session(session))
-                    .andExpect(model().attribute("historyHasPlaylist", youTube));
-        }
     }
 
     @Test
@@ -199,15 +180,15 @@ class DjDashboardControllerHistoryTest {
     @Test
     @DisplayName("the filter and the limit work together: \"Show more\" of a filtered list asks for that filter with the next limit")
     void shouldCombineTheFilterWithTheLimit() throws Exception {
-        givenHistory(150, HistoryFilter.GUEST, 150, true);
+        givenHistory(150, HistoryFilter.REJECTED, 150, true);
 
         mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("limit", "150")
-                        .param("filter", "guest").principal(token).session(session))
-                .andExpect(model().attribute("historyFilter", "guest"))
+                        .param("filter", "rejected").principal(token).session(session))
+                .andExpect(model().attribute("historyFilter", "rejected"))
                 .andExpect(model().attribute("historyHasMore", true))
                 .andExpect(model().attribute("historyNextLimit", 200));
 
-        verify(historyService).getHistory(PARTY, 150, HistoryFilter.GUEST);
+        verify(historyService).getHistory(PARTY, 150, HistoryFilter.REJECTED);
     }
 
     @Test
@@ -219,8 +200,8 @@ class DjDashboardControllerHistoryTest {
                         .principal(token).session(session))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("historyFilter", "all"));
-        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", "")
-                .principal(token).session(session)).andExpect(model().attribute("historyFilter", "all"));
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", "background")
+                .principal(token).session(session)).andExpect(model().attribute("historyFilter", "all"));   // an old link
         mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY)
                 .principal(token).session(session)).andExpect(model().attribute("historyFilter", "all"));
 
@@ -234,12 +215,12 @@ class DjDashboardControllerHistoryTest {
     @Test
     @DisplayName("the standalone page takes the filter too")
     void shouldTakeTheFilterOnTheStandalonePage() throws Exception {
-        List<HistoryEntry> entries = givenHistory(50, HistoryFilter.BACKGROUND, 4, false);
+        List<HistoryEntry> entries = givenHistory(50, HistoryFilter.PLAYED, 4, false);
 
-        mockMvc.perform(get("/dj/history-view").param("filter", "background").principal(token).session(session))
+        mockMvc.perform(get("/dj/history-view").param("filter", "played").principal(token).session(session))
                 .andExpect(view().name("history"))
                 .andExpect(model().attribute("history", entries))
-                .andExpect(model().attribute("historyFilter", "background"));
+                .andExpect(model().attribute("historyFilter", "played"));
     }
 
     @Test

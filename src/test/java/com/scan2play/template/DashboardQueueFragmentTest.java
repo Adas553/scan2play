@@ -1,7 +1,6 @@
 package com.scan2play.template;
 
 import com.scan2play.entity.SongRequestEntity;
-import com.scan2play.model.MusicProviderType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -64,7 +63,6 @@ class DashboardQueueFragmentTest {
                         .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()),
                 locale);
         context.setVariable("history", queue);
-        context.setVariable("activeProvider", MusicProviderType.REQUESTS_ONLY);
         return engine.process("dashboard", Set.of("songTableBody"), context);
     }
 

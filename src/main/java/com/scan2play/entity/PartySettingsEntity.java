@@ -1,7 +1,5 @@
 package com.scan2play.entity;
 
-import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.util.CodeGenerator;
 import jakarta.persistence.*;
@@ -55,14 +53,6 @@ public class PartySettingsEntity {
     @Column(length = DJ_NAME_MAX)
     private String djName;
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    private MusicProviderType activeProvider = MusicProviderType.YOUTUBE;
-
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    private PlaybackMode playbackMode = PlaybackMode.MANUAL;
-
     // --- Rate Limiting ---
     @Builder.Default
     @Column(nullable = false)
@@ -76,16 +66,6 @@ public class PartySettingsEntity {
     @Builder.Default
     @Column(nullable = false)
     private int duplicateCheckWindow = 15;
-
-    // --- YouTube Fallback Playlist ---
-    /** YouTube playlist URL played automatically when the guest queue is empty (YouTube provider only). */
-    @Column(length = 500)
-    private String fallbackPlaylistUrl;
-
-    /** Whether the fallback playlist should play in shuffled order. Default: true. */
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean fallbackShuffle = true;
 
     @PrePersist
     public void generateCode() {

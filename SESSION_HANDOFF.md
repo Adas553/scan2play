@@ -14,7 +14,38 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   deletes the key "Klucz API 2" in Google Cloud and the variable in IntelliJ / Railway). Packages, each reviewed and committed by the
   owner before the next: **1. the player and Auto-Pilot** (browser side), 2. the background playlist and the YouTube API (services,
   entities), 3. one kind of party + migration V19 (written once, whole), 4. texts and docs.
-- **Uncommitted, for the owner's review — package 1, the player and Auto-Pilot gone:** every party's dashboard is the requests-only
+- **Package 2 DONE, uncommitted, waiting for the owner's review (2026-10-04)** — packages 2 and 3 merged: the server side + one
+  kind + V19. Green in copies: **248 unit tests, 19 database tests** (V19, `YouTubeRemovalMigrationIT`; `VibeMigrationIT` now gives
+  its old parties the kind V19 keeps), **23 browser scenarios** (`guest-page-requests-only` merged into `guest-page-under-csp`).
+  Finished in the second session: `HistoryFragmentTest` (no `Source` / playlist rows; "🔍 Preview" link), 28 unused keys dropped
+  from both bundles (the mood tiles, the vibe select, the search-spent warning, the footer's YouTube line, the landing's YouTube tile,
+  the history's guest / background filters, `ai.error.offline`, and the long-dead `history.nav.*`, `party.vibe.trust_ai`), the
+  scenarios (`lists.js` / `history-days.js`: "Played …" titles, the "played" filter; `guest-limits.js`: only `party-full`), the
+  dead `data-autocomplete-off` switch of `song-autocomplete.js`, the prompts ("the guest will be asked for a specific song" instead
+  of "will choose the mood mode"), the QR print page ("tytuł, wykonawcę albo fragment tekstu" instead of "albo nastrój"). **At the
+  next start of the app V19 deletes the owner's local YouTube parties** (agreed). What was done in the first session: deleted the services / entities / repositories / models of the player, the background
+  playlist and the YouTube API (`NextTrackService`, `PlayerLeaseService`, `Fallback*`, `YouTubeMusicProvider`, `YouTubePlaylistClient`,
+  `YouTubeSearchBudget`, `QueueService`, `MusicProvider`, `MusicProviderType`, `PlaybackMode`, `RequestMode`, `YouTubeUrls`, the mood
+  and normalize prompts); `util/YouTubeSearchLinks` (from `RequestsOnlyMusicProvider`) makes the "🔍 Podejrzyj" link;
+  `SongEvaluationService` (no API, no mood mode — a mood is sent back with `guest.error.song_only`, the AI down = unchecked to the DJ,
+  lyrics linked by the guest's words), `GuestController` (no mode, no style from the form: the DJ's vibe or ANY), `GuestQueueService`
+  (`GuestQueue(recent, myIds, mySong, mostWanted)`), `PlayHistoryService` / `HistoryEntry` / `HistoryFilter` (ALL / PLAYED /
+  REJECTED; old "guest"/"background" links = ALL), `DjService` (no DJ pick), votes by name only, `PartySettingsEntity` (no kind,
+  playback mode, playlist), `HomeController` (`/start`, `/start/{kind}` → Google), `DjSessionHelper`, `AppConfig` (no RestClient,
+  no @EnableAsync, no youtubeSearch cache), `application.properties` (no `youtube.*`), templates (dashboard, history — filters All /
+  Played / Rejected, "🔍 Podejrzyj" instead of LINK —, index — no tiles, no vibe select, no YouTube badge —, result, guest-queue,
+  footer without the YouTube line, landing — one tile to `/start`), `guest-party.js`, `app.css`. **Migration
+  `V19__drop_youtube.sql`** (deletes every party that is not REQUESTS_ONLY with its requests and feedback, drops `fallback_play`,
+  `fallback_track`, `youtube_cache`, `youtube_search_budget` and the columns `active_provider`, `playback_mode`,
+  `fallback_playlist_url`, `fallback_shuffle`) + `YouTubeRemovalMigrationIT`; `SpotifyRemovalMigrationIT` stops at V18; `MigrationIT`
+  updated. Tests rewritten: GuestLimits / History controller tests, GuestControllerTest, GuestQueueServiceTest, PlayHistoryServiceTest,
+  HistoryFilterTest, SongEvaluationServiceTest, DjServiceTest, AccountDeletionServiceTest, PartySettings* tests, SmokeTest,
+  SongRequestVotesIT, DashboardPageRenderTest (history sample: "Played Alpha/Bravo/Echo/Hotel" instead of "Playlist …"),
+  GuestPageRenderTest (writes only `guest.html` now), DashboardQueueFragmentTest. **Next — package 3 (the last):** texts (landing
+  guide, privacy, terms — no YouTube API, background playlist or search cache), AGENTS.md + Copilot copy (stack without YouTube Data
+  API), PROJECT_CONTEXT.md (the current state only), REVIEW.md (6.3 moot), this file; "Waiting for the owner": delete the key
+  "Klucz API 2" in Google Cloud and `YOUTUBE_API_KEY` in IntelliJ / Railway.
+- **Committed and pushed (`5a1bf79`, handoff `3a928f6`) — package 1, the player and Auto-Pilot gone:** every party's dashboard is the requests-only
   one ("Twój program DJ-a", "Pomiń" and "🔍 Podejrzyj" on every waiting request); gone: the player card, the lease banner, the
   player's buttons, "up next", the Auto-Pilot switch, the background playlist's card, the DJ pick; `youtube-autopilot.js`,
   `js/dashboard/fallback-queue.js`, `wake-lock.js`, fragments `player-controls`, `player-lease-banner`, `fallback-queue`;

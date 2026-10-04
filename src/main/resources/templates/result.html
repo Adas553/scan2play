@@ -33,10 +33,9 @@
         </div>
 
         <!--/* Where the guest's song waits (GuestQueueService): the first of the guest's songs still in the queue */-->
-        <div th:if="${guestQueue != null and guestQueue.myPosition() != null}" id="myPosition"
+        <div th:if="${guestQueue != null and guestQueue.mySong() != null}" id="myPosition"
              class="alert alert-success fw-bold py-2 mt-4 mb-0" role="status"
-             th:text="${guestQueue.inOrder()} ? #{home.queue.my_position(${guestQueue.mySong()}, ${guestQueue.myPosition()})}
-                                             : #{home.queue.my_waiting(${guestQueue.mySong()})}">Your song is number 3 in the queue</div>
+             th:text="#{home.queue.my_waiting(${guestQueue.mySong()})}">Your request waits for the DJ</div>
 
         <a th:href="@{/p/{code}(code=${partyCode})}" class="btn btn-outline-light mt-5" th:text="#{result.button.suggest_another}">Suggest another one</a>
     </div>

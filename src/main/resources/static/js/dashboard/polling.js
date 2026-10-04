@@ -14,7 +14,7 @@ import { applyListFilters, reapplySort } from './list-tools.js';
 let currentETag = null;
 
 /**
- * Shows the warning of each server limit the header names (search-spent, party-full) and hides the others. A missing
+ * Shows the warning of each server limit the header names (party-full) and hides the others. A missing
  * header (an answer from before this version, an error page) changes nothing.
  */
 function applyGuestLimits(value) {

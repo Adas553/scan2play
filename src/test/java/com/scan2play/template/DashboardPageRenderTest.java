@@ -6,14 +6,11 @@ import com.scan2play.controller.DjSessionHelper;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.HistoryEntry;
-import com.scan2play.model.HistoryEntry.Source;
 import com.scan2play.model.HistoryFilter;
-import com.scan2play.model.MusicProviderType;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
-import com.scan2play.service.YouTubeSearchBudget;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeAll;
@@ -110,7 +107,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsQueryService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, mock(YouTubeSearchBudget.class));   // not spent
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -163,8 +160,7 @@ class DashboardPageRenderTest {
 
     /** A party of the product: the DJ plays from their own software, the guests' requests wait on the dashboard. */
     private static PartySettingsEntity party() {
-        return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
-                .activeProvider(MusicProviderType.REQUESTS_ONLY).build();
+        return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY).build();
     }
 
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */
@@ -245,17 +241,6 @@ class DashboardPageRenderTest {
     }
 
     @Test
-    @DisplayName("a party of the old YouTube kind (until V19 removes it) gets the same dashboard: no player, Skip and Preview")
-    void shouldRenderTheSameDashboardForAPartyOfTheOldYouTubeKind() {
-        PartySettingsEntity old = party();
-        old.setActiveProvider(MusicProviderType.YOUTUBE);
-        String html = renderDashboard(old, List.of(song(1, "Song One")), PL);
-
-        assertWhatTheScriptsNeed(html);
-        assertThat(html).contains("Twój program DJ-a", "action=\"/dj/dashboard/dismiss\"", "🔍 Podejrzyj");
-    }
-
-    @Test
     @DisplayName("the Content-Security-Policy of the real server (written to target/browser-harness/csp.txt): the stand-in sends it, enforced")
     void shouldWriteThePolicyForTheBrowserTests() throws IOException {
         assertThat(SecurityConfig.CONTENT_SECURITY_POLICY).contains("script-src 'self'").doesNotContain("'unsafe-eval'", "youtube", "ytimg");
@@ -293,36 +278,24 @@ class DashboardPageRenderTest {
     }
 
     /** A row of the sample timeline: {@code i} counts back from the newest (1), see {@link #historyAt}. */
-    private static HistoryEntry historyGuest(int i, String title, String decision) {
-        return new HistoryEntry(Source.GUEST, (long) i, historyAt(i), title,
-                "https://www.youtube.com/watch?v=g" + String.format("%010d", i), "g" + String.format("%010d", i), "Pop", decision,
+    private static HistoryEntry historyEntry(int i, String title, String decision) {
+        return new HistoryEntry((long) i, historyAt(i), title, "https://www.youtube.com/results?search_query=song" + i, "Pop", decision,
                 "ok", 5 + i % 5, null, i == 5 ? 12 : i == 8 ? 3 : 1);   // the votes: a ranking to sort (12 before 3 — as numbers)
     }
 
-    private static HistoryEntry historyBackground(int i, String title) {
-        return new HistoryEntry(Source.BACKGROUND, (long) i, historyAt(i), title,
-                "https://www.youtube.com/watch?v=b" + String.format("%010d", i), "b" + String.format("%010d", i), null, "played", null, null);
-    }
-
-    /** What the real server does with a filter: the entries whose kind the filter includes (the flags are the real enum's). */
+    /** What the real server does with a filter: the entries whose decision the filter includes (the flags are the real enum's). */
     private static boolean belongsTo(HistoryEntry entry, HistoryFilter filter) {
-        if (entry.source() == Source.BACKGROUND) {
-            return filter.includesBackgroundTracks();
-        }
-        return "rejected".equals(entry.decision()) ? filter.includesGuestsRejected() : filter.includesGuestsPlayed();
+        return "rejected".equals(entry.decision()) ? filter.includesRejected() : filter.includesPlayed();
     }
 
     /** The History tab's fragment as {@code DjDashboardController.historyFragment} builds it for what the service answers, rendered in Polish. */
     private static String renderHistory(HistoryFilter filter, int limit, List<HistoryEntry> entries, boolean hasMore) {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(PARTY, limit, filter)).thenReturn(new PlayHistoryService.Page(entries, hasMore));
-        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);   // a party of the old YouTube kind: the sample has background tracks
-        PartySettingsEntity youTube = party();
-        youTube.setActiveProvider(MusicProviderType.YOUTUBE);
-        when(sessionHelper.getPartySettings(any(), any())).thenReturn(youTube);
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.getPartySettings(any(), any())).thenReturn(party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                mock(QrCodeService.class), sessionHelper, history,
-                mock(GuestRequestLimiter.class), mock(YouTubeSearchBudget.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
@@ -339,12 +312,12 @@ class DashboardPageRenderTest {
     @Test
     @DisplayName("the History tab as the dashboard fetches it: a first page and a longer one (\"Show more\") for each filter, through the real controller (written to target/browser-harness/history-<filter>[-more].html)")
     void shouldRenderTheHistoryForTheBrowserTests() throws IOException {
-        // ten entries on one timeline, newest first: guests' songs that played or were rejected, and tracks of the playlist
+        // ten entries on one timeline, newest first: songs that played or were rejected
         List<HistoryEntry> timeline = List.of(
-                historyGuest(1, "Żółć — piosenka", "played"), historyBackground(2, "Playlist Alpha"), historyGuest(3, "Rejected Beat", "rejected"),
-                historyBackground(4, "Playlist Bravo"), historyGuest(5, "Guest Charlie", "played"), historyGuest(6, "Rejected Delta", "rejected"),
-                historyBackground(7, "Playlist Echo"), historyGuest(8, "Guest Foxtrot", "played"), historyGuest(9, "Rejected Golf", "rejected"),
-                historyBackground(10, "Playlist Hotel"));
+                historyEntry(1, "Żółć — piosenka", "played"), historyEntry(2, "Played Alpha", "played"), historyEntry(3, "Rejected Beat", "rejected"),
+                historyEntry(4, "Played Bravo", "played"), historyEntry(5, "Guest Charlie", "played"), historyEntry(6, "Rejected Delta", "rejected"),
+                historyEntry(7, "Played Echo", "played"), historyEntry(8, "Guest Foxtrot", "played"), historyEntry(9, "Rejected Golf", "rejected"),
+                historyEntry(10, "Played Hotel", "played"));
         int firstPage = 4;   // a "page" of the sample is four entries, so that a short list has something to show more of
 
         for (HistoryFilter filter : HistoryFilter.values()) {

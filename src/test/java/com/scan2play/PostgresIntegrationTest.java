@@ -36,7 +36,6 @@ import java.util.concurrent.ThreadLocalRandom;
         "GOOGLE_AI_API_KEY=it-dummy",
         "GOOGLE_CLIENT_ID=it-dummy",
         "GOOGLE_CLIENT_SECRET=it-dummy",
-        "youtube.api-key=",   // even if the machine has a real key in YOUTUBE_API_KEY
         // the statement counts of the import and of the version read (PostgresStatistics)
         "spring.jpa.properties.hibernate.generate_statistics=true",
         "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN"

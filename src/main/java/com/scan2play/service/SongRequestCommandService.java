@@ -3,7 +3,6 @@ package com.scan2play.service;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongNames;
-import com.scan2play.util.YouTubeUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,7 +36,7 @@ public class SongRequestCommandService {
     public record Saved(Outcome outcome, SongRequestEntity request) {
     }
 
-    /** The upper 32 bits of every lock key of guest requests: "S2PR", apart from the fallback queue's "S2PQ". */
+    /** The upper 32 bits of every lock key of guest requests: "S2PR". */
     private static final long REQUESTS_LOCK_SPACE = 0x5332_5052L << 32;
 
     private final SongRequestRepository songRequestRepository;
@@ -73,14 +72,12 @@ public class SongRequestCommandService {
         return new Saved(Outcome.VOTE, song);
     }
 
-    /** The waiting song of the party that is the same as the request: the same YouTube video, or else the same name. */
+    /** The waiting song of the party that is the same as the request: the same name ({@link SongNames#same}). */
     private Optional<SongRequestEntity> sameSongWaiting(SongRequestEntity request) {
         List<SongRequestEntity> waiting = songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 request.getPartyCode(), List.of(DECISION_ACCEPTED));
-        Optional<String> video = YouTubeUrls.extractVideoId(request.getTrackUrl());
         return waiting.stream()
-                .filter(song -> (video.isPresent() && video.equals(YouTubeUrls.extractVideoId(song.getTrackUrl())))
-                        || SongNames.same(song.getSongName(), request.getSongName()))
+                .filter(song -> SongNames.same(song.getSongName(), request.getSongName()))
                 .findFirst();
     }
 

@@ -1,8 +1,6 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
 import org.junit.jupiter.api.Test;
@@ -44,15 +42,13 @@ class PartySettingsCommandServiceTest {
                 .id(1L)
                 .ownerId("owner-123")
                 .partyCode("ABC12")
-                .activeProvider(MusicProviderType.REQUESTS_ONLY)
                 .build();
 
         when(partySettingsRepository.findByOwnerId("owner-123")).thenReturn(Optional.of(existing));
 
-        PartySettingsEntity result = service.getOrCreatePartyForDj("owner-123", MusicProviderType.YOUTUBE);
+        PartySettingsEntity result = service.getOrCreatePartyForDj("owner-123");
 
         assertThat(result.getPartyCode()).isEqualTo("ABC12");
-        assertThat(result.getActiveProvider()).isEqualTo(MusicProviderType.REQUESTS_ONLY); // original preserved
         verify(partySettingsRepository, never()).save(any());
     }
 
@@ -62,12 +58,10 @@ class PartySettingsCommandServiceTest {
         when(partySettingsRepository.save(any(PartySettingsEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        PartySettingsEntity result = service.getOrCreatePartyForDj("new-owner", MusicProviderType.YOUTUBE);
+        PartySettingsEntity result = service.getOrCreatePartyForDj("new-owner");
 
         assertThat(result.getOwnerId()).isEqualTo("new-owner");
-        assertThat(result.getActiveProvider()).isEqualTo(MusicProviderType.YOUTUBE);
         assertThat(result.getGlobalVibe()).isEqualTo(VibeType.ANY);
-        assertThat(result.getPlaybackMode()).isEqualTo(PlaybackMode.MANUAL);
         assertThat(result.isActive()).isTrue();
         assertThat(result.getPartyCode()).isNotBlank().hasSize(5);
         verify(partySettingsRepository).save(any());

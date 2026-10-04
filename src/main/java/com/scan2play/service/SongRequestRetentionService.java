@@ -12,17 +12,14 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * Deletes the guests' song requests {@value SongRequestEntity#MAX_AGE_DAYS} days after they were made — the retention the
- * privacy pages promise. Before this only the deletion of a DJ account removed them, while the pages said "for the duration of
- * the party session"; and {@code song_requests.track_url} holds YouTube video IDs that came from the YouTube API, which may be
- * kept for 30 calendar days at most (API Services Developer Policies, III.E.4.d — the same rule as for the playlist tracks
- * and the play log, {@link FallbackTrackCommandService#purgeStaleTracks}).
+ * privacy pages promise (the requests hold what guests typed; a party's history needs no more than a month).
  * <p>
  * The purge is counted from {@code requested_at} (the table has no other date) and is bounded: it deletes in batches of
  * {@value #BATCH_SIZE}, each in its own transaction, and at most {@value #MAX_BATCHES} batches a night — the rest waits for
  * the next night. So the first run over a long backlog cannot hold locks for long or run for ever.
  * <p>
- * It also removes the guests' part of the DJ history for good (played and rejected requests are the same rows), which is why
- * that history reaches back 30 days at most, like the playlist's.
+ * It also removes the DJ history for good (played and rejected requests are the same rows), which is why that history reaches
+ * back 30 days at most.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,7 +34,7 @@ public class SongRequestRetentionService {
 
     private final SongRequestRepository songRequestRepository;
 
-    /** Runs daily at 04:45, after the YouTube cache cleanup (04:00) and the playlist purge (04:30). */
+    /** Runs daily at 04:45. */
     @Scheduled(cron = "0 45 4 * * *")
     public void purgeStaleRequests() {
         purgeRequestedBefore(Instant.now().minus(SongRequestEntity.MAX_AGE_DAYS, ChronoUnit.DAYS));

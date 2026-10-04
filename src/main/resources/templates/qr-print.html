@@ -32,7 +32,7 @@
     <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
     <ol class="steps">
         <li><span lang="pl">Zeskanuj kod aparatem telefonu</span> <span lang="en" class="second">Scan the code with your phone camera</span></li>
-        <li><span lang="pl">Wpisz tytuł, wykonawcę albo nastrój</span> <span lang="en" class="second">Type a title, an artist or a mood</span></li>
+        <li><span lang="pl">Wpisz tytuł, wykonawcę albo fragment tekstu</span> <span lang="en" class="second">Type a title, an artist or a line of the lyrics</span></li>
         <li><span lang="pl">DJ zagra Twoją piosenkę</span> <span lang="en" class="second">The DJ plays your song</span></li>
     </ol>
     <p class="link">
@@ -49,8 +49,8 @@
         <div class="text">
             <p class="title"><span lang="pl">Zeskanuj i zamów piosenkę</span><br>
                 <span lang="en" class="second">Scan to request a song</span></p>
-            <p class="small"><span lang="pl">Tytuł, wykonawca albo nastrój</span><br>
-                <span lang="en" class="second">A title, an artist or a mood</span></p>
+            <p class="small"><span lang="pl">Tytuł, wykonawca albo fragment tekstu</span><br>
+                <span lang="en" class="second">A title, an artist or a line of the lyrics</span></p>
             <p class="small link" th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</p>
             <p class="small"><span lang="pl">Kod</span> / <span lang="en">Code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
         </div>

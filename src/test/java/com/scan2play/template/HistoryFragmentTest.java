@@ -1,7 +1,6 @@
 package com.scan2play.template;
 
 import com.scan2play.model.HistoryEntry;
-import com.scan2play.model.HistoryEntry.Source;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,13 +47,8 @@ class HistoryFragmentTest {
     }
 
     private static HistoryEntry guest(int i, String songName, String decision) {
-        return new HistoryEntry(Source.GUEST, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant(), songName,
-                "https://www.youtube.com/watch?v=hTWKbfoikeg", "hTWKbfoikeg", "Pop", decision, "ok", 7);
-    }
-
-    private static HistoryEntry background(int i, String title) {
-        return new HistoryEntry(Source.BACKGROUND, (long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant(), title,
-                "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ", null, "played", null, null);
+        return new HistoryEntry((long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant(), songName,
+                "https://www.youtube.com/results?search_query=" + songName.replace(' ', '+'), "Pop", decision, "ok", 7, null);
     }
 
     private static String render(List<HistoryEntry> history, boolean hasMore, Locale locale) {
@@ -66,7 +60,6 @@ class HistoryFragmentTest {
         context.setVariable("history", history);
         context.setVariable("historyHasMore", hasMore);
         context.setVariable("historyNextLimit", 100);
-        context.setVariable("historyHasPlaylist", true);   // a YouTube party (with a background playlist), unless a test says otherwise
         if (heading) {
             context.setVariable("historyHeading", true);
         }
@@ -102,10 +95,10 @@ class HistoryFragmentTest {
     @Test
     @DisplayName("the button of the filter in the model (historyFilter) is the lit one, and only that one; no filter lights All")
     void shouldLightTheButtonOfTheFilter() {
-        for (String filter : new String[] {"all", "guest", "background", "played", "rejected"}) {
+        for (String filter : new String[] {"all", "played", "rejected"}) {
             String html = renderWithFilter(filter);
 
-            for (String other : new String[] {"all", "guest", "background", "played", "rejected"}) {
+            for (String other : new String[] {"all", "played", "rejected"}) {
                 assertThat(html.contains("class=\"btn btn-outline-secondary btn-sm active\" data-list-filter=\"" + other + "\""))
                         .as("%s is lit when the filter is %s", other, filter).isEqualTo(other.equals(filter));
             }
@@ -120,80 +113,55 @@ class HistoryFragmentTest {
         context.setVariable("historyHasMore", false);
         context.setVariable("historyNextLimit", 100);
         context.setVariable("historyFilter", filter);
-        context.setVariable("historyHasPlaylist", true);
         return engine.process("history", Set.of("historyTableContent"), context);
     }
 
     @Test
-    @DisplayName("the \"Playlist\" filter only where the party has a background playlist (a YouTube party, historyHasPlaylist)")
-    void shouldOfferThePlaylistFilterOnlyAtAYouTubeParty() {
-        assertThat(renderWithFilter("all")).contains("data-list-filter=\"background\"");
-
-        Context context = new Context(Locale.ENGLISH);   // a requests-only party: no historyHasPlaylist
-        context.setVariable("history", List.of(guest(1, "Alpha", "played")));
-        context.setVariable("historyHasMore", false);
-        context.setVariable("historyNextLimit", 100);
-        assertThat(engine.process("history", Set.of("historyTableContent"), context))
-                .doesNotContain("data-list-filter=\"background\"", ">Playlist<")
-                .contains("data-list-filter=\"all\"", "data-list-filter=\"guest\"", "data-list-filter=\"played\"", "data-list-filter=\"rejected\"");
-    }
-
-    @Test
-    @DisplayName("a track of the background playlist is a row like the others: played, with its title and a link to the video")
-    void shouldRenderABackgroundTrack() {
-        String html = render(List.of(background(7, "Rick Astley - Never Gonna Give You Up")), false, Locale.ENGLISH);
-
-        assertThat(html).containsPattern("<tr[^>]*data-song-name=\"Rick Astley - Never Gonna Give You Up\"[^>]*data-decision=\"played\"");
-        assertThat(html).contains("href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\"");
-        assertThat(html).contains("🎶 Playlist");            // in the vibe column, where a guest's song has its style
-        assertThat(html).contains("title=\"🎶 Playlist\"");   // and beside the title, for a narrow screen that hides that column
-    }
-
-    @Test
-    @DisplayName("a background track has no style, comment or energy: no empty style badge, a dash for the energy")
-    void shouldNotInventTheGuestOnlyColumns_forABackgroundTrack() {
-        String html = render(List.of(background(7, "Song")), false, Locale.ENGLISH);
-
-        assertThat(html).doesNotContain("badge-energy");
-        assertThat(html).containsPattern("data-sort-value=\"energy\"[^>]*data-val=\"0\"");
-        assertThat(html).contains("—");
-        assertThat(html).doesNotContain("text-bg-secondary\" >");   // no empty style badge
-        assertThat(html).doesNotContain(">null<");
-    }
-
-    @Test
-    @DisplayName("a guest's song shows its style and energy, and no playlist marker")
-    void shouldRenderAGuestSong() {
-        String html = render(List.of(guest(1, "Alpha", "played")), false, Locale.ENGLISH);
+    @DisplayName("a song shows its style and energy, and the \"🔍 Preview\" link to YouTube's search results")
+    void shouldRenderASong() {
+        String html = render(List.of(guest(1, "Alpha Beta", "played")), false, Locale.ENGLISH);
 
         assertThat(html).contains(">Pop<", "7/10");
-        assertThat(html).doesNotContain("🎶");
+        assertThat(html).contains("href=\"https://www.youtube.com/results?search_query=Alpha+Beta\"", ">🔍 Preview<");
+        assertThat(html).doesNotContain(">LINK<", "🎶");
     }
 
     @Test
-    @DisplayName("a guest's song shows the guest's own words under it when they say something else; a background track never")
+    @DisplayName("a song without a link has no \"🔍 Preview\"; one without an energy rating shows a dash, never \"null\"")
+    void shouldLeaveOutWhatIsMissing() {
+        HistoryEntry bare = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "Pop", "rejected",
+                null, null, null);
+        String html = render(List.of(bare), false, Locale.ENGLISH);
+
+        assertThat(html).doesNotContain("🔍", "badge-energy", ">null<");
+        assertThat(html).containsPattern("data-sort-value=\"energy\"[^>]*data-val=\"0\"");
+        assertThat(html).contains("—");
+    }
+
+    @Test
+    @DisplayName("a song shows the guest's own words under it when they say something else")
     void shouldShowTheGuestsWords() {
-        HistoryEntry shrek = new HistoryEntry(Source.GUEST, 1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Smash Mouth - All Star",
-                null, null, "Pop", "rejected", "no", 3, "the one from Shrek");
-        HistoryEntry same = new HistoryEntry(Source.GUEST, 2L, java.time.Instant.parse("2026-09-29T18:01:00Z"), "Wilki - Baśka",
-                null, null, "Pop", "played", "ok", 7, "wilki baska");
-        String html = render(List.of(shrek, same, background(3, "Intro")), false, Locale.ENGLISH);
+        HistoryEntry shrek = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Smash Mouth - All Star",
+                null, "Pop", "rejected", "no", 3, "the one from Shrek");
+        HistoryEntry same = new HistoryEntry(2L, java.time.Instant.parse("2026-09-29T18:01:00Z"), "Wilki - Baśka",
+                null, "Pop", "played", "ok", 7, "wilki baska");
+        String html = render(List.of(shrek, same), false, Locale.ENGLISH);
 
         assertThat(html).contains("guest wrote: “the one from Shrek”");
         assertThat(html.split("guest-text", -1)).as("only the first row has the line").hasSize(2);
     }
 
     @Test
-    @DisplayName("a guest's song shows its votes (the history sorted by them is the party's ranking); a background track none")
+    @DisplayName("a song shows its votes (the history sorted by them is the party's ranking); one guest's is a grey 1")
     void shouldShowTheVotes() {
-        HistoryEntry wanted = new HistoryEntry(Source.GUEST, 1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Wanted",
-                null, null, "Pop", "played", "ok", 7, null, 12);
-        String html = render(List.of(wanted, background(2, "Intro")), false, Locale.ENGLISH);
+        HistoryEntry wanted = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Wanted",
+                null, "Pop", "played", "ok", 7, null, 12);
+        String html = render(List.of(wanted, guest(2, "Intro", "played")), false, Locale.ENGLISH);
 
         assertThat(html).contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Votes<");
         assertThat(html).contains("data-sort-value=\"votes\" data-val=\"12\"").containsPattern("text-bg-warning\">12<");
         String intro = html.substring(html.indexOf("data-song-name=\"Intro\""));
-        assertThat(intro.substring(0, intro.indexOf("</tr>"))).contains("data-val=\"0\"").doesNotContain("badge text-bg-secondary\">1<", "text-bg-warning");
+        assertThat(intro.substring(0, intro.indexOf("</tr>"))).contains("data-val=\"1\"", "badge text-bg-secondary\">1<").doesNotContain("text-bg-warning");
     }
 
     @Test
@@ -215,19 +183,16 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("the list has a search box, the five filter buttons (All chosen at first, then Guests, Playlist, Played, Rejected), a count and a scroll box")
+    @DisplayName("the list has a search box, the three filter buttons (All chosen at first, then Played, Rejected), a count and a scroll box")
     void shouldHaveTheListTools() {
         String html = render(List.of(guest(1, "Alpha", "played")), false, Locale.ENGLISH);
 
         assertThat(html).contains("data-list", "data-list-search", "data-list-count", "data-nomatch", "list-scroll");
         assertThat(html).containsPattern("class=\"btn btn-outline-secondary btn-sm active\"[^>]*data-list-filter=\"all\"");
-        assertThat(html).contains("data-list-filter=\"guest\"", "data-list-filter=\"background\"",
-                "data-list-filter=\"played\"", "data-list-filter=\"rejected\"");
-        assertThat(html).contains(">All<", ">Guests<", ">Playlist<", ">Played<", ">Rejected<", "placeholder=\"Search");
-        assertThat(html.split("data-list-filter=", -1)).hasSize(6);             // exactly five buttons
-        assertThat(html.indexOf("data-list-filter=\"all\"")).isLessThan(html.indexOf("data-list-filter=\"guest\""));
-        assertThat(html.indexOf("data-list-filter=\"guest\"")).isLessThan(html.indexOf("data-list-filter=\"background\""));
-        assertThat(html.indexOf("data-list-filter=\"background\"")).isLessThan(html.indexOf("data-list-filter=\"played\""));
+        assertThat(html).contains("data-list-filter=\"played\"", "data-list-filter=\"rejected\"");
+        assertThat(html).contains(">All<", ">Played<", ">Rejected<", "placeholder=\"Search");
+        assertThat(html.split("data-list-filter=", -1)).hasSize(4);             // exactly three buttons
+        assertThat(html.indexOf("data-list-filter=\"all\"")).isLessThan(html.indexOf("data-list-filter=\"played\""));
         assertThat(html.indexOf("data-list-filter=\"played\"")).isLessThan(html.indexOf("data-list-filter=\"rejected\""));
     }
 
@@ -266,13 +231,13 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("Polish texts of the tools and of the playlist marker, with every message key resolved")
+    @DisplayName("Polish texts of the tools and of the link, with every message key resolved")
     void shouldRenderInPolish() {
-        String html = render(List.of(guest(1, "Alpha", "played"), background(2, "Utwór")), true, PL);
+        String html = render(List.of(guest(1, "Alpha", "played"), guest(2, "Utwór", "rejected")), true, PL);
 
-        assertThat(html).contains(">Wszystkie<", ">Goście<", ">Playlista<", ">Zagrane<", ">Odrzucone<", ">Pokaż więcej<",
+        assertThat(html).contains(">Wszystkie<", ">Zagrane<", ">Odrzucone<", ">Pokaż więcej<",
                 "placeholder=\"Szukaj…\"");
-        assertThat(html).contains("Nic nie pasuje.", "🎶 Playlista");
+        assertThat(html).contains("Nic nie pasuje.", ">🔍 Podejrzyj<");
         assertThat(html).doesNotContain("??");
     }
 }

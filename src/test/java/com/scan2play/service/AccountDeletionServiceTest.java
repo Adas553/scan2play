@@ -1,8 +1,6 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.repository.FallbackPlayRepository;
-import com.scan2play.repository.FallbackTrackRepository;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
@@ -27,7 +25,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Account deletion is a Google API Services User Data Policy requirement — every table that holds
- * per-party data must be cleaned, including the server-side fallback tracks and the log of what they played.
+ * per-party data must be cleaned.
  */
 @ExtendWith(MockitoExtension.class)
 class AccountDeletionServiceTest {
@@ -42,10 +40,6 @@ class AccountDeletionServiceTest {
     @Mock
     private FeedbackRepository feedbackRepository;
     @Mock
-    private FallbackTrackRepository fallbackTrackRepository;
-    @Mock
-    private FallbackPlayRepository fallbackPlayRepository;
-    @Mock
     private CacheManager cacheManager;
     @Mock
     private Cache cache;
@@ -54,24 +48,21 @@ class AccountDeletionServiceTest {
     private AccountDeletionService service;
 
     @Test
-    @DisplayName("deletes song requests, fallback tracks and their play log, party settings and feedback — settings last")
+    @DisplayName("deletes song requests, party settings and feedback — settings last")
     void shouldDeleteAllPartyData() {
         PartySettingsEntity party = PartySettingsEntity.builder().ownerId(OWNER).partyCode(PARTY).build();
         when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.of(party));
 
         service.deleteAllUserData(OWNER);
 
-        InOrder order = inOrder(songRequestRepository, fallbackTrackRepository, fallbackPlayRepository,
-                partySettingsRepository, feedbackRepository);
+        InOrder order = inOrder(songRequestRepository, partySettingsRepository, feedbackRepository);
         order.verify(songRequestRepository).deleteByPartyCode(PARTY);
-        order.verify(fallbackTrackRepository).deleteByPartyCode(PARTY);
-        order.verify(fallbackPlayRepository).deleteByPartyCode(PARTY);
         order.verify(partySettingsRepository).delete(party);
         order.verify(feedbackRepository).deleteByOwnerId(OWNER);
     }
 
     @Test
-    @DisplayName("the deleted party is evicted from every cache that holds it under its code (settings with the Spotify tokens, the queues)")
+    @DisplayName("the deleted party is evicted from every cache that holds it under its code (the settings, the queue)")
     void shouldEvictThePartyFromTheCaches() {
         PartySettingsEntity party = PartySettingsEntity.builder().ownerId(OWNER).partyCode(PARTY).build();
         when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.of(party));
@@ -91,6 +82,6 @@ class AccountDeletionServiceTest {
         service.deleteAllUserData(OWNER);
 
         verify(feedbackRepository).deleteByOwnerId(OWNER);
-        verifyNoInteractions(songRequestRepository, fallbackTrackRepository, fallbackPlayRepository, cacheManager);
+        verifyNoInteractions(songRequestRepository, cacheManager);
     }
 }

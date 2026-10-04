@@ -24,7 +24,7 @@ class PartySettingsQueryServiceTest {
     @Test
     void readsTheDatabaseOnceAndHandsOutCopies() {
         when(repository.findByPartyCode("ABC12")).thenReturn(Optional.of(PartySettingsEntity.builder().id(7L)
-                .partyCode("ABC12").ownerId("owner").requestLimit(3).fallbackPlaylistUrl("https://x").build()));
+                .partyCode("ABC12").ownerId("owner").requestLimit(3).vibeNote("bez rapu").build()));
 
         PartySettingsEntity first = service.getSettings("ABC12");
         PartySettingsEntity second = service.getSettings("ABC12");
@@ -32,7 +32,7 @@ class PartySettingsQueryServiceTest {
         verify(repository, times(1)).findByPartyCode("ABC12");
         assertThat(first).isNotSameAs(second).isEqualTo(second);
         assertThat(first.getId()).isEqualTo(7L);
-        assertThat(first.getFallbackPlaylistUrl()).isEqualTo("https://x");
+        assertThat(first.getVibeNote()).isEqualTo("bez rapu");
     }
 
     @Test

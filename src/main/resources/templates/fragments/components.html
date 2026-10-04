@@ -162,21 +162,13 @@
 </th:block>
 
 <!-- ======================================================================
-     Footer Fragment — Legal links (YouTube ToS, Google Privacy, Scan2Play legal pages)
-     Required by YouTube API Terms of Service (Section III) and Google OAuth compliance.
+     Footer Fragment — Scan2Play's legal pages (required for Google OAuth verification)
      ====================================================================== -->
 <footer th:fragment="footer" class="text-center py-4 mt-5 border-top border-secondary s2p-footer">
     <div class="container">
         <p class="mb-2">
             <a href="/privacy" class="text-secondary me-3" th:text="#{footer.privacy}">Privacy Policy</a>
             <a href="/terms" class="text-secondary me-3" th:text="#{footer.terms}">Terms of Service</a>
-        </p>
-        <!--/* The YouTube API attribution — not on the pages of a requests-only party, which uses no YouTube API (its links are
-             plain YouTube pages); the pages that do not know the party (the landing page, the legal pages) keep it */-->
-        <p class="mb-1" th:unless="${activeProvider != null and activeProvider.name() == 'REQUESTS_ONLY'}" th:utext="#{footer.youtube.attribution}">
-            This application uses
-            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-secondary">YouTube API Services</a>.
-            <a href="https://policies.google.com/privacy" target="_blank" class="text-secondary">Google Privacy Policy</a>.
         </p>
         <p class="mb-0">&copy; 2026 Scan2Play</p>
     </div>

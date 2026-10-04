@@ -19,7 +19,6 @@ public final class ViewAttributes {
     public static final String GLOBAL_VIBE = "globalVibe";
     public static final String VIBE_NOTE = "vibeNote";
     public static final String DJ_NAME = "djName";
-    public static final String ACTIVE_PROVIDER = "activeProvider";
     public static final String PARTY_CODE = "partyCode";
     public static final String IS_ACTIVE = "isActive";
 
@@ -29,8 +28,6 @@ public final class ViewAttributes {
     public static final String HISTORY_NEXT_LIMIT = "historyNextLimit";
     public static final String HISTORY_HEADING = "historyHeading";
     public static final String HISTORY_FILTER = "historyFilter";
-    /** Whether the history offers the "Playlist" filter: only a YouTube party has a background playlist. */
-    public static final String HISTORY_HAS_PLAYLIST = "historyHasPlaylist";
     public static final String QR_CODE_BASE64 = "qrCodeBase64";
     public static final String PERMANENT_LINK = "permanentLink";
     /** The page to print the QR code on: "poster" (one A4 poster) or "cards" (eight cards to cut out). */
@@ -43,16 +40,14 @@ public final class ViewAttributes {
     public static final String SERVER_LIMIT_PER_PARTY = "serverLimitPerParty";
     public static final String PARTY_REQUESTS_USED = "partyRequestsUsed";
     public static final String BUSIEST_NETWORK_REQUESTS_USED = "busiestNetworkRequestsUsed";
-    public static final String SEARCH_BUDGET_SPENT = "searchBudgetSpent";
     public static final String PARTY_LIMIT_REACHED = "partyLimitReached";
 
     // --- Index/Guest Attributes ---
-    /** What plays now, the next guest songs and where the guest's own song waits ({@code GuestQueueService.GuestQueue}). */
+    /** The requests sent lately and whether the guest's own song waits ({@code GuestQueueService.GuestQueue}). */
     public static final String GUEST_QUEUE = "guestQueue";
     public static final String ERROR_MESSAGE = "errorMessage";
-    /** The text of a request sent back to the form (a mood sent as a song), and the mode the form should then show. */
+    /** The text of a request sent back to the form (a mood, not a song). */
     public static final String LAST_REQUEST = "lastRequest";
-    public static final String SUGGESTED_MODE = "suggestedMode";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";

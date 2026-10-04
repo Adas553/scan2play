@@ -1,9 +1,9 @@
 // The DJ sees the server's guest limits (review item 4.1, the owner's wish 2026-09-30: "Czy DJ wie jakie ma limity na imprezę?").
 //
 // The limits card says what the server allows (30 requests from one network per 10 min, 300 per party per 24 h — the values
-// DashboardPageRenderTest renders the page with). And when a limit stops guest songs — today's YouTube searches are spent (new songs
-// come without a video, Auto-Pilot skips them) or the party has used its 300 — a warning above the queue says so. The page learns it
-// from the X-Guest-Limits header of every queue poll, the 304s included: the queue does not change when a limit is reached.
+// DashboardPageRenderTest renders the page with). And when the party has used its 300 — the limit that stops guest songs — a warning
+// above the queue says so. The page learns it from the X-Guest-Limits header of every queue poll, the 304s included: the queue does
+// not change when a limit is reached.
 S2P.scenario({
     name: 'guest-limit-warnings',
     title: 'the server limits are shown, and a warning appears and goes with the X-Guest-Limits header of the queue poll',
@@ -11,7 +11,9 @@ S2P.scenario({
     run: async function (t) {
         const warning = function (flag) { return document.querySelector('#guestLimitWarnings [data-guest-limit="' + flag + '"]'); };
         const shown = function () {
-            return ['search-spent', 'party-full'].filter(function (flag) { return !warning(flag).classList.contains('d-none'); });
+            return Array.from(document.querySelectorAll('#guestLimitWarnings [data-guest-limit]')).filter(function (w) {
+                return !w.classList.contains('d-none');
+            }).map(function (w) { return w.getAttribute('data-guest-limit'); });
         };
         const polls = async function () { return t.stand.count('GET /dj/dashboard/updates'); };
         /** Waits until two more polls have been answered with the state the last config set. */
@@ -34,14 +36,16 @@ S2P.scenario({
         t.check('the whole party: 300 per 24 h and how much it has used: ' + lines[1], lines[1].indexOf('0/300') >= 0);
         t.step('no limit is reached: no warning', shown(), []);
 
-        await t.stand.config({ guestLimits: 'search-spent' });
+        t.check('the YouTube searches have no warning any more (one warning: the party limit)',
+            !warning('search-spent') && document.querySelectorAll('#guestLimitWarnings [data-guest-limit]').length === 1);
+
+        await t.stand.config({ guestLimits: 'party-full' });
         await afterPolls();
-        t.step('YouTube searches spent: its warning shows (the poll answered 304)', shown(), ['search-spent']);
-        t.check('the warning says Auto-Pilot skips the new songs', warning('search-spent').textContent.indexOf('Auto-Pilot') >= 0);
+        t.step('the party limit is reached: its warning shows (the poll answered 304)', shown(), ['party-full']);
 
         await t.stand.config({ guestLimits: 'search-spent,party-full' });
         await afterPolls();
-        t.step('the party limit too: both warnings', shown(), ['search-spent', 'party-full']);
+        t.step('a flag the page does not know (an older server\'s) changes nothing', shown(), ['party-full']);
 
         await t.stand.config({ guestLimits: 'none' });
         await afterPolls();

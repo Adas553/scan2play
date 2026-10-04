@@ -2,8 +2,6 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
-import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.RequestMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
@@ -23,7 +21,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -56,7 +53,6 @@ public class GuestController {
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
             model.addAttribute(VIBE_NOTE, settings.getVibeNote());
             model.addAttribute(DJ_NAME, settings.getDjName());
-            model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
             model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
             model.addAttribute(PARTY_CODE, partyCode);
             return "index";
@@ -67,7 +63,7 @@ public class GuestController {
     }
 
     /**
-     * The list under the request form alone (what plays now, the next guest songs, where the guest's song waits): the party page
+     * The list under the request form alone (the requests sent lately, where the guest's song waits): the party page
      * fetches it again when the guest comes back to it and on "↻ Odśwież" — no timer, so a room of phones asks only when someone
      * looks. Empty when the party has ended or there is nothing to show.
      */
@@ -85,14 +81,12 @@ public class GuestController {
 
     /**
      * Processes a song request asynchronously using {@link Callable} to release the Tomcat thread
-     * during the AI evaluation and the YouTube search (~2-4 seconds).
+     * during the AI evaluation (~2-4 seconds).
      * The HTTP connection stays open; the guest sees the result when processing completes.
      */
     @PostMapping("/{partyCode}/request")
     public Callable<String> requestSong(@PathVariable String partyCode,
                               @RequestParam String songName,
-                              @RequestParam(required = false) String style,
-                              @RequestParam(required = false) String requestMode,
                               Model model,
                               HttpSession session,
                               HttpServletRequest request,
@@ -124,34 +118,24 @@ public class GuestController {
                     };
                 }
 
-                // A requests-only party takes specific songs only (its DJ sets the mood): whatever the form sent, a song
-                boolean songsOnly = settings.getActiveProvider() == MusicProviderType.REQUESTS_ONLY;
-                RequestMode mode = songsOnly ? RequestMode.SONG : RequestMode.fromParam(requestMode);
                 // The guest's earlier requests: the same song asked for again while it waits is not one more vote
                 DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
-                        styleOf(settings, style, locale), mode, guestSessionService.myRequestIds(session, partyCode));
-                // A request that came to nothing — a mood sent back to the form, the AI not answering, the guest's own song
-                // asked for again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
-                if (response.isMood() || response.isAiUnavailable() || response.ownSong()) {
+                        styleOf(settings, locale), guestSessionService.myRequestIds(session, partyCode));
+                // A request that came to nothing — a mood sent back to the form, the guest's own song asked for again — does not
+                // use the guest's limit up (the server's own limits keep counting it: against abuse)
+                if (response.isMood() || response.ownSong()) {
                     guestSessionService.giveBack(session, partyCode);
                 }
-                if (songsOnly && response.isMood()) {
-                    // A mood at a party that takes songs only: nothing was saved. Back to the form with the text, asking for a song.
+                if (response.isMood()) {
+                    // A mood, not a song (the DJ sets the mood): nothing was saved. Back to the form with the text, asking for a song.
                     redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
                     return refuse(redirectAttributes, partyCode, "guest.error.song_only");
-                }
-                if (mode == RequestMode.SONG && response.isMood()) {
-                    // A mood sent as a song: nothing was saved. Back to the form with the text and the mood mode chosen.
-                    redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
-                    redirectAttributes.addFlashAttribute(SUGGESTED_MODE, RequestMode.MOOD.name());
-                    return refuse(redirectAttributes, partyCode, "guest.error.mood_in_song_mode");
                 }
 
                 // Remembered in the session, so the party page (and this result) can say where the guest's song waits
                 guestSessionService.rememberRequest(session, partyCode, response.requestId());
                 model.addAttribute(RESPONSE, response);
                 model.addAttribute(PARTY_CODE, partyCode);
-                model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
                 model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
                 return "result";
             } catch (IllegalArgumentException e) {
@@ -162,24 +146,16 @@ public class GuestController {
     }
 
     /**
-     * The style the AI judges the request against (review item 4.6) — decided here, not by the form, whose fields a guest can
-     * change: the DJ's vibe when the DJ set one (by its name in the guest's language, as the form sent it), otherwise the
-     * guest's pick from the list of vibes ({@link VibeType} by name), and {@code ANY} for anything else. At a requests-only party
-     * the guests pick no vibe (its DJ sets it, or the AI judges by the DJ's vibe note): {@code ANY} whatever the form sent.
+     * The style the AI judges the request against (review item 4.6) — decided here, not by the form: the DJ's vibe when the DJ set
+     * one (by its name in the guest's language), otherwise {@code ANY} (the AI judges by the DJ's vibe note, if any). The guests
+     * pick no vibe: the DJ sets it.
      */
-    String styleOf(PartySettingsEntity settings, String requested, Locale locale) {
+    String styleOf(PartySettingsEntity settings, Locale locale) {
         VibeType partyVibe = settings.getGlobalVibe();
         if (partyVibe != null && partyVibe != VibeType.ANY) {
             return messageSource.getMessage("vibe." + partyVibe.name(), null, partyVibe.name(), locale);
         }
-        if (settings.getActiveProvider() == MusicProviderType.REQUESTS_ONLY) {
-            return VibeType.ANY.name();
-        }
-        return Arrays.stream(VibeType.values())
-                .map(VibeType::name)
-                .filter(name -> name.equals(requested))
-                .findFirst()
-                .orElse(VibeType.ANY.name());
+        return VibeType.ANY.name();
     }
 
     /**

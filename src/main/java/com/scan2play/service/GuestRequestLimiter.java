@@ -18,8 +18,8 @@ import java.util.Optional;
  * Server-side limits on guest song requests that do not depend on the session cookie.
  * <p>
  * The per-guest limit set by the DJ lives in the session ({@link GuestSessionService}), and a request without the cookie gets
- * a new session and so no limit at all. Every request costs a Gemini call, and an accepted new title a YouTube search from a
- * daily limit that all parties share. Two limits here, both counted <b>before</b> the evaluation and atomically:
+ * a new session and so no limit at all. Every request costs a Gemini call. Two limits here, both counted <b>before</b> the
+ * evaluation and atomically:
  * <ul>
  *     <li><b>client IP + party</b> — {@code guest.limit.per-ip-party} requests per {@code guest.limit.per-ip-window-minutes}.
  *         Loose on purpose: the guests on a venue's Wi-Fi share one public address.</li>

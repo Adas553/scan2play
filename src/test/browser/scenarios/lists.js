@@ -100,19 +100,19 @@
             t.step('the history shows in place of the queue', [getComputedStyle(box).display !== 'none', getComputedStyle(document.getElementById('queue-content')).display !== 'none'], [true, false]);
             t.step('the History tab is the lit one', [tab.classList.contains('active'), tab.getAttribute('aria-current')], [true, 'page']);
             t.check('the list arrives with a heading of its own ("Historia imprezy")', /Historia imprezy/.test(list().querySelector('h4') ? list().querySelector('h4').textContent : ''));
-            t.step('the newest four entries, the count says there are older ones ("4+")', [titles(), count(list())], [['Żółć — piosenka', 'Playlist Alpha', 'Rejected Beat', 'Playlist Bravo'], '4+']);
+            t.step('the newest four entries, the count says there are older ones ("4+")', [titles(), count(list())], [['Żółć — piosenka', 'Played Alpha', 'Rejected Beat', 'Played Bravo'], '4+']);
             t.step('the filter "all" is lit; a button offers more', [litFilter(), list().querySelector('[data-history-more]').getAttribute('data-limit')], [['all'], '100']);
 
             // the search works on what is loaded
             type(list().querySelector('[data-list-search]'), 'alpha');
-            t.step('the search box narrows the loaded rows; the count keeps the "+" of older ones', [visibleNames(list()), count(list())], [['Playlist Alpha'], '1 / 4+']);
+            t.step('the search box narrows the loaded rows; the count keeps the "+" of older ones', [visibleNames(list()), count(list())], [['Played Alpha'], '1 / 4+']);
 
             // "Show more": a longer history of the same kind; the search text stays
             list().querySelector('[data-history-more]').click();
             await waitForList(function () { return titles().length === 10; }, 'the longer history');
             t.step('"Show more" asked for the limit that the button carries, and no filter (the chosen one is "all")', (await fetches()).slice(1).map(function (r) { return [r.q.limit, r.q.filter || null]; }), [['100', null]]);
             t.step('ten entries now, and no more button (nothing older)', [titles().length, list().querySelector('[data-history-more]')], [10, null]);
-            t.step('the search text is still there and applied: one row, "1 / 10"', [list().querySelector('[data-list-search]').value, visibleNames(list()), count(list())], ['alpha', ['Playlist Alpha'], '1 / 10']);
+            t.step('the search text is still there and applied: one row, "1 / 10"', [list().querySelector('[data-list-search]').value, visibleNames(list()), count(list())], ['alpha', ['Played Alpha'], '1 / 10']);
 
             // a filter button: the server reads entries of that kind; the button lights at once; the search text stays
             type(list().querySelector('[data-list-search]'), 'beat');
@@ -131,22 +131,22 @@
             t.step('a click on "Song" twice sorts the loaded history descending (the handlers were attached after the AJAX load)', titles()[0], 'Rejected Golf');
 
             // "Show more" of a list that a filter has narrowed: the filter goes with it (the server reads that kind, further back)
-            list().querySelector('[data-list-filter="guest"]').click();
-            await waitForList(function () { return litFilter()[0] === 'guest' && titles().length === 4; }, 'the guests\' entries');
+            list().querySelector('[data-list-filter="played"]').click();
+            await waitForList(function () { return litFilter()[0] === 'played' && titles().length === 4; }, 'the played entries');
             // the sort by "Song" (descending, above) is kept across the new list (2026-10-03: the owner saw it lost)
-            t.step('the "Guests" filter: the first four entries of that kind, still sorted by song, and the button offers more', [titles(), list().querySelector('[data-history-more]').getAttribute('data-limit')],
-                [['Żółć — piosenka', 'Rejected Delta', 'Rejected Beat', 'Guest Charlie'], '100']);
+            t.step('the "Played" filter: the first four entries of that kind, still sorted by song, and the button offers more', [titles(), list().querySelector('[data-history-more]').getAttribute('data-limit')],
+                [['Żółć — piosenka', 'Played Bravo', 'Played Alpha', 'Guest Charlie'], '100']);
             list().querySelector('[data-history-more]').click();
-            await waitForList(function () { return titles().length === 6; }, 'the longer list of guests\' entries');
-            t.step('"Show more" asked for the chosen filter as well as the longer limit', (await fetches()).slice(-1).map(function (r) { return [r.q.limit, r.q.filter]; }), [['100', 'guest']]);
-            t.step('and the filter is still the lit one', litFilter(), ['guest']);
+            await waitForList(function () { return titles().length === 7; }, 'the longer list of played entries');
+            t.step('"Show more" asked for the chosen filter as well as the longer limit', (await fetches()).slice(-1).map(function (r) { return [r.q.limit, r.q.filter]; }), [['100', 'played']]);
+            t.step('and the filter is still the lit one', litFilter(), ['played']);
 
             // a failed request: the button goes back to the one that was lit, the list stays
             await t.stand.config({ historyStatus: 500 });
-            list().querySelector('[data-list-filter="played"]').click();
-            t.step('the button of the new filter lights at once, before the answer', litFilter(), ['played']);
-            await t.waitFor(function () { return litFilter()[0] === 'guest'; }, 'the button to go back', 5000).catch(function () { /* the step says what it was */ });
-            t.step('the server failed: the previous button is the lit one again and the list is the one that was there', [litFilter(), titles().length], [['guest'], 6]);
+            list().querySelector('[data-list-filter="all"]').click();
+            t.step('the button of the new filter lights at once, before the answer', litFilter(), ['all']);
+            await t.waitFor(function () { return litFilter()[0] === 'played'; }, 'the button to go back', 5000).catch(function () { /* the step says what it was */ });
+            t.step('the server failed: the previous button is the lit one again and the list is the one that was there', [litFilter(), titles().length], [['played'], 7]);
         }
     });
     S2P.scenario({

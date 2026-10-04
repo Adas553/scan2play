@@ -32,8 +32,12 @@ class VibeMigrationIT {
     private static final String PORT = env("PGPORT", "5432");
     private static final String USER = env("PGUSER", "postgres");
     private static final String PASSWORD = env("PGPASSWORD", "1111");
+    /** A party as V15 knew it: of the kind that V19 keeps (it deletes every other kind's parties). */
+    private static final String INSERT_OLD = "INSERT INTO party_settings (active, cooldown_minutes, duplicate_check_window, owner_id, party_code,"
+            + " request_limit, active_provider, global_vibe) VALUES (true, 3, 5, '%s', '%s', 2, 'REQUESTS_ONLY', '%s')";
+    /** A party now: one kind, no column for it (V19). */
     private static final String INSERT = "INSERT INTO party_settings (active, cooldown_minutes, duplicate_check_window, owner_id, party_code,"
-            + " request_limit, active_provider, global_vibe) VALUES (true, 3, 5, '%s', '%s', 2, 'YOUTUBE', '%s')";
+            + " request_limit, global_vibe) VALUES (true, 3, 5, '%s', '%s', 2, '%s')";
     private static String database;
 
     @BeforeAll
@@ -53,10 +57,10 @@ class VibeMigrationIT {
         String url = "jdbc:postgresql://" + HOST + ":" + PORT + "/" + database;
         Flyway.configure().dataSource(url, USER, PASSWORD).target("15").load().migrate();
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
-            statement.execute(INSERT.formatted("o1", "VB001", "SALSA_AND_TIMBA"));
-            statement.execute(INSERT.formatted("o2", "VB002", "BACHATA_AND_KIZOMBA"));
-            statement.execute(INSERT.formatted("o3", "VB003", "REGGAETON_AND_DANCEHALL"));
-            statement.execute(INSERT.formatted("o4", "VB004", "JAZZ"));
+            statement.execute(INSERT_OLD.formatted("o1", "VB001", "SALSA_AND_TIMBA"));
+            statement.execute(INSERT_OLD.formatted("o2", "VB002", "BACHATA_AND_KIZOMBA"));
+            statement.execute(INSERT_OLD.formatted("o3", "VB003", "REGGAETON_AND_DANCEHALL"));
+            statement.execute(INSERT_OLD.formatted("o4", "VB004", "JAZZ"));
         }
 
         Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();

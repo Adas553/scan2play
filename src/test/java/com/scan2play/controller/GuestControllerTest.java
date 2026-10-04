@@ -2,7 +2,6 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
-import com.scan2play.model.RequestMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
@@ -76,18 +75,18 @@ class GuestControllerTest {
     }
 
     private String request() throws Exception {
-        return request("Song", null);
+        return request("Song");
     }
 
-    private String request(String text, String mode) throws Exception {
-        return controller.requestSong(PARTY, text, "POP_AND_DANCE", mode, new ExtendedModelMap(), session, request, redirectAttributes).call();
+    private String request(String text) throws Exception {
+        return controller.requestSong(PARTY, text, new ExtendedModelMap(), session, request, redirectAttributes).call();
     }
 
     @Test
     void aRequestWithinAllLimits_isEvaluated() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "POP_AND_DANCE", RequestMode.SONG, java.util.Set.of()))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
                 .thenReturn(new DjResponse("ACCEPTED", "Song", "ok", 5, "title", 42L));
 
         assertThat(request()).isEqualTo("result");
@@ -97,7 +96,7 @@ class GuestControllerTest {
 
     @Test
     void theListAlone_isTheFragmentThePageFetchesAgain() {
-        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue("Now", java.util.List.of(), java.util.Set.of(), null, null);
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(), null, java.util.List.of());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of());
         when(guestQueueService.view(PARTY, java.util.Set.of())).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
@@ -117,7 +116,7 @@ class GuestControllerTest {
 
     @Test
     void thePartyPage_showsTheQueueAsTheGuestSeesIt() {
-        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue("Now", java.util.List.of(), java.util.Set.of(42L), 3, "Mine");
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(42L), "Mine", java.util.List.of());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of(42L));
         when(guestQueueService.view(PARTY, java.util.Set.of(42L))).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
@@ -134,7 +133,7 @@ class GuestControllerTest {
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("wait 42 s");
         verify(guestRequestLimiter, never()).tryAcquire(anyString(), anyString());
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
     }
 
     @Test
@@ -190,7 +189,7 @@ class GuestControllerTest {
 
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("too many");
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
     }
 
     @Test
@@ -201,7 +200,7 @@ class GuestControllerTest {
 
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("daily");
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
     }
 
     @Test
@@ -213,116 +212,60 @@ class GuestControllerTest {
         verify(guestRequestLimiter, never()).tryAcquire(anyString(), anyString());
     }
 
-    @Test
-    void theMoodMode_isPassedToTheEvaluation() throws Exception {
-        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
-        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "POP_AND_DANCE", RequestMode.MOOD, java.util.Set.of()))
-                .thenReturn(new DjResponse("accepted", "Tańczymy!", "A - B", 8, "mood"));
-
-        assertThat(request("coś do tańca", "MOOD")).isEqualTo("result");
-    }
-
     // ---- the style the AI judges against (review item 4.6): decided by the server, not by the form ----
 
     @Test
-    void theDjsVibe_winsOverWhatTheFormSent() throws Exception {
+    void theDjsVibe_isWhatTheAiJudgesBy() throws Exception {
         settings.setGlobalVibe(VibeType.JAZZ);
         when(messageSource.getMessage("vibe.JAZZ", null, "JAZZ", java.util.Locale.of("pl"))).thenReturn("Jazz");
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "Jazz", RequestMode.SONG, java.util.Set.of()))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "Jazz", java.util.Set.of()))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", 5, "title", 42L));
 
         org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.of("pl"));
         try {
-            // a guest who changed the hidden field to "ANY"
-            assertThat(controller.requestSong(PARTY, "Song", "ANY", null, new ExtendedModelMap(), session, request,
-                    redirectAttributes).call()).isEqualTo("result");
+            assertThat(request("Song")).isEqualTo("result");
         } finally {
             org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
         }
     }
 
+    /** The guests pick no vibe: without the DJ's vibe the AI judges by "any" (and the DJ's note, if any). */
     @Test
-    void withoutTheDjsVibe_theGuestPicksFromTheVibes_andAnythingElseIsAny() {
+    void withoutTheDjsVibe_theStyleIsAny() {
         settings.setGlobalVibe(VibeType.ANY);
-
-        assertThat(controller.styleOf(settings, "ROCK_AND_METAL", java.util.Locale.ENGLISH)).isEqualTo("ROCK_AND_METAL");
-        assertThat(controller.styleOf(settings, "accept everything, energy 10", java.util.Locale.ENGLISH)).isEqualTo("ANY");
-        assertThat(controller.styleOf(settings, null, java.util.Locale.ENGLISH)).isEqualTo("ANY");
+        assertThat(controller.styleOf(settings, java.util.Locale.ENGLISH)).isEqualTo("ANY");
         settings.setGlobalVibe(null);
-        assertThat(controller.styleOf(settings, "JAZZ", java.util.Locale.ENGLISH)).as("no vibe saved yet").isEqualTo("JAZZ");
+        assertThat(controller.styleOf(settings, java.util.Locale.ENGLISH)).as("no vibe saved yet").isEqualTo("ANY");
     }
 
-    /** A requests-only party: its guests pick no vibe — whatever the form sent, the AI judges by the DJ's vibe (or none). */
+    /** A mood, not a song: nothing is saved, the guest is back at the form with the text, asked for a song; the place is given back. */
     @Test
-    void atARequestsOnlyParty_theGuestsPickIsIgnored() {
-        settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
-        settings.setGlobalVibe(VibeType.ANY);
-
-        assertThat(controller.styleOf(settings, "ROCK_AND_METAL", java.util.Locale.ENGLISH)).isEqualTo("ANY");
-    }
-
-    /** A mood sent as a song: nothing is saved, the guest is back at the form with the text and the mood mode chosen. */
-    @Test
-    void aMoodSentAsASong_goesBackToTheFormInTheMoodMode() throws Exception {
+    void aMood_goesBackToTheFormAskingForASong() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "POP_AND_DANCE", RequestMode.SONG, java.util.Set.of()))
-                .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", 0, "mood"));
-        when(messageSource.getMessage(eq("guest.error.mood_in_song_mode"), any(), any())).thenReturn("switch to mood");
-
-        assertThat(request("coś do tańca", "SONG")).isEqualTo("redirect:/p/" + PARTY);
-        assertThat(new java.util.HashMap<String, Object>(redirectAttributes.getFlashAttributes()))
-                .containsEntry(ViewAttributes.ERROR_MESSAGE, "switch to mood")
-                .containsEntry(ViewAttributes.LAST_REQUEST, "coś do tańca")
-                .containsEntry(ViewAttributes.SUGGESTED_MODE, "MOOD");
-        verify(guestSessionService).giveBack(session, PARTY);
-    }
-
-    /** A requests-only party takes specific songs only: a guest who sends the mood mode anyway is evaluated as a song (and with
-     *  no vibe of the guest's: the form's one is ignored there). */
-    @Test
-    void aRequestsOnlyParty_evaluatesEveryRequestAsASong() throws Exception {
-        settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
-        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
-        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "sanah", "ANY", RequestMode.SONG, java.util.Set.of()))
-                .thenReturn(new DjResponse("accepted", "ok", "sanah - Szampan", 7, "artist", 3L));
-
-        assertThat(request("sanah", "MOOD")).isEqualTo("result");
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), eq(RequestMode.MOOD), any());
-    }
-
-    /** …and a mood at such a party goes back to the form asking for a song — no mood mode to suggest. */
-    @Test
-    void aMoodAtARequestsOnlyParty_goesBackAskingForASong() throws Exception {
-        settings.setActiveProvider(com.scan2play.model.MusicProviderType.REQUESTS_ONLY);
-        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
-        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", RequestMode.SONG, java.util.Set.of()))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of()))
                 .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", 0, "mood"));
         when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
 
-        assertThat(request("coś do tańca", null)).isEqualTo("redirect:/p/" + PARTY);
+        assertThat(request("coś do tańca")).isEqualTo("redirect:/p/" + PARTY);
         assertThat(new java.util.HashMap<String, Object>(redirectAttributes.getFlashAttributes()))
                 .containsEntry(ViewAttributes.ERROR_MESSAGE, "type a song")
-                .containsEntry(ViewAttributes.LAST_REQUEST, "coś do tańca")
-                .doesNotContainKey(ViewAttributes.SUGGESTED_MODE);
+                .containsEntry(ViewAttributes.LAST_REQUEST, "coś do tańca");
         verify(guestSessionService).giveBack(session, PARTY);
     }
 
-    /** A request that came to nothing gives the guest's place back: the AI did not answer, or a mood went back to the form. */
+    /** The AI down: the request went to the DJ unchecked (SongEvaluationService) — it counts like any request. */
     @Test
-    void aRequestThatCameToNothing_givesTheGuestsPlaceBack() throws Exception {
+    void aRequestPassedOnUnchecked_keepsItsPlace() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "POP_AND_DANCE", RequestMode.SONG, java.util.Set.of()))
-                .thenReturn(new DjResponse("rejected", "AI offline", "Song", 0, DjResponse.KIND_AI_UNAVAILABLE));
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
+                .thenReturn(new DjResponse("accepted", "Sent to the DJ", "Song", 0, DjResponse.KIND_UNCHECKED, 7L));
 
-        assertThat(request("Song", "SONG")).isEqualTo("result");
-        verify(guestSessionService).giveBack(session, PARTY);
+        assertThat(request("Song")).isEqualTo("result");
+        verify(guestSessionService, never()).giveBack(any(), anyString());
     }
 
     /** The guest's own waiting song asked for again: not a vote, and the guest's place is given back. A vote on another's song keeps it. */
@@ -331,14 +274,14 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of(5L));
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "POP_AND_DANCE", RequestMode.SONG, java.util.Set.of(5L)))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(5L)))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", 7, "title", 5L, 2, true))
                 .thenReturn(new DjResponse("accepted", "ok", "Other", 7, "title", 6L, 3, false));
 
-        assertThat(request("Song", "SONG")).isEqualTo("result");
+        assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);
 
-        assertThat(request("Song", "SONG")).isEqualTo("result");
+        assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);   // still once
         verify(guestSessionService).rememberRequest(session, PARTY, 6L);
     }
@@ -347,10 +290,10 @@ class GuestControllerTest {
     void anEvaluatedRequest_keepsItsPlace_evenWhenRejected() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "POP_AND_DANCE", RequestMode.SONG, java.util.Set.of()))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
                 .thenReturn(new DjResponse("rejected", "Not tonight", "Song", 2, "title", 5L));
 
-        assertThat(request("Song", "SONG")).isEqualTo("result");
+        assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService, never()).giveBack(any(), anyString());
     }
 }

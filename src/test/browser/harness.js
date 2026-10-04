@@ -36,7 +36,7 @@
      *   name     what the URL says (?scenario=NAME) and the name of the result file
      *   title    one line: what it proves
      *   page     which rendered page the scenario runs on (default 'dashboard': the party in Polish, two requests waiting;
-     *            'dashboard-en': the same in English; 'guest', 'guest-requests', 'qr-print-poster', 'qr-print-cards'); see
+     *            'dashboard-en': the same in English; 'guest', 'qr-print-poster', 'qr-print-cards'); see
      *            DashboardPageRenderTest, GuestPageRenderTest, QrPrintPageTest
      *   viewport the browser window's size, e.g. '390,844' (a phone's screen; read by run.py)
      *   setup    what the stand-in server is told before the scenario runs (see server.py, POST /__config)

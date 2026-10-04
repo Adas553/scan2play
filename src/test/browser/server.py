@@ -247,7 +247,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, body, 'text/html; charset=utf-8', dict(limits, ETag=etag))
         if path == '/dj/history-view/fragment':
             # the REAL history fragment as DashboardPageRenderTest renders it through the real controller: one file per filter
-            # (all, guest, background, played, rejected) — the first page — and a "-more" one for "Show more" (a request with a limit)
+            # (all, played, rejected) — the first page — and a "-more" one for "Show more" (a request with a limit)
             with stand.lock:
                 if state['historyStatus']:
                     return self._send(state['historyStatus'])

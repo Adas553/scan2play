@@ -27,7 +27,7 @@
         </div>
     </div>
 
-    <!--/* The history list: a count, filter buttons (All / Guests / Playlist / Played / Rejected — the server filters, in
+    <!--/* The history list: a count, filter buttons (All / Played / Rejected — the server filters, in
          its bounded queries, and the button of the model attribute historyFilter is the lit one) and a search box (which
          works on the rows that are there) above a list of fixed height with its own
          scrollbar (.list-scroll), and a "Show more" button when older requests exist. Used by the standalone page
@@ -43,18 +43,11 @@
                 <span class="badge text-bg-secondary" data-list-count
                       th:attr="data-suffix=${historyHasMore} ? '+' : ''"
                       th:text="${#lists.size(history)} + (${historyHasMore} ? '+' : '')">0</span>
-                <!--/* Separate small buttons that wrap (a joined btn-group of five is wider than a phone) */-->
+                <!--/* Separate small buttons that wrap (a joined btn-group is wider than a phone) */-->
                 <div class="d-flex flex-wrap gap-1" role="group">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="all"
                             th:classappend="${activeFilter == 'all'} ? 'active'"
                             th:text="#{history.filter.all}">All</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="guest"
-                            th:classappend="${activeFilter == 'guest'} ? 'active'"
-                            th:text="#{history.filter.guest}">Guests</button>
-                    <!--/* only at a YouTube party: the others have no background playlist */-->
-                    <button th:if="${historyHasPlaylist}" type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="background"
-                            th:classappend="${activeFilter == 'background'} ? 'active'"
-                            th:text="#{history.filter.background}">Playlist</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="played"
                             th:classappend="${activeFilter == 'played'} ? 'active'"
                             th:text="#{history.filter.played}">Played</button>
@@ -72,7 +65,7 @@
             <tr>
                 <th class="d-none d-md-table-cell" data-sort="time" th:text="#{dashboard.table.header.time}">Time</th>
                 <th data-sort="song" th:text="#{dashboard.table.header.song}">Song</th>
-                <!--/* how many guests asked for the song; none for a background track — the history sorted by it is the party's ranking */-->
+                <!--/* how many guests asked for the song — the history sorted by it is the party's ranking */-->
                 <th data-sort="votes" data-sort-first="desc" class="text-center" th:text="#{dashboard.table.header.votes}">Votes</th>
                 <th class="d-none d-md-table-cell" th:text="#{dashboard.table.header.vibe}">Vibe</th>
                 <th>
@@ -104,31 +97,21 @@
                 <td data-sort-value="song" th:attr="data-val=${req.title}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                         <span class="d-flex flex-column" th:with="said=${T(com.scan2play.util.GuestWords).beside(req.guestText, req.title)}">
-                            <span class="fw-bold text-break">
-                                <span th:if="${req.source.name() != 'GUEST'}" th:title="#{history.source.background}">🎶</span>
-                                <span th:text="${req.title}">Song</span>
-                            </span>
+                            <span class="fw-bold text-break" th:text="${req.title}">Song</span>
                             <!--/* the guest's own words when they say something else (GuestWords) */-->
                             <span th:if="${said != null}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${said})}">guest wrote: “…”</span>
                         </span>
-                        <a th:if="${req.trackUrl != null}"
-                           th:href="${req.trackUrl}"
-                           target="_blank"
-                           class="btn btn-sm btn-secondary shadow-sm fw-bold flex-shrink-0 s2p-link-small">
-                            LINK
-                        </a>
+                        <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
+                           class="btn btn-sm btn-secondary shadow-sm fw-bold flex-shrink-0 text-nowrap s2p-link-small"
+                           th:text="#{dashboard.queue.preview}">🔍 Preview</a>
                     </div>
                 </td>
-                <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes != null ? req.votes : 0}">
-                    <span th:if="${req.votes != null}" class="badge" th:classappend="${req.votes > 1} ? 'text-bg-warning' : 'text-bg-secondary'"
+                <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
+                    <span class="badge" th:classappend="${req.votes > 1} ? 'text-bg-warning' : 'text-bg-secondary'"
                           th:text="${req.votes}">1</span>
                 </td>
-                <td class="d-none d-md-table-cell">
-                    <span th:if="${req.source.name() == 'GUEST'}" class="badge text-bg-secondary" th:text="${req.style}">Style</span>
-                    <span th:unless="${req.source.name() == 'GUEST'}" class="badge text-bg-dark border border-secondary"
-                          th:text="#{history.source.background}">Playlist</span>
-                </td>
+                <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}">
                     <span class="d-none d-md-inline" th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</span>
                     <span class="d-inline d-md-none s2p-decision-icon" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}"></span>

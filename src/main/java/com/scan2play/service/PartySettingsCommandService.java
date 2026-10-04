@@ -1,8 +1,6 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
-import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.util.CodeGenerator;
@@ -27,32 +25,27 @@ public class PartySettingsCommandService {
 
     /**
      * Retrieves the existing party for the given DJ (ownerId) or creates a new one if it doesn't exist.
-     * The provider is only used when creating a NEW party — existing parties keep their original provider.
      *
      * @param ownerId  The unique identifier of the DJ (from OAuth2).
-     * @param provider The music provider chosen on the landing page.
      * @return The PartySettingsEntity associated with this DJ.
      */
     @Transactional
-    public PartySettingsEntity getOrCreatePartyForDj(String ownerId, MusicProviderType provider) {
+    public PartySettingsEntity getOrCreatePartyForDj(String ownerId) {
         return partySettingsRepository.findByOwnerId(ownerId)
-                .orElseGet(() -> createNewParty(ownerId, provider));
+                .orElseGet(() -> createNewParty(ownerId));
     }
 
     /**
      * Creates a new party session for a specific owner.
      *
      * @param ownerId  The unique identifier of the DJ.
-     * @param provider The music provider to use for this party.
      * @return The newly created PartySettingsEntity with a unique code.
      */
-    private PartySettingsEntity createNewParty(String ownerId, MusicProviderType provider) {
+    private PartySettingsEntity createNewParty(String ownerId) {
         PartySettingsEntity party = PartySettingsEntity.builder()
                 .ownerId(ownerId)
                 .partyCode(CodeGenerator.generatePartyCode())
                 .globalVibe(VibeType.ANY)
-                .activeProvider(provider)
-                .playbackMode(PlaybackMode.MANUAL)
                 .active(true)
                 .build();
 

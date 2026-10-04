@@ -2,13 +2,11 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryFilter;
-import com.scan2play.model.MusicProviderType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.QrCodeService;
-import com.scan2play.service.YouTubeSearchBudget;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Controller responsible for DJ dashboard views and AJAX polling endpoints.
@@ -52,15 +48,13 @@ public class DjDashboardController {
     private final DjSessionHelper sessionHelper;
     private final PlayHistoryService playHistoryService;
     private final GuestRequestLimiter guestRequestLimiter;
-    private final YouTubeSearchBudget youTubeSearchBudget;
 
     /**
      * On every answer of the queue poll, 304 too: the limits that stop guest songs now, comma-separated —
-     * {@value #FLAG_SEARCH_SPENT} (today's YouTube searches, YouTube parties only) and {@value #FLAG_PARTY_FULL} (the party's
-     * 24-hour limit) — or {@value #FLAG_NONE}. The dashboard shows or hides its warnings by it.
+     * {@value #FLAG_PARTY_FULL} (the party's 24-hour limit) — or {@value #FLAG_NONE}. The dashboard shows or hides its warnings
+     * by it.
      */
     static final String GUEST_LIMITS_HEADER = "X-Guest-Limits";
-    static final String FLAG_SEARCH_SPENT = "search-spent";
     static final String FLAG_PARTY_FULL = "party-full";
     static final String FLAG_NONE = "none";
 
@@ -118,7 +112,6 @@ public class DjDashboardController {
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
         model.addAttribute(VIBE_NOTE, settings.getVibeNote());
         model.addAttribute(DJ_NAME, settings.getDjName());
-        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
@@ -129,7 +122,6 @@ public class DjDashboardController {
         model.addAttribute(SERVER_LIMIT_PER_PARTY, guestRequestLimiter.perPartyLimit());
         model.addAttribute(PARTY_REQUESTS_USED, guestRequestLimiter.partyRequestsUsed(partyCode));
         model.addAttribute(BUSIEST_NETWORK_REQUESTS_USED, guestRequestLimiter.busiestClientRequestsUsed(partyCode));
-        model.addAttribute(SEARCH_BUDGET_SPENT, isSearchBudgetSpent(settings));
         model.addAttribute(PARTY_LIMIT_REACHED, guestRequestLimiter.isPartyLimitReached(partyCode));
 
         // --- QR Code ---
@@ -189,7 +181,6 @@ public class DjDashboardController {
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
-        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         addHistory(model, settings, limit, filter);
 
         return "history";
@@ -199,7 +190,7 @@ public class DjDashboardController {
      * Returns the history table as an HTML fragment for AJAX-based tab switching.
      * Used by the dashboard to load history without a full page reload,
      * so the DJ keeps their place on the page. "Show more" asks for the same fragment with a larger
-     * {@code limit}, and a button of the filter (All / Guests / Playlist / Played / Rejected) with another
+     * {@code limit}, and a button of the filter (All / Played / Rejected) with another
      * {@code filter}.
      */
     @GetMapping("/history-view/fragment")
@@ -215,18 +206,16 @@ public class DjDashboardController {
     }
 
     /**
-     * Puts the last {@code limit} entries of the history in the model — songs of guests that played or were rejected
-     * and tracks of the background playlist, on one timeline — at least one page, at most {@value #HISTORY_MAX_LIMIT}
+     * Puts the last {@code limit} entries of the history in the model — songs of guests that played or were rejected — at least
+     * one page, at most {@value #HISTORY_MAX_LIMIT}
      * (the queries are always bounded) — and what the "Show more" button needs: whether there are older ones to show
      * and the limit to ask for next. The entries are of the kind the filter says (a missing or unknown filter is
-     * "all"); the filter goes into the model too, so that its button is the lit one. The "Playlist" button only at a YouTube
-     * party: only it has a background playlist (a party switched from YouTube still lists the old tracks under "All").
+     * "all"); the filter goes into the model too, so that its button is the lit one.
      */
     private void addHistory(Model model, PartySettingsEntity settings, int requestedLimit, String filterParam) {
         int limit = Math.max(HISTORY_PAGE_SIZE, Math.min(requestedLimit, HISTORY_MAX_LIMIT));
         HistoryFilter filter = HistoryFilter.fromParam(filterParam);
         PlayHistoryService.Page page = playHistoryService.getHistory(settings.getPartyCode(), limit, filter);
-        model.addAttribute(HISTORY_HAS_PLAYLIST, settings.getActiveProvider() == MusicProviderType.YOUTUBE);
         model.addAttribute(HISTORY_FILTER, filter.param());
         model.addAttribute(HISTORY, page.entries());
         model.addAttribute(HISTORY_HAS_MORE, page.hasMore() && limit < HISTORY_MAX_LIMIT);
@@ -248,7 +237,7 @@ public class DjDashboardController {
         sessionHelper.validateOwnership(partyCode, authentication, session);
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode); // cached
         // Not part of the ETag: the warnings follow the limits even while the queue stays the same
-        response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode, settings));
+        response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode));
         response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
                 + "," + guestRequestLimiter.partyRequestsUsed(partyCode));
         response.setHeader(PARTY_ACTIVE_HEADER, String.valueOf(settings.isActive()));
@@ -266,22 +255,13 @@ public class DjDashboardController {
 
         // --- Full render (queue changed) ---
         response.setHeader("ETag", etag);
-        model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
     }
 
     /** The value of {@link #GUEST_LIMITS_HEADER}. */
-    private String guestLimitFlags(String partyCode, PartySettingsEntity settings) {
-        List<String> flags = new ArrayList<>(2);
-        if (isSearchBudgetSpent(settings)) flags.add(FLAG_SEARCH_SPENT);
-        if (guestRequestLimiter.isPartyLimitReached(partyCode)) flags.add(FLAG_PARTY_FULL);
-        return flags.isEmpty() ? FLAG_NONE : String.join(",", flags);
-    }
-
-    /** Spent YouTube searches matter to a YouTube party only: a requests-only party links to YouTube's search page. */
-    private boolean isSearchBudgetSpent(PartySettingsEntity settings) {
-        return settings.getActiveProvider() == MusicProviderType.YOUTUBE && youTubeSearchBudget.isSpent();
+    private String guestLimitFlags(String partyCode) {
+        return guestRequestLimiter.isPartyLimitReached(partyCode) ? FLAG_PARTY_FULL : FLAG_NONE;
     }
 }
 

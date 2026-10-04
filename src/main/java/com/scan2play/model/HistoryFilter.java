@@ -4,53 +4,44 @@ import java.util.Locale;
 
 /**
  * Which entries of the DJ's history to read — the buttons above the history list. The filter is applied by the server,
- * inside the bounded queries, so the page limit counts the entries of the chosen kind: with a long playlist between the
- * guests' songs, "Guests" still shows the last guests' songs and not the few that happen to be among the last rows.
+ * inside the bounded query, so the page limit counts the entries of the chosen kind.
  */
 public enum HistoryFilter {
 
-    /** Everything: guests' songs that played or were rejected, and the tracks of the background playlist. */
-    ALL(true, true, true),
-    /** Only what guests asked for, played or rejected. */
-    GUEST(true, true, false),
-    /** Only the tracks of the DJ's background playlist. */
-    BACKGROUND(false, false, true),
-    /** Everything that played: guests' songs and playlist tracks, not the rejected requests. */
-    PLAYED(true, false, true),
-    /** Only the guests' requests that were rejected. */
-    REJECTED(false, true, false);
+    /** Everything: the guests' songs that played or were rejected. */
+    ALL(true, true),
+    /** Only what played. */
+    PLAYED(true, false),
+    /** Only the requests that were rejected (by the AI, skipped or cleared by the DJ). */
+    REJECTED(false, true);
 
-    private final boolean guestsPlayed;
-    private final boolean guestsRejected;
-    private final boolean backgroundTracks;
+    private final boolean played;
+    private final boolean rejected;
 
-    HistoryFilter(boolean guestsPlayed, boolean guestsRejected, boolean backgroundTracks) {
-        this.guestsPlayed = guestsPlayed;
-        this.guestsRejected = guestsRejected;
-        this.backgroundTracks = backgroundTracks;
+    HistoryFilter(boolean played, boolean rejected) {
+        this.played = played;
+        this.rejected = rejected;
     }
 
-    /** Whether the guests' requests that were played belong to this filter. */
-    public boolean includesGuestsPlayed() {
-        return guestsPlayed;
+    /** Whether the requests that were played belong to this filter. */
+    public boolean includesPlayed() {
+        return played;
     }
 
-    /** Whether the guests' requests that were rejected belong to this filter. */
-    public boolean includesGuestsRejected() {
-        return guestsRejected;
+    /** Whether the requests that were rejected belong to this filter. */
+    public boolean includesRejected() {
+        return rejected;
     }
 
-    /** Whether the tracks of the background playlist belong to this filter. */
-    public boolean includesBackgroundTracks() {
-        return backgroundTracks;
-    }
-
-    /** The value used in the URL ({@code ?filter=guest}) and by the buttons ({@code data-list-filter}). */
+    /** The value used in the URL ({@code ?filter=played}) and by the buttons ({@code data-list-filter}). */
     public String param() {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    /** The filter for a URL parameter; anything unknown, or none, is {@link #ALL} (a bad link should not break the page). */
+    /**
+     * The filter for a URL parameter; anything unknown, or none, is {@link #ALL} (a bad link should not break the page — nor an
+     * old one: "guest" and "background" were filters while the parties had a background playlist).
+     */
     public static HistoryFilter fromParam(String value) {
         if (value != null) {
             for (HistoryFilter filter : values()) {

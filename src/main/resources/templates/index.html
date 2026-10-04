@@ -17,20 +17,6 @@
             <!--/* Who plays, as the DJ wrote it (V17) */-->
             <p th:if="${djName != null}" id="djName" class="fs-5 fw-bold mb-1" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</p>
             <p class="text-secondary" th:text="#{home.subtitle}">What do you want to hear?</p>
-
-            <!-- YouTube branding badge — required by YouTube API Terms of Service (Section 4d) -->
-            <div th:if="${activeProvider != null and activeProvider.name() == 'YOUTUBE'}"
-                 class="d-inline-flex align-items-center gap-2 mt-2 px-3 py-1 rounded-pill s2p-provider-pill">
-                <!-- Official YouTube "play button" logo (SVG inline — no external dependency) -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 20" height="18" aria-label="YouTube" role="img">
-                    <rect width="28" height="20" rx="4" fill="#FF0000"/>
-                    <polygon points="11,5 22,10 11,15" fill="white"/>
-                    <text x="32" y="15"
-                          font-family="Roboto,Arial,Helvetica,sans-serif"
-                          font-size="14" font-weight="bold" fill="white">YouTube</text>
-                </svg>
-                <span class="s2p-powered-by">Powered by YouTube</span>
-            </div>
         </div>
 
         <div th:if="${errorMessage}" class="alert alert-danger text-center shadow-sm fw-bold" role="alert">
@@ -43,32 +29,8 @@
             <!-- Hidden Party Code Input -->
             <input type="hidden" name="partyCode" th:value="${partyCode}" />
 
-            <!--/* What the guest asks for: a specific song (the default) or a mood. The AI gets a prompt for each, so it does not
-                 guess which one a request is (a guess can take a line of lyrics for a mood). A mood sent as a song comes back here with
-                 its text and the mood mode chosen (lastRequest, suggestedMode). */-->
-            <!--/* Two tiles, not a segmented bar: a guest who sees the page for the first time has to notice there is a choice. The
-                 question above them, a line under each title, the chosen one green with a ✓. A requests-only party takes songs
-                 only (its DJ sets the mood): no tiles, the song mode. */-->
-            <input th:if="${activeProvider != null and activeProvider.name() == 'REQUESTS_ONLY'}" type="hidden" name="requestMode" value="SONG">
-            <div class="mb-4" role="radiogroup" aria-labelledby="requestModeLabel"
-                 th:unless="${activeProvider != null and activeProvider.name() == 'REQUESTS_ONLY'}">
-                <div id="requestModeLabel" class="form-label fw-bold" th:text="#{home.form.mode.label}">What are you asking for?</div>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                    <input type="radio" class="btn-check" name="requestMode" id="modeSong" value="SONG" autocomplete="off"
-                           th:checked="${suggestedMode != 'MOOD'}">
-                    <label class="btn btn-outline-success mode-tile flex-fill text-start" for="modeSong">
-                        <span class="d-block fw-bold" th:text="#{home.form.mode.song}">🎵 A specific song</span>
-                        <span class="d-block small mode-tile-hint" th:text="#{home.form.mode.song.hint}">a title, an artist or lyrics</span>
-                    </label>
-                    <input type="radio" class="btn-check" name="requestMode" id="modeMood" value="MOOD" autocomplete="off"
-                           th:checked="${suggestedMode == 'MOOD'}">
-                    <label class="btn btn-outline-success mode-tile flex-fill text-start" for="modeMood">
-                        <span class="d-block fw-bold" th:text="#{home.form.mode.mood}">✨ A mood</span>
-                        <span class="d-block small mode-tile-hint" th:text="#{home.form.mode.mood.hint}">the AI picks the song</span>
-                    </label>
-                </div>
-            </div>
-
+            <!--/* A specific song: a title, an artist or a line of the lyrics (the DJ sets the mood). A request the AI reads as a mood
+                 comes back here with its text (lastRequest), asking for a song. */-->
             <div class="mb-4">
                 <label for="songInput" class="form-label fw-bold" th:text="#{home.form.input.label}">Your choice</label>
                 <div class="song-autocomplete-wrapper">
@@ -77,7 +39,6 @@
                     <!-- Dropdown injected here by song-autocomplete.js -->
                 </div>
                 <div id="songInputHelp" class="form-text text-white-50 mt-2"
-                     th:attr="data-text-song=#{home.form.input.help.song},data-text-mood=#{home.form.input.help.mood}"
                      th:text="#{home.form.input.help.song}">A title, an artist or a line of the lyrics</div>
             </div>
 
@@ -92,19 +53,6 @@
                 <div th:if="${vibeNote != null}" id="vibeNote" th:text="${vibeNote}">40+ wedding, Polish hits, no rap</div>
             </div>
 
-            <!--/* The guests pick a vibe only when the DJ left it to them — and never at a requests-only party (its DJ sets it) */-->
-            <div class="mb-4" th:if="${globalVibe.name() == 'ANY' and (activeProvider == null or activeProvider.name() != 'REQUESTS_ONLY')}">
-                <label for="styleInput" class="form-label fw-bold" th:text="#{home.form.vibe.label}">Choose the vibe (optional)</label>
-                <select id="styleInput" name="style" class="form-select">
-                    <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
-                            th:value="${vibe}"
-                            th:text="#{vibe.__${vibe}__}">
-                    </option>
-                </select>
-            </div>
-
-            <input th:unless="${globalVibe.name() == 'ANY'}" type="hidden" name="style" th:value="#{vibe.__${globalVibe}__}">
-
             <button type="submit" id="submitBtn" class="btn btn-success w-100 fw-bold shadow-sm py-2"
                     th:attr="data-text-submitting=#{home.form.button.submitting}">
                 <span id="submitBtnText" th:text="#{home.form.button.submit}">Send to DJ!</span>
@@ -112,8 +60,8 @@
         </form>
     </div>
 
-    <!--/* The music as a guest sees it (GuestQueueService): where the guest's own song waits, what plays now, and the next guest
-         songs in the order they play — the guest's own marked. */-->
+    <!--/* The requests as a guest sees them (GuestQueueService): whether the guest's own song waits, the most wanted songs and the
+         requests sent lately — the guest's own marked. */-->
     <div id="guestQueueBox" class="w-100 s2p-mw-500"
          th:attr="data-url=@{/p/{code}/queue(code=${partyCode})}">
         <div th:replace="~{fragments/guest-queue :: guestQueue}"></div>
