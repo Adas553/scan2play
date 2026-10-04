@@ -46,7 +46,7 @@ controller/   HTTP: Thymeleaf views, HTML fragments for AJAX, a few JSON endpoin
 service/      business logic
 repository/   Spring Data JPA
 entity/       JPA entities        model/   enums, records        config/  Spring beans
-util/         CodeGenerator, GuestWords, SongNames, Texts, Times, YouTubeSearchLinks
+util/         CodeGenerator, SongNames, Texts, Times, YouTubeSearchLinks
 ```
 
 Server-rendered pages with AJAX: the DJ dashboard polls the guest queue every 3 s (ETag / 304) and sends its forms by `fetch` (the
@@ -74,8 +74,8 @@ the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en
 (the guest's own limit, 1–100 / 1–1440), `duplicateCheckWindow` (0–50 recently played songs the AI must not repeat).
 
 **`SongRequestEntity` → `song_requests`** — a guest's request. `partyCode`, `songName` (255; the song as the AI named it), `guestText`
-(150, V14: what the guest typed, as typed — one line, what the AI is given; null for older requests; the queue and the history show
-it under the song when it says something else, `util/GuestWords`), `votes` (V15, ≥ 1: how many guests asked for it — see below),
+(150, V14: what the guest typed, as typed — one line, what the AI is given; null for older requests; the queue and the history always show
+it under the song — the DJ checks the AI, 2026-10-04), `votes` (V15, ≥ 1: how many guests asked for it — see below),
 `style` (the vibe it was judged against), `decision` (`accepted` / `rejected` / `played`), `djComment` (500), `energyLevel`,
 `requestedAt`, `trackUrl` (500; the "🔍 Podejrzyj" link — YouTube's search results for the song, `util/YouTubeSearchLinks`: a page the
 DJ's browser opens, no API; a `lyrics` request is searched by the guest's own words, everything else by the AI's name), `playedAt`

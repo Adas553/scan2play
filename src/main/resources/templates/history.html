@@ -96,11 +96,11 @@
                 </td>
                 <td data-sort-value="song" th:attr="data-val=${req.title}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-                        <span class="d-flex flex-column" th:with="said=${T(com.scan2play.util.GuestWords).beside(req.guestText, req.title)}">
+                        <span class="d-flex flex-column">
                             <span class="fw-bold text-break" th:text="${req.title}">Song</span>
-                            <!--/* the guest's own words when they say something else (GuestWords) */-->
-                            <span th:if="${said != null}" class="small text-secondary fst-italic text-break guest-text"
-                                  th:text="#{dashboard.guest_text(${said})}">guest wrote: “…”</span>
+                            <!--/* always the guest's own words: the DJ checks that the AI understood them */-->
+                            <span th:unless="${#strings.isEmpty(req.guestText)}" class="small text-secondary fst-italic text-break guest-text"
+                                  th:text="#{dashboard.guest_text(${req.guestText})}">guest wrote: “…”</span>
                         </span>
                         <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
                            class="btn btn-sm btn-secondary shadow-sm fw-bold flex-shrink-0 text-nowrap s2p-link-small"

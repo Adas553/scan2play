@@ -139,16 +139,16 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("a song shows the guest's own words under it when they say something else")
+    @DisplayName("a song shows the guest's own words under it, also when they read like the song's name; none when missing")
     void shouldShowTheGuestsWords() {
         HistoryEntry shrek = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Smash Mouth - All Star",
                 null, "Pop", "rejected", "no", 3, "the one from Shrek");
         HistoryEntry same = new HistoryEntry(2L, java.time.Instant.parse("2026-09-29T18:01:00Z"), "Wilki - Baśka",
                 null, "Pop", "played", "ok", 7, "wilki baska");
-        String html = render(List.of(shrek, same), false, Locale.ENGLISH);
+        String html = render(List.of(shrek, same, guest(3, "Without words", "played")), false, Locale.ENGLISH);
 
-        assertThat(html).contains("guest wrote: “the one from Shrek”");
-        assertThat(html.split("guest-text", -1)).as("only the first row has the line").hasSize(2);
+        assertThat(html).contains("guest wrote: “the one from Shrek”", "guest wrote: “wilki baska”");
+        assertThat(html.split("guest-text", -1)).as("the two rows with words have the line, the one without none").hasSize(3);
     }
 
     @Test

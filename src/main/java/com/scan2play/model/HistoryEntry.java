@@ -14,7 +14,7 @@ import java.time.Instant;
  * @param decision    {@code played} or {@code rejected}
  * @param djComment   the AI's comment
  * @param energyLevel the AI's energy rating
- * @param guestText   what the guest typed (V14), shown beside {@code title} when it says something else; {@code null} for a
+ * @param guestText   what the guest typed (V14), always shown under {@code title} (the DJ checks the AI); {@code null} for a
  *                    request from before V14
  * @param votes       how many guests asked for the song (V15)
  */

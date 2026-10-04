@@ -129,16 +129,16 @@ class DashboardQueueFragmentTest {
     }
 
     @Test
-    @DisplayName("the guest's own words under the song when they say something else — escaped; none when they are the song's name or missing")
-    void shouldShowTheGuestsWords_whenTheySaySomethingElse() {
+    @DisplayName("the guest's own words under every song — escaped, also when they read like the song's name (the DJ checks the AI); none when missing")
+    void shouldShowTheGuestsWords_always() {
         SongRequestEntity shrek = accepted(1, "Smash Mouth - All Star");
         shrek.setGuestText("ta z Shreka <b>na wesele</b>");
         SongRequestEntity same = accepted(2, "Wilki - Baśka");
         same.setGuestText("wilki baśka");
-        String html = render(List.of(shrek, same, accepted(3, "DJ pick")), PL);
+        String html = render(List.of(shrek, same, accepted(3, "Without words")), PL);
 
-        assertThat(html).contains("gość napisał: „ta z Shreka &lt;b&gt;na wesele&lt;/b&gt;”");
-        assertThat(html.split("guest-text", -1)).as("only the first row has the line").hasSize(2);
+        assertThat(html).contains("gość napisał: „ta z Shreka &lt;b&gt;na wesele&lt;/b&gt;”", "gość napisał: „wilki baśka”");
+        assertThat(html.split("guest-text", -1)).as("the two rows with words have the line, the one without none").hasSize(3);
     }
 
     @Test
