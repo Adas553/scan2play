@@ -88,8 +88,10 @@ same name by `util/SongNames.comparable` — case, accents, punctuation ignored)
 `votes + 1` (a conditional `UPDATE … WHERE decision = 'accepted'`; when the DJ played it meanwhile, the request is a new row) and
 keeps its name, link and first guest's words. The guest's own waiting song asked for again changes nothing and gives the guest's limit
 back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests asking at once make one row (`SongRequestVotesIT`,
-20 rounds × 16 guests — red without the lock). A rejected request is always its own row. The AI's duplicate rule lists only PLAYED
-songs (a waiting one is a vote). The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
+20 rounds × 16 guests — red without the lock). A request the AI rejected this time for a song that waits is a vote too, and the
+guest hears the verdict the song was taken with (the AI does not judge a song the same way every time — 2026-10-04, a song accepted
+once, then rejected four times while it waited); any other rejected request is its own row. The AI's duplicate rule lists only
+PLAYED songs (a waiting one is a vote). The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
 party's ranking); the guest page lists "🔥 Najwięcej głosów" — up to 3 waiting songs with more than one vote — and the result page
 says "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N".
@@ -166,7 +168,7 @@ decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else 
    whole limit is back; counted by the session's id in memory (`GuestSessionService.tryAcquire`, one atomic `compute` — not in the
    session: with the sessions in the database every request works on its own copy, so parallel requests could not see each other's
    count there) — `guest.error.rate_limit`. A request that came to nothing gives its place back (`giveBack`: a mood sent back to
-   the form, the guest's own waiting song asked for again). The guest reads the wait of this limit and of the next one as
+   the form, a rejected song — the owner, 2026-10-04 —, the guest's own waiting song asked for again). The guest reads the wait of this limit and of the next one as
    `GuestController.waitText` says it: whole minutes rounded up from a minute on ("3 min"), seconds below it ("45 s");
 2. client IP + party: `guest.limit.per-ip-party` (30) per `guest.limit.per-ip-window-minutes` (10) — loose, a venue's Wi-Fi is one
    address — `guest.error.too_many_requests`;

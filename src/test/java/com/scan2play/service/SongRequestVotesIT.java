@@ -72,7 +72,7 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void theSameSongByName_isAVote_theGuestsOwn_aPlayedOne_andARejectedOne_areNot() {
+    void theSameSongByName_isAVote_evenRejectedThisTime_theGuestsOwn_andAPlayedOne_areNot() {
         String party = newPartyCode();
         SongRequestEntity first = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request();
 
@@ -84,14 +84,16 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
         SongRequestCommandService.Saved own = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of(first.getId()));
         assertThat(own.outcome()).isEqualTo(Outcome.ALREADY_YOURS);
         assertThat(own.request().getVotes()).isEqualTo(3);
-        // a rejected request is a row of its own (the history shows it)
-        assertThat(commands.saveOrVote(request(party, "Wilki - Baśka", "rejected", null), Set.of()).outcome()).isEqualTo(Outcome.NEW);
+        // the AI rejected it this time (it does not judge a song the same way every time): the party took the song already — a vote
+        assertThat(commands.saveOrVote(request(party, "Wilki - Baśka", "rejected", null), Set.of()).outcome()).isEqualTo(Outcome.VOTE);
+        // a rejected request for a song that does not wait is a row of its own (the history shows it)
+        assertThat(commands.saveOrVote(request(party, "Kult - Arahja", "rejected", null), Set.of()).outcome()).isEqualTo(Outcome.NEW);
         // played: the next request for it is a new row
         jdbc.update("UPDATE song_requests SET decision = 'played' WHERE id = ?", first.getId());
         assertThat(commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.NEW);
 
         assertThat(rows(party)).extracting(row -> row.get("decision") + " " + row.get("votes"))
-                .containsExactly("played 3", "rejected 1", "accepted 1");
+                .containsExactly("played 4", "rejected 1", "accepted 1");
     }
 
     @Test

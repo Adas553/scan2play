@@ -75,6 +75,11 @@ public record DjResponse(
         return new DjResponse(decision, comment, name, energyLevel, requestKind, requestId, votes, ownSong);
     }
 
+    /** The same request with another verdict: the one a song waiting in the queue was taken with. */
+    public DjResponse withVerdict(String newDecision, String newComment, int newEnergyLevel) {
+        return new DjResponse(newDecision, newComment, songName, newEnergyLevel, requestKind, requestId, votes, ownSong);
+    }
+
     /** The same response once the request is saved under this id. */
     public DjResponse withRequestId(Long id) {
         return new DjResponse(decision, comment, songName, energyLevel, requestKind, id, votes, ownSong);

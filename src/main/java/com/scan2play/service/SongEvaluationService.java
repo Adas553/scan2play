@@ -163,6 +163,11 @@ public class SongEvaluationService {
         // 3. Database Operations: a new row, or one more vote on the same song waiting in the queue
         SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds);
         SongRequestEntity savedRequest = saved.request();
+        if (saved.outcome() != SongRequestCommandService.Outcome.NEW && !DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
+            // The AI rejected this time a song the party took already and that still waits: the guest hears the verdict it was taken with
+            log.info("Party [{}]: '{}' rejected this time, but it waits in the queue — counted on it", partyCode, savedRequest.getSongName());
+            aiResponse = aiResponse.withVerdict(savedRequest.getDecision(), savedRequest.getDjComment(), savedRequest.getEnergyLevel());
+        }
 
         return aiResponse.savedAs(savedRequest.getId(), savedRequest.getSongName(), savedRequest.getVotes(),
                 saved.outcome() == SongRequestCommandService.Outcome.ALREADY_YOURS);

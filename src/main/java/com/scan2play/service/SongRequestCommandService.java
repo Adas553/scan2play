@@ -42,18 +42,17 @@ public class SongRequestCommandService {
     private final SongRequestRepository songRequestRepository;
 
     /**
-     * Saves {@code request}, unless it is accepted and the same song already waits in the party's queue: then the waiting song
-     * gets one vote more (and keeps its name, its link and the words of the guest who asked first). A guest's own waiting song is
-     * not counted again ({@link Outcome#ALREADY_YOURS}). A rejected request is always a row of its own — the history shows it.
+     * Saves {@code request}, unless the same song already waits in the party's queue: then the waiting song gets one vote more
+     * (and keeps its name, its link, its verdict and the words of the guest who asked first). A guest's own waiting song is not
+     * counted again ({@link Outcome#ALREADY_YOURS}). That holds for a request the AI rejected too: the AI does not judge a song the
+     * same way every time, and the party took this one already — the caller tells the guest the verdict the song was taken with.
+     * A rejected request for a song that does not wait is a row of its own — the history shows it.
      *
      * @param request     the request as the AI judged it, not saved yet
      * @param guestsOwnIds the guest's earlier requests at this party (their session), to tell their own song
      */
     @Transactional
     public Saved saveOrVote(SongRequestEntity request, Set<Long> guestsOwnIds) {
-        if (!DECISION_ACCEPTED.equalsIgnoreCase(request.getDecision())) {
-            return new Saved(Outcome.NEW, songRequestRepository.save(request));
-        }
         songRequestRepository.lockRequests(lockKey(request.getPartyCode()));
         Optional<SongRequestEntity> waiting = sameSongWaiting(request);
         if (waiting.isEmpty()) {

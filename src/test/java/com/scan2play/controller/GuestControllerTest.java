@@ -286,14 +286,23 @@ class GuestControllerTest {
         verify(guestSessionService).rememberRequest(session, PARTY, 6L);
     }
 
+    /**
+     * A rejected request does not use the guest's own limit up (the owner, 2026-10-04: "nieudane próby się liczą … a nie powinno"):
+     * with a limit of 2, two rejected songs would leave the guest waiting with nothing in the queue. The server's limits per network
+     * and per party still count it (against abuse: every request is an AI call).
+     */
     @Test
-    void anEvaluatedRequest_keepsItsPlace_evenWhenRejected() throws Exception {
+    void aRejectedRequest_givesThePlaceBack_anAcceptedOneKeepsIt() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
-                .thenReturn(new DjResponse("rejected", "Not tonight", "Song", 2, "title", 5L));
+                .thenReturn(new DjResponse("rejected", "Not tonight", "Song", 2, "title", 5L))
+                .thenReturn(new DjResponse("accepted", "Yes", "Song", 7, "title", 6L));
 
         assertThat(request("Song")).isEqualTo("result");
-        verify(guestSessionService, never()).giveBack(any(), anyString());
+        verify(guestSessionService).giveBack(session, PARTY);
+
+        assertThat(request("Song")).isEqualTo("result");
+        verify(guestSessionService).giveBack(session, PARTY);   // still once
     }
 }

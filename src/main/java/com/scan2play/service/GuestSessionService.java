@@ -68,8 +68,9 @@ public class GuestSessionService {
     }
 
     /**
-     * Gives the newest counted request of this guest back: a request that came to nothing — nothing saved, nothing for the DJ (a
-     * mood sent back to the form, the AI not answering) — does not use the guest's limit up.
+     * Gives the newest counted request of this guest back: a request that came to nothing for the guest — nothing for the DJ to
+     * play (a mood sent back to the form, a rejected song, the guest's own waiting song asked for again) — does not use the
+     * guest's limit up.
      */
     public void giveBack(HttpSession session, String partyCode) {
         requestTimes.asMap().computeIfPresent(key(session.getId(), partyCode), (key, times) -> {

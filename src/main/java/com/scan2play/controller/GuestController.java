@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import static com.scan2play.controller.ViewAttributes.*;
+import static com.scan2play.service.DjService.DECISION_REJECTED;
 
 @Controller
 @RequestMapping("/p")
@@ -121,9 +122,9 @@ public class GuestController {
                 // The guest's earlier requests: the same song asked for again while it waits is not one more vote
                 DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
                         styleOf(settings, locale), guestSessionService.myRequestIds(session, partyCode));
-                // A request that came to nothing — a mood sent back to the form, the guest's own song asked for again — does not
-                // use the guest's limit up (the server's own limits keep counting it: against abuse)
-                if (response.isMood() || response.ownSong()) {
+                // A request that came to nothing — a mood sent back to the form, a rejected song, the guest's own song asked for
+                // again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
+                if (response.isMood() || response.ownSong() || DECISION_REJECTED.equalsIgnoreCase(response.decision())) {
                     guestSessionService.giveBack(session, partyCode);
                 }
                 if (response.isMood()) {

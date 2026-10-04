@@ -278,6 +278,60 @@ class SongEvaluationServiceTest {
         assertThat(response.requestId()).isEqualTo(9L);
     }
 
+    private static final String WILKI_REJECTED = "{\"decision\":\"rejected\",\"comment\":\"Nie na ten parkiet\",\"songName\":\"Wilki - Baśka\","
+            + "\"energyLevel\":3,\"requestKind\":\"title\"}";
+
+    /**
+     * The AI does not judge the same song the same way every time (2026-10-04: a song accepted once, then rejected four times while
+     * it waited). The party took the song already: asked for again while it waits, it is a vote, whatever the AI says this time —
+     * with the verdict the song was taken with.
+     */
+    @Test
+    void theSameSongRejectedThisTime_whileItWaits_isAVote_withTheVerdictItWasTakenWith() {
+        aParty(0);
+        SongRequestEntity waiting = waitingWilki();
+        waiting.setDjComment("Klasyk!");
+        waiting.setEnergyLevel(7);
+        when(songRequestRepository.addVote(5L)).thenReturn(1);
+
+        DjResponse response = answering(WILKI_REJECTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", Set.of(1L));
+
+        assertThat(response.decision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(response.comment()).isEqualTo("Klasyk!");
+        assertThat(response.energyLevel()).isEqualTo(7);
+        assertThat(response.isVote()).isTrue();
+        assertThat(response.votes()).isEqualTo(3);
+        verify(songRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void theGuestsOwnWaitingSong_rejectedThisTime_isStillTheirsWaiting() {
+        aParty(0);
+        waitingWilki().setDjComment("Klasyk!");
+
+        DjResponse response = answering(WILKI_REJECTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", Set.of(5L));
+
+        assertThat(response.decision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(response.ownSong()).isTrue();
+        assertThat(response.comment()).isEqualTo("Klasyk!");
+        verify(songRequestRepository, never()).addVote(any());
+        verify(songRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void aRejectedSong_thatDoesNotWait_isARowOfItsOwn() {
+        aParty(0);
+        when(songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
+                .thenReturn(List.of());
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+
+        DjResponse response = answering(WILKI_REJECTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", Set.of());
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("Nie na ten parkiet");
+        assertThat(saved.getValue().getDecision()).isEqualTo("rejected");
+    }
+
     @Test
     void aMood_isNotSaved() {
         aParty(0);
