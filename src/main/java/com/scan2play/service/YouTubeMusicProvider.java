@@ -153,13 +153,6 @@ public class YouTubeMusicProvider implements MusicProvider {
         return callYouTubeApi(searchQuery, normalizedQuery, cached.orElse(null));
     }
 
-    /**
-     * No-op for YouTube. Auto-Pilot queue is managed client-side via IFrame Player API.
-     */
-    @Override
-    public void addToQueue(String partyCode, String trackId) {
-        log.debug("Party [{}]: YouTube queue is managed client-side, skipping server-side push", partyCode);
-    }
 
     /**
      * Daily cleanup of expired cache entries (YouTube API ToS: max 30-day retention).

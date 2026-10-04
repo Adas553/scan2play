@@ -27,7 +27,7 @@ import java.util.Set;
  * Key responsibilities:
  * <ul>
  *     <li>Queue queries (Dashboard, History, Public)</li>
- *     <li>Song status changes (mark as played, push to Spotify)</li>
+ *     <li>Song status changes (mark as played, skip, clear)</li>
  *     <li>DJ manual picks (bypass AI)</li>
  * </ul>
  * <p>
@@ -216,45 +216,6 @@ public class DjService {
         } else {
             evict.run();
         }
-    }
-
-    /**
-     * Pushes a specific song to the Spotify queue manually.
-     * Only works if the active provider is Spotify.
-     * Validates that the song belongs to the given party (IDOR protection).
-     * <p>
-     * The song is marked as played once Spotify has taken it ({@link QueueService#addToQueue} runs asynchronously); when that
-     * fails it stays in the queue, so the DJ sees it is still waiting and can press again.
-     *
-     * @param id             The ID of the song request.
-     * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
-     */
-    public void pushToSpotify(Long id, String ownerPartyCode) {
-        songRequestRepository.findById(id).ifPresent(song -> {
-            if (!song.getPartyCode().equals(ownerPartyCode)) {
-                log.warn("IDOR blocked: DJ party {} tried to push song {} to Spotify (belongs to party {})",
-                        ownerPartyCode, id, song.getPartyCode());
-                return;
-            }
-            String partyCode = song.getPartyCode();
-            PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-
-            if (settings.getActiveProvider() == MusicProviderType.SPOTIFY && song.getTrackUrl() != null) {
-                queueService.addToQueue(partyCode, song.getTrackUrl(), MusicProviderType.SPOTIFY)
-                        .whenComplete((ignored, error) -> {
-                            if (error != null) {
-                                log.warn("Could not push song ID={} to the Spotify queue — it stays in the queue", id, error);
-                                return;
-                            }
-                            markPlayed(song, Instant.now());
-                            songRequestRepository.save(song);
-                            evictDashboardQueueAfterCommit(partyCode);
-                            log.info("Manually pushed song ID={} to Spotify queue and marked as PLAYED", id);
-                        });
-            } else {
-                log.warn("Cannot push to Spotify: Provider is {} or track URL is missing", settings.getActiveProvider());
-            }
-        });
     }
 
     /**

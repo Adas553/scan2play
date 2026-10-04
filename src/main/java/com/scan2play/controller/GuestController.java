@@ -55,6 +55,7 @@ public class GuestController {
 
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
             model.addAttribute(VIBE_NOTE, settings.getVibeNote());
+            model.addAttribute(DJ_NAME, settings.getDjName());
             model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
             model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
             model.addAttribute(PARTY_CODE, partyCode);
@@ -84,7 +85,7 @@ public class GuestController {
 
     /**
      * Processes a song request asynchronously using {@link Callable} to release the Tomcat thread
-     * during the AI evaluation and Spotify API calls (~2-4 seconds).
+     * during the AI evaluation and the YouTube search (~2-4 seconds).
      * The HTTP connection stays open; the guest sees the result when processing completes.
      */
     @PostMapping("/{partyCode}/request")

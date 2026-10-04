@@ -241,29 +241,6 @@ class DashboardPageRenderTest {
     }
 
     @Test
-    @DisplayName("a Spotify party, connected: the queue with Played / push to Spotify, no YouTube player (written to target/browser-harness/dashboard-spotify.html)")
-    void shouldRenderTheDashboardOfASpotifyParty() throws IOException {
-        PartySettingsEntity party = youTubeParty(PlaybackMode.MANUAL, null);
-        party.setActiveProvider(MusicProviderType.SPOTIFY);
-        party.setSpotifyAccessToken("token");
-        SongRequestEntity waiting = song(1, "Daft Punk - One More Time", "unused");
-        waiting.setTrackUrl("spotify:track:0DiWol3AO6WpXZgp0goxAV");
-        String html = renderDashboard(party, List.of(waiting), PL);
-
-        // the Spotify icon beside what comes from Spotify (its Developer Policy): on the track's link and on the push button
-        assertThat(html.split("class=\"s2p-spotify-icon\"", -1).length - 1).as("the Spotify icons").isEqualTo(2);
-        assertThat(html).contains("aria-label=\"Spotify\"", "</svg> SPOTIFY").doesNotContain("▶ SPOTIFY", "🎵 <span");
-        assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/requests/1/push-to-spotify\"",
-                "id=\"autoToggle\"", "id=\"settingsToggle\"");
-        assertThat(html).doesNotContain("id=\"yt-player\"", "/js/youtube-autopilot.js", "id=\"fallbackQueue\"");
-        assertThat(html).contains("id=\"partyCode\"", "id=\"song-list\"", "data-provider=\"SPOTIFY\"", "id=\"queueList\"",
-                "<script type=\"module\" src=\"/js/dashboard/main.js\">");
-        assertNothingInline(html);
-        assertThat(html).doesNotContain("??");
-        write("dashboard-spotify.html", html);
-    }
-
-    @Test
     @DisplayName("a requests-only party (the DJ plays from their own software): the queue with Played / Skip / Preview, no player (written to target/browser-harness/dashboard-requests.html)")
     void shouldRenderTheDashboardOfARequestsOnlyParty() throws IOException {
         PartySettingsEntity party = youTubeParty(PlaybackMode.MANUAL, null);
@@ -275,6 +252,7 @@ class DashboardPageRenderTest {
 
         assertThat(html).contains("Twój program DJ-a", "Grasz ze swojego programu");
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
+        assertThat(html).as("who plays (V17)").contains("action=\"/dj/dashboard/dj-name\"", "id=\"djNameInput\"", "Kto gra (widzą goście)");
         assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
         assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
         // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)

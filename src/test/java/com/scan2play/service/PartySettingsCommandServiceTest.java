@@ -44,7 +44,7 @@ class PartySettingsCommandServiceTest {
                 .id(1L)
                 .ownerId("owner-123")
                 .partyCode("ABC12")
-                .activeProvider(MusicProviderType.SPOTIFY)
+                .activeProvider(MusicProviderType.REQUESTS_ONLY)
                 .build();
 
         when(partySettingsRepository.findByOwnerId("owner-123")).thenReturn(Optional.of(existing));
@@ -52,7 +52,7 @@ class PartySettingsCommandServiceTest {
         PartySettingsEntity result = service.getOrCreatePartyForDj("owner-123", MusicProviderType.YOUTUBE);
 
         assertThat(result.getPartyCode()).isEqualTo("ABC12");
-        assertThat(result.getActiveProvider()).isEqualTo(MusicProviderType.SPOTIFY); // original preserved
+        assertThat(result.getActiveProvider()).isEqualTo(MusicProviderType.REQUESTS_ONLY); // original preserved
         verify(partySettingsRepository, never()).save(any());
     }
 

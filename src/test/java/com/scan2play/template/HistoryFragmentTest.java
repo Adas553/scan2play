@@ -129,7 +129,7 @@ class HistoryFragmentTest {
     void shouldOfferThePlaylistFilterOnlyAtAYouTubeParty() {
         assertThat(renderWithFilter("all")).contains("data-list-filter=\"background\"");
 
-        Context context = new Context(Locale.ENGLISH);   // a Spotify or a requests-only party: no historyHasPlaylist
+        Context context = new Context(Locale.ENGLISH);   // a requests-only party: no historyHasPlaylist
         context.setVariable("history", List.of(guest(1, "Alpha", "played")));
         context.setVariable("historyHasMore", false);
         context.setVariable("historyNextLimit", 100);

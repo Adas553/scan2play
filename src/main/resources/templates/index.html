@@ -14,6 +14,8 @@
     <div class="card p-4 shadow-lg w-100 text-white mb-4">
         <div class="text-center mb-4">
             <h1 class="display-4 fw-bold" th:text="#{home.title}">🎵 Scan2Play</h1>
+            <!--/* Who plays, as the DJ wrote it (V17) */-->
+            <p th:if="${djName != null}" id="djName" class="fs-5 fw-bold mb-1" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</p>
             <p class="text-secondary" th:text="#{home.subtitle}">What do you want to hear?</p>
 
             <!-- YouTube branding badge — required by YouTube API Terms of Service (Section 4d) -->

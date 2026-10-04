@@ -10,7 +10,6 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.PlaybackMode;
 import com.scan2play.model.RequestMode;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.Texts;
@@ -25,8 +24,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -48,7 +45,6 @@ import static com.scan2play.service.DjService.DECISION_REJECTED;
  *     <li>Asks Google Gemini to evaluate the song request against the party vibe.</li>
  *     <li>Resolves a playable track URL via the active music provider.</li>
  *     <li>Persists the evaluation result.</li>
- *     <li>Optionally queues the song for auto-playback (Spotify only — YouTube is client-side).</li>
  * </ol>
  *
  * Extracted from {@link DjService} to keep each service focused on a single responsibility.
@@ -96,11 +92,9 @@ public class SongEvaluationService {
     private final QueueService queueService;
     private final MessageSource messageSource;
     private final ResourceLoader resourceLoader;
-    private final PlatformTransactionManager transactionManager;
     private final YouTubePlaylistClient youTubePlaylistClient;
     private final SongRequestCommandService songRequestCommandService;
 
-    private TransactionTemplate transactionTemplate;
 
     /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt), for a specific song. */
     private Map<String, String> promptTemplates;
@@ -114,11 +108,10 @@ public class SongEvaluationService {
     private String normalizePromptTemplate;
 
     /**
-     * Loads AI prompt templates for all supported languages and sets up the transaction template.
+     * Loads AI prompt templates for all supported languages.
      */
     @PostConstruct
     public void init() {
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.aiJsonConfig = GenerateContentConfig.builder()
                 .responseMimeType("application/json")
                 .thinkingConfig(ThinkingConfig.builder().thinkingBudget(thinkingBudget).build())
@@ -180,7 +173,6 @@ public class SongEvaluationService {
         Locale locale = LocaleContextHolder.getLocale();
 
         // Fetch i18n error messages in the main thread
-        String autopilotErrorMsg = messageSource.getMessage("dashboard.error.autopilot_failed", null, locale);
         String aiOfflineMsg = messageSource.getMessage("ai.error.offline", null, locale);
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
@@ -193,7 +185,7 @@ public class SongEvaluationService {
             return aiResponse;
         }
 
-        // 2. External API Call: Spotify/YouTube Track Resolution (if accepted)
+        // 2. External API Call: YouTube Track Resolution (if accepted)
         String trackUrl = null;
         if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
             trackUrl = resolveTrackUrl(searchQueryFor(aiResponse, songName, settings.getActiveProvider(), mode),
@@ -205,11 +197,6 @@ public class SongEvaluationService {
         // 3. Database Operations: a new row, or one more vote on the same song waiting in the queue
         SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds);
         SongRequestEntity savedRequest = saved.request();
-
-        // 4. External API Call: Add to Queue (If Accepted & Auto-Pilot is enabled) — a vote's song is in the queue already
-        if (saved.outcome() == SongRequestCommandService.Outcome.NEW) {
-            handleAutoQueue(settings, savedRequest, trackUrl, autopilotErrorMsg);
-        }
 
         return aiResponse.savedAs(savedRequest.getId(), savedRequest.getSongName(), savedRequest.getVotes(),
                 saved.outcome() == SongRequestCommandService.Outcome.ALREADY_YOURS);
@@ -332,8 +319,7 @@ public class SongEvaluationService {
      * What the provider searches for: the AI's name of the song — except when the guest typed a line of the lyrics at a party whose
      * links come from YouTube's search (YouTube, requests-only), then the guest's own words. The AI does not know lyrics reliably (a line of a well-known Polish song got a different
      * made-up artist and title on each try, and the search then found another song), while YouTube's search matches lyrics well.
-     * Spotify's search does not, so a Spotify party keeps the AI's name. A mood is never searched by the guest's words: the AI
-     * picked the song.
+     * A mood is never searched by the guest's words: the AI picked the song.
      *
      * @param guestText what the guest typed
      */
@@ -389,40 +375,6 @@ public class SongEvaluationService {
                 .build();
 
         return songRequestCommandService.saveOrVote(entity, guestsOwnIds);
-    }
-
-    /**
-     * Auto-Pilot of a Spotify party: puts an accepted song straight into the DJ's Spotify queue. The song counts as played only
-     * when that worked; when it failed it stays in the DJ's queue (accepted) with a note, so the DJ can still push it by hand.
-     */
-    void handleAutoQueue(PartySettingsEntity settings, SongRequestEntity savedRequest, String trackUrl, String autopilotErrorMsg) {
-        if (trackUrl == null || !DECISION_ACCEPTED.equalsIgnoreCase(savedRequest.getDecision()) || settings.getPlaybackMode() != PlaybackMode.AUTO) {
-            return;
-        }
-
-        // Only a Spotify party queues on the server: YouTube's Auto-Pilot is the page's player, and a requests-only party has no
-        // queue to add to (its DJ plays from their own software)
-        if (settings.getActiveProvider() != MusicProviderType.SPOTIFY) {
-            return;
-        }
-
-        // whenComplete, not exceptionally + thenAccept: exceptionally recovers the future, so a thenAccept after it ran on a failure
-        // too and marked the song as played although it never reached Spotify.
-        queueService.addToQueue(settings.getPartyCode(), trackUrl, settings.getActiveProvider())
-                .whenComplete((ignored, ex) -> {
-                    if (ex != null) {
-                        log.error("Failed to Auto-Queue track {} for party {}. Updating song status to indicate failure.", trackUrl, settings.getPartyCode(), ex);
-                    }
-                    transactionTemplate.executeWithoutResult(status ->
-                            songRequestRepository.findById(savedRequest.getId()).ifPresent(song -> {
-                                if (ex == null) {
-                                    DjService.markPlayed(song, Instant.now());
-                                } else {
-                                    song.setDjComment(song.getDjComment() + " " + autopilotErrorMsg);
-                                }
-                            })
-                    );
-                });
     }
 
     /**

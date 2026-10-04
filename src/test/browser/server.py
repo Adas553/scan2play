@@ -427,10 +427,6 @@ class Handler(BaseHTTPRequestHandler):
             with stand.lock:
                 state['queue'] = [r for r in state['queue'] if str(r['id']) != str(fields.get('id'))]
             return self._json({})
-        if re.fullmatch(r'/dj/requests/\d+/push-to-spotify', path):   # a Spotify party: the song goes to Spotify, leaves the queue
-            with stand.lock:
-                state['queue'] = [r for r in state['queue'] if str(r['id']) != path.split('/')[3]]
-            return self._json({})
         if path == '/dj/dashboard/limits':
             return self._json({})
         if path == '/dj/dashboard/clear-queue':       # every waiting request leaves the queue (as rejected, on the real server)

@@ -60,10 +60,21 @@
                             <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
                         </div>
                     </form>
+                    <!--/* Who plays (V17): the guests see "🎧 Gra: DJ Koko" on the party page; empty clears it */-->
+                    <form th:action="@{/dj/dashboard/dj-name}" method="POST" class="m-0 mt-2" id="djNameForm">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <label for="djNameInput" class="form-label text-secondary small mb-1" th:text="#{dashboard.dj.name.label}">Who plays</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="djNameInput" name="djName" maxlength="60" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary"
+                                   th:value="${djName}" th:placeholder="#{dashboard.dj.name.placeholder}">
+                            <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
-            <!--/* folded on a phone only at a requests-only party: elsewhere it holds the Auto-Pilot switch / "Connect Spotify" */-->
+            <!--/* folded on a phone only at a requests-only party: at a YouTube party it holds the Auto-Pilot switch */-->
             <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm"
                  th:classappend="${activeProvider.name() == 'REQUESTS_ONLY'} ? 's2p-phone-settings'">
                 <div class="row align-items-center">
@@ -71,28 +82,21 @@
                     <div class="col-md-6 mb-3 mb-md-0 d-flex align-items-center s2p-phone-settings">
                         <span class="fw-bold text-light me-3" th:text="#{dashboard.provider.label}">🎵 Playback source:</span>
                         <span class="badge fs-6 px-3 py-2"
-                              th:classappend="${activeProvider.name() == 'SPOTIFY' ? 'bg-success' : (activeProvider.name() == 'REQUESTS_ONLY' ? 'bg-info text-dark' : 'bg-danger')}"
-                              th:text="${activeProvider.name() == 'SPOTIFY' ? 'Spotify' : (activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.provider.requests') : 'YouTube')}">Spotify</span>
+                              th:classappend="${activeProvider.name() == 'REQUESTS_ONLY' ? 'bg-info text-dark' : 'bg-danger'}"
+                              th:text="${activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.provider.requests') : 'YouTube'}">YouTube</span>
                     </div>
                     <div class="col-md-6 d-flex justify-content-md-end align-items-center">
                         <!-- Requests only: the DJ plays from their own software — what the buttons of the queue do -->
                         <span th:if="${activeProvider.name() == 'REQUESTS_ONLY'}" class="text-secondary small"
                               th:text="#{dashboard.requests.help}">You play from your own software.</span>
-                        <!-- Spotify: Connect button if not yet linked -->
-                        <a th:if="${activeProvider.name() == 'SPOTIFY' and !isSpotifyConnected}"
-                           th:href="@{/dj/spotify/login(partyCode=${partyCode})}" class="btn btn-success">
-                            Connect Spotify for Auto-Pilot
-                        </a>
-
-                        <!-- Auto-Pilot toggle: YouTube (always) or Spotify (when connected) -->
-                        <form th:if="${activeProvider.name() == 'YOUTUBE' or (activeProvider.name() == 'SPOTIFY' and isSpotifyConnected)}"
+                        <!-- Auto-Pilot toggle: a YouTube party -->
+                        <form th:if="${activeProvider.name() == 'YOUTUBE'}"
                               th:action="@{/dj/dashboard/playback-mode}" method="POST" class="d-inline" id="autoPilotForm">
                             <input type="hidden" name="partyCode" th:value="${partyCode}">
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" id="autoToggle"
                                        th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
-                                <label class="form-check-label fw-bold" for="autoToggle"
-                                       th:classappend="${activeProvider.name() == 'SPOTIFY'} ? 's2p-text-spotify' : 's2p-text-youtube'">
+                                <label class="form-check-label fw-bold s2p-text-youtube" for="autoToggle">
                                     Auto-Pilot (Queue)
                                 </label>
                             </div>
@@ -298,7 +302,7 @@
             <tbody id="song-list" th:fragment="songTableBody"
                    th:attr="data-playback-mode=${playbackMode},data-provider=${activeProvider}">
             <!--/* data-video-id: the YouTube video of the song, read by the server (YouTubeUrls.extractVideoId) — the one source the
-                 scripts use (the guests-waiting count, ▶ in the embedded player); none for a search link or a Spotify URI */-->
+                 scripts use (the guests-waiting count, ▶ in the embedded player); none for a search link */-->
             <tr th:each="req : ${history}" th:with="videoId=${T(com.scan2play.util.YouTubeUrls).extractVideoId(req.trackUrl).orElse(null)},
                           shownAt=${T(com.scan2play.util.Times).display(req.requestedAt)},
                           sortAt=${T(com.scan2play.util.Times).sortKey(req.requestedAt)}"
@@ -314,7 +318,7 @@
                             <span th:if="${said != null}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${said})}">guest wrote: “…”</span>
                         </span>
-                        <!--/* Track link: ▶ SPOTIFY (green) | ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL).
+                        <!--/* Track link: ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL).
                              ▶ YOUTUBE in the window that plays = play it to the party now (the song is confirmed played and leaves
                              the queue); ↗ = only look at it on YouTube, in a new tab. */-->
                         <!--/* text-nowrap: the cell is as wide as ▶ YOUTUBE on one line, so ↗ never runs over the next column */-->
@@ -325,12 +329,8 @@
                            class="btn btn-sm shadow-sm fw-bold flex-shrink-0 play-link"
                            th:title="${videoId != null} ? #{dashboard.queue.play} : null"
                            th:attr="data-track-url=${req.trackUrl},data-video-id=${videoId}"
-                           th:classappend="${#strings.contains(req.trackUrl, 'spotify') ? 'btn-success text-dark' : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? 'btn-danger text-white' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-outline-danger text-danger' : 'btn-secondary'))}"
-                           th:with="spotifyLink=${activeProvider.name() != 'REQUESTS_ONLY' and #strings.contains(req.trackUrl, 'spotify')}">
-                            <!--/* a Spotify track: the Spotify icon (black on green), its Developer Policy's attribution */-->
-                            <th:block th:if="${spotifyLink}"><svg th:replace="~{fragments/components :: spotify-icon}"></svg> SPOTIFY</th:block>
-                            <th:block th:unless="${spotifyLink}"
-                                      th:text="${activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.queue.preview') : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? '▶ YOUTUBE' : (#strings.contains(req.trackUrl, 'youtube') ? '🔍 YOUTUBE' : '▶ PLAY'))}">▶ YOUTUBE</th:block>
+                           th:classappend="${#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? 'btn-danger text-white' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-outline-danger text-danger' : 'btn-secondary')}"
+                           th:text="${activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.queue.preview') : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? '▶ YOUTUBE' : (#strings.contains(req.trackUrl, 'youtube') ? '🔍 YOUTUBE' : '▶ PLAY'))}">
                         </a>
                         <a th:if="${videoId != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
                            class="text-light text-decoration-none fs-5 lh-1 px-1 youtube-preview"
@@ -361,13 +361,6 @@
                             <input type="hidden" name="id" th:value="${req.id}" />
                             <button type="submit" class="btn btn-sm btn-outline-secondary" th:title="#{dashboard.table.button.dismiss.title}"
                                     th:text="#{dashboard.table.button.dismiss}">Skip</button>
-                        </form>
-
-                        <form th:if="${req.decision == 'accepted' and activeProvider.name() == 'SPOTIFY' and isSpotifyConnected and #strings.contains(req.trackUrl, 'spotify')}"
-                              th:action="@{/dj/requests/{id}/push-to-spotify(id=${req.id})}" method="post" class="m-0">
-                             <button type="submit" class="btn btn-sm btn-outline-success" th:title="#{dashboard.button.push_to_spotify}">
-                                <svg th:replace="~{fragments/components :: spotify-icon}"></svg> <span th:text="#{dashboard.button.spotify}">Spotify</span>
-                            </button>
                         </form>
                     </div>
                 </td>

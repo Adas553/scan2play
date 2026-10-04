@@ -5,7 +5,6 @@ import com.scan2play.repository.PartySettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
-import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,13 +52,5 @@ class PartySettingsQueryServiceTest {
         assertThatThrownBy(() -> service.getSettings("NOPE1")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.getSettings("NOPE1")).isInstanceOf(IllegalArgumentException.class);
         verify(repository, times(2)).findByPartyCode("NOPE1");
-    }
-
-    @Test
-    void theSpotifyTokensAreNotInToString() {
-        PartySettingsEntity settings = PartySettingsEntity.builder().partyCode("ABC12").spotifyAccessToken("secret-access")
-                .spotifyRefreshToken("secret-refresh").spotifyTokenExpiresAt(Instant.now()).build();
-
-        assertThat(settings.toString()).contains("ABC12").doesNotContain("secret-access", "secret-refresh");
     }
 }

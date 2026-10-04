@@ -29,7 +29,6 @@ public class DjSessionHelper {
     static final String SESSION_PARTY_CODE = "djPartyCode";
     /** The kind of party the DJ chose on the landing page before Google's login (HomeController.start); used once. */
     static final String SESSION_CHOSEN_PROVIDER = "djChosenProvider";
-    private static final String GOOGLE_REGISTRATION_ID = "google";
 
     private final PartySettingsQueryService partySettingsQueryService;
     private final PartySettingsCommandService partySettingsCommandService;
@@ -44,7 +43,7 @@ public class DjSessionHelper {
      * @return The PartySettingsEntity for this DJ.
      */
     public PartySettingsEntity getPartySettings(OAuth2AuthenticationToken authentication, HttpSession session) {
-        MusicProviderType chosen = takeChosenProvider(authentication, session);
+        MusicProviderType chosen = takeChosenProvider(session);
         String cachedPartyCode = (String) session.getAttribute(SESSION_PARTY_CODE);
 
         if (cachedPartyCode != null) {
@@ -57,7 +56,7 @@ public class DjSessionHelper {
         }
 
         String ownerId = authentication.getName();
-        MusicProviderType provider = chosen != null ? chosen : resolveProviderFromAuth(authentication);
+        MusicProviderType provider = chosen != null ? chosen : MusicProviderType.YOUTUBE;
         PartySettingsEntity settings = giveChosenKind(partySettingsCommandService.getOrCreatePartyForDj(ownerId, provider), chosen);
         session.setAttribute(SESSION_PARTY_CODE, settings.getPartyCode());
         return settings;
@@ -65,17 +64,14 @@ public class DjSessionHelper {
 
     /**
      * The kind of party chosen on the landing page before this login (HomeController.start), taken out of the session: it counts
-     * once. Only for a Google login — the kinds that log in with Google are YouTube and requests-only.
+     * once.
      */
-    private MusicProviderType takeChosenProvider(OAuth2AuthenticationToken authentication, HttpSession session) {
+    private MusicProviderType takeChosenProvider(HttpSession session) {
         Object chosen = session.getAttribute(SESSION_CHOSEN_PROVIDER);
         if (chosen == null) {
             return null;
         }
         session.removeAttribute(SESSION_CHOSEN_PROVIDER);
-        if (resolveProviderFromAuth(authentication) != MusicProviderType.YOUTUBE) {
-            return null;
-        }
         try {
             return MusicProviderType.valueOf(chosen.toString());
         } catch (IllegalArgumentException e) {
@@ -89,7 +85,7 @@ public class DjSessionHelper {
      * its Auto-Pilot is off.
      */
     private PartySettingsEntity giveChosenKind(PartySettingsEntity settings, MusicProviderType chosen) {
-        if (chosen == null || settings.getActiveProvider() == chosen || settings.getActiveProvider() == MusicProviderType.SPOTIFY) {
+        if (chosen == null || settings.getActiveProvider() == chosen) {
             return settings;
         }
         log.info("Party [{}]: {} -> {} (the DJ's choice on the landing page)", settings.getPartyCode(), settings.getActiveProvider(), chosen);
@@ -121,17 +117,6 @@ public class DjSessionHelper {
             throw new org.springframework.security.access.AccessDeniedException(
                     "You do not own party: " + partyCode);
         }
-    }
-
-    /**
-     * Resolves the {@link MusicProviderType} from the OAuth2 authentication token.
-     * Spotify registration maps to SPOTIFY, Google registration maps to YOUTUBE.
-     */
-    MusicProviderType resolveProviderFromAuth(OAuth2AuthenticationToken authentication) {
-        String registrationId = authentication.getAuthorizedClientRegistrationId();
-        return GOOGLE_REGISTRATION_ID.equalsIgnoreCase(registrationId)
-                ? MusicProviderType.YOUTUBE
-                : MusicProviderType.SPOTIFY;
     }
 }
 

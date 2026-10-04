@@ -91,8 +91,8 @@ public class PlayHistoryService {
 
     /**
      * The tracks that played most recently and that the embedded player can play again (they have a YouTube video ID),
-     * newest first — what the "previous track" button walks back along. Songs of Spotify parties and requests whose
-     * link is a YouTube search page are left out.
+     * newest first — what the "previous track" button walks back along. Requests whose link is a YouTube search
+     * page are left out.
      *
      * @param limit how many entries to read from each side (fewer may come back once the unplayable ones are dropped)
      */

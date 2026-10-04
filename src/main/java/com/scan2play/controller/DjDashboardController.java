@@ -128,9 +128,9 @@ public class DjDashboardController {
         // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
         model.addAttribute(VIBE_NOTE, settings.getVibeNote());
+        model.addAttribute(DJ_NAME, settings.getDjName());
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
-        model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
@@ -283,7 +283,6 @@ public class DjDashboardController {
         response.setHeader("ETag", etag);
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
         model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
-        model.addAttribute(IS_SPOTIFY_CONNECTED, settings.getSpotifyAccessToken() != null);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
     }
@@ -296,7 +295,7 @@ public class DjDashboardController {
         return flags.isEmpty() ? FLAG_NONE : String.join(",", flags);
     }
 
-    /** Spent YouTube searches matter to a YouTube party only: Spotify resolves its songs by its own search. */
+    /** Spent YouTube searches matter to a YouTube party only: a requests-only party links to YouTube's search page. */
     private boolean isSearchBudgetSpent(PartySettingsEntity settings) {
         return settings.getActiveProvider() == MusicProviderType.YOUTUBE && youTubeSearchBudget.isSpent();
     }

@@ -23,7 +23,7 @@ public class AppConfig {
 
     /**
      * Shared RestClient with connect/read timeouts.
-     * Prevents hung threads when external APIs (YouTube, Spotify) are slow or unreachable.
+     * Prevents hung threads when external APIs (YouTube) are slow or unreachable.
      */
     @Bean
     public RestClient restClient() {

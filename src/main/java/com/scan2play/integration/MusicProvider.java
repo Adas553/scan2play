@@ -8,7 +8,7 @@ import com.scan2play.model.MusicProviderType;
 public interface MusicProvider {
 
     /**
-     * Returns the provider type (e.g., SPOTIFY, YOUTUBE).
+     * Returns the provider type (YOUTUBE, REQUESTS_ONLY).
      * Used by the factory/service to select the correct implementation.
      */
     MusicProviderType getType();
@@ -20,12 +20,4 @@ public interface MusicProvider {
      * @return The external URL to the track or null if not found.
      */
     String findTrackUrl(String searchQuery);
-
-    /**
-     * Adds a track to the user's playback queue.
-     *
-     * @param partyCode The unique code of the party to add the track to.
-     * @param trackId The unique identifier for the track (e.g., Spotify URI).
-     */
-    void addToQueue(String partyCode, String trackId);
 }

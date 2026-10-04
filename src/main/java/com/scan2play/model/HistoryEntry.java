@@ -16,8 +16,7 @@ import java.time.Instant;
  * @param title       the song name the guest gave, or the video title of a background track ({@code youtu.be/<id>}
  *                    when it is unknown)
  * @param trackUrl    a link to the track; {@code null} when there is none
- * @param videoId     the YouTube video ID the embedded player can play, or {@code null} (a Spotify track, a YouTube
- *                    search URL)
+ * @param videoId     the YouTube video ID the embedded player can play, or {@code null} (a YouTube search URL)
  * @param style       the guest's song style as the AI judged it; {@code null} for a background track
  * @param decision    {@code played} or {@code rejected} (a background track is always {@code played})
  * @param djComment   the AI's comment; {@code null} for a background track

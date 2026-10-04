@@ -55,7 +55,7 @@ class PartySettingsEntityTest {
 
     private static void assertDefaults(PartySettingsEntity party) {
         assertThat(party.isActive()).isTrue();
-        assertThat(party.getActiveProvider()).isEqualTo(MusicProviderType.SPOTIFY);
+        assertThat(party.getActiveProvider()).isEqualTo(MusicProviderType.YOUTUBE);
         assertThat(party.getPlaybackMode()).isEqualTo(PlaybackMode.MANUAL);
         assertThat(party.getRequestLimit()).isEqualTo(2);
         assertThat(party.getCooldownMinutes()).isEqualTo(3);

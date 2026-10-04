@@ -72,16 +72,3 @@ S2P.scenario({
         t.check('the queue comes after the player', queue.getBoundingClientRect().top > player.getBoundingClientRect().bottom);
     }
 });
-
-S2P.scenario({
-    name: 'spotify-phone',
-    title: 'a Spotify party on a phone: the settings fold, Auto-Pilot stays at hand, the queue comes first with Played / Spotify as big buttons',
-    page: 'dashboard-spotify',
-    viewport: '390,844',
-    setup: {},
-    run: async function (t) {
-        const queue = await phoneDashboard(t, ['/dj/dashboard/play', '/dj/requests/1/push-to-spotify']);
-        t.check('the Auto-Pilot switch is not folded', shows(document.getElementById('autoToggle')));
-        t.check('the queue starts in the first screen, under the heading', queue.getBoundingClientRect().top < window.innerHeight * 0.6);
-    }
-});

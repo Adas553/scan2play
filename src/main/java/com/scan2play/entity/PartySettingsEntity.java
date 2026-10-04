@@ -9,9 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-import java.time.Instant;
 
 @Entity
 @Table(name = "party_settings")   // ownerId and partyCode are UNIQUE (their own indexes)
@@ -23,6 +20,8 @@ public class PartySettingsEntity {
 
     /** The longest vibe note (the column, V16). */
     public static final int VIBE_NOTE_MAX = 150;
+    /** The longest DJ name (the column, V17). */
+    public static final int DJ_NAME_MAX = 60;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,7 +30,7 @@ public class PartySettingsEntity {
     @Column(unique = true, nullable = false, length = 5)
     private String partyCode;
 
-    // The unique ID of the DJ (from OAuth2 provider, e.g., Spotify ID)
+    // The unique ID of the DJ (from the Google login)
     @Column(nullable = false, unique = true)
     private String ownerId;
 
@@ -52,9 +51,13 @@ public class PartySettingsEntity {
     @Column(length = VIBE_NOTE_MAX)
     private String vibeNote;
 
+    /** Who plays, as the DJ wrote it (V17): one line of at most {@value #DJ_NAME_MAX} characters, e.g. "DJ Koko"; null = not shown. */
+    @Column(length = DJ_NAME_MAX)
+    private String djName;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    private MusicProviderType activeProvider = MusicProviderType.SPOTIFY;
+    private MusicProviderType activeProvider = MusicProviderType.YOUTUBE;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -83,20 +86,6 @@ public class PartySettingsEntity {
     @Builder.Default
     @Column(nullable = false)
     private boolean fallbackShuffle = true;
-
-    // --- Spotify OAuth2 Credentials --- (never in toString: one logged entity would put them in the logs; encrypted in the
-    // database, SpotifyTokenConverter — a token of a few hundred characters takes about 4/3 of its length + 40 there)
-    @ToString.Exclude
-    @Convert(converter = SpotifyTokenConverter.class)
-    @Column(length = 2048)
-    private String spotifyAccessToken;
-
-    @ToString.Exclude
-    @Convert(converter = SpotifyTokenConverter.class)
-    @Column(length = 2048)
-    private String spotifyRefreshToken;
-
-    private Instant spotifyTokenExpiresAt;
 
     @PrePersist
     public void generateCode() {

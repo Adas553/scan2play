@@ -29,7 +29,7 @@ public class AccountDeletionService {
 
     /**
      * The caches that hold a party's data under its code (AppConfig). Without evicting them the deleted party lived on in
-     * memory — its settings with the Spotify tokens for up to 24 h — and guests could still send requests to it.
+     * memory — its settings for up to 24 h — and guests could still send requests to it.
      */
     static final List<String> PARTY_CACHES = List.of("partySettings", "dashboardQueue");
 
@@ -44,7 +44,7 @@ public class AccountDeletionService {
      * Deletes all data associated with the given DJ (owner).
      * This includes: song requests, fallback tracks and their play log, feedback, and party settings.
      *
-     * @param ownerId The OAuth2 owner ID (Google or Spotify subject).
+     * @param ownerId The OAuth2 owner ID (the Google subject).
      */
     @Transactional
     public void deleteAllUserData(String ownerId) {

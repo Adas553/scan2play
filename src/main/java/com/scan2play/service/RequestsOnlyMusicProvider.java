@@ -29,10 +29,4 @@ public class RequestsOnlyMusicProvider implements MusicProvider {
         }
         return YOUTUBE_SEARCH + URLEncoder.encode(searchQuery.strip(), StandardCharsets.UTF_8);
     }
-
-    /** The DJ's software plays the songs: there is no queue to add to. */
-    @Override
-    public void addToQueue(String partyCode, String trackId) {
-        throw new UnsupportedOperationException("A requests-only party has no player queue");
-    }
 }

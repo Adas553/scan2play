@@ -48,16 +48,16 @@ class SmokeTest {
     }
 
     @Test
-    @DisplayName("The landing page offers three kinds of party; the two Google ones go through /start, which keeps the choice")
+    @DisplayName("The landing page offers two kinds of party, both through /start, which keeps the choice; no Spotify any more")
     void landingPage_offersTheRequestsOnlyTile() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(content().string(containsString("href=\"/start/youtube\"")))
                 .andExpect(content().string(containsString("href=\"/start/requests\"")))
-                .andExpect(content().string(containsString("href=\"/oauth2/authorization/spotify\"")));
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("spotify"))));
     }
 
     @Test
-    @DisplayName("The tile for DJs (requests only) comes first, on a row of its own, recommended; YouTube and Spotify follow")
+    @DisplayName("The tile for DJs (requests only) comes first, on a row of its own, recommended; YouTube follows")
     void landingPage_putsTheTileForDjsFirst() throws Exception {
         String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
 
@@ -65,7 +65,6 @@ class SmokeTest {
         int lineBreak = html.indexOf("provider-cards-break");
         assertThat(requests).isPositive().isLessThan(lineBreak);
         assertThat(lineBreak).isLessThan(html.indexOf("href=\"/start/youtube\""));
-        assertThat(html.indexOf("href=\"/start/youtube\"")).isLessThan(html.indexOf("href=\"/oauth2/authorization/spotify\""));
         // the recommended one is the tile for DJs, and only it
         assertThat(html).containsOnlyOnce("provider-card--recommended");
         assertThat(html.indexOf("provider-card--recommended")).isLessThan(lineBreak);

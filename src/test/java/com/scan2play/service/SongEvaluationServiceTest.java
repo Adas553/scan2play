@@ -15,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.transaction.PlatformTransactionManager;
 
 import com.google.genai.types.GenerateContentConfig;
 import org.mockito.ArgumentCaptor;
@@ -25,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
 import static com.scan2play.service.DjService.DECISION_PLAYED;
@@ -34,19 +32,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the Auto-Pilot of a Spotify party in {@link SongEvaluationService}: an accepted song goes straight into the DJ's
- * Spotify queue and counts as played only when Spotify has taken it.
+ * Tests for {@link SongEvaluationService}: the prompts, what is searched, the name of what plays and the whole pipeline with a test
+ * answering instead of Gemini.
  */
 @ExtendWith(MockitoExtension.class)
 class SongEvaluationServiceTest {
 
-    private static final String PARTY_CODE = "SPT01";
-    private static final String TRACK = "spotify:track:abc123";
-    private static final String FAILED_NOTE = "(Auto-Pilot failed)";
+    private static final String PARTY_CODE = "EVL01";
 
     @Mock
     private SongRequestRepository songRequestRepository;
@@ -57,17 +52,15 @@ class SongEvaluationServiceTest {
     @Mock
     private MessageSource messageSource;
     @Mock
-    private PlatformTransactionManager transactionManager;
-    @Mock
     private YouTubePlaylistClient youTubePlaylistClient;
 
     private SongEvaluationService service;
 
     @BeforeEach
     void setUp() {
-        // The Gemini client is not used by the auto-queue; the prompts are the real ones from the classpath.
+        // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                queueService, messageSource, new DefaultResourceLoader(), transactionManager, youTubePlaylistClient,
+                queueService, messageSource, new DefaultResourceLoader(), youTubePlaylistClient,
                 new SongRequestCommandService(songRequestRepository));
         service.init();
     }
@@ -154,8 +147,8 @@ class SongEvaluationServiceTest {
 
         assertThat(service.searchQueryFor(title, "baska wilki", MusicProviderType.YOUTUBE, RequestMode.SONG)).isEqualTo("Wilki - Baśka");
         assertThat(service.searchQueryFor(unknown, "baska wilki", MusicProviderType.YOUTUBE, RequestMode.SONG)).isEqualTo("Wilki - Baśka");
-        assertThat(service.searchQueryFor(lyrics, "baśka miała fajny biust", MusicProviderType.SPOTIFY, RequestMode.SONG))
-                .as("Spotify's search does not match lyrics").isEqualTo("Wilki - Baśka");
+        assertThat(service.searchQueryFor(lyrics, "baśka miała fajny biust", MusicProviderType.YOUTUBE, RequestMode.MOOD))
+                .as("a mood is never searched by the guest's words").isEqualTo("Wilki - Baśka");
     }
 
     // ---- nameOfTrack: the name of what plays, not the AI's guess ----
@@ -180,7 +173,8 @@ class SongEvaluationServiceTest {
         assertThat(service.nameOfTrack("A - B", "https://www.youtube.com/results?search_query=A+B", MusicProviderType.YOUTUBE))
                 .as("a search link").isEqualTo("A - B");
         assertThat(service.nameOfTrack("A - B", null, MusicProviderType.YOUTUBE)).as("nothing found").isEqualTo("A - B");
-        assertThat(service.nameOfTrack("A - B", TRACK, MusicProviderType.SPOTIFY)).as("a Spotify party").isEqualTo("A - B");
+        assertThat(service.nameOfTrack("A - B", "https://www.youtube.com/watch?v=gH476CxJxfg", MusicProviderType.REQUESTS_ONLY))
+                .as("a requests-only party").isEqualTo("A - B");
         verify(youTubePlaylistClient).findTitle("gH476CxJxfg");
     }
 
@@ -191,7 +185,7 @@ class SongEvaluationServiceTest {
 
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
-                partySettingsQueryService, queueService, messageSource, new DefaultResourceLoader(), transactionManager,
+                partySettingsQueryService, queueService, messageSource, new DefaultResourceLoader(),
                 youTubePlaylistClient, new SongRequestCommandService(songRequestRepository)) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
@@ -255,8 +249,6 @@ class SongEvaluationServiceTest {
         assertThat(saved.getValue().getSongName()).isEqualTo("Wilki - Baśka");
         assertThat(saved.getValue().getTrackUrl()).isEqualTo("https://www.youtube.com/watch?v=abcdefghijk");
         assertThat(saved.getValue().getDecision()).isEqualTo(DECISION_ACCEPTED);
-        // a YouTube party plays on the DJ's page, nothing is queued by the server
-        verify(queueService, never()).addToQueue(any(), any(), any());
     }
 
     @Test
@@ -397,68 +389,7 @@ class SongEvaluationServiceTest {
         assertThat(answering(null).normalizeSongName("nirvanna smells")).isEqualTo("nirvanna smells");
     }
 
-    private static PartySettingsEntity spotifyAutoParty() {
-        return PartySettingsEntity.builder().partyCode(PARTY_CODE)
-                .activeProvider(MusicProviderType.SPOTIFY).playbackMode(PlaybackMode.AUTO).build();
-    }
-
-    private SongRequestEntity acceptedSong() {
-        SongRequestEntity song = SongRequestEntity.builder().id(7L).partyCode(PARTY_CODE).songName("Song")
-                .decision(DECISION_ACCEPTED).djComment("Great pick!").trackUrl(TRACK).build();
-        when(songRequestRepository.findById(7L)).thenReturn(Optional.of(song));
-        return song;
-    }
-
-    @Test
-    void handleAutoQueue_marksTheSongPlayed_whenSpotifyTookIt() {
-        SongRequestEntity song = acceptedSong();
-        when(queueService.addToQueue(PARTY_CODE, TRACK, MusicProviderType.SPOTIFY))
-                .thenReturn(CompletableFuture.completedFuture(null));
-
-        service.handleAutoQueue(spotifyAutoParty(), song, TRACK, FAILED_NOTE);
-
-        assertThat(song.getDecision()).isEqualTo(DECISION_PLAYED);
-        assertThat(song.getPlayedAt()).isNotNull();
-        assertThat(song.getDjComment()).isEqualTo("Great pick!");
-    }
-
-    @Test
-    void handleAutoQueue_leavesTheSongInTheQueueWithANote_whenSpotifyRefusedIt() {
-        SongRequestEntity song = acceptedSong();
-        when(queueService.addToQueue(PARTY_CODE, TRACK, MusicProviderType.SPOTIFY))
-                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("no active device")));
-
-        service.handleAutoQueue(spotifyAutoParty(), song, TRACK, FAILED_NOTE);
-
-        assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED);
-        assertThat(song.getPlayedAt()).isNull();
-        assertThat(song.getDjComment()).isEqualTo("Great pick! " + FAILED_NOTE);
-    }
-
-    @Test
-    void handleAutoQueue_doesNothing_forAYouTubeParty() {
-        SongRequestEntity song = SongRequestEntity.builder().id(7L).decision(DECISION_ACCEPTED).build();
-        PartySettingsEntity youtube = PartySettingsEntity.builder().partyCode(PARTY_CODE)
-                .activeProvider(MusicProviderType.YOUTUBE).playbackMode(PlaybackMode.AUTO).build();
-
-        service.handleAutoQueue(youtube, song, TRACK, FAILED_NOTE);
-
-        verify(queueService, never()).addToQueue(PARTY_CODE, TRACK, MusicProviderType.YOUTUBE);
-    }
-
     // ---- a requests-only party: the DJ plays from their own software ----
-
-    @Test
-    void handleAutoQueue_doesNothing_forARequestsOnlyParty_evenWithAutoPilotLeftOn() {
-        SongRequestEntity song = SongRequestEntity.builder().id(7L).decision(DECISION_ACCEPTED).build();
-        PartySettingsEntity requestsOnly = PartySettingsEntity.builder().partyCode(PARTY_CODE)
-                .activeProvider(MusicProviderType.REQUESTS_ONLY).playbackMode(PlaybackMode.AUTO).build();
-
-        service.handleAutoQueue(requestsOnly, song, TRACK, FAILED_NOTE);
-
-        verifyNoInteractions(queueService);
-        assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED);
-    }
 
     @Test
     void aLineOfLyrics_atARequestsOnlyParty_isLookedUpByTheGuestsWords() {
@@ -487,6 +418,5 @@ class SongEvaluationServiceTest {
         assertThat(saved.getValue().getSongName()).isEqualTo("sanah");
         assertThat(saved.getValue().getDjComment()).isEqualTo("Sent to the DJ");
         assertThat(saved.getValue().getTrackUrl()).isEqualTo("https://www.youtube.com/results?search_query=sanah");
-        verify(queueService, never()).addToQueue(any(), any(), any());
     }
 }

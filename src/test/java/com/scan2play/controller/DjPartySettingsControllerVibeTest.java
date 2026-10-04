@@ -69,6 +69,37 @@ class DjPartySettingsControllerVibeTest {
         return party.getVibeNote();
     }
 
+    /** Posts who plays (V17) and gives the party's DJ name after what the controller asked the settings service to change. */
+    @SuppressWarnings("unchecked")
+    private String sendDjName(String name) throws Exception {
+        var request = post("/dj/dashboard/dj-name").param("partyCode", PARTY).principal(token).session(session);
+        if (name != null) {
+            request.param("djName", name);
+        }
+        mockMvc.perform(request).andExpect(status().is3xxRedirection());
+        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
+        verify(sessionHelper).validateOwnership(eq(PARTY), any(), any());
+        verify(settingsService).updateSettings(eq(PARTY), updater.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Old").build();
+        updater.getValue().accept(party);
+        return party.getDjName();
+    }
+
+    @Test
+    void whoPlays_isKeptOnOneLine() throws Exception {
+        assertThat(sendDjName("  DJ\n Koko ")).isEqualTo("DJ Koko");
+    }
+
+    @Test
+    void whoPlays_isCutTo60Characters() throws Exception {
+        assertThat(sendDjName("x".repeat(200))).hasSize(PartySettingsEntity.DJ_NAME_MAX);
+    }
+
+    @Test
+    void whoPlays_emptyClearsIt() throws Exception {
+        assertThat(sendDjName("  ")).isNull();
+    }
+
     @Test
     void theNote_isKeptOnOneLine() throws Exception {
         assertThat(send("  wesele 40+,\n  polskie przeboje,   bez rapu ")).isEqualTo("wesele 40+, polskie przeboje, bez rapu");

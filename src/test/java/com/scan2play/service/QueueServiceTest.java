@@ -13,34 +13,34 @@ import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link QueueService} — provider delegation logic.
- * Verifies correct routing to Spotify/YouTube implementations and error handling.
+ * Verifies correct routing to the YouTube / requests-only implementations and error handling.
  */
 class QueueServiceTest {
 
-    private MusicProvider spotifyProvider;
+    private MusicProvider requestsOnlyProvider;
     private MusicProvider youtubeProvider;
     private QueueService queueService;
 
     @BeforeEach
     void setUp() {
-        spotifyProvider = mock(MusicProvider.class);
+        requestsOnlyProvider = mock(MusicProvider.class);
         youtubeProvider = mock(MusicProvider.class);
-        when(spotifyProvider.getType()).thenReturn(MusicProviderType.SPOTIFY);
+        when(requestsOnlyProvider.getType()).thenReturn(MusicProviderType.REQUESTS_ONLY);
         when(youtubeProvider.getType()).thenReturn(MusicProviderType.YOUTUBE);
 
-        queueService = new QueueService(List.of(spotifyProvider, youtubeProvider));
+        queueService = new QueueService(List.of(requestsOnlyProvider, youtubeProvider));
     }
 
     // ---- resolveTrack ----
 
     @Test
-    void resolveTrack_shouldDelegateToSpotifyProvider() {
-        when(spotifyProvider.findTrackUrl("Nirvana")).thenReturn("spotify:track:abc123");
+    void resolveTrack_shouldDelegateToTheRequestsOnlyProvider() {
+        when(requestsOnlyProvider.findTrackUrl("Nirvana")).thenReturn("https://www.youtube.com/results?search_query=Nirvana");
 
-        String result = queueService.resolveTrack("Nirvana", MusicProviderType.SPOTIFY);
+        String result = queueService.resolveTrack("Nirvana", MusicProviderType.REQUESTS_ONLY);
 
-        assertThat(result).isEqualTo("spotify:track:abc123");
-        verify(spotifyProvider).findTrackUrl("Nirvana");
+        assertThat(result).isEqualTo("https://www.youtube.com/results?search_query=Nirvana");
+        verify(requestsOnlyProvider).findTrackUrl("Nirvana");
         verify(youtubeProvider, never()).findTrackUrl(any());
     }
 
@@ -52,27 +52,16 @@ class QueueServiceTest {
 
         assertThat(result).isEqualTo("https://www.youtube.com/watch?v=hTWKbfoikeg");
         verify(youtubeProvider).findTrackUrl("Nirvana");
-        verify(spotifyProvider, never()).findTrackUrl(any());
+        verify(requestsOnlyProvider, never()).findTrackUrl(any());
     }
 
     @Test
     void resolveTrack_shouldThrow_whenProviderNotConfigured() {
-        // Create service with only Spotify — no YouTube
-        QueueService partialService = new QueueService(List.of(spotifyProvider));
+        // Create service with only the requests-only provider — no YouTube
+        QueueService partialService = new QueueService(List.of(requestsOnlyProvider));
 
         assertThatThrownBy(() -> partialService.resolveTrack("Song", MusicProviderType.YOUTUBE))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported");
     }
-
-    // ---- addToQueue ----
-
-    @Test
-    void addToQueue_shouldDelegateToCorrectProvider() {
-        queueService.addToQueue("ABC12", "spotify:track:abc", MusicProviderType.SPOTIFY);
-
-        verify(spotifyProvider).addToQueue("ABC12", "spotify:track:abc");
-        verify(youtubeProvider, never()).addToQueue(any(), any());
-    }
 }
-

@@ -47,7 +47,7 @@ public class GuestQueueService {
      * @param myPosition where the guest's first waiting song is in the whole queue (1 = next), or null
      * @param mySong     the name of that song, or null
      * @param mostWanted the waiting songs more than one guest asked for, the most votes first (at most {@value #MOST_WANTED_SHOWN})
-     * @param inOrder    whether the songs play in the queue's order (a YouTube or Spotify party): then {@code upNext} is the next
+     * @param inOrder    whether the songs play in the queue's order (a YouTube party): then {@code upNext} is the next
      *                   songs and {@code myPosition} a place; otherwise (a requests-only party) {@code upNext} is the songs sent
      *                   lately, the newest first, and the guest's song only "waits for the DJ"
      */

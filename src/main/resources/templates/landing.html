@@ -47,20 +47,6 @@
                     <small class="d-block mt-2 s2p-hint" th:text="#{landing.hint.youtube}">Requires Google account</small>
                 </a>
 
-                <!-- Spotify: Closed Beta — limited to whitelisted accounts -->
-                <a href="/oauth2/authorization/spotify" class="provider-card provider-card--beta text-center">
-                    <span class="badge bg-secondary mb-2" th:text="#{landing.badge.spotify.beta}">🔒 Closed Beta</span>
-                    <div class="icon">🎵</div>
-                    <div class="btn btn-spotify btn-lg w-100" th:text="#{landing.btn.start.spotify}">
-                        Start Party with Spotify
-                    </div>
-                    <small class="d-block mt-2 s2p-hint" th:text="#{landing.hint.spotify}">Requires Spotify account</small>
-                    <small class="d-block mt-2 fst-italic s2p-hint s2p-hint-note"
-                           th:text="#{landing.hint.spotify.beta}">
-                        Due to API limits, Spotify integration is currently available only for selected DJs. Choose YouTube to get started instantly!
-                    </small>
-                </a>
-
             </div>
 
             <div th:if="${param.error}" class="alert alert-danger mt-4" role="alert" th:text="#{landing.error.login}">

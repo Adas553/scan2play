@@ -100,17 +100,6 @@ class DjSessionHelperChosenKindTest {
     }
 
     @Test
-    void aSpotifyLogin_ignoresAChoiceLeftInTheSession() {
-        session.setAttribute(DjSessionHelper.SESSION_CHOSEN_PROVIDER, "REQUESTS_ONLY");
-        when(command.getOrCreatePartyForDj(OWNER, MusicProviderType.SPOTIFY))
-                .thenReturn(party(MusicProviderType.SPOTIFY, PlaybackMode.MANUAL));
-
-        assertThat(helper.getPartySettings(login("spotify"), session).getActiveProvider()).isEqualTo(MusicProviderType.SPOTIFY);
-        verify(command, never()).updateSettings(anyString(), any());
-        assertThat(session.getAttribute(DjSessionHelper.SESSION_CHOSEN_PROVIDER)).isNull();
-    }
-
-    @Test
     void anUnknownChoice_isIgnored() {
         session.setAttribute(DjSessionHelper.SESSION_CHOSEN_PROVIDER, "VINYL");
         when(command.getOrCreatePartyForDj(OWNER, MusicProviderType.YOUTUBE))

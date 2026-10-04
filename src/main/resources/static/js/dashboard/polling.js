@@ -50,7 +50,7 @@ function applyGuestLimitsUse(value) {
 let nextPoll = null;
 let polling = false;
 let pollAgain = false;
-let playsHere = false;   // a dashboard without the player (Spotify, requests-only) never plays here
+let playsHere = false;   // a dashboard without the player (requests-only) never plays here
 
 function resting() {
     return document.hidden && !playsHere;
@@ -152,7 +152,7 @@ async function refreshTable() {
  * table (accepted songs, refreshed by the poll above) — only the ones that have a YouTube video ID, i.e. that Auto-Pilot can play
  * (the row's data-video-id, set by the server — YouTubeUrls.extractVideoId); the ones with a search link are for the DJ to play by
  * hand. Hidden when there are none. The plural form is the browser's (Polish has three), the four texts
- * travel in data attributes of the line (dashboard.html); there is no such line for a Spotify party.
+ * travel in data attributes of the line (dashboard.html); there is no such line for a requests-only party.
  */
 function updateGuestsWaiting() {
     const line = document.getElementById('fallbackGuestsWaiting');

@@ -4,7 +4,6 @@ import com.scan2play.model.MusicProviderType;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * A requests-only party: a song gets a link to YouTube's search results (opened by the DJ's browser — no API call, no share of the
@@ -25,10 +24,5 @@ class RequestsOnlyMusicProviderTest {
     void noName_noLink() {
         assertThat(provider.findTrackUrl(" ")).isNull();
         assertThat(provider.findTrackUrl(null)).isNull();
-    }
-
-    @Test
-    void thereIsNoQueueToAddTo() {
-        assertThatThrownBy(() -> provider.addToQueue("ABC12", "anything")).isInstanceOf(UnsupportedOperationException.class);
     }
 }

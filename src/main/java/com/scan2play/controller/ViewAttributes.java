@@ -18,13 +18,13 @@ public final class ViewAttributes {
     // --- Common Attributes ---
     public static final String GLOBAL_VIBE = "globalVibe";
     public static final String VIBE_NOTE = "vibeNote";
+    public static final String DJ_NAME = "djName";
     public static final String ACTIVE_PROVIDER = "activeProvider";
     public static final String PARTY_CODE = "partyCode";
     public static final String IS_ACTIVE = "isActive";
 
     // --- Dashboard Attributes ---
     public static final String PLAYBACK_MODE = "playbackMode";
-    public static final String IS_SPOTIFY_CONNECTED = "isSpotifyConnected";
     public static final String HISTORY = "history";
     public static final String HISTORY_HAS_MORE = "historyHasMore";
     public static final String HISTORY_NEXT_LIMIT = "historyNextLimit";

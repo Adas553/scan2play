@@ -121,8 +121,8 @@ class DjDashboardControllerGuestLimitsTest {
     }
 
     @Test
-    void spentYouTubeSearches_doNotConcernASpotifyParty() {
-        givenProvider(MusicProviderType.SPOTIFY);
+    void spentYouTubeSearches_doNotConcernARequestsOnlyParty() {
+        givenProvider(MusicProviderType.REQUESTS_ONLY);
         when(budget.isSpent()).thenReturn(true);
 
         assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("none");

@@ -15,7 +15,6 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
 // fold the settings away).
 //
 // Excluded: logout, delete-account (page reload / redirect is expected).
-// Connecting Spotify is a link, not a form.
 // ==========================================================================
 
 (function initAjaxFormInterceptor() {
@@ -43,10 +42,9 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
             body: new FormData(form),
             redirect: 'manual'
         }).then(function(response) {
-            // A song played, skipped, picked or sent to Spotify, or the queue cleared: the queue is fetched now, so the rows go (or
-            // come) at once (Spotify takes the song a moment later — a row still there goes with the next poll)
+            // A song played, skipped or picked, or the queue cleared: the queue is fetched now, so the rows go (or come) at once
             if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/dj-pick')
-                    || action.includes('/dashboard/clear-queue') || action.includes('/push-to-spotify')) {
+                    || action.includes('/dashboard/clear-queue')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
 
@@ -100,7 +98,7 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
 // ==========================================================================
 // AUTO-PILOT TOGGLE
 //
-// The switch #autoToggle (a YouTube party, a connected Spotify party): AJAX POST + local UI update (no reload).
+// The switch #autoToggle (a YouTube party): AJAX POST + local UI update (no reload).
 // ==========================================================================
 
 /** When the DJ last flipped the Auto-Pilot switch in this window (Date.now()), see the PLAYBACK_MODE_REPORTED listener. */

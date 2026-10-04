@@ -266,6 +266,15 @@ class GuestPageRenderTest {
         assertThat(requestsOnly).doesNotContain("id=\"styleInput\"", "id=\"vibeNote\"");
     }
 
+    /** Who plays (V17): "🎧 Gra: DJ Koko" under the title, escaped; nothing when the DJ wrote nothing. */
+    @Test
+    void whoPlays_isShownUnderTheTitle() {
+        assertThat(render(PL, Map.of("djName", "DJ <b>Koko</b>")))
+                .contains("id=\"djName\"", "🎧 Gra: DJ &lt;b&gt;Koko&lt;/b&gt;").doesNotContain("??");
+        assertThat(render(Locale.ENGLISH, Map.of("djName", "DJ Koko"))).contains("🎧 Playing: DJ Koko");
+        assertThat(render(PL, Map.of())).doesNotContain("id=\"djName\"");
+    }
+
     /** A requests-only party takes specific songs only: no song / mood tiles, the song mode sent as a hidden field. */
     @Test
     void aRequestsOnlyParty_asksForASong_withoutTheMoodTiles() {

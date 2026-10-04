@@ -69,7 +69,7 @@ public class SecurityConfig {
                         .requestMatchers("/privacy", "/terms").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
-                        // DJ dashboard is protected (includes /dj/spotify/**)
+                        // DJ dashboard is protected
                         .requestMatchers("/dj/**").authenticated()
                         // Everything else requires authentication
                         .anyRequest().authenticated()

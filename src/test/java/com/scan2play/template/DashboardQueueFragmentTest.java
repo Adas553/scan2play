@@ -67,7 +67,6 @@ class DashboardQueueFragmentTest {
         context.setVariable("history", queue);
         context.setVariable("playbackMode", PlaybackMode.AUTO);
         context.setVariable("activeProvider", MusicProviderType.YOUTUBE);
-        context.setVariable("isSpotifyConnected", false);
         return engine.process("dashboard", Set.of("songTableBody"), context);
     }
 

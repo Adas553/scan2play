@@ -3,12 +3,10 @@ package com.scan2play.service;
 import com.scan2play.integration.MusicProvider;
 import com.scan2play.model.MusicProviderType;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -31,7 +29,7 @@ public class QueueService {
      * based on the {@code preferredProvider} type.
      *
      * @param query             the search query (e.g., song title, artist)
-     * @param preferredProvider the type of music provider to use (e.g., SPOTIFY, YOUTUBE)
+     * @param preferredProvider the type of music provider to use (YOUTUBE, REQUESTS_ONLY)
      * @return the URL of the track found by the provider
      * @throws IllegalArgumentException if the requested provider is not supported or not configured
      */
@@ -44,31 +42,5 @@ public class QueueService {
         }
 
         return provider.findTrackUrl(query);
-    }
-
-    /**
-     * Asynchronously adds a track to the playback queue of the active provider.
-     * Returns a CompletableFuture so the caller can handle success or failure callbacks.
-     *
-     * @param partyCode         The unique code of the party.
-     * @param trackUrl          The URL or ID of the track to add.
-     * @param preferredProvider The provider to use.
-     */
-    @Async
-    public CompletableFuture<Void> addToQueue(String partyCode, String trackUrl, MusicProviderType preferredProvider) {
-        MusicProvider provider = providers.get(preferredProvider);
-        if (provider != null) {
-            try {
-                log.info("Party [{}]: Attempting to add track to queue: {} (Provider: {})", partyCode, trackUrl, preferredProvider);
-                provider.addToQueue(partyCode, trackUrl);
-                return CompletableFuture.completedFuture(null);
-            } catch (Exception e) {
-                log.error("Party [{}]: Failed to add track to queue asynchronously", partyCode, e);
-                return CompletableFuture.failedFuture(e);
-            }
-        } else {
-            log.warn("Party [{}]: Provider not found for auto-queue: {}", partyCode, preferredProvider);
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Provider not found: " + preferredProvider));
-        }
     }
 }

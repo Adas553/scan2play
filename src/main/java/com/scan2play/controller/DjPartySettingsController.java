@@ -102,6 +102,19 @@ public class DjPartySettingsController {
     }
 
     /**
+     * Who plays (V17), e.g. "DJ Koko": one line, at most {@value PartySettingsEntity#DJ_NAME_MAX} characters; empty clears it. The
+     * guests see it on the party page ("🎧 Gra: DJ Koko").
+     */
+    @PostMapping("/dashboard/dj-name")
+    public String updateDjName(@RequestParam String partyCode, @RequestParam(required = false) String djName,
+                               OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        String name = Texts.oneLine(djName, PartySettingsEntity.DJ_NAME_MAX);
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setDjName(name.isEmpty() ? null : name));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
      * Updates the rate limiting and duplicate checking parameters for the party.
      */
     @PostMapping("/dashboard/limits")

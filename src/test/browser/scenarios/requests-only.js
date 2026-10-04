@@ -1,6 +1,6 @@
 // A requests-only party (the DJ plays from their own software): the dashboard has no player, so youtube-autopilot.js is not on the
 // page. The dashboard's own modules must work without it — the queue poll, the lists, the tabs — and nothing may ask for the player
-// lease or for a track. (Before this kind of party, only a Spotify party had a dashboard without the player, and no scenario ran one.)
+// lease or for a track.
 
 S2P.scenario({
     name: 'requests-only-dashboard',

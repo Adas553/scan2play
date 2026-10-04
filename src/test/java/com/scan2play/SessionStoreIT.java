@@ -69,7 +69,7 @@ class SessionStoreIT extends PostgresIntegrationTest {
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 new SecurityContextImpl(new OAuth2AuthenticationToken(dj, dj.getAuthorities(), "google")));
         session.setAttribute("djPartyCode", "ABC12");
-        session.setAttribute("spotifyOAuthState", "f00d");
+        session.setAttribute("djChosenProvider", "REQUESTS_ONLY");
         session.setAttribute("org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository.CSRF_TOKEN",
                 new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
         session.setAttribute("myRequests_ABC12", new ArrayList<>(List.of(7L, 8L)));

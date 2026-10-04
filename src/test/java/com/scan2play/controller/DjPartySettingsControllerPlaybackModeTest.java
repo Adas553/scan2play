@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Tests {@code POST /dj/dashboard/playback-mode} (the Auto-Pilot switch): the mode the switch sends is set as it is — clicking
  * the switch of a window that showed an old state must not invert the setting — and without a mode the setting is toggled, as
- * before (a page opened before this change, the Spotify dashboard's plain form).
+ * before (a page opened before this change).
  */
 class DjPartySettingsControllerPlaybackModeTest {
 

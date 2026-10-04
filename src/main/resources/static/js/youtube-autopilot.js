@@ -1023,7 +1023,7 @@ import { EVENTS, emit, on } from './dashboard/events.js';
     document.addEventListener('click', function (e) {
         const link = e.target.closest('a.play-link');
         if (!link) return;
-        // the video's id comes from the server (data-video-id, YouTubeUrls.extractVideoId): none for a search link or Spotify
+        // the video's id comes from the server (data-video-id, YouTubeUrls.extractVideoId): none for a search link
         const row = link.closest('#song-list tr[data-song-id]');   // a guest song waiting in the queue
         const songId = row ? Number(row.getAttribute('data-song-id')) : null;
         if (playInEmbeddedPlayer(link.getAttribute('data-video-id'), songId)) e.preventDefault();
