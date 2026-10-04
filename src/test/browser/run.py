@@ -149,8 +149,8 @@ def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DE
              '--window-size=' + window, '--user-data-dir=' + profile]
     if no_sandbox:
         flags.append('--no-sandbox')   # a CI runner may forbid the sandbox's user namespaces; the browser opens only pages of this stand-in
-    # Nothing here needs the network: the YouTube API is faked, Bootstrap comes from the stand-in (its webjar), and the guest page's
-    # song suggestions may fail (the CSP check of a request comes before the network).
+    # Nothing here needs the network: Bootstrap comes from the stand-in (its webjar), and the guest page's song suggestions may fail
+    # (the CSP check of a request comes before the network). YouTube stays blocked: no page may reach it.
     blocked = ['www.youtube.com', 'i.ytimg.com', 'itunes.apple.com']
     flags.append('--host-resolver-rules=' + ', '.join('MAP %s ~NOTFOUND' % host for host in blocked))
     url = 'http://127.0.0.1:%d/dj/dashboard?scenario=%s' % (port, name)

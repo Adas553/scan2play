@@ -6,13 +6,11 @@ import com.scan2play.model.HistoryEntry.Source;
 import com.scan2play.model.HistoryFilter;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.service.DjService;
-import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.YouTubeSearchBudget;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PlayHistoryService.Page;
-import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -64,7 +62,7 @@ class DjDashboardControllerHistoryTest {
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class), sessionHelper,
-                mock(NextTrackService.class), mock(PlayerLeaseService.class), historyService,
+                historyService,
                 mock(GuestRequestLimiter.class), mock(YouTubeSearchBudget.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),

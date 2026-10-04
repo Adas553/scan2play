@@ -1,17 +1,15 @@
 """A stand-in for the DJ dashboard's server, for the browser tests (see README.md). Standard library only.
 
 It serves the REAL rendered dashboard.html (target/browser-harness/dashboard.html, written by DashboardPageRenderTest) with
-the REAL static js and css of the repo, and answers the few endpoints the dashboard's scripts call. It does not compute
-anything about music: what next-track and recent-tracks answer is either told by the scenario (POST /__config) or replayed
-from a fixture of answers that the REAL services gave (fixtures/*.json, recorded by PlayLogFixtureRecorderTest).
+the REAL static js and css of the repo, and answers the few endpoints the dashboard's scripts call.
 
-  /dj/dashboard                      the page (with the fake YouTube API in <head>); ?scenario=NAME also adds the runner; sent with
-                                     the real Content-Security-Policy (csp.txt), enforced
+  /dj/dashboard                      the page; ?scenario=NAME also adds the runner; sent with the real Content-Security-Policy
+                                     (csp.txt), enforced
   POST /csp-report                   204 (the page's violations are caught by harness.js)
   /js/*, /css/*                      src/main/resources/static
   /webjars/bootstrap/*               Bootstrap from its webjar in the local Maven repository (the version the pom names), as
                                      the real server serves it — so the policy is checked against Bootstrap's CSS and script too
-  /harness/*                         this directory (fake-yt.js, harness.js, scenarios/*.js)
+  /harness/*                         this directory (harness.js, scenarios/*.js)
   POST /__reset                      the default answers, an empty request log
   POST /__config  {json}             merged into the state (see default_state for the keys)
   GET  /dj/history-view/fragment     the REAL history fragment (rendered by DashboardPageRenderTest: history-<filter>.html, and
@@ -22,7 +20,6 @@ from a fixture of answers that the REAL services gave (fixtures/*.json, recorded
 By hand:  python server.py [--root <repo>] [--port 8765]   and open  http://127.0.0.1:8765/dj/dashboard
 """
 import argparse
-import copy
 import html
 import json
 import os
@@ -40,50 +37,25 @@ from urllib.parse import urlparse, parse_qs
 HERE = os.path.dirname(os.path.abspath(__file__))
 TYPES = {'.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
          '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8'}
-PARTY_CODE_PLAYLIST = 'PLstandin000000000000000000000000000'
 
 
 def default_state():
     """What the stand-in answers until a scenario says otherwise."""
     return {
-        # The answer of POST player-lease. This window is the one that plays.
-        'lease': {'holder': True, 'free': False, 'fallbackPlaylistId': PARTY_CODE_PLAYLIST, 'queueVersion': 'v1', 'playing': None},
-        # Commands for the window that plays, handed out one per lease report of the holder: 'NEXT', 'PAUSE'...
-        'commands': [],
-        # The answers of POST next-track in order ({source, id, videoId, playlistId}); when they run out: 204. A GUEST answer whose
-        # id the request lists in `exclude` is dropped and the next one given, as the real server never hands out an excluded song.
-        'nextTracks': [],
-        'nextTrackStatus': None,       # e.g. 409: every next-track is refused
-        # The answer of GET recent-tracks (a list of {key, source, id, videoId, title, secondsAgo}; without secondsAgo a reload
-        # never resumes the newest entry).
-        'recent': [],
-        'recentStatus': None,          # e.g. 500: recent-tracks fails
-        # Replaying a fixture instead: {'fixture': 'play-log-boundary', 'keys': 'play' | 'old', 'n': <hand-outs so far>}.
-        # 'play' = the answers as the real services gave them; 'old' = the same plays keyed by the queue's track id
-        # (what the code answered before the play log, V7) — the control that must fail.
-        'replay': None,
-        # Seconds to wait before answering a path, e.g. {'/dj/dashboard/player-lease': 2.5}: an answer that arrives late.
+        # Seconds to wait before answering a path, e.g. {'/dj/dashboard/updates': 2.5}: an answer that arrives late.
         # (The request is logged at once, and the answer says what the state was when the request came.)
         'delays': {},
-        'playbackMode': 'AUTO',        # the party's Auto-Pilot setting: in every lease answer, and in the poll's <tbody> when it is sent
-        # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the track link).
+        # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the song's link).
         # The rendered page itself has two rows, but the first poll replaces them with these.
         'queue': [],
         # The X-Guest-Limits header of every poll answer: 'none', or the server limits that stop guest songs now, e.g.
-        # 'search-spent', 'party-full', 'search-spent,party-full' (the dashboard shows a warning for each)
+        # 'party-full' (the dashboard shows a warning for each)
         'guestLimits': 'none',
         # The X-Guest-Limits-Use header of every poll answer: '<busiest network>,<party>' — the requests used of each server limit
         'guestLimitsUse': '0,0',
         # The X-Party-Active header of every poll answer: false = the DJ ended the party (in any window)
         'partyActive': True,
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
-        'queueVersion': 'v1',          # X-Queue-Version of GET fallback-queue
-        'queueActionStatus': 204,      # the answer of POST fallback-queue/move|place|skip (409: the player took the track)
-        'commandStatus': 204,          # the answer of POST player-command (409: no window plays, nobody would carry it out)
-        # The answer of POST fallback-playlist (the DJ pressed Save): its X-Fallback-* headers, and the party's playlist
-        # afterwards (the next lease answer names it).
-        # saved: False = the server refused the link and kept the party's playlist (a YouTube Mix, reason YOUTUBE_MIX).
-        'fallbackSave': {'playlistId': PARTY_CODE_PLAYLIST, 'import': 'ok', 'tracks': 3, 'reason': None, 'saved': True},
         'requests': [],
     }
 
@@ -108,7 +80,6 @@ class Stand:
         os.makedirs(self.results, exist_ok=True)
         self.lock = threading.Lock()
         self.state = default_state()
-        self.fixtures = {}
         self.result_events = {}
         self.result_data = {}
         self._webjar = None
@@ -116,12 +87,6 @@ class Stand:
     def event(self, name):
         with self.lock:
             return self.result_events.setdefault(name, threading.Event())
-
-    def fixture(self, name):
-        if name not in self.fixtures:
-            with open(os.path.join(self.browser, 'fixtures', name + '.json'), encoding='utf-8') as f:
-                self.fixtures[name] = json.load(f)
-        return self.fixtures[name]
 
     def webjar_file(self, rel):
         """A file of the Bootstrap webjar ('css/bootstrap.min.css'), or None. The jar is the one Maven fetched for the pom's version
@@ -152,43 +117,12 @@ class Stand:
     def page(self, which, scenario):
         with open(os.path.join(self.rendered, which + '.html'), encoding='utf-8') as f:
             text = f.read()
-        head = '<script src="/harness/fake-yt.js"></script><script src="/harness/harness.js"></script>'
-        text = text.replace('<head>', '<head>' + head, 1)
+        text = text.replace('<head>', '<head><script src="/harness/harness.js"></script>', 1)
         if scenario:
             files = sorted(os.listdir(os.path.join(self.browser, 'scenarios')))
             tags = ''.join('<script src="/harness/scenarios/%s"></script>' % n for n in files if n.endswith('.js'))
             text = text.replace('</body>', tags + '</body>', 1)
         return text
-
-    # ---- replaying a fixture ----
-
-    def _old(self, fixture, track):
-        """A track as the play log's predecessor keyed it: by the id of the queue's track (the same video = the same key)."""
-        track = dict(track)
-        old_id = fixture['trackIdByVideo'][track['videoId']]
-        track['id'] = old_id
-        if 'key' in track:
-            track['key'] = 'B:%d' % old_id
-        return track
-
-    def replay_next(self):
-        replay = self.state['replay']
-        fixture = self.fixture(replay['fixture'])
-        n = replay['n']
-        if n >= len(fixture['steps']):
-            return None
-        replay['n'] = n + 1
-        answer = fixture['steps'][n]['nextTrack']
-        return self._old(fixture, answer) if replay['keys'] == 'old' else answer
-
-    def replay_recent(self):
-        replay = self.state['replay']
-        fixture = self.fixture(replay['fixture'])
-        n = replay['n']
-        if n == 0:
-            return []
-        recent = fixture['steps'][min(n, len(fixture['steps'])) - 1]['recentTracks']
-        return [self._old(fixture, e) for e in recent] if replay['keys'] == 'old' else recent
 
     def nomatch_row(self):
         """The "nothing matches" row of the queue table, as the REAL template renders it. It is part of the polled <tbody> (the
@@ -203,12 +137,6 @@ class Stand:
     def config(self, patch):
         with self.lock:
             merge(self.state, patch)
-            replay = self.state['replay']
-            if replay:
-                replay.setdefault('n', 0)
-                replay.setdefault('keys', 'play')
-                # the lease answer names the playlist of the recorded tracks, or the script would stop them as stale
-                self.state['lease']['fallbackPlaylistId'] = self.fixture(replay['fixture'])['playlistId']
             return len(self.state['requests'])
 
 
@@ -300,32 +228,22 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(stand.state)
         self._note('GET', path, self._fields(query, b'', ''))
         state = stand.state
-        if path == '/dj/dashboard/recent-tracks':
-            with stand.lock:
-                if state['recentStatus']:
-                    return self._send(state['recentStatus'])
-                return self._json(stand.replay_recent() if state['replay'] else state['recent'])
         if path == '/dj/dashboard/updates':
             with stand.lock:
-                mode, queue = state['playbackMode'], list(state['queue'])
+                queue = list(state['queue'])
                 limits = {'X-Guest-Limits': state['guestLimits'], 'X-Guest-Limits-Use': state['guestLimitsUse'],
                           'X-Party-Active': 'true' if state['partyActive'] else 'false'}
-            # Like the real server: the ETag is a fingerprint of the guest queue only, so a change of the Auto-Pilot setting alone is
-            # answered 304 — a window learns it from the lease answers. X-Guest-Limits(-Use) is on every answer, 304 too.
+            # Like the real server: the ETag is a fingerprint of the guest queue only. X-Guest-Limits(-Use) is on every answer, 304 too.
             etag = '"q-%08x"' % zlib.crc32(json.dumps(queue, sort_keys=True).encode('utf-8'))
             if self.headers.get('If-None-Match') == etag:
                 return self._send(304, headers=dict(limits, ETag=etag))
             # a row has the song cell that the column sort reads (data-sort-value / data-val) and, after the rows, the real
             # "nothing matches" row that the search box shows and hides
-            # data-video-id as the real template sets it (YouTubeUrls.extractVideoId on the server): only for a watch URL
-            def video_attr(url):
-                m = re.search(r'[?&]v=([A-Za-z0-9_-]{11})', url)
-                return ' data-video-id="%s"' % m.group(1) if m else ''
-            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"%s><td class="song-cell" data-sort-value="song" data-val="%s"><span class="song-title">%s</span></td></tr>'
-                           % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True), video_attr(r['url']),
+            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"><td class="song-cell" data-sort-value="song" data-val="%s"><span class="song-title">%s</span></td></tr>'
+                           % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True),
                               html.escape(r['name'], True), html.escape(r['name']))
                            for r in queue)
-            body = '<tbody id="song-list" data-playback-mode="%s" data-provider="YOUTUBE">%s%s</tbody>' % (mode, rows, stand.nomatch_row())
+            body = '<tbody id="song-list">%s%s</tbody>' % (rows, stand.nomatch_row())
             return self._send(200, body, 'text/html; charset=utf-8', dict(limits, ETag=etag))
         if path == '/dj/history-view/fragment':
             # the REAL history fragment as DashboardPageRenderTest renders it through the real controller: one file per filter
@@ -339,14 +257,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(404, ('no rendered ' + name).encode('utf-8'), 'text/plain')
             with open(listing, encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
-        if path == '/dj/dashboard/fallback-queue':
-            # the REAL fragment as DashboardPageRenderTest renders it (four tracks); a bare placeholder if it was not rendered
-            listing = os.path.join(stand.rendered, 'fallback-queue.html')
-            body = '<div data-order="playlist"></div>'
-            if os.path.isfile(listing):
-                with open(listing, encoding='utf-8') as f:
-                    body = f.read()
-            return self._send(200, body, 'text/html; charset=utf-8', {'X-Queue-Version': state['queueVersion']})
         return self._send(404, b'not found', 'text/plain')
 
     # ---- POST ----
@@ -377,70 +287,17 @@ class Handler(BaseHTTPRequestHandler):
         fields = self._fields(query, body, self.headers.get('Content-Type'))
         self._note('POST', path, fields)
         state = stand.state
-        if path == '/dj/dashboard/player-lease':
-            with stand.lock:
-                answer = {'holder': state['lease']['holder'], 'free': state['lease']['free'],
-                          'fallbackPlaylistId': state['lease']['fallbackPlaylistId'],
-                          'queueVersion': state['lease']['queueVersion'], 'command': None,
-                          'playing': state['lease']['playing'], 'playbackMode': state['playbackMode']}
-                if answer['holder'] and state['commands']:
-                    answer['command'] = state['commands'].pop(0)
-            return self._json(answer)
-        if path == '/dj/dashboard/next-track':
-            with stand.lock:
-                if state['nextTrackStatus']:
-                    return self._send(state['nextTrackStatus'])
-                if state['replay']:
-                    answer = stand.replay_next()
-                else:
-                    # Like the real server, never hand out a guest song the request excludes: its scripted answer is dropped
-                    excluded = {int(x) for x in (fields.get('exclude') or '').split(',') if x.strip().isdigit()}
-                    while (state['nextTracks'] and state['nextTracks'][0].get('source') == 'GUEST'
-                           and state['nextTracks'][0].get('id') in excluded):
-                        state['nextTracks'].pop(0)
-                    answer = state['nextTracks'].pop(0) if state['nextTracks'] else None
-            return self._send(204) if answer is None else self._json(answer)
-        if path == '/dj/dashboard/fallback-playlist':
-            with stand.lock:
-                save = copy.deepcopy(state['fallbackSave'])
-                cleared = not fields.get('fallbackPlaylistUrl', 'x')
-                if save.get('saved') is False:
-                    # Like the real server for a YouTube Mix: nothing is saved, the party keeps its playlist
-                    return self._send(200, b'', headers={'X-Fallback-Saved': 'false', 'X-Fallback-Import': 'failed',
-                                                         'X-Fallback-Import-Reason': save['reason']})
-                state['lease']['fallbackPlaylistId'] = None if cleared else save['playlistId']
-            headers = {}
-            if not cleared:
-                headers['X-Fallback-Id'] = save['playlistId']
-                headers['X-Fallback-Import'] = save['import']
-                if save['import'] == 'ok':
-                    headers['X-Fallback-Tracks'] = str(save['tracks'])
-                elif save.get('reason'):
-                    headers['X-Fallback-Import-Reason'] = save['reason']
-            return self._send(200, b'', headers=headers)
-        if path == '/dj/dashboard/playback-mode':      # the Auto-Pilot switch: sets the mode it sends (toggles without one)
-            with stand.lock:
-                wanted = fields.get('mode')
-                state['playbackMode'] = wanted if wanted in ('AUTO', 'MANUAL') else ('MANUAL' if state['playbackMode'] == 'AUTO' else 'AUTO')
-            return self._json({})
         if path in ('/dj/dashboard/play', '/dj/dashboard/dismiss'):   # the song leaves the queue, as on the real server
             with stand.lock:
                 state['queue'] = [r for r in state['queue'] if str(r['id']) != str(fields.get('id'))]
-            return self._json({})
-        if path == '/dj/dashboard/limits':
             return self._json({})
         if path == '/dj/dashboard/clear-queue':       # every waiting request leaves the queue (as rejected, on the real server)
             with stand.lock:
                 state['queue'] = []
             return self._json({})
-        if path == '/dj/dashboard/fallback-shuffle':
+        if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/vibe-note', '/dj/dashboard/dj-name',
+                    '/dj/end-party', '/dj/start-party'):
             return self._json({})
-        if path == '/dj/dashboard/player-command':      # the DJ's command for the window that plays (204 waiting, 409 nobody plays)
-            return self._send(state['commandStatus'])
-        if path == '/dj/dashboard/player-lease/release':
-            return self._send(204)
-        if path.startswith('/dj/dashboard/fallback-queue/'):    # move, place, skip
-            return self._send(state['queueActionStatus'])
         return self._send(404, b'not found', 'text/plain')
 
 

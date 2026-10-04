@@ -21,19 +21,17 @@ public class SecurityConfig {
 
     /**
      * The Content-Security-Policy of every page (review item 5.1). The pages have no inline script and no inline handler; what
-     * comes from elsewhere: the YouTube IFrame API and its player, the iTunes search of the song
-     * suggestions. No inline style either: no {@code style="…"} attribute and no {@code <style>} element (the classes are in
+     * comes from elsewhere: only the iTunes search of the song suggestions. No frames (the default, {@code 'self'}). No inline style either: no {@code style="…"} attribute and no {@code <style>} element (the classes are in
      * {@code app.css}; scripts change styles through {@code element.style}, which the policy allows). Violations go to {@link com.scan2play.controller.CspReportController}. Public for the browser tests: their stand-in
      * server sends this same policy (written by {@code DashboardPageRenderTest}), enforced.
      */
     public static final String CONTENT_SECURITY_POLICY = String.join("; ",
             "default-src 'self'",
-            "script-src 'self' https://www.youtube.com https://s.ytimg.com",
+            "script-src 'self'",
             "style-src 'self'",
             "img-src 'self' data:",
             "font-src 'self'",
             "connect-src 'self' https://itunes.apple.com",
-            "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",

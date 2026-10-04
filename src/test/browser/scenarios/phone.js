@@ -1,6 +1,6 @@
-// The dashboard on a phone (the DJ in the booth, phone in hand), every kind of party: the settings, the vibe, the background playlist
-// and the QR code fold under one button, so what the DJ works with comes right under the heading — the player first at a YouTube
-// party, then the queue — and every waiting request is a card with big buttons. The window is a phone's (viewport, read by run.py).
+// The dashboard on a phone (the DJ in the booth, phone in hand): the settings, the vibe and the QR code fold under one button, so the
+// queue comes right under the heading, and every waiting request is a card with big buttons. The window is a phone's (viewport, read by
+// run.py).
 
 function shows(element) { return !!element && element.getClientRects().length > 0; }
 
@@ -41,8 +41,7 @@ async function phoneDashboard(t, buttons) {
 
 S2P.scenario({
     name: 'requests-only-phone',
-    title: 'a requests-only party on a phone: the settings fold under one button, the queue comes first, a request is a card with big buttons',
-    page: 'dashboard-requests',
+    title: 'the dashboard on a phone: the settings fold under one button, the queue comes first, a request is a card with big buttons',
     viewport: '390,844',
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
                      { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
@@ -53,22 +52,5 @@ S2P.scenario({
         await t.waitFor(function () { return document.querySelector('#song-list [data-song-id="2"]'); }, 'the queue poll', 8000);
         t.step('after a poll the requests are still cards',
             getComputedStyle(document.querySelector('#song-list tr[data-song-id="2"]')).display, 'flex');
-    }
-});
-
-S2P.scenario({
-    name: 'youtube-phone',
-    title: 'a YouTube party on a phone: the settings and the playlist fold, the player comes first and Auto-Pilot stays at hand, then the queue as cards',
-    page: 'dashboard',
-    viewport: '390,844',
-    setup: { lease: { holder: true } },
-    run: async function (t) {
-        const queue = await phoneDashboard(t, ['/dj/dashboard/play']);
-        const player = document.getElementById('yt-player-card');
-        t.step('the background playlist\'s field is folded; the Auto-Pilot switch and the player are not',
-            [shows(document.getElementById('fallbackInput')), shows(document.getElementById('autoToggle')), shows(player)],
-            [false, true, true]);
-        t.check('the player starts in the first screen, under the heading', player.getBoundingClientRect().top < window.innerHeight * 0.6);
-        t.check('the queue comes after the player', queue.getBoundingClientRect().top > player.getBoundingClientRect().bottom);
     }
 });

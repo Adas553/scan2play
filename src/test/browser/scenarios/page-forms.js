@@ -19,7 +19,7 @@
 
     S2P.scenario({
         name: 'vibe-select-saves-on-change',
-        title: 'picking another vibe saves it at once, by fetch (the page and the player stay)',
+        title: 'picking another vibe saves it at once, by fetch (the page stays)',
         run: async function (t) {
             const select = document.getElementById('vibeSelect');
             const other = Array.from(select.options).find(function (o) { return !o.selected; });
@@ -29,29 +29,6 @@
             const saved = (await t.stand.requests('POST /dj/dashboard/vibe'))[0].q;
             t.step('the chosen vibe is sent', saved.newVibe, other.value);
             t.check('the page did not reload (the select is the same element)', document.getElementById('vibeSelect') === select);
-        }
-    });
-
-    // ▶ on a row of the real rendered queue plays the song here, by the video id the server put on the link (data-video-id, review
-    // 3.5 — the script parsed the URL itself before). The queue poll is held back, so the rendered rows stay on the page.
-    S2P.scenario({
-        name: 'play-link-plays-the-servers-video',
-        title: '▶ on a queue row plays its video in the window that plays — the id the server put on the link',
-        setup: { delays: { '/dj/dashboard/updates': 30000 } },
-        run: async function (t) {
-            await t.reportAfterConfig();
-            await t.sleep(300);
-            const link = document.querySelector('#song-list a.play-link[data-video-id="bbbbbbbbbbB"]');
-            t.check('the rendered row carries the id from the server', !!link);
-            link.click();
-            await t.waitForTrack(1, 'the picked song');
-            t.step('the picked song plays here', t.fake.loads.map(t.letter), ['b']);
-            // the owner (2026-10-01): a guest song played with ▶ was heard — it is confirmed played and leaves the queue (before,
-            // it stayed, and when it ended Auto-Pilot handed out the same song again)
-            await t.sleep(400);
-            const confirms = (await t.stand.requests(t.PLAY)).map(function (r) { return r.q.id; });
-            t.step('it is confirmed played, once', confirms, [link.closest('tr').getAttribute('data-song-id')]);
-            t.check('↗ beside it only opens YouTube', !!link.parentElement.querySelector('a.youtube-preview[target="_blank"]'));
         }
     });
 

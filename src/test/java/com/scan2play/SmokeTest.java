@@ -89,7 +89,10 @@ class SmokeTest {
         mockMvc.perform(get("/"))
                 // no 'unsafe-inline' for scripts: the pages have no inline script and no inline handler
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString(
-                        "script-src 'self' https://www.youtube.com https://s.ytimg.com;")))
+                        "script-src 'self';")))
+                // nothing of YouTube: no player, no frame (frames fall back to default-src 'self')
+                .andExpect(header().string("Content-Security-Policy-Report-Only", not(containsString("youtube"))))
+                .andExpect(header().string("Content-Security-Policy-Report-Only", not(containsString("frame-src"))))
                 // and none for styles: the templates have no style="…" (NoInlineCodeInTemplatesTest)
                 .andExpect(header().string("Content-Security-Policy-Report-Only", containsString(
                         "style-src 'self';")))

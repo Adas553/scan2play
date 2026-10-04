@@ -6,16 +6,15 @@
 // The harness serves the dashboard in Polish (dashboard.html) and, for this scenario, in English (dashboard-en.html: the same party,
 // rendered by DashboardPageRenderTest with the English locale).
 (function () {
-    const guestsLine = function () { return document.getElementById('fallbackGuestsWaiting'); };
+    const skipButton = function () { return document.querySelector('form[action="/dj/dashboard/dismiss"] button[type="submit"]'); };
 
     S2P.scenario({
         name: 'page-language',
-        title: '<html lang> of the Polish page is "pl" — the language of its texts, and the one the plural forms of the guests line are picked in',
+        title: '<html lang> of the Polish page is "pl" — the language of its texts',
         setup: {},
         run: async function (t) {
             t.step('the page says it is Polish', document.documentElement.lang, 'pl');
-            t.step('the texts really are Polish (the import result box says "Playlista zapisana")', document.getElementById('fallbackImportStatus').dataset.textOk.indexOf('Playlista zapisana') === 0, true);
-            t.step('the language of the plural rules (data-lang) is the same as <html lang>', guestsLine().dataset.lang, document.documentElement.lang);
+            t.step('the texts really are Polish (a waiting request\'s button says "Pomiń")', skipButton().textContent.trim(), 'Pomiń');
         }
     });
 
@@ -26,8 +25,7 @@
         setup: {},
         run: async function (t) {
             t.step('the page says it is English', document.documentElement.lang, 'en');
-            t.step('the language of the plural rules (data-lang) is the same as <html lang>', guestsLine().dataset.lang, document.documentElement.lang);
-            t.step('the texts really are English (the import result box says "Playlist saved")', document.getElementById('fallbackImportStatus').dataset.textOk.indexOf('Playlist saved') === 0, true);
+            t.step('the texts really are English (a waiting request\'s button says "Skip")', skipButton().textContent.trim(), 'Skip');
         }
     });
 })();

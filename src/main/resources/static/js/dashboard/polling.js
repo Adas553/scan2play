@@ -3,13 +3,11 @@
  *
  * Uses ETag / 304 Not Modified to skip DOM replacement when the queue hasn't changed. This preserves client-side sorting and
  * reduces bandwidth. Every answer, 304 too, also carries the server's guest limits (X-Guest-Limits, X-Guest-Limits-Use).
- * When the rows are new the player is told (EVENTS.GUEST_QUEUE_UPDATED): a guest song may be waiting.
  *
- * A hidden window that does not play does not poll at all — the DJ's phone in a pocket, a second tab, the requests-only dashboard
- * behind the DJ's own software: nobody sees the list, and it is fetched at once when the window is shown again. The window that plays
- * (EVENTS.PLAYER_ROLE) goes on, hidden or not: its poll tells the player that a guest song waits.
+ * A hidden window does not poll at all — the DJ's phone in a pocket, a second tab, the dashboard behind the DJ's own software: nobody
+ * sees the list, and it is fetched at once when the window is shown again.
  */
-import { EVENTS, emit, on } from './events.js';
+import { EVENTS, on } from './events.js';
 import { csrfHeaders, partyCode, showPartyActive } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 
@@ -50,11 +48,6 @@ function applyGuestLimitsUse(value) {
 let nextPoll = null;
 let polling = false;
 let pollAgain = false;
-let playsHere = false;   // a dashboard without the player (requests-only) never plays here
-
-function resting() {
-    return document.hidden && !playsHere;
-}
 
 /** Fetches the queue now instead of at the next 3 s tick (EVENTS.GUEST_QUEUE_CHANGED: the DJ changed it here). */
 function pollNow() {
@@ -66,12 +59,6 @@ function pollNow() {
     refreshTable();
 }
 on(EVENTS.GUEST_QUEUE_CHANGED, pollNow);
-
-on(EVENTS.PLAYER_ROLE, function (role) {
-    const rested = nextPoll === null && !polling;
-    playsHere = role.plays === true;
-    if (playsHere && rested) pollNow();   // a hidden window that has just become the player: it needs the queue
-});
 
 document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') pollNow();
@@ -130,47 +117,18 @@ async function refreshTable() {
             document.getElementById('song-list').innerHTML = html;
         }
 
-        emit(EVENTS.GUEST_QUEUE_UPDATED);
-
         // Re-apply user's sort preference after table refresh
         reapplySort();
 
         // The rows are new: apply the search text again, and update the number of songs in the heading
         applyListFilters(document.getElementById('queueList'));
-        updateGuestsWaiting();
     } catch (err) {
         console.error('[Polling] Refresh error:', err);
     } finally {
         polling = false;
-        nextPoll = pollAgain || !resting() ? setTimeout(refreshTable, pollAgain ? 0 : 3000) : null;
+        nextPoll = pollAgain || !document.hidden ? setTimeout(refreshTable, pollAgain ? 0 : 3000) : null;
         pollAgain = false;
     }
 }
 
-/**
- * The line above the "up next" list: how many guest songs wait — they play before the track marked "Next". Counted from the queue
- * table (accepted songs, refreshed by the poll above) — only the ones that have a YouTube video ID, i.e. that Auto-Pilot can play
- * (the row's data-video-id, set by the server — YouTubeUrls.extractVideoId); the ones with a search link are for the DJ to play by
- * hand. Hidden when there are none. The plural form is the browser's (Polish has three), the four texts
- * travel in data attributes of the line (dashboard.html); there is no such line for a requests-only party.
- */
-function updateGuestsWaiting() {
-    const line = document.getElementById('fallbackGuestsWaiting');
-    if (!line) return;
-    let waiting = 0;
-    document.querySelectorAll('#song-list tr[data-song-id]').forEach(function(row) {
-        if (row.getAttribute('data-video-id')) waiting++;
-    });
-    if (waiting === 0) {
-        line.classList.add('d-none');
-        line.textContent = '';
-        return;
-    }
-    const form = new Intl.PluralRules(line.dataset.lang || 'en').select(waiting);   // one | few | many | other
-    const text = line.dataset['text' + form.charAt(0).toUpperCase() + form.slice(1)] || line.dataset.textOther || '';
-    line.textContent = text.replace('{0}', String(waiting));
-    line.classList.remove('d-none');
-}
-
-updateGuestsWaiting();
 nextPoll = setTimeout(refreshTable, 3000);

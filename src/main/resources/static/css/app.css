@@ -99,15 +99,6 @@ body {
 /* --- Table border --- */
 .table { border-color: var(--s2p-border); }
 
-/* --- YouTube IFrame Player — force dimensions so the IFrame stays visible
-       even if YouTube API internally resets width/height during rapid
-       video ↔ playlist transitions (known IFrame API quirk) --- */
-#yt-player,
-#yt-player iframe {
-    width:  100% !important;
-    height: 100% !important;
-}
-
 /* --- Table header — distinct background so it doesn't blend with rows (especially on mobile) --- */
 .page-dj .table-dark thead th {
     background-color: #1a1a2e;
@@ -508,10 +499,7 @@ th[data-sort].sort-desc::after {
 .s2p-mw-800          { max-width: 800px !important; }
 .s2p-z-10            { z-index: 10 !important; }
 .s2p-z-toast         { z-index: 1090 !important; }
-.s2p-text-youtube    { color: #FF0000 !important; }
 .s2p-dashboard-qr    { max-width: 200px !important; height: auto !important; }
-.s2p-player-column   { flex-basis: 400px !important; max-width: 640px !important; }
-.s2p-side-column     { flex-basis: 300px !important; max-width: 640px !important; }
 .s2p-list-search     { max-width: 16rem !important; }
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
@@ -524,17 +512,12 @@ th[data-sort].sort-desc::after {
 .s2p-alert-closed    { background-color: #2b2000 !important; color: #ffca2c !important; }
 .s2p-btn-muted       { color: #6c757d !important; border: 1px solid #6c757d !important; }
 .s2p-footer          { color: #6c757d !important; font-size: 0.85rem !important; }
-/* the "up next" list: a fixed height with its own scrollbar (up to 500 tracks); dragged rows, no text selection */
-.s2p-up-next-list    { max-height: 17rem !important; overflow-y: auto !important; cursor: grab !important; user-select: none !important;
-                       -webkit-user-select: none !important; -webkit-touch-callout: none !important; }
-.s2p-up-next-title   { flex: 1 1 10rem !important; min-width: 0 !important; }
 /* a song's votes on the guest page: a dark pill with a yellow edge — the 👍 emoji is yellow itself and vanished on a yellow one */
 .s2p-vote-badge      { background: #2b2000 !important; color: #ffca2c !important; border: 1px solid #ffc107 !important; }
 
-/* --- The dashboard on a phone (dashboard.html; the DJ in the booth, phone in hand): the settings, the vibe, the background playlist
-       and the QR code (.s2p-phone-settings) fold under one button, settings-toggle.js opens them (<body class="s2p-settings-open">),
-       so what the DJ works with comes right under the heading — the player first at a YouTube party, then the queue — and every
-       waiting request is a card with big buttons. Folded by CSS alone, so nothing jumps while the page loads. The polled <tbody> is
+/* --- The dashboard on a phone (dashboard.html; the DJ in the booth, phone in hand): the settings, the vibe and the QR code
+       (.s2p-phone-settings) fold under one button, settings-toggle.js opens them (<body class="s2p-settings-open">), so the queue
+       comes right under the heading — and every waiting request is a card with big buttons. Folded by CSS alone, so nothing jumps while the page loads. The polled <tbody> is
        replaced every 3 s; these rules style whatever it brings. --- */
 .s2p-settings-toggle { display: none !important; }
 /* its own colours: Bootstrap's outline button fills white on hover and focus, and on a phone the tap leaves it so until the next
@@ -592,8 +575,7 @@ th[data-sort].sort-desc::after {
 }
 
 /* --- The active queue (dashboard.html): every request has its number — a CSS counter, so it follows the polled <tbody>, the sort
-       and the search by itself (a row the search hides does not count). At a YouTube party the list's own order is the order of
-       play. "Wyczyść kolejkę" shows only while a request waits. --- */
+       and the search by itself (a row the search hides does not count). "Wyczyść kolejkę" shows only while a request waits. --- */
 #song-list { counter-reset: s2p-queue; }
 #song-list > tr[data-song-id] { counter-increment: s2p-queue; }
 #song-list > tr[data-song-id] .song-title::before {

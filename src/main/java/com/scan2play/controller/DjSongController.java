@@ -17,7 +17,7 @@ import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
  * Handles:
  * <ul>
  *     <li>Marking songs as played</li>
- *     <li>Adding DJ-picked songs directly to the queue</li>
+ *     <li>Skipping a song, clearing the queue</li>
  * </ul>
  * Dashboard views are handled by {@link DjDashboardController}.
  * Party settings are handled by {@link DjPartySettingsController}.
@@ -70,26 +70,6 @@ public class DjSongController {
     public String clearQueue(OAuth2AuthenticationToken authentication, HttpSession session) {
         String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
         djService.clearQueue(ownerPartyCode);
-        return REDIRECT_DASHBOARD;
-    }
-
-
-    /**
-     * Adds a DJ-picked song directly to the party queue, bypassing AI evaluation.
-     * Only meaningful for the YouTube provider (Auto-Pilot picks it up in the next polling cycle).
-     *
-     * @param partyCode The unique code of the party.
-     * @param songName  The name of the song to add.
-     * @return Redirects back to the dashboard.
-     */
-    @PostMapping("/dashboard/dj-pick")
-    public String addDjPick(@RequestParam String partyCode,
-                            @RequestParam String songName,
-                            OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
-        if (songName != null && !songName.isBlank()) {
-            djService.addDjPick(partyCode, songName.trim());
-        }
         return REDIRECT_DASHBOARD;
     }
 }

@@ -4,10 +4,8 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.MusicProviderType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
-import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
-import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.service.YouTubeSearchBudget;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +43,7 @@ class DjDashboardControllerGuestLimitsTest {
         limiter = mock(GuestRequestLimiter.class);
         budget = mock(YouTubeSearchBudget.class);
         controller = new DjDashboardController(djService, settingsService, mock(QrCodeService.class), mock(DjSessionHelper.class),
-                mock(NextTrackService.class), mock(PlayerLeaseService.class), mock(PlayHistoryService.class), limiter, budget);
+                mock(PlayHistoryService.class), limiter, budget);
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getDashboardQueue(PARTY)).thenReturn(List.of());
     }

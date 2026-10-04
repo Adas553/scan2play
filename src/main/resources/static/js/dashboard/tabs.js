@@ -1,11 +1,11 @@
 /**
  * TABS — Panel / Queue / History, in a bar that stays in view (fragment dj-nav, .dj-tabbar).
  *
- * Panel scrolls to the top of the page (the settings, the QR code, the player), Queue shows the queue and scrolls to it,
+ * Panel scrolls to the top of the page (the settings, the QR code), Queue shows the queue and scrolls to it,
  * History shows the history and scrolls to it, so from anywhere on a long page the DJ can jump to any of them. The tab
  * that is lit follows the part of the page in view.
  * The History tab loads its content via AJAX into #history-content and swaps it with #queue-content, for every kind of party:
- * the page is not reloaded (a YouTube party's player stays alive, the DJ keeps their place). The standalone history page does not
+ * the page is not reloaded (the DJ keeps their place). The standalone history page does not
  * load this module: its tabs are plain links.
  */
 import { csrfHeaders, partyCode } from './common.js';
@@ -65,7 +65,7 @@ import { captureListState, initSortableHeaders, restoreListState, setHistoryRelo
 
     /**
      * After a click on a tab the part of the page it stands for may be far away — on a phone the lists sit below the
-     * settings, the QR code and the player — so bring the top of the list into view, just under the tab bar. Unless it
+     * settings and the QR code — so bring the top of the list into view, just under the tab bar. Unless it
      * already is in the upper part of the screen (a wide screen shows it without any scrolling).
      */
     function revealContent(element) {
@@ -133,7 +133,7 @@ import { captureListState, initSortableHeaders, restoreListState, setHistoryRelo
         scrollToPosition(0);
     });
 
-    // Queue: the queue shows (and the history goes away, with YouTube) and the page scrolls to it.
+    // Queue: the queue shows (and the history goes away) and the page scrolls to it.
     links.queue.addEventListener('click', function(e) {
         e.preventDefault();
         if (activeList === 'history') {

@@ -1,11 +1,9 @@
-// A requests-only party (the DJ plays from their own software): the dashboard has no player, so youtube-autopilot.js is not on the
-// page. The dashboard's own modules must work without it — the queue poll, the lists, the tabs — and nothing may ask for the player
-// lease or for a track.
+// The party (the DJ plays from their own software): the dashboard has no player. Its modules — the queue poll, the lists, the tabs —
+// work on their own, and nothing asks for the player's old endpoints (the lease, a track, the timeline: gone from the server).
 
 S2P.scenario({
     name: 'requests-only-dashboard',
-    title: 'a requests-only party: the dashboard runs without the player — the queue is polled, nothing asks for the lease or a track',
-    page: 'dashboard-requests',
+    title: 'the dashboard runs without a player — the queue is polled, nothing asks for the lease or a track',
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' }] },
     run: async function (t) {
         const dismiss = document.querySelector('form[action="/dj/dashboard/dismiss"] button[type="submit"]');
@@ -20,7 +18,8 @@ S2P.scenario({
         t.step('the queue is polled and shown', document.querySelector('#song-list [data-song-id="1"]').getAttribute('data-song-name'),
             'Wilki - Baśka');
         t.step('nothing asks for the player lease, a track or the timeline',
-            [await t.stand.count(t.LEASE), await t.stand.count(t.NEXT_TRACK), await t.stand.count('GET /dj/dashboard/recent-tracks')],
+            [await t.stand.count('POST /dj/dashboard/player-lease'), await t.stand.count('POST /dj/dashboard/next-track'),
+             await t.stand.count('GET /dj/dashboard/recent-tracks')],
             [0, 0, 0]);
 
         const search = document.querySelector('#queueList [data-list-search]');
@@ -33,8 +32,7 @@ S2P.scenario({
 
 S2P.scenario({
     name: 'requests-only-history-in-place',
-    title: 'a party without the player: the History tab loads the history in place of the queue — the page is not left',
-    page: 'dashboard-requests',
+    title: 'the History tab loads the history in place of the queue — the page is not left',
     setup: {},
     run: async function (t) {
         // Whether the page handled the click itself (no navigation); the scenario stops a navigation either way, so that a page
@@ -64,8 +62,7 @@ S2P.scenario({
 
 S2P.scenario({
     name: 'requests-only-skip-in-place',
-    title: 'a requests-only party: "Pomiń" is sent in the background — the page stays, and the queue is fetched again at once',
-    page: 'dashboard-requests',
+    title: 'the queue: "Pomiń" is sent in the background — the page stays, and the queue is fetched again at once',
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
                      { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
     run: async function (t) {
@@ -91,7 +88,6 @@ S2P.scenario({
 S2P.scenario({
     name: 'queue-numbers-and-clear',
     title: 'the active queue: every request has its number; "Wyczyść kolejkę" asks first, then empties the queue in place, and is gone with nothing to clear',
-    page: 'dashboard-requests',
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
                      { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
     run: async function (t) {

@@ -2,7 +2,6 @@ package com.scan2play.template;
 
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.PlaybackMode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,7 +54,7 @@ class DashboardQueueFragmentTest {
     private static SongRequestEntity accepted(int i, String songName) {
         return SongRequestEntity.builder().id((long) i).partyCode("ABC12").songName(songName).style("Pop")
                 .decision("accepted").djComment("ok").energyLevel(7).requestedAt(java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant())
-                .trackUrl("https://www.youtube.com/watch?v=hTWKbfoikeg").build();
+                .trackUrl("https://www.youtube.com/results?search_query=" + songName).build();
     }
 
     private static String render(List<SongRequestEntity> queue, Locale locale) {
@@ -65,17 +64,16 @@ class DashboardQueueFragmentTest {
                         .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()),
                 locale);
         context.setVariable("history", queue);
-        context.setVariable("playbackMode", PlaybackMode.AUTO);
-        context.setVariable("activeProvider", MusicProviderType.YOUTUBE);
+        context.setVariable("activeProvider", MusicProviderType.REQUESTS_ONLY);
         return engine.process("dashboard", Set.of("songTableBody"), context);
     }
 
     @Test
-    @DisplayName("the polled tbody keeps its id and the Auto-Pilot mode the player script reads")
+    @DisplayName("the polled tbody keeps its id, and every row its id and song name")
     void shouldKeepTheHooksOfTheScripts() {
         String html = render(List.of(accepted(1, "Alpha")), Locale.ENGLISH);
 
-        assertThat(html).contains("id=\"song-list\"", "data-playback-mode=\"AUTO\"", "data-provider=\"YOUTUBE\"");
+        assertThat(html).contains("id=\"song-list\"").doesNotContain("data-playback-mode");
         assertThat(html).containsPattern("<tr[^>]*data-song-id=\"1\"[^>]*data-song-name=\"Alpha\"");
     }
 
@@ -107,25 +105,16 @@ class DashboardQueueFragmentTest {
         assertThat(html).doesNotContain("data-song-id");
     }
 
-    /**
-     * One source of a video's id (review 3.5): the server reads it from the track's URL (YouTubeUrls.extractVideoId) and the row
-     * and its ▶ link carry it — the scripts no longer parse URLs. A search link has no video, so no attribute.
-     */
+    /** The song's "🔍" link: YouTube's search results in a new tab, for the DJ to look at a song they do not know (no player). */
     @Test
-    @DisplayName("a row and its ▶ link carry the video's id from the server; a search link carries none")
-    void shouldCarryTheVideoIdOfTheServer() {
-        SongRequestEntity searchLink = accepted(2, "Beta");
-        searchLink.setTrackUrl("https://www.youtube.com/results?search_query=Beta");
+    @DisplayName("a row's link opens the song on YouTube's search results, in a new tab; nothing on the page plays it")
+    void shouldLinkToTheSearchResults() {
+        String html = render(List.of(accepted(1, "Alpha")), Locale.ENGLISH);
 
-        String html = render(List.of(accepted(1, "Alpha"), searchLink), Locale.ENGLISH);
-
-        String alpha = html.substring(html.indexOf("data-song-id=\"1\""), html.indexOf("data-song-id=\"2\""));
-        String beta = html.substring(html.indexOf("data-song-id=\"2\""));
-        assertThat(alpha.split("data-video-id=\"hTWKbfoikeg\"", -1)).as("the row and its link").hasSize(3);
-        assertThat(beta.substring(0, beta.indexOf("</tr>"))).doesNotContain("data-video-id");
-        // ↗ beside ▶: only a look at the video on YouTube, in a new tab — for a video, not for a search link
-        assertThat(alpha).contains("youtube-preview", "Preview on YouTube", "the song leaves the queue");
-        assertThat(beta.substring(0, beta.indexOf("</tr>"))).doesNotContain("youtube-preview");
+        String alpha = html.substring(html.indexOf("data-song-id=\"1\""), html.indexOf("</tr>", html.indexOf("data-song-id=\"1\"")));
+        assertThat(alpha).contains("href=\"https://www.youtube.com/results?search_query=Alpha\"", "target=\"_blank\"",
+                "rel=\"noopener noreferrer\"", "Preview");
+        assertThat(alpha).doesNotContain("data-video-id", "youtube-preview", "▶ YOUTUBE");
     }
 
     @Test

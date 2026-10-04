@@ -3,7 +3,6 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
-import com.scan2play.service.FallbackPlaylistService;
 import com.scan2play.service.PartySettingsCommandService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +46,7 @@ class DjPartySettingsControllerVibeTest {
         settingsService = mock(PartySettingsCommandService.class);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
-                settingsService, mock(AccountDeletionService.class), sessionHelper, mock(FallbackPlaylistService.class))).build();
+                settingsService, mock(AccountDeletionService.class), sessionHelper)).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");

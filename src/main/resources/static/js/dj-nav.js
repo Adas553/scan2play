@@ -3,7 +3,7 @@
 // Content-Security-Policy (review 5.1). Loaded as a plain script inside the fragment, so it runs before the dashboard's modules.
 
 // A form with data-confirm asks first. In the capture phase on the document, so it runs before any other submit listener — the
-// dashboard's forms.js sends the YouTube panel's forms by fetch() and leaves alone a submit that was cancelled here.
+// dashboard's forms.js sends the panel's forms by fetch() and leaves alone a submit that was cancelled here.
 document.addEventListener('submit', function (e) {
     var form = e.target.closest ? e.target.closest('form[data-confirm]') : null;
     if (form && !window.confirm(form.getAttribute('data-confirm'))) {

@@ -24,7 +24,6 @@ public final class ViewAttributes {
     public static final String IS_ACTIVE = "isActive";
 
     // --- Dashboard Attributes ---
-    public static final String PLAYBACK_MODE = "playbackMode";
     public static final String HISTORY = "history";
     public static final String HISTORY_HAS_MORE = "historyHasMore";
     public static final String HISTORY_NEXT_LIMIT = "historyNextLimit";
@@ -39,9 +38,6 @@ public final class ViewAttributes {
     public static final String REQUEST_LIMIT = "requestLimit";
     public static final String COOLDOWN_MINUTES = "cooldownMinutes";
     public static final String DUPLICATE_CHECK_WINDOW = "duplicateCheckWindow";
-    public static final String FALLBACK_PLAYLIST_ID = "fallbackPlaylistId";
-    public static final String FALLBACK_PLAYLIST_URL = "fallbackPlaylistUrl";
-    public static final String FALLBACK_SHUFFLE = "fallbackShuffle";
     public static final String SERVER_LIMIT_PER_NETWORK = "serverLimitPerNetwork";
     public static final String SERVER_LIMIT_WINDOW_MINUTES = "serverLimitWindowMinutes";
     public static final String SERVER_LIMIT_PER_PARTY = "serverLimitPerParty";

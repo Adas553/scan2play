@@ -1,18 +1,15 @@
 /**
- * The forms of the DJ panel: the POST forms submitted by AJAX (a YouTube party), the Auto-Pilot switch — one setting for all the
- * DJ's windows — and the "copy" button of the party link.
+ * The forms of the DJ panel: the POST forms submitted by AJAX, and the "copy" button of the party link.
  */
-import { EVENTS, emit, on } from './events.js';
+import { EVENTS, emit } from './events.js';
 import { csrfHeaders, showPartyActive } from './common.js';
-import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue.js';
 
 // ==========================================================================
-// AJAX FORM INTERCEPTOR (every kind of party)
+// AJAX FORM INTERCEPTOR
 //
 // Most POST forms on the dashboard are submitted via fetch(): a full page
-// reload would destroy the YouTube IFrame player, and at every party it
-// would take the DJ away from their place in the list (and, on a phone,
-// fold the settings away).
+// reload would take the DJ away from their place in the list (and, on a
+// phone, fold the settings away).
 //
 // Excluded: logout, delete-account (page reload / redirect is expected).
 // ==========================================================================
@@ -31,9 +28,6 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
         const action = form.action || '';
         if (action.includes('/logout') || action.includes('/delete-account')) return;
 
-        // Auto-Pilot toggle has its own AJAX handler — skip
-        if (form.id === 'autoPilotForm') return;
-
         e.preventDefault();
 
         fetch(action, {
@@ -41,10 +35,9 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
             headers: csrfHeaders(),
             body: new FormData(form),
             redirect: 'manual'
-        }).then(function(response) {
-            // A song played, skipped or picked, or the queue cleared: the queue is fetched now, so the rows go (or come) at once
-            if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/dj-pick')
-                    || action.includes('/dashboard/clear-queue')) {
+        }).then(function() {
+            // A song played or skipped, or the queue cleared: the queue is fetched now, so the rows go at once
+            if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/clear-queue')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
 
@@ -54,40 +47,16 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
                 return; // no flash needed for these buttons
             }
 
-            // --- Fallback playlist save ---
-            let importFailed = false;
-            if (action.includes('/fallback-playlist') && response.headers.get('X-Fallback-Saved') === 'false') {
-                // The server refused the link (a YouTube Mix) and kept the party's playlist: say why, touch nothing else
-                importFailed = showFallbackImportResult(response, null);
-            } else if (action.includes('/fallback-playlist')) {
-                // Server returns the extracted playlist/video ID in X-Fallback-Id header
-                // so we don't need to duplicate the URL parsing logic client-side.
-                const extractedId = response.headers.get('X-Fallback-Id') || '';
-                emit(EVENTS.FALLBACK_PLAYLIST_SAVED);
-                refreshFallbackQueue();
-                // Show/hide the stop button based on whether an ID was extracted
-                const stopBtn = document.getElementById('fallbackStopBtn');
-                if (stopBtn) {
-                    stopBtn.classList.toggle('d-none', !extractedId);
-                }
-                importFailed = showFallbackImportResult(response, extractedId);
-            }
-
-            // Flash the submit button briefly as confirmation: green, or red when the playlist could not be imported
+            // Flash the submit button briefly as confirmation
             const btn = form.querySelector('button[type="submit"]');
             if (btn) {
                 const original = btn.textContent;
-                const flashClass = importFailed ? 'btn-danger' : 'btn-success';
-                btn.textContent = importFailed ? '✗' : '✓';
-                btn.classList.add(flashClass);
+                btn.textContent = '✓';
+                btn.classList.add('btn-success');
                 setTimeout(function() {
                     btn.textContent = original;
-                    btn.classList.remove(flashClass);
+                    btn.classList.remove('btn-success');
                 }, 1500);
-            }
-            // Clear "add item" forms after successful submission
-            if (form.classList.contains('reset-on-success')) {
-                form.reset();
             }
         }).catch(function(err) {
             console.error('[Dashboard] AJAX form error:', err);
@@ -95,69 +64,8 @@ import { refreshFallbackQueue, showFallbackImportResult } from './fallback-queue
     });
 })();
 
-// ==========================================================================
-// AUTO-PILOT TOGGLE
-//
-// The switch #autoToggle (a YouTube party): AJAX POST + local UI update (no reload).
-// ==========================================================================
-
-/** When the DJ last flipped the Auto-Pilot switch in this window (Date.now()), see the PLAYBACK_MODE_REPORTED listener. */
-let playbackModeChangedHereAt = 0;
-
-function submitAutoPilotToggle(checkbox) {
-    const formData = new FormData(checkbox.form);
-    // The state the switch shows now, not "toggle": a window whose switch showed an old state (Auto-Pilot changed on another
-    // device) would otherwise have inverted the setting.
-    const newMode = checkbox.checked ? 'AUTO' : 'MANUAL';
-    formData.append('mode', newMode);
-    playbackModeChangedHereAt = Date.now();
-
-    fetch('/dj/dashboard/playback-mode', {
-        method: 'POST',
-        headers: csrfHeaders(),
-        body: formData,
-        redirect: 'manual'
-    }).then(function() {
-        setPlaybackMode(newMode);
-        console.log('[Auto-Pilot] Mode set to: ' + newMode);
-    }).catch(function(err) {
-        console.error('[Auto-Pilot] Toggle error:', err);
-        checkbox.checked = !checkbox.checked;
-    });
-}
-
-/**
- * Makes this window follow an Auto-Pilot setting: the attribute youtube-autopilot.js reads (what happens when a track ends),
- * the switch; when it changed, EVENTS.PLAYBACK_MODE tells the screen wake lock and the player (switched on, it starts if idle).
- */
-function setPlaybackMode(mode) {
-    const tbody = document.getElementById('song-list');
-    if (!tbody) return;
-    const changed = tbody.getAttribute('data-playback-mode') !== mode;
-    tbody.setAttribute('data-playback-mode', mode);
-    const toggle = document.getElementById('autoToggle');
-    if (toggle) toggle.checked = mode === 'AUTO';
-    if (changed) emit(EVENTS.PLAYBACK_MODE, { mode: mode });
-}
-
-/**
- * The party's Auto-Pilot setting as the server says it (every lease answer carries it — youtube-autopilot.js): one setting for
- * all the DJ's windows, so a change made on another device reaches this one within a report — the value the page was loaded with
- * goes stale (the queue poll brings a new one only when the guest queue changes), and a window that took the playback over with
- * a stale "off" would leave its player empty. An answer to a report sent before the DJ flipped the switch here is ignored: it
- * may still say the old value.
- */
-on(EVENTS.PLAYBACK_MODE_REPORTED, function (report) {
-    if (report.mode !== 'AUTO' && report.mode !== 'MANUAL') return;
-    if (report.sentAt <= playbackModeChangedHereAt) return;
-    setPlaybackMode(report.mode);
-});
-
-const autoToggle = document.getElementById('autoToggle');
-if (autoToggle) autoToggle.addEventListener('change', function () { submitAutoPilotToggle(autoToggle); });
-
-// A select that saves as soon as the DJ picks (the party's vibe): requestSubmit, so the form goes through the submit listeners
-// above (fetch at a YouTube party) — data-auto-submit instead of an inline onchange (CSP, review 5.1).
+// A select that saves as soon as the DJ picks (the party's vibe): requestSubmit, so the form goes through the submit listener
+// above (fetch) — data-auto-submit instead of an inline onchange (CSP, review 5.1).
 document.querySelectorAll('select[data-auto-submit]').forEach(function (select) {
     select.addEventListener('change', function () { select.form.requestSubmit(); });
 });

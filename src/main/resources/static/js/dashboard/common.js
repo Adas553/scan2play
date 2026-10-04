@@ -1,4 +1,4 @@
-/** What every part of the dashboard needs: the CSRF token, the party, the provider. */
+/** What every part of the dashboard needs: the CSRF token, the party, whether it is open. */
 
 const csrfToken = document.querySelector('meta[name="_csrf"]');
 const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
@@ -31,9 +31,4 @@ export function showPartyActive(active, pollSentAt) {
     const endForm = document.getElementById('end-party-form');
     if (banner) banner.classList.toggle('d-none', active);
     if (endForm) endForm.classList.toggle('d-none', !active);
-}
-
-/** True when the YouTube embedded player is on the page (a YouTube party). */
-export function isYouTubeProvider() {
-    return !!document.getElementById('yt-player-card');
 }

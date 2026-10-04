@@ -1,6 +1,6 @@
 /**
- * SETTINGS ON A PHONE — the settings, the vibe, the background playlist and the QR code fold under one button (#settingsToggle), so
- * the player (YouTube) and the queue come right under the heading. They are folded by app.css alone (a narrow screen, until <body>
+ * SETTINGS ON A PHONE — the settings, the vibe and the QR code fold under one button (#settingsToggle), so the queue comes right
+ * under the heading. They are folded by app.css alone (a narrow screen, until <body>
  * has .s2p-settings-open), so nothing jumps while the page loads; this opens and closes them. On a wide screen the button is hidden
  * and they always show.
  * The choice is kept for this tab (sessionStorage): a page reload leaves them open.

@@ -1,8 +1,7 @@
 name: Browser tests
 
-# The browser tests of the DJ dashboard (src/test/browser/README.md): the REAL youtube-autopilot.js and dashboard.js on the REAL rendered
-# dashboard.html, in a headless Chrome, against a stand-in server and a fake YouTube player. No database, no secrets, no YouTube:
-# only Maven Central (for the build of the render test) and the Chrome that the runner image already has.
+# The browser tests of the DJ dashboard (src/test/browser/README.md): the REAL js/dashboard/*.js on the REAL rendered dashboard.html,
+# in a headless Chrome, against a stand-in server. No database, no secrets: only Maven Central (for the build of the render test) and the Chrome that the runner image already has.
 # They are not part of `mvnw test` (the unit tests); this is the one place where a machine runs them.
 
 on:

@@ -13,7 +13,7 @@
         input.value = text;
         input.dispatchEvent(new Event('input', { bubbles: true }));
     };
-    const song = function (id, name) { return { id: id, name: name, url: 'https://www.youtube.com/watch?v=abcdefgh' + String(id).padStart(3, '0') }; };
+    const song = function (id, name) { return { id: id, name: name, url: 'https://www.youtube.com/results?search_query=song' + id }; };
 
     S2P.scenario({
         name: 'queue-list',

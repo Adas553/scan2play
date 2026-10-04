@@ -29,9 +29,9 @@
                     <h1 class="h4 mb-0 text-secondary" th:text="#{dashboard.title}">DJ Dashboard</h1>
                 </div>
 
-                <!--/* On a phone the settings, the vibe, the background playlist and the QR code (.s2p-phone-settings) fold under this
-                     button, so the player (YouTube) and the queue come right under the heading (app.css; settings-toggle.js opens and
-                     closes them). On a wide screen the button is hidden and they always show. */-->
+                <!--/* On a phone the settings, the vibe and the QR code (.s2p-phone-settings) fold under this button, so the queue
+                     comes right under the heading (app.css; settings-toggle.js opens and closes them). On a wide screen the button is
+                     hidden and they always show. */-->
                 <button type="button" id="settingsToggle"
                         class="btn btn-outline-light w-100 s2p-settings-toggle" aria-expanded="false"
                         th:text="#{dashboard.settings.toggle}">⚙️ Settings, vibe and QR code</button>
@@ -74,33 +74,15 @@
                 </div>
             </div>
 
-            <!--/* folded on a phone only at a requests-only party: at a YouTube party it holds the Auto-Pilot switch */-->
-            <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm"
-                 th:classappend="${activeProvider.name() == 'REQUESTS_ONLY'} ? 's2p-phone-settings'">
+            <!--/* The DJ plays from their own software: what the buttons of the queue do */-->
+            <div class="card bg-dark border-secondary mb-4 p-3 shadow-sm s2p-phone-settings">
                 <div class="row align-items-center">
-                    <!--/* on a phone only the switch stays: the kind of party is folded with the settings */-->
-                    <div class="col-md-6 mb-3 mb-md-0 d-flex align-items-center s2p-phone-settings">
+                    <div class="col-md-6 mb-3 mb-md-0 d-flex align-items-center">
                         <span class="fw-bold text-light me-3" th:text="#{dashboard.provider.label}">🎵 Playback source:</span>
-                        <span class="badge fs-6 px-3 py-2"
-                              th:classappend="${activeProvider.name() == 'REQUESTS_ONLY' ? 'bg-info text-dark' : 'bg-danger'}"
-                              th:text="${activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.provider.requests') : 'YouTube'}">YouTube</span>
+                        <span class="badge fs-6 px-3 py-2 bg-info text-dark" th:text="#{dashboard.provider.requests}">Your DJ software</span>
                     </div>
                     <div class="col-md-6 d-flex justify-content-md-end align-items-center">
-                        <!-- Requests only: the DJ plays from their own software — what the buttons of the queue do -->
-                        <span th:if="${activeProvider.name() == 'REQUESTS_ONLY'}" class="text-secondary small"
-                              th:text="#{dashboard.requests.help}">You play from your own software.</span>
-                        <!-- Auto-Pilot toggle: a YouTube party -->
-                        <form th:if="${activeProvider.name() == 'YOUTUBE'}"
-                              th:action="@{/dj/dashboard/playback-mode}" method="POST" class="d-inline" id="autoPilotForm">
-                            <input type="hidden" name="partyCode" th:value="${partyCode}">
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="autoToggle"
-                                       th:checked="${playbackMode == T(com.scan2play.model.PlaybackMode).AUTO}">
-                                <label class="form-check-label fw-bold s2p-text-youtube" for="autoToggle">
-                                    Auto-Pilot (Queue)
-                                </label>
-                            </div>
-                        </form>
+                        <span class="text-secondary small" th:text="#{dashboard.requests.help}">You play from your own software.</span>
                     </div>
                 </div>
             </div>
@@ -145,36 +127,6 @@
                     </ul>
                 </div>
             </div>
-
-            <!-- Fallback Playlist (YouTube only) — background music when guest queue is empty -->
-            <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm s2p-phone-settings">
-                <h6 class="text-light mb-2">🎶 <span th:text="#{dashboard.fallback.title}">Fallback Playlist</span></h6>
-                <p class="text-secondary small mb-2" th:text="#{dashboard.fallback.help}">Plays automatically when the guest queue is empty.</p>
-                <form th:action="@{/dj/dashboard/fallback-playlist}" method="POST" class="d-flex gap-2" id="fallbackForm">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <input type="text" name="fallbackPlaylistUrl" id="fallbackInput"
-                           class="form-control form-control-sm bg-black text-light border-secondary flex-grow-1"
-                           th:placeholder="#{dashboard.fallback.placeholder}"
-                           th:value="${fallbackPlaylistUrl}" autocomplete="off" maxlength="500">
-                    <button type="submit" class="btn btn-sm btn-outline-light flex-shrink-0"
-                            th:text="#{dashboard.fallback.save}">Save</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
-                            th:classappend="${fallbackPlaylistId == null ? 'd-none' : ''}"
-                            id="fallbackStopBtn"
-                            th:text="#{dashboard.fallback.stop}">⏹ Stop</button>
-                </form>
-                <!--/* What came of the import after Save (dashboard.js, showFallbackImportResult): the server answers ok / failed with a reason; the texts travel in data attributes */-->
-                <div id="fallbackImportStatus" class="small mt-2 d-none" role="status" aria-live="polite"
-                     th:attr="data-text-ok=#{dashboard.fallback.import.ok},data-text-noapikey=#{dashboard.fallback.import.noapikey},data-text-invalidplaylist=#{dashboard.fallback.import.invalidplaylist},data-text-apierror=#{dashboard.fallback.import.apierror},data-text-noplayabletracks=#{dashboard.fallback.import.noplayabletracks},data-text-youtubemix=#{dashboard.fallback.import.youtubemix},data-text-notalink=#{dashboard.fallback.import.notalink},data-text-unknown=#{dashboard.fallback.import.unknown}"></div>
-                <div class="form-check form-switch mt-2">
-                    <input class="form-check-input" type="checkbox" role="switch"
-                           id="fallbackShuffleToggle"
-                           th:checked="${fallbackShuffle}"
-                           th:attr="data-confirm=#{dashboard.fallback.shuffle.confirm}">
-                    <label class="form-check-label text-secondary small" for="fallbackShuffleToggle"
-                           th:text="#{dashboard.fallback.shuffle}">🔀 Shuffle</label>
-                </div>
-            </div>
         </div>
 
         <!-- QR Code Section -->
@@ -205,49 +157,7 @@
         </div>
     </div>
 
-    <!-- YouTube Player (only for YouTube provider) -->
-    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm" id="yt-player-card">
-        <h5 class="text-light mb-2">▶️ YouTube Player</h5>
-        <div th:replace="~{fragments/player-lease-banner :: banner}"></div>
-
-        <div class="d-flex flex-wrap gap-3 align-items-start">
-            <div class="flex-grow-1 s2p-player-column">
-                <div class="ratio ratio-16x9">
-                    <div id="yt-player"></div>
-                </div>
-                <div th:replace="~{fragments/player-controls :: controls}"></div>
-            </div>
-
-            <!--/* "Up next" of the fallback playlist, beside the player: filled by dashboard.js (refreshFallbackQueue) from /dj/dashboard/fallback-queue; on a narrow screen it wraps below the player */-->
-            <div class="flex-grow-1 s2p-side-column">
-                <h6 class="text-light small mb-1" th:text="#{dashboard.fallback.queue.title}">Up next from the playlist</h6>
-                <p class="text-secondary small mb-2" th:text="#{dashboard.fallback.queue.hint}">Guest requests always play before the playlist.</p>
-                <!--/* How many guest songs wait (dashboard.js, updateGuestsWaiting): they play before the track marked "Next" below. The plural form is picked in the browser (Intl.PluralRules of data-lang), the four texts travel in data attributes. */-->
-                <p id="fallbackGuestsWaiting" class="text-warning small mb-2 d-none" role="status"
-                   th:attr="data-lang=${#locale.language},data-text-one=#{dashboard.fallback.queue.guests.one},data-text-few=#{dashboard.fallback.queue.guests.few},data-text-many=#{dashboard.fallback.queue.guests.many},data-text-other=#{dashboard.fallback.queue.guests.other}"></p>
-                <div id="fallbackQueue"></div>
-            </div>
-        </div>
-    </div>
-
     <div id="queue-content">
-
-    <!-- DJ Pick Form: manual song addition, bypasses AI (YouTube provider only) -->
-    <div th:if="${activeProvider.name() == 'YOUTUBE'}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm">
-        <h5 class="text-light mb-3">➕ <span th:text="#{dashboard.djpick.title}">Add DJ Pick</span></h5>
-        <form th:action="@{/dj/dashboard/dj-pick}" method="POST"
-              class="d-flex flex-column flex-sm-row gap-2 reset-on-success" id="dj-pick-form">
-            <input type="hidden" name="partyCode" th:value="${partyCode}">
-            <div class="song-autocomplete-wrapper flex-grow-1">
-                <input type="text" id="djPickInput" name="songName"
-                       class="form-control form-control-lg bg-black text-light border-secondary w-100"
-                       th:placeholder="#{dashboard.djpick.placeholder}"
-                       data-autocomplete="songs" required maxlength="200">
-            </div>
-            <button type="submit" class="btn btn-outline-danger btn-lg flex-shrink-0"
-                    th:text="#{dashboard.djpick.button}">Add to Queue</button>
-        </form>
-    </div>
 
     <!--/* The active queue: a heading with the number of songs and a search box, and a list of fixed height with its own
          scrollbar (.list-scroll) and a header that stays in view — with many songs the DJ no longer scrolls the whole
@@ -299,14 +209,10 @@
                 <th th:text="#{dashboard.table.header.action}">Action</th>
             </tr>
             </thead>
-            <tbody id="song-list" th:fragment="songTableBody"
-                   th:attr="data-playback-mode=${playbackMode},data-provider=${activeProvider}">
-            <!--/* data-video-id: the YouTube video of the song, read by the server (YouTubeUrls.extractVideoId) — the one source the
-                 scripts use (the guests-waiting count, ▶ in the embedded player); none for a search link */-->
-            <tr th:each="req : ${history}" th:with="videoId=${T(com.scan2play.util.YouTubeUrls).extractVideoId(req.trackUrl).orElse(null)},
-                          shownAt=${T(com.scan2play.util.Times).display(req.requestedAt)},
+            <tbody id="song-list" th:fragment="songTableBody" th:attr="data-provider=${activeProvider}">
+            <tr th:each="req : ${history}" th:with="shownAt=${T(com.scan2play.util.Times).display(req.requestedAt)},
                           sortAt=${T(com.scan2play.util.Times).sortKey(req.requestedAt)}"
-                th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl},data-video-id=${videoId}">
+                th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl}">
                 <td class="d-none d-md-table-cell text-nowrap" data-sort-value="time" th:attr="data-val=${sortAt}" th:title="${shownAt}">
                     <th:block th:replace="~{fragments/components :: moment(${req.requestedAt})}"></th:block>
                 </td>
@@ -318,24 +224,11 @@
                             <span th:if="${said != null}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${said})}">guest wrote: “…”</span>
                         </span>
-                        <!--/* Track link: ▶ YOUTUBE (red, direct video) | 🔍 YOUTUBE (outline, search URL).
-                             ▶ YOUTUBE in the window that plays = play it to the party now (the song is confirmed played and leaves
-                             the queue); ↗ = only look at it on YouTube, in a new tab. */-->
-                        <!--/* text-nowrap: the cell is as wide as ▶ YOUTUBE on one line, so ↗ never runs over the next column */-->
-                        <span class="d-flex align-items-center gap-1 flex-shrink-0 text-nowrap">
-                        <a th:if="${req.trackUrl != null}"
-                           th:href="${req.trackUrl}"
-                           target="_blank"
-                           class="btn btn-sm shadow-sm fw-bold flex-shrink-0 play-link"
-                           th:title="${videoId != null} ? #{dashboard.queue.play} : null"
-                           th:attr="data-track-url=${req.trackUrl},data-video-id=${videoId}"
-                           th:classappend="${#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? 'btn-danger text-white' : (#strings.contains(req.trackUrl, 'youtube') ? 'btn-outline-danger text-danger' : 'btn-secondary')}"
-                           th:text="${activeProvider.name() == 'REQUESTS_ONLY' ? #messages.msg('dashboard.queue.preview') : (#strings.contains(req.trackUrl, 'youtube') and #strings.contains(req.trackUrl, 'watch?v=') ? '▶ YOUTUBE' : (#strings.contains(req.trackUrl, 'youtube') ? '🔍 YOUTUBE' : '▶ PLAY'))}">
-                        </a>
-                        <a th:if="${videoId != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
-                           class="text-light text-decoration-none fs-5 lh-1 px-1 youtube-preview"
-                           th:title="#{dashboard.queue.open}">↗</a>
-                        </span>
+                        <!--/* "🔍 Podejrzyj": the song on YouTube's search results, for the DJ to look at a song they do not know — a page
+                             the DJ's browser opens, no YouTube API */-->
+                        <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
+                           class="btn btn-sm shadow-sm fw-bold flex-shrink-0 text-nowrap btn-outline-danger text-danger play-link"
+                           th:text="#{dashboard.queue.preview}">🔍 Preview</a>
                     </div>
                 </td>
                 <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
@@ -355,8 +248,8 @@
                             <button type="submit" class="btn btn-sm btn-outline-info" th:text="#{dashboard.table.button.mark_played}">Mark Played</button>
                         </form>
 
-                        <!--/* Requests only: a song the DJ does not have, or does not want now — it leaves the queue as rejected */-->
-                        <form th:if="${req.decision == 'accepted' and activeProvider.name() == 'REQUESTS_ONLY'}"
+                        <!--/* A song the DJ does not have, or does not want now — it leaves the queue as rejected */-->
+                        <form th:if="${req.decision == 'accepted'}"
                               th:action="@{/dj/dashboard/dismiss}" method="post" class="m-0">
                             <input type="hidden" name="id" th:value="${req.id}" />
                             <button type="submit" class="btn btn-sm btn-outline-secondary" th:title="#{dashboard.table.button.dismiss.title}"
@@ -377,23 +270,12 @@
     </div>
     </div>
 
-    <!-- History content loaded via AJAX (preserves YouTube player) -->
+    <!-- History content loaded via AJAX (the DJ keeps their place on the page) -->
     <div id="history-content" hidden></div>
 </div>
 
-<!-- Screen Wake Lock — keeps display on while Auto-Pilot is running (graceful degradation; follows the s2p:playback-mode event) -->
-<script src="/js/wake-lock.js"></script>
-
-<!-- Dashboard core JS (polling, AJAX forms, tabs, lists, the background playlist) — ES modules, js/dashboard/main.js imports the rest -->
+<!-- Dashboard core JS (polling, AJAX forms, tabs, lists) — ES modules, js/dashboard/main.js imports the rest -->
 <script type="module" src="/js/dashboard/main.js"></script>
-
-<!-- Song Autocomplete — DJ Pick form (iTunes Search API, no backend queries) -->
-<script src="/js/song-autocomplete.js"></script>
-
-<!-- YouTube Auto-Pilot (only loaded for YouTube provider) — a module too, after main.js; they talk through js/dashboard/events.js -->
-<th:block th:if="${activeProvider.name() == 'YOUTUBE'}">
-    <script type="module" src="/js/youtube-autopilot.js"></script>
-</th:block>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 

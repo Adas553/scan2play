@@ -3,16 +3,12 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryFilter;
 import com.scan2play.model.MusicProviderType;
-import com.scan2play.model.NextTrackResponse;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
-import com.scan2play.service.NextTrackService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
-import com.scan2play.service.PlayerLeaseService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.service.YouTubeSearchBudget;
-import com.scan2play.util.YouTubeUrls;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,22 +16,17 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Controller responsible for DJ dashboard views and AJAX polling endpoints.
@@ -59,8 +50,6 @@ public class DjDashboardController {
     private final PartySettingsQueryService partySettingsQueryService;
     private final QrCodeService qrCodeService;
     private final DjSessionHelper sessionHelper;
-    private final NextTrackService nextTrackService;
-    private final PlayerLeaseService playerLeaseService;
     private final PlayHistoryService playHistoryService;
     private final GuestRequestLimiter guestRequestLimiter;
     private final YouTubeSearchBudget youTubeSearchBudget;
@@ -130,13 +119,9 @@ public class DjDashboardController {
         model.addAttribute(VIBE_NOTE, settings.getVibeNote());
         model.addAttribute(DJ_NAME, settings.getDjName());
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
-        model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
-        model.addAttribute(FALLBACK_PLAYLIST_ID, YouTubeUrls.extractPlaylistId(settings.getFallbackPlaylistUrl()));
-        model.addAttribute(FALLBACK_PLAYLIST_URL, settings.getFallbackPlaylistUrl());
-        model.addAttribute(FALLBACK_SHUFFLE, settings.isFallbackShuffle());
 
         // --- The server's guest limits (they are not the DJ's to set) and whether one stops guest songs now ---
         model.addAttribute(SERVER_LIMIT_PER_NETWORK, guestRequestLimiter.perClientLimit());
@@ -213,7 +198,7 @@ public class DjDashboardController {
     /**
      * Returns the history table as an HTML fragment for AJAX-based tab switching.
      * Used by the dashboard to load history without a full page reload,
-     * which preserves the YouTube IFrame player state. "Show more" asks for the same fragment with a larger
+     * so the DJ keeps their place on the page. "Show more" asks for the same fragment with a larger
      * {@code limit}, and a button of the filter (All / Guests / Playlist / Played / Rejected) with another
      * {@code filter}.
      */
@@ -282,7 +267,6 @@ public class DjDashboardController {
         // --- Full render (queue changed) ---
         response.setHeader("ETag", etag);
         model.addAttribute(ACTIVE_PROVIDER, settings.getActiveProvider());
-        model.addAttribute(PLAYBACK_MODE, settings.getPlaybackMode());
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         return "dashboard :: songTableBody";
     }
@@ -298,53 +282,6 @@ public class DjDashboardController {
     /** Spent YouTube searches matter to a YouTube party only: a requests-only party links to YouTube's search page. */
     private boolean isSearchBudgetSpent(PartySettingsEntity settings) {
         return settings.getActiveProvider() == MusicProviderType.YOUTUBE && youTubeSearchBudget.isSpent();
-    }
-
-    /**
-     * Server-side "what plays next?" for YouTube Auto-Pilot: a waiting guest song first, otherwise the next
-     * track of the party's fallback (background music) playlist — see {@link NextTrackService}.
-     * <p>
-     * A POST because it is <b>not</b> read-only: a background track is marked as played the moment it is
-     * handed out (a guest song is still confirmed later via {@code POST /dj/dashboard/play}). Ask for it only
-     * when a track is actually about to be loaded, not to poll.
-     * <p>
-     * Returns 204 No Content when there is neither a guest song nor a background track, and 409 Conflict when
-     * another dashboard window holds the party's player lease ({@link PlayerLeaseService}) — nothing is handed out
-     * then, so a window that only looks at the dashboard cannot take tracks off the queue.
-     *
-     * @param exclude  Optional comma-separated guest song IDs the client already knows are broken (the YouTube
-     *                 player itself errored on them) and wants skipped.
-     * @param deviceId The asking window's id, as it reports it to {@code /dashboard/player-lease}.
-     */
-    @PostMapping("/dashboard/next-track")
-    @ResponseBody
-    public ResponseEntity<NextTrackResponse> nextTrack(@RequestParam String partyCode,
-                                                       @RequestParam(required = false) String exclude,
-                                                       @RequestParam(required = false) String deviceId,
-                                                       OAuth2AuthenticationToken authentication,
-                                                       HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
-        if (!playerLeaseService.claimToPlay(partyCode, deviceId)) {
-            return ResponseEntity.status(409).build();
-        }
-        return nextTrackService.findNextTrack(partyCode, parseExcludeIds(exclude))
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
-    }
-
-    private static Set<Long> parseExcludeIds(String exclude) {
-        if (exclude == null || exclude.isBlank()) {
-            return Set.of();
-        }
-        Set<Long> ids = new HashSet<>();
-        for (String part : exclude.split(",")) {
-            try {
-                ids.add(Long.parseLong(part.trim()));
-            } catch (NumberFormatException ignored) {
-                // malformed id from the client — ignore it rather than fail the whole lookup
-            }
-        }
-        return ids;
     }
 }
 
