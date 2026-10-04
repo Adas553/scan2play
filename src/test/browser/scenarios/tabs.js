@@ -1,5 +1,5 @@
-// THE THREE TABS Panel DJ-a / Kolejka / Historia in the bar that stays in view (dashboard.js initTabs; fragment dj-nav; PROJECT_CONTEXT.md
-// Section 5.4, "Three tabs in a bar that stays in view"). A click lights the tab at once and brings the part of the page it stands for
+// THE THREE TABS Panel DJ-a / Kolejka / Historia in the bar that stays in view (js/dashboard/tabs.js; fragment dj-nav; PROJECT_CONTEXT.md
+// Section 6.4). A click lights the tab at once and brings the part of the page it stands for
 // into view — just under the bar, unless it is in the upper part of the screen already; the History tab loads its content by AJAX and
 // shows it in place of the queue (the page is not left); and the lit tab follows the part of the page in view when the DJ scrolls.
 //

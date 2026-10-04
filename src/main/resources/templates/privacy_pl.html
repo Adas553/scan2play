@@ -34,28 +34,26 @@
         <ul>
             <li>Do uwierzytelniania DJ-ów i zarządzania sesjami imprez</li>
             <li>Do przetwarzania zamówień piosenek i oceny muzyki przez AI</li>
-            <li>Do wyszukiwania muzyki przez YouTube Data API v3 (na imprezie „Twój program DJ-a” serwis niczego nie odtwarza i nie wyszukuje przez API — pokazuje DJ-owi tylko link do wyników wyszukiwania YouTube)</li>
             <li>Do łączenia próśb o tę samą piosenkę w głosy i pokazywania gościom piosenek z największą liczbą głosów (liczba głosów nie zawiera danych osobowych)</li>
             <li>Do egzekwowania limitów i zapobiegania nadużyciom</li>
         </ul>
 
-        <h3>4. YouTube API Services</h3>
-        <p>Ta aplikacja korzysta z YouTube API Services do wyszukiwania i odtwarzania teledysków. Korzystając ze Scan2Play, akceptujesz
-            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">Warunki korzystania z YouTube</a>.
-            Zapoznaj się również z <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Polityką Prywatności Google</a>.
+        <h3>4. Linki do innych serwisów</h3>
+        <p>Scan2Play nie odtwarza muzyki i nie korzysta z żadnego API YouTube. Przycisk DJ-a „🔍 Podejrzyj” tylko otwiera w jego
+            przeglądarce wyniki wyszukiwania piosenki na YouTube — to, co dzieje się tam, regulują
+            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">Warunki korzystania z YouTube</a> i
+            <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Polityka Prywatności Google</a>.
         </p>
 
         <h3>5. Okres przechowywania danych</h3>
         <ul>
             <li>Zamówienia piosenek: usuwane automatycznie po 30 dniach od zamówienia (albo wcześniej, gdy DJ usunie swoje konto)</li>
-            <li>Utwory z playlisty DJ-a w tle i dziennik tego, co z niej zagrało (identyfikatory i tytuły filmów z YouTube): usuwane automatycznie po 30 dniach</li>
-            <li>Cache wyszukiwań YouTube: automatycznie usuwany po 30 dniach</li>
             <li>Sesje (logowanie DJ-a, identyfikator sesji gościa): przechowywane w bazie danych i usuwane po 30 minutach bez aktywności</li>
             <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
         </ul>
 
         <h3>6. Udostępnianie danych</h3>
-        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (YouTube API, OAuth) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa) w zakresie niezbędnym do działania serwisu.</p>
+        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (logowanie OAuth) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa) w zakresie niezbędnym do działania serwisu. Gdy gość pisze, jego przeglądarka pyta Apple iTunes Search API o podpowiedzi piosenek (trafia tam tylko wpisany tekst).</p>
 
         <h3>7. Twoje prawa — Usuwanie danych</h3>
         <p>Możesz usunąć wszystkie swoje dane w dowolnym momencie, klikając <strong>„Usuń konto"</strong> w Panelu DJ-a.

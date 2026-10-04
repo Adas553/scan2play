@@ -34,29 +34,26 @@
         <ul>
             <li>To authenticate DJs and manage party sessions</li>
             <li>To process song requests and provide AI-powered music evaluation</li>
-            <li>To search for music via YouTube Data API v3 (at a “Your DJ software” party the service plays nothing and searches through no API — it only shows the DJ a link to YouTube’s search results)</li>
             <li>To count requests for the same song as votes and show guests the most wanted songs (the number of votes holds no personal data)</li>
             <li>To enforce rate limits and prevent abuse</li>
         </ul>
 
-        <h3>4. YouTube API Services</h3>
-        <p>This application uses YouTube API Services to search for and play music videos. By using Scan2Play, you agree to be bound by the
-            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">YouTube Terms of Service</a>.
-            Please review the <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Google Privacy Policy</a>
-            to understand how Google handles your data.
+        <h3>4. Links to Other Sites</h3>
+        <p>Scan2Play plays no music and uses no YouTube API. The DJ’s “🔍 Preview” button only opens YouTube’s search results for
+            a song in the DJ’s own browser — what YouTube does there is governed by the
+            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">YouTube Terms of Service</a> and the
+            <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Google Privacy Policy</a>.
         </p>
 
         <h3>5. Data Retention</h3>
         <ul>
             <li>Song requests: automatically deleted 30 days after they were made (or earlier, when the DJ deletes their account)</li>
-            <li>Tracks of the DJ's background playlist and the log of what played from it (YouTube video IDs and titles): automatically deleted after 30 days</li>
-            <li>YouTube search cache: automatically deleted after 30 days</li>
             <li>Sessions (the DJ’s login, a guest’s session identifier): stored in the database and deleted after 30 minutes without activity</li>
             <li>DJ account data: stored until the DJ deletes their account</li>
         </ul>
 
         <h3>6. Data Sharing</h3>
-        <p>We do not sell or share your personal data with third parties. Data is only sent to Google (YouTube API, OAuth) and Google Gemini (AI song evaluation — it receives the guest’s request text) as required for the service to function.</p>
+        <p>We do not sell or share your personal data with third parties. Data is only sent to Google (OAuth login) and Google Gemini (AI song evaluation — it receives the guest’s request text) as required for the service to function. While a guest types, their browser asks Apple’s iTunes Search API for song suggestions (it receives the typed text, nothing else).</p>
 
         <h3>7. Your Rights — Data Deletion</h3>
         <p>You can delete all your data at any time by clicking <strong>&quot;Delete Account&quot;</strong> in your DJ Dashboard.

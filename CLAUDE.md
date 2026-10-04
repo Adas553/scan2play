@@ -4,8 +4,9 @@
 
 ## Read first
 
-- `PROJECT_CONTEXT.md` — architecture, domain model, endpoints, as they are now (~550 lines); Section 5.4 is the YouTube
-  player, Section 10 Flyway migrations and the deploy checklist. Keep it to what is true now: the history (decisions, reports,
+- `PROJECT_CONTEXT.md` — architecture, domain model, endpoints, as they are now; Section 5 the DJ's and the guest's flows,
+  Section 10 Flyway migrations and the deploy checklist. YouTube and Spotify are gone (2026-10-04): the full app is the tag
+  `full-player-2026-10-04` and the clone `D:\Coding\scan2play-full` with its own database `scan2play_full` — leave them alone. Keep it to what is true now: the history (decisions, reports,
   how things were verified) goes to `docs/history/` — `project-context-2026-10-01.md` is the long version, word for word.
 - `SESSION_HANDOFF.md` — the current state of the work, the next step and open items.
 
@@ -30,19 +31,19 @@
   whole result *before* opening the file for writing (a failed encode after `open(path, 'w')` leaves an empty file — it
   happened once), keep the CRLF, and check `git diff`. A long Python heredoc in Bash may be rejected: write the script to a
   file with the Write tool and run it.
-- **Queue SQL needs a check against a real PostgreSQL.** Mocked unit tests cannot show locking problems — a deadlock in
-  `FallbackTrackCommandService` was found only by a stress test on a real database. The `*IT` tests do it (base class
-  `PostgresIntegrationTest`; `FallbackQueueIT`, `FallbackQueueConcurrencyIT` — red if the advisory lock goes —, `MigrationIT`,
-  `SongRequestRepositoryIT`): in the scratch copy, `.\mvnw.cmd -B -ntp verify -Pit` (only the ITs; the local PostgreSQL 18, user
+- **SQL that locks or counts needs a check against a real PostgreSQL.** Mocked unit tests cannot show locking problems — a
+  deadlock in the old background queue was found only by a stress test on a real database. The `*IT` tests do it (base class
+  `PostgresIntegrationTest`; `SongRequestVotesIT` — red if the advisory lock goes —, `MigrationIT`, `SongRequestRepositoryIT`, the
+  `*MigrationIT` of a migration that moves rows): in the scratch copy, `.\mvnw.cmd -B -ntp verify -Pit` (only the ITs; the local PostgreSQL 18, user
   `postgres`, or `PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD`). Each run creates and drops its own `s2p_it_*` database — never the
-  developer's. GitHub runs them in `.github/workflows/db-tests.yml` (PostgreSQL 18, as on Railway). After touching that class,
-  `FallbackTrackRepository` or a migration, run them, and give new queue SQL a test there. When copying the repo to the scratch
+  developer's. GitHub runs them in `.github/workflows/db-tests.yml` (PostgreSQL 18, as on Railway). After touching
+  `SongRequestCommandService`, `SongRequestRepository` or a migration, run them, and give new SQL of that kind a test there. When copying the repo to the scratch
   directory, delete its `target/classes`: a copy that keeps the old file times leaves Maven's stale classes in place.
 - **Browser tests** (`src/test/browser`, guide in its `README.md`): `python src/test/browser/run.py` runs the real
-  `youtube-autopilot.js` / `js/dashboard/*.js` (ES modules; they talk through the `s2p:*` events of `js/dashboard/events.js`, never
-  through `window`) on the real rendered dashboard in a headless Chrome. It copies the repo to a work directory
+  `js/dashboard/*.js` (ES modules; they talk through the `s2p:*` events of `js/dashboard/events.js`, never through `window`) on the
+  real rendered dashboard (and the guest page, the QR print page) in a headless Chrome, under the real CSP. It copies the repo to a work directory
   (`%TEMP%\scan2play-browser-tests`) and runs Maven there — never in the repo — so it is safe while the app runs. `--no-render`
-  skips Maven (a quick loop while editing scenarios). A new behaviour of those scripts gets a scenario, seen red before green. The
-  fixture of real answers is recorded by `PlayLogFixtureRecorderTest` against a throw-away `s2p_*` database (README).
+  skips Maven (a quick loop while editing scenarios). `--clean` starts from a fresh work directory. A new behaviour of those scripts
+  gets a scenario, seen red before green.
 - **Secrets:** never write API keys or passwords into the repo, docs or memory. If one shows up in a chat or a
   screenshot, tell the owner to rotate or restrict it.

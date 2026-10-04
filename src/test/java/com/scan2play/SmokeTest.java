@@ -3,6 +3,7 @@ package com.scan2play;
 import com.scan2play.config.SecurityConfig;
 import com.scan2play.controller.CspReportController;
 import com.scan2play.controller.HomeController;
+import com.scan2play.controller.LegalController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * and the security layer works as expected.
  * Uses @WebMvcTest (no DB, no external APIs — fast and reliable).
  */
-@WebMvcTest({HomeController.class, CspReportController.class})
+@WebMvcTest({HomeController.class, CspReportController.class, LegalController.class})
 @Import(SecurityConfig.class)
 class SmokeTest {
 
@@ -138,13 +139,38 @@ class SmokeTest {
                 .andExpect(status().is3xxRedirection());
     }
 
-    // ---- YouTube player is NOT scrapeable from server-rendered HTML ----
-
     @Test
-    @DisplayName("Landing page HTML does not contain any <iframe> (YouTube player is client-side only)")
+    @DisplayName("Landing page HTML does not contain any <iframe> (there is no player)")
     void landingPage_shouldNotContainIframe() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("<iframe"))));
+    }
+
+    @Test
+    @DisplayName("The landing page's guide, in both languages, describes no player, Auto-Pilot or background playlist")
+    void landingGuide_describesOnlyTheRequestsParty() throws Exception {
+        for (String language : new String[] {"en", "pl"}) {
+            String html = mockMvc.perform(get("/").header("Accept-Language", language)).andReturn().getResponse().getContentAsString();
+
+            // (without messages_en, "en" gets the JVM's own locale's bundle — Polish on a Polish machine; the check holds for both)
+            assertThat(html).as(language).doesNotContain("Auto-Pilot", "Playlist", "Shuffle", "Losow", "YouTube")
+                    .containsAnyOf("Jak to działa?", "How does it work?");
+        }
+    }
+
+    @Test
+    @DisplayName("The privacy policy and the terms, in both languages, use no YouTube API, keep no YouTube data, and link YouTube's terms")
+    void legalPages_useNoYouTubeApi() throws Exception {
+        for (String page : new String[] {"/privacy", "/terms"}) {
+            for (String language : new String[] {"en", "pl"}) {
+                String html = mockMvc.perform(get(page).header("Accept-Language", language))
+                        .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+                assertThat(html).as(page + " " + language)
+                        .doesNotContain("YouTube API Services", "Data API", "YouTube API,", "cache", "Cache", "playlist", "playlisty")
+                        .contains("https://www.youtube.com/t/terms", "🔍", language.equals("pl") ? "Podejrzyj" : "Preview");
+            }
+        }
     }
 }

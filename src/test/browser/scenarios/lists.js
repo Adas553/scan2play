@@ -1,6 +1,6 @@
 // THE LISTS of the dashboard: the active queue (a search box, a count, a column sort, a "nothing matches" row, all of it kept across the
 // poll that replaces the rows every 3 s) and the History tab (filters and "Show more" asked of the server, the search box working on what
-// was loaded). dashboard.js: initListTools, initTableSorting, initTabs (fetchHistory, reloadHistory); PROJECT_CONTEXT.md Section 5.4, "Long lists".
+// was loaded). js/dashboard/list-tools.js and tabs.js; PROJECT_CONTEXT.md Section 5.1 ("The history").
 //
 // The queue's rows are the stand-in's answer to the poll (config "queue"), the History tab is the REAL fragment rendered by
 // DashboardPageRenderTest through the real controller: ten entries on one timeline, a page of four, one file per filter.

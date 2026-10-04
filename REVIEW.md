@@ -405,7 +405,7 @@ nie osobno. **Nakład:** S (przy okazji).
 | 1.7 | N | Klucz blokady = 32-bitowy `hashCode` | `FallbackTrackCommandService.java:77-79` | XS |
 | 1.8 | N | Czas bez strefy (`LocalDateTime` + `timestamp`) | encje, migracje | XS / M |
 | 1.9 | N | `getUpcoming` liczy to, co już ma | `FallbackQueueService.java:54-55` | XS |
-| 6.3 | N | Testy kolejki weryfikują wywołania, nie zachowanie | `FallbackTrackCommandServiceTest.java` | M |
+| 6.3 | N | ~~Testy kolejki weryfikują wywołania, nie zachowanie~~ — nieaktualne: kolejka tła usunięta 2026-10-04 | `FallbackTrackCommandServiceTest.java` | — |
 | 6.4 | N | `pom.xml`: zbędne repozytoria snapshot/milestone, niepodpięty dependency-check, brak JaCoCo | `pom.xml` | XS–S |
 | 7.2 | N | Komentarze z historią zamiast powodu | JS, szablony | S |
 | 7.3 | N | `HELP.md`, kopia `AGENTS.md`, wcięcia, konstruktory testowe | różne | XS |
@@ -617,3 +617,10 @@ Testy jednostkowe: **632** (631 uruchomionych, 1 pominięty), testy na bazie: **
 **Do zrobienia przez właściciela:** `SPOTIFY_TOKEN_KEY` w konfiguracji uruchomienia w IntelliJ (bez niej aplikacja nie wystartuje)
 i jako zmienna staged na Railway (inna wartość niż lokalna).
 **Nie zrobione:** 6.3 (tylko razem ze zmianą kolejki).
+
+**Po usunięciu Spotify i YouTube (2026-10-04, V18 / V19; pełna aplikacja: tag `full-player-2026-10-04`):** produkt to już tylko
+impreza „Twój program DJ-a”, więc punkty o odtwarzaczu, kolejce tła, lease, wyszukiwaniu YouTube i Spotify straciły przedmiot —
+kod, którego dotyczyły, został usunięty: 1.3, 1.4, 1.6, 1.7, 1.9, 2.1, 2.4, 2.5, 2.6, 3.1, 3.2, 3.3, 4.1, 4.2, 4.3, 4.5, 4.7, 5.2,
+5.3 (te poprawione wcześniej — w historii powyżej) oraz **6.3 (nieaktualne — `FallbackTrackCommandService` i jego test nie
+istnieją)**. Nadal ważne: 2.3 (jedna instancja — limity gości i cache w pamięci), 5.1 (CSP włączyć na Railway), 7.x. Zmienna
+`SPOTIFY_TOKEN_KEY` nie jest już potrzebna (IntelliJ, Railway).
