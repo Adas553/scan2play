@@ -6,14 +6,30 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 ## Start here
 
-- **Branch `dev`**, pushed up to the documentation commit after the Spotify icon (2026-10-03; workflows green up to `76d420d` —
-  check the commits after it). Check with `git status -sb` and `git log --oneline -8`. Nothing uncommitted.
-- **Uncommitted, for the owner's review — "Kto gra"** (2026-10-04, the owner: "Fajnie jakby dać możliwość DJ w ustawieniach wpisanie
+- **Branch `dev`**: "Kto gra" and the removal of Spotify committed (`83ddc7d`, docs `7de0c1a`, 2026-10-04, the owner: "commituj"),
+  **not pushed** — the workflows have not seen V17 / V18 yet. Workflows green up to `73f38a2`.
+- **Stage 3 — YouTube goes (2026-10-04, in progress). The owner's decisions:** the YouTube parties are deleted with their data (all
+  of them are the owner's local test parties: "można usuwać"); `active_provider` goes completely (one kind); the footer's YouTube
+  attribution goes, "🔍 Podejrzyj" stays (a plain link to YouTube's search results); `YOUTUBE_API_KEY` leaves the code (the owner
+  deletes the key "Klucz API 2" in Google Cloud and the variable in IntelliJ / Railway). Packages, each reviewed and committed by the
+  owner before the next: **1. the player and Auto-Pilot** (browser side), 2. the background playlist and the YouTube API (services,
+  entities), 3. one kind of party + migration V19 (written once, whole), 4. texts and docs.
+- **Uncommitted, for the owner's review — package 1, the player and Auto-Pilot gone:** every party's dashboard is the requests-only
+  one ("Twój program DJ-a", "Pomiń" and "🔍 Podejrzyj" on every waiting request); gone: the player card, the lease banner, the
+  player's buttons, "up next", the Auto-Pilot switch, the background playlist's card, the DJ pick; `youtube-autopilot.js`,
+  `js/dashboard/fallback-queue.js`, `wake-lock.js`, fragments `player-controls`, `player-lease-banner`, `fallback-queue`;
+  `DjPlayerLeaseController`, `DjFallbackQueueController`, `POST /dj/dashboard/next-track`, `/playback-mode`, `/fallback-playlist`,
+  `/fallback-shuffle`, `/dj-pick`; their message keys; the CSP has no YouTube (`script-src 'self'`, no `frame-src`). `events.js` keeps
+  only `s2p:guest-queue-changed`; a hidden window never polls. The services behind them (`NextTrackService`, `PlayerLeaseService`,
+  `FallbackPlaylistService`, …) stay until package 2. Browser tests: no fake player, no lease, no fixture (`fake-yt.js`, `fixtures/`,
+  `PlayLogFixtureRecorderTest` gone), the default page is the requests-only dashboard (`dashboard.html`, `dashboard-en.html`); 24
+  scenarios. Tests: 486 unit tests, 24 browser scenarios — green in copies (no SQL touched).
+- **Uncommitted before, now committed in `83ddc7d` — "Kto gra"** (2026-10-04, the owner: "Fajnie jakby dać możliwość DJ w ustawieniach wpisanie
   kto gra … Gra: DJ Koko"): a field "Kto gra (widzą goście)" under the vibe note on the dashboard (`POST /dj/dashboard/dj-name`, one
   line, ≤ 60, empty clears), migration **V17** (`party_settings.dj_name`), the guest page shows "🎧 Gra: DJ Koko" under the title
   (`party.dj`, PL / EN). Tests: `DjPartySettingsControllerVibeTest` +3, `GuestPageRenderTest` +1, `DashboardPageRenderTest`; 640 unit
   tests, 40 database tests (V17 applied).
-- **Uncommitted, for the owner's review — Spotify removed** (stage 2 of 3; the owner: "zrób kto gra, potem spotify i potem
+- **Committed in `83ddc7d` — Spotify removed** (stage 2 of 3; the owner: "zrób kto gra, potem spotify i potem
   youtube"): the Spotify login and its landing tile, connecting Spotify, the tokens and their encryption (`SpotifyTokenConverter`,
   `SpotifyTokenEncryptionOnStartup`, `SPOTIFY_TOKEN_KEY`), the server-side auto-queue (`SongEvaluationService.handleAutoQueue`,
   `QueueService.addToQueue`, `MusicProvider.addToQueue`), "🎵 Spotify" and `POST /dj/requests/{id}/push-to-spotify`, the Spotify icon,
