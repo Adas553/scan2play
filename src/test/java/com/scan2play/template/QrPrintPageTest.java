@@ -105,6 +105,10 @@ class QrPrintPageTest {
         assertThat(html).contains("class=\"layout-poster\"", "<main class=\"poster\">", "data:image/png;base64,");
         assertThat(html).contains("https://www.scan2play.com.pl/p/" + PARTY, ">" + PARTY + "<");
         assertThat(html).contains("<span lang=\"pl\">Zeskanuj i zamów piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>");
+        // our logo once, between the title and the code
+        assertThat(html).containsOnlyOnce("Scan2Play</p>").contains("<p class=\"logo\">🎵 Scan2Play</p>");
+        assertThat(html.indexOf("</h1>")).isLessThan(html.indexOf("class=\"logo\""));
+        assertThat(html.indexOf("class=\"logo\"")).isLessThan(html.indexOf("class=\"qr\""));
         assertThat(html).doesNotContain("class=\"cards\"", "??");
     }
 

@@ -131,11 +131,13 @@ body {
     font-size: 13pt;
 }
 
-.poster .brand {
-    margin: 4mm 0 0;
-    color: #888888;
-    font-size: 10pt;
-    letter-spacing: 0.1em;
+/* Our logo between the title and the code; the code's own white margin (the quiet zone) is the space under it */
+.poster .logo {
+    margin: 0;
+    font-size: 26pt;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
 }
 
 /* ---- The cards: 2 × 4 on an A4 sheet, cut along the dashed lines ---- */

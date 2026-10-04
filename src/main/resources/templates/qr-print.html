@@ -29,6 +29,8 @@
         <span lang="pl">Zeskanuj i zamów piosenkę</span>
         <span lang="en" class="second">Scan to request a song</span>
     </h1>
+    <!--/* our logo, the wordmark of the app's pages (home.title), right above the code it belongs to */-->
+    <p class="logo">🎵 Scan2Play</p>
     <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
     <ol class="steps">
         <li><span lang="pl">Zeskanuj kod aparatem telefonu</span> <span lang="en" class="second">Scan the code with your phone camera</span></li>
@@ -40,7 +42,6 @@
         <strong th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</strong>
     </p>
     <p class="code"><span lang="pl">Kod imprezy</span> / <span lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
-    <p class="brand">Scan2Play</p>
 </main>
 
 <main th:if="${qrLayout == 'cards'}" class="cards">
