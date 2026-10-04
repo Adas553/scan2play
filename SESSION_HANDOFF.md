@@ -8,6 +8,34 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 
 - **Branch `dev`**, pushed up to the documentation commit after the Spotify icon (2026-10-03; workflows green up to `76d420d` —
   check the commits after it). Check with `git status -sb` and `git log --oneline -8`. Nothing uncommitted.
+- **Uncommitted, for the owner's review — "Kto gra"** (2026-10-04, the owner: "Fajnie jakby dać możliwość DJ w ustawieniach wpisanie
+  kto gra … Gra: DJ Koko"): a field "Kto gra (widzą goście)" under the vibe note on the dashboard (`POST /dj/dashboard/dj-name`, one
+  line, ≤ 60, empty clears), migration **V17** (`party_settings.dj_name`), the guest page shows "🎧 Gra: DJ Koko" under the title
+  (`party.dj`, PL / EN). Tests: `DjPartySettingsControllerVibeTest` +3, `GuestPageRenderTest` +1, `DashboardPageRenderTest`; 640 unit
+  tests, 40 database tests (V17 applied).
+- **Uncommitted, for the owner's review — Spotify removed** (stage 2 of 3; the owner: "zrób kto gra, potem spotify i potem
+  youtube"): the Spotify login and its landing tile, connecting Spotify, the tokens and their encryption (`SpotifyTokenConverter`,
+  `SpotifyTokenEncryptionOnStartup`, `SPOTIFY_TOKEN_KEY`), the server-side auto-queue (`SongEvaluationService.handleAutoQueue`,
+  `QueueService.addToQueue`, `MusicProvider.addToQueue`), "🎵 Spotify" and `POST /dj/requests/{id}/push-to-spotify`, the Spotify icon,
+  `spotify-web-api-java`, the Spotify properties, `OAuth2DebugConfig`, `MusicProviderType.SPOTIFY`; the privacy and terms pages and
+  the landing guide without Spotify; AGENTS.md (and its Copilot copy) say what the product is now. **Migration V18** deletes the
+  Spotify parties (their DJs logged in with Spotify — a login that no longer exists, so they could never open or delete them) with
+  their requests, background tracks, plays and feedback, drops the `spotify_*` columns and SPOTIFY from the kind's check —
+  `SpotifyRemovalMigrationIT`. Locally that deletes the owner's test parties 5KMJZ and IEEIR at the next start. The default kind of
+  a new party stays YouTube until stage 3. Tests: 611 unit tests, 38 database tests (the Spotify ones gone, V18 +1), 81 browser
+  scenarios (the three Spotify ones gone) — green in copies.
+- **Next session: stage 3 — YouTube goes** (the owner, 2026-10-04: "może usuwanie youtube zostawimy do następnej sesji"). Plan:
+  the player and Auto-Pilot (`youtube-autopilot.js`, the lease, player commands, `next-track`), the background playlist (import,
+  refresh, "up next"), the YouTube search and its cache / budget (a requests-only party links to YouTube's search page — that stays),
+  the tables `fallback_track`, `fallback_play`, `youtube_cache`, `youtube_search_budget` (a migration), `YOUTUBE_API_KEY`, the footer's
+  YouTube attribution, the choice of the kind (one kind left: the landing page, `activeProvider`, `MusicProviderType`, `QueueService` /
+  `MusicProvider`), the browser scenarios of the player; the texts (landing, privacy, terms) and the docs. Each part reviewed as
+  a package.
+- **The owner's decision (2026-10-04): YouTube and Spotify go** — the product is the requests-only party (YouTube: 100 searches a
+  day shared by every party, terms; Spotify: development mode, its policy). Order: "Kto gra", then Spotify, then YouTube, each a
+  package to review. The full app is archived first: tag `full-player-2026-10-04`, branch `archive/full-player` (both pushed), a
+  clone in `D:\Coding\scan2play-full` with its own empty database `scan2play_full` (never `scan2play`: the slim app's migrations
+  will drop the YouTube / Spotify tables there).
 - **Committed and pushed (`aba50fc` and after, 2026-10-03, the owner: "commituj i push"):** a revoked Spotify refresh token
   is forgotten (the owner, trying Spotify locally: `invalid_grant`, "Refresh token revoked" — the tokens stayed, the dashboard
   kept saying connected, with no "Connect Spotify" to press). `SpotifyAuthService.forgetTokens` on a 400 `invalid_grant`; a 5xx /
@@ -265,8 +293,8 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 4. **The owner shows the requests-only party to DJs** — with a separate Google account (the owner's own party has the YouTube
    history) — and tells what they said. (The guest's own words beside the song — done, above.)
 5. **Go-live** (the owner: no customers yet, so not now): start the paused Postgres on Railway, back it up, `pg_dump --schema-only`
-   compared with `V1__baseline.sql`; `SPOTIFY_TOKEN_KEY` staged (a new value); `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
-   (Flyway V2..V16, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
+   compared with `V1__baseline.sql`; the `SPOTIFY_*` variables removed; `dev` → `main` (a fast-forward) together with the staged variables; watch the start log
+   (Flyway V2..V18, Hibernate validation); Dependabot switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
 6. **Ideas for the requests-only party, to ask DJs about:** the DJ's library (an export from rekordbox / Serato) → "✓ you have
    it" beside each request. (The wait in minutes, the queue on the phone, Spotify's forms in the background — done.)
 7. From `REVIEW.md`: 6.3 (only together with a change of the queue). (5.3 — the eleventh package, above.)
@@ -291,7 +319,7 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
   secret `****IgiS` — delete it (`****pfTe` is the one in use). The old `YOUTUBE_API_KEY` is gone; "Klucz API 2" is restricted to
   the YouTube Data API v3 (seen 2026-10-03). No application restriction: a server key on Railway has no fixed IP to restrict to.
 - **Production** (Railway paused): at the next go-live, the Flyway checklist of `PROJECT_CONTEXT.md` Section 10 first — the first
-  deploy applies V2..V16 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
+  deploy applies V2..V17 at once. `dev` → `main` only when the owner decides. `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` is set on
   Railway already.
 - **Try on the phone:** the wake lock (Auto-Pilot on, the screen should not dim), ✕ on an "up next" row, Save with a private / wrong
   playlist link.
@@ -299,11 +327,8 @@ needs the background. Working agreements: `CLAUDE.md`. Architecture and rules: `
 - **`SCAN2PLAY_GUEST_URL` in IntelliJ** holds the computer's address in the local network (the QR code's link): it changes with
   the network — 2026-10-03 the computer was 192.168.68.54, the run configuration still said 192.168.100.184 and the QR link did not
   open. Change it in Run → Edit Configurations when the network changes (detecting it automatically was offered, not asked for).
-- **Spotify locally** (not tried yet): the playback-connect redirect is `spotify.oauth.redirect-uri` (production's address in
-  `application.properties`); the environment variable `SPOTIFY_OAUTH_REDIRECT_URI` overrides it (Spring's relaxed binding). To
-  try: the app through the `https://dev.scan2play.com.pl` tunnel (registered with Google), `SPOTIFY_OAUTH_REDIRECT_URI=
-  https://dev.scan2play.com.pl/dj/spotify/callback` in IntelliJ, that URI added in the Spotify Developer Dashboard, the Spotify
-  account on the app's user list (development mode), Spotify Premium and an open Spotify app (a device) for the queue.
+- **Spotify Developer Dashboard / Railway:** the Spotify app and the `SPOTIFY_*` variables (Railway, IntelliJ) are no longer
+  used — the owner may delete them.
 - **`origin/backup/local-main-2026-04`** holds two old local commits of `main`; never push `main` from it. Can be deleted once the
   `guest-url` design is decided.
 - **`D:\Users`**: an empty directory tree left by a mistaken path in an earlier session; safe to delete by hand.

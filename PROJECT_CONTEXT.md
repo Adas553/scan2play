@@ -12,8 +12,8 @@
 ## 1. Product Overview
 
 **Scan2Play** is an AI-powered music request and virtual DJ platform for events. Guests scan a QR code and send song requests
-from a phone; Google Gemini decides whether each one fits the party's vibe. Accepted songs play on the DJ's side: through the
-Spotify API (server side) or in the YouTube IFrame Player embedded in the DJ's dashboard. When no guest song waits, a YouTube party
+from a phone; Google Gemini decides whether each one fits the party's vibe. Accepted songs play on the DJ's side: in the YouTube
+IFrame Player embedded in the DJ's dashboard. (Spotify was removed 2026-10-04: development mode only, and its policy forbids this use.) When no guest song waits, a YouTube party
 plays the DJ's background ("fallback") playlist, served track by track by the server. A **requests-only** party (`REQUESTS_ONLY`, for
 DJs who play from their own software — VirtualDJ, Serato, rekordbox) has no player: Scan2Play collects and filters the requests, and
 the DJ marks each one played or skips it.
@@ -31,7 +31,7 @@ the DJ marks each one played or skips it.
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
 | AI               | Google Gemini (`google-genai` 1.38.0), model `gemini-2.5-flash` |
-| Music            | Spotify Web API (`spotify-web-api-java` 8.4.1); YouTube Data API v3 (`RestClient`) + IFrame Player API |
+| Music            | YouTube Data API v3 (`RestClient`) + IFrame Player API |
 | Other            | ZXing 3.5.3 (QR codes), Caffeine (caches), Maven |
 | i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes |
 
@@ -46,7 +46,7 @@ controller/   HTTP: Thymeleaf views, HTML fragments for AJAX, a few JSON endpoin
 service/      business logic
 repository/   Spring Data JPA (+ native SQL for the queue)
 entity/       JPA entities        model/   enums, records, views
-integration/  MusicProvider, Spotify constants      config/  Spring beans      util/  CodeGenerator, YouTubeUrls
+integration/  MusicProvider                          config/  Spring beans      util/  CodeGenerator, YouTubeUrls
 ```
 
 Server-rendered pages with AJAX: the DJ dashboard polls the guest queue every 3 s (ETag / 304), sends its forms by `fetch` at every
@@ -71,18 +71,18 @@ server in UTC; the pages show them in Polish time (`util/Times`: the lists show 
 `partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code), `ownerId` (the OAuth2 subject), `active` (accepting requests),
 `globalVibe` (`VibeType`; `ANY` = the guests choose — at a requests-only party the AI judges by the DJ's note alone), `vibeNote`
 (V16, ≤ 150: the DJ's own words about the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en}`, the
-guests see them above the form; `POST /dj/dashboard/vibe-note`, one line, empty clears), `activeProvider` (`SPOTIFY` / `YOUTUBE`, set at creation by the login used,
+guests see them above the form; `POST /dj/dashboard/vibe-note`, one line, empty clears), `djName` (V17, ≤ 60: who plays, e.g.
+"DJ Koko" — the guests see "🎧 Gra: DJ Koko" under the page's title; `POST /dj/dashboard/dj-name`, one line, empty clears), `activeProvider` (`YOUTUBE` / `REQUESTS_ONLY`, set at creation by the landing page's tile,
 never changed), `playbackMode` (`MANUAL` / `AUTO` = Auto-Pilot), `requestLimit` / `cooldownMinutes` (the guest's own limit, 1–100 /
 1–1440), `duplicateCheckWindow` (0–50 recent songs the AI must not repeat), `fallbackPlaylistUrl` (≤ 500), `fallbackShuffle`,
-`spotifyAccessToken` / `spotifyRefreshToken` (2048; encrypted in the column — `SpotifyTokenConverter`, AES-256-GCM, `enc:v1:` +
-base64, key `SPOTIFY_TOKEN_KEY`; plain in the entity; a column the key cannot open is read as no token) / `spotifyTokenExpiresAt`.
+(The Spotify token columns were dropped by V18.)
 
 **`SongRequestEntity` → `song_requests`** — a guest's request or a DJ pick. `partyCode`, `songName` (255; for a YouTube party the
 found video's cleaned title, Section 7.1), `guestText` (150, V14: what the guest typed, as typed — one line, what the AI is given;
 null for a DJ pick and older requests; the queue and the history show it under the song when it says something else,
 `util/GuestWords`), `votes` (V15, ≥ 1: how many guests asked for it — see below), `style` (the vibe it was judged against, or "DJ Pick"), `decision` (`accepted` /
 `rejected` / `played`), `djComment` (500), `energyLevel`, `requestedAt`, `trackUrl` (500; a YouTube watch URL, a YouTube search
-link, or a Spotify URI), `playedAt` (V6; set only by `DjService.markPlayed`). Index `idx_party_decision_time (party_code, decision,
+link), `playedAt` (V6; set only by `DjService.markPlayed`). Index `idx_party_decision_time (party_code, decision,
 requested_at DESC)`. `@PrePersist` truncates the long fields. **Retention: 30 days from `requestedAt`** —
 `SongRequestRetentionService` deletes nightly at 04:45 in batches of 1000, at most 200 batches a night; and with the account.
 
@@ -120,7 +120,7 @@ deleted every minute.
 
 ### 4.2 Enums
 
-`MusicProviderType` SPOTIFY / YOUTUBE / REQUESTS_ONLY (the kind of party) · `PlaybackMode` MANUAL / AUTO · `RequestMode` SONG / MOOD · `FallbackTrackStatus`
+`MusicProviderType` YOUTUBE / REQUESTS_ONLY (the kind of party) · `PlaybackMode` MANUAL / AUTO · `RequestMode` SONG / MOOD · `FallbackTrackStatus`
 QUEUED / PLAYED / CANCELLED / SKIPPED · `PlayerLeaseMode` CLAIM / WATCH / TAKE_OVER · `PlayerCommand` NEXT / PREVIOUS /
 PREVIOUS_TRACK / RESTART / PAUSE / RESUME · `MoveDirection` UP / DOWN / TOP · `HistoryFilter` all / guest / background / played /
 rejected · `VibeType` ANY and 16 genres (V16: Polish hits, 2000s/2010s, R&B & soul, folk / biesiada, kids added; bachata,
@@ -138,11 +138,11 @@ salsa and reggaeton merged into LATINO — the rows moved by the migration).
 
 ### 5.1 DJ Flow
 
-Landing page `/` → three tiles: "with YouTube" (`/start/youtube`), "collect guest requests" — the requests-only party —
-(`/start/requests`), both then Google's login, and "with Spotify" (`/oauth2/authorization/spotify`) → `/dj/dashboard`. `/start/{kind}`
+Landing page `/` → two tiles: "collect guest requests" — the requests-only party — (`/start/requests`) and "with YouTube"
+(`/start/youtube`), both then Google's login → `/dj/dashboard`. `/start/{kind}`
 keeps the chosen kind in the session (it survives the login); `DjSessionHelper.getPartySettings` takes it once: a new DJ's party is
 created of that kind, and a DJ who has a party gets the same party (code, QR) switched between YouTube and requests-only (requests-only
-sets Auto-Pilot off). Without a choice the party is created with the provider of the login. A requests-only dashboard shows the
+sets Auto-Pilot off). Without a choice the party is created as a YouTube party. A requests-only dashboard shows the
 guest queue with "Mark as played", "Skip" (`POST /dj/dashboard/dismiss`: the request leaves as rejected with the DJ's note) and
 "🔍 Preview" (a link to YouTube's search results — `RequestsOnlyMusicProvider`, no API call); no player, Auto-Pilot, background
 playlist or DJ pick, and neither the guest page nor the party's pages show the YouTube badge or the footer's YouTube API line.
@@ -155,14 +155,14 @@ leaves the list at once. On the dashboard the DJ can: see the
 guest queue (polled every 3 s; sort, search), set the vibe and the guest limits, switch Auto-Pilot, add a DJ pick (YouTube; the AI
 only normalises the name), set the background playlist (YouTube) and see / reorder / skip its "up next" list, play / pause / skip
 / go back (the player controls), see the history (one timeline of what played and was rejected), print the QR code
-(`/dj/qr-print`: an A4 poster or eight table cards, Polish and English), connect Spotify for playback (Section 5.3), send feedback,
+(`/dj/qr-print`: an A4 poster or eight table cards, Polish and English), send feedback,
 end / resume the party, delete the account, log out.
 
 **On a phone** (narrower than 768 px), every kind of party: the vibe, the limits, the kind of party, the background playlist and the
 QR code fold under one button "⚙️ Ustawienia, klimat i kod QR" (`.s2p-phone-settings`; folded by `app.css` alone, `settings-toggle.js`
-opens them and keeps the choice for the tab in `sessionStorage` — a reload, or coming back from connecting Spotify, keeps them open). The Auto-Pilot switch
-(YouTube, Spotify) stays; then the YouTube player with "up next", the DJ pick, the queue. Every waiting request is a card with big
-buttons ("Oznacz jako zagrane", "Pomiń" / "🎵 Spotify"); the list scrolls with the page.
+opens them and keeps the choice for the tab in `sessionStorage` — a reload keeps them open). The Auto-Pilot switch
+(YouTube) stays; then the YouTube player with "up next", the DJ pick, the queue. Every waiting request is a card with big
+buttons ("Oznacz jako zagrane", "Pomiń"); the list scrolls with the page.
 
 **The active queue**, every party: each request has its number — a CSS counter in `app.css`, so it follows the polled list, the sort
 and the search by itself (at a YouTube party the list's own order is the order of play). "🧹 Wyczyść kolejkę" beside the heading
@@ -206,15 +206,7 @@ requests-only party's guests pick none (no list on the page; `ANY` whatever the 
 by `guest.client-ip-header` (`CF-Connecting-IP` — set on Railway). The DJ sees the use of 2 and 3 under the limits form (badges:
 grey, yellow from 80 %, red) and a warning above the queue while a limit or the YouTube search fuse stops guest songs.
 
-### 5.3 Spotify Playback Auth (a second OAuth2)
-
-`/dj/spotify/login` → Spotify (playback scopes) → `/dj/spotify/callback`; the tokens go to the party (`SpotifyAuthService`, refreshed
-5 minutes before they expire, one refresh per party at a time — the others wait and use the saved tokens), encrypted in the
-database (Section 4.1; `SpotifyTokenEncryptionOnStartup` encrypts, at start, tokens still in plain text). A refresh token
-Spotify revoked (400 `invalid_grant`) is forgotten with the access token: the dashboard offers "Connect Spotify" again. Spotify has no endpoint to
-revoke them: the privacy page tells the DJ to remove the app in their Spotify account after deleting theirs. Spotify tracks in the
-queue carry the Spotify icon (`components :: spotify-icon`, Spotify's attribution rule; `.s2p-spotify-icon`, ≥ 21 px). Both endpoints need the DJ's login. The OAuth `state` is 32 random bytes kept in the session and
-accepted once (review 5.2). The Spotify redirect URI must be registered in the Spotify Developer Dashboard.
+### 5.3 (Spotify — removed 2026-10-04, migration V18; the full app is the tag `full-player-2026-10-04`)
 
 ### 5.4 YouTube Auto-Pilot — the server decides what plays, the browser plays it
 
@@ -325,21 +317,20 @@ many videos have embedding disabled (error 150).
 | `DjPartySettingsController` | start / end party, vibe and vibe note, limits (bounded), Auto-Pilot, background playlist + shuffle, account deletion |
 | `DjFallbackQueueController` | the "up next" fragment, move / place / skip |
 | `DjPlayerLeaseController` | the player lease, its release, the player commands, `recent-tracks` |
-| `DjSongController` | mark played, push to Spotify, DJ pick |
+| `DjSongController` | mark played, skip, clear the queue, DJ pick |
 | `DjSessionHelper` | the party of the logged-in DJ (cached in the session) and **`validateOwnership`** (IDOR) |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation) |
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
 | `LegalController` | `/privacy`, `/terms` (a file per language) |
-| `SpotifyAuthController` | `/dj/spotify/login`, `/dj/spotify/callback` |
 | `ViewAttributes` | names of the model attributes |
 
 ### 6.2 Services
 
 | Class | Purpose |
 |-------|---------|
-| `SongEvaluationService` | the guest's request: Gemini (`askAi`, prompts per mode and language) → track search → the video's title as the name → save → Spotify auto-queue; DJ pick name normalisation |
-| `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played (`markPlayed`), skip (`dismissSong`), push to Spotify, DJ picks, the next playable guest song |
+| `SongEvaluationService` | the guest's request: Gemini (`askAi`, prompts per mode and language) → track search → the video's title as the name → save; DJ pick name normalisation |
+| `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played (`markPlayed`), skip (`dismissSong`), DJ picks, the next playable guest song |
 | `RequestsOnlyMusicProvider` | the `MusicProvider` of a requests-only party: a link to YouTube's search results, no queue |
 | `NextTrackService` | "what plays next" (Section 5.4) |
 | `FallbackPlaylistService` | imports the background playlist (API first, the database only after a complete result) |
@@ -354,7 +345,6 @@ many videos have embedding disabled (error 150).
 | `QueueService` | delegates to the `MusicProvider` of the party |
 | `YouTubeMusicProvider` / `YouTubeSearchBudget` | the YouTube search with its two caches / the daily search fuse (Section 7.3) |
 | `YouTubePlaylistClient` | reads a playlist (≤ 500 items, titles), a single video's title |
-| `SpotifyMusicProvider` / `SpotifyAuthService` | Spotify search (client credentials) and queue (the DJ's token) / the playback tokens |
 | `QrCodeService` | QR codes (ZXing, cached) |
 | `AccountDeletionService` | deletes all of a DJ's data and evicts the caches after the commit |
 | `SongRequestRetentionService` | the nightly purge of song requests (Section 4.1) |
@@ -379,7 +369,7 @@ page (`DashboardPageRenderTest.assertNothingInline`).
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms at every party — not logout and account deletion —, Auto-Pilot switch, `data-auto-submit`; played / skipped / picked / sent to Spotify / cleared → `s2p:guest-queue-changed`), `tabs.js` (the history in place, every party), `settings-toggle.js` (on a phone: the settings folded), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden unless this window plays — `s2p:player-role`), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `fallback-queue.js`, `forms.js` (AJAX forms at every party — not logout and account deletion —, Auto-Pilot switch, `data-auto-submit`; played / skipped / picked / cleared → `s2p:guest-queue-changed`), `tabs.js` (the history in place, every party), `settings-toggle.js` (on a phone: the settings folded), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden unless this window plays — `s2p:player-role`), `common.js`; they and the player talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/youtube-autopilot.js` | the player (Section 5.4), an ES module; its only global is `onYouTubeIframeAPIReady` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
@@ -409,11 +399,7 @@ for a song, `prompt-mood_{en,pl}`, `prompt-duplicate-rule_{en,pl}`, `prompt-norm
 - AI down → the request is rejected with "AI offline" (no retry). Duplicates: the last `duplicateCheckWindow` played songs go into
   the prompt (a waiting song asked for again is a vote, not a duplicate).
 
-### 7.2 Spotify Web API
-
-Login (Spring Security OAuth2) identifies the DJ; the playback OAuth2 (Section 5.3) controls the DJ's player; client credentials
-(cached token) search tracks. A song counts as played only once Spotify has taken it into the queue (`whenComplete`); otherwise it
-stays in the queue with a note. Spotify's API allows only a few users for this app — the Spotify party is secondary.
+### 7.2 (Spotify — removed 2026-10-04)
 
 ### 7.3 YouTube Data API v3
 
@@ -446,7 +432,7 @@ inline script, no `on…=` handler, no `style="…"` (the templates use `s2p-…
 `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only** while
 `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. Switch it on once real use
 leaves the log quiet. The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced (Section
-5.4, "Testing"), a Spotify party's dashboard too (`dashboard-spotify.html`); the standalone history page is not covered by them.
+5.4, "Testing"); the standalone history page is not covered by them.
 
 ---
 
@@ -467,9 +453,7 @@ The DJ's party code is cached in the `HttpSession`. Account deletion evicts the 
 
 ### Environment variables
 
-`SPOTIFY_CLIENT_ID` / `_SECRET`, **`SPOTIFY_TOKEN_KEY` required** (base64 of 32 random bytes, `openssl rand -base64 32`: the key of
-the Spotify tokens in the database; the app does not start without it; a new key = the DJs connect Spotify again; one value per
-environment — locally in IntelliJ's run configuration, on Railway a staged variable), `GOOGLE_CLIENT_ID` / `_SECRET`, `GOOGLE_AI_API_KEY`, `YOUTUBE_API_KEY` (optional: without it songs
+`GOOGLE_CLIENT_ID` / `_SECRET`, `GOOGLE_AI_API_KEY`, `YOUTUBE_API_KEY` (optional: without it songs
 get search links and playlists cannot be imported; no trailing characters in the variable's name), the database (`PGHOST`, `PGPORT`,
 `PGDATABASE`, and **`PGUSER` / `PGPASSWORD` required** — no defaults since review 5.5; Railway sets all five), `SCAN2PLAY_GUEST_URL` (the base URL in the QR code; locally the LAN address, so a phone on the
 same Wi-Fi can open it), `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` (Railway), and the optional overrides below. The DJ's login works
@@ -525,11 +509,13 @@ Never set it to `update`: Hibernate would change the schema behind Flyway's back
 | V14 | `song_requests.guest_text` varchar(150), nullable (no back-fill: the words of older requests were never kept) |
 | V15 | `song_requests.votes` integer NOT NULL DEFAULT 1 |
 | V16 | `party_settings.global_vibe`: BACHATA_AND_KIZOMBA / SALSA_AND_TIMBA / REGGAETON_AND_DANCEHALL → LATINO, the check constraint with the new list; `party_settings.vibe_note` varchar(150) |
+| V17 | `party_settings.dj_name` varchar(60), nullable |
+| V18 | Spotify removed: Spotify parties deleted with their requests, background tracks, plays and their DJ's feedback; `spotify_*` columns dropped; the kind's check without SPOTIFY |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub.
 
-**First production deploy checklist** (the next deploy applies V2..V16 at once): (0) `SPOTIFY_TOKEN_KEY` set on Railway (a new
-value, not the local one) — without it the app does not start; (1) back up the database; (2) dump the production
+**First production deploy checklist** (the next deploy applies V2..V18 at once): (0) the `SPOTIFY_*` variables can go from
+Railway (the app no longer reads them); (1) back up the database; (2) dump the production
 schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or Hibernate's
 validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
 What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
@@ -553,7 +539,7 @@ DjFallbackQueueController  → FallbackQueueService, DjSessionHelper
 NextTrackService           → DjService, FallbackPlaylistService, FallbackTrackCommandService, FallbackTrackRepository
 SongEvaluationService      → Gemini Client, QueueService, YouTubePlaylistClient, SongRequestRepository, SongRequestCommandService,
                              PartySettingsQueryService
-QueueService               → SpotifyMusicProvider (→ SpotifyAuthService), YouTubeMusicProvider (→ YouTubeSearchBudget)
+QueueService               → YouTubeMusicProvider (→ YouTubeSearchBudget), RequestsOnlyMusicProvider
 GuestQueueService          → DjService, PlayHistoryService
 ```
 
@@ -591,13 +577,11 @@ GuestQueueService          → DjService, PlayHistoryService
 | POST | `/dj/dashboard/fallback-queue/move`, `/place`, `/skip` | 204, 409 when the track is no longer queued in the current playlist |
 | POST | `/dj/dashboard/fallback-playlist` | save + import (headers, Section 5.4) |
 | POST | `/dj/dashboard/fallback-shuffle` | toggle + re-order; `X-Fallback-Shuffle` |
-| POST | `/dj/dashboard/vibe`, `/vibe-note`, `/limits`, `/playback-mode` | settings (`mode` = AUTO / MANUAL; without it a toggle) |
+| POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/limits`, `/playback-mode` | settings (`mode` = AUTO / MANUAL; without it a toggle) |
 | POST | `/dj/dashboard/dj-pick` | YouTube only, no AI judgement |
-| POST | `/dj/requests/{id}/push-to-spotify` | |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster / cards |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | |
-| GET | `/dj/spotify/login`, `/dj/spotify/callback` | Section 5.3 |
 
 ---
 
@@ -619,25 +603,25 @@ GuestQueueService          → DjService, PlayHistoryService
 - `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 636, 1 skipped (the fixture recorder,
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 611, 1 skipped (the fixture recorder,
   `PlayLogFixtureRecorderTest`, runs only with `S2P_FIXTURE_OUT` and a throw-away `s2p_*` database). Pure Mockito, plus template
   rendering with the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest`
   with the real security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`;
   the Unit tests workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 40 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 38 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `FallbackQueueIT`, `FallbackQueueConcurrencyIT` (fails
   with "deadlock detected" without the advisory lock), `SongRequestRepositoryIT`, `YouTubeSearchBudgetIT`, `ApplicationSetupIT`, `SessionStoreIT` (what the app keeps in a session survives
   the database and another repository; the cleanup of expired sessions), `TimestampMigrationIT` (its own database: V11, rows the old
   way, then V12 — the same moments; red when the old values are read as UTC), `SongRequestVotesIT` (votes under the lock),
-  `VibeMigrationIT` (V16), `SpotifyTokenEncryptionIT` (no plain token in the column; old plain rows encrypted at start).
+  `VibeMigrationIT` (V16), `SpotifyRemovalMigrationIT` (V18: a Spotify party goes with its data, the others stay).
   New queue SQL gets a test there.
-- **Browser tests**: 84 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
+- **Browser tests**: 81 scenarios (Section 5.4, "Testing"), under the real CSP enforced.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
   (`.github/dependabot.yml`): security fixes only (version updates off by `open-pull-requests-limit: 0`); it works from the default
   branch `main` and needs "Dependabot alerts" and "security updates" switched on in the repository's settings.
-- Not covered: the real YouTube player, real devices, the guest's page in a browser, Spotify end to end.
+- Not covered: the real YouTube player, real devices, the guest's page in a browser.
 
 ### AI
 - No retry when Gemini is down; no server-side check that a song exists (the search is the check).
