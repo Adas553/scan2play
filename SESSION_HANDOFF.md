@@ -21,10 +21,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   still count it), `b2e9620` (the guest's own words under every song in the queue and the history; `util/GuestWords` gone).
 - **Review of the removal (2026-10-05):** complete; leftovers tidied — the dead `vibe.ANY` text ("guests choose": `vibe.ANY` is now
   "the AI judges", `vibe.ANY.requests` gone), `DjResponse.withRequestId`, stale comments about the player, the DJ pick and the
-  "guest" / "background" filters. Open for the owner: the privacy policy does not name the guest's IP address, which
-  `GuestRequestLimiter` keeps in memory with the party's code for the per-network limit (dropped ~10 min after the window
-  starts; not in the database, not logged). Tests: 250 unit, 19 database (PostgreSQL 18),
-  23 browser scenarios.
+  "guest" / "background" filters. The privacy policy (PL / EN) now names the guest's IP address: `GuestRequestLimiter` keeps
+  it in memory with the party's code for the per-network limit, forgotten 10 minutes after the last request from that network
+  (`guest.limit.per-ip-window-minutes`; `SmokeTest` ties the pages to it); not in the database, not in the application's logs.
+  Tests: 251 unit, 19 database (PostgreSQL 18), 23 browser scenarios.
 - **Found while writing the docs:** without a `messages_en` bundle, a browser asking for English gets the bundle of the JVM's own
   locale — Polish on a Polish machine (Railway's JVM is probably English). Not changed; noted in `PROJECT_CONTEXT.md` Section 13.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
