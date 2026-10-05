@@ -16,7 +16,7 @@ import java.util.Objects;
 public class PartySettingsQueryService {
 
     /** The cache of the settings by party code (AppConfig); emptied for a party by every change of its settings. */
-    static final String CACHE = "partySettings";
+    public static final String CACHE = "partySettings";
 
     private final PartySettingsRepository partySettingsRepository;
     private final CacheManager cacheManager;

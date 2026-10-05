@@ -86,7 +86,8 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/")
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
-                        .deleteCookies("JSESSIONID")
+                        // Spring Session's cookie (the sessions are in the database, V11), not the servlet container's JSESSIONID
+                        .deleteCookies("SESSION")
                 );
 
         return http.build();

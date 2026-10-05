@@ -49,7 +49,7 @@ public class FeedbackController {
             return ResponseEntity.badRequest().body(Map.of("error", "Message too long (max 2000 characters)"));
         }
 
-        String ownerId = authentication != null ? authentication.getName() : "unknown";
+        String ownerId = authentication.getName();   // /dj/** needs the login; validateOwnership has used it already
 
         FeedbackEntity feedback = FeedbackEntity.builder()
                 .partyCode(partyCode)

@@ -6,6 +6,7 @@ import com.scan2play.service.PartySettingsQueryService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Component;
 
@@ -66,15 +67,14 @@ public class DjSessionHelper {
      * @param partyCode      The partyCode from the incoming request.
      * @param authentication The current DJ's OAuth2 token.
      * @param session        The current HTTP session.
-     * @throws org.springframework.security.access.AccessDeniedException if the partyCode does not belong to this DJ.
+     * @throws AccessDeniedException if the partyCode does not belong to this DJ.
      */
     public void validateOwnership(String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
         PartySettingsEntity settings = getPartySettings(authentication, session);
         if (!settings.getPartyCode().equals(partyCode)) {
             log.warn("IDOR attempt: DJ {} tried to access party {} (owns {})",
                     authentication.getName(), partyCode, settings.getPartyCode());
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "You do not own party: " + partyCode);
+            throw new AccessDeniedException("You do not own party: " + partyCode);
         }
     }
 }

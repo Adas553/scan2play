@@ -4,6 +4,7 @@ import com.scan2play.entity.SongRequestEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -48,7 +49,7 @@ public class GuestQueueService {
     static List<SongRequestEntity> mostWanted(List<SongRequestEntity> queue) {
         return queue.stream()
                 .filter(song -> song.getVotes() > 1)
-                .sorted(java.util.Comparator.comparingInt(SongRequestEntity::getVotes).reversed())   // stable: queue order among equals
+                .sorted(Comparator.comparingInt(SongRequestEntity::getVotes).reversed())   // stable: queue order among equals
                 .limit(MOST_WANTED_SHOWN)
                 .toList();
     }

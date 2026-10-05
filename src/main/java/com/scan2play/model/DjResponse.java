@@ -1,8 +1,12 @@
 package com.scan2play.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * Represents the DJ's response to a song request.
+ * <p>
+ * Read from the AI's JSON: a field the app does not know is ignored — Gemini's JSON mode has no schema, and one extra field must
+ * not make every request go to the DJ unchecked.
  *
  * @param decision    The decision made by the DJ (e.g., "accepted", "rejected").
  * @param comment     A short comment or feedback from the DJ.
@@ -18,6 +22,7 @@ package com.scan2play.model;
  *                    and this request was counted on it ({@link #isVote()}); 0 when nothing was saved.
  * @param ownSong     The same song already waits as the guest's own request: nothing was saved or counted.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record DjResponse(
         String decision,
         String comment,

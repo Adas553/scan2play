@@ -96,10 +96,6 @@ public class DjDashboardController {
      */
     @GetMapping("/dashboard")
     public String dashboard(Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
-        if (authentication == null) {
-            return REDIRECT_LOGIN;
-        }
-
         PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
         String partyCode = settings.getPartyCode();
 
@@ -148,9 +144,6 @@ public class DjDashboardController {
     @GetMapping("/qr-print")
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, Model model,
                           OAuth2AuthenticationToken authentication, HttpSession session) {
-        if (authentication == null) {
-            return REDIRECT_LOGIN;
-        }
         String partyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
         String guestUrl = guestUrl(partyCode);
         model.addAttribute(PARTY_CODE, partyCode);
@@ -173,9 +166,6 @@ public class DjDashboardController {
     public String historyView(@RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit,
                               @RequestParam(required = false) String filter, Model model,
                               OAuth2AuthenticationToken authentication, HttpSession session) {
-        if (authentication == null) {
-            return REDIRECT_LOGIN;
-        }
         PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
         String partyCode = settings.getPartyCode();
 

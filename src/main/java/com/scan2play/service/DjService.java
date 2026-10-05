@@ -36,6 +36,9 @@ public class DjService {
     public static final String DECISION_REJECTED = "rejected";
     public static final String DECISION_PLAYED = "played";
 
+    /** The cache of a party's waiting requests, by party code (AppConfig: 3 s); evicted after a song leaves the queue. */
+    public static final String QUEUE_CACHE = "dashboardQueue";
+
     /** The note of a request the DJ skipped (dismissSong), in place of the AI's comment. */
     static final String DJ_DISMISS_COMMENT = "Skipped by the DJ ⏭";
     static final String DJ_CLEAR_COMMENT = "Cleared by the DJ 🧹";
@@ -66,7 +69,7 @@ public class DjService {
      * @param partyCode The unique code of the party.
      * @return List of accepted song requests (max 100), oldest first.
      */
-    @Cacheable(value = "dashboardQueue", key = "#partyCode")
+    @Cacheable(value = QUEUE_CACHE, key = "#partyCode")
     public List<SongRequestEntity> getDashboardQueue(String partyCode) {
         return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 partyCode, List.of(DECISION_ACCEPTED)
@@ -158,7 +161,7 @@ public class DjService {
      */
     private void evictDashboardQueueAfterCommit(String partyCode) {
         Runnable evict = () -> {
-            Cache cache = cacheManager.getCache("dashboardQueue");
+            Cache cache = cacheManager.getCache(QUEUE_CACHE);
             if (cache != null) cache.evict(partyCode);
         };
         if (TransactionSynchronizationManager.isSynchronizationActive()) {

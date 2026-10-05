@@ -2,10 +2,13 @@ package com.scan2play.service;
 
 import com.scan2play.PostgresIntegrationTest;
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.service.SongRequestCommandService.Outcome;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,6 +35,8 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
 
     @Autowired SongRequestCommandService commands;
     @Autowired JdbcTemplate jdbc;
+    @Autowired SongRequestRepository requests;
+    @Autowired PlatformTransactionManager transactions;
 
     private static SongRequestEntity request(String party, String name, String decision, String trackUrl) {
         return SongRequestEntity.builder().partyCode(party).songName(name).style("ANY").decision(decision).trackUrl(trackUrl)
@@ -107,5 +112,35 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
         assertThat(vote.request().getId()).isEqualTo(first.getId());
         assertThat(vote.request().getVotes()).isEqualTo(2);
         assertThat(rows(party)).extracting(row -> row.get("decision") + " " + row.get("votes")).containsExactly("accepted 2");
+    }
+
+    /**
+     * The DJ marks a song played (DjService: read the row, change it, save it) while a guest's vote on it commits in between: the
+     * DJ's save writes only what it changed, so the vote stays — it once wrote the whole row back, votes as read before the vote.
+     */
+    @Test
+    void aVoteThatCommitsWhileTheDjMarksTheSongPlayed_isKept() throws Exception {
+        String party = newPartyCode();
+        Long id = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
+        ExecutorService guest = Executors.newSingleThreadExecutor();
+        try {
+            new TransactionTemplate(transactions).executeWithoutResult(status -> {
+                SongRequestEntity song = requests.findById(id).orElseThrow();   // the DJ's read: votes 1
+                try {
+                    Outcome vote = guest.submit(() ->
+                            commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).outcome())
+                            .get(30, TimeUnit.SECONDS);
+                    assertThat(vote).isEqualTo(Outcome.VOTE);
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+                DjService.markPlayed(song, Instant.now());
+                requests.save(song);
+            });
+        } finally {
+            guest.shutdownNow();
+        }
+
+        assertThat(rows(party)).extracting(row -> row.get("decision") + " " + row.get("votes")).containsExactly("played 2");
     }
 }

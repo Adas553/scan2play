@@ -1,6 +1,9 @@
 package com.scan2play.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.scan2play.service.DjService;
+import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.QrCodeService;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
@@ -30,9 +33,9 @@ public class AppConfig {
     public CacheManager cacheManager() {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         cacheManager.setCaches(List.of(
-                buildCache("partySettings", Duration.ofHours(24), 500),
-                buildCache("qr-codes", Duration.ofHours(24), 1000),
-                buildCache("dashboardQueue", Duration.ofSeconds(3), 200)
+                buildCache(PartySettingsQueryService.CACHE, Duration.ofHours(24), 500),
+                buildCache(QrCodeService.QR_CODE_CACHE, Duration.ofHours(24), 1000),
+                buildCache(DjService.QUEUE_CACHE, Duration.ofSeconds(3), 200)
         ));
         return cacheManager;
     }

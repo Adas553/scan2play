@@ -27,15 +27,17 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     List<SongRequestEntity> findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(String partyCode, Collection<String> decisions);
 
     /**
-     * Finds song requests for a specific party filtered by one or more statuses, most recent first, dynamically
-     * paginated — the recent requests the AI looks at when it checks for duplicates.
+     * The party's songs that played most recently — the ones the AI must not accept again (its duplicate rule). By the moment they
+     * played, not when they were asked for: a song asked for early and played just now is one of the last. A song played before
+     * V6 (no {@code played_at}) counts by its request time, as in the history.
      *
      * @param partyCode The unique code of the party.
-     * @param decisions The list of statuses to include.
-     * @param pageable  Pagination/limit constraints.
-     * @return A list of matching song requests.
+     * @param pageable  How many to read.
+     * @return The songs that played, the latest first.
      */
-    List<SongRequestEntity> findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(String partyCode, Collection<String> decisions, Pageable pageable);
+    @Query("SELECT s FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision = 'played' "
+            + "ORDER BY COALESCE(s.playedAt, s.requestedAt) DESC, s.id DESC")
+    List<SongRequestEntity> findRecentlyPlayed(@Param("partyCode") String partyCode, Pageable pageable);
 
     /**
      * The party's played and/or rejected requests, the most recent event first — for the DJ history

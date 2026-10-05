@@ -91,7 +91,8 @@ back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests
 20 rounds × 16 guests — red without the lock). A request the AI rejected this time for a song that waits is a vote too, and the
 guest hears the verdict the song was taken with (the AI does not judge a song the same way every time — 2026-10-04, a song accepted
 once, then rejected four times while it waited); any other rejected request is its own row. The AI's duplicate rule lists only
-PLAYED songs (a waiting one is a vote). The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
+PLAYED songs, the latest to play first (`findRecentlyPlayed`; a waiting one is a vote). `SongRequestEntity` is `@DynamicUpdate`: the
+DJ's "played" / "skip" writes only the columns it changed, so a vote that commits meanwhile is kept (`SongRequestVotesIT`). The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
 party's ranking); the guest page lists "🔥 Najwięcej głosów" — up to 3 waiting songs with more than one vote — and the result page
 says "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N".
@@ -155,7 +156,8 @@ puts the server's order back.
 `/p/{partyCode}` (no login) → the form: one field for a song — a title, an artist or a line of the lyrics (song suggestions from
 iTunes, asked by the browser) → `POST /p/{partyCode}/request` (`songName`; an async `Callable`) → the result page (decision, the AI's
 comment, the votes). A request the AI reads as a mood is not saved: the guest is back at the form with the text and
-`guest.error.song_only` (the DJ sets the mood). Under the form: "🔥 Najwięcej głosów", "Ostatnio wysłane" (the 5 newest waiting
+`guest.error.song_only` (the DJ sets the mood). An empty request (only spaces) goes back at once with `guest.error.empty` — no
+limit used, no AI asked. Under the form: "🔥 Najwięcej głosów", "Ostatnio wysłane" (the 5 newest waiting
 requests, unnumbered — the DJ picks the order) and "Twoja prośba „…” czeka u DJ-a" (`GuestQueueService`; the guest's requests are
 remembered in the session) — fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. An ended party shows
 "DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
@@ -258,7 +260,9 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 - Evaluates guests' requests. Model `gemini-2.5-flash` (pinned; env `GOOGLE_AI_MODEL`); a request may think up to
   `google.ai.thinking-budget` tokens (1024). Timeout 10 s per call.
-- The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`). A request may be a title, an
+- The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`; JSON mode without a schema, so
+  a field the app does not know is ignored, and a decision other than `accepted` in any case is `rejected` — the queue matches
+  `'accepted'` exactly). A request may be a title, an
   artist or a line of lyrics; never replace it by another song; not knowing a song (a new one) is no reason to reject it; a mood or
   an occasion is `requestKind` `mood` (sent back to the guest); on a rejection `songName` is what the guest asked for (the code also
   falls back to the guest's text).
@@ -441,14 +445,14 @@ GuestQueueService          → DjService
   `messages_en`: a browser in a language without a bundle gets the bundle of the JVM's own locale (Polish on a Polish machine).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 251. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 258. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest` with the real
   security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 19 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 21 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT`, `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
-  `SongRequestVotesIT` (votes under the lock); with a database of their own, migrated to the version before and given rows the old
+  `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played); with a database of their own, migrated to the version before and given rows the old
   way: `TimestampMigrationIT` (V12 — the same moments; red when the old values are read as UTC), `VibeMigrationIT` (V16),
   `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT` (V19: the YouTube parties go with their data, a requests-only party
   stays). New SQL that locks or counts gets a test there.

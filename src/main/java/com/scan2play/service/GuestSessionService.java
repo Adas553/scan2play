@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpSession;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.WebUtils;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -20,6 +19,12 @@ import java.util.Set;
  */
 @Service
 public class GuestSessionService {
+
+    /** How many of a guest's own requests the session remembers per party (the newest ones). */
+    static final int MY_REQUESTS_KEPT = 20;
+
+    /** The session attribute of the guest's own requests at a party, followed by the party code. */
+    private static final String MY_REQUESTS_PREFIX = "myRequests_";
 
     /**
      * The requests each guest has sent per party in the cooldown window, by session id and party code. In memory, not in the
@@ -97,31 +102,35 @@ public class GuestSessionService {
         return sessionId + ':' + partyCode;
     }
 
-    /** How many of a guest's own requests the session remembers per party (the newest ones). */
-    static final int MY_REQUESTS_KEPT = 20;
-
-    /** Remembers that this guest sent the song request {@code requestId}, so the party page can say where it waits. */
+    /**
+     * Remembers that this guest sent the song request {@code requestId}, so the party page can say where it waits and a second
+     * request for the same waiting song is not counted as the guest's own vote.
+     * <p>
+     * In the session, so that it outlives a deploy (the sessions are in the database). No lock: with Spring Session JDBC each
+     * request works on its own copy of the session, and a lock on that copy would not stop a parallel request — when one guest
+     * sends two requests at the same moment, the copy written last wins and the other id may be forgotten. The cost is small (that
+     * song is not marked "Twoja", and asked for again it counts as a vote), and the form sends one request at a time.
+     */
     public void rememberRequest(HttpSession session, String partyCode, Long requestId) {
         if (requestId == null) {
             return;
         }
-        String key = "myRequests_" + partyCode;
-        synchronized (WebUtils.getSessionMutex(session)) {
-            @SuppressWarnings("unchecked")
-            List<Long> ids = (List<Long>) session.getAttribute(key);
-            List<Long> kept = ids == null ? new ArrayList<>() : new ArrayList<>(ids);
-            kept.add(requestId);
-            if (kept.size() > MY_REQUESTS_KEPT) {
-                kept = new ArrayList<>(kept.subList(kept.size() - MY_REQUESTS_KEPT, kept.size()));
-            }
-            session.setAttribute(key, kept);
+        List<Long> kept = new ArrayList<>(myRequestList(session, partyCode));
+        kept.add(requestId);
+        if (kept.size() > MY_REQUESTS_KEPT) {
+            kept = new ArrayList<>(kept.subList(kept.size() - MY_REQUESTS_KEPT, kept.size()));
         }
+        session.setAttribute(MY_REQUESTS_PREFIX + partyCode, kept);
     }
 
     /** The ids of the song requests this guest sent to the party (as far as the session remembers). */
     public Set<Long> myRequestIds(HttpSession session, String partyCode) {
-        @SuppressWarnings("unchecked")
-        List<Long> ids = (List<Long>) session.getAttribute("myRequests_" + partyCode);
-        return ids == null ? Set.of() : Set.copyOf(ids);
+        return Set.copyOf(myRequestList(session, partyCode));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Long> myRequestList(HttpSession session, String partyCode) {
+        List<Long> ids = (List<Long>) session.getAttribute(MY_REQUESTS_PREFIX + partyCode);
+        return ids == null ? List.of() : ids;
     }
 }
