@@ -23,8 +23,10 @@ class VibeMessagesTest {
             for (VibeType vibe : VibeType.values()) {
                 assertThat(messages.getMessage("vibe." + vibe.name(), null, null, locale)).as(vibe + " in " + locale).isNotBlank();
             }
-            assertThat(messages.getMessage("vibe.ANY.requests", null, null, locale)).isNotBlank();
         }
+        // "Any": no genre, the AI judges (the guests pick no vibe)
+        assertThat(messages.getMessage("vibe.ANY", null, Locale.ENGLISH)).isEqualTo("Any (the AI judges)");
+        assertThat(messages.getMessage("vibe.ANY", null, Locale.forLanguageTag("pl"))).isEqualTo("Dowolny (ocenia AI)");
         assertThat(messages.getMessage("vibe.LATINO", null, Locale.forLanguageTag("pl"))).contains("salsa", "bachata", "reggaeton");
     }
 }

@@ -104,7 +104,7 @@ class SongRequestRetentionServiceTest {
     }
 
     @Test
-    @DisplayName("it is a scheduled job — every day at 04:45, after the cache cleanup (04:00) and the playlist purge (04:30)")
+    @DisplayName("it is a scheduled job — every day at 04:45")
     void shouldBeScheduledEveryNight() throws Exception {
         Scheduled scheduled = SongRequestRetentionService.class.getMethod("purgeStaleRequests").getAnnotation(Scheduled.class);
 

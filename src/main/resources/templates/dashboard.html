@@ -44,7 +44,7 @@
                             <!--/* "Any": the guests pick no vibe, the AI judges by the DJ's note (if any) */-->
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
                                     th:value="${vibe}"
-                                    th:text="${vibe.name() == 'ANY'} ? #{vibe.ANY.requests} : #{vibe.__${vibe}__}"
+                                    th:text="#{vibe.__${vibe}__}"
                                     th:selected="${vibe == globalVibe}">
                             </option>
                         </select>

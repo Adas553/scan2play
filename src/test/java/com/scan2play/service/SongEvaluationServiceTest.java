@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Set;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
-import static com.scan2play.service.DjService.DECISION_PLAYED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -367,8 +366,7 @@ class SongEvaluationServiceTest {
         aParty(2);
         savesWithId();
         // a waiting song is not a duplicate: asked for again, it gets one more vote (SongRequestCommandService)
-        when(songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(eq(PARTY_CODE),
-                eq(List.of(DECISION_PLAYED)), eq(PageRequest.of(0, 2))))
+        when(songRequestRepository.findRecentlyPlayed(eq(PARTY_CODE), eq(PageRequest.of(0, 2))))
                 .thenReturn(List.of(SongRequestEntity.builder().songName("A - One").build(),
                         SongRequestEntity.builder().songName("B - Two").build()));
 
@@ -393,5 +391,47 @@ class SongEvaluationServiceTest {
                 .doesNotContain("\n").doesNotContain("\"");
         assertThat(SongEvaluationService.forPrompt("  Wilki -   Baśka ")).isEqualTo("Wilki - Baśka");
         assertThat(SongEvaluationService.forPrompt(null)).isEmpty();
+    }
+
+    // ---- the AI's answer is read defensively: Gemini's JSON mode has no schema ----
+
+    /** A field the app does not know is ignored: one extra field must not send every request to the DJ unchecked. */
+    @Test
+    void anAnswerWithAFieldTheAppDoesNotKnow_isStillTheAisVerdict() {
+        aParty(0);
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+
+        DjResponse response = answering("{\"decision\":\"accepted\",\"comment\":\"Klasyk!\",\"songName\":\"Wilki - Baśka\","
+                + "\"energyLevel\":8,\"requestKind\":\"title\",\"reason\":\"fits the party\"}")
+                .evaluateAndSaveSong(PARTY_CODE, "baska", "ANY");
+
+        assertThat(response.isUnchecked()).isFalse();
+        assertThat(response.comment()).isEqualTo("Klasyk!");
+        assertThat(saved.getValue().getDecision()).isEqualTo(DECISION_ACCEPTED);
+    }
+
+    /**
+     * The queue and the votes match the decision exactly ({@code 'accepted'}): "Accepted" would be saved and then shown nowhere —
+     * neither in the queue nor in the history. Any other value, or none, is a rejection.
+     */
+    @Test
+    void theAisDecision_isSavedAsAcceptedOrRejected_whateverItsCase() {
+        aParty(0);
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+
+        answering("{\"decision\":\"Accepted\",\"comment\":\"ok\",\"songName\":\"Wilki - Baśka\",\"energyLevel\":8}")
+                .evaluateAndSaveSong(PARTY_CODE, "baska", "ANY");
+        assertThat(saved.getValue().getDecision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(saved.getValue().getTrackUrl()).isNotNull();
+
+        DjResponse unsure = answering("{\"decision\":\"maybe\",\"comment\":\"hmm\",\"songName\":\"X\",\"energyLevel\":3}")
+                .evaluateAndSaveSong(PARTY_CODE, "x", "ANY");
+        assertThat(unsure.decision()).isEqualTo("rejected");
+        assertThat(saved.getValue().getDecision()).isEqualTo("rejected");
+
+        DjResponse none = answering("{\"comment\":\"hmm\",\"songName\":\"Y\",\"energyLevel\":3}")
+                .evaluateAndSaveSong(PARTY_CODE, "y", "ANY");
+        assertThat(none.decision()).isEqualTo("rejected");
+        assertThat(saved.getValue().getDecision()).isEqualTo("rejected");
     }
 }

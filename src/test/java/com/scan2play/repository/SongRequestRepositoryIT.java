@@ -38,6 +38,24 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         assertThat(requests.findHistory(party, List.of("played", "rejected"), PageRequest.of(0, 2))).hasSize(2);
     }
 
+    /** The AI's duplicate rule: the songs that played last, by when they played — not by when a guest asked for them. */
+    @Test
+    void theRecentlyPlayedSongs_areTheLatestToPlay() {
+        String party = newPartyCode();
+        Instant t = Instant.now().minus(2, ChronoUnit.HOURS);
+        save(party, "asked first, played last", "played", t, t.plus(90, ChronoUnit.MINUTES));
+        save(party, "asked later, played early", "played", t.plus(10, ChronoUnit.MINUTES), t.plus(20, ChronoUnit.MINUTES));
+        save(party, "played before V6", "played", t.plus(30, ChronoUnit.MINUTES), null);
+        save(party, "waiting", "accepted", t.plus(100, ChronoUnit.MINUTES), null);
+        save(party, "rejected", "rejected", t.plus(110, ChronoUnit.MINUTES), null);
+        save(newPartyCode(), "another party", "played", t, t.plus(115, ChronoUnit.MINUTES));
+
+        assertThat(requests.findRecentlyPlayed(party, PageRequest.of(0, 10))).extracting(SongRequestEntity::getSongName)
+                .containsExactly("asked first, played last", "played before V6", "asked later, played early");
+        assertThat(requests.findRecentlyPlayed(party, PageRequest.of(0, 1))).extracting(SongRequestEntity::getSongName)
+                .containsExactly("asked first, played last");
+    }
+
     @Test
     void theFingerprintFollowsTheQueue() {
         String party = newPartyCode();

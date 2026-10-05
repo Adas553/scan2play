@@ -7,6 +7,7 @@ import com.scan2play.controller.LegalController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
@@ -172,6 +173,22 @@ class SmokeTest {
                         .doesNotContain("YouTube API Services", "Data API", "YouTube API,", "cache", "Cache", "playlist", "playlisty")
                         .contains("https://www.youtube.com/t/terms", "🔍", language.equals("pl") ? "Podejrzyj" : "Preview");
             }
+        }
+    }
+
+    /** The window of the per-network limit (GuestRequestLimiter): as long as the guest's IP address stays in memory. */
+    @Value("${guest.limit.per-ip-window-minutes}")
+    private int perNetworkWindowMinutes;
+
+    @Test
+    @DisplayName("The privacy policy, in both languages, names the guest's IP address and how long it is kept — the per-network window")
+    void privacyPolicy_namesTheGuestsIpAddress() throws Exception {
+        for (String language : new String[] {"en", "pl"}) {
+            String html = mockMvc.perform(get("/privacy").header("Accept-Language", language))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+            assertThat(html).as(language).contains(language.equals("pl") ? "Adres IP" : "IP address",
+                    perNetworkWindowMinutes + (language.equals("pl") ? " minut po ostatniej prośbie" : " minutes after the last request"));
         }
     }
 }

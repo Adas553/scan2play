@@ -2,9 +2,19 @@ package com.scan2play.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
+
 import java.time.Instant;
 
+/**
+ * A guest's song request.
+ * <p>
+ * {@link DynamicUpdate}: an UPDATE writes only the columns that changed. The DJ's actions read a row, change its decision and save
+ * it, while a guest's vote ({@code SongRequestRepository.addVote}) may commit in between — writing the whole row back would put
+ * the votes as they were read and lose that vote ({@code SongRequestVotesIT}).
+ */
 @Entity
+@DynamicUpdate
 @Table(name = "song_requests", indexes = {
     @Index(name = "idx_party_decision_time", columnList = "partyCode, decision, requestedAt DESC")
 })
@@ -37,14 +47,14 @@ public class SongRequestEntity {
 
     /**
      * What the guest typed, as typed (one line, at most 150 characters — what the AI is given; V14), so that the DJ can check the
-     * song the AI made of it. {@code null} for a DJ's pick and for requests from before V14.
+     * song the AI made of it. {@code null} for requests from before V14.
      */
     @Column(length = GUEST_TEXT_MAX)
     private String guestText;
 
     /**
      * How many guests asked for this song (V15): a request for a song that already waits in the queue adds a vote here instead of
-     * a row of its own ({@code SongRequestCommandService}). 1 for a new request and for a DJ's pick.
+     * a row of its own ({@code SongRequestCommandService}). 1 for a new request.
      */
     @Column(nullable = false)
     @Builder.Default

@@ -49,10 +49,8 @@ public class DjPartySettingsController {
      */
     @PostMapping("/start-party")
     public String startParty(OAuth2AuthenticationToken authentication, HttpSession session) {
-        if (authentication != null) {
-            PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
-            partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
-        }
+        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+        partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
         return REDIRECT_DASHBOARD;
     }
 
@@ -61,11 +59,9 @@ public class DjPartySettingsController {
      */
     @PostMapping("/end-party")
     public String endParty(OAuth2AuthenticationToken authentication, HttpSession session) {
-        if (authentication != null) {
-            log.info("Ending party for DJ: {}", authentication.getName());
-            PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
-            partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
-        }
+        log.info("Ending party for DJ: {}", authentication.getName());
+        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+        partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
         return REDIRECT_DASHBOARD;
     }
 
@@ -113,15 +109,16 @@ public class DjPartySettingsController {
     public String updateLimits(@RequestParam String partyCode,
                                @RequestParam double requestLimit,
                                @RequestParam double cooldownMinutes,
-                               @RequestParam int duplicateCheckWindow,
+                               @RequestParam double duplicateCheckWindow,
                                OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
 
         // Whole numbers within bounds (review item 5.4): the duplicate window is read from the database and sent to the AI with
-        // every guest's request, so it has a ceiling; the guest limit's own ceilings only keep the numbers sensible.
-        int safeRequestLimit = clamp((int) Math.round(requestLimit), 1, MAX_REQUEST_LIMIT);
-        int safeCooldownMinutes = clamp((int) Math.round(cooldownMinutes), 1, MAX_COOLDOWN_MINUTES);
-        int safeDuplicateCheckWindow = clamp(duplicateCheckWindow, 0, MAX_DUPLICATE_CHECK_WINDOW);
+        // every guest's request, so it has a ceiling; the guest limit's own ceilings only keep the numbers sensible. All three
+        // the same way: a number with a fraction is rounded, not refused.
+        int safeRequestLimit = wholeWithin(requestLimit, 1, MAX_REQUEST_LIMIT);
+        int safeCooldownMinutes = wholeWithin(cooldownMinutes, 1, MAX_COOLDOWN_MINUTES);
+        int safeDuplicateCheckWindow = wholeWithin(duplicateCheckWindow, 0, MAX_DUPLICATE_CHECK_WINDOW);
 
         partySettingsCommandService.updateSettings(partyCode, s -> {
             s.setRequestLimit(safeRequestLimit);
@@ -138,17 +135,19 @@ public class DjPartySettingsController {
      */
     @PostMapping("/delete-account")
     public String deleteAccount(OAuth2AuthenticationToken authentication, HttpSession session) {
-        if (authentication != null) {
-            String ownerId = authentication.getName();
-            log.info("Account deletion requested by ownerId={}", ownerId);
-            accountDeletionService.deleteAllUserData(ownerId);
-            session.invalidate();
-        }
+        String ownerId = authentication.getName();
+        log.info("Account deletion requested by ownerId={}", ownerId);
+        accountDeletionService.deleteAllUserData(ownerId);
+        session.invalidate();
         return REDIRECT_HOME;
     }
 
-    private static int clamp(int value, int min, int max) {
-        return Math.min(max, Math.max(min, value));
+    /** {@code value} rounded to a whole number within {@code min}..{@code max}; not a number at all is {@code min}. */
+    static int wholeWithin(double value, int min, int max) {
+        if (Double.isNaN(value)) {
+            return min;
+        }
+        return (int) Math.round(Math.min(max, Math.max(min, value)));
     }
 }
 

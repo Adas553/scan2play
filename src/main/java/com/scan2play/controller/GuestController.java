@@ -103,6 +103,11 @@ public class GuestController {
                     return "party_ended";
                 }
 
+                // Nothing typed (only spaces get past the form's "required"; a POST may skip the form): back to the form before
+                // any limit is used or the AI is asked — with the AI down it would be an empty row in the DJ's queue
+                if (SongEvaluationService.asTyped(songName).isEmpty()) {
+                    return refuse(redirectAttributes, partyCode, "guest.error.empty");
+                }
                 // The guest's own limit first (the DJ's setting), then the server's limits that do not need the cookie.
                 // Both count the request before the evaluation.
                 Optional<Long> waitTimeSeconds = guestSessionService.tryAcquire(session, partyCode, settings);

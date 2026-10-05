@@ -11,22 +11,33 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   searches a day shared by every party, its terms; Spotify — development mode, its policy). The full app is archived: tag
   `full-player-2026-10-04`, branch `archive/full-player` (both pushed), the clone `D:\Coding\scan2play-full` with its own database
   `scan2play_full` — leave them alone.
-- **Stage 3 (YouTube goes) — packages 1 and 2 committed and pushed, CI green:** `5a1bf79` (the player and Auto-Pilot, browser side),
-  `e44d00f` (the server side, one kind of party, **V19** — deletes every party that is not requests-only with its data, drops the
-  player's tables and the kind's columns; the owner tried it locally: "działa"). Tests at `e44d00f`: 248 unit, 19 database,
-  23 browser scenarios.
-- **Package 3 (the last) — uncommitted, waiting for the owner's review:** the landing page's guide (step 1 "Załóż imprezę", step 4
-  without Auto-Pilot and the background playlist), the privacy policy and the terms (PL / EN: no YouTube API, no playlist, no search
-  cache; "🔍 Podejrzyj" is a plain link; the iTunes suggestions named), `SmokeTest` +2 (the guide and the legal pages, both languages),
-  `AGENTS.md` + the Copilot copy (no YouTube Data API, no player), `CLAUDE.md`, `PROJECT_CONTEXT.md` (the current state only:
-  651 → 470 lines; Sections 5.4 and 14 are pointers to the history — old migrations refer to them), `REVIEW.md` (6.3 and the other
-  player / Spotify items moot), this file (the old one word for word in `docs/history/session-handoff-2026-10-04.md`). Tests in a
-  copy: 250 unit (`SmokeTest` 14).
+- **Stage 3 (YouTube goes) — done, all three packages committed and pushed, CI green:** `5a1bf79` (the player and Auto-Pilot,
+  browser side), `e44d00f` (the server side, one kind of party, **V19** — deletes every party that is not requests-only with its
+  data, drops the player's tables and the kind's columns; the owner tried it locally: "działa"), `1b461b8` (texts and docs: the
+  landing page's guide, privacy and terms PL / EN without the YouTube API, `AGENTS.md` + the Copilot copy, `PROJECT_CONTEXT.md`
+  cut to the current state — Sections 5.4 and 14 are pointers to the history, old migrations refer to them —, `REVIEW.md`).
+- **After it:** `1fa2dff`, `c08ab71` (our logo on the pages, the QR prints and the favicon), `c83642d` (a request the AI rejects for
+  a song that waits is a vote on it, with the song's verdict; a rejected request gives the guest's limit back — the server's limits
+  still count it), `b2e9620` (the guest's own words under every song in the queue and the history; `util/GuestWords` gone).
+- **Review of the removal (2026-10-05):** complete; leftovers tidied — the dead `vibe.ANY` text ("guests choose": `vibe.ANY` is now
+  "the AI judges", `vibe.ANY.requests` gone), `DjResponse.withRequestId`, stale comments about the player, the DJ pick and the
+  "guest" / "background" filters. The privacy policy (PL / EN) now names the guest's IP address: `GuestRequestLimiter` keeps
+  it in memory with the party's code for the per-network limit, forgotten 10 minutes after the last request from that network
+  (`guest.limit.per-ip-window-minutes`; `SmokeTest` ties the pages to it); not in the database, not in the application's logs.
+- **Code review, class by class (2026-10-05), fixed:** the AI's answer read defensively (an unknown field is ignored; a decision
+  other than `accepted` in any case is `rejected` — "Accepted" was saved and then shown nowhere); an empty request goes back to
+  the form before any limit or the AI (with the AI down it was an empty row in the queue); `@DynamicUpdate` on
+  `SongRequestEntity` (a vote that committed while the DJ marked the song played was lost — `SongRequestVotesIT`, seen red); the
+  duplicate rule's songs by when they played; the logout deletes Spring Session's cookie `SESSION`; no `@Data` on
+  `PartySettingsEntity`; the limits form rounds all three numbers alike (Infinity became 1); `Texts.oneLine` never splits an
+  emoji; the cache names as constants; dead `authentication == null` branches and `REDIRECT_LOGIN` gone. Kept on purpose: the
+  guest's own requests stay in the session (they outlive a deploy; two requests at the same moment may forget one — the form
+  sends one at a time). Tests: 258 unit, 21 database (PostgreSQL 18), 23 browser scenarios.
 - **Found while writing the docs:** without a `messages_en` bundle, a browser asking for English gets the bundle of the JVM's own
   locale — Polish on a Polish machine (Railway's JVM is probably English). Not changed; noted in `PROJECT_CONTEXT.md` Section 13.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
-  to `e44d00f`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.
+  to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.
 
 ## Next (the owner picks)
 

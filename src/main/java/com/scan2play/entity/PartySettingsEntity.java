@@ -5,12 +5,20 @@ import com.scan2play.util.CodeGenerator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
+/**
+ * One party, owned by one DJ. Getters and setters, no {@code @Data}: an entity's equality is not "all fields equal" (Lombok's
+ * equals and hashCode change with every setter and break a Set or a Hibernate collection), so it keeps Object's identity.
+ */
 @Entity
 @Table(name = "party_settings")   // ownerId and partyCode are UNIQUE (their own indexes)
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)   // toBuilder: PartySettingsQueryService hands out copies of the cached settings

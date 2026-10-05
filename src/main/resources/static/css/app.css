@@ -270,14 +270,14 @@ th[data-sort].sort-desc::after {
 .provider-card:hover { transform: translateY(-4px); border-color: #555; }
 .provider-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
-/* Recommended provider (For DJs, requests only) — green glow highlight */
+/* The landing page's one tile ("For DJs") — green glow highlight */
 .provider-card--recommended {
     border-color: var(--s2p-green);
     box-shadow: 0 0 18px rgba(29, 185, 84, 0.15);
 }
 .provider-card--recommended:hover { border-color: var(--s2p-green-hover); }
 
-/* For DJs (requests only, no player) — the info colour of the badge */
+/* The same tile — the info colour of its button */
 .provider-card--requests:hover { border-color: #0dcaf0; }
 .btn-requests { background-color: #0dcaf0; border: none; color: #111; font-weight: 700; }
 .btn-requests:hover { background-color: #31d2f2; color: #111; }

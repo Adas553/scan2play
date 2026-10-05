@@ -30,7 +30,7 @@ class PartySettingsQueryServiceTest {
         PartySettingsEntity second = service.getSettings("ABC12");
 
         verify(repository, times(1)).findByPartyCode("ABC12");
-        assertThat(first).isNotSameAs(second).isEqualTo(second);
+        assertThat(first).isNotSameAs(second).usingRecursiveComparison().isEqualTo(second);
         assertThat(first.getId()).isEqualTo(7L);
         assertThat(first.getVibeNote()).isEqualTo("bez rapu");
     }

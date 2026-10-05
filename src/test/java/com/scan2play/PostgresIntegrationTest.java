@@ -26,7 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * open the developer's own database. Every test class shares that one database and one Spring context (same configuration);
  * tests keep apart by using their own party codes.
  * <p>
- * The external services get dummy credentials: nothing here calls Gemini, Google login or the YouTube API.
+ * The external services get dummy credentials: nothing here calls Gemini or Google login.
  * <p>
  * They run only under failsafe, which sets {@code scan2play.it} (profile {@code it}): {@code mvnw test -Dtest=...} replaces
  * surefire's own name patterns and so picks up {@code *IT} classes too — without a database they would fail; here they are skipped.

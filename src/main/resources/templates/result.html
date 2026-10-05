@@ -12,7 +12,7 @@
     <div class="card p-5 shadow-lg text-white">
 
         <h2 class="mb-4 text-white" th:text="${response.songName}">Song Name</h2>
-        <!--/* unchecked: the AI could not be asked, and a requests-only party passed the request on to its DJ */-->
+        <!--/* unchecked: the AI could not be asked, and the request went on to the DJ unchecked */-->
         <div th:class="${response.decision == 'accepted' ? 'accepted' : 'rejected'}">
             <h1 class="display-1 fw-bold"
                 th:text="${response.unchecked} ? #{result.decision.to_dj} : (${response.decision == 'accepted'} ? #{result.decision.accepted} : #{result.decision.rejected})">

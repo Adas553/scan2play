@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,7 +33,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
-import static com.scan2play.service.DjService.DECISION_PLAYED;
+import static com.scan2play.service.DjService.DECISION_REJECTED;
 
 /**
  * Handles the full AI-powered song evaluation pipeline:
@@ -95,9 +96,9 @@ public class SongEvaluationService {
                 .thinkingConfig(ThinkingConfig.builder().thinkingBudget(thinkingBudget).build())
                 .build();
         try {
-            var prompts = new java.util.HashMap<String, String>();
-            var duplicates = new java.util.HashMap<String, String>();
-            var vibeNotes = new java.util.HashMap<String, String>();
+            var prompts = new HashMap<String, String>();
+            var duplicates = new HashMap<String, String>();
+            var vibeNotes = new HashMap<String, String>();
             for (String lang : SUPPORTED_LANGS) {
                 vibeNotes.put(lang, loadResource("classpath:prompts/prompt-vibe-note_" + lang + ".txt"));
                 prompts.put(lang, loadResource("classpath:prompts/prompt-template_" + lang + ".txt"));
@@ -184,9 +185,7 @@ public class SongEvaluationService {
             return null;
         }
 
-        List<SongRequestEntity> recentRequests = songRequestRepository.findAllByPartyCodeAndDecisionInOrderByRequestedAtDesc(
-                partyCode, List.of(DECISION_PLAYED), PageRequest.of(0, duplicateCheckWindow)
-        );
+        List<SongRequestEntity> recentRequests = songRequestRepository.findRecentlyPlayed(partyCode, PageRequest.of(0, duplicateCheckWindow));
 
         String recentSongs = recentRequests.stream()
                 .map(SongRequestEntity::getSongName)
@@ -202,11 +201,25 @@ public class SongEvaluationService {
             DjResponse answer = objectMapper.readValue(askAi(prompt, aiJsonConfig), DjResponse.class);
             // The AI may leave the name of a rejected song empty (the Polish prompt once allowed it): the history would show a
             // row without a song, so it keeps what the guest asked for.
-            return (answer.songName() == null || answer.songName().isBlank()) ? answer.withSongName(songName) : answer;
+            if (answer.songName() == null || answer.songName().isBlank()) {
+                answer = answer.withSongName(songName);
+            }
+            return withKnownDecision(answer);
         } catch (Exception e) {
             log.error("AI evaluation failed for song: '{}'", songName, e);
             return null;
         }
+    }
+
+    /**
+     * The AI's decision as the app keeps it: {@code accepted}, whatever its case, or else {@code rejected} (another word, or none).
+     * The queue, the votes and the history match the decision exactly — an "Accepted" row would be shown nowhere.
+     */
+    static DjResponse withKnownDecision(DjResponse answer) {
+        String decision = answer.decision() != null && DECISION_ACCEPTED.equalsIgnoreCase(answer.decision().strip())
+                ? DECISION_ACCEPTED
+                : DECISION_REJECTED;
+        return decision.equals(answer.decision()) ? answer : answer.withVerdict(decision, answer.comment(), answer.energyLevel());
     }
 
     /**
@@ -253,7 +266,7 @@ public class SongEvaluationService {
      * What the guest typed as the DJ is shown it beside the AI's song: the line the AI is given ({@link #forPrompt}), with the
      * guest's double quotes.
      */
-    static String asTyped(String guestText) {
+    public static String asTyped(String guestText) {
         return Texts.oneLine(guestText, GUEST_TEXT_MAX);
     }
 

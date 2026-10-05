@@ -12,7 +12,6 @@ public final class ViewAttributes {
 
     // --- Redirect Paths ---
     public static final String REDIRECT_DASHBOARD = "redirect:/dj/dashboard";
-    public static final String REDIRECT_LOGIN = "redirect:/login";
     public static final String REDIRECT_HOME = "redirect:/";
 
     // --- Common Attributes ---

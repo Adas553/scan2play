@@ -136,6 +136,24 @@ class GuestControllerTest {
         verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
     }
 
+    /**
+     * A request with nothing in it (only spaces — the form's "required" lets them through — or a POST without the form) goes back
+     * to the form at once: no limit is used, the AI is not asked, and nothing reaches the DJ (with the AI down it would have
+     * been an empty row in the queue).
+     */
+    @Test
+    void anEmptyRequest_goesBackToTheForm_withoutALimitOrTheAi() throws Exception {
+        when(messageSource.getMessage(eq("guest.error.empty"), any(), any())).thenReturn("type a song");
+
+        for (String empty : new String[] {"", "   ", " \n\t "}) {
+            assertThat(request(empty)).isEqualTo("redirect:/p/" + PARTY);
+            assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("type a song");
+        }
+        verify(guestSessionService, never()).tryAcquire(any(), anyString(), any());
+        verify(guestRequestLimiter, never()).tryAcquire(anyString(), anyString());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
+    }
+
     @Test
     void theWait_isSaidInWholeMinutes_roundedUp_andInSecondsBelowAMinute() {
         assertThat(GuestController.waitText(1)).isEqualTo("1 s");

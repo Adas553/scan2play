@@ -75,7 +75,7 @@ class DjServiceTest {
         verify(songRequestRepository).save(song);
     }
 
-    /** Review item 1.3: next-track reads the queue through a 3 s cache — a song that played leaves it at once. */
+    /** The dashboard reads the queue through a 3 s cache — a song that played leaves it at once. */
     @Test
     void markSongAsPlayed_evictsTheCachedDashboardQueueOfTheParty() {
         SongRequestEntity song = SongRequestEntity.builder()
@@ -131,7 +131,7 @@ class DjServiceTest {
 
     @Test
     void markSongAsPlayed_shouldKeepTheFirstPlayTime_whenConfirmedAgain() {
-        // the player confirms once per song, and the DJ may press "Mark Played" as well: the second one must not move it
+        // a second "Mark as played" (another window, a double tap) must not move the first play time
         Instant first = java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
         SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
                 .decision(DECISION_PLAYED).playedAt(first).build();
