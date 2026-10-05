@@ -92,7 +92,13 @@ back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests
 guest hears the verdict the song was taken with (the AI does not judge a song the same way every time — 2026-10-04, a song accepted
 once, then rejected four times while it waited); any other rejected request is its own row. The AI's duplicate rule lists only
 PLAYED songs, the latest to play first (`findRecentlyPlayed`; a waiting one is a vote). `SongRequestEntity` is `@DynamicUpdate`: the
-DJ's "played" / "skip" writes only the columns it changed, so a vote that commits meanwhile is kept (`SongRequestVotesIT`). The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
+DJ's "played" / "skip" writes only the columns it changed, so a vote that commits meanwhile is kept (`SongRequestVotesIT`). **A song
+the DJ skipped** ("Pomiń" — usually "I do not have it") is not saved again for 2 hours from the skip (`skipped_at`, V20; the owner:
+12 h was too long): the next guest who asks for it hears `guest.skipped_by_dj` ("Tej piosenki DJ teraz nie zagra — wybierz inną"),
+nothing reaches the queue (`Outcome.SKIPPED_BY_DJ`, `findSkippedByTheDj`). A song only cleared with the whole queue may be asked for
+again. **A skip by mistake is undone** ("Cofnij" in a bar for 8 s after the skip, "↩ Przywróć" at the request in the history;
+`POST /dj/dashboard/restore`, `DjService.restoreSkippedSong`, under the same lock): the request waits again in its old place with its
+votes and the guest's words, `skipped_at` cleared — unless the same song waits already. The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
 party's ranking); the guest page lists "🔥 Najwięcej głosów" — up to 3 waiting songs with more than one vote — and the result page
 says "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N".
@@ -122,7 +128,7 @@ sees under the form), `PlayHistoryService.Page`.
 Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
-leaves as rejected with the DJ's note) and "🔍 Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
+leaves as rejected with the DJ's note and `skipped_at`; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "🔍 Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
 limits and the use of the server limits; the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; feedback; end / resume the party, delete the account, log out. The forms are sent in the background (`forms.js`; not logout
 and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
@@ -199,7 +205,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), account deletion |
 | `DjSongController` | mark played, skip, clear the queue |
-| `DjSessionHelper` | the party of the logged-in DJ (cached in the session) and **`validateOwnership`** (IDOR) |
+| `DjSessionHelper` | the party of the logged-in DJ (cached in the session; made on the first login — tabs that make it at once look again, `FirstLoginIT`) and **`validateOwnership`** (IDOR) |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation) |
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
@@ -220,6 +226,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `QrCodeService` | QR codes (ZXing, cached) |
 | `AccountDeletionService` | deletes all of a DJ's data and evicts the caches after the commit |
 | `SongRequestRetentionService` | the nightly purge of song requests (Section 4.1) |
+| `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …" |
 
 ### 6.3 Configuration
 
@@ -239,7 +246,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared → `s2p:guest-queue-changed`), `tabs.js` (the history in place), `settings-toggle.js` (on a phone: the settings folded), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
@@ -250,7 +257,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`), `db/migration/V1..V19`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`), `db/migration/V1..V20`.
 
 ---
 
@@ -260,13 +267,15 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 - Evaluates guests' requests. Model `gemini-2.5-flash` (pinned; env `GOOGLE_AI_MODEL`); a request may think up to
   `google.ai.thinking-budget` tokens (1024). Timeout 10 s per call.
-- The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`; JSON mode without a schema, so
-  a field the app does not know is ignored, and a decision other than `accepted` in any case is `rejected` — the queue matches
-  `'accepted'` exactly). A request may be a title, an
+- The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`) of a given shape
+  (`SongEvaluationService.ANSWER_SCHEMA`: every field required, `decision` only `accepted` / `rejected`, `requestKind` only title /
+  artist / lyrics / mood); read defensively anyway — a field the app does not know is ignored, and a decision other than
+  `accepted` in any case is `rejected` (the queue matches `'accepted'` exactly). A request may be a title, an
   artist or a line of lyrics; never replace it by another song; not knowing a song (a new one) is no reason to reject it; a mood or
   an occasion is `requestKind` `mood` (sent back to the guest); on a rejection `songName` is what the guest asked for (the code also
   falls back to the guest's text).
-- AI down → the request goes to the DJ unchecked (Section 5.1; no retry). Duplicates: the last `duplicateCheckWindow` played songs go
+- AI down → the request goes to the DJ unchecked (Section 5.1; no retry), and the log says so every 5 minutes while it lasts
+  (`AiHealthMonitor`: search the log for "AI check"). Duplicates: the last `duplicateCheckWindow` played songs go
   into the prompt (a waiting song asked for again is a vote, not a duplicate).
 
 ### 7.2 (Spotify — removed 2026-10-04)
@@ -364,11 +373,12 @@ that Railway applies with the next deploy. Never set it to `update`: Hibernate w
 | V17 | `party_settings.dj_name` varchar(60), nullable |
 | V18 | Spotify removed: Spotify parties deleted with their requests, background tracks, plays and their DJ's feedback; `spotify_*` columns dropped; the kind's check without SPOTIFY |
 | V19 | YouTube removed: every party that is not `REQUESTS_ONLY` (and one with no kind) deleted with its requests and its DJ's feedback; `fallback_play`, `fallback_track`, `youtube_cache`, `youtube_search_budget` dropped; the columns `active_provider`, `playback_mode`, `fallback_playlist_url`, `fallback_shuffle` dropped |
+| V20 | `song_requests.skipped_at` timestamptz, nullable: when the DJ skipped the request; the requests skipped before get their request time |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
 
-**First production deploy checklist** (the next deploy applies V2..V19 at once): (0) **V18 and V19 delete every production party
+**First production deploy checklist** (the next deploy applies V2..V20 at once): (0) **V18 and V19 delete every production party
 that was made before 2026-10-04** — in April only YouTube and Spotify parties existed, so every DJ gets a new party with a new code
 at their next login, and a QR code printed before no longer works (their requests are long gone anyway: 30-day retention). The
 variables `YOUTUBE_API_KEY`, `YOUTUBE_SEARCH_DAILY_BUDGET`, `SPOTIFY_*` can go from Railway; (1) back up the database; (2) dump the
@@ -417,7 +427,8 @@ GuestQueueService          → DjService
 | GET | `/dj/dashboard` | the dashboard |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active` |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
-| POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, the DJ's note |
+| POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, the DJ's note, `skipped_at` (the song stays out for 2 h) |
+| POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own skip, not when the same song waits) |
 | POST | `/dj/dashboard/clear-queue` | "🧹 Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, "Cleared by the DJ 🧹" (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
 | POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/limits` | settings |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
@@ -441,24 +452,26 @@ GuestQueueService          → DjService
 
 ### Front end
 - Polling every 3 s (ETag / 304), no WebSockets; a hidden window rests until it is shown (review 3.4).
-- `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`). There is no
-  `messages_en`: a browser in a language without a bundle gets the bundle of the JVM's own locale (Polish on a Polish machine).
+- `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`). The English texts are
+  `messages.properties` itself: a browser in any language without a bundle (English, German…) gets them, whatever the server's own
+  language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 258. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 267. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest` with the real
   security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 21 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 24 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT`, `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
-  `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played); with a database of their own, migrated to the version before and given rows the old
+  `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played; a song the DJ skipped, and put back), `FirstLoginIT` (a
+  first login in eight tabs at once — one party); with a database of their own, migrated to the version before and given rows the old
   way: `TimestampMigrationIT` (V12 — the same moments; red when the old values are read as UTC), `VibeMigrationIT` (V16),
   `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT` (V19: the YouTube parties go with their data, a requests-only party
   stays). New SQL that locks or counts gets a test there.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
-  Chrome, with a Python stand-in server that the scenarios configure; 23 scenarios. The stand-in sends the real CSP **enforced** and
+  Chrome, with a Python stand-in server that the scenarios configure; 26 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed
@@ -467,7 +480,8 @@ GuestQueueService          → DjService
   branch `main` and needs "Dependabot alerts" and "security updates" switched on in the repository's settings.
 
 ### AI
-- No retry when Gemini is down (the request goes to the DJ unchecked); no check that a song exists.
+- No retry when Gemini is down (the request goes to the DJ unchecked; `AiHealthMonitor` writes it to the log); no check that a song
+  exists.
 
 ---
 

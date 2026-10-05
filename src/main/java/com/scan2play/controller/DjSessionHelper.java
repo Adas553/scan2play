@@ -6,6 +6,7 @@ import com.scan2play.service.PartySettingsQueryService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,9 @@ import org.springframework.stereotype.Component;
 public class DjSessionHelper {
 
     static final String SESSION_PARTY_CODE = "djPartyCode";
+
+    /** How many times a new DJ's party is looked up or made before the error goes on ({@link #getOrCreateParty}). */
+    static final int PARTY_CREATE_ATTEMPTS = 3;
 
     private final PartySettingsQueryService partySettingsQueryService;
     private final PartySettingsCommandService partySettingsCommandService;
@@ -51,10 +55,27 @@ public class DjSessionHelper {
             }
         }
 
-        String ownerId = authentication.getName();
-        PartySettingsEntity settings = partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+        PartySettingsEntity settings = getOrCreateParty(authentication.getName());
         session.setAttribute(SESSION_PARTY_CODE, settings.getPartyCode());
         return settings;
+    }
+
+    /**
+     * The DJ's party, made on the first login. A first login opened in several tabs at once makes the party in each of them and
+     * all but one hit the UNIQUE owner_id ({@code FirstLoginIT}); a new random code may also, very rarely, be taken already. Each
+     * try is a transaction of its own, so the next one simply finds the party the other tab made (or draws another code).
+     */
+    private PartySettingsEntity getOrCreateParty(String ownerId) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                return partySettingsCommandService.getOrCreatePartyForDj(ownerId);
+            } catch (DataIntegrityViolationException e) {
+                if (attempt >= PARTY_CREATE_ATTEMPTS) {
+                    throw e;
+                }
+                log.info("DJ {}: the party was made at the same moment elsewhere (or its code was taken) — looking again", ownerId);
+            }
+        }
     }
 
     /**

@@ -12,6 +12,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Locale;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -173,6 +175,27 @@ class SmokeTest {
                         .doesNotContain("YouTube API Services", "Data API", "YouTube API,", "cache", "Cache", "playlist", "playlisty")
                         .contains("https://www.youtube.com/t/terms", "🔍", language.equals("pl") ? "Podejrzyj" : "Preview");
             }
+        }
+    }
+
+    /**
+     * A browser in a language without a bundle of its own (German, or English — the English texts are the base bundle) gets the
+     * English texts, whatever the server's own language: on a Polish machine it used to get Polish ones (spring.messages
+     * .fallback-to-system-locale=false).
+     */
+    @Test
+    @DisplayName("On a Polish server, a German or English browser gets the English page, a Polish one the Polish page")
+    void aBrowserInALanguageWithoutABundle_getsEnglish_evenOnAPolishServer() throws Exception {
+        Locale serverLocale = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("pl-PL"));
+        try {
+            for (String language : new String[] {"de", "en", "en-US"}) {
+                mockMvc.perform(get("/").header("Accept-Language", language))
+                        .andExpect(content().string(containsString("lang=\"en\"")));
+            }
+            mockMvc.perform(get("/").header("Accept-Language", "pl")).andExpect(content().string(containsString("lang=\"pl\"")));
+        } finally {
+            Locale.setDefault(serverLocale);
         }
     }
 

@@ -270,6 +270,14 @@
 
     <!-- History content loaded via AJAX (the DJ keeps their place on the page) -->
     <div id="history-content" hidden></div>
+
+    <!--/* "Cofnij" after "Pomiń": shown by forms.js for a few seconds after a skip, puts the request back (/dj/dashboard/restore) */-->
+    <div id="undoSkip" class="s2p-undo-toast" role="status" aria-live="polite" hidden>
+        <span th:text="#{dashboard.undo.skipped}">Skipped:</span>
+        <span class="fw-bold text-break" data-undo-song>Song</span>
+        <button type="button" class="btn btn-warning fw-bold flex-shrink-0 ms-auto" data-undo-button
+                th:text="#{dashboard.undo.button}">Undo</button>
+    </div>
 </div>
 
 <!-- Dashboard core JS (polling, AJAX forms, tabs, lists) — ES modules, js/dashboard/main.js imports the rest -->

@@ -79,6 +79,12 @@ public class SongRequestEntity {
     private Instant playedAt;
 
     /**
+     * When the DJ skipped the request ("Pomiń", V20); {@code null} for every other request (one cleared with the whole queue too)
+     * and once the DJ put it back. The same song stays out of the queue for a while from then ({@code SongRequestCommandService}).
+     */
+    private Instant skippedAt;
+
+    /**
      * Defensive truncation of all free-text fields before persist/update.
      * Prevents DataIntegrityViolationException from AI-generated content
      * that may exceed column limits.

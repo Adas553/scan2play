@@ -54,3 +54,26 @@ S2P.scenario({
             getComputedStyle(document.querySelector('#song-list tr[data-song-id="2"]')).display, 'flex');
     }
 });
+
+S2P.scenario({
+    name: 'skip-undo-phone',
+    title: 'on a phone the "Cofnij" bar is as wide as it needs: the song on one line, the bar inside the screen',
+    viewport: '390,844',
+    setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' }] },
+    run: async function (t) {
+        t.step('the window is a phone\'s', window.innerWidth < 768, true);
+        const bar = document.getElementById('undoSkip');
+        // the rendered row has the buttons (the stand-in's polled rows do not): click before the first poll replaces it
+        document.querySelector('#song-list tr[data-song-id="1"] form[action="/dj/dashboard/dismiss"] button').click();
+        await t.waitFor(function () { return !bar.hidden; }, 'the bar', 2500).catch(function () {});
+        const song = bar.querySelector('[data-undo-song]');
+        const box = bar.getBoundingClientRect();
+        // 2026-10-05, the owner's phone: the bar got half the screen (left: 50%) and the song one letter per line
+        // a flex item has one box however many lines it takes: one line is less than two font sizes high
+        t.check('the song is on one line (' + Math.round(song.getBoundingClientRect().height) + ' px high)',
+            song.getBoundingClientRect().height < 2 * parseFloat(getComputedStyle(song).fontSize));
+        t.check('the bar is inside the screen, with a margin', box.left >= 8 && box.right <= window.innerWidth - 8);
+        t.check('the "Cofnij" button is big enough for a thumb (at least 36 px high)',
+            bar.querySelector('[data-undo-button]').getBoundingClientRect().height >= 36);
+    }
+});

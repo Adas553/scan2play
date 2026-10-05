@@ -5,6 +5,8 @@ import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.ThinkingConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.Schema;
+import com.google.genai.types.Type;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.DjResponse;
@@ -56,6 +58,26 @@ public class SongEvaluationService {
     private static final String DEFAULT_LANG = "en";
     private static final List<String> SUPPORTED_LANGS = List.of("en", "pl");
 
+    /**
+     * The shape of the AI's answer ({@link DjResponse}), given to Gemini with the request: JSON mode alone promises valid JSON, not
+     * its fields — Gemini could add one, leave the decision out or write "Accepted". The schema makes every field required and
+     * names the only words a decision and a kind of request may be. The reading of the answer stays defensive anyway
+     * ({@link #withKnownDecision}, unknown fields ignored by {@code DjResponse}).
+     */
+    static final Schema ANSWER_SCHEMA = Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                    "decision", Schema.builder().type(Type.Known.STRING).enum_(DECISION_ACCEPTED, DECISION_REJECTED).build(),
+                    "comment", Schema.builder().type(Type.Known.STRING).build(),
+                    "songName", Schema.builder().type(Type.Known.STRING).build(),
+                    "energyLevel", Schema.builder().type(Type.Known.INTEGER).build(),
+                    "requestKind", Schema.builder().type(Type.Known.STRING)
+                            .enum_(DjResponse.KIND_TITLE, DjResponse.KIND_ARTIST, DjResponse.KIND_LYRICS, DjResponse.KIND_MOOD)
+                            .build()))
+            .required("decision", "comment", "songName", "energyLevel", "requestKind")
+            .propertyOrdering("decision", "comment", "songName", "energyLevel", "requestKind")
+            .build();
+
     @Value("${google.ai.model-name}")
     private String modelName;
 
@@ -77,7 +99,7 @@ public class SongEvaluationService {
     private final MessageSource messageSource;
     private final ResourceLoader resourceLoader;
     private final SongRequestCommandService songRequestCommandService;
-
+    private final AiHealthMonitor aiHealthMonitor;
 
     /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt). */
     private Map<String, String> promptTemplates;
@@ -93,6 +115,7 @@ public class SongEvaluationService {
     public void init() {
         this.aiJsonConfig = GenerateContentConfig.builder()
                 .responseMimeType("application/json")
+                .responseSchema(ANSWER_SCHEMA)
                 .thinkingConfig(ThinkingConfig.builder().thinkingBudget(thinkingBudget).build())
                 .build();
         try {
@@ -149,7 +172,10 @@ public class SongEvaluationService {
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
         DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), locale);
         if (aiResponse == null) {
+            aiHealthMonitor.recordUnchecked();
             aiResponse = withoutTheAi(partyCode, songName, locale);
+        } else {
+            aiHealthMonitor.recordAnswered();
         }
         if (aiResponse.isMood()) {
             log.info("Party [{}]: '{}' reads as a mood, not a song — not saved", partyCode, songName);
@@ -163,6 +189,11 @@ public class SongEvaluationService {
 
         // 3. Database Operations: a new row, or one more vote on the same song waiting in the queue
         SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds);
+        if (saved.outcome() == SongRequestCommandService.Outcome.SKIPPED_BY_DJ) {
+            // The DJ skipped this song lately (usually: they do not have it): nothing saved, the guest is told to pick another one
+            return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.skipped_by_dj", null, locale),
+                    saved.request().getSongName(), 0, aiResponse.requestKind());
+        }
         SongRequestEntity savedRequest = saved.request();
         if (saved.outcome() != SongRequestCommandService.Outcome.NEW && !DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
             // The AI rejected this time a song the party took already and that still waits: the guest hears the verdict it was taken with

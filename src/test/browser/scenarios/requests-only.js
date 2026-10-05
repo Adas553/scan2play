@@ -86,6 +86,52 @@ S2P.scenario({
 });
 
 S2P.scenario({
+    name: 'skip-undo',
+    title: '"Pomiń" by mistake: a bar names the song and offers "Cofnij", which puts the request back in the queue at once',
+    setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
+                     { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
+    run: async function (t) {
+        const bar = document.getElementById('undoSkip');
+        const shows = function () { return !!bar && !bar.hidden && bar.getClientRects().length > 0; };
+        t.check('no bar before a skip', !!bar && !shows());
+
+        // the rendered rows have the buttons (the stand-in's polled rows do not): click before the first poll replaces them
+        document.querySelector('#song-list tr[data-song-id="1"] form[action="/dj/dashboard/dismiss"] button').click();
+        await t.waitFor(shows, 'the "Cofnij" bar', 2500).catch(function () {});
+        t.step('after the skip the bar names the song', shows() ? bar.querySelector('[data-undo-song]').textContent : null, 'Wilki - Baśka');
+        await t.waitFor(function () { return !document.querySelector('#song-list tr[data-song-id="1"]'); }, 'the row to go', 2500)
+            .catch(function () {});
+
+        const clickedAt = performance.now();
+        bar.querySelector('[data-undo-button]').click();
+        t.check('"Cofnij" hides the bar at once', !shows());
+        await t.waitFor(function () { return document.querySelector('#song-list tr[data-song-id="1"]'); }, 'the request back', 2500)
+            .catch(function () {});
+        t.step('the server was told which request to put back', (await t.stand.requests('POST /dj/dashboard/restore'))
+            .map(function (r) { return r.q.id; }), ['1']);
+        t.check('the request is back in the queue at once, not with the next 3 s poll',
+            !!document.querySelector('#song-list tr[data-song-id="1"]') && performance.now() - clickedAt < 2500);
+    }
+});
+
+S2P.scenario({
+    name: 'skip-undo-goes',
+    title: 'the "Cofnij" bar goes by itself after a few seconds, and nothing is put back',
+    setup: { queue: [{ id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
+    run: async function (t) {
+        const bar = document.getElementById('undoSkip');
+        const shows = function () { return !!bar && !bar.hidden && bar.getClientRects().length > 0; };
+        document.querySelector('#song-list tr[data-song-id="2"] form[action="/dj/dashboard/dismiss"] button').click();
+        await t.waitFor(shows, 'the bar', 2500).catch(function () {});
+        t.check('the bar shows after the skip', shows());
+        const shownAt = performance.now();
+        await t.waitFor(function () { return !shows(); }, 'the bar to go by itself', 12000).catch(function () {});
+        t.check('it goes by itself, after some seconds — not at once', !shows() && performance.now() - shownAt > 5000);
+        t.step('nothing was put back', await t.stand.count('POST /dj/dashboard/restore'), 0);
+    }
+});
+
+S2P.scenario({
     name: 'queue-numbers-and-clear',
     title: 'the active queue: every request has its number; "Wyczyść kolejkę" asks first, then empties the queue in place, and is gone with nothing to clear',
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },

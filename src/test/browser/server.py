@@ -289,7 +289,16 @@ class Handler(BaseHTTPRequestHandler):
         state = stand.state
         if path in ('/dj/dashboard/play', '/dj/dashboard/dismiss'):   # the song leaves the queue, as on the real server
             with stand.lock:
+                leaving = [r for r in state['queue'] if str(r['id']) == str(fields.get('id'))]
                 state['queue'] = [r for r in state['queue'] if str(r['id']) != str(fields.get('id'))]
+                if path.endswith('/dismiss'):
+                    state.setdefault('skipped', []).extend(leaving)
+            return self._json({})
+        if path == '/dj/dashboard/restore':           # a skipped request back in the queue ("Cofnij", "↩ Przywróć")
+            with stand.lock:
+                back = [r for r in state.get('skipped', []) if str(r['id']) == str(fields.get('id'))]
+                state['skipped'] = [r for r in state.get('skipped', []) if str(r['id']) != str(fields.get('id'))]
+                state['queue'] = sorted(state['queue'] + back, key=lambda r: int(r['id']))
             return self._json({})
         if path == '/dj/dashboard/clear-queue':       # every waiting request leaves the queue (as rejected, on the real server)
             with stand.lock:

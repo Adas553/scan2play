@@ -46,12 +46,13 @@ class SongEvaluationServiceTest {
     private MessageSource messageSource;
 
     private SongEvaluationService service;
+    private final AiHealthMonitor aiHealth = new AiHealthMonitor();
 
     @BeforeEach
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository));
+                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository), aiHealth);
         service.init();
     }
 
@@ -130,14 +131,16 @@ class SongEvaluationServiceTest {
 
     /** The service with {@link SongEvaluationService#askAi} answered by the test; it keeps the prompts it was asked. */
     private final List<String> prompts = new ArrayList<>();
+    private final List<GenerateContentConfig> configs = new ArrayList<>();
 
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, new DefaultResourceLoader(),
-                new SongRequestCommandService(songRequestRepository)) {
+                new SongRequestCommandService(songRequestRepository), aiHealth) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
+                configs.add(config);
                 if (json == null) {
                     throw new IllegalStateException("Gemini timed out");
                 }
@@ -361,6 +364,40 @@ class SongEvaluationServiceTest {
         assertThat(saved.getValue().getTrackUrl()).isEqualTo("https://www.youtube.com/results?search_query=sanah");
     }
 
+    /** AiHealthMonitor counts what the AI answered and what went to the DJ unchecked — the log's "AI check" line. */
+    @Test
+    void everyRequest_isCountedAsAnsweredOrUnchecked() {
+        aParty(0);
+        savesWithId();
+        when(messageSource.getMessage(any(String.class), any(), any(java.util.Locale.class))).thenReturn("note");
+
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY");
+        answering(null).evaluateAndSaveSong(PARTY_CODE, "sanah", "ANY");
+        answering(null).evaluateAndSaveSong(PARTY_CODE, "kult", "ANY");
+
+        assertThat(aiHealth.takeSummary()).startsWith("AI check: 2 of 3 ");
+    }
+
+    /**
+     * Option A (2026-10-05): a song the DJ skipped lately ("Pomiń" — usually "I do not have it") does not come back to the queue
+     * with the next guest who asks for it; the guest is told to pick another one, nothing is saved.
+     */
+    @Test
+    void aSongTheDjSkippedLately_isNotBackInTheQueue() {
+        aParty(0);
+        SongRequestEntity skipped = SongRequestEntity.builder().id(3L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
+                .decision("rejected").djComment(DjService.DJ_DISMISS_COMMENT).skippedAt(java.time.Instant.now()).build();
+        when(songRequestRepository.findSkippedByTheDj(eq(PARTY_CODE), any(), any())).thenReturn(List.of(skipped));
+        when(messageSource.getMessage(eq("guest.skipped_by_dj"), any(), any(java.util.Locale.class))).thenReturn("Pick another one");
+
+        DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baska", "ANY");
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("Pick another one");
+        assertThat(response.requestId()).isNull();
+        verify(songRequestRepository, never()).save(any());
+    }
+
     @Test
     void thePrompt_getsTheRecentlyPlayedSongs_forTheDuplicateRule_notTheWaitingOnes() {
         aParty(2);
@@ -394,6 +431,30 @@ class SongEvaluationServiceTest {
     }
 
     // ---- the AI's answer is read defensively: Gemini's JSON mode has no schema ----
+
+    /**
+     * Gemini is given the shape of the answer, not only "JSON": the fields the app reads, all of them required, and the only words
+     * a decision and a kind of request may be — so it cannot answer "Accepted", "maybe" or leave the decision out.
+     */
+    @Test
+    void theAiIsGivenTheSchemaOfItsAnswer() {
+        aParty(0);
+        savesWithId();
+
+        answering("{\"decision\":\"accepted\",\"comment\":\"ok\",\"songName\":\"X\",\"energyLevel\":5,\"requestKind\":\"title\"}")
+                .evaluateAndSaveSong(PARTY_CODE, "x", "ANY");
+
+        GenerateContentConfig config = configs.getFirst();
+        assertThat(config.responseMimeType()).contains("application/json");
+        com.google.genai.types.Schema schema = config.responseSchema().orElseThrow();
+        assertThat(schema.required().orElseThrow())
+                .containsExactlyInAnyOrder("decision", "comment", "songName", "energyLevel", "requestKind");
+        assertThat(schema.properties().orElseThrow().get("decision").enum_().orElseThrow()).containsExactly("accepted", "rejected");
+        assertThat(schema.properties().orElseThrow().get("requestKind").enum_().orElseThrow())
+                .containsExactly("title", "artist", "lyrics", "mood");
+        assertThat(schema.properties().orElseThrow().get("energyLevel").type().orElseThrow().knownEnum())
+                .isEqualTo(com.google.genai.types.Type.Known.INTEGER);
+    }
 
     /** A field the app does not know is ignored: one extra field must not send every request to the DJ unchecked. */
     @Test
