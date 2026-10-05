@@ -1,7 +1,7 @@
 name: Database tests
 
 # The tests on a real PostgreSQL (*IT, base class PostgresIntegrationTest): every migration on an empty database with Hibernate
-# validation, the SQL of the background queue, its locking under concurrent callers, the guests' requests. `mvnw verify -Pit`
+# validation, the SQL of the guest queue, the votes under their lock with concurrent guests, the sessions. `mvnw verify -Pit`
 # runs them alone (the unit tests are unit-tests.yml); they create and drop their own s2p_it_* database on the service below.
 # PostgreSQL 18 — the version of the production database on Railway (image postgres-ssl:18) and of the developer's machine.
 

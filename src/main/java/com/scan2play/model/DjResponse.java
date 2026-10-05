@@ -10,7 +10,7 @@ package com.scan2play.model;
  * @param energyLevel The energy level of the song on a scale of 1-10.
  * @param requestKind What the guest typed, as the AI reads it: {@value #KIND_TITLE}, {@value #KIND_ARTIST}, {@value #KIND_LYRICS}
  *                    or {@value #KIND_MOOD}; {@value #KIND_UNCHECKED} when the AI could not be asked and the request went to the
- *                    DJ unchecked (a requests-only party); null when the AI did not say (an older answer, an error). For {@value #KIND_LYRICS}
+ *                    DJ unchecked; null when the AI did not say (an older answer, an error). For {@value #KIND_LYRICS}
  *                    the song is searched by the guest's own words, not by the AI's name of it (see SongEvaluationService).
  * @param requestId   The id of the saved song request; null when nothing was saved (and in the AI's own answer). For a vote, the
  *                    id of the waiting song it was counted on.
@@ -70,7 +70,7 @@ public record DjResponse(
         return votes > 1 && !ownSong;
     }
 
-    /** The same response under another song name (what the found video is called). */
+    /** The same response under another song name (what the guest typed, when the AI left the name empty). */
     public DjResponse withSongName(String name) {
         return new DjResponse(decision, comment, name, energyLevel, requestKind, requestId, votes, ownSong);
     }
@@ -78,11 +78,6 @@ public record DjResponse(
     /** The same request with another verdict: the one a song waiting in the queue was taken with. */
     public DjResponse withVerdict(String newDecision, String newComment, int newEnergyLevel) {
         return new DjResponse(newDecision, newComment, songName, newEnergyLevel, requestKind, requestId, votes, ownSong);
-    }
-
-    /** The same response once the request is saved under this id. */
-    public DjResponse withRequestId(Long id) {
-        return new DjResponse(decision, comment, songName, energyLevel, requestKind, id, votes, ownSong);
     }
 
     /**

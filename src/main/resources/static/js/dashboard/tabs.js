@@ -77,7 +77,7 @@ import { captureListState, initSortableHeaders, restoreListState, setHistoryRelo
 
     /**
      * The history fragment: the last page of entries, or — "Show more" — the last {@code limit} of them, of the kind
-     * {@code filter} says (all / guest / background / played / rejected; none = all). The server filters.
+     * {@code filter} says (all / played / rejected; none or an old value = all). The server filters.
      */
     function fetchHistory(limit, filter) {
         let url = '/dj/history-view/fragment?partyCode=' + encodeURIComponent(partyCode());

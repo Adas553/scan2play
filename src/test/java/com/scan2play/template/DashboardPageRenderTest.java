@@ -68,7 +68,6 @@ import static org.mockito.Mockito.when;
 class DashboardPageRenderTest {
 
     private static final String PARTY = "HARN1";
-    private static final String PLAYLIST = "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf";
     private static final Path OUT = Path.of("target", "browser-harness");
     private static final Locale PL = Locale.forLanguageTag("pl");
 

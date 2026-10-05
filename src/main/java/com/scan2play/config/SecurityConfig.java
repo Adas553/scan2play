@@ -59,7 +59,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public resources, landing page, and guest party views
                         .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()
-                        // The landing page's tiles: the kind of party chosen, then Google's login (HomeController.start)
+                        // The landing page's button (and the old tile links /start/{kind}): Google's login (HomeController.start)
                         .requestMatchers("/start/**").permitAll()
                         // The browsers' reports of the Content-Security-Policy
                         .requestMatchers("/csp-report").permitAll()

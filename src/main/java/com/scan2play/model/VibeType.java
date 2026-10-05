@@ -1,7 +1,7 @@
 package com.scan2play.model;
 
 /**
- * The music of a party, as the DJ sets it (or a guest picks it when the DJ leaves it to the guests, {@link #ANY}). Stored by name
+ * The music of a party, as the DJ sets it ({@link #ANY}: no genre — the AI judges by the DJ's vibe note alone). Stored by name
  * (a check constraint lists them, V16); the order is the order of the lists on the pages. Bachata, salsa and reggaeton are one
  * {@link #LATINO} since V16 — a DJ who wants only one of them says so in the party's vibe note.
  */

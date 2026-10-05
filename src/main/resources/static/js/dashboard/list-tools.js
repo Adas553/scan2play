@@ -11,8 +11,8 @@
  *   - The history table (loaded by AJAX in the History tab) gets its click handlers via initSortableHeaders()
  *
  * LONG LISTS — search, filter and "Show more"
- * A list is any element with data-list. Inside it: an input [data-list-search], buttons [data-list-filter="all" | "guest" |
- * "background" | "played" | "rejected"] (the chosen one has class "active"; the history only), a count [data-list-count] (its
+ * A list is any element with data-list. Inside it: an input [data-list-search], buttons [data-list-filter="all" | "played" |
+ * "rejected"] (the chosen one has class "active"; the history only), a count [data-list-count] (its
  * data-suffix is appended: the history's "+" says that older requests exist) and the rows tbody tr[data-song-name];
  * tr[data-nomatch] is the "nothing matches" row. The search hides rows (of what is loaded) with class d-none. The filter buttons
  * do not hide anything: the server reads the entries of the chosen kind, inside its bounded queries, so a filter reaches as far
