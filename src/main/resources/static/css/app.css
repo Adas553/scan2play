@@ -584,17 +584,21 @@ th[data-sort].sort-desc::after {
 .s2p-sorted .s2p-day-heading { display: none; }
 
 /* --- "Cofnij" after "Pomiń" (dashboard.html #undoSkip, forms.js): a bar at the bottom of the screen for a few seconds after a
-       skip, above the content and the phone's thumb area; [hidden] keeps it out of the way the rest of the time. --- */
+       skip, above the content and the phone's thumb area; [hidden] keeps it out of the way the rest of the time. Centred by
+       left + right + margin auto with a width of its content — not left: 50% + translate, which leaves it half the screen to
+       wrap in (2026-10-05, the owner's phone: the song one letter per line; phone.js skip-undo-phone). --- */
 .s2p-undo-toast {
     position: fixed;
-    left: 50%;
+    left: 1rem;
+    right: 1rem;
     bottom: 1rem;
-    transform: translateX(-50%);
+    margin-inline: auto;
+    width: fit-content;
     z-index: 1090;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    max-width: calc(100vw - 2rem);
+    gap: 0.75rem;
+    max-width: 36rem;
     padding: 0.6rem 0.8rem;
     background: #262626;
     color: var(--s2p-text);

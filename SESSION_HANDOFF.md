@@ -40,7 +40,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   party (`FirstLoginIT`, seen red: the UNIQUE owner_id); `AiHealthMonitor` writes "AI check: N of M guest requests … unchecked"
   to the log every 5 minutes while Gemini fails; a browser in English (or any language without a bundle) gets the English texts
   on a Polish server too (`spring.messages.fallback-to-system-locale=false` — no `messages_en` file needed: `messages.properties`
-  is the English one). Tests: 267 unit, 24 database (PostgreSQL 18), 25 browser scenarios.
+  is the English one). Tests: 267 unit, 24 database (PostgreSQL 18), 26 browser scenarios.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
   to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.
