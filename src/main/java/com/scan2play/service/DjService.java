@@ -2,6 +2,7 @@ package com.scan2play.service;
 
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.SongNames;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -39,9 +40,11 @@ public class DjService {
     /** The cache of a party's waiting requests, by party code (AppConfig: 3 s); evicted after a song leaves the queue. */
     public static final String QUEUE_CACHE = "dashboardQueue";
 
-    /** The note of a request the DJ skipped (dismissSong), in place of the AI's comment. */
+    /** The note of a request the DJ skipped (dismissSong), in place of the AI's comment; the skip itself is {@code skippedAt}. */
     static final String DJ_DISMISS_COMMENT = "Skipped by the DJ ⏭";
     static final String DJ_CLEAR_COMMENT = "Cleared by the DJ 🧹";
+    /** The note of a skipped request the DJ put back in the queue (restoreSkippedSong). */
+    static final String DJ_RESTORE_COMMENT = "Restored by the DJ ↩";
 
     private final SongRequestRepository songRequestRepository;
     private final CacheManager cacheManager;
@@ -132,10 +135,52 @@ public class DjService {
             }
             song.setDecision(DECISION_REJECTED);
             song.setDjComment(DJ_DISMISS_COMMENT);
+            song.setSkippedAt(Instant.now());
             songRequestRepository.save(song);
             evictDashboardQueueAfterCommit(song.getPartyCode());
             log.info("Song ID={} skipped by the DJ of party {}", id, song.getPartyCode());
         });
+    }
+
+    /**
+     * Undoes a skip ("Cofnij" right after it, "↩ Przywróć" in the history): the request the DJ skipped waits in the queue again, in
+     * its old place (by its request time), with its votes and the guest's words, and the song is no longer kept out of the queue.
+     * Only a request skipped by the DJ — not one the AI rejected, not one cleared with the queue — and only the DJ's own.
+     * <p>
+     * Under the party's lock of the guests' requests ({@code SongRequestCommandService}): when the same song waits in the queue
+     * already (asked for again once the skip was no longer remembered), nothing changes — the song is in the queue.
+     *
+     * @return whether the request went back to the queue
+     */
+    @Transactional
+    public boolean restoreSkippedSong(Long id, String ownerPartyCode) {
+        songRequestRepository.lockRequests(SongRequestCommandService.lockKey(ownerPartyCode));
+        SongRequestEntity song = songRequestRepository.findById(id).orElse(null);
+        if (song == null || !song.getPartyCode().equals(ownerPartyCode)) {
+            log.warn("Restore refused: DJ party {} asked for song {} (not theirs, or gone)", ownerPartyCode, id);
+            return false;
+        }
+        if (!DECISION_REJECTED.equals(song.getDecision()) || song.getSkippedAt() == null) {
+            return false;
+        }
+        boolean alreadyWaiting = getWaiting(ownerPartyCode).stream()
+                .anyMatch(waiting -> SongNames.same(waiting.getSongName(), song.getSongName()));
+        if (alreadyWaiting) {
+            log.info("Party [{}]: '{}' not restored — the same song waits already", ownerPartyCode, song.getSongName());
+            return false;
+        }
+        song.setDecision(DECISION_ACCEPTED);
+        song.setDjComment(DJ_RESTORE_COMMENT);
+        song.setSkippedAt(null);
+        songRequestRepository.save(song);
+        evictDashboardQueueAfterCommit(ownerPartyCode);
+        log.info("Song ID={} restored to the queue by the DJ of party {}", id, ownerPartyCode);
+        return true;
+    }
+
+    /** The party's waiting requests, read now (not through the 3 s cache of {@link #getDashboardQueue}). */
+    private List<SongRequestEntity> getWaiting(String partyCode) {
+        return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
     }
 
     /**

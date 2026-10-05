@@ -70,6 +70,6 @@ public class PlayHistoryService {
     private static HistoryEntry toEntry(SongRequestEntity song) {
         Instant at = song.getPlayedAt() != null ? song.getPlayedAt() : song.getRequestedAt();
         return new HistoryEntry(song.getId(), at, song.getSongName(), song.getTrackUrl(), song.getStyle(), song.getDecision(),
-                song.getDjComment(), song.getEnergyLevel(), song.getGuestText(), song.getVotes());
+                song.getDjComment(), song.getEnergyLevel(), song.getGuestText(), song.getVotes(), song.getSkippedAt());
     }
 }

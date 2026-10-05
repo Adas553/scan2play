@@ -17,9 +17,21 @@ import java.time.Instant;
  * @param guestText   what the guest typed (V14), always shown under {@code title} (the DJ checks the AI); {@code null} for a
  *                    request from before V14
  * @param votes       how many guests asked for the song (V15)
+ * @param skippedAt   when the DJ skipped it ("Pomiń", V20); {@code null} for every other entry
  */
 public record HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
-                           Integer energyLevel, String guestText, Integer votes) {
+                           Integer energyLevel, String guestText, Integer votes, Instant skippedAt) {
+
+    /** An entry the DJ did not skip. */
+    public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
+                        Integer energyLevel, String guestText, Integer votes) {
+        this(id, at, title, trackUrl, style, decision, djComment, energyLevel, guestText, votes, null);
+    }
+
+    /** Whether the DJ skipped this request — the history offers to put it back in the queue ("↩ Przywróć"). */
+    public boolean skippedByDj() {
+        return skippedAt != null && "rejected".equals(decision);
+    }
 
     /** An entry with the guest's words, one guest's: a request nobody else asked for. */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,

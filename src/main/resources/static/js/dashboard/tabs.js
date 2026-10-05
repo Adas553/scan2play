@@ -8,6 +8,7 @@
  * the page is not reloaded (the DJ keeps their place). The standalone history page does not
  * load this module: its tabs are plain links.
  */
+import { EVENTS, on } from './events.js';
 import { csrfHeaders, partyCode } from './common.js';
 import { captureListState, initSortableHeaders, restoreListState, setHistoryReloader } from './list-tools.js';
 
@@ -125,6 +126,11 @@ import { captureListState, initSortableHeaders, restoreListState, setHistoryRelo
         });
     }
     setHistoryReloader(reloadHistory);
+
+    // A skipped request put back in the queue ("Cofnij", "↩ Przywróć"): a history that has been loaded shows it no longer
+    on(EVENTS.HISTORY_CHANGED, function () {
+        if (historyContent.querySelector('[data-list]')) reloadHistory(null, null);
+    });
 
     // Panel: the top of the page. The list that shows stays as it is.
     links.panel.addEventListener('click', function(e) {

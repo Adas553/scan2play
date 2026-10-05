@@ -238,6 +238,9 @@ class DashboardPageRenderTest {
         assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">Pomiń<", "🔍 Podejrzyj",
                 "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
         assertThat(html).doesNotContain("Powered by YouTube", "🔍 YOUTUBE", "▶ YOUTUBE", "YouTube API Services");
+        // "Cofnij" after "Pomiń": a bar forms.js shows for a few seconds after a skip; hidden until then
+        assertThat(html).contains("id=\"undoSkip\"", "Pominięto:", "data-undo-button", ">Cofnij<");
+        assertThat(html.substring(html.indexOf("id=\"undoSkip\""), html.indexOf("data-undo-song"))).contains("hidden");
         write("dashboard.html", html);
     }
 

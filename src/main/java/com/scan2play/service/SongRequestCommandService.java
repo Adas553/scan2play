@@ -47,12 +47,13 @@ public class SongRequestCommandService {
     private static final long REQUESTS_LOCK_SPACE = 0x5332_5052L << 32;
 
     /**
-     * How long a song the DJ skipped stays out of the queue, counted from when it was asked for: one evening. A DJ keeps one
-     * party (one QR code) for every event, so a skip at last Saturday's wedding must not keep the song from the next one.
+     * How long a song the DJ skipped stays out of the queue, from the skip (the owner, 2026-10-05: 12 hours was too long — a skip
+     * by mistake can also be undone, "Cofnij" / "↩ Przywróć"). A DJ keeps one party (one QR code) for every event, so it never
+     * lasts beyond the evening.
      */
-    static final Duration SKIP_REMEMBERED = Duration.ofHours(12);
+    static final Duration SKIP_REMEMBERED = Duration.ofHours(2);
 
-    /** The most of the DJ's skips a request is compared with (a bounded read; an evening has far fewer). */
+    /** The most of the DJ's skips a request is compared with (a bounded read; two hours have far fewer). */
     private static final int SKIPS_READ = 100;
 
     private final SongRequestRepository songRequestRepository;
@@ -98,7 +99,7 @@ public class SongRequestCommandService {
 
     /** The song of the request, if the DJ skipped it within {@link #SKIP_REMEMBERED}: the same name ({@link SongNames#same}). */
     private Optional<SongRequestEntity> sameSongSkippedByTheDj(SongRequestEntity request) {
-        List<SongRequestEntity> skipped = songRequestRepository.findSkippedByTheDj(request.getPartyCode(), DjService.DJ_DISMISS_COMMENT,
+        List<SongRequestEntity> skipped = songRequestRepository.findSkippedByTheDj(request.getPartyCode(),
                 Instant.now().minus(SKIP_REMEMBERED), PageRequest.of(0, SKIPS_READ));
         return skipped.stream()
                 .filter(song -> SongNames.same(song.getSongName(), request.getSongName()))

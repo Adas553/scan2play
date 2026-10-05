@@ -4,8 +4,13 @@
  * CustomEvent on `document`; nobody listening is fine.
  */
 export const EVENTS = Object.freeze({
-    /** The DJ changed the guest queue here (a song played or skipped, the queue cleared). Dashboard: fetch the queue now, not in 3 s. */
-    GUEST_QUEUE_CHANGED: 's2p:guest-queue-changed'
+    /**
+     * The DJ changed the guest queue here (a song played, skipped or put back, the queue cleared). Dashboard: fetch the queue now,
+     * not in 3 s.
+     */
+    GUEST_QUEUE_CHANGED: 's2p:guest-queue-changed',
+    /** The DJ changed the history here (a skipped request put back in the queue). The History tab: fetch the list again. */
+    HISTORY_CHANGED: 's2p:history-changed'
 });
 
 export function emit(name, detail) {

@@ -61,6 +61,20 @@ public class DjSongController {
     }
 
     /**
+     * Puts a request the DJ skipped back in the queue ("Cofnij" right after the skip, "↩ Przywróć" in the history). Only the
+     * authenticated DJ's own party, only a skipped request ({@link DjService#restoreSkippedSong}).
+     *
+     * @param id The ID of the song request.
+     * @return Redirects back to the dashboard (the standalone history page's form lands there, with the song in the queue).
+     */
+    @PostMapping("/dashboard/restore")
+    public String restore(@RequestParam Long id, OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        djService.restoreSkippedSong(id, ownerPartyCode);
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
      * Clears the DJ's queue: every waiting request leaves it as rejected (it stays in the history). Only the authenticated DJ's own
      * party — the party code comes from the session, never from the form.
      *

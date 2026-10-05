@@ -36,6 +36,7 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
     @Autowired SongRequestCommandService commands;
     @Autowired JdbcTemplate jdbc;
     @Autowired SongRequestRepository requests;
+    @Autowired DjService dj;
     @Autowired PlatformTransactionManager transactions;
 
     private static SongRequestEntity request(String party, String name, String decision, String trackUrl) {
@@ -115,20 +116,22 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
     }
 
     /**
-     * Option A: a song the DJ skipped ("Pomiń") within an evening is not saved again — another guest's request for it does not put
-     * it back in the queue. A song only cleared with the whole queue, one skipped more than 12 hours ago, and one skipped at another
-     * party may be asked for again.
+     * Option A: a song the DJ skipped ("Pomiń") within the last two hours is not saved again — another guest's request for it does
+     * not put it back in the queue. Counted from the skip, not from the request: a song that waited three hours and was skipped now
+     * stays out. A song only cleared with the whole queue, one skipped more than two hours ago, and one skipped at another party may
+     * be asked for again.
      */
     @Test
     void aSongTheDjSkippedLately_isNotSavedAgain_aClearedOldOrOtherPartysOneIs() {
         String party = newPartyCode();
         Long wilki = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
-        Long kult = commands.saveOrVote(request(party, "Kult - Arahja", "accepted", LINK), Set.of()).request().getId();
         Long sanah = commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of()).request().getId();
-        jdbc.update("UPDATE song_requests SET decision = 'rejected', dj_comment = ? WHERE id = ?", DjService.DJ_DISMISS_COMMENT, wilki);
-        jdbc.update("UPDATE song_requests SET decision = 'rejected', dj_comment = ? WHERE id = ?", DjService.DJ_CLEAR_COMMENT, kult);
-        jdbc.update("UPDATE song_requests SET decision = 'rejected', dj_comment = ?, requested_at = now() - interval '13 hours' "
-                + "WHERE id = ?", DjService.DJ_DISMISS_COMMENT, sanah);
+        jdbc.update("UPDATE song_requests SET requested_at = now() - interval '3 hours' WHERE id = ?", wilki);
+        dj.dismissSong(wilki, party);
+        dj.dismissSong(sanah, party);
+        jdbc.update("UPDATE song_requests SET skipped_at = now() - interval '3 hours' WHERE id = ?", sanah);   // skipped long ago
+        commands.saveOrVote(request(party, "Kult - Arahja", "accepted", LINK), Set.of());
+        dj.clearQueue(party);
 
         SongRequestCommandService.Saved again = commands.saveOrVote(request(party, "wilki baśka", "accepted", LINK), Set.of());
         assertThat(again.outcome()).isEqualTo(Outcome.SKIPPED_BY_DJ);
@@ -139,8 +142,40 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
                 .isEqualTo(Outcome.NEW);
 
         assertThat(rows(party)).extracting(row -> row.get("song_name") + " " + row.get("decision"))
-                .containsExactly("Wilki - Baśka rejected", "Kult - Arahja rejected", "sanah - Szampan rejected",
+                .containsExactly("Wilki - Baśka rejected", "sanah - Szampan rejected", "Kult - Arahja rejected",
                         "Kult - Arahja accepted", "sanah - Szampan accepted");
+    }
+
+    /**
+     * "Cofnij" / "↩ Przywróć": a skipped request goes back to the queue, and the song is no longer kept out — the next guest's
+     * request for it is a vote on it. Not a request the AI rejected, not another party's, and not when the same song waits already.
+     */
+    @Test
+    void aSkippedRequestPutBack_waitsAgain_andTheNextRequestIsAVoteOnIt() {
+        String party = newPartyCode();
+        Long wilki = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
+        dj.dismissSong(wilki, party);
+
+        assertThat(dj.restoreSkippedSong(wilki, newPartyCode())).as("another party's DJ").isFalse();
+        assertThat(dj.restoreSkippedSong(wilki, party)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT decision || ' ' || (skipped_at IS NULL) FROM song_requests WHERE id = ?", String.class, wilki))
+                .isEqualTo("accepted true");
+        assertThat(commands.saveOrVote(request(party, "wilki baśka", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.VOTE);
+        assertThat(dj.restoreSkippedSong(wilki, party)).as("waiting already: nothing to put back").isFalse();
+
+        Long rejectedByTheAi = commands.saveOrVote(request(party, "Kult - Arahja", "rejected", null), Set.of()).request().getId();
+        assertThat(dj.restoreSkippedSong(rejectedByTheAi, party)).as("only the DJ's skips").isFalse();
+
+        // the same song asked for again once the skip was forgotten, then the old skipped request: the song waits already
+        Long sanah = commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of()).request().getId();
+        dj.dismissSong(sanah, party);
+        jdbc.update("UPDATE song_requests SET skipped_at = now() - interval '3 hours' WHERE id = ?", sanah);
+        commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of());
+        assertThat(dj.restoreSkippedSong(sanah, party)).isFalse();
+
+        assertThat(rows(party)).extracting(row -> row.get("song_name") + " " + row.get("decision") + " " + row.get("votes"))
+                .containsExactly("Wilki - Baśka accepted 2", "Kult - Arahja rejected 1", "sanah - Szampan rejected 1",
+                        "sanah - Szampan accepted 1");
     }
 
     /**

@@ -182,9 +182,55 @@ class DjServiceTest {
 
         assertThat(song.getDecision()).isEqualTo(DECISION_REJECTED);
         assertThat(song.getDjComment()).isEqualTo(DjService.DJ_DISMISS_COMMENT);
+        assertThat(song.getSkippedAt()).as("when it was skipped: the song stays out of the queue for a while from then")
+                .isCloseTo(java.time.Instant.now(), org.assertj.core.api.Assertions.within(5, java.time.temporal.ChronoUnit.SECONDS));
         assertThat(song.getPlayedAt()).isNull();
         verify(songRequestRepository).save(song);
         verify(queue).evict(PARTY_CODE);
+    }
+
+    // ---- restoreSkippedSong ("Cofnij", "↩ Przywróć") ----
+
+    @Test
+    void restoreSkippedSong_putsTheRequestBackInTheQueue_andForgetsTheSkip() {
+        SongRequestEntity song = SongRequestEntity.builder().id(5L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
+                .decision(DECISION_REJECTED).djComment(DjService.DJ_DISMISS_COMMENT).skippedAt(java.time.Instant.now()).votes(3).build();
+        when(songRequestRepository.findById(5L)).thenReturn(Optional.of(song));
+        Cache queue = mock(Cache.class);
+        when(cacheManager.getCache("dashboardQueue")).thenReturn(queue);
+
+        assertThat(djService.restoreSkippedSong(5L, PARTY_CODE)).isTrue();
+
+        assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(song.getSkippedAt()).isNull();
+        assertThat(song.getDjComment()).isEqualTo(DjService.DJ_RESTORE_COMMENT);
+        assertThat(song.getVotes()).as("the guests' votes stay").isEqualTo(3);
+        verify(songRequestRepository).lockRequests(SongRequestCommandService.lockKey(PARTY_CODE));
+        verify(songRequestRepository).save(song);
+        verify(queue).evict(PARTY_CODE);
+    }
+
+    @Test
+    void restoreSkippedSong_leavesAnotherPartysSong_aRejectionByTheAi_andASongThatWaitsAlready() {
+        SongRequestEntity foreign = SongRequestEntity.builder().id(6L).partyCode("OTHER").songName("A")
+                .decision(DECISION_REJECTED).skippedAt(java.time.Instant.now()).build();
+        SongRequestEntity byTheAi = SongRequestEntity.builder().id(7L).partyCode(PARTY_CODE).songName("B")
+                .decision(DECISION_REJECTED).djComment("Not tonight").build();
+        SongRequestEntity skipped = SongRequestEntity.builder().id(8L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
+                .decision(DECISION_REJECTED).skippedAt(java.time.Instant.now()).build();
+        when(songRequestRepository.findById(6L)).thenReturn(Optional.of(foreign));
+        when(songRequestRepository.findById(7L)).thenReturn(Optional.of(byTheAi));
+        when(songRequestRepository.findById(8L)).thenReturn(Optional.of(skipped));
+        when(songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
+                .thenReturn(List.of(SongRequestEntity.builder().id(9L).songName("wilki baśka").decision(DECISION_ACCEPTED).build()));
+
+        assertThat(djService.restoreSkippedSong(6L, PARTY_CODE)).isFalse();
+        assertThat(djService.restoreSkippedSong(7L, PARTY_CODE)).isFalse();
+        assertThat(djService.restoreSkippedSong(8L, PARTY_CODE)).isFalse();
+        assertThat(djService.restoreSkippedSong(99L, PARTY_CODE)).as("gone").isFalse();
+
+        assertThat(List.of(foreign, byTheAi, skipped)).extracting(SongRequestEntity::getDecision).containsOnly(DECISION_REJECTED);
+        verify(songRequestRepository, never()).save(any());
     }
 
     @Test

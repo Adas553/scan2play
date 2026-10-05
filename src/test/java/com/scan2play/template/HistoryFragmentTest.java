@@ -165,6 +165,20 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("a request the DJ skipped has \"↩ Przywróć\" (back to the queue); one the AI rejected, and one that played, have not")
+    void shouldOfferToRestoreOnlyWhatTheDjSkipped() {
+        java.time.Instant at = java.time.Instant.parse("2026-09-29T18:00:00Z");
+        HistoryEntry skipped = new HistoryEntry(41L, at, "Skipped", null, "Pop", "rejected", "Skipped by the DJ ⏭", 7, null, 2, at);
+        HistoryEntry byTheAi = new HistoryEntry(42L, at, "ByTheAi", null, "Pop", "rejected", "Not tonight", 7, null, 1);
+        String html = render(List.of(skipped, byTheAi, guest(43, "Played", "played")), false, Locale.forLanguageTag("pl"));
+
+        assertThat(html.split("action=\"/dj/dashboard/restore\"", -1)).as("one restore form").hasSize(2);
+        String row = html.substring(html.indexOf("data-song-name=\"Skipped\""));
+        assertThat(row.substring(0, row.indexOf("</tr>"))).contains("action=\"/dj/dashboard/restore\"",
+                "name=\"id\" value=\"41\"", "↩ Przywróć", "title=\"Z powrotem do kolejki — pominięte przez pomyłkę\"");
+    }
+
+    @Test
     @DisplayName("a song name is never rendered as HTML, not even inside an attribute (it comes from guests)")
     void shouldEscapeTheTitle() {
         String html = render(List.of(guest(1, "\"><script>alert(1)</script>", "played")), false, Locale.ENGLISH);

@@ -582,3 +582,24 @@ th[data-sort].sort-desc::after {
     border-bottom-color: #444 !important;
 }
 .s2p-sorted .s2p-day-heading { display: none; }
+
+/* --- "Cofnij" after "Pomiń" (dashboard.html #undoSkip, forms.js): a bar at the bottom of the screen for a few seconds after a
+       skip, above the content and the phone's thumb area; [hidden] keeps it out of the way the rest of the time. --- */
+.s2p-undo-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    z-index: 1090;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: calc(100vw - 2rem);
+    padding: 0.6rem 0.8rem;
+    background: #262626;
+    color: var(--s2p-text);
+    border: 1px solid #555;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+}
+.s2p-undo-toast[hidden] { display: none; }

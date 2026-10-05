@@ -33,13 +33,14 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   emoji; the cache names as constants; dead `authentication == null` branches and `REDIRECT_LOGIN` gone. Kept on purpose: the
   guest's own requests stay in the session (they outlive a deploy; two requests at the same moment may forget one — the form
   sends one at a time). Merged into `dev` (PR #5).
-- **After the review (2026-10-05, the owner's picks):** a song the DJ skipped ("Pomiń") within 12 hours is not saved again — the
-  next guest hears "Tej piosenki DJ dziś nie zagra — wybierz inną" (option A of three; a song only cleared with the queue may come
-  back); Gemini gets the schema of its answer (`ANSWER_SCHEMA`); a first login in several tabs at once gives every tab the one
+- **After the review (2026-10-05, the owner's picks), PR #8:** a song the DJ skipped ("Pomiń") is not saved again for 2 hours
+  from the skip (`skipped_at`, V20; the owner: 12 h was too long) — the next guest hears "Tej piosenki DJ teraz nie zagra —
+  wybierz inną" (option A of three; a song only cleared with the queue may come back); a skip by mistake is undone with "Cofnij"
+  (a bar for 8 s after the skip) or "↩ Przywróć" in the history (`POST /dj/dashboard/restore`); Gemini gets the schema of its answer (`ANSWER_SCHEMA`); a first login in several tabs at once gives every tab the one
   party (`FirstLoginIT`, seen red: the UNIQUE owner_id); `AiHealthMonitor` writes "AI check: N of M guest requests … unchecked"
   to the log every 5 minutes while Gemini fails; a browser in English (or any language without a bundle) gets the English texts
   on a Polish server too (`spring.messages.fallback-to-system-locale=false` — no `messages_en` file needed: `messages.properties`
-  is the English one). Tests: 264 unit, 23 database (PostgreSQL 18), 23 browser scenarios.
+  is the English one). Tests: 267 unit, 24 database (PostgreSQL 18), 25 browser scenarios.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
   to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.
@@ -54,7 +55,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 3. **Go-live** (the owner: no customers yet, so not now): the checklist of `PROJECT_CONTEXT.md` Section 10 — **V18 and V19 delete
    every party made in production before 2026-10-04** (April had only YouTube / Spotify parties): every DJ gets a new party with a
    new code, a printed QR code stops working. Then start the paused Postgres on Railway, back it up, `pg_dump --schema-only` compared
-   with `V1__baseline.sql`; `dev` → `main` (a fast-forward); watch the start log (Flyway V2..V19, Hibernate validation); Dependabot
+   with `V1__baseline.sql`; `dev` → `main` (a fast-forward); watch the start log (Flyway V2..V20, Hibernate validation); Dependabot
    switched on in GitHub; `CSP_ENFORCE=true` after a few quiet days.
 4. From `REVIEW.md`: what is left is 2.3 (one instance) and 7.x (small tidy-ups).
 

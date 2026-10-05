@@ -35,10 +35,20 @@ import { csrfHeaders, showPartyActive } from './common.js';
             headers: csrfHeaders(),
             body: new FormData(form),
             redirect: 'manual'
-        }).then(function() {
+        }).then(function(response) {
             // A song played or skipped, or the queue cleared: the queue is fetched now, so the rows go at once
             if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/clear-queue')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
+            }
+            // A skip that went through: "Cofnij" for a few seconds (the server answers with a redirect, read as opaqueredirect)
+            if (action.includes('/dashboard/dismiss') && accepted(response)) {
+                offerUndo(form);
+            }
+            // A skipped request put back from the history: it is in the queue again and no longer in the history
+            if (action.includes('/dashboard/restore')) {
+                emit(EVENTS.GUEST_QUEUE_CHANGED);
+                emit(EVENTS.HISTORY_CHANGED);
+                return;   // the history is fetched again: no button left to flash
             }
 
             // --- Party state toggle (end/start party) ---
@@ -63,6 +73,56 @@ import { csrfHeaders, showPartyActive } from './common.js';
         });
     });
 })();
+
+/** Whether the server took a form: it answers with a redirect to the dashboard (fetch with redirect: 'manual' sees opaqueredirect). */
+function accepted(response) {
+    return response.type === 'opaqueredirect' || response.ok;
+}
+
+// ==========================================================================
+// "COFNIJ" AFTER "POMIŃ"
+//
+// A skip by mistake (a thumb on a phone) is put right at once: for UNDO_MS a bar at the bottom of the screen names the song and
+// offers "Cofnij", which puts the request back in the queue (POST /dj/dashboard/restore). A later skip replaces the bar; after the
+// bar is gone the history still offers "↩ Przywróć".
+// ==========================================================================
+
+const UNDO_MS = 8000;
+let undoTimer = null;
+
+function offerUndo(form) {
+    const bar = document.getElementById('undoSkip');
+    const idInput = form.querySelector('input[name="id"]');
+    if (!bar || !idInput) return;
+    const row = form.closest('tr[data-song-name]');
+    bar.querySelector('[data-undo-song]').textContent = row ? row.getAttribute('data-song-name') : '';
+    bar.setAttribute('data-undo-id', idInput.value);
+    bar.hidden = false;
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(hideUndo, UNDO_MS);
+}
+
+function hideUndo() {
+    const bar = document.getElementById('undoSkip');
+    if (bar) bar.hidden = true;
+}
+
+const undoButton = document.querySelector('#undoSkip [data-undo-button]');
+if (undoButton) {
+    undoButton.addEventListener('click', function () {
+        const bar = document.getElementById('undoSkip');
+        const body = new FormData();
+        body.append('id', bar.getAttribute('data-undo-id'));
+        clearTimeout(undoTimer);
+        hideUndo();
+        fetch('/dj/dashboard/restore', { method: 'POST', headers: csrfHeaders(), body: body, redirect: 'manual' })
+            .then(function () {
+                emit(EVENTS.GUEST_QUEUE_CHANGED);
+                emit(EVENTS.HISTORY_CHANGED);
+            })
+            .catch(function (err) { console.error('[Dashboard] Undo error:', err); });
+    });
+}
 
 // A select that saves as soon as the DJ picks (the party's vibe): requestSubmit, so the form goes through the submit listener
 // above (fetch) — data-auto-submit instead of an inline onchange (CSP, review 5.1).

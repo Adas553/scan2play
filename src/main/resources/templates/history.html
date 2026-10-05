@@ -115,6 +115,15 @@
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}">
                     <span class="d-none d-md-inline" th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</span>
                     <span class="d-inline d-md-none s2p-decision-icon" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}"></span>
+                    <!--/* A request the DJ skipped ("Pomiń") can go back to the queue — a skip by mistake (DjService.restoreSkippedSong).
+                         In the History tab forms.js sends it in the background; on the standalone page it lands on the dashboard. */-->
+                    <form th:if="${req.skippedByDj()}" action="/dj/dashboard/restore" method="post" class="m-0 mt-1">
+                        <!--/* the CSRF field by hand: the fragment is rendered without a web context too (HistoryFragmentTest) */-->
+                        <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="hidden" name="id" th:value="${req.id}" />
+                        <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap" th:title="#{history.restore.title}"
+                                th:text="#{history.restore}">↩ Restore</button>
+                    </form>
                 </td>
                 <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap s2p-comment-cell" th:text="${req.djComment}">Comment</td>
                 <td class="d-none d-md-table-cell" data-sort-value="energy" th:attr="data-val=${req.energyLevel != null ? req.energyLevel : 0}">

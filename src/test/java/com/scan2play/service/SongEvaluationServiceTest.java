@@ -386,9 +386,8 @@ class SongEvaluationServiceTest {
     void aSongTheDjSkippedLately_isNotBackInTheQueue() {
         aParty(0);
         SongRequestEntity skipped = SongRequestEntity.builder().id(3L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
-                .decision("rejected").djComment(DjService.DJ_DISMISS_COMMENT).build();
-        when(songRequestRepository.findSkippedByTheDj(eq(PARTY_CODE), eq(DjService.DJ_DISMISS_COMMENT), any(), any()))
-                .thenReturn(List.of(skipped));
+                .decision("rejected").djComment(DjService.DJ_DISMISS_COMMENT).skippedAt(java.time.Instant.now()).build();
+        when(songRequestRepository.findSkippedByTheDj(eq(PARTY_CODE), any(), any())).thenReturn(List.of(skipped));
         when(messageSource.getMessage(eq("guest.skipped_by_dj"), any(), any(java.util.Locale.class))).thenReturn("Pick another one");
 
         DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baska", "ANY");
