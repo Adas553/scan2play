@@ -115,6 +115,35 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
     }
 
     /**
+     * Option A: a song the DJ skipped ("Pomiń") within an evening is not saved again — another guest's request for it does not put
+     * it back in the queue. A song only cleared with the whole queue, one skipped more than 12 hours ago, and one skipped at another
+     * party may be asked for again.
+     */
+    @Test
+    void aSongTheDjSkippedLately_isNotSavedAgain_aClearedOldOrOtherPartysOneIs() {
+        String party = newPartyCode();
+        Long wilki = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
+        Long kult = commands.saveOrVote(request(party, "Kult - Arahja", "accepted", LINK), Set.of()).request().getId();
+        Long sanah = commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of()).request().getId();
+        jdbc.update("UPDATE song_requests SET decision = 'rejected', dj_comment = ? WHERE id = ?", DjService.DJ_DISMISS_COMMENT, wilki);
+        jdbc.update("UPDATE song_requests SET decision = 'rejected', dj_comment = ? WHERE id = ?", DjService.DJ_CLEAR_COMMENT, kult);
+        jdbc.update("UPDATE song_requests SET decision = 'rejected', dj_comment = ?, requested_at = now() - interval '13 hours' "
+                + "WHERE id = ?", DjService.DJ_DISMISS_COMMENT, sanah);
+
+        SongRequestCommandService.Saved again = commands.saveOrVote(request(party, "wilki baśka", "accepted", LINK), Set.of());
+        assertThat(again.outcome()).isEqualTo(Outcome.SKIPPED_BY_DJ);
+        assertThat(again.request().getId()).isEqualTo(wilki);
+        assertThat(commands.saveOrVote(request(party, "Kult - Arahja", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.NEW);
+        assertThat(commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.NEW);
+        assertThat(commands.saveOrVote(request(newPartyCode(), "Wilki - Baśka", "accepted", LINK), Set.of()).outcome())
+                .isEqualTo(Outcome.NEW);
+
+        assertThat(rows(party)).extracting(row -> row.get("song_name") + " " + row.get("decision"))
+                .containsExactly("Wilki - Baśka rejected", "Kult - Arahja rejected", "sanah - Szampan rejected",
+                        "Kult - Arahja accepted", "sanah - Szampan accepted");
+    }
+
+    /**
      * The DJ marks a song played (DjService: read the row, change it, save it) while a guest's vote on it commits in between: the
      * DJ's save writes only what it changed, so the vote stays — it once wrote the whole row back, votes as read before the vote.
      */

@@ -92,7 +92,11 @@ back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests
 guest hears the verdict the song was taken with (the AI does not judge a song the same way every time — 2026-10-04, a song accepted
 once, then rejected four times while it waited); any other rejected request is its own row. The AI's duplicate rule lists only
 PLAYED songs, the latest to play first (`findRecentlyPlayed`; a waiting one is a vote). `SongRequestEntity` is `@DynamicUpdate`: the
-DJ's "played" / "skip" writes only the columns it changed, so a vote that commits meanwhile is kept (`SongRequestVotesIT`). The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
+DJ's "played" / "skip" writes only the columns it changed, so a vote that commits meanwhile is kept (`SongRequestVotesIT`). **A song
+the DJ skipped** ("Pomiń" — usually "I do not have it") within 12 hours of its request is not saved again: the next guest who asks
+for it hears `guest.skipped_by_dj` ("Tej piosenki DJ dziś nie zagra — wybierz inną"), nothing reaches the queue (`Outcome.SKIPPED_BY_DJ`,
+`findSkippedByTheDj` — the skipped rows are the ones with the DJ's note `DjService.DJ_DISMISS_COMMENT`; 12 h because one party, one
+QR code, serves every event of the DJ). A song only cleared with the whole queue may be asked for again. The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
 party's ranking); the guest page lists "🔥 Najwięcej głosów" — up to 3 waiting songs with more than one vote — and the result page
 says "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N".
@@ -199,7 +203,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), account deletion |
 | `DjSongController` | mark played, skip, clear the queue |
-| `DjSessionHelper` | the party of the logged-in DJ (cached in the session) and **`validateOwnership`** (IDOR) |
+| `DjSessionHelper` | the party of the logged-in DJ (cached in the session; made on the first login — tabs that make it at once look again, `FirstLoginIT`) and **`validateOwnership`** (IDOR) |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation) |
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
@@ -220,6 +224,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `QrCodeService` | QR codes (ZXing, cached) |
 | `AccountDeletionService` | deletes all of a DJ's data and evicts the caches after the commit |
 | `SongRequestRetentionService` | the nightly purge of song requests (Section 4.1) |
+| `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …" |
 
 ### 6.3 Configuration
 
@@ -260,13 +265,15 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 - Evaluates guests' requests. Model `gemini-2.5-flash` (pinned; env `GOOGLE_AI_MODEL`); a request may think up to
   `google.ai.thinking-budget` tokens (1024). Timeout 10 s per call.
-- The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`; JSON mode without a schema, so
-  a field the app does not know is ignored, and a decision other than `accepted` in any case is `rejected` — the queue matches
-  `'accepted'` exactly). A request may be a title, an
+- The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`) of a given shape
+  (`SongEvaluationService.ANSWER_SCHEMA`: every field required, `decision` only `accepted` / `rejected`, `requestKind` only title /
+  artist / lyrics / mood); read defensively anyway — a field the app does not know is ignored, and a decision other than
+  `accepted` in any case is `rejected` (the queue matches `'accepted'` exactly). A request may be a title, an
   artist or a line of lyrics; never replace it by another song; not knowing a song (a new one) is no reason to reject it; a mood or
   an occasion is `requestKind` `mood` (sent back to the guest); on a rejection `songName` is what the guest asked for (the code also
   falls back to the guest's text).
-- AI down → the request goes to the DJ unchecked (Section 5.1; no retry). Duplicates: the last `duplicateCheckWindow` played songs go
+- AI down → the request goes to the DJ unchecked (Section 5.1; no retry), and the log says so every 5 minutes while it lasts
+  (`AiHealthMonitor`: search the log for "AI check"). Duplicates: the last `duplicateCheckWindow` played songs go
   into the prompt (a waiting song asked for again is a vote, not a duplicate).
 
 ### 7.2 (Spotify — removed 2026-10-04)
@@ -441,18 +448,20 @@ GuestQueueService          → DjService
 
 ### Front end
 - Polling every 3 s (ETag / 304), no WebSockets; a hidden window rests until it is shown (review 3.4).
-- `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`). There is no
-  `messages_en`: a browser in a language without a bundle gets the bundle of the JVM's own locale (Polish on a Polish machine).
+- `<html lang>` follows the bundle that wrote the texts (`th:lang="#{html.lang}"`; `HtmlLangDeclarationTest`). The English texts are
+  `messages.properties` itself: a browser in any language without a bundle (English, German…) gets them, whatever the server's own
+  language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 258. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 264. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest` with the real
   security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 21 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 23 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT`, `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
-  `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played); with a database of their own, migrated to the version before and given rows the old
+  `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played; a song the DJ skipped), `FirstLoginIT` (a
+  first login in eight tabs at once — one party); with a database of their own, migrated to the version before and given rows the old
   way: `TimestampMigrationIT` (V12 — the same moments; red when the old values are read as UTC), `VibeMigrationIT` (V16),
   `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT` (V19: the YouTube parties go with their data, a requests-only party
   stays). New SQL that locks or counts gets a test there.
@@ -467,7 +476,8 @@ GuestQueueService          → DjService
   branch `main` and needs "Dependabot alerts" and "security updates" switched on in the repository's settings.
 
 ### AI
-- No retry when Gemini is down (the request goes to the DJ unchecked); no check that a song exists.
+- No retry when Gemini is down (the request goes to the DJ unchecked; `AiHealthMonitor` writes it to the log); no check that a song
+  exists.
 
 ---
 

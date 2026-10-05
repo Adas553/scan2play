@@ -27,6 +27,16 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     List<SongRequestEntity> findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(String partyCode, Collection<String> decisions);
 
     /**
+     * The party's requests the DJ skipped ("Pomiń": rejected, with the DJ's note {@code comment}) that were asked for after
+     * {@code since}, the latest first — a request for one of them again does not come back to the DJ's queue
+     * ({@code SongRequestCommandService}). Bounded by the pageable; {@code idx_party_decision_time} covers the filter.
+     */
+    @Query("SELECT s FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision = 'rejected' AND s.djComment = :comment "
+            + "AND s.requestedAt > :since ORDER BY s.requestedAt DESC")
+    List<SongRequestEntity> findSkippedByTheDj(@Param("partyCode") String partyCode, @Param("comment") String comment,
+                                               @Param("since") Instant since, Pageable pageable);
+
+    /**
      * The party's songs that played most recently — the ones the AI must not accept again (its duplicate rule). By the moment they
      * played, not when they were asked for: a song asked for early and played just now is one of the last. A song played before
      * V6 (no {@code played_at}) counts by its request time, as in the history.
