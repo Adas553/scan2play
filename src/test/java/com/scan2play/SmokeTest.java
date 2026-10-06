@@ -214,4 +214,16 @@ class SmokeTest {
                     perNetworkWindowMinutes + (language.equals("pl") ? " minut po ostatniej prośbie" : " minutes after the last request"));
         }
     }
+
+    @Test
+    @DisplayName("The privacy policy, in both languages, names the DJ's notifications: the push services that deliver them, encrypted")
+    void privacyPolicy_namesThePushServicesOfTheNotifications() throws Exception {
+        for (String language : new String[] {"en", "pl"}) {
+            String html = mockMvc.perform(get("/privacy").header("Accept-Language", language))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+            assertThat(html).as(language).contains("Google, Apple, Mozilla",
+                    language.equals("pl") ? "zaszyfrowana od końca do końca" : "end-to-end encrypted");
+        }
+    }
 }

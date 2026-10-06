@@ -61,6 +61,9 @@ public class SecurityConfig {
                         .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()
                         // The landing page's button (and the old tile links /start/{kind}): Google's login (HomeController.start)
                         .requestMatchers("/start/**").permitAll()
+                        // The web app's manifest and the service worker of the notifications: a browser fetches them without
+                        // the login cookie (the manifest), or before any page asks (an update of the worker)
+                        .requestMatchers("/manifest.webmanifest", "/sw.js").permitAll()
                         // The browsers' reports of the Content-Security-Policy
                         .requestMatchers("/csp-report").permitAll()
                         // Legal pages (Privacy Policy, Terms of Service)

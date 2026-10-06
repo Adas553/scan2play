@@ -6,6 +6,7 @@ import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
+import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.QrCodeService;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,6 +49,7 @@ public class DjDashboardController {
     private final DjSessionHelper sessionHelper;
     private final PlayHistoryService playHistoryService;
     private final GuestRequestLimiter guestRequestLimiter;
+    private final PushNotificationService pushNotificationService;
 
     /**
      * On every answer of the queue poll, 304 too: the limits that stop guest songs now, comma-separated —
@@ -119,6 +121,9 @@ public class DjDashboardController {
         model.addAttribute(PARTY_REQUESTS_USED, guestRequestLimiter.partyRequestsUsed(partyCode));
         model.addAttribute(BUSIEST_NETWORK_REQUESTS_USED, guestRequestLimiter.busiestClientRequestsUsed(partyCode));
         model.addAttribute(PARTY_LIMIT_REACHED, guestRequestLimiter.isPartyLimitReached(partyCode));
+
+        // --- Notifications on the DJ's devices (offered only when the server has the keys) ---
+        model.addAttribute(PUSH_PUBLIC_KEY, pushNotificationService.publicKey());
 
         // --- QR Code ---
         String guestUrl = guestUrl(partyCode);

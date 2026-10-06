@@ -7,6 +7,7 @@ import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
+import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -73,7 +74,8 @@ class QrPrintPageTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.getPartySettings(any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""));
+                new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
+                mock(PushNotificationService.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "https://www.scan2play.com.pl/");
         controller.init();
 

@@ -55,6 +55,12 @@
 			<artifactId>google-genai</artifactId>
 			<version>1.38.0</version>
 		</dependency>
+		<!-- Web Push to the DJ's devices (VAPID, aes128gcm): no dependencies of its own; sends with the JDK's HttpClient -->
+		<dependency>
+			<groupId>com.zerodeplibs</groupId>
+			<artifactId>zerodep-web-push-java</artifactId>
+			<version>2.1.5</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>

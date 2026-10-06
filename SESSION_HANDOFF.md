@@ -50,6 +50,14 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   the cost: an app that woke before its database failed once and was restarted by Railway, and one request at 16:04 got an error
   page when the sleeping database dropped its connection. Before real customers: switch the database's sleep off (or at least
   `spring.flyway.connect-retries` for the start).
+- **Notifications on the DJ's devices (2026-10-06, the owner's request; not deployed yet):** a switch "🔔 Powiadomienia na tym
+  urządzeniu" per browser (the owner: a checkbox for the DJ); a **new** song on the list (not a vote) vibrates the DJ's phone with
+  "🎵 Nowa prośba — <song>" (the owner's picks: new songs only, the title on the lock screen); several fold into "🎵 Nowe prośby: 3".
+  Web Push (`PushNotificationService`, `zerodep-web-push-java`), **V21** `push_subscription`, `/sw.js`, the web app manifest and its
+  icons (an iPhone takes notifications only from the dashboard added to the Home Screen, iOS 16.4+ — the switch says so), the privacy
+  policy PL / EN. Tests: 287 unit, 27 database, 31 browser (5 new scenarios, seen red on a broken `push.js`); the app started locally
+  with test keys (V21 applied, the manifest typed, `/sw.js` public, `/dj/push/*` behind the login and CSRF). **Not checked: a real
+  delivery to a phone** (no push service reachable from the session) — needs the keys on Railway and a try on Android and an iPhone.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
   to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.
@@ -67,8 +75,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    Instagram / Facebook / a website; maybe on the QR print too; a candidate "premium" feature).
 3. **Ideas, only if the DJs ask:** the DJ's library (an export from rekordbox / Serato / M3U) → "✓ you have it" beside each request,
    a lyric matched to the version the DJ has, "the DJ does not have it" at once, a list of what guests asked for and the DJ lacks;
-   **notifications on the DJ's phone** — a PWA with Web Push first (Android works fully; an iPhone only after "Add to Home Screen",
-   iOS 16.4+; delivery is best effort, so a nudge, the dashboard stays the truth), a store app only if that is not enough. Other
+   (notifications on the DJ's phone: built 2026-10-06, see Start here — a store app only if Web Push is not enough). Other
    ideas raised: a "do not play" list of the couple / the DJ checked before the AI; a link for the couple to fill in their
    must-play / do-not-play list and the vibe before the wedding; parties planned ahead (several, each with its own QR code).
    Decided against (2026-10-03): "play later" without rejecting; a sound / a count in the tab title on a new request.
@@ -83,6 +90,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    log warns about).
 
 ## Waiting for the owner (not code)
+
+- **The notifications' keys:** run `VapidKeyGenerator` (`src/test/java/com/scan2play`, IntelliJ's green arrow) once, put its two lines
+  `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` on Railway (and in IntelliJ's run configuration for a local try) — secrets, never in the
+  repo or a chat; then switch the notifications on on an Android phone and on an iPhone (from the Home Screen) and send a request.
 
 - **YouTube API key:** delete the key **"Klucz API 2"** in Google Cloud Console and the variable **`YOUTUBE_API_KEY`** in IntelliJ's
   run configuration (Railway: done 2026-10-06).

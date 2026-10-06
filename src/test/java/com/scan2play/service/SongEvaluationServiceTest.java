@@ -24,6 +24,7 @@ import java.util.Set;
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,6 +45,8 @@ class SongEvaluationServiceTest {
     private PartySettingsQueryService partySettingsQueryService;
     @Mock
     private MessageSource messageSource;
+    @Mock
+    private PushNotificationService pushNotifications;
 
     private SongEvaluationService service;
     private final AiHealthMonitor aiHealth = new AiHealthMonitor();
@@ -52,7 +55,7 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository), aiHealth);
+                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications);
         service.init();
     }
 
@@ -136,7 +139,7 @@ class SongEvaluationServiceTest {
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, new DefaultResourceLoader(),
-                new SongRequestCommandService(songRequestRepository), aiHealth) {
+                new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -200,6 +203,27 @@ class SongEvaluationServiceTest {
     }
 
     @Test
+    void aNewSongOnTheList_tellsTheDjsDevices_withTheAisName() {
+        aParty(0).setOwnerId("dj-1");
+        savesWithId();
+
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "baska wilki", "ANY");
+
+        verify(pushNotifications).notifyNewRequest("dj-1", PARTY_CODE, "Wilki - Baśka");
+    }
+
+    @Test
+    void aRejectedRequest_tellsTheDjNothing() {
+        aParty(0).setOwnerId("dj-1");
+        savesWithId();
+
+        answering("{\"decision\":\"rejected\",\"comment\":\"Nie dziś\",\"songName\":\"X - Y\",\"energyLevel\":0}")
+                .evaluateAndSaveSong(PARTY_CODE, "x y", "ANY");
+
+        verify(pushNotifications, never()).notifyNewRequest(anyString(), anyString(), anyString());
+    }
+
+    @Test
     void anAcceptedLineOfLyrics_isLinkedByTheGuestsWords() {
         aParty(0);
         ArgumentCaptor<SongRequestEntity> saved = savesWithId();
@@ -250,6 +274,7 @@ class SongEvaluationServiceTest {
         assertThat(response.votes()).isEqualTo(3);
         assertThat(response.requestId()).as("the waiting song's id: the guest's page marks it as theirs").isEqualTo(5L);
         verify(songRequestRepository, never()).save(any());
+        verify(pushNotifications, never()).notifyNewRequest(any(), any(), any());   // a vote is not news
     }
 
     @Test

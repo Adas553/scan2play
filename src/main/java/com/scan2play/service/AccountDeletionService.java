@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.repository.PushSubscriptionRepository;
 import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,11 +35,12 @@ public class AccountDeletionService {
     private final PartySettingsRepository partySettingsRepository;
     private final SongRequestRepository songRequestRepository;
     private final FeedbackRepository feedbackRepository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
     private final CacheManager cacheManager;
 
     /**
      * Deletes all data associated with the given DJ (owner).
-     * This includes: song requests, feedback, and party settings.
+     * This includes: song requests, feedback, party settings and the devices that took notifications.
      *
      * @param ownerId The OAuth2 owner ID (the Google subject).
      */
@@ -67,6 +69,9 @@ public class AccountDeletionService {
         // 4. Delete all feedback from this owner
         feedbackRepository.deleteByOwnerId(ownerId);
         log.info("Deleted feedback for ownerId={}", ownerId);
+
+        // 5. The devices that took notifications of new requests
+        pushSubscriptionRepository.deleteByOwnerId(ownerId);
 
         log.info("Account deletion completed for ownerId={}", ownerId);
     }

@@ -56,6 +56,7 @@ def default_state():
         # The X-Party-Active header of every poll answer: false = the DJ ended the party (in any window)
         'partyActive': True,
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
+        'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'requests': [],
     }
 
@@ -187,11 +188,13 @@ class Handler(BaseHTTPRequestHandler):
 
     @staticmethod
     def _fields(query, body, content_type):
-        """Query and form fields (urlencoded, or multipart as FormData sends them) as one dict; the last value wins."""
+        """Query and form fields (urlencoded, multipart as FormData sends them, or a JSON object) as one dict; the last value wins."""
         fields = {k: v[-1] for k, v in query.items()}
         content_type = content_type or ''
         if body and 'application/x-www-form-urlencoded' in content_type:
             fields.update({k: v[-1] for k, v in parse_qs(body.decode('utf-8')).items()})
+        elif body and 'application/json' in content_type:   # the switch of notifications sends the browser's subscription as JSON
+            fields.update(json.loads(body.decode('utf-8')))
         elif body and 'multipart/form-data' in content_type:
             message = BytesParser(policy=HTTP).parsebytes(b'Content-Type: ' + content_type.encode('ascii') + b'\r\n\r\n' + body)
             for part in message.iter_parts():
@@ -304,6 +307,10 @@ class Handler(BaseHTTPRequestHandler):
             with stand.lock:
                 state['queue'] = []
             return self._json({})
+        if path == '/dj/push/subscribe':               # the browser's subscription to notifications (push.js)
+            return self._send(state.get('pushStatus', 204))
+        if path == '/dj/push/unsubscribe':
+            return self._send(204)
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/vibe-note', '/dj/dashboard/dj-name',
                     '/dj/end-party', '/dj/start-party'):
             return self._json({})

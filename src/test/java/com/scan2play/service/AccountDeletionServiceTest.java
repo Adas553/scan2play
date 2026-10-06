@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.repository.PushSubscriptionRepository;
 import com.scan2play.repository.SongRequestRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,8 @@ class AccountDeletionServiceTest {
     @Mock
     private FeedbackRepository feedbackRepository;
     @Mock
+    private PushSubscriptionRepository pushSubscriptionRepository;
+    @Mock
     private CacheManager cacheManager;
     @Mock
     private Cache cache;
@@ -48,7 +51,7 @@ class AccountDeletionServiceTest {
     private AccountDeletionService service;
 
     @Test
-    @DisplayName("deletes song requests, party settings and feedback — settings last")
+    @DisplayName("deletes song requests, party settings, feedback and the devices of the notifications — settings after the requests")
     void shouldDeleteAllPartyData() {
         PartySettingsEntity party = PartySettingsEntity.builder().ownerId(OWNER).partyCode(PARTY).build();
         when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.of(party));
@@ -59,6 +62,7 @@ class AccountDeletionServiceTest {
         order.verify(songRequestRepository).deleteByPartyCode(PARTY);
         order.verify(partySettingsRepository).delete(party);
         order.verify(feedbackRepository).deleteByOwnerId(OWNER);
+        verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
     }
 
     @Test
@@ -82,6 +86,7 @@ class AccountDeletionServiceTest {
         service.deleteAllUserData(OWNER);
 
         verify(feedbackRepository).deleteByOwnerId(OWNER);
+        verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
         verifyNoInteractions(songRequestRepository, cacheManager);
     }
 }

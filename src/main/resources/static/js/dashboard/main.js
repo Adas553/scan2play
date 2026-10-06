@@ -8,6 +8,7 @@
  *   tabs.js            Panel / Queue / History, the History tab loaded in place
  *   polling.js         the guest queue every 3 s, the server's guest limits
  *   settings-toggle.js on a phone: the settings folded under one button
+ *   push.js            "🔔 Notifications on this device" (Web Push)
  *
  * Dependencies (DOM): <meta name="_csrf">, <meta name="_csrf_header">, <input id="partyCode">, <tbody id="song-list">,
  * <div id="queue-content">, <div id="history-content">.
@@ -17,3 +18,4 @@ import './forms.js';
 import './tabs.js';
 import './polling.js';
 import './settings-toggle.js';
+import './push.js';
