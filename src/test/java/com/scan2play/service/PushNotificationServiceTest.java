@@ -98,6 +98,36 @@ class PushNotificationServiceTest {
     }
 
     @Test
+    void keysAsTheyArePasted_areRead_whateverTheCopyBroughtAlong() {
+        // base64 with its "=" padding, the variable's name in front, quotes, a line break in the middle (a terminal's wrap)
+        String paddedPrivate = Base64.getEncoder().encodeToString(Base64.getDecoder().decode(serverPrivateKey));
+        String messyPrivate = "\"VAPID_PRIVATE_KEY=" + paddedPrivate.substring(0, 40) + "\n" + paddedPrivate.substring(40) + "\" ";
+        String paddedPublic = " " + serverPublicKey + "=\t";
+
+        PushNotificationService push = service(paddedPublic, messyPrivate.replace("\"VAPID_PRIVATE_KEY=", "VAPID_PRIVATE_KEY=\""));
+
+        assertThat(push.isEnabled()).isTrue();
+        assertThat(push.publicKey()).as("one spelling for the browser").isEqualTo(serverPublicKey);
+    }
+
+    @Test
+    void aKeyWithACharacterLost_isNamedInTheLog_andTheNotificationsAreOff() {
+        assertThat(PushNotificationService.keyBytes("VAPID_PRIVATE_KEY", serverPrivateKey.substring(1), 0)).isNull();
+        assertThat(PushNotificationService.keyBytes("VAPID_PUBLIC_KEY", serverPublicKey.substring(4), 65)).as("too short").isNull();
+        assertThat(service(serverPublicKey, serverPrivateKey.substring(1)).isEnabled()).isFalse();
+    }
+
+    @Test
+    void theTwoKeys_mustBeOnePair() throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+        generator.initialize(new ECGenParameterSpec("secp256r1"));
+        String otherPublic = VapidKeyGenerator.publicKeyBase64Url((ECPublicKey) generator.generateKeyPair().getPublic());
+
+        // zerodep checks the pair when it is made: a public key of another pair is refused
+        assertThat(service(otherPublic, serverPrivateKey).isEnabled()).isFalse();
+    }
+
+    @Test
     void everyDeviceOfTheDj_getsAnEncryptedMessage_atItsPushService() throws Exception {
         when(repository.findTop20ByOwnerIdOrderByCreatedAtDesc(OWNER)).thenReturn(List.of(
                 device("https://fcm.googleapis.com/fcm/send/abc", "pl"),

@@ -19,6 +19,13 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -56,6 +63,9 @@ public class PushNotificationService {
     /** Notifications waiting to be sent; more are dropped (logged) rather than held in memory. */
     private static final int SEND_QUEUE = 200;
 
+    /** A P-256 public key as an uncompressed point: 0x04, x, y. */
+    private static final int PUBLIC_KEY_BYTES = 65;
+
     /** Where a tap on the notification leads. */
     static final String DASHBOARD_URL = "/dj/dashboard";
 
@@ -88,24 +98,81 @@ public class PushNotificationService {
         this.subject = subject;
         this.httpClient = httpClient;
         this.sender = sender;
-        this.keyPair = keyPair(publicKey, privateKey);
-        this.publicKey = keyPair == null ? null : publicKey.trim();
+        byte[] publicBytes = keyBytes("VAPID_PUBLIC_KEY", publicKey, PUBLIC_KEY_BYTES);
+        this.keyPair = keyPair(publicBytes, keyBytes("VAPID_PRIVATE_KEY", privateKey, 0));
+        // The browser's applicationServerKey in one spelling, whatever the variable held
+        this.publicKey = keyPair == null ? null : Base64.getUrlEncoder().withoutPadding().encodeToString(publicBytes);
     }
 
-    private static VAPIDKeyPair keyPair(String publicKey, String privateKey) {
-        if (publicKey == null || publicKey.isBlank() || privateKey == null || privateKey.isBlank()) {
-            log.info("Push notifications off: VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set");
+    private static VAPIDKeyPair keyPair(byte[] publicKey, byte[] privateKey) {
+        if (publicKey == null || privateKey == null) {
             return null;
         }
         try {
-            VAPIDKeyPair pair = VAPIDKeyPairs.of(
-                    PrivateKeySources.ofPKCS8Bytes(Base64.getDecoder().decode(privateKey.trim())),
-                    PublicKeySources.ofUncompressedBytes(Base64.getUrlDecoder().decode(publicKey.trim())));
+            VAPIDKeyPair pair = VAPIDKeyPairs.of(PrivateKeySources.ofPKCS8Bytes(privateKey), PublicKeySources.ofUncompressedBytes(publicKey));
+            if (!onePair(privateKey, publicKey)) {
+                // The push services would refuse every message (403) — say it now, not with each request
+                log.error("Push notifications off: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are not one pair — copy both from one run of VapidKeyGenerator");
+                return null;
+            }
             log.info("Push notifications on");
             return pair;
         } catch (RuntimeException e) {
             // Not a reason to keep the guests' requests from working: the switch is just not offered
-            log.error("Push notifications off: the VAPID keys are not valid ({})", e.getMessage());
+            log.error("Push notifications off: VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY are not a key pair ({})", e.getMessage());
+            return null;
+        }
+    }
+
+    /** Whether the public key verifies what the private key signs (zerodep does not check that the two belong together). */
+    private static boolean onePair(byte[] privateKey, byte[] publicKey) {
+        try {
+            KeyFactory keys = KeyFactory.getInstance("EC");
+            PrivateKey signer = keys.generatePrivate(new PKCS8EncodedKeySpec(privateKey));
+            ECPublicKey verifier = PublicKeySources.ofUncompressedBytes(publicKey).extract();
+            byte[] probe = "scan2play-vapid-pair".getBytes(StandardCharsets.UTF_8);
+            Signature sign = Signature.getInstance("SHA256withECDSA");
+            sign.initSign(signer);
+            sign.update(probe);
+            byte[] signature = sign.sign();
+            Signature verify = Signature.getInstance("SHA256withECDSA");
+            verify.initVerify(verifier);
+            verify.update(probe);
+            return verify.verify(signature);
+        } catch (GeneralSecurityException e) {
+            return false;
+        }
+    }
+
+    /**
+     * The bytes of a key as it was pasted into a variable: base64 or base64url, with or without the padding "=", and forgiving what
+     * a copy brings along — spaces and line breaks, quotes around it, the variable's own name in front ("VAPID_PUBLIC_KEY=…").
+     * Null (logged, without the key itself) when it is not set or does not read as {@code expectedBytes} bytes; 0 = any length.
+     */
+    static byte[] keyBytes(String name, String value, int expectedBytes) {
+        if (value == null || value.isBlank()) {
+            log.info("Push notifications off: {} not set", name);
+            return null;
+        }
+        String text = value.strip();
+        if (text.startsWith(name + "=")) {
+            text = text.substring(name.length() + 1);
+        }
+        text = text.replaceAll("[\\s\"']", "").replace('+', '-').replace('/', '_');
+        while (text.endsWith("=")) {
+            text = text.substring(0, text.length() - 1);
+        }
+        try {
+            byte[] bytes = Base64.getUrlDecoder().decode(text);
+            if (expectedBytes > 0 && bytes.length != expectedBytes) {
+                log.error("Push notifications off: {} is {} bytes, not {} — copy the whole line VapidKeyGenerator printed",
+                        name, bytes.length, expectedBytes);
+                return null;
+            }
+            return bytes;
+        } catch (IllegalArgumentException e) {
+            log.error("Push notifications off: {} is not base64 ({} characters: a character lost or added in the copy?)",
+                    name, text.length());
             return null;
         }
     }

@@ -23,7 +23,8 @@ public final class VapidKeyGenerator {
         generator.initialize(new ECGenParameterSpec("secp256r1"));
         KeyPair pair = generator.generateKeyPair();
         System.out.println("VAPID_PUBLIC_KEY=" + publicKeyBase64Url((ECPublicKey) pair.getPublic()));
-        System.out.println("VAPID_PRIVATE_KEY=" + Base64.getEncoder().encodeToString(pair.getPrivate().getEncoded()));
+        // base64url without "=": nothing at the end of the line to lose when it is pasted as NAME=value
+        System.out.println("VAPID_PRIVATE_KEY=" + Base64.getUrlEncoder().withoutPadding().encodeToString(pair.getPrivate().getEncoded()));
     }
 
     /** The uncompressed point (0x04 ‖ x ‖ y, 65 bytes), base64url without padding: the browser's applicationServerKey. */
