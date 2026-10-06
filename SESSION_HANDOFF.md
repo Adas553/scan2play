@@ -55,9 +55,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   "🎵 Nowa prośba — <song>" (the owner's picks: new songs only, the title on the lock screen); several fold into "🎵 Nowe prośby: 3".
   Web Push (`PushNotificationService`, `zerodep-web-push-java`), **V21** `push_subscription`, `/sw.js`, the web app manifest and its
   icons (an iPhone takes notifications only from the dashboard added to the Home Screen, iOS 16.4+ — the switch says so), the privacy
-  policy PL / EN. Tests: 287 unit, 27 database, 31 browser (5 new scenarios, seen red on a broken `push.js`); the app started locally
-  with test keys (V21 applied, the manifest typed, `/sw.js` public, `/dj/push/*` behind the login and CSRF). **Not checked: a real
-  delivery to a phone** (no push service reachable from the session) — needs the keys on Railway and a try on Android and an iPhone.
+  policy PL / EN. Then: the VAPID keys read as they are pasted (the owner's IntelliJ variable had lost characters; the log now names
+  the key and its length, and a public key of another pair is refused), the status bar's small icon (`badge-96.png`: the mark alone
+  on transparent — the app icon showed as a white square), a button "📲 Zainstaluj aplikację" (Chrome's own offer does not come back
+  for months after a dismissal or a removal). Tests: 290 unit, 27 database, 35 browser (9 new scenarios, seen red on a broken
+  `push.js` / `install.js`). **The owner's try (2026-10-06, local, Android, over HTTPS): a notification arrived** ("🎵 Nowa prośba —
+  Elektryczne Gitary - Widziałem Orła Cień"); no sound because "Nie przeszkadzać" was on (a DJ adds Scan2Play to its exceptions).
+  Not tried yet: an iPhone, production (the keys on Railway).
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
   to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.

@@ -12,7 +12,7 @@
  *
  * Dependencies (DOM): <div id="pushSettings" data-public-key>, <input id="pushToggle">, its [data-push-state] notes.
  */
-import { csrfHeaders } from './common.js';
+import { csrfHeaders, isInstalledApp, isIos } from './common.js';
 
 const section = document.getElementById('pushSettings');
 const toggle = document.getElementById('pushToggle');
@@ -22,15 +22,6 @@ function showState(state) {
     section.querySelectorAll('[data-push-state]').forEach(function (note) {
         note.classList.toggle('d-none', note.dataset.pushState !== state);
     });
-}
-
-function isIos() {
-    return /iPhone|iPad|iPod/.test(navigator.userAgent)
-        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-function isHomeScreenApp() {
-    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 }
 
 /** The VAPID public key (base64url) as the bytes PushManager.subscribe wants. */
@@ -88,7 +79,7 @@ async function switchOff(registration) {
 async function init() {
     section.hidden = false;
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-        showState(isIos() && !isHomeScreenApp() ? 'ios' : 'unsupported');
+        showState(isIos() && !isInstalledApp() ? 'ios' : 'unsupported');
         return;
     }
     const key = keyBytes(section.dataset.publicKey);

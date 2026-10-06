@@ -91,6 +91,13 @@
                         <span class="text-secondary small" th:text="#{dashboard.requests.help}">You play from your own software.</span>
                     </div>
                 </div>
+                <!--/* "📲 Zainstaluj aplikację" (js/dashboard/install.js): shown by the script only where it helps — a browser that offers
+                     to install the app (Chrome, Edge), or an iPhone's Safari (the steps); never in the installed app itself */-->
+                <div class="border-top border-secondary mt-3 pt-3" id="installApp" hidden>
+                    <button type="button" class="btn btn-sm btn-outline-info" id="installAppBtn" th:text="#{dashboard.install.button}">📲 Install the app</button>
+                    <span class="text-secondary small ms-2" th:text="#{dashboard.install.help}">An icon on your phone, no browser bar.</span>
+                    <div class="text-warning small mt-2 d-none" id="installAppIos" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
+                </div>
                 <!--/* Notifications of new requests on this device (Web Push, js/dashboard/push.js) — only when the server has the keys;
                      shown by the script, with the note of the state it finds (an iPhone outside the Home Screen app, blocked, …) */-->
                 <div class="border-top border-secondary mt-3 pt-3" id="pushSettings" hidden

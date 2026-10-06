@@ -147,6 +147,10 @@ song on the list (accepted, or unchecked with the AI down; not a vote on a waiti
 service worker folds the notifications of one party into one ("🎵 Nowe prośby: 3"), a tap opens the dashboard. On an iPhone only
 the dashboard added to the Home Screen (the web app manifest `/manifest.webmanifest`, iOS 16.4+) can take them — the switch says
 so in Safari. Delivery is best effort: the dashboard stays the truth.
+**"📲 Zainstaluj aplikację"** in the same card (`js/dashboard/install.js`): the browser's own offer to install comes when it decides
+and, once dismissed or the app removed, not again for months — the button asks when the DJ wants (Chrome / Edge: the kept
+`beforeinstallprompt` opens the install window; an iPhone's Safari: the steps "Udostępnij → Do ekranu początkowego"; nothing in the
+installed app or a browser that cannot install).
 
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
@@ -264,7 +268,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `push.js` (the switch of notifications on this device), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `push.js` (the switch of notifications on this device), `install.js` ("📲 Zainstaluj aplikację"), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
