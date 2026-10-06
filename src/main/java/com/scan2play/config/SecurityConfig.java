@@ -64,6 +64,8 @@ public class SecurityConfig {
                         // The web app's manifest and the service worker of the notifications: a browser fetches them without
                         // the login cookie (the manifest), or before any page asks (an update of the worker)
                         .requestMatchers("/manifest.webmanifest", "/sw.js").permitAll()
+                        // The scripts and styles under the deploy's version (/<version>/js/..., spring.web.resources.chain.strategy.fixed)
+                        .requestMatchers("/*/js/**", "/*/css/**").permitAll()
                         // The browsers' reports of the Content-Security-Policy
                         .requestMatchers("/csp-report").permitAll()
                         // Legal pages (Privacy Policy, Terms of Service)

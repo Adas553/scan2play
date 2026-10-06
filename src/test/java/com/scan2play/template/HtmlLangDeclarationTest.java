@@ -6,10 +6,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.thymeleaf.context.Context;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockServletContext;
+import org.thymeleaf.context.WebContext;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
+import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -124,12 +128,12 @@ class HtmlLangDeclarationTest {
     @Test
     @DisplayName("a guest's dead end leads back to the party's link, not to the DJs' login page (the owner, 2026-10-01)")
     void shouldLeadTheGuestBackToTheParty() {
-        Context ended = new Context(PL);
+        WebContext ended = webContext(PL);
         ended.setVariable("partyCode", "ABC12");
         assertThat(engine.process("party_ended", ended)).contains("href=\"/p/ABC12\" id=\"checkAgainBtn\"", "Sprawdź ponownie")
                 .doesNotContain("??");
 
-        Context error = new Context(PL);
+        WebContext error = webContext(PL);
         error.setVariable("status", 500);
         error.setVariable("path", "/p/ABC12/request");
         assertThat(engine.process("error", error)).contains("href=\"/p/ABC12\"", "id=\"retryBtn\"", "Spróbuj ponownie")
@@ -138,8 +142,15 @@ class HtmlLangDeclarationTest {
         assertThat(engine.process("error", error)).contains("href=\"/dj/dashboard\"");
     }
 
+    /** A web request's context: the pages link their styles and scripts with "@{/css/...}", which needs one. */
+    private static WebContext webContext(Locale locale) {
+        MockServletContext servletContext = new MockServletContext();
+        return new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
+    }
+
     private static String render(String page, Locale locale) {
-        Context context = new Context(locale);
+        WebContext context = webContext(locale);
         context.setVariable("status", 404);   // what error.html reads; party_ended needs nothing
         return engine.process(page, context);
     }

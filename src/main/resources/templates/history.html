@@ -12,7 +12,7 @@
     <th:block th:replace="~{fragments/components :: scroll-restore-script}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
-    <link href="/css/app.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
@@ -153,7 +153,7 @@
 </div>
 
 <!-- The dashboard's list tools: sorting, search, filters and "Show more" (it sets up the table's headers itself) -->
-<script type="module" src="/js/dashboard/list-tools.js"></script>
+<script type="module" src="/js/dashboard/list-tools.js" th:src="@{/js/dashboard/list-tools.js}"></script>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 

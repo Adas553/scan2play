@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title th:text="#{qr.print.title}">Print the QR code - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="/css/qr-print.css" rel="stylesheet">
+    <link href="/css/qr-print.css" th:href="@{/css/qr-print.css}" rel="stylesheet">
 </head>
 <!--/*
     The party's QR code to print (DjDashboardController.qrPrint): an A4 poster, or eight cards to cut out. What is printed speaks
@@ -59,6 +59,6 @@
     </section>
 </main>
 
-<script src="/js/qr-print.js"></script>
+<script src="/js/qr-print.js" th:src="@{/js/qr-print.js}"></script>
 </body>
 </html>
