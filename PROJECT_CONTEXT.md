@@ -19,7 +19,7 @@ one played or skips it. One kind of party ("Twój program DJ-a"). YouTube and Sp
 mode only, and its policy forbids this use; YouTube: 100 API searches a day shared by every party, and its terms limit playing to
 personal use) — migrations V18 and V19.
 
-**Production URL:** `https://www.scan2play.com.pl` (Railway, behind Cloudflare; paused at the moment — `main` is not live).
+**Production URL:** `https://www.scan2play.com.pl` (Railway, behind Cloudflare; `main` is live since 2026-10-06, Section 10).
 
 ---
 
@@ -354,8 +354,8 @@ The schema is a sequence of files `src/main/resources/db/migration/V<n>__<what>.
 validates; **never edit an applied one** — not even a comment: Flyway checksums the whole file; add the next. An entity change that
 touches the schema needs its migration in the same change, or the application does not start.
 `spring.flyway.baseline-on-migrate=true`: a database that had tables before Flyway (production) is recorded as V1 without running it.
-**`SPRING_JPA_HIBERNATE_DDL_AUTO`** on Railway was `validate`; the owner removed it (2026-10-01) — the removal is a **staged change**
-that Railway applies with the next deploy. Never set it to `update`: Hibernate would change the schema behind Flyway's back.
+**`SPRING_JPA_HIBERNATE_DDL_AUTO`** is not set on Railway (removed 2026-10-06); never set it to `update`: Hibernate would change the
+schema behind Flyway's back.
 
 | Version | What |
 |---------|------|
@@ -378,18 +378,19 @@ that Railway applies with the next deploy. Never set it to `update`: Hibernate w
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
 
-**First production deploy checklist** (the next deploy applies V2..V20 at once): (0) **V18 and V19 delete every production party
-that was made before 2026-10-04** — in April only YouTube and Spotify parties existed, so every DJ gets a new party with a new code
-at their next login, and a QR code printed before no longer works (their requests are long gone anyway: 30-day retention). The
-variables `YOUTUBE_API_KEY`, `YOUTUBE_SEARCH_DAILY_BUDGET`, `SPOTIFY_*` can go from Railway; (1) back up the database; (2) dump the
-production schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or
-Hibernate's validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
-What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
-2026-04-07 from `5314006`; the app and its `postgres-ssl:18` are paused (the database must run for steps 1–2). The entities did not
-change between `5314006` and V1 (only `@Builder.Default`), so V1 should match production; V9 drops only `IF EXISTS`. No `TZ` /
-`-Duser.timezone` on Railway: the JVM is UTC, which is what V12 assumes for the old values. `main` is an ancestor of `dev`: the merge
-is a fast-forward. After it: `CSP_ENFORCE` stays off on Railway until a few days of real use leave the log quiet, then `true`;
-Dependabot alerts and security updates switched on in GitHub.
+**Production (first deploy of the requests-only app: 2026-10-06).** Railway project `celebrated-enjoyment`, environment
+`production`: the service `scan2play` builds `main` on every push (Railpack, Java 21, custom domain `www.scan2play.com.pl` behind
+Cloudflare) and the service `Postgres` (`postgres-ssl:18`, PostgreSQL 18.6, a 500 MB volume). `main` was fast-forwarded to `dev`
+(`b61f4fd`); the start log showed Flyway baselining the old schema as V1 and applying V2..V20 (0.2 s), Hibernate's validation
+passing, the app up in ~10 s. V18 / V19 deleted every party of April (only the owner's and friends' tests; no backup was taken, by
+the owner's choice). Variables now: `GOOGLE_AI_API_KEY`, `GOOGLE_CLIENT_ID` / `_SECRET`, `GUEST_CLIENT_IP_HEADER`, the five `PG*`,
+`DATABASE_URL` (unused); `SCAN2PLAY_GUEST_URL` is not set (the default is the production URL); `YOUTUBE_API_KEY`, `SPOTIFY_*` and
+`SPRING_JPA_HIBERNATE_DDL_AUTO` removed. No `TZ`: the JVM is UTC. **Both services sleep** after ~10 minutes without traffic
+(Railway's serverless, kept on purpose while only friends use it): the first request wakes the app (~6 s), an app that wakes
+before its database fails once and Railway restarts it, and a database that falls asleep under a running app breaks the request
+that holds the dropped connection (seen once, 2026-10-06 16:04). Switch the database's sleep off before real customers. **Still
+open:** `CSP_ENFORCE` stays off until a few days of real use leave the log quiet (Section 13), then `true`; Dependabot alerts and
+security updates switched on in GitHub.
 
 ---
 
@@ -447,7 +448,9 @@ GuestQueueService          → DjService
   per shown window every 3 s).
 
 ### Security
-- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on).
+- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
+  Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`, injected by Cloudflare into the HTML) — switch that off in
+  Cloudflare, or allow it in the CSP, before enforcing.
 - `REVIEW.md` lists what else is open.
 
 ### Front end

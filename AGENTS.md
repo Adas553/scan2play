@@ -95,8 +95,7 @@ change of behaviour a scenario. SQL that changes the queue needs a throw-away Po
 
 ## Branches
 
-- `main` — was previously auto-deployed to Railway. Railway is currently paused (not
-  billed), so `main` is not live right now, but treat it as the production/stable branch:
-  don't push half-finished work directly to it.
+- `main` — production: every push to it is deployed to Railway at once
+  (www.scan2play.com.pl). Don't push half-finished work directly to it.
 - `dev` — active development branch. Free to experiment, commit early/often, break things.
   Rebase/merge to `main` deliberately once something is working.
