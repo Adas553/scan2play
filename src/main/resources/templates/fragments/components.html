@@ -7,7 +7,7 @@
         then reveals the page. Prevents any visible jump when switching between DJ panels.
     -->
     <th:block th:fragment="scroll-restore-script">
-        <script src="/js/scroll-restore.js"></script>
+        <script src="/js/scroll-restore.js" th:src="@{/js/scroll-restore.js}"></script>
     </th:block>
 </head>
 <body>
@@ -149,7 +149,7 @@
     </div>
 
     <!--/* The feedback form and the confirmations of the account buttons above: js/dj-nav.js (no inline script — CSP, review 5.1). */-->
-    <script src="/js/dj-nav.js"></script>
+    <script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 
 </th:block>
 

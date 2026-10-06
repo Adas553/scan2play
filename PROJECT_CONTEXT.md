@@ -253,7 +253,10 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 ### 6.3 Configuration
 
 `SecurityConfig` (routes, OAuth2 login, logout, CSRF, the CSP — Section 8), `AppConfig` (caching, scheduling, the Caffeine caches,
-the `webmanifest` MIME type),
+the `webmanifest` MIME type), **versioned static addresses** (`spring.web.resources.chain.strategy.fixed`: the templates link
+`th:src` / `th:href="@{/js/...}"`, served as `/<RAILWAY_GIT_COMMIT_SHA>/js/...` — locally `/dev/...` —, so a deploy changes every
+script's and style's address and no cache on the way keeps an old one; the dashboard's modules import each other relatively and stay
+in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy),
 `GeminiConfig` (the Gemini client, 10 s timeout; the `ObjectMapper` bean).
 
 ### 6.4 Templates
@@ -320,7 +323,8 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "🔍 Podejrzyj" is a p
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**`, `/images/**`, `/webjars/**`,
+Public: `/`, `/start/**`, `/p/**`, `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
+under the deploy's version), `/images/**`, `/webjars/**`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party's ownership
 (`DjSessionHelper.validateOwnership` — IDOR). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.

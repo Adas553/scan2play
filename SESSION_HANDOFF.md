@@ -62,6 +62,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   `push.js` / `install.js`). **The owner's try (2026-10-06, local, Android, over HTTPS): a notification arrived** ("🎵 Nowa prośba —
   Elektryczne Gitary - Widziałem Orła Cień"); no sound because "Nie przeszkadzać" was on (a DJ adds Scan2Play to its exceptions).
   Not tried yet: an iPhone, production (the keys on Railway).
+- **Deployed 2026-10-06 22:02** (PR #9 → `dev` → `main` `2b31300`, V21 applied, the VAPID keys on Railway: "Push notifications on").
+  The owner then saw no switch: Cloudflare served the old `main.js` (the HTTP log: the browsers never asked the server for it), a
+  "Purge Everything" did not help. Fix: the scripts' and styles' addresses carry the deploy's version (`/<commit>/js/...`,
+  `PROJECT_CONTEXT.md` Section 6.3). Worth a look in Cloudflare (Caching → Cache Rules, Browser Cache TTL): the server sends
+  `no-store`, yet the edge kept the files.
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
   to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.

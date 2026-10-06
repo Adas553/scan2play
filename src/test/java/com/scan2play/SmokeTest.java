@@ -43,6 +43,17 @@ class SmokeTest {
     }
 
     @Test
+    @DisplayName("The scripts and styles under the deploy's version are served without a login (the pages link them so)")
+    void stylesAndScripts_underTheDeploysVersion_areServedWithoutLogin() throws Exception {
+        // "dev" without RAILWAY_GIT_COMMIT_SHA (application.properties). That the pages' "@{/css/...}" become these addresses is
+        // Spring's ResourceUrlEncodingFilter, which this slice does not register (checked on the running app)
+        mockMvc.perform(get("/dev/css/app.css")).andExpect(status().isOk());
+        mockMvc.perform(get("/dev/js/dashboard/main.js")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("import './push.js';")));
+        mockMvc.perform(get("/dev/js/dashboard/push.js")).andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("Landing page renders HTML with Scan2Play branding")
     void landingPage_shouldContainBranding() throws Exception {
         mockMvc.perform(get("/"))

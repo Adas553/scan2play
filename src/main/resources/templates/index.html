@@ -5,7 +5,7 @@
     <title th:text="#{home.title}">Scan2Play - Request a Song</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/css/app.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body class="page-guest">
 <div class="container d-flex flex-column align-items-center">
@@ -69,9 +69,9 @@
 
 </div>
 
-<script src="/js/guest-party.js"></script>
+<script src="/js/guest-party.js" th:src="@{/js/guest-party.js}"></script>
 
-<script src="/js/song-autocomplete.js"></script>
+<script src="/js/song-autocomplete.js" th:src="@{/js/song-autocomplete.js}"></script>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 
