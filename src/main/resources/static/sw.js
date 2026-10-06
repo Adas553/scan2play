@@ -35,7 +35,8 @@ self.addEventListener('push', function (event) {
             tag: tag,
             renotify: true,
             icon: '/images/icon-192.png',
-            badge: '/images/icon-192.png',
+            // The small icon of the status bar: Android draws only its transparency, in white — the mark alone, no tile
+            badge: '/images/badge-96.png',
             vibrate: [200, 100, 200],
             data: { count: count, url: message.url || '/dj/dashboard' }
         });
