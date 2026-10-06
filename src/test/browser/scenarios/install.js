@@ -29,7 +29,8 @@
 
     const section = function () { return document.getElementById('installApp'); };
     const button = function () { return document.getElementById('installAppBtn'); };
-    const steps = function () { return document.getElementById('installAppIos'); };
+    const note = function (name) { return document.querySelector('#installApp [data-install-note="' + name + '"]'); };
+    const steps = function () { return note('ios'); };
 
     S2P.scenario({
         name: 'install-chrome-asks-when-the-dj-wants',
@@ -45,7 +46,7 @@
             button().click();
             await t.sleep(50);
             t.step('the click opens the browser\'s install window', event.prompted, 1);
-            t.check('no iPhone steps on Android', steps().classList.contains('d-none'));
+            t.check('no notes under the button', steps().classList.contains('d-none') && note('menu').classList.contains('d-none'));
 
             window.dispatchEvent(new Event('appinstalled'));
             t.check('installed: the button goes', section().hidden);
@@ -53,15 +54,25 @@
     });
 
     S2P.scenario({
-        name: 'install-dismissed-goes',
-        title: 'install the app: the DJ closes the browser\'s install window — the button goes (the browser may offer again later)',
+        name: 'install-closed-then-the-menu',
+        title: 'install the app: the install window closed without installing ("Dowiedz się więcej") — the button stays; clicked again it says where the browser\'s menu has it, never the iPhone\'s steps',
         run: async function (t) {
             await t.sleep(300);
             const event = offer('dismissed');
             button().click();
             await t.sleep(50);
             t.step('the install window was opened once', event.prompted, 1);
-            t.check('dismissed: the button goes', section().hidden);
+            t.check('closed: the button stays', !section().hidden);
+
+            button().click();
+            t.step('the offer is used up: not opened again', event.prompted, 1);
+            t.check('the second click says: the browser\'s menu', !note('menu').classList.contains('d-none'));
+            t.check('… not the iPhone\'s steps on a computer', steps().classList.contains('d-none'));
+
+            const again = offer('accepted');
+            t.check('a new offer of the browser: the note goes', note('menu').classList.contains('d-none'));
+            button().click();
+            t.step('… and the button opens the install window again', again.prompted, 1);
         }
     });
 
@@ -73,6 +84,7 @@
             t.check('the steps are not shown before the click', steps().classList.contains('d-none'));
             button().click();
             t.check('the click shows the steps', !steps().classList.contains('d-none'));
+            t.check('… not the note of the browser\'s menu', note('menu').classList.contains('d-none'));
             t.check('… which say where to tap', steps().textContent.indexOf('Do ekranu początkowego') >= 0);
         }
     });

@@ -96,7 +96,8 @@
                 <div class="border-top border-secondary mt-3 pt-3" id="installApp" hidden>
                     <button type="button" class="btn btn-sm btn-outline-info" id="installAppBtn" th:text="#{dashboard.install.button}">📲 Install the app</button>
                     <span class="text-secondary small ms-2" th:text="#{dashboard.install.help}">Its own icon and window, no browser bar.</span>
-                    <div class="text-warning small mt-2 d-none" id="installAppIos" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
+                    <div class="text-warning small mt-2 d-none" data-install-note="ios" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
+                    <div class="text-warning small mt-2 d-none" data-install-note="menu" th:text="#{dashboard.install.menu}">Install from the browser's menu.</div>
                 </div>
                 <!--/* Notifications of new requests on this device (Web Push, js/dashboard/push.js) — only when the server has the keys;
                      shown by the script, with the note of the state it finds (an iPhone outside the Home Screen app, blocked, …) */-->

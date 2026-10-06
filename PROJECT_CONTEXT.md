@@ -149,8 +149,9 @@ the dashboard added to the Home Screen (the web app manifest `/manifest.webmanif
 so in Safari. Delivery is best effort: the dashboard stays the truth.
 **"📲 Zainstaluj aplikację"** in the same card (`js/dashboard/install.js`): the browser's own offer to install comes when it decides
 and, once dismissed or the app removed, not again for months — the button asks when the DJ wants (Chrome / Edge: the kept
-`beforeinstallprompt` opens the install window; an iPhone's Safari: the steps "Udostępnij → Do ekranu początkowego"; nothing in the
-installed app or a browser that cannot install).
+`beforeinstallprompt` opens the install window — once per offer: closed without installing, the next click says where the browser's
+menu has it; an iPhone's Safari: the steps "Udostępnij → Do ekranu początkowego"; nothing in the installed app or a browser that
+never offered).
 
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
