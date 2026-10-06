@@ -13,6 +13,12 @@
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
     <link href="/css/app.css" rel="stylesheet">
+    <!--/* The dashboard as an app on the phone's Home Screen: on an iPhone only such an app may take notifications (js/dashboard/push.js) */-->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Scan2Play">
 </head>
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
@@ -84,6 +90,27 @@
                     <div class="col-md-6 d-flex justify-content-md-end align-items-center">
                         <span class="text-secondary small" th:text="#{dashboard.requests.help}">You play from your own software.</span>
                     </div>
+                </div>
+                <!--/* "📲 Zainstaluj aplikację" (js/dashboard/install.js): shown by the script only where it helps — a browser that offers
+                     to install the app (Chrome, Edge), or an iPhone's Safari (the steps); never in the installed app itself */-->
+                <div class="border-top border-secondary mt-3 pt-3" id="installApp" hidden>
+                    <button type="button" class="btn btn-sm btn-outline-info" id="installAppBtn" th:text="#{dashboard.install.button}">📲 Install the app</button>
+                    <span class="text-secondary small ms-2" th:text="#{dashboard.install.help}">Its own icon and window, no browser bar.</span>
+                    <div class="text-warning small mt-2 d-none" data-install-note="ios" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
+                    <div class="text-warning small mt-2 d-none" data-install-note="menu" th:text="#{dashboard.install.menu}">Install from the browser's menu.</div>
+                </div>
+                <!--/* Notifications of new requests on this device (Web Push, js/dashboard/push.js) — only when the server has the keys;
+                     shown by the script, with the note of the state it finds (an iPhone outside the Home Screen app, blocked, …) */-->
+                <div class="border-top border-secondary mt-3 pt-3" id="pushSettings" hidden
+                     th:if="${pushPublicKey != null}" th:attr="data-public-key=${pushPublicKey}">
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="pushToggle" disabled>
+                        <label class="form-check-label text-light" for="pushToggle" th:text="#{dashboard.push.label}">🔔 Notifications on this device</label>
+                    </div>
+                    <div class="text-warning small mt-1 d-none" data-push-state="ios" th:text="#{dashboard.push.ios}">On an iPhone: add it to the Home Screen first.</div>
+                    <div class="text-warning small mt-1 d-none" data-push-state="denied" th:text="#{dashboard.push.denied}">Notifications are blocked for this site.</div>
+                    <div class="text-warning small mt-1 d-none" data-push-state="unsupported" th:text="#{dashboard.push.unsupported}">This browser does not support notifications.</div>
+                    <div class="text-danger small mt-1 d-none" data-push-state="error" th:text="#{dashboard.push.error}">Could not switch notifications on.</div>
                 </div>
             </div>
 

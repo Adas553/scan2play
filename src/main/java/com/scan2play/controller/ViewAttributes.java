@@ -40,6 +40,8 @@ public final class ViewAttributes {
     public static final String PARTY_REQUESTS_USED = "partyRequestsUsed";
     public static final String BUSIEST_NETWORK_REQUESTS_USED = "busiestNetworkRequestsUsed";
     public static final String PARTY_LIMIT_REACHED = "partyLimitReached";
+    /** The VAPID public key (base64url) for the switch of notifications on this device; null = notifications are off on the server. */
+    public static final String PUSH_PUBLIC_KEY = "pushPublicKey";
 
     // --- Index/Guest Attributes ---
     /** The requests sent lately and whether the guest's own song waits ({@code GuestQueueService.GuestQueue}). */

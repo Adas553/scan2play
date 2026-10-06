@@ -19,7 +19,7 @@ one played or skips it. One kind of party ("Twój program DJ-a"). YouTube and Sp
 mode only, and its policy forbids this use; YouTube: 100 API searches a day shared by every party, and its terms limit playing to
 personal use) — migrations V18 and V19.
 
-**Production URL:** `https://www.scan2play.com.pl` (Railway, behind Cloudflare; paused at the moment — `main` is not live).
+**Production URL:** `https://www.scan2play.com.pl` (Railway, behind Cloudflare; `main` is live since 2026-10-06, Section 10).
 
 ---
 
@@ -104,6 +104,12 @@ party's ranking); the guest page lists "🔥 Najwięcej głosów" — up to 3 wa
 says "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N".
 
 **`FeedbackEntity` → `feedback`** — the DJ's bug reports and ideas (`message` ≤ 2000).
+
+**`PushSubscriptionEntity` → `push_subscription`** (V21) — one of the DJ's browsers that takes notifications of new requests:
+`ownerId`, `endpoint` (≤ 1000, UNIQUE: the push service's address of that browser — only Google FCM, Apple, Mozilla or Microsoft
+WNS hosts are taken, `PushSubscriptionService.isPushServiceEndpoint`), `p256dh` / `auth` (its encryption keys), `locale` (the
+notification's language), `createdAt`. At most 10 per DJ (the oldest goes); gone when switched off, on a 404 / 410 of the push
+service, or with the account.
 **`spring_session`, `spring_session_attributes`** (V11, Spring Session's own schema, no entity) — the HTTP sessions; expired ones are
 deleted every minute.
 
@@ -132,6 +138,20 @@ leaves as rejected with the DJ's note and `skipped_at`; "Cofnij" for 8 s, "↩ P
 limits and the use of the server limits; the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; feedback; end / resume the party, delete the account, log out. The forms are sent in the background (`forms.js`; not logout
 and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
+
+**Notifications on the DJ's devices** (Web Push; only when the server has the VAPID keys — Section 10): the switch "🔔 Powiadomienia
+na tym urządzeniu" in the card "Twój program DJ-a" (`js/dashboard/push.js`), per browser — the permission, the service worker
+`/sw.js` (scope `/dj/`), the subscription with the server's key → `POST /dj/push/subscribe`; off → `/dj/push/unsubscribe`. A **new**
+song on the list (accepted, or unchecked with the AI down; not a vote on a waiting one) → `PushNotificationService` sends
+"🎵 Nowa prośba — <song>" to each of the DJ's devices, off the guest's thread (a pool of 2, queue 200, TTL 1 h, urgency high); the
+service worker folds the notifications of one party into one ("🎵 Nowe prośby: 3"), a tap opens the dashboard. On an iPhone only
+the dashboard added to the Home Screen (the web app manifest `/manifest.webmanifest`, iOS 16.4+) can take them — the switch says
+so in Safari. Delivery is best effort: the dashboard stays the truth.
+**"📲 Zainstaluj aplikację"** in the same card (`js/dashboard/install.js`): the browser's own offer to install comes when it decides
+and, once dismissed or the app removed, not again for months — the button asks when the DJ wants (Chrome / Edge: the kept
+`beforeinstallprompt` opens the install window — once per offer: closed without installing, the next click says where the browser's
+menu has it; an iPhone's Safari: the steps "Udostępnij → Do ekranu początkowego"; nothing in the installed app or a browser that
+never offered).
 
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
@@ -208,6 +228,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjSessionHelper` | the party of the logged-in DJ (cached in the session; made on the first login — tabs that make it at once look again, `FirstLoginIT`) and **`validateOwnership`** (IDOR) |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation) |
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
+| `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
 | `LegalController` | `/privacy`, `/terms` (a file per language) |
 | `ViewAttributes` | names of the model attributes |
@@ -226,11 +247,13 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `QrCodeService` | QR codes (ZXing, cached) |
 | `AccountDeletionService` | deletes all of a DJ's data and evicts the caches after the commit |
 | `SongRequestRetentionService` | the nightly purge of song requests (Section 4.1) |
+| `PushSubscriptionService` / `PushNotificationService` | the DJ's devices of the notifications (checked addresses, ≤ 10 per DJ) / sending a new request to them (Web Push, `zerodep-web-push-java`, off the request thread) |
 | `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …" |
 
 ### 6.3 Configuration
 
-`SecurityConfig` (routes, OAuth2 login, logout, CSRF, the CSP — Section 8), `AppConfig` (caching, scheduling, the Caffeine caches),
+`SecurityConfig` (routes, OAuth2 login, logout, CSRF, the CSP — Section 8), `AppConfig` (caching, scheduling, the Caffeine caches,
+the `webmanifest` MIME type),
 `GeminiConfig` (the Gemini client, 10 s timeout; the `ObjectMapper` bean).
 
 ### 6.4 Templates
@@ -246,18 +269,19 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `push.js` (the switch of notifications on this device), `install.js` ("📲 Zainstaluj aplikację"), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side) |
 | `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles |
+| `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them, a tap opens the dashboard; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
 | `images/logo.svg`, `favicon.ico` | our mark: three QR finder corners and a cyan play triangle on the dark tile (2026-10-04); on the landing page, the dashboard, the guest page, the QR poster and cards; the favicon is the same mark at 16 / 32 / 48 px |
 
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`), `db/migration/V1..V20`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`), `db/migration/V1..V21`.
 
 ---
 
@@ -278,7 +302,14 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
   (`AiHealthMonitor`: search the log for "AI check"). Duplicates: the last `duplicateCheckWindow` played songs go
   into the prompt (a waiting song asked for again is a vote, not a duplicate).
 
-### 7.2 (Spotify — removed 2026-10-04)
+### 7.2 Web Push (the DJ's notifications)
+
+The browsers' push services (Google FCM, Apple, Mozilla, Microsoft WNS) — RFC 8030 / 8291 (aes128gcm) / 8292 (VAPID), by
+`zerodep-web-push-java` 2.1.5 (no dependencies of its own) over the JDK's `HttpClient` (connect 5 s, send 10 s). The payload is
+encrypted for the device; the push service delivers it but cannot read it. 404 / 410 → the device is removed; other errors are
+logged. No keys → off (`PushNotificationService.isEnabled`), keys that do not parse → off with an ERROR line, the app starts anyway.
+
+### 7.2a (Spotify — removed 2026-10-04)
 
 ### 7.3 YouTube — no API
 
@@ -290,7 +321,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "🔍 Podejrzyj" is a p
 ## 8. Security Model
 
 Public: `/`, `/start/**`, `/p/**`, `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**`, `/images/**`, `/webjars/**`,
-`/error`, `POST /csp-report`. Everything else needs the DJ's login; `/dj/**` validates the party's ownership
+`/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party's ownership
 (`DjSessionHelper.validateOwnership` — IDOR). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.
 
@@ -323,7 +354,9 @@ The DJ's party code is cached in the `HttpSession`. Account deletion evicts the 
 
 `GOOGLE_CLIENT_ID` / `_SECRET`, `GOOGLE_AI_API_KEY`, the database (`PGHOST`, `PGPORT`, `PGDATABASE`, and **`PGUSER` / `PGPASSWORD`
 required** — no defaults since review 5.5; Railway sets all five), `SCAN2PLAY_GUEST_URL` (the base URL in the QR code; locally the LAN
-address, so a phone on the same Wi-Fi can open it), `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` (Railway), and the optional overrides
+address, so a phone on the same Wi-Fi can open it), `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` (Railway), **`VAPID_PUBLIC_KEY` /
+`VAPID_PRIVATE_KEY`** (the notifications' key pair, made once by `VapidKeyGenerator` in `src/test/java` — secrets; without them the
+notifications are off; a new pair makes every device switch them on again; `VAPID_SUBJECT` optional), and the optional overrides
 below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH_DAILY_BUDGET`. The DJ's login works only on
 `localhost` or a public HTTPS address (Google refuses a LAN IP as a redirect URI); the guest side works through the LAN IP.
 
@@ -354,8 +387,8 @@ The schema is a sequence of files `src/main/resources/db/migration/V<n>__<what>.
 validates; **never edit an applied one** — not even a comment: Flyway checksums the whole file; add the next. An entity change that
 touches the schema needs its migration in the same change, or the application does not start.
 `spring.flyway.baseline-on-migrate=true`: a database that had tables before Flyway (production) is recorded as V1 without running it.
-**`SPRING_JPA_HIBERNATE_DDL_AUTO`** on Railway was `validate`; the owner removed it (2026-10-01) — the removal is a **staged change**
-that Railway applies with the next deploy. Never set it to `update`: Hibernate would change the schema behind Flyway's back.
+**`SPRING_JPA_HIBERNATE_DDL_AUTO`** is not set on Railway (removed 2026-10-06); never set it to `update`: Hibernate would change the
+schema behind Flyway's back.
 
 | Version | What |
 |---------|------|
@@ -374,22 +407,24 @@ that Railway applies with the next deploy. Never set it to `update`: Hibernate w
 | V18 | Spotify removed: Spotify parties deleted with their requests, background tracks, plays and their DJ's feedback; `spotify_*` columns dropped; the kind's check without SPOTIFY |
 | V19 | YouTube removed: every party that is not `REQUESTS_ONLY` (and one with no kind) deleted with its requests and its DJ's feedback; `fallback_play`, `fallback_track`, `youtube_cache`, `youtube_search_budget` dropped; the columns `active_provider`, `playback_mode`, `fallback_playlist_url`, `fallback_shuffle` dropped |
 | V20 | `song_requests.skipped_at` timestamptz, nullable: when the DJ skipped the request; the requests skipped before get their request time |
+| V21 | `push_subscription`: the DJ's devices of the notifications (`endpoint` UNIQUE, index on `owner_id`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
 
-**First production deploy checklist** (the next deploy applies V2..V20 at once): (0) **V18 and V19 delete every production party
-that was made before 2026-10-04** — in April only YouTube and Spotify parties existed, so every DJ gets a new party with a new code
-at their next login, and a QR code printed before no longer works (their requests are long gone anyway: 30-day retention). The
-variables `YOUTUBE_API_KEY`, `YOUTUBE_SEARCH_DAILY_BUDGET`, `SPOTIFY_*` can go from Railway; (1) back up the database; (2) dump the
-production schema (`pg_dump --schema-only --no-owner`) and compare it with `V1__baseline.sql` — the same tables and columns, or
-Hibernate's validation refuses to start; (3) deploy — Flyway creates `flyway_schema_history`, baselines, and applies the rest.
-What is known (Railway, read 2026-10-01): the service `scan2play` (project `celebrated-enjoyment`) builds `main`, last deployed
-2026-04-07 from `5314006`; the app and its `postgres-ssl:18` are paused (the database must run for steps 1–2). The entities did not
-change between `5314006` and V1 (only `@Builder.Default`), so V1 should match production; V9 drops only `IF EXISTS`. No `TZ` /
-`-Duser.timezone` on Railway: the JVM is UTC, which is what V12 assumes for the old values. `main` is an ancestor of `dev`: the merge
-is a fast-forward. After it: `CSP_ENFORCE` stays off on Railway until a few days of real use leave the log quiet, then `true`;
-Dependabot alerts and security updates switched on in GitHub.
+**Production (first deploy of the requests-only app: 2026-10-06).** Railway project `celebrated-enjoyment`, environment
+`production`: the service `scan2play` builds `main` on every push (Railpack, Java 21, custom domain `www.scan2play.com.pl` behind
+Cloudflare) and the service `Postgres` (`postgres-ssl:18`, PostgreSQL 18.6, a 500 MB volume). `main` was fast-forwarded to `dev`
+(`b61f4fd`); the start log showed Flyway baselining the old schema as V1 and applying V2..V20 (0.2 s), Hibernate's validation
+passing, the app up in ~10 s. V18 / V19 deleted every party of April (only the owner's and friends' tests; no backup was taken, by
+the owner's choice). Variables now: `GOOGLE_AI_API_KEY`, `GOOGLE_CLIENT_ID` / `_SECRET`, `GUEST_CLIENT_IP_HEADER`, the five `PG*`,
+`DATABASE_URL` (unused); `SCAN2PLAY_GUEST_URL` is not set (the default is the production URL); `YOUTUBE_API_KEY`, `SPOTIFY_*` and
+`SPRING_JPA_HIBERNATE_DDL_AUTO` removed. No `TZ`: the JVM is UTC. **Both services sleep** after ~10 minutes without traffic
+(Railway's serverless, kept on purpose while only friends use it): the first request wakes the app (~6 s), an app that wakes
+before its database fails once and Railway restarts it, and a database that falls asleep under a running app breaks the request
+that holds the dropped connection (seen once, 2026-10-06 16:04). Switch the database's sleep off before real customers. **Still
+open:** `CSP_ENFORCE` stays off until a few days of real use leave the log quiet (Section 13), then `true`; Dependabot alerts and
+security updates switched on in GitHub.
 
 ---
 
@@ -397,10 +432,11 @@ Dependabot alerts and security updates switched on in GitHub.
 
 ```
 GuestController            → SongEvaluationService, GuestQueueService, GuestSessionService, GuestRequestLimiter, PartySettingsQueryService
-DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsQueryService, DjSessionHelper
+DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsQueryService, DjSessionHelper, PushNotificationService
 DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper
 DjSongController           → DjService, DjSessionHelper
-SongEvaluationService      → Gemini Client, SongRequestRepository, SongRequestCommandService, PartySettingsQueryService
+SongEvaluationService      → Gemini Client, SongRequestRepository, SongRequestCommandService, PartySettingsQueryService, PushNotificationService
+PushController             → PushSubscriptionService
 GuestQueueService          → DjService
 ```
 
@@ -419,6 +455,7 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/request` | a request: `songName` |
 | GET | `/privacy`, `/terms` | legal pages |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
+| GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |
 
 ### DJ (logged in; every endpoint with a `partyCode` checks ownership)
 
@@ -433,6 +470,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/limits` | settings |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster / cards |
+| POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | |
 
 ---
@@ -447,7 +485,9 @@ GuestQueueService          → DjService
   per shown window every 3 s).
 
 ### Security
-- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on).
+- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
+  Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`, injected by Cloudflare into the HTML) — switch that off in
+  Cloudflare, or allow it in the CSP, before enforcing.
 - `REVIEW.md` lists what else is open.
 
 ### Front end

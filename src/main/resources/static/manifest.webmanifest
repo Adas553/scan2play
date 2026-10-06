@@ -1,0 +1,14 @@
+{
+  "name": "Scan2Play",
+  "short_name": "Scan2Play",
+  "description": "Guests' song requests for the DJ",
+  "start_url": "/dj/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

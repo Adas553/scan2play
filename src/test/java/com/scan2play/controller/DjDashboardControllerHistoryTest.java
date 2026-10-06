@@ -6,6 +6,7 @@ import com.scan2play.model.HistoryFilter;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
+import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PlayHistoryService.Page;
 import com.scan2play.service.QrCodeService;
@@ -60,7 +61,7 @@ class DjDashboardControllerHistoryTest {
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class), sessionHelper,
                 historyService,
-                mock(GuestRequestLimiter.class))).build();
+                mock(GuestRequestLimiter.class), mock(PushNotificationService.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");

@@ -23,6 +23,7 @@
             <li>Informacje z profilu Google (imię, email, zdjęcie profilowe) przez OAuth 2.0</li>
             <li>Ustawienia imprezy i preferencje konfiguracji</li>
             <li>Wiadomości feedback przesłane przez panel DJ-a</li>
+            <li>Gdy DJ włączy powiadomienia na urządzeniu: subskrypcja powiadomień tej przeglądarki (adres przeglądarki w usłudze powiadomień i jej klucze szyfrowania) oraz język panelu</li>
         </ul>
         <p><strong>Dla gości (anonimowi użytkownicy):</strong></p>
         <ul>
@@ -52,10 +53,11 @@
             <li>Sesje (logowanie DJ-a, identyfikator sesji gościa): przechowywane w bazie danych i usuwane po 30 minutach bez aktywności</li>
             <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie z tej sieci</li>
             <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
+            <li>Subskrypcja powiadomień urządzenia: do wyłączenia powiadomień na nim przez DJ-a, porzucenia jej przez przeglądarkę albo usunięcia konta</li>
         </ul>
 
         <h3>6. Udostępnianie danych</h3>
-        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (logowanie OAuth) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa) w zakresie niezbędnym do działania serwisu. Gdy gość pisze, jego przeglądarka pyta Apple iTunes Search API o podpowiedzi piosenek (trafia tam tylko wpisany tekst).</p>
+        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (logowanie OAuth) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa) w zakresie niezbędnym do działania serwisu. Gdy gość pisze, jego przeglądarka pyta Apple iTunes Search API o podpowiedzi piosenek (trafia tam tylko wpisany tekst). Gdy DJ włączy powiadomienia na urządzeniu, nowa prośba trafia na nie jako wiadomość zaszyfrowana od końca do końca (nazwa piosenki) przez usługę powiadomień przeglądarki DJ-a (Google, Apple, Mozilla albo Microsoft), która ją dostarcza, ale nie może jej odczytać.</p>
 
         <h3>7. Twoje prawa — Usuwanie danych</h3>
         <p>Możesz usunąć wszystkie swoje dane w dowolnym momencie, klikając <strong>„Usuń konto"</strong> w Panelu DJ-a.

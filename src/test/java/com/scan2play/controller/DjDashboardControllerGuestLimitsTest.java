@@ -5,6 +5,7 @@ import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
+import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class DjDashboardControllerGuestLimitsTest {
         settingsService = mock(PartySettingsQueryService.class);
         limiter = mock(GuestRequestLimiter.class);
         controller = new DjDashboardController(djService, settingsService, mock(QrCodeService.class), mock(DjSessionHelper.class),
-                mock(PlayHistoryService.class), limiter);
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class));
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getDashboardQueue(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();

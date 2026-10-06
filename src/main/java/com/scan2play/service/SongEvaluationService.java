@@ -100,6 +100,7 @@ public class SongEvaluationService {
     private final ResourceLoader resourceLoader;
     private final SongRequestCommandService songRequestCommandService;
     private final AiHealthMonitor aiHealthMonitor;
+    private final PushNotificationService pushNotificationService;
 
     /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt). */
     private Map<String, String> promptTemplates;
@@ -195,6 +196,10 @@ public class SongEvaluationService {
                     saved.request().getSongName(), 0, aiResponse.requestKind());
         }
         SongRequestEntity savedRequest = saved.request();
+        if (saved.outcome() == SongRequestCommandService.Outcome.NEW && DECISION_ACCEPTED.equals(savedRequest.getDecision())) {
+            // A new song on the DJ's list (a vote on a waiting one is not news): the DJ's devices that asked for it get a notification
+            pushNotificationService.notifyNewRequest(settings.getOwnerId(), partyCode, savedRequest.getSongName());
+        }
         if (saved.outcome() != SongRequestCommandService.Outcome.NEW && !DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
             // The AI rejected this time a song the party took already and that still waits: the guest hears the verdict it was taken with
             log.info("Party [{}]: '{}' rejected this time, but it waits in the queue — counted on it", partyCode, savedRequest.getSongName());

@@ -23,6 +23,7 @@
             <li>Google account profile information (name, email, profile picture) via OAuth 2.0</li>
             <li>Party settings and configuration preferences</li>
             <li>Feedback messages submitted through the dashboard</li>
+            <li>If the DJ switches on notifications on a device: that browser’s push subscription (the push service’s address of the browser and its encryption keys) and the dashboard’s language</li>
         </ul>
         <p><strong>For Guests (anonymous users):</strong></p>
         <ul>
@@ -52,10 +53,11 @@
             <li>Sessions (the DJ’s login, a guest’s session identifier): stored in the database and deleted after 30 minutes without activity</li>
             <li>A guest’s IP address: in the server’s memory only, forgotten 10 minutes after the last request from that network</li>
             <li>DJ account data: stored until the DJ deletes their account</li>
+            <li>A device’s notification subscription: until the DJ switches the notifications off on it, the browser drops it, or the DJ deletes their account</li>
         </ul>
 
         <h3>6. Data Sharing</h3>
-        <p>We do not sell or share your personal data with third parties. Data is only sent to Google (OAuth login) and Google Gemini (AI song evaluation — it receives the guest’s request text) as required for the service to function. While a guest types, their browser asks Apple’s iTunes Search API for song suggestions (it receives the typed text, nothing else).</p>
+        <p>We do not sell or share your personal data with third parties. Data is only sent to Google (OAuth login) and Google Gemini (AI song evaluation — it receives the guest’s request text) as required for the service to function. While a guest types, their browser asks Apple’s iTunes Search API for song suggestions (it receives the typed text, nothing else). When a DJ has switched on notifications on a device, a new request is sent to it as an end-to-end encrypted message (the song’s name) through the push service of the DJ’s browser (Google, Apple, Mozilla or Microsoft), which delivers it but cannot read it.</p>
 
         <h3>7. Your Rights — Data Deletion</h3>
         <p>You can delete all your data at any time by clicking <strong>&quot;Delete Account&quot;</strong> in your DJ Dashboard.

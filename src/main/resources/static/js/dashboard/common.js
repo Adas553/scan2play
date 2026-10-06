@@ -1,4 +1,4 @@
-/** What every part of the dashboard needs: the CSRF token, the party, whether it is open. */
+/** What every part of the dashboard needs: the CSRF token, the party, whether it is open, which device it runs on. */
 
 const csrfToken = document.querySelector('meta[name="_csrf"]');
 const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
@@ -31,4 +31,15 @@ export function showPartyActive(active, pollSentAt) {
     const endForm = document.getElementById('end-party-form');
     if (banner) banner.classList.toggle('d-none', active);
     if (endForm) endForm.classList.toggle('d-none', !active);
+}
+
+/** An iPhone or an iPad (an iPad says "Macintosh", but has a touch screen). */
+export function isIos() {
+    return /iPhone|iPad|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/** The dashboard opened as the installed app (from the Home Screen), not in a browser's tab. */
+export function isInstalledApp() {
+    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 }

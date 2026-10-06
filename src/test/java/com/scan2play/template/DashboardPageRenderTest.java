@@ -11,6 +11,7 @@ import com.scan2play.model.VibeType;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlayHistoryService;
+import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeAll;
@@ -106,7 +107,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsQueryService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter);
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey());
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -155,6 +156,23 @@ class DashboardPageRenderTest {
         return new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
+    }
+
+    /**
+     * Notifications on the server, with a public key of the right shape (made here): the page offers the switch "🔔 Powiadomienia
+     * na tym urządzeniu" (the browser scenario {@code push}).
+     */
+    private static PushNotificationService pushWithKey() {
+        try {
+            java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("EC");
+            generator.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+            PushNotificationService push = mock(PushNotificationService.class);
+            when(push.publicKey()).thenReturn(com.scan2play.VapidKeyGenerator.publicKeyBase64Url(
+                    (java.security.interfaces.ECPublicKey) generator.generateKeyPair().getPublic()));
+            return push;
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** A party of the product: the DJ plays from their own software, the guests' requests wait on the dashboard. */
@@ -299,7 +317,7 @@ class DashboardPageRenderTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.getPartySettings(any(), any())).thenReturn(party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
