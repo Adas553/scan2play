@@ -95,7 +95,7 @@
                      to install the app (Chrome, Edge), or an iPhone's Safari (the steps); never in the installed app itself */-->
                 <div class="border-top border-secondary mt-3 pt-3" id="installApp" hidden>
                     <button type="button" class="btn btn-sm btn-outline-info" id="installAppBtn" th:text="#{dashboard.install.button}">📲 Install the app</button>
-                    <span class="text-secondary small ms-2" th:text="#{dashboard.install.help}">An icon on your phone, no browser bar.</span>
+                    <span class="text-secondary small ms-2" th:text="#{dashboard.install.help}">Its own icon and window, no browser bar.</span>
                     <div class="text-warning small mt-2 d-none" id="installAppIos" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
                 </div>
                 <!--/* Notifications of new requests on this device (Web Push, js/dashboard/push.js) — only when the server has the keys;
@@ -106,7 +106,6 @@
                         <input class="form-check-input" type="checkbox" role="switch" id="pushToggle" disabled>
                         <label class="form-check-label text-light" for="pushToggle" th:text="#{dashboard.push.label}">🔔 Notifications on this device</label>
                     </div>
-                    <div class="text-secondary small mt-1" th:text="#{dashboard.push.help}">Your phone vibrates for every new request on the list.</div>
                     <div class="text-warning small mt-1 d-none" data-push-state="ios" th:text="#{dashboard.push.ios}">On an iPhone: add it to the Home Screen first.</div>
                     <div class="text-warning small mt-1 d-none" data-push-state="denied" th:text="#{dashboard.push.denied}">Notifications are blocked for this site.</div>
                     <div class="text-warning small mt-1 d-none" data-push-state="unsupported" th:text="#{dashboard.push.unsupported}">This browser does not support notifications.</div>
