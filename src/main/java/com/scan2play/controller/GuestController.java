@@ -54,6 +54,9 @@ public class GuestController {
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
             model.addAttribute(VIBE_NOTE, settings.getVibeNote());
             model.addAttribute(DJ_NAME, settings.getDjName());
+            model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
+            model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
+            model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
             model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
             model.addAttribute(PARTY_CODE, partyCode);
             return "index";

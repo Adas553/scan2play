@@ -18,6 +18,10 @@ public final class ViewAttributes {
     public static final String GLOBAL_VIBE = "globalVibe";
     public static final String VIBE_NOTE = "vibeNote";
     public static final String DJ_NAME = "djName";
+    /** The DJ's profiles (V24): https addresses on Instagram, Facebook, TikTok, or null. */
+    public static final String INSTAGRAM_URL = "instagramUrl";
+    public static final String FACEBOOK_URL = "facebookUrl";
+    public static final String TIKTOK_URL = "tiktokUrl";
     public static final String COMMENT_STYLE = "commentStyle";
     public static final String PARTY_CODE = "partyCode";
     public static final String IS_ACTIVE = "isActive";

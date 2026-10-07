@@ -110,6 +110,9 @@ public class DjDashboardController {
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
         model.addAttribute(VIBE_NOTE, settings.getVibeNote());
         model.addAttribute(DJ_NAME, settings.getDjName());
+        model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
+        model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
+        model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
         model.addAttribute(COMMENT_STYLE, settings.getCommentStyle());
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
@@ -150,9 +153,14 @@ public class DjDashboardController {
     @GetMapping("/qr-print")
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, Model model,
                           OAuth2AuthenticationToken authentication, HttpSession session) {
-        String partyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+        String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
         model.addAttribute(PARTY_CODE, partyCode);
+        // the DJ's profiles under the code: on paper the guests read them, "@djkoko" (V24)
+        model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
+        model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
+        model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
         model.addAttribute(PERMANENT_LINK, guestUrl);
         model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_PRINT_SIZE, QR_PRINT_SIZE));
         model.addAttribute(QR_LAYOUT, "cards".equals(layout) ? "cards" : "poster");

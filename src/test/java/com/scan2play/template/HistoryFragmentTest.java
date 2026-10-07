@@ -173,6 +173,21 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("\"⚠ Sprawdź\" on a song with none of the guest's words (maybe another song); none on a song that has one")
+    void shouldMarkASongWithNoneOfTheGuestsWords() {
+        HistoryEntry other = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Dżem - Sen o Victorii",
+                null, "Pop", "played", "ok", 7, "orła cień");
+        HistoryEntry same = new HistoryEntry(2L, java.time.Instant.parse("2026-09-29T18:01:00Z"), "Wilki - Baśka",
+                null, "Pop", "played", "ok", 7, "ta o Baśce");
+        String html = render(List.of(other, same), false, Locale.forLanguageTag("pl"));
+
+        assertThat(html).doesNotContain("??");
+        String row = html.substring(html.indexOf("data-song-name=\"Dżem - Sen o Victorii\""));
+        assertThat(row.substring(0, row.indexOf("</tr>"))).contains(">⚠ Sprawdź<");
+        assertThat(html.split("s2p-check-song", -1)).as("only the first row").hasSize(2);
+    }
+
+    @Test
     @DisplayName("a song shows its votes (the history sorted by them is the party's ranking); one guest's is a grey 1")
     void shouldShowTheVotes() {
         HistoryEntry wanted = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Wanted",

@@ -196,6 +196,30 @@
                 <a th:href="@{/dj/qr-print}" target="_blank" rel="noopener" id="qrPrintLink"
                    class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.print}">🖨 Print</a>
             </div>
+            <!--/* The DJ's profiles (V24) beside the QR code they are printed with: the guests see them under "Kto gra" and on
+                 the print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks) —
+                 400 when it is not a profile there */-->
+            <div class="card bg-dark border-secondary p-3 shadow-sm mt-3 text-start">
+                <form th:action="@{/dj/dashboard/dj-links}" method="POST" class="m-0" id="djLinksForm">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <span class="form-label d-block text-light small mb-2" th:text="#{dashboard.dj.links.label}">Your profiles</span>
+                    <div class="d-flex flex-column gap-2">
+                        <input type="text" id="instagramInput" name="instagram" maxlength="200" autocomplete="off"
+                               class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Instagram"
+                               th:value="${instagramUrl}" th:placeholder="#{dashboard.dj.links.instagram}">
+                        <input type="text" id="facebookInput" name="facebook" maxlength="200" autocomplete="off"
+                               class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Facebook"
+                               th:value="${facebookUrl}" th:placeholder="#{dashboard.dj.links.facebook}">
+                        <div class="d-flex gap-2">
+                            <input type="text" id="tiktokInput" name="tiktok" maxlength="200" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary" aria-label="TikTok"
+                                   th:value="${tiktokUrl}" th:placeholder="#{dashboard.dj.links.tiktok}">
+                            <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
+                        </div>
+                    </div>
+                    <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.dj.links.invalid}">Not a profile</div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -261,6 +285,9 @@
                         <!--/* Under the song, always, the guest's own words: the DJ checks that the AI understood them */-->
                         <span class="d-flex flex-column">
                             <span class="fw-bold song-title" th:text="${req.songName}">Song</span>
+                            <!--/* none of the guest's words in the AI's song: maybe another song in place of the one asked for */-->
+                            <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
+                                  th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>
                             <span th:unless="${#strings.isEmpty(req.guestText)}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${req.guestText})}">guest wrote: “…”</span>
                         </span>

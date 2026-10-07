@@ -29,6 +29,8 @@ public class PartySettingsEntity {
     public static final int VIBE_NOTE_MAX = 150;
     /** The longest DJ name (the column, V17). */
     public static final int DJ_NAME_MAX = 60;
+    /** The longest address of a DJ's profile (V24). */
+    public static final int LINK_MAX = 200;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -61,6 +63,19 @@ public class PartySettingsEntity {
     /** Who plays, as the DJ wrote it (V17): one line of at most {@value #DJ_NAME_MAX} characters, e.g. "DJ Koko"; null = not shown. */
     @Column(length = DJ_NAME_MAX)
     private String djName;
+
+    /**
+     * The DJ's profiles (V24), for the guests to follow: an https address on Instagram / Facebook / TikTok as
+     * {@code util.SocialLinks} wrote it from what the DJ typed; null = not shown.
+     */
+    @Column(length = LINK_MAX)
+    private String instagramUrl;
+
+    @Column(length = LINK_MAX)
+    private String facebookUrl;
+
+    @Column(length = LINK_MAX)
+    private String tiktokUrl;
 
     /** How the AI words its comment to the guest (V22); {@link CommentStyle#CLASSIC} adds nothing to the prompt. */
     @Builder.Default
