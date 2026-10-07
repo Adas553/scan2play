@@ -12,6 +12,7 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
+import com.scan2play.model.VibeType;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongNames;
 import com.scan2play.util.Texts;
@@ -393,7 +394,19 @@ public class SongEvaluationService {
         String styleRule = commentStyle == null || commentStyle == CommentStyle.CLASSIC
                 ? ""
                 : System.lineSeparator() + commentStyleRules.get(lang).get(commentStyle) + System.lineSeparator();
-        return String.format(promptTemplates.get(lang), songName, style, vibeRule + duplicateRule + styleRule);
+        return String.format(promptTemplates.get(lang), songName, genreForPrompt(style, lang), vibeRule + duplicateRule + styleRule);
+    }
+
+    /** How the prompt names "no genre": words, not the code "ANY" — the AI once quoted "'ANY'" to a guest (2026-10-07). */
+    private static final Map<String, String> ANY_GENRE = Map.of(
+            "pl", "dowolny (DJ nie wybrał gatunku)",
+            "en", "any (the DJ picked no genre)");
+
+    /** The party's genre as the prompt gives it: a picked one in quotes (the guest-facing name), none in plain words. */
+    static String genreForPrompt(String style, String lang) {
+        return style == null || style.isBlank() || VibeType.ANY.name().equals(style)
+                ? ANY_GENRE.getOrDefault(lang, ANY_GENRE.get(DEFAULT_LANG))
+                : "\"" + style.replace('"', '\'') + "\"";
     }
 
     /**
