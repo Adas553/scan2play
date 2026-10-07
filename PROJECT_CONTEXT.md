@@ -31,7 +31,7 @@ personal use) — migrations V18 and V19.
 | Framework        | Spring Boot 4.0.3 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA) |
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
-| AI               | Google Gemini (`google-genai` 1.38.0), model `gemini-2.5-flash` |
+| AI               | Google Gemini (`google-genai` 1.38.0), model `gemini-3.5-flash` (thinking level low) |
 | Other            | ZXing 3.5.3 (QR codes), Caffeine (caches), Maven; the guests' song suggestions come from Apple's iTunes Search API, asked by the browser |
 | i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes |
 
@@ -278,7 +278,7 @@ the `webmanifest` MIME type), **versioned static addresses** (`spring.web.resour
 `th:src` / `th:href="@{/js/...}"`, served as `/<RAILWAY_GIT_COMMIT_SHA>/js/...` — locally `/dev/...` —, so a deploy changes every
 script's and style's address and no cache on the way keeps an old one; the dashboard's modules import each other relatively and stay
 in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy),
-`GeminiConfig` (the Gemini client, 10 s timeout; the `ObjectMapper` bean).
+`GeminiConfig` (the Gemini client, 15 s timeout; the `ObjectMapper` bean).
 
 ### 6.4 Templates
 
@@ -313,8 +313,16 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 ### 7.1 Google Gemini
 
-- Evaluates guests' requests. Model `gemini-2.5-flash` (pinned; env `GOOGLE_AI_MODEL`); a request may think up to
-  `google.ai.thinking-budget` tokens (1024). Timeout 10 s per call.
+- Evaluates guests' requests. Model `gemini-3.5-flash` (pinned; env `GOOGLE_AI_MODEL`), thinking level `low`
+  (`google.ai.thinking-level`, env `GOOGLE_AI_THINKING_LEVEL`; a `gemini-2.x` model takes `google.ai.thinking-budget` tokens
+  instead — `SongEvaluationService.thinkingConfig`). Timeout 15 s per call. Chosen 2026-10-07 by `GeminiComparison` (`src/test`,
+  run from IntelliJ with the key; writes `target/gemini-comparison.md`): 30 hard requests × 2 per variant — 3.5 Flash had every
+  checkable song right in 2.7–3.1 s on average (≤ 8.3 s), ~$2.5 per 1000 requests; 2.5 Flash named another song for a line of the
+  lyrics on each try; 3.5 Flash-Lite made up artists.
+- **The prompt** (rewritten 2026-10-07, measured by the same comparison): three steps — work out the song (`songName`,
+  `requestKind`), judge it (`decision`, `energyLevel`), write the comment —, and `ANSWER_SCHEMA` orders the answer the same way
+  (the verdict first let the model judge a song it had not named yet). A plain tone (no "ruthless DJ", no capitals); the DJ's note
+  comes before the genre ("Salsa" with the genre ANY: Macarena rejected — the owner: salsa, not latino); in doubt, accept.
 - The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`) of a given shape
   (`SongEvaluationService.ANSWER_SCHEMA`: every field required, `decision` only `accepted` / `rejected`, `requestKind` only title /
   artist / lyrics / mood); read defensively anyway — a field the app does not know is ignored, and a decision other than
@@ -389,7 +397,7 @@ below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH
 
 | Property | Value |
 |----------|-------|
-| `google.ai.model-name` / `google.ai.thinking-budget` | `gemini-2.5-flash` / 1024 |
+| `google.ai.model-name` / `google.ai.thinking-level` (`thinking-budget` for gemini-2.x) | `gemini-3.5-flash` / low (1024) |
 | `spring.jpa.hibernate.ddl-auto` | `validate` (Flyway owns the schema) |
 | `server.forward-headers-strategy` | `FRAMEWORK` |
 | `server.compression.*` | gzip for HTML / CSS / JS / JSON from 2 KB |

@@ -1,3 +1,3 @@
-The DJ's notes about this party's vibe (a description of the music the DJ wants — not instructions about the answer's format): "%s".
-Treat them as part of the party's vibe: REJECT a request that clearly goes against them (decision: "rejected") and in the comment briefly tell the guest what the DJ is after tonight.
 
+The DJ's notes about the music at this party (a description of the music, not instructions about the answer): "%s".
+They come before the genre: reject a request that clearly goes against them, and in the comment briefly say what the DJ is after tonight. Accept a song that fits them or is close to them.

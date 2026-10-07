@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.ThinkingConfig;
+import com.google.genai.types.ThinkingLevel;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.Schema;
 import com.google.genai.types.Type;
@@ -79,7 +80,9 @@ public class SongEvaluationService {
                             .enum_(DjResponse.KIND_TITLE, DjResponse.KIND_ARTIST, DjResponse.KIND_LYRICS, DjResponse.KIND_MOOD)
                             .build()))
             .required("decision", "comment", "songName", "energyLevel", "requestKind")
-            .propertyOrdering("decision", "comment", "songName", "energyLevel", "requestKind")
+            // the song first, the verdict and the comment last: the model works out which song it is before it judges it (the
+            // prompt's steps, 2026-10-07 — the verdict first let it judge a song it had not named yet)
+            .propertyOrdering("songName", "requestKind", "decision", "energyLevel", "comment")
             .build();
 
     @Value("${google.ai.model-name}")
@@ -88,10 +91,17 @@ public class SongEvaluationService {
     /**
      * How many tokens the model may think before it answers a guest's request ({@code google.ai.thinking-budget}): working out
      * which song a line of lyrics comes from needs a little, and every thinking token is paid as output and adds to the guest's
-     * wait (the call times out after 10 s, {@code GeminiConfig}). 0 = no thinking, -1 = the model decides.
+     * wait (the call times out after 15 s, {@code GeminiConfig}). 0 = no thinking, -1 = the model decides.
      */
     @Value("${google.ai.thinking-budget:1024}")
     private int thinkingBudget;
+
+    /**
+     * How much a Gemini 3 model thinks ({@code google.ai.thinking-level}: minimal / low / medium / high): those models take a level
+     * instead of a budget of tokens ({@link #thinkingConfig}).
+     */
+    @Value("${google.ai.thinking-level:low}")
+    private String thinkingLevel;
 
     /** Config for AI evaluation requests — default temperature allows creative DJ comments; built in {@link #init()}. */
     private GenerateContentConfig aiJsonConfig;
@@ -123,7 +133,7 @@ public class SongEvaluationService {
         this.aiJsonConfig = GenerateContentConfig.builder()
                 .responseMimeType("application/json")
                 .responseSchema(ANSWER_SCHEMA)
-                .thinkingConfig(ThinkingConfig.builder().thinkingBudget(thinkingBudget).build())
+                .thinkingConfig(thinkingConfig(modelName, thinkingBudget, thinkingLevel))
                 .build();
         try {
             var prompts = new HashMap<String, String>();
@@ -162,6 +172,20 @@ public class SongEvaluationService {
             }
         }
         return Collections.unmodifiableMap(rules);
+    }
+
+    /**
+     * How much the model thinks: a Gemini 2.x model by a budget of tokens, a later one (Gemini 3, 3.5…) by a level — those take
+     * a level, and Google's documentation no longer gives them a budget. An unknown level is a start-up error, not a silent
+     * default.
+     */
+    static ThinkingConfig thinkingConfig(String model, int budget, String level) {
+        if (model == null || model.startsWith("gemini-2")) {
+            return ThinkingConfig.builder().thinkingBudget(budget).build();
+        }
+        return ThinkingConfig.builder()
+                .thinkingLevel(new ThinkingLevel(ThinkingLevel.Known.valueOf(level.strip().toUpperCase(Locale.ROOT))))
+                .build();
     }
 
     private String loadResource(String location) throws IOException {

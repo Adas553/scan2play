@@ -14,9 +14,10 @@ public class GeminiConfig {
      * How long one Gemini call may take (milliseconds). Without it a hanging call held its thread for as long as the
      * connection lived — after the guest's own request had long timed out (spring.mvc.async.request-timeout, 30 s) — and a
      * few of them used up the threads that evaluate every guest's request. A failed call sends the request on to the DJ
-     * unchecked ({@code SongEvaluationService.withoutTheAi}).
+     * unchecked ({@code SongEvaluationService.withoutTheAi}). 15 s: Gemini 3.5 Flash took up to 8.3 s in the comparison of
+     * 2026-10-07 — a margin, still well under the guest's 30 s.
      */
-    static final int TIMEOUT_MS = 10_000;
+    static final int TIMEOUT_MS = 15_000;
 
     @Value("${google.ai.api-key}")
     private String apiKey;
