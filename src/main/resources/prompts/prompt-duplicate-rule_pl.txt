@@ -1,9 +1,3 @@
 
-Oto lista piosenek, które ostatnio zagrały na tej imprezie: [%s].
-
-Dodatkowa zasada (ZAKAZ DUPLIKATÓW):
-Zanim zaakceptujesz piosenkę, sprawdź powyższą listę. Jeśli użytkownik prosi o utwór, który JEST NA TEJ LIŚCIE
-(nawet jeśli wpisał go z błędem, użył skrótu, lub to lekko inny remix tego samego hitu), musisz bezwzględnie
-ODRZUCIĆ prośbę (decision: "rejected"). Skomentuj to w języku użytkownika w zabawny sposób,
-np. "Ta piosenka już dzisiaj leciała, dajmy szansę innym!" albo "Ktoś Cię już uprzedził z tym hitem!".
-
+Piosenki, które już dziś zagrały: [%s].
+Jeśli gość prosi o jedną z nich (także z literówką, skrótem albo w innym remiksie), odrzuć prośbę i w komentarzu powiedz z humorem, że już leciała.
