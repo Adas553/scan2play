@@ -244,6 +244,10 @@ class DashboardPageRenderTest {
                 "<h1 class=\"h4 mb-0 text-secondary\">Panel DJ-a</h1>");
         assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
+        assertThat(html).as("the AI's comment style (V22): the party's own picked, saved as soon as picked")
+                .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", "💬 Komentarze AI:",
+                        "selected=\"selected\">Klasyczne<", ">Sarkastyczne (łagodne)<")
+                .doesNotContain("data-example", "commentStyleExample");
         assertThat(html).as("who plays (V17)").contains("action=\"/dj/dashboard/dj-name\"", "id=\"djNameInput\"", "Kto gra (widzą goście)");
         assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
         assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
@@ -253,8 +257,13 @@ class DashboardPageRenderTest {
         // "Wyczyść kolejkę": the DJ's own queue (no party code in the form), asks first
         assertThat(html).contains("action=\"/dj/dashboard/clear-queue\"", "id=\"clearQueueBtn\"", "🧹 Wyczyść kolejkę",
                 "data-confirm=\"Usunąć wszystkie czekające prośby z kolejki?");
-        assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">Pomiń<", "🔍 Podejrzyj",
+        assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">⏭ Pomiń<", "🔍 Podejrzyj",
                 "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
+        // the request's buttons: "▶ Zagrane" filled and short (one line), "⏭ Pomiń" outlined but readable (the owner, 2026-10-07)
+        assertThat(html).containsPattern("class=\"btn btn-sm btn-info text-nowrap s2p-btn-played\"[^>]*>▶ Zagrane<")
+                .containsPattern("class=\"btn btn-sm btn-outline-light text-nowrap s2p-btn-skip\"[^>]*>⏭ Pomiń<")
+                .containsPattern("class=\"btn btn-sm btn-secondary [^\"]*\"[^>]*>🔍 Podejrzyj<")   // grey, as in the history: red deletes
+                .doesNotContain("btn-outline-danger text-danger", "Oznacz jako zagrane", "btn-outline-secondary\" title=\"Nie tę");
         assertThat(html).doesNotContain("Powered by YouTube", "🔍 YOUTUBE", "▶ YOUTUBE", "YouTube API Services");
         // "Cofnij" after "Pomiń": a bar forms.js shows for a few seconds after a skip; hidden until then
         assertThat(html).contains("id=\"undoSkip\"", "Pominięto:", "data-undo-button", ">Cofnij<");
@@ -275,7 +284,7 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party(), List.of(song(1, "Song One")), Locale.ENGLISH);
 
         assertWhatTheScriptsNeed(html);
-        assertThat(html).contains(">Skip<", "🔍 Preview");
+        assertThat(html).contains(">⏭ Skip<", ">▶ Played<", "🔍 Preview");
         write("dashboard-en.html", html);
     }
 
@@ -301,8 +310,11 @@ class DashboardPageRenderTest {
 
     /** A row of the sample timeline: {@code i} counts back from the newest (1), see {@link #historyAt}. */
     private static HistoryEntry historyEntry(int i, String title, String decision) {
+        // the 3rd the DJ skipped ("⏭ Pominięta przez DJ-a", "↩ Przywróć"), with the AI's longer comment kept (a phone's card shows it)
         return new HistoryEntry((long) i, historyAt(i), title, "https://www.youtube.com/results?search_query=song" + i, "Pop", decision,
-                "ok", 5 + i % 5, null, i == 5 ? 12 : i == 8 ? 3 : 1);   // the votes: a ranking to sort (12 before 3 — as numbers)
+                i == 3 ? "Klasyk wesel, ale parkiet chce dziś czegoś szybszego — może później?" : "ok", 5 + i % 5, null,
+                i == 5 ? 12 : i == 8 ? 3 : 1,   // the votes: a ranking to sort (12 before 3 — as numbers)
+                i == 3 ? historyAt(i) : null);
     }
 
     /** What the real server does with a filter: the entries whose decision the filter includes (the flags are the real enum's). */

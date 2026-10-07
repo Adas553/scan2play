@@ -1,5 +1,6 @@
 package com.scan2play.template;
 
+import com.scan2play.model.CommentStyle;
 import com.scan2play.model.VibeType;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -28,5 +29,24 @@ class VibeMessagesTest {
         assertThat(messages.getMessage("vibe.ANY", null, Locale.ENGLISH)).isEqualTo("Any (the AI judges)");
         assertThat(messages.getMessage("vibe.ANY", null, Locale.forLanguageTag("pl"))).isEqualTo("Dowolny (ocenia AI)");
         assertThat(messages.getMessage("vibe.LATINO", null, Locale.forLanguageTag("pl"))).contains("salsa", "bachata", "reggaeton");
+    }
+
+    /** Every comment style (V22) has its name in both languages — the Polish one of its own, not the English. */
+    @Test
+    void everyCommentStyle_hasItsNameInPolishAndEnglish() {
+        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+
+        Locale pl = Locale.forLanguageTag("pl");
+        for (CommentStyle style : CommentStyle.values()) {
+            String key = "comment.style." + style.name();
+            String english = messages.getMessage(key, null, null, Locale.ENGLISH);
+            String polish = messages.getMessage(key, null, null, pl);
+            assertThat(english).as(key + " en").isNotBlank();
+            assertThat(polish).as(key + " pl").isNotBlank().isNotEqualTo(english);
+        }
+        assertThat(messages.getMessage("comment.style.SARCASTIC_LIGHT", null, pl)).isEqualTo("Sarkastyczne (łagodne)");
     }
 }

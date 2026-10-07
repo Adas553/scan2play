@@ -40,11 +40,12 @@ public class DjService {
     /** The cache of a party's waiting requests, by party code (AppConfig: 3 s); evicted after a song leaves the queue. */
     public static final String QUEUE_CACHE = "dashboardQueue";
 
-    /** The note of a request the DJ skipped (dismissSong), in place of the AI's comment; the skip itself is {@code skippedAt}. */
-    static final String DJ_DISMISS_COMMENT = "Skipped by the DJ ⏭";
+    /**
+     * The note of the requests cleared with the queue, in place of the AI's comment (nothing else tells them from the AI's own
+     * rejections). A skip keeps the AI's comment: {@code skippedAt} says it was skipped, and a restore gives the request back with it
+     * (V23 cleared the notes "Skipped by the DJ ⏭" / "Restored by the DJ ↩" the skips wrote before).
+     */
     static final String DJ_CLEAR_COMMENT = "Cleared by the DJ 🧹";
-    /** The note of a skipped request the DJ put back in the queue (restoreSkippedSong). */
-    static final String DJ_RESTORE_COMMENT = "Restored by the DJ ↩";
 
     private final SongRequestRepository songRequestRepository;
     private final CacheManager cacheManager;
@@ -116,7 +117,7 @@ public class DjService {
 
     /**
      * The DJ skips a waiting request (a song they do not have, or do not want to play now): it leaves the queue as rejected, with
-     * the DJ's note instead of the AI's comment, and shows in the history's rejected requests. Only a waiting (accepted) request;
+     * {@code skippedAt} set and the AI's comment kept, and shows in the history's rejected requests as skipped by the DJ. Only a waiting (accepted) request;
      * one that played stays played. Validates that the song belongs to the given party (IDOR protection).
      *
      * @param id             The ID of the song request.
@@ -134,8 +135,7 @@ public class DjService {
                 return;
             }
             song.setDecision(DECISION_REJECTED);
-            song.setDjComment(DJ_DISMISS_COMMENT);
-            song.setSkippedAt(Instant.now());
+            song.setSkippedAt(Instant.now());   // the AI's comment stays: a restore gives the request back with it
             songRequestRepository.save(song);
             evictDashboardQueueAfterCommit(song.getPartyCode());
             log.info("Song ID={} skipped by the DJ of party {}", id, song.getPartyCode());
@@ -170,8 +170,7 @@ public class DjService {
             return false;
         }
         song.setDecision(DECISION_ACCEPTED);
-        song.setDjComment(DJ_RESTORE_COMMENT);
-        song.setSkippedAt(null);
+        song.setSkippedAt(null);   // with the AI's comment, as before the skip
         songRequestRepository.save(song);
         evictDashboardQueueAfterCommit(ownerPartyCode);
         log.info("Song ID={} restored to the queue by the DJ of party {}", id, ownerPartyCode);
@@ -196,6 +195,27 @@ public class DjService {
         evictDashboardQueueAfterCommit(ownerPartyCode);
         log.info("Party [{}]: the DJ cleared the queue — {} waiting request(s) rejected", ownerPartyCode, cleared);
         return cleared;
+    }
+
+    /**
+     * The DJ clears the history ("Wyczyść historię" — a weekend's guests' words should not stay on the list): the party's requests
+     * that played or were rejected are deleted. The waiting ones stay, and so do the ones the DJ skipped within
+     * {@link SongRequestCommandService#SKIP_REMEMBERED} — deleting them would let the song back into the queue. The AI's duplicate
+     * rule reads the songs that played, so after this it no longer knows what played before.
+     * <p>
+     * Under the party's lock of the guests' requests, as {@link #restoreSkippedSong}: a skip put back at the same moment is either
+     * back in the queue or deleted, never half of each.
+     *
+     * @param ownerPartyCode the partyCode of the authenticated DJ (from the session) — only their own history
+     * @return number of deleted requests
+     */
+    @Transactional
+    public int clearHistory(String ownerPartyCode) {
+        songRequestRepository.lockRequests(SongRequestCommandService.lockKey(ownerPartyCode));
+        int deleted = songRequestRepository.deleteHistory(ownerPartyCode,
+                Instant.now().minus(SongRequestCommandService.SKIP_REMEMBERED));
+        log.info("Party [{}]: the DJ cleared the history — {} request(s) deleted", ownerPartyCode, deleted);
+        return deleted;
     }
 
     /**

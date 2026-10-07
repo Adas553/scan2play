@@ -66,14 +66,20 @@ class GuestQueueServiceTest {
     void theGuestsSong_isFoundInTheWholeQueue_notOnlyInTheFiveShown() {
         givenQueue(10, 11, 12, 13, 14, 15, 16);
 
-        assertThat(service.view(PARTY, Set.of(10L, 99L)).mySong()).isEqualTo("Song 10");
+        GuestQueue queue = service.view(PARTY, Set.of(10L, 99L));
+
+        assertThat(queue.mySong()).isEqualTo("Song 10");
+        assertThat(queue.myWaiting()).isEqualTo(1);
     }
 
     @Test
-    void ofSeveralSongsOfTheGuest_theOneThatWaitsLongestIsNamed() {
+    void ofSeveralSongsOfTheGuest_noneIsNamed_theyAreCounted() {
         givenQueue(10, 11, 12);
 
-        assertThat(service.view(PARTY, Set.of(12L, 11L)).mySong()).isEqualTo("Song 11");
+        GuestQueue queue = service.view(PARTY, Set.of(12L, 11L));
+
+        assertThat(queue.mySong()).as("naming one of them read as the AI's mix-up").isNull();
+        assertThat(queue.myWaiting()).isEqualTo(2);
     }
 
     @Test

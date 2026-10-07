@@ -55,6 +55,21 @@
                             </option>
                         </select>
                     </form>
+                    <!--/* How the AI words its comment to the guest (V22): saved as soon as the DJ picks */-->
+                    <form th:action="@{/dj/dashboard/comment-style}" method="POST" class="m-0 mt-2 d-flex align-items-center"
+                          th:with="pickedStyle=${commentStyle != null ? commentStyle : T(com.scan2play.model.CommentStyle).CLASSIC}">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <label for="commentStyleSelect" class="me-2 fw-bold text-light small text-nowrap"
+                               th:text="#{dashboard.comment.style.label}">💬 AI comments:</label>
+                        <select id="commentStyleSelect" name="commentStyle" data-auto-submit
+                                class="form-select form-select-sm bg-black text-light border-secondary">
+                            <option th:each="style : ${T(com.scan2play.model.CommentStyle).values()}"
+                                    th:value="${style}"
+                                    th:text="#{comment.style.__${style}__}"
+                                    th:selected="${style == pickedStyle}">
+                            </option>
+                        </select>
+                    </form>
                     <!--/* The DJ's own words about the vibe (V16): the AI is given them, the guests see them; empty clears them */-->
                     <form th:action="@{/dj/dashboard/vibe-note}" method="POST" class="m-0 mt-2" id="vibeNoteForm">
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
@@ -250,16 +265,16 @@
                                   th:text="#{dashboard.guest_text(${req.guestText})}">guest wrote: “…”</span>
                         </span>
                         <!--/* "🔍 Podejrzyj": the song on YouTube's search results, for the DJ to look at a song they do not know — a page
-                             the DJ's browser opens, no YouTube API */-->
+                             the DJ's browser opens, no YouTube API. Grey as in the history: red is for what deletes ("Wyczyść") */-->
                         <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
-                           class="btn btn-sm shadow-sm fw-bold flex-shrink-0 text-nowrap btn-outline-danger text-danger play-link"
+                           class="btn btn-sm btn-secondary shadow-sm fw-bold flex-shrink-0 text-nowrap"
                            th:text="#{dashboard.queue.preview}">🔍 Preview</a>
                     </div>
                 </td>
                 <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
                     <span class="badge" th:classappend="${req.votes > 1} ? 'text-bg-warning' : 'text-bg-secondary'" th:text="${req.votes}">1</span>
                 </td>
-                <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style}">Style</span></td>
+                <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style == 'ANY'} ? #{table.style.any} : ${req.style}">Style</span></td>
                 <td th:classappend="${req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played')}">
                     <span class="d-none d-md-inline" th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</span>
                     <span class="d-inline d-md-none s2p-decision-icon" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}"></span>
@@ -270,15 +285,17 @@
                     <div class="d-flex gap-2">
                         <form th:if="${req.decision == 'accepted'}" th:action="@{/dj/dashboard/play}" method="post" class="m-0">
                             <input type="hidden" name="id" th:value="${req.id}" />
-                            <button type="submit" class="btn btn-sm btn-outline-info" th:text="#{dashboard.table.button.mark_played}">Mark Played</button>
+                            <!--/* the request's main action: filled, short ("▶ Zagrane" on one line); "⏭ Pomiń" beside it outlined (app.css) */-->
+                            <button type="submit" class="btn btn-sm btn-info text-nowrap s2p-btn-played" th:title="#{dashboard.table.button.mark_played.title}"
+                                    th:text="#{dashboard.table.button.mark_played}">▶ Played</button>
                         </form>
 
                         <!--/* A song the DJ does not have, or does not want now — it leaves the queue as rejected */-->
                         <form th:if="${req.decision == 'accepted'}"
                               th:action="@{/dj/dashboard/dismiss}" method="post" class="m-0">
                             <input type="hidden" name="id" th:value="${req.id}" />
-                            <button type="submit" class="btn btn-sm btn-outline-secondary" th:title="#{dashboard.table.button.dismiss.title}"
-                                    th:text="#{dashboard.table.button.dismiss}">Skip</button>
+                            <button type="submit" class="btn btn-sm btn-outline-light text-nowrap s2p-btn-skip" th:title="#{dashboard.table.button.dismiss.title}"
+                                    th:text="#{dashboard.table.button.dismiss}">⏭ Skip</button>
                         </form>
                     </div>
                 </td>

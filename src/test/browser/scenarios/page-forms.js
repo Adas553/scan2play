@@ -32,6 +32,21 @@
         }
     });
 
+    S2P.scenario({
+        name: 'comment-style-saves-on-change',
+        title: 'picking the AI\'s comment style saves it at once, by fetch (the page stays)',
+        run: async function (t) {
+            const select = document.getElementById('commentStyleSelect');
+            t.step('at first the classic style', select.value, 'CLASSIC');
+            select.value = 'SARCASTIC';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            await waitForPosts(t, '/dj/dashboard/comment-style', 1, 'the style saved');
+            const saved = (await t.stand.requests('POST /dj/dashboard/comment-style'))[0].q;
+            t.step('the style is sent with the party', [saved.commentStyle, !!saved.partyCode], ['SARCASTIC', true]);
+            t.check('the page did not reload (the select is the same element)', document.getElementById('commentStyleSelect') === select);
+        }
+    });
+
     // The owner (2026-10-01): "End party" changed only the window it was pressed in; the phone kept showing the party open until a
     // reload. Every answer of the queue poll now says whether the party is open (X-Party-Active), and every window follows it.
     S2P.scenario({

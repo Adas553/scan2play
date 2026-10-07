@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.CommentStyle;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
@@ -130,6 +131,24 @@ class DjPartySettingsControllerVibeTest {
             // the access denial surfaces from the standalone MockMvc
         }
         verify(settingsService, never()).updateSettings(any(), any());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void theCommentStyle_isSaved_forTheDjsOwnParty_andAnUnknownOneIsRefused() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/comment-style").param("partyCode", PARTY).param("commentStyle", "SARCASTIC")
+                .principal(token).session(session)).andExpect(status().is3xxRedirection());
+
+        verify(sessionHelper).validateOwnership(eq(PARTY), any(), any());
+        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
+        verify(settingsService).updateSettings(eq(PARTY), updater.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).build();
+        assertThat(party.getCommentStyle()).as("a new party's style").isEqualTo(CommentStyle.CLASSIC);
+        updater.getValue().accept(party);
+        assertThat(party.getCommentStyle()).isEqualTo(CommentStyle.SARCASTIC);
+
+        mockMvc.perform(post("/dj/dashboard/comment-style").param("partyCode", PARTY).param("commentStyle", "RUDE")
+                .principal(token).session(session)).andExpect(status().isBadRequest());
     }
 
     @Test

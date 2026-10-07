@@ -307,11 +307,13 @@ class Handler(BaseHTTPRequestHandler):
             with stand.lock:
                 state['queue'] = []
             return self._json({})
+        if path == '/dj/dashboard/clear-history':     # the history cleared (the History tab fetches it again)
+            return self._json({})
         if path == '/dj/push/subscribe':               # the browser's subscription to notifications (push.js)
             return self._send(state.get('pushStatus', 204))
         if path == '/dj/push/unsubscribe':
             return self._send(204)
-        if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/vibe-note', '/dj/dashboard/dj-name',
+        if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/vibe-note', '/dj/dashboard/dj-name', '/dj/dashboard/comment-style',
                     '/dj/end-party', '/dj/start-party'):
             return self._json({})
         return self._send(404, b'not found', 'text/plain')

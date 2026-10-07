@@ -355,6 +355,15 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// The AI's comment in the history: on a phone one line of it (app.css), a tap shows the whole of it and a second tap folds it
+// again (the owner, 2026-10-07: the comments took most of the cards). Delegated, so the History tab's list needs no set-up.
+document.addEventListener('click', function(e) {
+    const comment = e.target.closest('.s2p-history-table td.s2p-comment-cell');
+    if (!comment) return;
+    const open = comment.classList.toggle('s2p-comment-open');
+    comment.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+
 // The tables on the page as it loads: the queue on the dashboard, the history on the standalone page (with the search and the
 // sort of the page before it, when "Show more" or a filter button loaded it).
 initSortableHeaders(document.body);

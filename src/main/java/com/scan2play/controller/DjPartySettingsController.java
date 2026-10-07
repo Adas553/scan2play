@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.CommentStyle;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
@@ -73,6 +74,18 @@ public class DjPartySettingsController {
                                    OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.validateOwnership(partyCode, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setGlobalVibe(newVibe));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * How the AI words its comment to the guest (V22): classic, funny, lightly sarcastic, sarcastic or short. An unknown value is a
+     * 400 (the enum binding), as for the vibe.
+     */
+    @PostMapping("/dashboard/comment-style")
+    public String updateCommentStyle(@RequestParam String partyCode, @RequestParam CommentStyle commentStyle,
+                                     OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setCommentStyle(commentStyle));
         return REDIRECT_DASHBOARD;
     }
 

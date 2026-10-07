@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
 import com.scan2play.repository.SongRequestRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +24,7 @@ import java.util.Set;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -72,6 +74,60 @@ class SongEvaluationServiceTest {
         assertThat(song).contains("Wskazówki DJ-a o klimacie", "\"wesele 40+, 'bez rapu' i bez disco polo\"").doesNotContain("%s");
         assertThat(en).contains("The DJ's notes about this party's vibe", "\"no rap tonight\"", "A - B").doesNotContain("%s");
         assertThat(none).doesNotContain("Wskazówki DJ-a");
+    }
+
+    /** The DJ's comment style (V22): its block closes the rules; the classic one is the prompt as it was, word for word. */
+    @Test
+    void theCommentStyle_isGivenToTheAi_andTheClassicOneChangesNothing() {
+        java.util.Locale pl = java.util.Locale.of("pl");
+        String before = service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", pl);
+
+        assertThat(service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", CommentStyle.CLASSIC, pl)).isEqualTo(before);
+        assertThat(service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", null, pl)).isEqualTo(before);
+        assertThat(before).doesNotContain("STYL KOMENTARZA");
+        for (CommentStyle style : CommentStyle.values()) {
+            if (style == CommentStyle.CLASSIC) continue;
+            String polish = service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", style, pl);
+            String english = service.buildPrompt("sanah", "ANY", null, null, style, java.util.Locale.ENGLISH);
+            // the style overrides the example comments, not the rules: the sarcastic one named the song in a local try
+            assertThat(polish).as(style + " pl").contains("STYL KOMENTARZA", "przy accepted nie podawaj w komentarzu tytułu ani wykonawcy")
+                    .doesNotContain("%s");
+            assertThat(english).as(style + " en").contains("COMMENT STYLE", "when accepted, do not name the song's title or artist")
+                    .doesNotContain("%s", "STYL KOMENTARZA");
+            // after the duplicate rule's own funny examples, before the answer's format: it overrides both
+            assertThat(polish.indexOf("STYL KOMENTARZA")).isGreaterThan(polish.indexOf("A - B")).isLessThan(polish.indexOf("Odpowiedz WYŁĄCZNIE"));
+        }
+        assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.SARCASTIC, pl))
+                .contains("SARKASTYCZNY —", "nigdy o samej osobie gościa").doesNotContain("ŁAGODNY");
+        assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.SHORT, java.util.Locale.ENGLISH)).contains("at most 80 characters");
+    }
+
+    @Test
+    void theSavedCommentStyle_reachesThePromptOfARequest() {
+        aParty(0).setCommentStyle(CommentStyle.FUNNY);
+        savesWithId();
+
+        // the guest's language picks the prompt's: set here, not the machine's (CI runs in English, a Polish Windows in Polish)
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.of("pl"));
+        try {
+            answering("{\"decision\":\"accepted\",\"comment\":\"Hej!\",\"songName\":\"sanah - Szampan\",\"energyLevel\":7}")
+                    .evaluateAndSaveSong(PARTY_CODE, "szampan", "ANY");
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+
+        assertThat(prompts.getFirst()).contains("ZABAWNY");
+    }
+
+    /** A style without its line in a prompt file would quietly be the classic one: the start stops instead. */
+    @Test
+    void aCommentStyleWithoutItsBlock_stopsTheStart() {
+        String file = "# comment" + System.lineSeparator() + "FUNNY=a" + System.lineSeparator() + "SARCASTIC_LIGHT=b"
+                + System.lineSeparator() + System.lineSeparator() + "SARCASTIC=c";
+
+        assertThatThrownBy(() -> SongEvaluationService.commentStyleRules(file, "pl")).hasMessageContaining("SHORT");
+        assertThat(SongEvaluationService.commentStyleRules(file + System.lineSeparator() + "SHORT= d ", "pl"))
+                .containsEntry(CommentStyle.FUNNY, "a").containsEntry(CommentStyle.SHORT, "d").doesNotContainKey(CommentStyle.CLASSIC);
     }
 
     @Test
@@ -411,7 +467,7 @@ class SongEvaluationServiceTest {
     void aSongTheDjSkippedLately_isNotBackInTheQueue() {
         aParty(0);
         SongRequestEntity skipped = SongRequestEntity.builder().id(3L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
-                .decision("rejected").djComment(DjService.DJ_DISMISS_COMMENT).skippedAt(java.time.Instant.now()).build();
+                .decision("rejected").djComment("Klasyk!").skippedAt(java.time.Instant.now()).build();
         when(songRequestRepository.findSkippedByTheDj(eq(PARTY_CODE), any(), any())).thenReturn(List.of(skipped));
         when(messageSource.getMessage(eq("guest.skipped_by_dj"), any(), any(java.util.Locale.class))).thenReturn("Pick another one");
 
