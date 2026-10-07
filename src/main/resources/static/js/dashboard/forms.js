@@ -50,6 +50,11 @@ import { csrfHeaders, showPartyActive } from './common.js';
                 emit(EVENTS.HISTORY_CHANGED);
                 return;   // the history is fetched again: no button left to flash
             }
+            // The history cleared: what is left of it (a skip that still keeps its song out) is fetched again
+            if (action.includes('/dashboard/clear-history')) {
+                emit(EVENTS.HISTORY_CHANGED);
+                return;
+            }
 
             // --- Party state toggle (end/start party) ---
             if (action.includes('/end-party') || action.includes('/start-party')) {
@@ -129,7 +134,6 @@ if (undoButton) {
 document.querySelectorAll('select[data-auto-submit]').forEach(function (select) {
     select.addEventListener('change', function () { select.form.requestSubmit(); });
 });
-
 // ==========================================================================
 // COPY PARTY LINK
 // ==========================================================================

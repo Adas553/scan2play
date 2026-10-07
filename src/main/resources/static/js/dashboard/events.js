@@ -9,7 +9,7 @@ export const EVENTS = Object.freeze({
      * not in 3 s.
      */
     GUEST_QUEUE_CHANGED: 's2p:guest-queue-changed',
-    /** The DJ changed the history here (a skipped request put back in the queue). The History tab: fetch the list again. */
+    /** The DJ changed the history here (a skipped request put back in the queue, the history cleared). The History tab: fetch the list again. */
     HISTORY_CHANGED: 's2p:history-changed'
 });
 

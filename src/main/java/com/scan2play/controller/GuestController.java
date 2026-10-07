@@ -138,11 +138,11 @@ public class GuestController {
                     return refuse(redirectAttributes, partyCode, "guest.error.song_only");
                 }
 
-                // Remembered in the session, so the party page (and this result) can say where the guest's song waits
+                // Remembered in the session, so the party page can say that the guest's songs wait. The result itself is about this
+                // request alone: another of the guest's waiting songs named here read as the AI's mix-up (the owner, 2026-10-07).
                 guestSessionService.rememberRequest(session, partyCode, response.requestId());
                 model.addAttribute(RESPONSE, response);
                 model.addAttribute(PARTY_CODE, partyCode);
-                model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
                 return "result";
             } catch (IllegalArgumentException e) {
                 log.warn("Song request for unknown party code: {}", partyCode);

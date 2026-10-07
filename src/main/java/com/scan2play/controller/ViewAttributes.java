@@ -18,6 +18,7 @@ public final class ViewAttributes {
     public static final String GLOBAL_VIBE = "globalVibe";
     public static final String VIBE_NOTE = "vibeNote";
     public static final String DJ_NAME = "djName";
+    public static final String COMMENT_STYLE = "commentStyle";
     public static final String PARTY_CODE = "partyCode";
     public static final String IS_ACTIVE = "isActive";
 

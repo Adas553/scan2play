@@ -9,6 +9,7 @@ import com.google.genai.types.Schema;
 import com.google.genai.types.Type;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.Texts;
@@ -27,6 +28,8 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -108,6 +111,8 @@ public class SongEvaluationService {
     private Map<String, String> duplicateRuleTemplates;
     /** The DJ's vibe note in the prompt, per language code. */
     private Map<String, String> vibeNoteTemplates;
+    /** The block of each comment style but {@link CommentStyle#CLASSIC}, per language code. */
+    private Map<String, Map<CommentStyle, String>> commentStyleRules;
 
     /**
      * Loads AI prompt templates for all supported languages.
@@ -123,18 +128,39 @@ public class SongEvaluationService {
             var prompts = new HashMap<String, String>();
             var duplicates = new HashMap<String, String>();
             var vibeNotes = new HashMap<String, String>();
+            var styles = new HashMap<String, Map<CommentStyle, String>>();
             for (String lang : SUPPORTED_LANGS) {
                 vibeNotes.put(lang, loadResource("classpath:prompts/prompt-vibe-note_" + lang + ".txt"));
                 prompts.put(lang, loadResource("classpath:prompts/prompt-template_" + lang + ".txt"));
                 duplicates.put(lang, loadResource("classpath:prompts/prompt-duplicate-rule_" + lang + ".txt"));
+                styles.put(lang, commentStyleRules(loadResource("classpath:prompts/prompt-comment-style_" + lang + ".txt"), lang));
             }
             this.promptTemplates = Map.copyOf(prompts);
             this.duplicateRuleTemplates = Map.copyOf(duplicates);
             this.vibeNoteTemplates = Map.copyOf(vibeNotes);
+            this.commentStyleRules = Map.copyOf(styles);
         } catch (IOException e) {
             log.error("Failed to load prompt templates", e);
             throw new RuntimeException("System configuration error: prompt templates missing", e);
         }
+    }
+
+    /**
+     * The comment styles' blocks of one language: a line {@code STYLE=text} for each style but {@link CommentStyle#CLASSIC} (blank
+     * lines and {@code #} comments ignored). A style without its line stops the start: the DJ would pick it and get the classic one.
+     */
+    static Map<CommentStyle, String> commentStyleRules(String file, String lang) {
+        Map<CommentStyle, String> rules = new EnumMap<>(CommentStyle.class);
+        file.lines().map(String::strip).filter(line -> !line.isEmpty() && !line.startsWith("#")).forEach(line -> {
+            int eq = line.indexOf('=');
+            rules.put(CommentStyle.valueOf(line.substring(0, eq)), line.substring(eq + 1).strip());
+        });
+        for (CommentStyle style : CommentStyle.values()) {
+            if (style != CommentStyle.CLASSIC && !rules.containsKey(style)) {
+                throw new IllegalStateException("prompt-comment-style_" + lang + ".txt has no line for " + style);
+            }
+        }
+        return Collections.unmodifiableMap(rules);
     }
 
     private String loadResource(String location) throws IOException {
@@ -171,7 +197,7 @@ public class SongEvaluationService {
         Locale locale = LocaleContextHolder.getLocale();
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), locale);
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(), locale);
         if (aiResponse == null) {
             aiHealthMonitor.recordUnchecked();
             aiResponse = withoutTheAi(partyCode, songName, locale);
@@ -231,9 +257,10 @@ public class SongEvaluationService {
     }
 
     /** The AI's answer, or null when the AI could not be asked (an error, a timeout, an answer that is not JSON). */
-    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String vibeNote, Locale locale) {
+    private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
+                                      Locale locale) {
         try {
-            String prompt = buildPrompt(songName, style, recentSongs, vibeNote, locale);
+            String prompt = buildPrompt(songName, style, recentSongs, vibeNote, commentStyle, locale);
             DjResponse answer = objectMapper.readValue(askAi(prompt, aiJsonConfig), DjResponse.class);
             // The AI may leave the name of a rejected song empty (the Polish prompt once allowed it): the history would show a
             // row without a song, so it keeps what the guest asked for.
@@ -317,13 +344,25 @@ public class SongEvaluationService {
      * the DJ wrote none.
      */
     String buildPrompt(String songName, String style, String recentSongs, String vibeNote, Locale locale) {
+        return buildPrompt(songName, style, recentSongs, vibeNote, CommentStyle.CLASSIC, locale);
+    }
+
+    /**
+     * The same, with the DJ's comment style (V22) after the other rules, where it overrides the comments the prompt gives as
+     * examples; {@link CommentStyle#CLASSIC} (or none) adds nothing — the prompt as it was.
+     */
+    String buildPrompt(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
+                       Locale locale) {
         String lang = resolvePromptLanguage(locale);
         String note = Texts.oneLine(vibeNote, PartySettingsEntity.VIBE_NOTE_MAX).replace('"', '\'');
         String vibeRule = note.isEmpty() ? "" : String.format(vibeNoteTemplates.get(lang), note);
         String duplicateRule = (recentSongs != null)
                 ? String.format(duplicateRuleTemplates.get(lang), recentSongs)
                 : "";
-        return String.format(promptTemplates.get(lang), songName, style, vibeRule + duplicateRule);
+        String styleRule = commentStyle == null || commentStyle == CommentStyle.CLASSIC
+                ? ""
+                : System.lineSeparator() + commentStyleRules.get(lang).get(commentStyle) + System.lineSeparator();
+        return String.format(promptTemplates.get(lang), songName, style, vibeRule + duplicateRule + styleRule);
     }
 
     /**

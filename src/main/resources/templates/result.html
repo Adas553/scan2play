@@ -29,13 +29,8 @@
         <p class="mt-4 lead fst-italic text-light" th:text="${response.comment}">DJ's Comment</p>
 
         <div class="mt-4" th:unless="${response.unchecked}">
-            <span class="badge bg-secondary p-2">Energy: <span th:text="${response.energyLevel}">0</span>/10</span>
+            <span class="badge bg-secondary p-2" th:text="#{result.energy(${response.energyLevel})}">Energy: 0/10</span>
         </div>
-
-        <!--/* Where the guest's song waits (GuestQueueService): the first of the guest's songs still in the queue */-->
-        <div th:if="${guestQueue != null and guestQueue.mySong() != null}" id="myPosition"
-             class="alert alert-success fw-bold py-2 mt-4 mb-0" role="status"
-             th:text="#{home.queue.my_waiting(${guestQueue.mySong()})}">Your request waits for the DJ</div>
 
         <a th:href="@{/p/{code}(code=${partyCode})}" class="btn btn-outline-light mt-5" th:text="#{result.button.suggest_another}">Suggest another one</a>
     </div>
