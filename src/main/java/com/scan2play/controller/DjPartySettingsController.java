@@ -5,15 +5,18 @@ import com.scan2play.model.CommentStyle;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.util.SocialLinks;
 import com.scan2play.util.Texts;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -112,6 +115,35 @@ public class DjPartySettingsController {
         sessionHelper.validateOwnership(partyCode, authentication, session);
         String name = Texts.oneLine(djName, PartySettingsEntity.DJ_NAME_MAX);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setDjName(name.isEmpty() ? null : name));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The DJ's profiles (V24) the guests see under "🎧 Gra: …" and on the QR print: each one "@name", a name, or a link copied from
+     * the site, kept as an https address on that site ({@link SocialLinks}); empty clears it. 400 and nothing saved when one of them
+     * is not a profile on its site.
+     */
+    @PostMapping("/dashboard/dj-links")
+    public String updateDjLinks(@RequestParam String partyCode, @RequestParam(required = false) String instagram,
+                                @RequestParam(required = false) String facebook, @RequestParam(required = false) String tiktok,
+                                OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        String instagramUrl;
+        String facebookUrl;
+        String tiktokUrl;
+        try {
+            instagramUrl = SocialLinks.instagram(Texts.oneLine(instagram, PartySettingsEntity.LINK_MAX));
+            facebookUrl = SocialLinks.facebook(Texts.oneLine(facebook, PartySettingsEntity.LINK_MAX));
+            tiktokUrl = SocialLinks.tiktok(Texts.oneLine(tiktok, PartySettingsEntity.LINK_MAX));
+        } catch (IllegalArgumentException e) {
+            log.info("Party [{}]: the DJ's links not saved — {}", partyCode, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setInstagramUrl(instagramUrl);
+            s.setFacebookUrl(facebookUrl);
+            s.setTiktokUrl(tiktokUrl);
+        });
         return REDIRECT_DASHBOARD;
     }
 

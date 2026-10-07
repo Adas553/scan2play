@@ -1,5 +1,6 @@
 package com.scan2play.entity;
 
+import com.scan2play.util.SongNames;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DynamicUpdate;
@@ -83,6 +84,11 @@ public class SongRequestEntity {
      * and once the DJ put it back. The same song stays out of the queue for a while from then ({@code SongRequestCommandService}).
      */
     private Instant skippedAt;
+
+    /** Whether the AI's song has none of the guest's words in it: the queue marks it "⚠ Sprawdź" ({@code SongNames.sharesNoWord}). */
+    public boolean needsCheck() {
+        return SongNames.sharesNoWord(guestText, songName);
+    }
 
     /**
      * Defensive truncation of all free-text fields before persist/update.

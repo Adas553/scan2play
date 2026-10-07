@@ -186,6 +186,14 @@ class SongEvaluationServiceTest {
         assertThat(SongEvaluationService.searchQueryFor(lyricsWithoutWords, " ")).isEqualTo("Wilki - Baśka");
     }
 
+    @Test
+    void aSongWithNoneOfTheGuestsWords_isLookedUpByTheGuestsWords() {
+        // 2026-10-07: "orła cień" (Elektryczne Gitary) became "Dżem - Sen o Victorii" — the DJ checks it against what was asked for
+        DjResponse other = new DjResponse("accepted", "ok", "Dżem - Sen o Victorii", 7, "title");
+
+        assertThat(SongEvaluationService.searchQueryFor(other, "orła cień")).isEqualTo("orła cień");
+    }
+
     // ---- evaluateAndSaveSong: the whole pipeline, with a test answering instead of Gemini ----
 
     /** The service with {@link SongEvaluationService#askAi} answered by the test; it keeps the prompts it was asked. */
@@ -241,6 +249,23 @@ class SongEvaluationServiceTest {
         assertThat(saved.getValue().getDecision()).isEqualTo("rejected");
         assertThat(saved.getValue().getTrackUrl()).isNull();
         assertThat(response.songName()).isEqualTo("nirvana");
+    }
+
+    /** 2026-10-07: the guest's "–" came back from the AI as a backspace — the page showed "Hulewicz □ Za zdrowie Pań". */
+    @Test
+    void aControlCharacterInTheAisName_isSavedAsADash_andTheAiGetsAPlainDash() {
+        aParty(0);
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+
+        DjResponse response = answering("{\"decision\":\"accepted\",\"comment\":\"Na zdrowie!\","
+                + "\"songName\":\"Zenon Martyniuk & Edward Hulewicz \\b Za zdrowie Pań\",\"energyLevel\":7,\"requestKind\":\"title\"}")
+                .evaluateAndSaveSong(PARTY_CODE, "Zenon Martyniuk & Edward Hulewicz – Za zdrowie Pań", "ANY");
+
+        assertThat(saved.getValue().getSongName()).isEqualTo("Zenon Martyniuk & Edward Hulewicz - Za zdrowie Pań");
+        assertThat(response.songName()).isEqualTo("Zenon Martyniuk & Edward Hulewicz - Za zdrowie Pań");
+        assertThat(prompts.get(0)).contains("Hulewicz - Za zdrowie Pań").doesNotContain("–");
+        assertThat(saved.getValue().getGuestText()).as("the DJ sees the guest's words as typed")
+                .isEqualTo("Zenon Martyniuk & Edward Hulewicz – Za zdrowie Pań");
     }
 
     @Test

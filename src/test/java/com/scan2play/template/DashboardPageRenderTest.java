@@ -177,7 +177,8 @@ class DashboardPageRenderTest {
 
     /** A party of the product: the DJ plays from their own software, the guests' requests wait on the dashboard. */
     private static PartySettingsEntity party() {
-        return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY).build();
+        return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
+                .instagramUrl("https://www.instagram.com/dj.koko/").build();
     }
 
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */
@@ -232,7 +233,10 @@ class DashboardPageRenderTest {
     void shouldRenderTheDashboard() throws IOException {
         SongRequestEntity waiting = song(1, "Wilki - Baśka");
         waiting.setGuestText("ta o Baśce, co ją Wilki grają");
-        String html = renderDashboard(party(), List.of(waiting, song(2, "sanah - Szampan")), PL);
+        // none of the guest's words in the AI's song: "⚠ Sprawdź" (the browser scenario check-song-phone)
+        SongRequestEntity other = song(2, "sanah - Szampan");
+        other.setGuestText("orła cień");
+        String html = renderDashboard(party(), List.of(waiting, other), PL);
 
         assertWhatTheScriptsNeed(html);
         assertThat(html).contains("Wilki - Baśka", "sanah - Szampan");
@@ -248,9 +252,13 @@ class DashboardPageRenderTest {
                 .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", "💬 Komentarze AI:",
                         "selected=\"selected\">Klasyczne<", ">Sarkastyczne (łagodne)<")
                 .doesNotContain("data-example", "commentStyleExample");
+        assertThat(html).as("the DJ's profiles (V24), a note for a refused one hidden until then")
+                .contains("action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"", "id=\"facebookInput\"", "id=\"tiktokInput\"",
+                        "value=\"https://www.instagram.com/dj.koko/\"", "Twoje profile (goście widzą je", "data-form-error hidden");
         assertThat(html).as("who plays (V17)").contains("action=\"/dj/dashboard/dj-name\"", "id=\"djNameInput\"", "Kto gra (widzą goście)");
         assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
         assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
+        assertThat(html.split(">⚠ Sprawdź<", -1)).as("only the song with none of the guest's words").hasSize(2);
         // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)
         assertThat(html).contains("id=\"settingsToggle\"", "⚙️ Ustawienia, klimat i kod QR");
         assertThat(html.split("s2p-phone-settings", -1).length - 1).as("the folded parts: vibe, the kind of party, limits, QR code").isEqualTo(4);
@@ -312,7 +320,9 @@ class DashboardPageRenderTest {
     private static HistoryEntry historyEntry(int i, String title, String decision) {
         // the 3rd the DJ skipped ("⏭ Pominięta przez DJ-a", "↩ Przywróć"), with the AI's longer comment kept (a phone's card shows it)
         return new HistoryEntry((long) i, historyAt(i), title, "https://www.youtube.com/results?search_query=song" + i, "Pop", decision,
-                i == 3 ? "Klasyk wesel, ale parkiet chce dziś czegoś szybszego — może później?" : "ok", 5 + i % 5, null,
+                i == 3 ? "Klasyk wesel, ale parkiet chce dziś czegoś szybszego — może później?" : "ok", 5 + i % 5,
+                // the guest's words: the 2nd's are not in its song ("⚠ Sprawdź"), the 4th's are
+                i == 2 ? "orła cień" : i == 4 ? "bravo" : null,
                 i == 5 ? 12 : i == 8 ? 3 : 1,   // the votes: a ranking to sort (12 before 3 — as numbers)
                 i == 3 ? historyAt(i) : null);
     }

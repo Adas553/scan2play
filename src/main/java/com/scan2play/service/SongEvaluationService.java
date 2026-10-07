@@ -12,6 +12,7 @@ import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.SongNames;
 import com.scan2play.util.Texts;
 import com.scan2play.util.YouTubeSearchLinks;
 import jakarta.annotation.PostConstruct;
@@ -266,6 +267,9 @@ public class SongEvaluationService {
             // row without a song, so it keeps what the guest asked for.
             if (answer.songName() == null || answer.songName().isBlank()) {
                 answer = answer.withSongName(songName);
+            } else if (!SongNames.tidy(answer.songName()).equals(answer.songName())) {
+                // a control character in place of a dash (the page shows "□"), a line break in the middle of the name
+                answer = answer.withSongName(SongNames.tidy(answer.songName()));
             }
             return withKnownDecision(answer);
         } catch (Exception e) {
@@ -299,12 +303,14 @@ public class SongEvaluationService {
     /**
      * What the link searches for: the AI's name of the song — except when the guest typed a line of the lyrics, then the guest's
      * own words. The AI does not know lyrics reliably (a line of a well-known Polish song got a different made-up artist and title
-     * on each try), while YouTube's search matches lyrics well.
+     * on each try), while YouTube's search matches lyrics well. The guest's words too when the AI's song has none of them
+     * ({@link SongNames#sharesNoWord}, marked "⚠ Sprawdź"): the DJ checks it against what the guest asked for.
      *
      * @param guestText what the guest typed
      */
     static String searchQueryFor(DjResponse aiResponse, String guestText) {
-        if (aiResponse.isLyrics() && guestText != null && !guestText.isBlank()) {
+        if (guestText != null && !guestText.isBlank()
+                && (aiResponse.isLyrics() || SongNames.sharesNoWord(guestText, aiResponse.songName()))) {
             return guestText.strip();
         }
         return aiResponse.songName();
@@ -319,10 +325,11 @@ public class SongEvaluationService {
     /**
      * What the guest typed, as it goes into the prompt (review item 4.6): one line, at most {@value #GUEST_TEXT_MAX} characters,
      * without the double quotes the prompt puts around it — a song name needs no more, and a longer text is only a way to steer
-     * the AI (or to pay for its tokens). The form allows up to 10 KB.
+     * the AI (or to pay for its tokens). The form allows up to 10 KB. Every kind of dash is "-": the AI copied a "–" back as a
+     * control character ({@link SongNames#tidy}).
      */
     static String forPrompt(String guestText) {
-        return asTyped(guestText).replace('"', '\'');
+        return asTyped(guestText).replace('"', '\'').replaceAll("[\\u2010-\\u2015\\u2212]", "-");
     }
 
     /**

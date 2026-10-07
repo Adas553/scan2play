@@ -41,6 +41,10 @@ S2P.scenario({
     run: async function (t) {
         const asked = recordFetches();
         t.check('no song / mood tiles (one kind of request: a song)', !document.getElementById('modeMood') && !document.getElementById('modeSong'));
+        // the DJ's profiles (V24): a button each, its icon drawn (an inline SVG, 16 px) beside the name
+        const icons = Array.from(document.querySelectorAll('#djLinks a svg'));
+        t.step('the DJ\'s profiles: three buttons, each with its icon drawn', [document.querySelectorAll('#djLinks a').length,
+            icons.filter(function (svg) { const box = svg.getBoundingClientRect(); return box.width >= 14 && box.height >= 14; }).length], [3, 3]);
 
         const input = document.getElementById('songInput');
         input.value = 'abba';
@@ -82,4 +86,24 @@ S2P.scenario({
     title: 'the QR print page (eight cards) under the real policy: the codes show, "Print" opens the print window',
     page: 'qr-print-cards',
     run: printPageWorks
+});
+
+// The owner (2026-10-07): on a card our logo goes above the code and the DJ's profiles under it. A card is 68 mm high and clips what
+// does not fit (overflow: hidden) — the page has all three profiles, the most the column must hold.
+S2P.scenario({
+    name: 'qr-print-cards-layout',
+    title: 'the QR cards: our logo above the code, the DJ\'s three profiles under it, all inside the card; the texts beside the code',
+    page: 'qr-print-cards',
+    run: async function (t) {
+        await t.waitFor(function () { return document.querySelector('.card .qr').complete; }, 'the code', 3000).catch(function () {});
+        const card = document.querySelector('.card');
+        const box = function (selector) { return card.querySelector(selector).getBoundingClientRect(); };
+        const logo = box('.side .logo'), qr = box('.side .qr'), links = box('.side .dj-links'), text = box('.text'), whole = card.getBoundingClientRect();
+        t.step('the code\'s column: logo, code, profiles from the top', [logo.bottom <= qr.top + 0.5, qr.bottom <= links.top + 0.5], [true, true]);
+        t.step('the three profiles, one under another', Array.from(card.querySelectorAll('.dj-links span')).map(function (s) { return s.textContent; }),
+            ['Instagram @dj.koko', 'TikTok @dj_koko', 'Facebook djkoko']);
+        t.check('nothing cut off: the profiles end inside the card (' + Math.round(whole.bottom - links.bottom) + ' px to spare)',
+            links.bottom <= whole.bottom - 2);
+        t.check('the texts beside the code, not under it', text.left >= qr.right);
+    }
 });

@@ -142,6 +142,22 @@ class DashboardQueueFragmentTest {
     }
 
     @Test
+    @DisplayName("\"⚠ Sprawdź\" on a song with none of the guest's words (maybe another song); none on a song that has one, none without words")
+    void shouldMarkASongWithNoneOfTheGuestsWords() {
+        SongRequestEntity other = accepted(1, "Dżem - Sen o Victorii");
+        other.setGuestText("orła cień");
+        SongRequestEntity same = accepted(2, "Wilki - Baśka");
+        same.setGuestText("ta o Baśce");
+        String html = render(List.of(other, same, accepted(3, "Without words")), PL);
+
+        assertThat(html).doesNotContain("??");
+        String first = html.substring(html.indexOf("data-song-id=\"1\""), html.indexOf("data-song-id=\"2\""));
+        assertThat(first).contains(">⚠ Sprawdź<", "title=\"W piosence od AI nie ma żadnego słowa gościa");
+        assertThat(html.split("s2p-check-song", -1)).as("only the first row").hasSize(2);
+        assertThat(render(List.of(other), Locale.ENGLISH)).contains(">⚠ Check<");
+    }
+
+    @Test
     @DisplayName("Polish text of the \"nothing matches\" row, with every message key resolved")
     void shouldRenderInPolish() {
         String html = render(List.of(accepted(1, "Alpha")), PL);

@@ -70,9 +70,19 @@ class QrPrintPageTest {
         engine.setTemplateEngineMessageSource(messages);
     }
 
+    /**
+     * The party of the pages the browser tests get: with all three of the DJ's profiles (V24) — the most a card's column under the
+     * code must hold (qr-print-cards-layout).
+     */
     private static String render(String layout, Locale locale) throws IOException {
+        return render(layout, locale, PartySettingsEntity.builder().partyCode(PARTY)
+                .instagramUrl("https://www.instagram.com/dj.koko/").tiktokUrl("https://www.tiktok.com/@dj_koko")
+                .facebookUrl("https://www.facebook.com/djkoko").build());
+    }
+
+    private static String render(String layout, Locale locale, PartySettingsEntity party) throws IOException {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        when(sessionHelper.getPartySettings(any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
+        when(sessionHelper.getPartySettings(any(), any())).thenReturn(party);
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
                 new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
                 mock(PushNotificationService.class));
@@ -123,6 +133,28 @@ class QrPrintPageTest {
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
         assertThat(html).contains("Zeskanuj i zamów piosenkę", "Scan to request a song").doesNotContain("??");
+    }
+
+    @Test
+    void theDjsProfiles_areUnderTheCode_asAGuestReadsThem() throws IOException {
+        String poster = render("poster", Locale.forLanguageTag("pl"));
+        assertThat(poster).containsOnlyOnce("class=\"dj-links\"")
+                .contains("<span>Instagram @dj.koko</span>", "<span>TikTok @dj_koko</span>", "<span>Facebook djkoko</span>");
+        assertThat(poster.indexOf("class=\"code\"")).isLessThan(poster.indexOf("class=\"dj-links\""));
+
+        // a card: the code's column has our logo above the code and the profiles under it (the owner, 2026-10-07)
+        String cards = render("cards", Locale.ENGLISH);
+        assertThat(cards.split("class=\"dj-links\"", -1)).as("on every card").hasSize(9);
+        String card = cards.substring(cards.indexOf("<section class=\"card\">"), cards.indexOf("</section>"));
+        String side = card.substring(card.indexOf("<div class=\"side\">"), card.indexOf("<div class=\"text\">"));
+        assertThat(side.indexOf("class=\"logo\"")).isNotNegative().isLessThan(side.indexOf("class=\"qr\""));
+        assertThat(side.indexOf("class=\"qr\"")).isLessThan(side.indexOf("class=\"dj-links\""));
+
+        String number = render("whatever", Locale.ENGLISH, PartySettingsEntity.builder().partyCode(PARTY)
+                .facebookUrl("https://www.facebook.com/profile.php?id=100012345678").build());
+        assertThat(number).as("a Facebook page known only by its number: nothing to read on paper").doesNotContain("dj-links", "Facebook");
+        String none = render("whatever", Locale.ENGLISH, PartySettingsEntity.builder().partyCode(PARTY).build());
+        assertThat(none).doesNotContain("dj-links");
     }
 
     @Test
