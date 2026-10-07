@@ -44,8 +44,8 @@ public final class GeminiComparison {
     private static final Locale PL = Locale.forLanguageTag("pl");
 
     /**
-     * A guest's request. {@code expected}: words the right song's name contains (null = for a person to judge); {@code accept}: the
-     * decision it should get (null = either).
+     * A guest's request. {@code expected}: words the right song's name contains — or, after "=", all it may be (the guest's own
+     * words, nothing added) — null = for a person to judge; {@code accept}: the decision it should get (null = either).
      */
     record Case(String text, String vibeNote, CommentStyle style, Locale locale, String expected, Boolean accept) {
         Case(String text, String expected) {
@@ -73,10 +73,14 @@ public final class GeminiComparison {
                 return "ERROR";
             }
             boolean song = aCase.expected() == null
-                    || SongNames.comparable(answer.songName()).contains(SongNames.comparable(aCase.expected()))
+                    || (aCase.expected().startsWith("=")
+                        ? SongNames.same(answer.songName(), aCase.expected().substring(1))
+                        : SongNames.comparable(answer.songName()).contains(SongNames.comparable(aCase.expected())))
                     || ("mood".equals(aCase.expected()) && answer.isMood());
             boolean decision = aCase.accept() == null || aCase.accept() == "accepted".equals(answer.decision());
-            if (!song || !decision) {
+            // the comment talks to a guest: no code of the prompt ("Ale skoro 'ANY', to niech będzie", 2026-10-07)
+            boolean comment = answer.comment() == null || !answer.comment().contains("ANY");
+            if (!song || !decision || !comment) {
                 return "WRONG";
             }
             return aCase.expected() == null && aCase.accept() == null ? "?" : "ok";
@@ -88,9 +92,11 @@ public final class GeminiComparison {
             new Case("orła cień", "Varius Manx"),
             new Case("widziałem orła cień", "Varius Manx"),
             // the owner's tries, 2026-10-07, the note "Salsa", sarcastic comments
-            new Case("somos hermanos", "Salsa", CommentStyle.SARCASTIC, PL, null, null),
+            new Case("somos hermanos", "Salsa", CommentStyle.SARCASTIC, PL, "Somos Hermanos", null),   // once "Somos Novios"
             new Case("Crooked Stilo - Somos Hermanos ft. C-Kan", "Salsa", CommentStyle.SARCASTIC, PL, "Somos Hermanos", null),
             new Case("El Zorro - Somos Hermanos", "Salsa", CommentStyle.SARCASTIC, PL, "Somos Hermanos", null),
+            // too short to point to one song: the guest's words, nothing made up ("Ray Sepúlveda - Con Qué Derecho", 2026-10-07)
+            new Case("con que", "Salsa", CommentStyle.SARCASTIC, PL, "=con que", null),
             new Case("ta o Baśce", "Baśka"),
             new Case("jesteś szalona mówię ci", "Jesteś szalona"),
             new Case("przez twe oczy zielone", "Przez twe oczy zielone"),

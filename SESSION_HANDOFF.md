@@ -144,6 +144,19 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   first): three steps, the song named before the verdict (`ANSWER_SCHEMA`'s order), no "ruthless DJ" and no capitals, the DJ's
   note before the genre. On 3.5 Flash as right as the old one, a little faster (≤ 6.6 s), stricter with the note ("Salsa": Macarena
   rejected — the owner: right, it is latino, not salsa). Tests: 366 unit.
+- **Live 2026-10-07 (PR #15 / #16), the owner's first tries on production (not committed yet):** a sarcastic comment quoted the
+  prompt's code to a guest ("Ale skoro 'ANY', to niech będzie"), and "somos hermanos" became "Armando Manzanero - Somos Novios"
+  (a similar-sounding title; "⚠ Sprawdź" stays quiet: "somos" is shared). Fixed: no genre reaches the AI in words
+  (`genreForPrompt`: "dowolny (DJ nie wybrał gatunku)", never "ANY"), the comment must not quote the instructions, and Step 1
+  says a similar-sounding title is another song (with that very example). `GeminiComparison` now marks a comment with "ANY"
+  WRONG and expects "Somos Hermanos". Then "con que" became "Ray Sepúlveda - Con Qué Derecho" (a guess dressed as a fact):
+  Step 1 now adds an artist or the rest of a title only when the words point to one well-known song, a request too short or too
+  general is copied as typed (the comparison's case "=con que": nothing added). The comparison then (3.5 Flash low): 59 of 60
+  right, "con que" copied every time, no "ANY"; "somos hermanos" still "Somos Novios" once of two — its comment ("myląc rodzeństwo
+  z kochankami") shows the AI "correcting" the guest. Step 1 now (the owner: guests do get it wrong too): fix typos and garbled
+  words of a well-known title, but a real song's title means that song, not a better-known one — kept as typed, the DJ's
+  "🔍 Podejrzyj" still finds what the guest meant; swapped, the DJ gets a wrong song unawares (not measured yet).
+  ~$3.7 per 1000 requests (was ~$2.4: a longer prompt, more thinking) — ~$1.1 for a wedding of 300. Tests: 367 unit.
 
 ## Next (the owner picks)
 
@@ -154,6 +167,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    many they do not have; is searching a pain at all; should a guest hear "the DJ does not have it" at once.
    New questions (2026-10-06): during the party, do you look at the laptop, or should the phone vibrate; would you upload your
    library.
+   Later (2026-10-07, the owner): **the DJ's login.** Only Google today — no passwords kept, no table of users (the DJ is the
+   Google subject, `owner_id`), Google's own 2FA; it began with the YouTube API, gone since 2026-10-04. Ask: does any DJ lack a
+   Google account or mind it; does it work on an iPhone from the Home Screen (Next, the iPhone test). If they ask, by effort:
+   "Sign in with Apple" (an Apple Developer account, $99 a year), a sign-in link by e-mail (a mail service — Resend / Postmark —
+   and a table of accounts), e-mail and password (not advised: hashing, resets, lockouts). Until then: Google only.
 2. **The owner liked (2026-10-06):** the **"clear the history"** button — built 2026-10-07 (Start here) —, best paired with a
    **summary of the night** to download first (CSV / PDF; not started); the
    **DJ's branding on the guest page**: the profiles are built (2026-10-07, Start here); left: **the DJ's logo** (small,
