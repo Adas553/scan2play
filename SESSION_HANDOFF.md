@@ -106,7 +106,38 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
   to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.
 
+- **Deployed 2026-10-07 12:46** (PR #11 → `dev`, PR #12 `dev` → `main` `a06e4be`, the owner merged both): the start log showed
+  Flyway applying V22 and V23 (0.05 s), "Push notifications on", started in 5.5 s, no error; the landing page answers with the new
+  texts (PL / EN). Pushes to `dev` / `main` from Claude were refused by auto mode ("Production Deploy"); the owner merges on GitHub.
+
+- **"⚠ Sprawdź" (2026-10-07, the owner's request; not committed):** a guest wrote "orła cień" (Elektryczne Gitary) and the AI saved
+  "Dżem - Sen o Victorii" — another song by its mood, which the prompt forbids. Now a song with none of the guest's words is marked
+  "⚠ Sprawdź" in the queue and the history (a yellow badge under the song, a tooltip says why) and its "🔍 Podejrzyj" searches by
+  the guest's words. `SongNames.sharesNoWord`: the guest's words of 3+ letters, each one's stem (its first max(3, length − 2)
+  letters: "sen" whole, "baśce" → "bas") looked for in the AI's name by `comparable` — "ta o Baśce" finds "Wilki - Baśka", "labamba" finds "La Bamba", a bare
+  artist finds its song. Computed when shown (old rows too, no migration); the link is decided when saved. **Measured** on the
+  local database (21 requests with the guest's words): no false mark — and one miss: "orła cień" → "Budka Suflera - Cień Wielkiej
+  Góry" shares "cień". Marked although right: a description by context ("ta z Shreka" → "Smash Mouth - All Star"), a name spelled
+  by ear ("bitelsi"), a line of lyrics with no word of the title. Tests: 323 unit (`SongNamesTest`), 39 browser
+  (`check-song-phone`, seen red with the badge taken out).
+- **"□" in a song's name (2026-10-07, the owner; not committed):** not a dash the font lacks — a control character. The guest's
+  "–" (U+2013, as iTunes' suggestions write it) came back from the AI as a backspace (U+0008: "Hulewicz □ Za zdrowie Pań") or a
+  line break ("Brathanki↵– Czerwone Korale", "Grubson↵G Nie Nie Nie" — that stray "G" cannot be undone); a guest's "-" never did.
+  Now the AI is given "-" for every dash (`forPrompt`), and its name is tidied when read (`SongNames.tidy`: a control character is
+  " - ", every dash "-", one in a row). Rows saved before keep their "□" (local ones; gone after 30 days). Tests: 325 unit.
+- **The DJ's profiles (2026-10-07, the owner's picks; not committed):** Instagram, Facebook, TikTok (not a website; the owner: no
+  "follow the DJ" on the result page). Three fields in a card under the dashboard's QR code (the owner: not beside "Kto gra" — it stretched the heading's column) → `POST /dj/dashboard/dj-links`; the DJ types "@name", a name
+  or a link copied from the app, the server keeps an https address on that site (`util/SocialLinks`; a look-alike host, another
+  site, a post instead of a profile → 400, nothing saved, the form says why and its button shows ✗). **V24** (three columns). The
+  guest page: buttons with the sites' icons (Bootstrap Icons 1.11.3, MIT: their paths inline in `index.html`) under "🎧 Gra: …"; the QR print (the poster: under the code; every card: our logo above the code, the profiles under it, the texts beside — the owner; `qr-print-cards-layout`, three profiles fit a 68 mm card with ~4.5 mm to spare): "Instagram @djkoko", "TikTok @…", "Facebook <name>"
+  (a page known only by its number is left off the paper). The privacy policy PL / EN names them (public; the sites open only on
+  a click). Tests: 363 unit, 30 database (V24 by `MigrationIT`), 41 browser (`dj-links-refused-then-saved`, seen red with the old
+  `forms.js`). Not tried yet: how the poster looks printed with three profiles (it must stay one A4 page).
+
 ## Next (the owner picks)
+
+0. **"⚠ Sprawdź"** — built 2026-10-07 (Start here; not committed). Still a case for the Gemini comparison (item 5: does 3.5 Flash
+   know "orła cień"?).
 
 1. **Show the requests-only party to DJs** and tell what they said. Questions (2026-10-01): how many requests per wedding and how
    many they do not have; is searching a pain at all; should a guest hear "the DJ does not have it" at once.
@@ -114,8 +145,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    library.
 2. **The owner liked (2026-10-06):** the **"clear the history"** button — built 2026-10-07 (Start here) —, best paired with a
    **summary of the night** to download first (CSV / PDF; not started); the
-   **DJ's branding on the guest page** (a logo — small, re-encoded on the server, kept in the database — and https links to
-   Instagram / Facebook / a website; maybe on the QR print too; a candidate "premium" feature).
+   **DJ's branding on the guest page**: the profiles are built (2026-10-07, Start here); left: **the DJ's logo** (small,
+   re-encoded on the server to PNG, kept in the database, served from our address — the CSP needs no change; the privacy policy
+   to update). A candidate "premium" feature.
 3. **Ideas, only if the DJs ask:** the DJ's library (an export from rekordbox / Serato / M3U) → "✓ you have it" beside each request,
    a lyric matched to the version the DJ has, "the DJ does not have it" at once, a list of what guests asked for and the DJ lacks;
    (notifications on the DJ's phone: built 2026-10-06, see Start here — a store app only if Web Push is not enough). Other

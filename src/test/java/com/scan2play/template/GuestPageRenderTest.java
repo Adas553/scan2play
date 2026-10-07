@@ -125,8 +125,10 @@ class GuestPageRenderTest {
     /** No order to tell (the DJ plays from their own software): the requests sent lately, unnumbered, and the guest's own "waits". */
     @Test
     void theRequestsSentLately_areListed_andTheGuestsOwnWaitsForTheDj() {
+        // with who plays and the DJ's three profiles: the browser tests load the page — the icons too — under the real CSP
         String html = render(PL, Map.of("guestQueue", queue(List.of(song(3, "Newest"), song(2, "Mine"), song(1, "Oldest")),
-                Set.of(2L), "Mine", List.of())));
+                Set.of(2L), "Mine", List.of()), "djName", "DJ Koko", "instagramUrl", "https://www.instagram.com/dj.koko/",
+                "facebookUrl", "https://www.facebook.com/djkoko", "tiktokUrl", "https://www.tiktok.com/@dj_koko"));
         writePreview("index-with-queue.html", html);
         writeForTheBrowserTests("guest.html", html);
 
@@ -267,5 +269,18 @@ class GuestPageRenderTest {
                 .contains("id=\"djName\"", "🎧 Gra: DJ &lt;b&gt;Koko&lt;/b&gt;").doesNotContain("??");
         assertThat(render(Locale.ENGLISH, Map.of("djName", "DJ Koko"))).contains("🎧 Playing: DJ Koko");
         assertThat(render(PL, Map.of())).doesNotContain("id=\"djName\"");
+    }
+
+    /** The DJ's profiles (V24): a button for each one the DJ gave, opened in a new tab, nothing passed to the site. */
+    @Test
+    void theDjsProfiles_areButtons() {
+        String html = render(PL, Map.of("instagramUrl", "https://www.instagram.com/dj.koko/", "tiktokUrl", "https://www.tiktok.com/@dj_koko"));
+
+        assertThat(html).contains("id=\"djLinks\"",
+                "<a href=\"https://www.instagram.com/dj.koko/\" target=\"_blank\" rel=\"noopener noreferrer nofollow\"",
+                "href=\"https://www.tiktok.com/@dj_koko\"", ">Instagram<", ">TikTok<").doesNotContain(">Facebook<");
+        assertThat(html.split("<svg ", -1)).as("an icon on each button, drawn in the text's colour").hasSize(3);
+        assertThat(html).contains("fill=\"currentColor\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"");
+        assertThat(render(PL, Map.of())).doesNotContain("id=\"djLinks\"");
     }
 }

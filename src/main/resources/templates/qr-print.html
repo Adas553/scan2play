@@ -42,13 +42,27 @@
         <strong th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</strong>
     </p>
     <p class="code"><span lang="pl">Kod imprezy</span> / <span lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
+    <!--/* The DJ's profiles (V24), as a guest reads them on paper: "Instagram @djkoko"; a Facebook page known only by its number
+         has nothing to read, so it is left out here */-->
+    <th:block th:fragment="djLinks" th:with="links=${T(com.scan2play.util.SocialLinks)},
+            fb=${facebookUrl != null ? links.handle(facebookUrl) : null}">
+    <p th:if="${instagramUrl != null or tiktokUrl != null or fb != null}" class="dj-links">
+        <span th:if="${instagramUrl != null}" th:text="${'Instagram ' + links.handle(instagramUrl)}">Instagram @djkoko</span>
+        <span th:if="${tiktokUrl != null}" th:text="${'TikTok ' + links.handle(tiktokUrl)}">TikTok @djkoko</span>
+        <span th:if="${fb != null}" th:text="${'Facebook ' + fb}">Facebook djkoko</span>
+    </p>
+    </th:block>
 </main>
 
 <main th:if="${qrLayout == 'cards'}" class="cards">
     <section class="card" th:each="card : ${#numbers.sequence(1, 8)}">
-        <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
-        <div class="text">
+        <!--/* the code's column: our logo above the code, the DJ's profiles under it (the owner, 2026-10-07); the texts beside */-->
+        <div class="side">
             <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+            <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
+            <th:block th:replace="~{qr-print :: djLinks}"></th:block>
+        </div>
+        <div class="text">
             <p class="title"><span lang="pl">Zeskanuj i zamów piosenkę</span><br>
                 <span lang="en" class="second">Scan to request a song</span></p>
             <p class="small"><span lang="pl">Tytuł, wykonawca albo fragment tekstu</span><br>

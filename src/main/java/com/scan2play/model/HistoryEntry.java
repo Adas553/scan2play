@@ -1,5 +1,7 @@
 package com.scan2play.model;
 
+import com.scan2play.util.SongNames;
+
 import java.time.Instant;
 
 /**
@@ -31,6 +33,11 @@ public record HistoryEntry(Long id, Instant at, String title, String trackUrl, S
     /** Whether the DJ skipped this request — the history offers to put it back in the queue ("↩ Przywróć"). */
     public boolean skippedByDj() {
         return skippedAt != null && "rejected".equals(decision);
+    }
+
+    /** Whether the AI's song has none of the guest's words in it: the history marks it "⚠ Sprawdź" ({@code SongNames.sharesNoWord}). */
+    public boolean needsCheck() {
+        return SongNames.sharesNoWord(guestText, title);
     }
 
     /** An entry with the guest's words, one guest's: a request nobody else asked for. */

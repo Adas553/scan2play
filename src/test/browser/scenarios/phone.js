@@ -83,6 +83,38 @@ S2P.scenario({
     }
 });
 
+// The owner (2026-10-07): a guest wrote "orła cień", the AI saved another song by its mood — only the guest's words showed it. A song
+// with none of the guest's words is marked "⚠ Sprawdź" (the server decides, SongNames.sharesNoWord); on a phone it must stay in the card.
+S2P.scenario({
+    name: 'check-song-phone',
+    title: 'on a phone "⚠ Sprawdź" shows on the song with none of the guest\'s words, inside its card — in the queue and in the history',
+    viewport: '390,844',
+    setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
+                     { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
+    run: async function (t) {
+        // the rendered rows (the stand-in's polled rows have no badge): read before the first poll replaces them
+        const marked = function (row) { return shows(row.querySelector('.s2p-check-song')); };
+        const inside = function (row) {
+            const badge = row.querySelector('.s2p-check-song').getBoundingClientRect();
+            const card = row.getBoundingClientRect();
+            return badge.left >= card.left && badge.right <= card.right && badge.right <= window.innerWidth;
+        };
+        const queued = ['1', '2'].map(function (id) { return document.querySelector('#song-list tr[data-song-id="' + id + '"]'); });
+        t.step('the queue: marked only the song with none of the guest\'s words', queued.map(marked), [false, true]);
+        t.check('the queue: the mark inside the card', inside(queued[1]));
+        t.step('the queue: the mark says it', queued[1].querySelector('.s2p-check-song').textContent.trim(), '⚠ Sprawdź');
+
+        document.querySelector('[data-dj-tab="history"]').click();
+        await t.waitFor(function () { return document.querySelector('#history-content tr[data-decision]'); }, 'the history', 5000);
+        const rows = ['Played Alpha', 'Played Bravo'].map(function (name) {
+            return document.querySelector('#history-content tr[data-song-name="' + name + '"]');
+        });
+        t.step('the history: marked only the song with none of the guest\'s words', rows.map(marked), [true, false]);
+        t.check('the history: the mark inside the card', inside(rows[0]));
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+    }
+});
+
 // The owner (2026-10-07): on a phone the history was a table of narrow columns — a title broke into a word per line, the skip's label
 // ran off the screen. Now a card per request, as the queue.
 S2P.scenario({

@@ -47,6 +47,37 @@
         }
     });
 
+    // The DJ's profiles (V24): the server refuses one that is not a profile on its site (400) — the form says so, the button ✗, not
+    // a ✓ for something not saved; saved again, the note goes.
+    S2P.scenario({
+        name: 'dj-links-refused-then-saved',
+        title: 'the DJ\'s profiles: a refused one shows the note and ✗ (nothing saved); saved, the note goes and the button shows ✓',
+        setup: { djLinksStatus: 400 },
+        run: async function (t) {
+            const form = document.getElementById('djLinksForm');
+            const note = form.querySelector('[data-form-error]');
+            const button = form.querySelector('button[type="submit"]');
+            t.step('at first no note, the saved profile in its field', [note.hidden, document.getElementById('instagramInput').value],
+                [true, 'https://www.instagram.com/dj.koko/']);
+            document.getElementById('tiktokInput').value = 'https://evil.example/@dj';
+            button.click();
+            await waitForPosts(t, '/dj/dashboard/dj-links', 1, 'the profiles sent');
+            await t.waitFor(function () { return !note.hidden; }, 'the note', 2000).catch(function () {});
+            t.step('refused: the note shows, the button says ✗', [note.hidden, button.textContent], [false, '✗']);
+            t.step('all three fields are sent', Object.keys((await t.stand.requests('POST /dj/dashboard/dj-links'))[0].q)
+                .filter(function (k) { return k !== 'partyCode' && k !== '_csrf'; }).sort(), ['facebook', 'instagram', 'tiktok']);
+
+            await t.stand.config({ djLinksStatus: 302 });
+            document.getElementById('tiktokInput').value = '@dj_koko';
+            await t.sleep(1700);   // the ✗ goes back to the label first
+            button.click();
+            await waitForPosts(t, '/dj/dashboard/dj-links', 2, 'the profiles sent again');
+            await t.waitFor(function () { return note.hidden; }, 'the note gone', 2000).catch(function () {});
+            t.step('saved: no note, the button says ✓', [note.hidden, button.textContent], [true, '✓']);
+            t.check('the page did not reload (the form is the same element)', document.getElementById('djLinksForm') === form);
+        }
+    });
+
     // The owner (2026-10-01): "End party" changed only the window it was pressed in; the phone kept showing the party open until a
     // reload. Every answer of the queue poll now says whether the party is open (X-Party-Active), and every window follows it.
     S2P.scenario({

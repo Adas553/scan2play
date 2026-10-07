@@ -57,6 +57,7 @@ def default_state():
         'partyActive': True,
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
+        'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
         'requests': [],
     }
 
@@ -311,6 +312,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({})
         if path == '/dj/push/subscribe':               # the browser's subscription to notifications (push.js)
             return self._send(state.get('pushStatus', 204))
+        if path == '/dj/dashboard/dj-links':           # the DJ's profiles: a redirect when saved, as the real server, or 400
+            status = state.get('djLinksStatus', 302)
+            return self._send(status, headers={'Location': '/dj/dashboard'}) if status == 302 else self._send(status)
         if path == '/dj/push/unsubscribe':
             return self._send(204)
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/vibe-note', '/dj/dashboard/dj-name', '/dj/dashboard/comment-style',

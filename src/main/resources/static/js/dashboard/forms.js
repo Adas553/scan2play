@@ -62,15 +62,23 @@ import { csrfHeaders, showPartyActive } from './common.js';
                 return; // no flash needed for these buttons
             }
 
+            // A form that says why the server refused it (the DJ's profiles: not a profile on that site) shows it; ✗, not ✓
+            const ok = accepted(response);
+            const error = form.querySelector('[data-form-error]');
+            if (error) {
+                error.hidden = ok;
+            }
+
             // Flash the submit button briefly as confirmation
             const btn = form.querySelector('button[type="submit"]');
             if (btn) {
                 const original = btn.textContent;
-                btn.textContent = '✓';
-                btn.classList.add('btn-success');
+                const flash = ok || !error ? 'btn-success' : 'btn-danger';
+                btn.textContent = flash === 'btn-success' ? '✓' : '✗';
+                btn.classList.add(flash);
                 setTimeout(function() {
                     btn.textContent = original;
-                    btn.classList.remove('btn-success');
+                    btn.classList.remove(flash);
                 }, 1500);
             }
         }).catch(function(err) {

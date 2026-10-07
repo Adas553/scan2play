@@ -131,8 +131,34 @@ body {
     font-size: 13pt;
 }
 
+/* The DJ's profiles (V24): "Instagram @djkoko" — on the poster in one line under the code, on a card one under another */
+.dj-links span {
+    white-space: nowrap;
+}
+
+.poster .dj-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1mm 6mm;
+    margin: 2mm 0 0;
+    font-size: 13pt;
+    font-weight: 600;
+}
+
+.card .dj-links {
+    text-align: center;
+    font-size: 8pt;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.card .dj-links span {
+    display: block;
+}
+
 /* Our logo: the mark (images/logo.svg) and the name with a cyan "2" — on the poster between the title and the code (the
-   code's own white margin, the quiet zone, is the space under it), on a card above its title */
+   code's own white margin, the quiet zone, is the space under it), on a card above the code */
 .logo {
     display: flex;
     align-items: center;
@@ -157,7 +183,6 @@ body {
 }
 
 .card .logo {
-    justify-content: flex-start;
     gap: 1.5mm;
     font-size: 10pt;
 }
@@ -189,10 +214,23 @@ body {
     break-inside: avoid;
 }
 
-.card .qr {
+/* The code's column of a card: our logo above the code, the DJ's profiles under it */
+.card .side {
+    display: flex;
     flex: none;
-    width: 42mm;
-    height: 42mm;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5mm;
+    width: 40mm;
+}
+
+.card .side p {
+    margin: 0;
+}
+
+.card .qr {
+    width: 40mm;
+    height: 40mm;
     image-rendering: pixelated;
 }
 
