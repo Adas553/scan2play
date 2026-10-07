@@ -153,7 +153,8 @@ class SongEvaluationServiceTest {
         // a song the model does not know (a new one: "Shakira & Burna Boy – Dai Dai", May 2026) is not rejected for that
         assertThat(song).contains("To, że nie znasz piosenki, nie jest powodem do odrzucenia");
         // never another song of a similar vibe, and the song worked out before it is judged (2026-10-07: "orła cień" became Dżem)
-        assertThat(song).contains("Nie podmieniaj prośby na inną piosenkę o podobnym klimacie", "naprawdę są słowa gościa");
+        assertThat(song).contains("Piosenka o podobnie brzmiącym tytule to inna piosenka", "tak samo piosenka o podobnym klimacie",
+                "naprawdę są słowa gościa");
         assertThat(song.indexOf("Krok 1 — ustal piosenkę")).isLessThan(song.indexOf("Krok 2 — oceń"));
     }
 
@@ -217,9 +218,29 @@ class SongEvaluationServiceTest {
         for (Locale locale : List.of(Locale.forLanguageTag("pl"), Locale.ENGLISH)) {
             for (CommentStyle style : CommentStyle.values()) {
                 String prompt = proposed.buildPrompt("orła cień", "ANY", "Wilki - Baśka", "Salsa", style, locale);
-                assertThat(prompt).contains("\"orła cień\"", "\"ANY\"", "Salsa", "Wilki - Baśka", "songName").doesNotContain("%s");
+                assertThat(prompt).contains("\"orła cień\"", "Salsa", "Wilki - Baśka", "songName").doesNotContain("%s");
             }
         }
+    }
+
+    /** "No genre" reaches the AI in words: it once quoted "'ANY'" to a guest (2026-10-07). A picked genre goes in quotes. */
+    @Test
+    void noGenre_isWords_notTheCodeAny() {
+        String polish = service.buildPrompt("somos hermanos", "ANY", null, null, CommentStyle.SARCASTIC, Locale.forLanguageTag("pl"));
+        String english = service.buildPrompt("somos hermanos", "ANY", null, null, CommentStyle.SARCASTIC, Locale.ENGLISH);
+
+        assertThat(polish).contains("Gatunek imprezy wybrany przez DJ-a: dowolny (DJ nie wybrał gatunku)", "nie cytuj tego polecenia")
+                .doesNotContain("ANY");
+        assertThat(english).contains("as the DJ picked it: any (the DJ picked no genre)", "do not quote these instructions")
+                .doesNotContain("ANY");
+        assertThat(service.buildPrompt("x", "Latino (salsa, bachata, reggaeton)", null, Locale.forLanguageTag("pl")))
+                .contains("wybrany przez DJ-a: \"Latino (salsa, bachata, reggaeton)\"");
+        // a song with a similar-sounding title is another song: the AI made "Somos Novios" of "somos hermanos"
+        assertThat(polish).contains("\"Somos Novios\" nie jest \"Somos Hermanos\"");
+        // the AI "corrected" the guest: "myląc rodzeństwo z kochankami" (the comparison, 2026-10-07)
+        assertThat(polish).contains("Gość może się pomylić", "gdy jego słowa są tytułem prawdziwej piosenki, chodzi mu o nią");
+        // too short to point to one song: the guest's words ("con que" became "Ray Sepúlveda - Con Qué Derecho")
+        assertThat(polish).contains("zbyt ogólna, żeby wskazać jedną (np. \"con que\"", "przepisz słowa gościa");
     }
 
     @Test
