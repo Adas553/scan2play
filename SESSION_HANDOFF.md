@@ -60,7 +60,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   on transparent — the app icon showed as a white square), a button "📲 Zainstaluj aplikację" (Chrome's own offer does not come back
   for months after a dismissal or a removal). Tests: 290 unit, 27 database, 35 browser (9 new scenarios, seen red on a broken
   `push.js` / `install.js`). **The owner's try (2026-10-06, local, Android, over HTTPS): a notification arrived** ("🎵 Nowa prośba —
-  Elektryczne Gitary - Widziałem Orła Cień"); no sound because "Nie przeszkadzać" was on (a DJ adds Scan2Play to its exceptions).
+  Elektryczne Gitary - Widziałem Orła Cień" — a song 2.5 Flash made up: it is Varius Manx, "Orła cień"); no sound because "Nie przeszkadzać" was on (a DJ adds Scan2Play to its exceptions).
   Not tried yet: an iPhone, production (the keys on Railway).
 - **Deployed 2026-10-06 22:02** (PR #9 → `dev` → `main` `2b31300`, V21 applied, the VAPID keys on Railway: "Push notifications on").
   The owner then saw no switch: Cloudflare served the old `main.js` (the HTTP log: the browsers never asked the server for it), a
@@ -110,7 +110,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Flyway applying V22 and V23 (0.05 s), "Push notifications on", started in 5.5 s, no error; the landing page answers with the new
   texts (PL / EN). Pushes to `dev` / `main` from Claude were refused by auto mode ("Production Deploy"); the owner merges on GitHub.
 
-- **"⚠ Sprawdź" (2026-10-07, the owner's request; not committed):** a guest wrote "orła cień" (Elektryczne Gitary) and the AI saved
+- **"⚠ Sprawdź" (2026-10-07, the owner's request; not committed):** a guest wrote "orła cień" (Varius Manx - "Orła cień"; our own notes had said Elektryczne Gitary — that was 2.5 Flash, too) and the AI saved
   "Dżem - Sen o Victorii" — another song by its mood, which the prompt forbids. Now a song with none of the guest's words is marked
   "⚠ Sprawdź" in the queue and the history (a yellow badge under the song, a tooltip says why) and its "🔍 Podejrzyj" searches by
   the guest's words. `SongNames.sharesNoWord`: the guest's words of 3+ letters, each one's stem (its first max(3, length − 2)
@@ -133,6 +133,17 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (a page known only by its number is left off the paper). The privacy policy PL / EN names them (public; the sites open only on
   a click). Tests: 363 unit, 30 database (V24 by `MigrationIT`), 41 browser (`dj-links-refused-then-saved`, seen red with the old
   `forms.js`). Not tried yet: how the poster looks printed with three profiles (it must stay one A4 page).
+
+- **Gemini 3.5 Flash (2026-10-07, the owner: "czas na model 3.5, nie może być takich pomyłek"; not committed):** `GeminiComparison`
+  (`src/test/java/com/scan2play/service`, run from IntelliJ with `GOOGLE_AI_API_KEY`; writes `target/gemini-comparison.md`): 30 hard
+  requests × 2 on 6 variants. 3.5 Flash (low): every checkable song right, 2.7–3.1 s on average, ≤ 8.3 s, ~$2.4–2.6 per 1000
+  requests; 2.5 Flash (today): "orła cień" got a different wrong song on each try (Lady Pank, IRA, Dżem, Perfect, Niemen — it is
+  Varius Manx), ~$1.9; 3.5 Flash medium: no more right, ~$8.6, once over 10 s; 3.5 Flash-Lite: made-up artists ("Delfin - Sen o
+  Wiktorii"), "bajlando" read as Magdalena Tul. Now: `gemini-3.5-flash`, `google.ai.thinking-level=low` (a gemini-3 model takes a
+  level, a gemini-2 one the budget — `thinkingConfig`), the call's timeout 15 s. **The prompt rewritten** (the owner's pick, measured
+  first): three steps, the song named before the verdict (`ANSWER_SCHEMA`'s order), no "ruthless DJ" and no capitals, the DJ's
+  note before the genre. On 3.5 Flash as right as the old one, a little faster (≤ 6.6 s), stricter with the note ("Salsa": Macarena
+  rejected — the owner: right, it is latino, not salsa). Tests: 366 unit.
 
 ## Next (the owner picks)
 
@@ -158,9 +169,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    Web Analytics beacon (the only report so far): switch it off in Cloudflare (Analytics → Web Analytics, the automatic setup for
    the site) or allow it in the CSP. Dependabot alerts and security updates: GitHub → the repository's Settings → "Advanced
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
-5. **A Gemini comparison:** 2.5 Flash (now) against 3.5 Flash (better, ~4–5× the price; it takes `thinkingLevel`, not the
-   `thinkingBudget` of `SongEvaluationService`) and a Flash-Lite, on 30–50 sample requests (hard Polish ones too), answers / time /
-   cost side by side. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
+5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
+   for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
 6. From `REVIEW.md`: what is left is 2.3 (one instance) and 7.x (small tidy-ups; also the needless `hibernate.dialect` the start
    log warns about).
 

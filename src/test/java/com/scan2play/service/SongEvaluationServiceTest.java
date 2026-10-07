@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
@@ -71,12 +72,14 @@ class SongEvaluationServiceTest {
         String en = service.buildPrompt("sanah", "ANY", "A - B", "no rap tonight", java.util.Locale.ENGLISH);
         String none = service.buildPrompt("sanah", "ANY", null, "   ", java.util.Locale.of("pl"));
 
-        assertThat(song).contains("Wskazówki DJ-a o klimacie", "\"wesele 40+, 'bez rapu' i bez disco polo\"").doesNotContain("%s");
-        assertThat(en).contains("The DJ's notes about this party's vibe", "\"no rap tonight\"", "A - B").doesNotContain("%s");
+        assertThat(song).contains("Wskazówki DJ-a o muzyce", "\"wesele 40+, 'bez rapu' i bez disco polo\"").doesNotContain("%s");
+        assertThat(en).contains("The DJ's notes about the music", "\"no rap tonight\"", "A - B").doesNotContain("%s");
+        // the note comes before the genre (2026-10-07: with "Salsa" and the genre ANY the AI did not know which rule wins)
+        assertThat(song).contains("Są ważniejsze niż gatunek");
         assertThat(none).doesNotContain("Wskazówki DJ-a");
     }
 
-    /** The DJ's comment style (V22): its block closes the rules; the classic one is the prompt as it was, word for word. */
+    /** The DJ's comment style (V22): its block follows Step 3 (the comment); the classic one is the prompt without it, word for word. */
     @Test
     void theCommentStyle_isGivenToTheAi_andTheClassicOneChangesNothing() {
         java.util.Locale pl = java.util.Locale.of("pl");
@@ -84,21 +87,22 @@ class SongEvaluationServiceTest {
 
         assertThat(service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", CommentStyle.CLASSIC, pl)).isEqualTo(before);
         assertThat(service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", null, pl)).isEqualTo(before);
-        assertThat(before).doesNotContain("STYL KOMENTARZA");
+        assertThat(before).doesNotContain("Styl komentarza");
         for (CommentStyle style : CommentStyle.values()) {
             if (style == CommentStyle.CLASSIC) continue;
             String polish = service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", style, pl);
             String english = service.buildPrompt("sanah", "ANY", null, null, style, java.util.Locale.ENGLISH);
-            // the style overrides the example comments, not the rules: the sarcastic one named the song in a local try
-            assertThat(polish).as(style + " pl").contains("STYL KOMENTARZA", "przy accepted nie podawaj w komentarzu tytułu ani wykonawcy")
-                    .doesNotContain("%s");
-            assertThat(english).as(style + " en").contains("COMMENT STYLE", "when accepted, do not name the song's title or artist")
-                    .doesNotContain("%s", "STYL KOMENTARZA");
-            // after the duplicate rule's own funny examples, before the answer's format: it overrides both
-            assertThat(polish.indexOf("STYL KOMENTARZA")).isGreaterThan(polish.indexOf("A - B")).isLessThan(polish.indexOf("Odpowiedz WYŁĄCZNIE"));
+            // the style replaces Step 3's tone, not its rules: the sarcastic one named the song in a local try
+            assertThat(polish).as(style + " pl").contains("Styl komentarza (zastępuje ton z Kroku 3)", "Pozostałe zasady Kroku 3 obowiązują",
+                    "Przy \"accepted\" nie podawaj tytułu ani wykonawcy").doesNotContain("%s");
+            assertThat(english).as(style + " en").contains("Comment style (replaces the tone of Step 3)", "The other rules of Step 3 still apply")
+                    .doesNotContain("%s", "Styl komentarza");
+            // after Step 3 and the played songs, before the answer's format
+            assertThat(polish.indexOf("Styl komentarza")).isGreaterThan(polish.indexOf("A - B")).isGreaterThan(polish.indexOf("Krok 3"))
+                    .isLessThan(polish.indexOf("Odpowiedz wyłącznie"));
         }
         assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.SARCASTIC, pl))
-                .contains("SARKASTYCZNY —", "nigdy o samej osobie gościa").doesNotContain("ŁAGODNY");
+                .contains("sarkastyczny — kąśliwa", "nigdy o samej osobie").doesNotContain("łagodny");
         assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.SHORT, java.util.Locale.ENGLISH)).contains("at most 80 characters");
     }
 
@@ -116,7 +120,7 @@ class SongEvaluationServiceTest {
             org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
         }
 
-        assertThat(prompts.getFirst()).contains("ZABAWNY");
+        assertThat(prompts.getFirst()).contains("zabawny — żart");
     }
 
     /** A style without its line in a prompt file would quietly be the classic one: the start stops instead. */
@@ -145,9 +149,12 @@ class SongEvaluationServiceTest {
     void thePrompt_asksForTheSongTheGuestMeans_andTellsAMoodApart() {
         String song = service.buildPrompt("chciałbym być marynarzem", "ANY", null, java.util.Locale.of("pl"));
 
-        assertThat(song).contains("KONKRETNĄ PIOSENKĘ", "\"chciałbym być marynarzem\"", "\"lyrics\"", "\"mood\"").doesNotContain("%s");
+        assertThat(song).contains("Prośba gościa: \"chciałbym być marynarzem\"", "\"lyrics\"", "\"mood\"").doesNotContain("%s");
         // a song the model does not know (a new one: "Shakira & Burna Boy – Dai Dai", May 2026) is not rejected for that
-        assertThat(song).contains("NIE ZNASZ piosenki, NIE jest powodem do odrzucenia");
+        assertThat(song).contains("To, że nie znasz piosenki, nie jest powodem do odrzucenia");
+        // never another song of a similar vibe, and the song worked out before it is judged (2026-10-07: "orła cień" became Dżem)
+        assertThat(song).contains("Nie podmieniaj prośby na inną piosenkę o podobnym klimacie", "naprawdę są słowa gościa");
+        assertThat(song.indexOf("Krok 1 — ustal piosenkę")).isLessThan(song.indexOf("Krok 2 — oceń"));
     }
 
     // ---- searchQueryFor: a line of lyrics is looked up by the guest's own words ----
@@ -184,6 +191,35 @@ class SongEvaluationServiceTest {
         assertThat(SongEvaluationService.searchQueryFor(title, "baska wilki")).isEqualTo("Wilki - Baśka");
         assertThat(SongEvaluationService.searchQueryFor(unknown, "baska wilki")).isEqualTo("Wilki - Baśka");
         assertThat(SongEvaluationService.searchQueryFor(lyricsWithoutWords, " ")).isEqualTo("Wilki - Baśka");
+    }
+
+    @Test
+    void theAnswer_namesTheSongBeforeItsVerdict() {
+        assertThat(SongEvaluationService.ANSWER_SCHEMA.propertyOrdering())
+                .contains(List.of("songName", "requestKind", "decision", "energyLevel", "comment"));
+    }
+
+    @Test
+    void aGemini2Model_thinksByABudget_aLaterOneByALevel() {
+        assertThat(SongEvaluationService.thinkingConfig("gemini-2.5-flash", 1024, "low").thinkingBudget()).contains(1024);
+        assertThat(SongEvaluationService.thinkingConfig("gemini-2.5-flash", 1024, "low").thinkingLevel()).isEmpty();
+        var level = SongEvaluationService.thinkingConfig("gemini-3.5-flash", 1024, " Medium ");
+        assertThat(level.thinkingBudget()).isEmpty();
+        assertThat(level.thinkingLevel().map(Object::toString)).contains("MEDIUM");
+        assertThatThrownBy(() -> SongEvaluationService.thinkingConfig("gemini-3.5-flash", 0, "lots"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** The prompt builds whole in every style, with the note and the played songs, in both languages (GeminiComparison builds it so too). */
+    @Test
+    void thePrompt_buildsInEveryStyle() {
+        SongEvaluationService proposed = GeminiComparison.prompts("current");
+        for (Locale locale : List.of(Locale.forLanguageTag("pl"), Locale.ENGLISH)) {
+            for (CommentStyle style : CommentStyle.values()) {
+                String prompt = proposed.buildPrompt("orła cień", "ANY", "Wilki - Baśka", "Salsa", style, locale);
+                assertThat(prompt).contains("\"orła cień\"", "\"ANY\"", "Salsa", "Wilki - Baśka", "songName").doesNotContain("%s");
+            }
+        }
     }
 
     @Test
