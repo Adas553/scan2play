@@ -53,7 +53,7 @@ class GuestPageRenderTest {
     }
 
     private static GuestQueue queue(List<SongRequestEntity> recent, Set<Long> mine, String mySong, List<SongRequestEntity> mostWanted) {
-        return new GuestQueue(recent, mine, mySong, mostWanted);
+        return new GuestQueue(recent, mine, mySong, mine.size(), mostWanted);
     }
 
     private static String render(Locale locale, Map<String, Object> flash) {
@@ -140,6 +140,24 @@ class GuestPageRenderTest {
         assertThat(html.substring(html.indexOf("Newest"), html.indexOf(">Mine<"))).doesNotContain("Twoja");
     }
 
+    /** Several of the guest's songs wait: counted, none named — naming one read as the AI's mix-up (the owner, 2026-10-07). */
+    @Test
+    void severalOfTheGuestsSongsWaiting_areCounted_notNamed() {
+        String html = render(PL, Map.of("guestQueue", queue(List.of(song(3, "Third"), song(2, "Second"), song(1, "First")),
+                Set.of(1L, 2L, 3L), null, List.of())));
+
+        assertThat(html).contains("Czekają u DJ-a Twoje prośby: 3").doesNotContain("Twoja prośba „", "??");
+        assertThat(html.split(">Twoja<", -1)).as("each of them marked in the list").hasSize(4);
+    }
+
+    /** The result page is about this request alone: no other of the guest's waiting songs on it. */
+    @Test
+    void theResultPage_namesNoOtherWaitingSong() {
+        String html = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "Golec uOrkiestra - Ściernisko", 7, "title"));
+
+        assertThat(html).contains("TAK!").doesNotContain("id=\"myPosition\"", "czeka u DJ-a", "Czekają u DJ-a");
+    }
+
     /** GET /p/{code}/queue renders the fragment alone: the same list, with its refresh button, and nothing when it is empty. */
     @Test
     void theFragmentAlone_isTheList_withItsRefreshButton() {
@@ -184,11 +202,11 @@ class GuestPageRenderTest {
     void aRequestPassedOnWithoutTheAi_saysItWentToTheDj() {
         String unchecked = renderResult(new com.scan2play.model.DjResponse("accepted", "AI jest chwilowo niedostępne", "sanah", 0,
                 com.scan2play.model.DjResponse.KIND_UNCHECKED));
-        assertThat(unchecked).contains("PRZEKAZANE", "AI jest chwilowo niedostępne").doesNotContain("TAK!", "Energy:");
+        assertThat(unchecked).contains("PRZEKAZANE", "AI jest chwilowo niedostępne").doesNotContain("TAK!", "Energia", "Energy");
         assertThat(unchecked).as("no YouTube API").doesNotContain("YouTube API Services");
 
         String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title"));
-        assertThat(accepted).contains("TAK!", "Energy:").doesNotContain("PRZEKAZANE");
+        assertThat(accepted).contains("TAK!", "Energia: 7/10").doesNotContain("PRZEKAZANE", "Energy");
     }
 
     /** The songs more than one guest asked for, listed with their votes above the list; the list's songs show theirs too. */

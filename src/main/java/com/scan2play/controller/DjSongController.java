@@ -86,5 +86,18 @@ public class DjSongController {
         djService.clearQueue(ownerPartyCode);
         return REDIRECT_DASHBOARD;
     }
+
+    /**
+     * Clears the DJ's history: the requests that played or were rejected are deleted ({@link DjService#clearHistory}). Only the
+     * authenticated DJ's own party — the party code comes from the session, never from the form.
+     *
+     * @return Redirects to the standalone history page (the dashboard's History tab sends it in the background and reloads the tab).
+     */
+    @PostMapping("/dashboard/clear-history")
+    public String clearHistory(OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        djService.clearHistory(ownerPartyCode);
+        return "redirect:/dj/history-view";
+    }
 }
 

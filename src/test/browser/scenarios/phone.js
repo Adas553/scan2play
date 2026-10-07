@@ -20,11 +20,16 @@ async function phoneDashboard(t, buttons) {
     const row = document.querySelector('#song-list tr[data-song-id]');
     t.step('a request is a card, with no table header', [getComputedStyle(row).display, shows(queue.querySelector('thead'))], ['flex', false]);
     const found = buttons.map(function (action) { return row.querySelector('form[action="' + action + '"] button'); });
-    t.check('its buttons (' + buttons.join(', ') + ') are big enough for a thumb (at least 44 px high, a third of the card wide)',
+    t.check('its buttons (' + buttons.join(', ') + ') are big enough for a thumb (at least 44 px high, a quarter of the card wide)',
         found.every(function (b) {
             const box = b && b.getBoundingClientRect();
-            return !!box && box.height >= 44 && box.width >= row.getBoundingClientRect().width / 3;
+            return !!box && box.height >= 44 && box.width >= row.getBoundingClientRect().width / 4;
         }));
+    // "▶ Zagrane", the one used most, is the bigger target: about two thirds of the row, "⏭ Pomiń" one third; each on one line
+    const played = row.querySelector('form[action="/dj/dashboard/play"] button').getBoundingClientRect();
+    const skip = row.querySelector('form[action="/dj/dashboard/dismiss"] button').getBoundingClientRect();
+    t.check('"▶ Zagrane" is about twice as wide as "⏭ Pomiń"', played.width > skip.width * 1.6);
+    t.check('both labels on one line', played.height < 60 && skip.height < 60);
     t.check('the list scrolls with the page, not in a box of its own',
         getComputedStyle(queue.querySelector('.list-scroll')).overflowY === 'visible');
 
@@ -75,5 +80,43 @@ S2P.scenario({
         t.check('the bar is inside the screen, with a margin', box.left >= 8 && box.right <= window.innerWidth - 8);
         t.check('the "Cofnij" button is big enough for a thumb (at least 36 px high)',
             bar.querySelector('[data-undo-button]').getBoundingClientRect().height >= 36);
+    }
+});
+
+// The owner (2026-10-07): on a phone the history was a table of narrow columns — a title broke into a word per line, the skip's label
+// ran off the screen. Now a card per request, as the queue.
+S2P.scenario({
+    name: 'history-phone',
+    title: 'the history on a phone: a card per request — the song across it, the skip and "↩ Przywróć" inside the screen, the AI\'s comment shown',
+    viewport: '390,844',
+    setup: {},
+    run: async function (t) {
+        document.querySelector('[data-dj-tab="history"]').click();
+        await t.waitFor(function () { return document.querySelector('#history-content tr[data-decision]'); }, 'the history', 5000);
+        const card = document.querySelector('#history-content tr[data-song-name="Rejected Beat"]');
+        const cardBox = card.getBoundingClientRect();
+        const songBox = card.querySelector('td[data-sort-value="song"]').getBoundingClientRect();
+        t.step('a request is a card', getComputedStyle(card).display, 'flex');
+        t.check('the song goes across the card (not a narrow column)', songBox.width >= cardBox.width * 0.85);
+        const label = card.querySelector('.s2p-skipped-label');
+        const restore = card.querySelector('form[action="/dj/dashboard/restore"] button');
+        t.check('"⏭ Pominięta przez DJ-a" and "↩ Przywróć" show inside the screen',
+            [label, restore].every(function (el) { return shows(el) && el.getBoundingClientRect().right <= window.innerWidth; }));
+        t.step('skipped in place of the AI\'s verdict: no red ✖ of a rejection',
+            Array.from(card.querySelectorAll('.s2p-decision-icon')).filter(shows).length, 0);
+        const comment = card.querySelector('td.s2p-comment-cell');
+        t.check('the AI\'s comment shows (hidden in the table below a wide screen)', shows(comment) && /parkiet/.test(comment.textContent));
+        // one line of it, a tap shows the whole of it, a second tap folds it (the owner, 2026-10-07: the comments took the cards)
+        const lineHeight = parseFloat(getComputedStyle(comment).lineHeight);
+        const folded = comment.getBoundingClientRect().height;
+        comment.click();
+        const opened = comment.getBoundingClientRect().height;
+        comment.click();
+        t.step('the comment: one line, a tap opens the whole of it, another folds it',
+            [folded < lineHeight * 1.5, opened > folded * 1.5, comment.getBoundingClientRect().height === folded],
+            [true, true, true]);
+        t.step('the column sort stays: Piosenka and Głosy', Array.from(document.querySelectorAll('#history-content thead th'))
+            .filter(shows).map(function (th) { return th.getAttribute('data-sort'); }), ['song', 'votes']);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
     }
 });

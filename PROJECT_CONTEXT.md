@@ -70,7 +70,12 @@ a fixed-width UTC `sortKey` for the lists' `data-val`).
 `globalVibe` (`VibeType`; `ANY` = no genre: the AI judges by the DJ's note alone), `vibeNote` (V16, ≤ 150: the DJ's own words about
 the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en}`, the guests see them above the form;
 `POST /dj/dashboard/vibe-note`, one line, empty clears), `djName` (V17, ≤ 60: who plays, e.g. "DJ Koko" — the guests see
-"🎧 Gra: DJ Koko" under the page's title; `POST /dj/dashboard/dj-name`, one line, empty clears), `requestLimit` / `cooldownMinutes`
+"🎧 Gra: DJ Koko" under the page's title; `POST /dj/dashboard/dj-name`, one line, empty clears), `commentStyle` (V22, `CommentStyle`:
+CLASSIC / FUNNY / SARCASTIC_LIGHT / SARCASTIC / SHORT, NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
+of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
+the person", no profanity and no song's name in an accepted one; the dashboard's list "💬 Komentarze AI",
+`POST /dj/dashboard/comment-style`),
+`requestLimit` / `cooldownMinutes`
 (the guest's own limit, 1–100 / 1–1440), `duplicateCheckWindow` (0–50 recently played songs the AI must not repeat).
 
 **`SongRequestEntity` → `song_requests`** — a guest's request. `partyCode`, `songName` (255; the song as the AI named it), `guestText`
@@ -134,7 +139,8 @@ sees under the form), `PlayHistoryService.Page`.
 Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
-leaves as rejected with the DJ's note and `skipped_at`; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "🔍 Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
+leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "⏭ Pominięta przez DJ-a" in place of the verdict (amber, not the red "ODRZUCONE"; still
+under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "🔍 Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
 limits and the use of the server limits; the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; feedback; end / resume the party, delete the account, log out. The forms are sent in the background (`forms.js`; not logout
 and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
@@ -158,7 +164,7 @@ never offered).
 
 **On a phone** (narrower than 768 px): the vibe, the limits and the QR code fold under one button "⚙️ Ustawienia, klimat i kod QR"
 (`.s2p-phone-settings`; folded by `app.css` alone, `settings-toggle.js` opens them and keeps the choice for the tab in
-`sessionStorage`); the queue comes first, every waiting request is a card with big buttons; the list scrolls with the page.
+`sessionStorage`); the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); the list scrolls with the page.
 
 **The active queue**: each request has its number — a CSS counter in `app.css`, so it follows the polled list, the sort and the
 search by itself. "🧹 Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
@@ -174,8 +180,14 @@ filters All / Played / Rejected applied by the server, "Show more" (50 at a time
 column (`captureListState` / `restoreListState` in the tab; on the standalone page, which loads itself again, through
 `sessionStorage` once). A heading row where a new day starts, Polish time (`tr[data-day-heading]`: "dziś — sobota, 03.10",
 "wczoraj — …", "wtorek, 29.09"; `Times.dayKey` / `weekday`) — the history keeps 30 days, so the parties of a month share it.
+On a phone (narrower than 768 px) every entry is a card, as in the queue: the song across it, then the votes, the decision, the skip
+and "↩ Przywróć", and the AI's comment — one line with "…", a tap opens it (`.s2p-history-table`, `app.css`, `list-tools.js`); the column sort stays as a row of buttons.
 `list-tools.js`: the search hides a heading with no row left under it; a sort by a column hides them all (`.s2p-sorted`), undoing it
-puts the server's order back.
+puts the server's order back. **"🗑 Wyczyść historię"** (shown while the history is not empty; asks first — `data-confirm`) sends
+`POST /dj/dashboard/clear-history` (`DjService.clearHistory`, under the party's lock "S2PR"): the party's played and rejected requests
+are **deleted**, the guests' words with them — never a waiting one, and never one the DJ skipped within the last 2 hours (it keeps its
+song out of the queue and stays in the history until that ends). The AI's duplicate rule reads the played songs, so after it the AI no
+longer knows what played. The History tab sends it in the background and loads itself again (`s2p:history-changed`).
 
 ### 5.2 Guest Flow
 
@@ -184,7 +196,8 @@ iTunes, asked by the browser) → `POST /p/{partyCode}/request` (`songName`; an 
 comment, the votes). A request the AI reads as a mood is not saved: the guest is back at the form with the text and
 `guest.error.song_only` (the DJ sets the mood). An empty request (only spaces) goes back at once with `guest.error.empty` — no
 limit used, no AI asked. Under the form: "🔥 Najwięcej głosów", "Ostatnio wysłane" (the 5 newest waiting
-requests, unnumbered — the DJ picks the order) and "Twoja prośba „…” czeka u DJ-a" (`GuestQueueService`; the guest's requests are
+requests, unnumbered — the DJ picks the order) and "Twoja prośba „…” czeka u DJ-a" — or, with several, "Czekają u DJ-a Twoje prośby: 3",
+the list marking them "Twoja" (`GuestQueueService`; not on the result page, which is about its one request; the guest's requests are
 remembered in the session) — fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. An ended party shows
 "DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
 
@@ -272,7 +285,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `push.js` (the switch of notifications on this device), `install.js` ("📲 Zainstaluj aplikację"), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `push.js` (the switch of notifications on this device), `install.js` ("📲 Zainstaluj aplikację"), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
@@ -284,7 +297,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`), `db/migration/V1..V21`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V23`.
 
 ---
 
@@ -412,6 +425,8 @@ schema behind Flyway's back.
 | V19 | YouTube removed: every party that is not `REQUESTS_ONLY` (and one with no kind) deleted with its requests and its DJ's feedback; `fallback_play`, `fallback_track`, `youtube_cache`, `youtube_search_budget` dropped; the columns `active_provider`, `playback_mode`, `fallback_playlist_url`, `fallback_shuffle` dropped |
 | V20 | `song_requests.skipped_at` timestamptz, nullable: when the DJ skipped the request; the requests skipped before get their request time |
 | V21 | `push_subscription`: the DJ's devices of the notifications (`endpoint` UNIQUE, index on `owner_id`) |
+| V22 | `party_settings.comment_style` varchar(20) NOT NULL DEFAULT 'CLASSIC', a check of the five styles |
+| V23 | data: the notes "Skipped by the DJ ⏭" / "Restored by the DJ ↩" a skip and a restore wrote in place of the AI's comment → NULL (a skip keeps the AI's comment since; `SkipCommentMigrationIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -468,10 +483,11 @@ GuestQueueService          → DjService
 | GET | `/dj/dashboard` | the dashboard |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active` |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
-| POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, the DJ's note, `skipped_at` (the song stays out for 2 h) |
+| POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own skip, not when the same song waits) |
 | POST | `/dj/dashboard/clear-queue` | "🧹 Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, "Cleared by the DJ 🧹" (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
-| POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/limits` | settings |
+| POST | `/dj/dashboard/clear-history` | "🗑 Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
+| POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/comment-style`, `/limits` | settings |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster / cards |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
@@ -501,11 +517,11 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 267. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 300. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest` with the real
   security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 24 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 30 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT`, `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
   `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played; a song the DJ skipped, and put back), `FirstLoginIT` (a
@@ -515,7 +531,7 @@ GuestQueueService          → DjService
   stays). New SQL that locks or counts gets a test there.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
-  Chrome, with a Python stand-in server that the scenarios configure; 26 scenarios. The stand-in sends the real CSP **enforced** and
+  Chrome, with a Python stand-in server that the scenarios configure; 38 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed

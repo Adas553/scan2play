@@ -110,6 +110,7 @@ public class DjDashboardController {
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
         model.addAttribute(VIBE_NOTE, settings.getVibeNote());
         model.addAttribute(DJ_NAME, settings.getDjName());
+        model.addAttribute(COMMENT_STYLE, settings.getCommentStyle());
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());

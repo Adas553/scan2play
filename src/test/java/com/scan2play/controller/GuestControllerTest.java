@@ -96,7 +96,7 @@ class GuestControllerTest {
 
     @Test
     void theListAlone_isTheFragmentThePageFetchesAgain() {
-        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(), null, java.util.List.of());
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(), null, 0, java.util.List.of());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of());
         when(guestQueueService.view(PARTY, java.util.Set.of())).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
@@ -116,7 +116,7 @@ class GuestControllerTest {
 
     @Test
     void thePartyPage_showsTheQueueAsTheGuestSeesIt() {
-        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(42L), "Mine", java.util.List.of());
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(42L), "Mine", 1, java.util.List.of());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of(42L));
         when(guestQueueService.view(PARTY, java.util.Set.of(42L))).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
@@ -302,6 +302,7 @@ class GuestControllerTest {
         assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);   // still once
         verify(guestSessionService).rememberRequest(session, PARTY, 6L);
+        verify(guestQueueService, never()).view(any(), any());   // the result is about this request alone
     }
 
     /**

@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The migrations on an empty PostgreSQL: the application context of {@link PostgresIntegrationTest} starts only when Flyway has
@@ -62,6 +63,20 @@ class MigrationIT extends PostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns"
                 + " WHERE table_name = 'song_requests' AND column_name = 'guest_text' AND is_nullable = 'YES'", Integer.class))
                 .isEqualTo(150);
+    }
+
+    /** V22: the comment style — a party made before it is classic, and the database takes no style the app does not know. */
+    @Test
+    void aPartyHasACommentStyle_classicByDefault_andOnlyAKnownOne() {
+        String code = "V22" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+
+        assertThat(jdbc.queryForObject("SELECT comment_style FROM party_settings WHERE party_code = ?", String.class, code))
+                .isEqualTo("CLASSIC");
+        jdbc.update("UPDATE party_settings SET comment_style = 'SARCASTIC_LIGHT' WHERE party_code = ?", code);
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET comment_style = 'RUDE' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_comment_style_check");
     }
 
     @Test

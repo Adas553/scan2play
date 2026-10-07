@@ -550,14 +550,78 @@ th[data-sort].sort-desc::after {
     /* a waiting request is accepted: its ✔ says nothing */
     .page-dj #song-list td.status-accepted { display: none; }
     .page-dj #song-list td[data-sort-value="votes"] .badge { font-size: 1rem; }
-    /* the buttons: a row across the card, each half of it, big enough for a thumb */
+    /* the buttons: a row across the card, big enough for a thumb — "▶ Zagrane", the one used most, two thirds of it */
     .page-dj #song-list > tr > td:last-child { flex: 1 1 100%; }
     .page-dj #song-list > tr > td:last-child form { flex: 1 1 0; }
+    .page-dj #song-list > tr > td:last-child form:first-child { flex-grow: 2; }
     .page-dj #song-list > tr > td:last-child .btn {
         width: 100%;
         min-height: 48px;
         font-size: 1rem;
     }
+}
+
+/* --- The queue's buttons (dashboard.html): "▶ Zagrane" filled (the cyan of "ZAGRANE" in the history), "⏭ Pomiń" outlined but
+       readable — the grey outline looked switched off — and amber under the pointer, as "↩ Przywróć" (the owner, 2026-10-07) --- */
+.s2p-btn-played { font-weight: 600; }
+.s2p-btn-skip {
+    --bs-btn-color: #e0e0e0;
+    --bs-btn-border-color: #6c757d;
+    --bs-btn-hover-bg: transparent;
+    --bs-btn-hover-color: #ffc107;
+    --bs-btn-hover-border-color: #ffc107;
+    --bs-btn-active-bg: rgba(255, 193, 7, 0.15);
+    --bs-btn-active-color: #ffc107;
+    --bs-btn-active-border-color: #ffc107;
+}
+
+/* --- The history on a phone (history.html, the History tab and the standalone page): a card per request, as the queue — the song
+       across the card, under it one line of the votes, the decision, the skip and "↩ Przywróć", and the AI's comment (hidden in the
+       table below a wide screen). A table's narrow columns broke a title into a word per line and pushed the skip off the screen
+       (the owner, 2026-10-07). The column sort stays as a row of buttons; the list scrolls with the page. --- */
+/* a request the DJ skipped, in place of the AI's verdict: the colour of its "↩ Przywróć" (Bootstrap's warning), not the red of a rejection */
+.status-skipped { color: #ffc107 !important; font-weight: bold; }
+@media (max-width: 767.98px) {
+    .page-dj .s2p-history-table { display: block; }
+    .page-dj [data-list]:has(.s2p-history-table) .list-scroll { max-height: none; overflow: visible; }
+    .page-dj .s2p-history-table thead,
+    .page-dj .s2p-history-table tbody { display: block; }
+    .page-dj .s2p-history-table thead tr { display: flex; gap: 1rem; }
+    .page-dj .s2p-history-table thead th:not([data-sort]) { display: none; }
+    .page-dj .s2p-history-table tbody > tr { display: block; }
+    .page-dj .s2p-history-table tbody > tr[data-decision] {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        background: #232323;
+        border: 1px solid var(--s2p-border);
+        border-radius: 12px;
+    }
+    .page-dj .s2p-history-table tbody > tr[data-decision] > td {
+        display: block;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+    .page-dj .s2p-history-table tbody > tr[data-decision] > td[data-sort-value="song"] { flex: 1 1 100%; }
+    .page-dj .s2p-history-table td[class*="status-"] { display: flex !important; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+    .page-dj .s2p-history-table td[class*="status-"] form { margin: 0 !important; }
+    /* the AI's comment: one line with "…", a tap shows the whole of it (list-tools.js, .s2p-comment-open) */
+    .page-dj .s2p-history-table td.s2p-comment-cell {
+        display: -webkit-box !important;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+        overflow: hidden;
+        flex: 1 1 100%;
+        cursor: pointer;
+    }
+    .page-dj .s2p-history-table td.s2p-comment-cell.s2p-comment-open { display: block !important; }
+    .page-dj .s2p-history-table td.s2p-comment-cell:empty { display: none !important; }
 }
 
 /* --- The active queue (dashboard.html): every request has its number — a CSS counter, so it follows the polled <tbody>, the sort

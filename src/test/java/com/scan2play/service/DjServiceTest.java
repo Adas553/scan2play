@@ -4,6 +4,8 @@ import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -171,7 +173,7 @@ class DjServiceTest {
     // ---- dismissSong: the DJ skips a waiting request (a requests-only party) ----
 
     @Test
-    void dismissSong_takesAWaitingRequestOutOfTheQueue_asRejected_withTheDjsNote() {
+    void dismissSong_takesAWaitingRequestOutOfTheQueue_asRejected_keepingTheAisComment() {
         SongRequestEntity song = SongRequestEntity.builder().id(5L).partyCode(PARTY_CODE).songName("Unknown Song")
                 .decision(DECISION_ACCEPTED).djComment("The AI liked it").build();
         when(songRequestRepository.findById(5L)).thenReturn(Optional.of(song));
@@ -181,7 +183,7 @@ class DjServiceTest {
         djService.dismissSong(5L, PARTY_CODE);
 
         assertThat(song.getDecision()).isEqualTo(DECISION_REJECTED);
-        assertThat(song.getDjComment()).isEqualTo(DjService.DJ_DISMISS_COMMENT);
+        assertThat(song.getDjComment()).as("a restore gives it back with it").isEqualTo("The AI liked it");
         assertThat(song.getSkippedAt()).as("when it was skipped: the song stays out of the queue for a while from then")
                 .isCloseTo(java.time.Instant.now(), org.assertj.core.api.Assertions.within(5, java.time.temporal.ChronoUnit.SECONDS));
         assertThat(song.getPlayedAt()).isNull();
@@ -194,7 +196,7 @@ class DjServiceTest {
     @Test
     void restoreSkippedSong_putsTheRequestBackInTheQueue_andForgetsTheSkip() {
         SongRequestEntity song = SongRequestEntity.builder().id(5L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
-                .decision(DECISION_REJECTED).djComment(DjService.DJ_DISMISS_COMMENT).skippedAt(java.time.Instant.now()).votes(3).build();
+                .decision(DECISION_REJECTED).djComment("Klasyk wesel!").skippedAt(java.time.Instant.now()).votes(3).build();
         when(songRequestRepository.findById(5L)).thenReturn(Optional.of(song));
         Cache queue = mock(Cache.class);
         when(cacheManager.getCache("dashboardQueue")).thenReturn(queue);
@@ -203,7 +205,7 @@ class DjServiceTest {
 
         assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED);
         assertThat(song.getSkippedAt()).isNull();
-        assertThat(song.getDjComment()).isEqualTo(DjService.DJ_RESTORE_COMMENT);
+        assertThat(song.getDjComment()).as("the AI's comment, as before the skip").isEqualTo("Klasyk wesel!");
         assertThat(song.getVotes()).as("the guests' votes stay").isEqualTo(3);
         verify(songRequestRepository).lockRequests(SongRequestCommandService.lockKey(PARTY_CODE));
         verify(songRequestRepository).save(song);
@@ -243,6 +245,22 @@ class DjServiceTest {
 
         verify(songRequestRepository).rejectWaiting(PARTY_CODE, DjService.DJ_CLEAR_COMMENT);
         verify(queue).evict(PARTY_CODE);
+    }
+
+    @Test
+    void clearHistory_deletesTheOwnPartysHistory_underTheLock_keepingTheSkipsThatStillKeepTheirSongOut() {
+        when(songRequestRepository.deleteHistory(eq(PARTY_CODE), any())).thenReturn(12);
+        Instant before = Instant.now();
+
+        assertThat(djService.clearHistory(PARTY_CODE)).isEqualTo(12);
+
+        ArgumentCaptor<Instant> skippedAfter = ArgumentCaptor.forClass(Instant.class);
+        InOrder order = inOrder(songRequestRepository);
+        order.verify(songRequestRepository).lockRequests(SongRequestCommandService.lockKey(PARTY_CODE));
+        order.verify(songRequestRepository).deleteHistory(eq(PARTY_CODE), skippedAfter.capture());
+        assertThat(skippedAfter.getValue()).as("a skip of the last 2 hours stays")
+                .isBetween(before.minus(SongRequestCommandService.SKIP_REMEMBERED), Instant.now().minus(SongRequestCommandService.SKIP_REMEMBERED));
+        verifyNoInteractions(cacheManager);   // the queue is not touched
     }
 
     @Test

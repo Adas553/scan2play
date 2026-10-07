@@ -107,6 +107,27 @@ class HistoryFragmentTest {
                 .contains("active\" data-list-filter=\"all\"");
     }
 
+    @Test
+    @DisplayName("a party with no genre (the style ANY) shows \"Dowolny\" / \"Any\", never the raw ANY; the column is \"Klimat\"")
+    void shouldNameTheVibeOfNoGenre() {
+        HistoryEntry any = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "ANY", "played", null, 5, null);
+
+        assertThat(render(List.of(any), false, PL)).contains(">Dowolny<", ">Klimat<").doesNotContain(">ANY<", ">Vibe<");
+        assertThat(render(List.of(any), false, Locale.ENGLISH)).contains(">Any<").doesNotContain(">ANY<");
+        assertThat(render(List.of(guest(1, "Alpha", "played")), false, PL)).as("a genre as it was saved").contains(">Pop<");
+    }
+
+    @Test
+    @DisplayName("\"Wyczyść historię\" posts to its own endpoint and asks first (what goes, that the AI forgets); none with nothing to clear")
+    void shouldOfferToClearTheHistory_onlyWhenThereIsOne() {
+        String html = render(List.of(guest(1, "Alpha", "played")), false, PL);
+
+        assertThat(html).containsPattern("<form action=\"/dj/dashboard/clear-history\" method=\"post\"[^>]*data-confirm=\"[^\"]*na zawsze[^\"]*AI zapomni");
+        assertThat(html).contains("id=\"clearHistoryBtn\"", "🗑 Wyczyść historię");
+        assertThat(render(List.of(guest(1, "Alpha", "played")), false, Locale.ENGLISH)).contains("🗑 Clear the history", "for good");
+        assertThat(render(List.of(), false, PL)).doesNotContain("clear-history", "clearHistoryBtn");
+    }
+
     private static String renderWithFilter(String filter) {
         Context context = new Context(Locale.ENGLISH);
         context.setVariable("history", List.of(guest(1, "Alpha", "played")));
@@ -168,14 +189,21 @@ class HistoryFragmentTest {
     @DisplayName("a request the DJ skipped has \"↩ Przywróć\" (back to the queue); one the AI rejected, and one that played, have not")
     void shouldOfferToRestoreOnlyWhatTheDjSkipped() {
         java.time.Instant at = java.time.Instant.parse("2026-09-29T18:00:00Z");
-        HistoryEntry skipped = new HistoryEntry(41L, at, "Skipped", null, "Pop", "rejected", "Skipped by the DJ ⏭", 7, null, 2, at);
+        HistoryEntry skipped = new HistoryEntry(41L, at, "Skipped", null, "Pop", "rejected", "Klasyk wesel!", 7, null, 2, at);
         HistoryEntry byTheAi = new HistoryEntry(42L, at, "ByTheAi", null, "Pop", "rejected", "Not tonight", 7, null, 1);
         String html = render(List.of(skipped, byTheAi, guest(43, "Played", "played")), false, Locale.forLanguageTag("pl"));
 
         assertThat(html.split("action=\"/dj/dashboard/restore\"", -1)).as("one restore form").hasSize(2);
         String row = html.substring(html.indexOf("data-song-name=\"Skipped\""));
         assertThat(row.substring(0, row.indexOf("</tr>"))).contains("action=\"/dj/dashboard/restore\"",
-                "name=\"id\" value=\"41\"", "↩ Przywróć", "title=\"Z powrotem do kolejki — pominięte przez pomyłkę\"");
+                "name=\"id\" value=\"41\"", "↩ Przywróć", "title=\"Z powrotem do kolejki — pominięte przez pomyłkę\"",
+                "⏭ Pominięta przez DJ-a", "Klasyk wesel!");
+        String aiRow = html.substring(html.indexOf("data-song-name=\"ByTheAi\""));
+        assertThat(aiRow.substring(0, aiRow.indexOf("</tr>"))).as("rejected by the AI, not skipped").doesNotContain("Pominięta")
+                .contains("status-rejected", ">ODRZUCONE<", "✖");
+        // the AI took it, the DJ skipped it (the owner, 2026-10-07): "skipped" in place of the verdict, not "rejected", not a ✖
+        assertThat(row.substring(0, row.indexOf("</tr>"))).contains("status-skipped")
+                .doesNotContain("status-rejected", ">ODRZUCONE<", "✖", "ZAAKCEPTOWANE");
     }
 
     @Test

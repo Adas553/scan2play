@@ -117,6 +117,20 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int rejectWaiting(@Param("partyCode") String partyCode, @Param("comment") String comment);
 
     /**
+     * The DJ clears the history: the party's requests that played or were rejected are deleted, guests' words with them. Never a
+     * waiting one, and never one the DJ skipped after {@code skippedAfter}: it keeps its song out of the queue
+     * ({@link #findSkippedByTheDj}) and stays in the history until that ends. One statement over one party's rows — at most what
+     * the retention keeps of it (30 days, ≤ 300 requests a day), found by {@code idx_party_decision_time}.
+     *
+     * @return number of deleted requests
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN ('played', 'rejected') "
+            + "AND (s.skippedAt IS NULL OR s.skippedAt <= :skippedAfter)")
+    int deleteHistory(@Param("partyCode") String partyCode, @Param("skippedAfter") Instant skippedAfter);
+
+    /**
      * Deletes all song requests associated with a specific party.
      * Used during account deletion to comply with GDPR / Google API data deletion requirements.
      *

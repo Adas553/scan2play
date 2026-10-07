@@ -1,5 +1,6 @@
 package com.scan2play.entity;
 
+import com.scan2play.model.CommentStyle;
 import com.scan2play.model.VibeType;
 import com.scan2play.util.CodeGenerator;
 import jakarta.persistence.*;
@@ -60,6 +61,12 @@ public class PartySettingsEntity {
     /** Who plays, as the DJ wrote it (V17): one line of at most {@value #DJ_NAME_MAX} characters, e.g. "DJ Koko"; null = not shown. */
     @Column(length = DJ_NAME_MAX)
     private String djName;
+
+    /** How the AI words its comment to the guest (V22); {@link CommentStyle#CLASSIC} adds nothing to the prompt. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CommentStyle commentStyle = CommentStyle.CLASSIC;
 
     // --- Rate Limiting ---
     @Builder.Default

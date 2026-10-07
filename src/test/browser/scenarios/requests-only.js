@@ -7,7 +7,7 @@ S2P.scenario({
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' }] },
     run: async function (t) {
         const dismiss = document.querySelector('form[action="/dj/dashboard/dismiss"] button[type="submit"]');
-        t.check('a waiting request can be skipped ("Pomiń")', dismiss && dismiss.textContent.trim() === 'Pomiń');
+        t.check('a waiting request can be skipped ("⏭ Pomiń")', dismiss && dismiss.textContent.trim() === '⏭ Pomiń');
         t.check('and marked as played', !!document.querySelector('form[action="/dj/dashboard/play"]'));
         t.check('there is no player on the page', !document.getElementById('yt-player') && !window.onYouTubeIframeAPIReady);
         const fold = document.getElementById('settingsToggle');
@@ -169,5 +169,37 @@ S2P.scenario({
         t.check('the queue emptied at once, not with the next 3 s poll',
             !document.querySelector('#song-list tr[data-song-id]') && performance.now() - clickedAt < 2500);
         t.check('with nothing to clear the button is gone', !shows(button));
+    }
+});
+
+S2P.scenario({
+    name: 'history-clear',
+    title: 'the History tab: "Wyczyść historię" asks first, then goes in the background and the tab is fetched again in place',
+    setup: {},
+    run: async function (t) {
+        const fetches = function () { return t.stand.count('GET /dj/history-view/fragment'); };
+        document.querySelector('[data-dj-tab="history"]').click();
+        await t.waitFor(function () { return document.getElementById('clearHistoryBtn'); }, 'the history with its button', 5000);
+
+        const asked = [];
+        let answer = false;
+        window.confirm = function (text) { asked.push(text); return answer; };
+        let handledInPlace = null;
+        document.addEventListener('submit', function (e) { handledInPlace = e.defaultPrevented; e.preventDefault(); });
+
+        document.getElementById('clearHistoryBtn').click();
+        await t.sleep(300);
+        t.step('it asks first (the words go too, the AI forgets); "no" sends nothing',
+            [asked.length, /na zawsze/.test(asked[0] || ''), await t.stand.count('POST /dj/dashboard/clear-history')], [1, true, 0]);
+
+        answer = true;
+        const before = await fetches();
+        document.getElementById('clearHistoryBtn').click();
+        t.step('"yes": the page stays (the form goes in the background)', handledInPlace, true);
+        for (let i = 0; i < 25 && await fetches() === before; i++) await t.sleep(100);   // the stand-in counts the fetch
+        t.step('the server was told once, and the tab fetched the history again at once',
+            [await t.stand.count('POST /dj/dashboard/clear-history'), await fetches() - before], [1, 1]);
+        t.check('the history still shows in place of the queue', !document.getElementById('history-content').hidden
+            && !!document.querySelector('#history-content [data-list]'));
     }
 });

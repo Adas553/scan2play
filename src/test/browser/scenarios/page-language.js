@@ -14,7 +14,7 @@
         setup: {},
         run: async function (t) {
             t.step('the page says it is Polish', document.documentElement.lang, 'pl');
-            t.step('the texts really are Polish (a waiting request\'s button says "Pomiń")', skipButton().textContent.trim(), 'Pomiń');
+            t.step('the texts really are Polish (a waiting request\'s button says "⏭ Pomiń")', skipButton().textContent.trim(), '⏭ Pomiń');
         }
     });
 
@@ -25,7 +25,7 @@
         setup: {},
         run: async function (t) {
             t.step('the page says it is English', document.documentElement.lang, 'en');
-            t.step('the texts really are English (a waiting request\'s button says "Skip")', skipButton().textContent.trim(), 'Skip');
+            t.step('the texts really are English (a waiting request\'s button says "⏭ Skip")', skipButton().textContent.trim(), '⏭ Skip');
         }
     });
 })();

@@ -67,6 +67,41 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   "Purge Everything" did not help. Fix: the scripts' and styles' addresses carry the deploy's version (`/<commit>/js/...`,
   `PROJECT_CONTEXT.md` Section 6.3). Worth a look in Cloudflare (Caching → Cache Rules, Browser Cache TTL): the server sends
   `no-store`, yet the edge kept the files.
+- **Checked in production (2026-10-07, the logs):** PR #10 live (`484fa54`); the dashboard loads `/<commit>/js/...`; notifications on
+  for two devices (Windows, Android); a guest's request at 22:35 UTC → the Android phone fetched the notification's icons at once,
+  no push error in the log. The owner set Cloudflare's Browser Cache TTL to "Respect Existing Headers": no more `max-age=14400`,
+  the browsers get `304`s again (Cloudflare's edge still keeps `sw.js` / images: `cf-cache-status: HIT`). No "CSP violation", no
+  "AI check" since the deploy (little traffic). Not tried yet: an iPhone. The log's `HikariPool-1 - Failed to validate connection`
+  warnings are the sleeping database (the pool reconnects).
+- **"🗑 Wyczyść historię" (2026-10-07, the owner's request; not committed):** in the history's filter row, asks first;
+  `POST /dj/dashboard/clear-history` → `DjService.clearHistory` (under the party's lock) → `SongRequestRepository.deleteHistory`:
+  the party's played and rejected requests deleted, never a waiting one, never a skip of the last 2 hours (it keeps its song out).
+  The confirmation says the guests' words go and the AI forgets what played. Without the summary of the night for now (Next,
+  item 2). Tests: 293 unit, 28 database, 36 browser (`history-clear`, seen red with `forms.js`' branch taken out).
+- **The AI's comment style (2026-10-07, the owner's picks; not committed):** "💬 Komentarze AI" under the vibe — Klasyczne (the
+  prompt as before), Zabawne, Sarkastyczne (łagodne), Sarkastyczne (the owner: sharp, the DJ's own responsibility), Krótkie (an
+  example under the list was tried and dropped: the owner did not want it). **V22** `party_settings.comment_style`; the blocks in
+  `prompts/prompt-comment-style_{pl,en}.txt`; every style keeps "no profanity, mock the request, not the person" and reminds the
+  AI not to name an accepted song (the sarcastic one did in the owner's local try).
+- **The guest's waiting songs (2026-10-07, the owner: confusing):** the result page no longer says "Twoja prośba „X” czeka u DJ-a"
+  (it named the guest's oldest waiting song under the result of another one); the party page names the song when one waits and
+  counts them when several do ("Czekają u DJ-a Twoje prośby: 3"; `GuestQueue.myWaiting`), the list marks them "Twoja".
+- **A skip keeps the AI's comment (2026-10-07, the owner):** "Pomiń" no longer writes "Skipped by the DJ ⏭" over it, "↩ Przywróć"
+  / "Cofnij" no longer write "Restored by the DJ ↩" (English on a Polish page): the request comes back with the AI's comment; the
+  history says "⏭ Pominięta przez DJ-a" from `skipped_at`. **V23** clears the old notes (their AI comments are lost). The result
+  page's "Energy: 7/10" is "Energia: 7/10" in Polish (`result.energy`). Still English in the database: "Cleared by the DJ 🧹" of a
+  cleared queue (the only thing that tells those from the AI's rejections).
+- **The history on a phone (2026-10-07, the owner: chaotic):** a card per request, as the queue — the title across the card (it
+  broke into a word per line), the skip and "↩ Przywróć" inside the screen, the AI's comment shown; sort by song / votes kept.
+  Tests: 300 unit, 30 database (`SkipCommentMigrationIT`, seen red without V23), 38 browser (`history-phone`, seen red without
+  its CSS). A skipped request shows "⏭ Pominięta przez DJ-a" (amber) in place of the red "ODRZUCONE" / ✖ (the owner: the AI took
+  it, the DJ skipped it); still under the "Odrzucone" filter, by the owner's choice. "ANY" shows as "Dowolny", the column "Vibe" is
+  "Klimat", the landing page says "klimat imprezy" (not "Global Vibe").
+- **The queue's buttons (2026-10-07, the owner):** "▶ Zagrane" (filled cyan, one line — "Oznacz jako zagrane" broke into three) and
+  "⏭ Pomiń" (outlined, readable — the grey looked switched off — amber under the pointer); on a phone "▶ Zagrane" is two thirds of
+  the card's row (`requests-only-phone`, seen red without it). "🔍 Podejrzyj" grey in the queue as in the history (red is for
+  what deletes). On a phone the history's AI comment is one line with "…", a tap opens it, another folds it (`list-tools.js`;
+  `history-phone`, seen red without the toggle).
 - **CI** (`gh` is not installed; the public API answers: `https://api.github.com/repos/Adas553/scan2play/actions/runs?head_sha=…`;
   failed tests are public **annotations**: `.../check-runs/<id>/annotations`): Unit tests, Browser tests, Database tests. Green up
   to `b2e9620`. Unit tests also check that the Copilot copy of `AGENTS.md` matches it.
@@ -77,9 +112,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    many they do not have; is searching a pain at all; should a guest hear "the DJ does not have it" at once.
    New questions (2026-10-06): during the party, do you look at the laptop, or should the phone vibrate; would you upload your
    library.
-2. **The owner liked (2026-10-06), not started:** a **"clear the history"** button (reconsidered — a weekend's guests' words should
-   not stay on the DJ's list; only this party's played / skipped / rejected requests, never the waiting ones, and not a skip of
-   the last 2 hours, or its block goes with it), best paired with a **summary of the night** to download first (CSV / PDF); the
+2. **The owner liked (2026-10-06):** the **"clear the history"** button — built 2026-10-07 (Start here) —, best paired with a
+   **summary of the night** to download first (CSV / PDF; not started); the
    **DJ's branding on the guest page** (a logo — small, re-encoded on the server, kept in the database — and https links to
    Instagram / Facebook / a website; maybe on the QR print too; a candidate "premium" feature).
 3. **Ideas, only if the DJs ask:** the DJ's library (an export from rekordbox / Serato / M3U) → "✓ you have it" beside each request,

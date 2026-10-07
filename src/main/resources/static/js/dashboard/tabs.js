@@ -127,7 +127,8 @@ import { captureListState, initSortableHeaders, restoreListState, setHistoryRelo
     }
     setHistoryReloader(reloadHistory);
 
-    // A skipped request put back in the queue ("Cofnij", "↩ Przywróć"): a history that has been loaded shows it no longer
+    // A skipped request put back in the queue ("Cofnij", "↩ Przywróć") or the history cleared: a history that has been loaded
+    // shows what is left of it
     on(EVENTS.HISTORY_CHANGED, function () {
         if (historyContent.querySelector('[data-list]')) reloadHistory(null, null);
     });

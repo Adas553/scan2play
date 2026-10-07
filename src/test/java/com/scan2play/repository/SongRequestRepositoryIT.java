@@ -95,6 +95,28 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         assertThat(requests.rejectWaiting(party, "Cleared")).as("nothing left to clear").isZero();
     }
 
+    /** "Wyczyść historię": only the party's played and rejected requests; a waiting one and a skip that still blocks its song stay. */
+    @Test
+    void clearingTheHistoryDeletesOnlyThePartysPastRequests_notASkipThatStillKeepsItsSongOut() {
+        String party = newPartyCode();
+        String other = newPartyCode();
+        Instant now = Instant.now();
+        save(party, "played", "played", now.minus(3, ChronoUnit.HOURS), now.minus(2, ChronoUnit.HOURS));
+        save(party, "rejected by the AI", "rejected", now.minus(1, ChronoUnit.HOURS), null);
+        save(party, "skipped long ago", "rejected", now.minus(4, ChronoUnit.HOURS), null, now.minus(3, ChronoUnit.HOURS));
+        save(party, "skipped just now", "rejected", now.minus(1, ChronoUnit.HOURS), null, now.minus(5, ChronoUnit.MINUTES));
+        save(party, "waiting", "accepted", now, null);
+        save(other, "another party's", "played", now, now);
+
+        assertThat(requests.deleteHistory(party, now.minus(2, ChronoUnit.HOURS))).isEqualTo(3);
+
+        assertThat(jdbc.queryForList("SELECT song_name FROM song_requests WHERE party_code = ?", String.class, party))
+                .containsExactlyInAnyOrder("skipped just now", "waiting");
+        assertThat(jdbc.queryForList("SELECT song_name FROM song_requests WHERE party_code = ?", String.class, other))
+                .as("another party's history is untouched").containsExactly("another party's");
+        assertThat(requests.deleteHistory(party, now.minus(2, ChronoUnit.HOURS))).as("nothing left to clear").isZero();
+    }
+
     @Test
     void thePurgeDeletesOldRequestsInBatches() {
         String party = newPartyCode();
@@ -116,7 +138,12 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
     }
 
     private SongRequestEntity save(String party, String song, String decision, Instant requestedAt, Instant playedAt) {
+        return save(party, song, decision, requestedAt, playedAt, null);
+    }
+
+    private SongRequestEntity save(String party, String song, String decision, Instant requestedAt, Instant playedAt,
+                                   Instant skippedAt) {
         return requests.save(SongRequestEntity.builder().partyCode(party).songName(song).style("ANY").decision(decision)
-                .requestedAt(requestedAt).playedAt(playedAt).build());
+                .requestedAt(requestedAt).playedAt(playedAt).skippedAt(skippedAt).build());
     }
 }
