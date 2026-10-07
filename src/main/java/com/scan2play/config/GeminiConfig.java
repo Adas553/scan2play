@@ -3,6 +3,7 @@ package com.scan2play.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.HttpOptions;
+import com.google.genai.types.HttpRetryOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,7 +46,18 @@ public class GeminiConfig {
 
         return Client.builder()
                 .apiKey(apiKey)
-                .httpOptions(HttpOptions.builder().timeout(TIMEOUT_MS).build())
+                .httpOptions(httpOptions())
+                .build();
+    }
+
+    /**
+     * One try of {@link #TIMEOUT_MS}, no retry: the SDK tried a timed-out call again by itself, so a slow Gemini kept the guest
+     * waiting until their own request gave up at 30 s (2026-10-07, two requests) instead of going to the DJ unchecked at 15 s.
+     */
+    static HttpOptions httpOptions() {
+        return HttpOptions.builder()
+                .timeout(TIMEOUT_MS)
+                .retryOptions(HttpRetryOptions.builder().attempts(1).build())
                 .build();
     }
 }

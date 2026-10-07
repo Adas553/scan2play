@@ -287,7 +287,11 @@ public class SongEvaluationService {
                                       Locale locale) {
         try {
             String prompt = buildPrompt(songName, style, recentSongs, vibeNote, commentStyle, locale);
-            DjResponse answer = objectMapper.readValue(askAi(prompt, aiJsonConfig), DjResponse.class);
+            long started = System.nanoTime();
+            String text = askAi(prompt, aiJsonConfig);
+            // how long the guest waited for the AI: search the log for "AI answered" (2026-10-07: 3.5 Flash timed out a while)
+            log.info("AI answered in {} ms ({})", (System.nanoTime() - started) / 1_000_000, modelName);
+            DjResponse answer = objectMapper.readValue(text, DjResponse.class);
             // The AI may leave the name of a rejected song empty (the Polish prompt once allowed it): the history would show a
             // row without a song, so it keeps what the guest asked for.
             if (answer.songName() == null || answer.songName().isBlank()) {

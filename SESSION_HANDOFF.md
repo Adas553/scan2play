@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-06
+# Session Handoff — 2026-10-07
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
@@ -73,12 +73,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   the browsers get `304`s again (Cloudflare's edge still keeps `sw.js` / images: `cf-cache-status: HIT`). No "CSP violation", no
   "AI check" since the deploy (little traffic). Not tried yet: an iPhone. The log's `HikariPool-1 - Failed to validate connection`
   warnings are the sleeping database (the pool reconnects).
-- **"🗑 Wyczyść historię" (2026-10-07, the owner's request; not committed):** in the history's filter row, asks first;
+- **"🗑 Wyczyść historię" (2026-10-07, the owner's request; live, PR #11 / #12):** in the history's filter row, asks first;
   `POST /dj/dashboard/clear-history` → `DjService.clearHistory` (under the party's lock) → `SongRequestRepository.deleteHistory`:
   the party's played and rejected requests deleted, never a waiting one, never a skip of the last 2 hours (it keeps its song out).
   The confirmation says the guests' words go and the AI forgets what played. Without the summary of the night for now (Next,
   item 2). Tests: 293 unit, 28 database, 36 browser (`history-clear`, seen red with `forms.js`' branch taken out).
-- **The AI's comment style (2026-10-07, the owner's picks; not committed):** "💬 Komentarze AI" under the vibe — Klasyczne (the
+- **The AI's comment style (2026-10-07, the owner's picks; live, PR #11 / #12):** "💬 Komentarze AI" under the vibe — Klasyczne (the
   prompt as before), Zabawne, Sarkastyczne (łagodne), Sarkastyczne (the owner: sharp, the DJ's own responsibility), Krótkie (an
   example under the list was tried and dropped: the owner did not want it). **V22** `party_settings.comment_style`; the blocks in
   `prompts/prompt-comment-style_{pl,en}.txt`; every style keeps "no profanity, mock the request, not the person" and reminds the
@@ -110,7 +110,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Flyway applying V22 and V23 (0.05 s), "Push notifications on", started in 5.5 s, no error; the landing page answers with the new
   texts (PL / EN). Pushes to `dev` / `main` from Claude were refused by auto mode ("Production Deploy"); the owner merges on GitHub.
 
-- **"⚠ Sprawdź" (2026-10-07, the owner's request; not committed):** a guest wrote "orła cień" (Varius Manx - "Orła cień"; our own notes had said Elektryczne Gitary — that was 2.5 Flash, too) and the AI saved
+- **"⚠ Sprawdź" (2026-10-07, the owner's request; live, PR #13 / #14):** a guest wrote "orła cień" (Varius Manx - "Orła cień"; our own notes had said Elektryczne Gitary — that was 2.5 Flash, too) and the AI saved
   "Dżem - Sen o Victorii" — another song by its mood, which the prompt forbids. Now a song with none of the guest's words is marked
   "⚠ Sprawdź" in the queue and the history (a yellow badge under the song, a tooltip says why) and its "🔍 Podejrzyj" searches by
   the guest's words. `SongNames.sharesNoWord`: the guest's words of 3+ letters, each one's stem (its first max(3, length − 2)
@@ -120,12 +120,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Góry" shares "cień". Marked although right: a description by context ("ta z Shreka" → "Smash Mouth - All Star"), a name spelled
   by ear ("bitelsi"), a line of lyrics with no word of the title. Tests: 323 unit (`SongNamesTest`), 39 browser
   (`check-song-phone`, seen red with the badge taken out).
-- **"□" in a song's name (2026-10-07, the owner; not committed):** not a dash the font lacks — a control character. The guest's
+- **"□" in a song's name (2026-10-07, the owner; live, PR #13 / #14):** not a dash the font lacks — a control character. The guest's
   "–" (U+2013, as iTunes' suggestions write it) came back from the AI as a backspace (U+0008: "Hulewicz □ Za zdrowie Pań") or a
   line break ("Brathanki↵– Czerwone Korale", "Grubson↵G Nie Nie Nie" — that stray "G" cannot be undone); a guest's "-" never did.
   Now the AI is given "-" for every dash (`forPrompt`), and its name is tidied when read (`SongNames.tidy`: a control character is
   " - ", every dash "-", one in a row). Rows saved before keep their "□" (local ones; gone after 30 days). Tests: 325 unit.
-- **The DJ's profiles (2026-10-07, the owner's picks; not committed):** Instagram, Facebook, TikTok (not a website; the owner: no
+- **The DJ's profiles (2026-10-07, the owner's picks; live, PR #13 / #14, V24):** Instagram, Facebook, TikTok (not a website; the owner: no
   "follow the DJ" on the result page). Three fields in a card under the dashboard's QR code (the owner: not beside "Kto gra" — it stretched the heading's column) → `POST /dj/dashboard/dj-links`; the DJ types "@name", a name
   or a link copied from the app, the server keeps an https address on that site (`util/SocialLinks`; a look-alike host, another
   site, a post instead of a profile → 400, nothing saved, the form says why and its button shows ✗). **V24** (three columns). The
@@ -134,7 +134,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   a click). Tests: 363 unit, 30 database (V24 by `MigrationIT`), 41 browser (`dj-links-refused-then-saved`, seen red with the old
   `forms.js`). Not tried yet: how the poster looks printed with three profiles (it must stay one A4 page).
 
-- **Gemini 3.5 Flash (2026-10-07, the owner: "czas na model 3.5, nie może być takich pomyłek"; not committed):** `GeminiComparison`
+- **Gemini 3.5 Flash (2026-10-07, the owner: "czas na model 3.5, nie może być takich pomyłek"; live, PR #15 / #16):** `GeminiComparison`
   (`src/test/java/com/scan2play/service`, run from IntelliJ with `GOOGLE_AI_API_KEY`; writes `target/gemini-comparison.md`): 30 hard
   requests × 2 on 6 variants. 3.5 Flash (low): every checkable song right, 2.7–3.1 s on average, ≤ 8.3 s, ~$2.4–2.6 per 1000
   requests; 2.5 Flash (today): "orła cień" got a different wrong song on each try (Lady Pank, IRA, Dżem, Perfect, Niemen — it is
@@ -144,7 +144,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   first): three steps, the song named before the verdict (`ANSWER_SCHEMA`'s order), no "ruthless DJ" and no capitals, the DJ's
   note before the genre. On 3.5 Flash as right as the old one, a little faster (≤ 6.6 s), stricter with the note ("Salsa": Macarena
   rejected — the owner: right, it is latino, not salsa). Tests: 366 unit.
-- **Live 2026-10-07 (PR #15 / #16), the owner's first tries on production (not committed yet):** a sarcastic comment quoted the
+- **Live 2026-10-07 (PR #15 / #16), the owner's first tries on production (live, PR #17 / #18):** a sarcastic comment quoted the
   prompt's code to a guest ("Ale skoro 'ANY', to niech będzie"), and "somos hermanos" became "Armando Manzanero - Somos Novios"
   (a similar-sounding title; "⚠ Sprawdź" stays quiet: "somos" is shared). Fixed: no genre reaches the AI in words
   (`genreForPrompt`: "dowolny (DJ nie wybrał gatunku)", never "ANY"), the comment must not quote the instructions, and Step 1
@@ -158,9 +158,18 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   "🔍 Podejrzyj" still finds what the guest meant; swapped, the DJ gets a wrong song unawares (not measured yet).
   ~$3.7 per 1000 requests (was ~$2.4: a longer prompt, more thinking) — ~$1.1 for a wedding of 300. Tests: 367 unit.
 
+- **3.5 Flash timed out on production (2026-10-07 16:51–16:53 UTC; fixed in the next PR):** two requests ("dichavate") waited 30 s and
+  went to the DJ unchecked ("AI check: 2 of 2"): the call passed its 15 s, and the SDK's own retry held the guest until the
+  request's 30 s ran out. A few minutes later it answered well again (the owner: keep 3.5). Now: one try, no retry
+  (`GeminiConfig.httpOptions`, `HttpRetryOptions.attempts(1)`) — a slow Gemini sends the request on at 15 s; the log says
+  "AI answered in N ms (model)" for every call — watch it. If it happens again: `GOOGLE_AI_MODEL=gemini-2.5-flash` on Railway
+  (no deploy).
+- **The song field's placeholder (2026-10-07, the owner):** "Wykonawca – Tytuł" / "Artist – Title" in the empty field — the format the
+  suggestions fill in (`song-autocomplete.js`); the hint under it stays (a title, an artist or a line of the lyrics will do).
+
 ## Next (the owner picks)
 
-0. **"⚠ Sprawdź"** — built 2026-10-07 (Start here; not committed). Still a case for the Gemini comparison (item 5: does 3.5 Flash
+0. **"⚠ Sprawdź"** — built 2026-10-07 (Start here; live). Still a case for the Gemini comparison (item 5: does 3.5 Flash
    know "orła cień"?).
 
 1. **Show the requests-only party to DJs** and tell what they said. Questions (2026-10-01): how many requests per wedding and how
