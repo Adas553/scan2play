@@ -45,8 +45,9 @@
             <div class="mb-4">
                 <label for="songInput" class="form-label fw-bold" th:text="#{home.form.input.label}">Your choice</label>
                 <div class="song-autocomplete-wrapper">
+                    <!--/* the placeholder in the suggestions' own format ("Artist – Title", song-autocomplete.js) — the owner, 2026-10-07 */-->
                     <input type="text" id="songInput" name="songName" class="form-control" required
-                           data-autocomplete="songs" th:value="${lastRequest}">
+                           data-autocomplete="songs" th:value="${lastRequest}" th:placeholder="#{home.form.input.placeholder}">
                     <!-- Dropdown injected here by song-autocomplete.js -->
                 </div>
                 <div id="songInputHelp" class="form-text text-white-50 mt-2"
