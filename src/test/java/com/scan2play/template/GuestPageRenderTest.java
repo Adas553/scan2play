@@ -271,6 +271,13 @@ class GuestPageRenderTest {
         assertThat(render(PL, Map.of())).doesNotContain("id=\"djName\"");
     }
 
+    /** The empty field shows the suggestions' own format, "Wykonawca – Tytuł" (song-autocomplete.js fills it in so). */
+    @Test
+    void theSongField_showsTheSuggestionsFormat() {
+        assertThat(render(PL, Map.of())).contains("placeholder=\"Wykonawca – Tytuł\"");
+        assertThat(render(Locale.ENGLISH, Map.of())).contains("placeholder=\"Artist – Title\"");
+    }
+
     /** The DJ's profiles (V24): a button for each one the DJ gave, opened in a new tab, nothing passed to the site. */
     @Test
     void theDjsProfiles_areButtons() {
