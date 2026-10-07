@@ -107,8 +107,14 @@ class SongEvaluationServiceTest {
         aParty(0).setCommentStyle(CommentStyle.FUNNY);
         savesWithId();
 
-        answering("{\"decision\":\"accepted\",\"comment\":\"Hej!\",\"songName\":\"sanah - Szampan\",\"energyLevel\":7}")
-                .evaluateAndSaveSong(PARTY_CODE, "szampan", "ANY");
+        // the guest's language picks the prompt's: set here, not the machine's (CI runs in English, a Polish Windows in Polish)
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.of("pl"));
+        try {
+            answering("{\"decision\":\"accepted\",\"comment\":\"Hej!\",\"songName\":\"sanah - Szampan\",\"energyLevel\":7}")
+                    .evaluateAndSaveSong(PARTY_CODE, "szampan", "ANY");
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
 
         assertThat(prompts.getFirst()).contains("ZABAWNY");
     }
