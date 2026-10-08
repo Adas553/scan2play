@@ -20,9 +20,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * V23 on a database with requests: the fixed English notes a skip and a restore wrote in place of the AI's comment go; every other
- * comment — the AI's own, the note of a cleared queue — stays. A throw-away database of its own, migrated to V22, given requests the
- * old way, and then to the end.
+ * V23 and V25 on a database with requests: the fixed English notes a skip, a restore and a cleared queue wrote in place of the AI's
+ * comment go; the AI's own comments stay, on a rejected request too. A cleared request gets {@code cleared_at} (its request time),
+ * nothing else does. A throw-away database of its own, migrated to V22, given requests the old way, and then to the end.
  */
 @ExtendWith(PostgresIntegrationTest.OnlyUnderFailsafe.class)
 class SkipCommentMigrationIT {
@@ -48,7 +48,7 @@ class SkipCommentMigrationIT {
     }
 
     @Test
-    void theNotesOfSkipsAndRestoresGo_theAisCommentsAndTheClearedQueuesNoteStay() throws SQLException {
+    void theNotesOfSkipsRestoresAndClearsGo_theAisCommentsStay_aClearedRequestIsMarked() throws SQLException {
         String url = "jdbc:postgresql://" + HOST + ":" + PORT + "/" + database;
         Flyway.configure().dataSource(url, USER, PASSWORD).target("22").load().migrate();
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
@@ -56,6 +56,7 @@ class SkipCommentMigrationIT {
             statement.execute(REQUEST.formatted("b restored", "accepted", "Restored by the DJ ↩", "null"));
             statement.execute(REQUEST.formatted("c cleared", "rejected", "Cleared by the DJ 🧹", "null"));
             statement.execute(REQUEST.formatted("d the AI", "accepted", "Klasyk wesel!", "null"));
+            statement.execute(REQUEST.formatted("e rejected by the AI", "rejected", "Nie na dziś", "null"));
         }
 
         Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
@@ -63,13 +64,13 @@ class SkipCommentMigrationIT {
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
             List<String> comments = new ArrayList<>();
             try (ResultSet rows = statement.executeQuery("SELECT song_name || ': ' || coalesce(dj_comment, '-') || ' '"
-                    + " || (skipped_at IS NOT NULL) FROM song_requests ORDER BY song_name")) {
+                    + " || (skipped_at IS NOT NULL) || ' ' || ((cleared_at = requested_at) IS TRUE) FROM song_requests ORDER BY song_name")) {
                 while (rows.next()) {
                     comments.add(rows.getString(1));
                 }
             }
-            assertThat(comments).containsExactly("a skipped: - true", "b restored: - false", "c cleared: Cleared by the DJ 🧹 false",
-                    "d the AI: Klasyk wesel! false");
+            assertThat(comments).containsExactly("a skipped: - true false", "b restored: - false false", "c cleared: - false true",
+                    "d the AI: Klasyk wesel! false false", "e rejected by the AI: Nie na dziś false false");
         }
     }
 

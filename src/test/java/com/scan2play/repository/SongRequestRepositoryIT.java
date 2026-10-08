@@ -83,16 +83,21 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         save(party, "rejected by the AI", "rejected", Instant.now(), null);
         save(other, "another party's", "accepted", Instant.now(), null);
 
-        assertThat(requests.rejectWaiting(party, "Cleared")).isEqualTo(2);
+        jdbc.update("UPDATE song_requests SET dj_comment = song_name || '!' WHERE party_code = ?", party);   // the AI's comments
+        Instant clearedAt = Instant.parse("2026-10-08T20:00:00Z");
+
+        assertThat(requests.rejectWaiting(party, clearedAt)).isEqualTo(2);
 
         assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted"))).isEmpty();
-        assertThat(jdbc.queryForList("SELECT song_name || ':' || decision || ':' || coalesce(dj_comment, '') FROM song_requests "
+        // the AI's comment stays (V25: no note over it); only the cleared ones are marked
+        assertThat(jdbc.queryForList("SELECT song_name || ':' || decision || ':' || coalesce(dj_comment, '') || ':' "
+                + "|| coalesce(to_char(cleared_at AT TIME ZONE 'UTC', 'HH24:MI'), '-') FROM song_requests "
                 + "WHERE party_code = ? ORDER BY song_name", String.class, party))
-                .containsExactly("played:played:", "rejected by the AI:rejected:", "waiting one:rejected:Cleared",
-                        "waiting two:rejected:Cleared");
+                .containsExactly("played:played:played!:-", "rejected by the AI:rejected:rejected by the AI!:-",
+                        "waiting one:rejected:waiting one!:20:00", "waiting two:rejected:waiting two!:20:00");
         assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(other, List.of("accepted")))
                 .as("another party's queue is untouched").hasSize(1);
-        assertThat(requests.rejectWaiting(party, "Cleared")).as("nothing left to clear").isZero();
+        assertThat(requests.rejectWaiting(party, Instant.now())).as("nothing left to clear").isZero();
     }
 
     /** "Wyczyść historię": only the party's played and rejected requests; a waiting one and a skip that still blocks its song stay. */

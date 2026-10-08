@@ -125,16 +125,25 @@
                 </td>
                 <td class="d-none d-md-table-cell"><span class="badge text-bg-secondary" th:text="${req.style == 'ANY'} ? #{table.style.any} : ${req.style}">Style</span></td>
                 <!--/* A request the DJ skipped ("Pomiń") shows as skipped, not as rejected: the AI took it, the DJ skipped it (the owner,
-                     2026-10-07). It stays rejected underneath — the queue, the 2-hour block and the "Rejected" filter go by that. */-->
-                <td th:classappend="${req.skippedByDj() ? 'status-skipped' : (req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played'))}">
-                    <th:block th:unless="${req.skippedByDj()}">
+                     2026-10-07). It stays rejected underneath — the queue, the 2-hour block and the "Rejected" filter go by that. One
+                     cleared with the whole queue ("Wyczyść kolejkę", V25) shows the same way, without "↩ Przywróć". */-->
+                <td th:with="byTheDj=${req.skippedByDj() or req.clearedByDj()}"
+                    th:classappend="${byTheDj ? 'status-skipped' : (req.decision == 'accepted' ? 'status-accepted' : (req.decision == 'rejected' ? 'status-rejected' : 'status-played'))}">
+                    <th:block th:unless="${byTheDj}">
                         <span class="d-none d-md-inline" th:text="${req.decision == 'played' ? #messages.msg('dashboard.table.status.played') : (req.decision == 'accepted' ? #messages.msg('dashboard.table.status.accepted') : (req.decision == 'rejected' ? #messages.msg('dashboard.table.status.rejected') : req.decision))}">Decision</span>
                         <span class="d-inline d-md-none s2p-decision-icon" th:text="${req.decision == 'played' ? '▶' : (req.decision == 'accepted' ? '✔' : (req.decision == 'rejected' ? '✖' : req.decision))}"></span>
                     </th:block>
-                    <div th:if="${req.skippedByDj()}" class="text-nowrap s2p-skipped-label" th:text="#{history.skipped}">⏭ Skipped by the DJ</div>
+                    <!--/* On a wide screen one word, as "ZAGRANE" / "ODRZUCONE" (the owner, 2026-10-08: the long words stretched the
+                         column and squeezed the songs); on a phone the icon alone, beside the votes as ▶ / ✖. What it means: the title. */-->
+                    <th:block th:if="${byTheDj}" th:with="byTheDjTitle=${req.skippedByDj() ? #messages.msg('history.skipped.title') : #messages.msg('history.cleared.title')}">
+                        <span class="d-none d-md-inline text-nowrap s2p-skipped-label" th:title="${byTheDjTitle}"
+                              th:text="${req.skippedByDj() ? #messages.msg('history.skipped') : #messages.msg('history.cleared')}">Skipped</span>
+                        <span class="d-inline d-md-none s2p-decision-icon" th:title="${byTheDjTitle}" th:attr="aria-label=${byTheDjTitle}"
+                              th:text="${req.skippedByDj() ? '⏭' : '🧹'}">⏭</span>
+                    </th:block>
                     <!--/* It can go back to the queue — a skip by mistake (DjService.restoreSkippedSong). In the History tab forms.js sends
-                         it in the background; on the standalone page it lands on the dashboard. */-->
-                    <form th:if="${req.skippedByDj()}" action="/dj/dashboard/restore" method="post" class="m-0 mt-1">
+                         it in the background; on the standalone page it lands on the dashboard. Beside the word, on the same line. */-->
+                    <form th:if="${req.skippedByDj()}" action="/dj/dashboard/restore" method="post" class="d-inline-block m-0 ms-md-2">
                         <!--/* the CSRF field by hand: the fragment is rendered without a web context too (HistoryFragmentTest) */-->
                         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                         <input type="hidden" name="id" th:value="${req.id}" />

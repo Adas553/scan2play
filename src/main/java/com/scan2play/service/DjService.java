@@ -40,13 +40,6 @@ public class DjService {
     /** The cache of a party's waiting requests, by party code (AppConfig: 3 s); evicted after a song leaves the queue. */
     public static final String QUEUE_CACHE = "dashboardQueue";
 
-    /**
-     * The note of the requests cleared with the queue, in place of the AI's comment (nothing else tells them from the AI's own
-     * rejections). A skip keeps the AI's comment: {@code skippedAt} says it was skipped, and a restore gives the request back with it
-     * (V23 cleared the notes "Skipped by the DJ ⏭" / "Restored by the DJ ↩" the skips wrote before).
-     */
-    static final String DJ_CLEAR_COMMENT = "Cleared by the DJ 🧹";
-
     private final SongRequestRepository songRequestRepository;
     private final CacheManager cacheManager;
 
@@ -183,15 +176,17 @@ public class DjService {
     }
 
     /**
-     * The DJ clears the queue ("Wyczyść kolejkę"): every waiting request leaves it as rejected, as if skipped one by one, and shows
-     * in the history's rejected requests. Songs that played stay played; the one playing now has been confirmed played already.
+     * The DJ clears the queue ("Wyczyść kolejkę"): every waiting request leaves it as rejected, with {@code clearedAt} set and the
+     * AI's comment kept, and shows in the history's rejected requests as cleared by the DJ — in the page's language (V25; the fixed
+     * English note "Cleared by the DJ 🧹" it wrote over the AI's comment before is gone, as the skips' notes went with V23). Unlike a
+     * skip, the song may be asked for again at once. Songs that played stay played; the one playing now has been confirmed played already.
      *
      * @param ownerPartyCode the partyCode of the authenticated DJ (from the session) — only their own queue
      * @return number of requests taken out of the queue
      */
     @Transactional
     public int clearQueue(String ownerPartyCode) {
-        int cleared = songRequestRepository.rejectWaiting(ownerPartyCode, DJ_CLEAR_COMMENT);
+        int cleared = songRequestRepository.rejectWaiting(ownerPartyCode, Instant.now());
         evictDashboardQueueAfterCommit(ownerPartyCode);
         log.info("Party [{}]: the DJ cleared the queue — {} waiting request(s) rejected", ownerPartyCode, cleared);
         return cleared;

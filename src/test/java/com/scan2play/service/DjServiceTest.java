@@ -236,14 +236,16 @@ class DjServiceTest {
     }
 
     @Test
-    void clearQueue_rejectsTheOwnPartysWaitingRequests_withTheDjsNote_andRefreshesTheQueue() {
-        when(songRequestRepository.rejectWaiting(PARTY_CODE, DjService.DJ_CLEAR_COMMENT)).thenReturn(3);
+    void clearQueue_rejectsTheOwnPartysWaitingRequests_markedClearedNow_andRefreshesTheQueue() {
+        java.time.Instant before = java.time.Instant.now();
+        when(songRequestRepository.rejectWaiting(eq(PARTY_CODE), any())).thenReturn(3);
         Cache queue = mock(Cache.class);
         when(cacheManager.getCache("dashboardQueue")).thenReturn(queue);
 
         assertThat(djService.clearQueue(PARTY_CODE)).isEqualTo(3);
 
-        verify(songRequestRepository).rejectWaiting(PARTY_CODE, DjService.DJ_CLEAR_COMMENT);
+        verify(songRequestRepository).rejectWaiting(eq(PARTY_CODE),
+                argThat(clearedAt -> !clearedAt.isBefore(before) && !clearedAt.isAfter(java.time.Instant.now())));
         verify(queue).evict(PARTY_CODE);
     }
 

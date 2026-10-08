@@ -92,7 +92,8 @@ word of 3+ letters, its stem — the first max(3, length − 2) letters — look
 `requestedAt`, `trackUrl` (500; the "🔍 Podejrzyj" link — YouTube's search results for the song, `util/YouTubeSearchLinks`: a page the
 DJ's browser opens, no API; a `lyrics` request, and a song with none of the guest's words, is searched by the guest's own words,
 everything else by the AI's name — decided when saved), `playedAt`
-(V6; set only when the DJ marks it played). Index `idx_party_decision_time (party_code, decision, requested_at DESC)`. `@PrePersist`
+(V6; set only when the DJ marks it played), `skippedAt` (V20, "Pomiń"), `clearedAt` (V25: cleared with the whole queue — the AI's
+comment kept, the history says "WYCZYSZCZONE" — on a phone 🧹; unlike a skip, no song kept out and no "↩ Przywróć"). Index `idx_party_decision_time (party_code, decision, requested_at DESC)`. `@PrePersist`
 truncates the long fields. **Retention: 30 days from `requestedAt`** — `SongRequestRetentionService` deletes nightly at 04:45 in
 batches of 1000, at most 200 batches a night; and with the account.
 
@@ -147,7 +148,7 @@ sees under the form), `PlayHistoryService.Page`.
 Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
-leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "⏭ Pominięta przez DJ-a" in place of the verdict (amber, not the red "ODRZUCONE"; still
+leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
 under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "🔍 Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
 limits and the use of the server limits; the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; feedback; end / resume the party, delete the account, log out. The forms are sent in the background (`forms.js`; not logout
@@ -176,7 +177,8 @@ never offered).
 
 **The active queue**: each request has its number — a CSS counter in `app.css`, so it follows the polled list, the sort and the
 search by itself. "🧹 Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
-sends `POST /dj/dashboard/clear-queue`: the waiting requests go to the history's rejected ones. Ending the party does not clear the
+sends `POST /dj/dashboard/clear-queue`: the waiting requests go to the history's rejected ones, with `cleared_at` and the AI's
+comment (V25) — the history says "WYCZYSZCZONE" in place of the verdict ("🧹 Wyczyszczona przez DJ-a …" in its title), amber as a skip. Ending the party does not clear the
 queue (the DJ may pause it for a break or a limit).
 
 Every dashboard window follows the party's state within one poll: the party open or closed (`X-Party-Active` — the "party closed"
@@ -277,7 +279,10 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 the `webmanifest` MIME type), **versioned static addresses** (`spring.web.resources.chain.strategy.fixed`: the templates link
 `th:src` / `th:href="@{/js/...}"`, served as `/<RAILWAY_GIT_COMMIT_SHA>/js/...` — locally `/dev/...` —, so a deploy changes every
 script's and style's address and no cache on the way keeps an old one; the dashboard's modules import each other relatively and stay
-in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy),
+in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy). `VersionedAssetCacheFilter` lets the
+browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
+deploy's version always gives the same file (an old version is a 404). Only for a commit's version, never `dev` (devtools changes the
+files under it); everything else keeps Spring Security's `no-store`,
 `GeminiConfig` (the Gemini client, 15 s timeout; the `ObjectMapper` bean).
 
 ### 6.4 Templates
@@ -305,7 +310,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V24`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V25`.
 
 ---
 
@@ -444,6 +449,7 @@ schema behind Flyway's back.
 | V22 | `party_settings.comment_style` varchar(20) NOT NULL DEFAULT 'CLASSIC', a check of the five styles |
 | V23 | data: the notes "Skipped by the DJ ⏭" / "Restored by the DJ ↩" a skip and a restore wrote in place of the AI's comment → NULL (a skip keeps the AI's comment since; `SkipCommentMigrationIT`) |
 | V24 | `party_settings.instagram_url`, `facebook_url`, `tiktok_url` varchar(200), nullable: the DJ's profiles |
+| V25 | `song_requests.cleared_at` timestamptz, nullable: when the DJ cleared the request with the queue; the old note "Cleared by the DJ 🧹" → NULL, its request time as `cleared_at` (`SkipCommentMigrationIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -504,7 +510,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own skip, not when the same song waits) |
-| POST | `/dj/dashboard/clear-queue` | "🧹 Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, "Cleared by the DJ 🧹" (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
+| POST | `/dj/dashboard/clear-queue` | "🧹 Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, `cleared_at`, the AI's comment kept (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
 | POST | `/dj/dashboard/clear-history` | "🗑 Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
 | POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/comment-style`, `/limits` | settings |
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |

@@ -85,6 +85,12 @@ public class SongRequestEntity {
      */
     private Instant skippedAt;
 
+    /**
+     * When the DJ cleared the request with the whole queue ("Wyczyść kolejkę", V25); {@code null} for every other request. The AI's
+     * comment stays, the history says it was cleared. Unlike a skip, it keeps no song out of the queue and has no "↩ Przywróć".
+     */
+    private Instant clearedAt;
+
     /** Whether the AI's song has none of the guest's words in it: the queue marks it "⚠ Sprawdź" ({@code SongNames.sharesNoWord}). */
     public boolean needsCheck() {
         return SongNames.sharesNoWord(guestText, songName);
