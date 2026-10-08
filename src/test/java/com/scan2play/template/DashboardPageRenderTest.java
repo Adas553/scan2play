@@ -318,13 +318,15 @@ class DashboardPageRenderTest {
 
     /** A row of the sample timeline: {@code i} counts back from the newest (1), see {@link #historyAt}. */
     private static HistoryEntry historyEntry(int i, String title, String decision) {
-        // the 3rd the DJ skipped ("⏭ Pominięta przez DJ-a", "↩ Przywróć"), with the AI's longer comment kept (a phone's card shows it)
+        // the 3rd the DJ skipped ("⏭ Pominięta przez DJ-a", "↩ Przywróć"), with the AI's longer comment kept (a phone's card shows it);
+        // the 6th the DJ cleared with the queue
         return new HistoryEntry((long) i, historyAt(i), title, "https://www.youtube.com/results?search_query=song" + i, "Pop", decision,
                 i == 3 ? "Klasyk wesel, ale parkiet chce dziś czegoś szybszego — może później?" : "ok", 5 + i % 5,
                 // the guest's words: the 2nd's are not in its song ("⚠ Sprawdź"), the 4th's are
                 i == 2 ? "orła cień" : i == 4 ? "bravo" : null,
                 i == 5 ? 12 : i == 8 ? 3 : 1,   // the votes: a ranking to sort (12 before 3 — as numbers)
-                i == 3 ? historyAt(i) : null);
+                i == 3 ? historyAt(i) : null,
+                i == 6 ? historyAt(i) : null);   // the 6th cleared with the whole queue ("🧹 Wyczyszczona przez DJ-a", V25)
     }
 
     /** What the real server does with a filter: the entries whose decision the filter includes (the flags are the real enum's). */

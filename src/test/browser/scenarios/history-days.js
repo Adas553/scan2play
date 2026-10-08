@@ -96,3 +96,33 @@
         }
     });
 })();
+
+// The owner (2026-10-08): on a wide screen "⏭ Pominięta przez DJ-a" / "🧹 Wyczyszczona przez DJ-a" stretched the verdict's column
+// (the songs broke into four lines) and "↩ Przywróć" went under the words. Now one word in capitals, as "ZAGRANE" / "ODRZUCONE",
+// what it means in its title, and "↩ Przywróć" on the same line.
+S2P.scenario({
+    name: 'history-wide-skip-and-clear',
+    title: 'the history on a wide screen: a skip and a clear are one word in capitals (the meaning in the title), "↩ Przywróć" on the same line',
+    setup: {},
+    run: async function (t) {
+        const row = function (name) { return document.querySelector('#history-content tr[data-song-name="' + name + '"]'); };
+        const word = function (tr) {
+            const label = Array.from(tr.querySelectorAll('.s2p-skipped-label')).filter(function (el) { return el.getClientRects().length > 0; })[0];
+            return label ? [label.innerText.trim(), /przez DJ-a/.test(label.title)] : null;
+        };
+        const middle = function (el) { const box = el.getBoundingClientRect(); return box.top + box.height / 2; };
+        document.querySelector('[data-dj-tab="history"]').click();
+        await t.waitFor(function () { return row('Rejected Beat'); }, 'the history', 5000);
+        const skipped = row('Rejected Beat');
+        t.step('skipped: one word in capitals, the meaning in its title', word(skipped), ['POMINIĘTE', true]);
+        const label = skipped.querySelector('.s2p-skipped-label');
+        const restore = skipped.querySelector('form[action="/dj/dashboard/restore"] button');
+        t.check('"↩ Przywróć" beside the word, on the same line',
+            restore.getBoundingClientRect().left > label.getBoundingClientRect().right && Math.abs(middle(restore) - middle(label)) < 6);
+        document.querySelector('#history-content [data-history-more]').click();   // the cleared one is older than the first four
+        await t.waitFor(function () { return row('Rejected Delta'); }, 'the older entries', 5000);
+        t.step('cleared: one word in capitals, the meaning in its title, no "↩ Przywróć"',
+            [word(row('Rejected Delta')), row('Rejected Delta').querySelectorAll('form[action="/dj/dashboard/restore"]').length],
+            [['WYCZYSZCZONE', true], 0]);
+    }
+});

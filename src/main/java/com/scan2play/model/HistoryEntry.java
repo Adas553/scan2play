@@ -20,19 +20,25 @@ import java.time.Instant;
  *                    request from before V14
  * @param votes       how many guests asked for the song (V15)
  * @param skippedAt   when the DJ skipped it ("Pomiń", V20); {@code null} for every other entry
+ * @param clearedAt   when the DJ cleared it with the whole queue ("Wyczyść kolejkę", V25); {@code null} for every other entry
  */
 public record HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
-                           Integer energyLevel, String guestText, Integer votes, Instant skippedAt) {
+                           Integer energyLevel, String guestText, Integer votes, Instant skippedAt, Instant clearedAt) {
 
-    /** An entry the DJ did not skip. */
+    /** An entry the DJ neither skipped nor cleared. */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
                         Integer energyLevel, String guestText, Integer votes) {
-        this(id, at, title, trackUrl, style, decision, djComment, energyLevel, guestText, votes, null);
+        this(id, at, title, trackUrl, style, decision, djComment, energyLevel, guestText, votes, null, null);
     }
 
     /** Whether the DJ skipped this request — the history offers to put it back in the queue ("↩ Przywróć"). */
     public boolean skippedByDj() {
         return skippedAt != null && "rejected".equals(decision);
+    }
+
+    /** Whether the DJ cleared this request with the whole queue — the history says so in place of the AI's verdict. */
+    public boolean clearedByDj() {
+        return clearedAt != null && "rejected".equals(decision);
     }
 
     /** Whether the AI's song has none of the guest's words in it: the history marks it "⚠ Sprawdź" ({@code SongNames.sharesNoWord}). */
