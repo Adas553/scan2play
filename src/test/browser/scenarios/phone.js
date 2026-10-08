@@ -119,7 +119,7 @@ S2P.scenario({
 // ran off the screen. Now a card per request, as the queue.
 S2P.scenario({
     name: 'history-phone',
-    title: 'the history on a phone: a card per request — the song across it, the skip and "↩ Przywróć" inside the screen, the AI\'s comment shown',
+    title: 'the history on a phone: a card per request — the song across it, a skip (⏭) or a clear (🧹) as an icon beside the votes, "↩ Przywróć" inside the screen, the AI\'s comment shown',
     viewport: '390,844',
     setup: {},
     run: async function (t) {
@@ -130,12 +130,22 @@ S2P.scenario({
         const songBox = card.querySelector('td[data-sort-value="song"]').getBoundingClientRect();
         t.step('a request is a card', getComputedStyle(card).display, 'flex');
         t.check('the song goes across the card (not a narrow column)', songBox.width >= cardBox.width * 0.85);
-        const label = card.querySelector('.s2p-skipped-label');
+        // the owner (2026-10-08): on a phone the icon alone, beside the votes as ▶ / ✖ — the words only on a wide screen
+        const icons = function (row) {
+            return Array.from(row.querySelectorAll('.s2p-decision-icon')).filter(shows).map(function (el) { return el.textContent.trim(); });
+        };
+        const besideTheVotes = function (row) {
+            const votes = row.querySelector('td[data-sort-value="votes"] .badge').getBoundingClientRect();
+            const icon = Array.from(row.querySelectorAll('.s2p-decision-icon')).filter(shows)[0].getBoundingClientRect();
+            const middle = function (box) { return box.top + box.height / 2; };
+            return icon.left > votes.right && icon.left - votes.right < 40 && Math.abs(middle(icon) - middle(votes)) < 8;
+        };
         const restore = card.querySelector('form[action="/dj/dashboard/restore"] button');
-        t.check('"⏭ Pominięta przez DJ-a" and "↩ Przywróć" show inside the screen',
-            [label, restore].every(function (el) { return shows(el) && el.getBoundingClientRect().right <= window.innerWidth; }));
-        t.step('skipped in place of the AI\'s verdict: no red ✖ of a rejection',
-            Array.from(card.querySelectorAll('.s2p-decision-icon')).filter(shows).length, 0);
+        t.step('skipped: the icon ⏭ alone in place of the AI\'s verdict (no red ✖, no words)',
+            [icons(card), Array.from(card.querySelectorAll('.s2p-skipped-label')).filter(shows).length], [['⏭'], 0]);
+        t.check('the icon beside the votes, as ▶ of a song that played', besideTheVotes(card)
+            && besideTheVotes(document.querySelector('#history-content tr[data-song-name="Played Bravo"]')));
+        t.check('"↩ Przywróć" shows inside the screen', shows(restore) && restore.getBoundingClientRect().right <= window.innerWidth);
         const comment = card.querySelector('td.s2p-comment-cell');
         t.check('the AI\'s comment shows (hidden in the table below a wide screen)', shows(comment) && /parkiet/.test(comment.textContent));
         // one line of it, a tap shows the whole of it, a second tap folds it (the owner, 2026-10-07: the comments took the cards)
@@ -149,6 +159,14 @@ S2P.scenario({
             [true, true, true]);
         t.step('the column sort stays: Piosenka and Głosy', Array.from(document.querySelectorAll('#history-content thead th'))
             .filter(shows).map(function (th) { return th.getAttribute('data-sort'); }), ['song', 'votes']);
+        document.querySelector('#history-content [data-history-more]').click();   // the cleared one is older than the first four
+        const clearedRow = function () { return document.querySelector('#history-content tr[data-song-name="Rejected Delta"]'); };
+        await t.waitFor(clearedRow, 'the older entries', 5000);
+        const cleared = clearedRow();
+        t.step('cleared with the queue: the icon 🧹 alone, no "↩ Przywróć"',
+            [icons(cleared), Array.from(cleared.querySelectorAll('.s2p-skipped-label')).filter(shows).length,
+                cleared.querySelectorAll('form[action="/dj/dashboard/restore"]').length], [['🧹'], 0, 0]);
+        t.check('the icon beside the votes', besideTheVotes(cleared));
         t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
     }
 });

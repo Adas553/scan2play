@@ -47,7 +47,9 @@ class SmokeTest {
     void stylesAndScripts_underTheDeploysVersion_areServedWithoutLogin() throws Exception {
         // "dev" without RAILWAY_GIT_COMMIT_SHA (application.properties). That the pages' "@{/css/...}" become these addresses is
         // Spring's ResourceUrlEncodingFilter, which this slice does not register (checked on the running app)
-        mockMvc.perform(get("/dev/css/app.css")).andExpect(status().isOk());
+        mockMvc.perform(get("/dev/css/app.css")).andExpect(status().isOk())
+                // locally the files change under "dev" with every edit: never kept (VersionedAssetCacheFilter)
+                .andExpect(header().string("Cache-Control", containsString("no-store")));
         mockMvc.perform(get("/dev/js/dashboard/main.js")).andExpect(status().isOk())
                 .andExpect(content().string(containsString("import './push.js';")));
         mockMvc.perform(get("/dev/js/dashboard/push.js")).andExpect(status().isOk());

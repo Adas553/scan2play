@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-07
+# Session Handoff — 2026-10-08
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
@@ -89,8 +89,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **A skip keeps the AI's comment (2026-10-07, the owner):** "Pomiń" no longer writes "Skipped by the DJ ⏭" over it, "↩ Przywróć"
   / "Cofnij" no longer write "Restored by the DJ ↩" (English on a Polish page): the request comes back with the AI's comment; the
   history says "⏭ Pominięta przez DJ-a" from `skipped_at`. **V23** clears the old notes (their AI comments are lost). The result
-  page's "Energy: 7/10" is "Energia: 7/10" in Polish (`result.energy`). Still English in the database: "Cleared by the DJ 🧹" of a
-  cleared queue (the only thing that tells those from the AI's rejections).
+  page's "Energy: 7/10" is "Energia: 7/10" in Polish (`result.energy`). A cleared queue's note followed on 2026-10-08 (V25, below).
 - **The history on a phone (2026-10-07, the owner: chaotic):** a card per request, as the queue — the title across the card (it
   broke into a word per line), the skip and "↩ Przywróć" inside the screen, the AI's comment shown; sort by song / votes kept.
   Tests: 300 unit, 30 database (`SkipCommentMigrationIT`, seen red without V23), 38 browser (`history-phone`, seen red without
@@ -166,6 +165,22 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (no deploy).
 - **The song field's placeholder (2026-10-07, the owner):** "Wykonawca – Tytuł" / "Artist – Title" in the empty field — the format the
   suggestions fill in (`song-autocomplete.js`); the hint under it stays (a title, an artist or a line of the lyrics will do).
+- **Live 2026-10-07 18:55 UTC (PR #19 / #20, `cc31cdf`), CI green.** The first start failed — the sleeping database refused the
+  connection to Flyway — and Railway's restart came up in 3.8 s (the known cost of the sleep, "Na później"). Until 2026-10-08 morning
+  no guest request since, so no "AI answered in" yet; no "CSP violation"; open PRs: only #7 and #2 (to close).
+
+- **2026-10-08 (not deployed yet):**
+  - **The hint under the song field** (the owner): it asks for the artist with the title or a line of the lyrics, "Nie znasz
+    wykonawcy? …" — no check of the format (a guest may know only "sanah" or a line; the owner dropped a "do you know the artist?"
+    question at sending for the same reason). The owner then edited the text.
+  - **A cleared queue in the page's language (V25):** "🧹 Wyczyść kolejkę" no longer writes "Cleared by the DJ 🧹" over the AI's
+    comment; `cleared_at` says it, the history shows "🧹 Wyczyszczona przez DJ-a" (amber as a skip, no "↩ Przywróć", still under
+    "Rejected"). V25 turns the old notes into `cleared_at` (their request time; the AI's comment under them is lost). On a phone
+    (the owner) the words go: the icon alone, ⏭ (with "↩ Przywróć") or 🧹, beside the votes as ▶ / ✖ (`history-phone`, seen red).
+  - **The versioned scripts and styles kept for a year** (`VersionedAssetCacheFilter`: `public, max-age=31536000, immutable` on
+    `/<commit>/js|css/...`; never on `dev` locally; everything else `no-store` as before). After the deploy: check in the HTTP log /
+    the browser that `main.js` comes from the cache on the second load.
+  - Tests: 372 unit, 30 database, all browser scenarios; the new ones seen red without the change.
 
 ## Next (the owner picks)
 

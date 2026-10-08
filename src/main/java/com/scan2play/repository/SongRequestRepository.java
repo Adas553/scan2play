@@ -105,16 +105,17 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int addVote(@Param("id") Long id);
 
     /**
-     * The DJ clears the queue: every waiting (accepted) request of the party leaves it as rejected, with the DJ's note in place of
-     * the AI's comment — it stays in the history's rejected requests. One statement; a song that played stays played.
+     * The DJ clears the queue: every waiting (accepted) request of the party leaves it as rejected, with {@code clearedAt} set and
+     * the AI's comment kept — it stays in the history's rejected requests, marked as cleared. One statement; a song that played
+     * stays played.
      *
      * @return number of requests taken out of the queue
      */
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("UPDATE SongRequestEntity s SET s.decision = 'rejected', s.djComment = :comment "
+    @Query("UPDATE SongRequestEntity s SET s.decision = 'rejected', s.clearedAt = :clearedAt "
             + "WHERE s.partyCode = :partyCode AND s.decision = 'accepted'")
-    int rejectWaiting(@Param("partyCode") String partyCode, @Param("comment") String comment);
+    int rejectWaiting(@Param("partyCode") String partyCode, @Param("clearedAt") Instant clearedAt);
 
     /**
      * The DJ clears the history: the party's requests that played or were rejected are deleted, guests' words with them. Never a
