@@ -36,6 +36,10 @@ public final class ViewAttributes {
     public static final String PERMANENT_LINK = "permanentLink";
     /** The page to print the QR code on: "poster" (one A4 poster) or "cards" (eight cards to cut out). */
     public static final String QR_LAYOUT = "qrLayout";
+    /** The evening summary: the party's evenings with requests, the one shown, its summary (null when there is none). */
+    public static final String EVENINGS = "evenings";
+    public static final String EVENING = "evening";
+    public static final String SUMMARY = "summary";
     public static final String REQUEST_LIMIT = "requestLimit";
     public static final String COOLDOWN_MINUTES = "cooldownMinutes";
     public static final String DUPLICATE_CHECK_WINDOW = "duplicateCheckWindow";

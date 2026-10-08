@@ -75,7 +75,7 @@ the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en
 nofollow"`), the QR print "Instagram @djkoko"; `POST /dj/dashboard/dj-links` takes "@name", a name or a link copied from the app and
 keeps an https address on that site, `util/SocialLinks` — anything else, a look-alike host too, is a 400 and nothing is saved; the
 form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `commentStyle` (V22, `CommentStyle`:
-CLASSIC / FUNNY / SARCASTIC_LIGHT / SARCASTIC / SHORT, NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
+CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
 the person", no profanity and no song's name in an accepted one; the dashboard's list "💬 Komentarze AI",
 `POST /dj/dashboard/comment-style`),
@@ -214,6 +214,20 @@ are **deleted**, the guests' words with them — never a waiting one, and never 
 song out of the queue and stays in the history until that ends). The AI's duplicate rule reads the played songs, so after it the AI no
 longer knows what played. The History tab sends it in the background and loads itself again (`s2p:history-changed`).
 
+**"📊 Podsumowanie wieczoru"** (beside "🗑 Wyczyść historię", a new tab; its question points to it): `/dj/summary`
+(`DjSummaryController`, `EveningSummaryService`, `summary.html`) — one evening of the DJ's own party (no party code asked for) on a
+white page to print or save as PDF ("🖨 Drukuj / PDF", `js/summary.js`, `css/summary.css`): an **evening runs from 6:00 to 6:00 Polish
+time** (`EVENING_STARTS`; a wedding past midnight is one evening); the evenings with requests to pick (≤ 31, latest first, with their
+counts — `SongRequestRepository.findEvenings`, native SQL with the same 6 hours); the counts — requests (rows: a song asked for again
+is a vote), played, the guests' votes (of what the AI let through), rejected by the AI, skipped, cleared, still waiting —, a line of how long the played requests waited (from the request to "played": the
+average and the longest), the 10 most wanted (votes, then the earlier), "🙋 Chcieli, a nie usłyszeli" (the wanted ones that did not
+play — waiting, skipped, cleared — with their status), "🎤 Najczęściej proszeni wykonawcy" (the artist of the AI's "Artist - Title",
+grouped by `SongNames.comparable`, the most votes first, then the most songs), the requests every half-hour (`<meter>` bars, the quiet
+half-hours between too, the busiest named), what played in the order it played, the DJ's name and our logo. All from one bounded read of the evening's requests (`findRequestedBetween`,
+≤ 2000) — so it lasts as `song_requests` do (30 days) and goes with "Wyczyść historię". `/dj/summary/csv`: the same evening as a CSV
+file (`scan2play-<day>.csv`; BOM and ";" for Excel, the DJ's language, every value quoted, and one that starts with `= + - @` or a tab
+gets an apostrophe — a guest's text is never a formula).
+
 ### 5.2 Guest Flow
 
 `/p/{partyCode}` (no login) → the form: one field for a song — a title, an artist or a line of the lyrics (song suggestions from
@@ -278,6 +292,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), account deletion |
 | `DjSongController` | mark played, skip, clear the queue |
+| `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
 | `DjSessionHelper` | the party of the logged-in DJ (cached in the session; made on the first login — tabs that make it at once look again, `FirstLoginIT`) and **`validateOwnership`** (IDOR) |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
@@ -293,6 +308,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`, the prompt per language) → the "🔍 Podejrzyj" link → save or vote |
 | `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played, skip (`dismissSong`), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
+| `EveningSummaryService` | "📊 Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1) |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes) |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock) |
@@ -319,7 +335,7 @@ files under it); everything else keeps Spring Security's `no-store`,
 ### 6.4 Templates
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
-`qr-print.html`, `index.html` (the guest's page), `result.html`, `party_ended.html`, `error.html`, `privacy[_pl].html`,
+`qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `error.html`, `privacy[_pl].html`,
 `terms[_pl].html`; `fragments/`: `components.html` (`dj-nav`: the account buttons, the sticky tabs Panel / Kolejka / Historia, the
 feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
 dashboard and the guest page; `footer`), `guest-queue.html`. Texts the scripts need travel in `data-*`
@@ -335,13 +351,14 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side) |
 | `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles |
+| `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them, a tap opens the dashboard; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
 | `images/logo.svg`, `favicon.ico` | our mark: three QR finder corners and a cyan play triangle on the dark tile (2026-10-04); on the landing page, the dashboard, the guest page, the QR poster and cards; the favicon is the same mark at 16 / 32 / 48 px |
 
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V25`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V26`.
 
 ---
 
@@ -481,6 +498,7 @@ schema behind Flyway's back.
 | V23 | data: the notes "Skipped by the DJ ⏭" / "Restored by the DJ ↩" a skip and a restore wrote in place of the AI's comment → NULL (a skip keeps the AI's comment since; `SkipCommentMigrationIT`) |
 | V24 | `party_settings.instagram_url`, `facebook_url`, `tiktok_url` varchar(200), nullable: the DJ's profiles |
 | V25 | `song_requests.cleared_at` timestamptz, nullable: when the DJ cleared the request with the queue; the old note "Cleared by the DJ 🧹" → NULL, its request time as `cleared_at` (`SkipCommentMigrationIT`) |
+| V26 | data + constraint: `comment_style` 'SARCASTIC_LIGHT' → 'SARCASTIC', the check without it (`CommentStyleMigrationIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -511,6 +529,7 @@ GuestVoteService           → SongRequestRepository, DjService
 DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsQueryService, DjSessionHelper, PushNotificationService
 DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper
 DjSongController           → DjService, DjSessionHelper
+DjSummaryController        → EveningSummaryService, DjSessionHelper, MessageSource
 SongEvaluationService      → Gemini Client, SongRequestRepository, SongRequestCommandService, PartySettingsQueryService, PushNotificationService
 PushController             → PushSubscriptionService
 GuestQueueService          → DjService
@@ -550,6 +569,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster / cards |
+| GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | |
 

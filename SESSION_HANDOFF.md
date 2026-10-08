@@ -7,6 +7,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-08, evening — not deployed yet (branch `claude/inspiring-einstein-sgh2tz`, a PR to `dev`):**
+  **"📊 Podsumowanie wieczoru"** (`/dj/summary`, PROJECT_CONTEXT 5.1): one evening (6:00–6:00 Polish time) to print / save as PDF,
+  and as CSV — the counts, how long the played requests waited, the 10 most wanted, "Chcieli, a nie usłyszeli", the most wanted
+  artists, requests every half-hour (the owner wants to see how it looks), what played in order; a button beside "🗑 Wyczyść historię",
+  whose question now points to it. **V26**: "Sarkastyczne (łagodne)" gone (the owner: "sarkastyczny wystarczy"), its parties now
+  "Sarkastyczne". The prompt's "not knowing a song is no reason to make one up" (`8b638ef`; all of it one PR to `dev`). Tests: 414 unit,
+  35 database, 47 browser.
 - **Branch `dev`. The product is the requests-only party** ("Twój program DJ-a"; the owner's decision 2026-10-04: YouTube — 100 API
   searches a day shared by every party, its terms; Spotify — development mode, its policy). The full app is archived: tag
   `full-player-2026-10-04`, branch `archive/full-player` (both pushed), the clone `D:\Coding\scan2play-full` with its own database
@@ -79,7 +86,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   The confirmation says the guests' words go and the AI forgets what played. Without the summary of the night for now (Next,
   item 2). Tests: 293 unit, 28 database, 36 browser (`history-clear`, seen red with `forms.js`' branch taken out).
 - **The AI's comment style (2026-10-07, the owner's picks; live, PR #11 / #12):** "💬 Komentarze AI" under the vibe — Klasyczne (the
-  prompt as before), Zabawne, Sarkastyczne (łagodne), Sarkastyczne (the owner: sharp, the DJ's own responsibility), Krótkie (an
+  prompt as before), Zabawne, Sarkastyczne (łagodne — gone in V26, 2026-10-08), Sarkastyczne (the owner: sharp, the DJ's own responsibility), Krótkie (an
   example under the list was tried and dropped: the owner did not want it). **V22** `party_settings.comment_style`; the blocks in
   `prompts/prompt-comment-style_{pl,en}.txt`; every style keeps "no profanity, mock the request, not the person" and reminds the
   AI not to name an accepted song (the sarcastic one did in the owner's local try).
@@ -233,7 +240,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
    "Sign in with Apple" (an Apple Developer account, $99 a year), a sign-in link by e-mail (a mail service — Resend / Postmark —
    and a table of accounts), e-mail and password (not advised: hashing, resets, lockouts). Until then: Google only.
 2. **The owner liked (2026-10-06):** the **"clear the history"** button — built 2026-10-07 (Start here) —, best paired with a
-   **summary of the night** to download first (CSV / PDF; not started); the
+   **summary of the night** to download first (built 2026-10-08, Start here); the
    **DJ's branding on the guest page**: the profiles are built (2026-10-07, Start here); left: **the DJ's logo** (small,
    re-encoded on the server to PNG, kept in the database, served from our address — the CSP needs no change; the privacy policy
    to update). A candidate "premium" feature.

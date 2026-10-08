@@ -69,6 +69,26 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                         Pageable pageable);
 
     /**
+     * The party's evenings, the latest first: each day ({@code "2026-10-03"}) a request was made on, with how many — the day in
+     * Polish time, moved back by {@code EveningSummaryService.EVENING_STARTS} (6 hours), so a request at 01:30 belongs to the evening
+     * before. A row is {@code [day as text, count]}. Bounded by {@code limit}; the retention keeps 30 days of one party's rows
+     * (≤ 300 a day), {@code idx_party_decision_time} finds them by its first column.
+     */
+    @Query(value = "SELECT to_char(CAST((requested_at AT TIME ZONE 'Europe/Warsaw') - INTERVAL '6 hours' AS date), 'YYYY-MM-DD'),"
+            + " COUNT(*) FROM song_requests WHERE party_code = :partyCode GROUP BY 1 ORDER BY 1 DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Object[]> findEvenings(@Param("partyCode") String partyCode, @Param("limit") int limit);
+
+    /**
+     * The party's requests made in {@code [from, to)}, every decision, the first asked first — one evening of the summary
+     * ({@code EveningSummaryService}). Bounded by the pageable.
+     */
+    @Query("SELECT s FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.requestedAt >= :from AND s.requestedAt < :to "
+            + "ORDER BY s.requestedAt, s.id")
+    List<SongRequestEntity> findRequestedBetween(@Param("partyCode") String partyCode, @Param("from") Instant from,
+                                                 @Param("to") Instant to, Pageable pageable);
+
+    /**
      * Computes a lightweight fingerprint of the queue state (count + maxId + the votes, which change no row count).
      * Used for ETag-based 304 Not Modified responses during AJAX polling.
      *

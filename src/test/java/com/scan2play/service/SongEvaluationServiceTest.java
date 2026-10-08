@@ -126,8 +126,8 @@ class SongEvaluationServiceTest {
     /** A style without its line in a prompt file would quietly be the classic one: the start stops instead. */
     @Test
     void aCommentStyleWithoutItsBlock_stopsTheStart() {
-        String file = "# comment" + System.lineSeparator() + "FUNNY=a" + System.lineSeparator() + "SARCASTIC_LIGHT=b"
-                + System.lineSeparator() + System.lineSeparator() + "SARCASTIC=c";
+        String file = "# comment" + System.lineSeparator() + "FUNNY=a" + System.lineSeparator() + System.lineSeparator()
+                + "SARCASTIC=c";
 
         assertThatThrownBy(() -> SongEvaluationService.commentStyleRules(file, "pl")).hasMessageContaining("SHORT");
         assertThat(SongEvaluationService.commentStyleRules(file + System.lineSeparator() + "SHORT= d ", "pl"))

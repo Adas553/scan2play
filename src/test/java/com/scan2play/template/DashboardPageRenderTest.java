@@ -250,8 +250,8 @@ class DashboardPageRenderTest {
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
         assertThat(html).as("the AI's comment style (V22): the party's own picked, saved as soon as picked")
                 .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", "💬 Komentarze AI:",
-                        "selected=\"selected\">Klasyczne<", ">Sarkastyczne (łagodne)<")
-                .doesNotContain("data-example", "commentStyleExample");
+                        "selected=\"selected\">Klasyczne<", ">Sarkastyczne<")
+                .doesNotContain("data-example", "commentStyleExample", "łagodne", "SARCASTIC_LIGHT");
         assertThat(html).as("the DJ's profiles (V24), a note for a refused one hidden until then")
                 .contains("action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"", "id=\"facebookInput\"", "id=\"tiktokInput\"",
                         "value=\"https://www.instagram.com/dj.koko/\"", "Twoje profile (goście widzą je", "data-form-error hidden");
