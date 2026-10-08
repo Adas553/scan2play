@@ -23,7 +23,7 @@ import static com.scan2play.service.DjService.DECISION_ACCEPTED;
  * row: the DJ sees how many guests want a song ("×3"), and the queue does not fill with repeats.
  * <p>
  * <b>Concurrency:</b> the party's requests are saved under a transaction-scoped advisory lock, so two guests who ask for the same
- * song at the same moment make one row with two votes ({@code SongRequestVotesIT}).
+ * song at the same moment make one row with two votes ({@code SongRequestVotesIT}), and two new songs never get the same number.
  */
 @Slf4j
 @Service
@@ -93,6 +93,11 @@ public class SongRequestCommandService {
             log.info("Party [{}]: '{}' was skipped by the DJ lately — not back in the queue", request.getPartyCode(),
                     request.getSongName());
             return new Saved(Outcome.SKIPPED_BY_DJ, skipped.get());
+        }
+        if (DECISION_ACCEPTED.equals(request.getDecision())) {
+            // a song in the queue gets the party's next number ("#27", V28) — under this lock, so two at once never share one
+            Integer number = songRequestRepository.nextRequestNumber(request.getPartyCode());
+            request.setRequestNumber(number != null ? number : songRequestRepository.maxRequestNumber(request.getPartyCode()) + 1);
         }
         return new Saved(Outcome.NEW, songRequestRepository.save(request));
     }

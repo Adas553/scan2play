@@ -63,6 +63,36 @@ class DjPartySettingsControllerLinksTest {
         assertThat(party.getTiktokUrl()).isNull();
     }
 
+    /** The tip link (V27, {@code POST /dj/dashboard/tip-link}): kept as an address on the service, an empty one clears it. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void theTipLink_isKeptAsAnAddressOnItsService_andAnEmptyOneClearsIt() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/tip-link").param("partyCode", PARTY).principal(token).session(new MockHttpSession())
+                        .param("tip", " revolut.me/djkoko?currency=PLN "))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/dj/dashboard/tip-link").param("partyCode", PARTY).principal(token).session(new MockHttpSession())
+                        .param("tip", ""))
+                .andExpect(status().is3xxRedirection());
+
+        verify(sessionHelper, org.mockito.Mockito.times(2)).validateOwnership(eq(PARTY), any(), any());
+        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
+        verify(settingsService, org.mockito.Mockito.times(2)).updateSettings(eq(PARTY), updater.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).build();
+        updater.getAllValues().get(0).accept(party);
+        assertThat(party.getTipUrl()).isEqualTo("https://revolut.me/djkoko");
+        updater.getAllValues().get(1).accept(party);
+        assertThat(party.getTipUrl()).isNull();
+    }
+
+    @Test
+    void aTipLinkOnAnotherSite_isRefused_andNothingIsSaved() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/tip-link").param("partyCode", PARTY).principal(token).session(new MockHttpSession())
+                        .param("tip", "https://evil.example/revolut.me/djkoko"))
+                .andExpect(status().isBadRequest());
+
+        verify(settingsService, never()).updateSettings(any(), any());
+    }
+
     @Test
     void anAddressOnAnotherSite_isRefused_andNothingIsSaved() throws Exception {
         mockMvc.perform(post("/dj/dashboard/dj-links").param("partyCode", PARTY).principal(token).session(new MockHttpSession())

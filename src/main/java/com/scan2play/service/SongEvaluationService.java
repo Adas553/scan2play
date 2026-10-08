@@ -258,8 +258,8 @@ public class SongEvaluationService {
             aiResponse = aiResponse.withVerdict(savedRequest.getDecision(), savedRequest.getDjComment(), savedRequest.getEnergyLevel());
         }
 
-        return aiResponse.savedAs(savedRequest.getId(), savedRequest.getSongName(), savedRequest.getVotes(),
-                saved.outcome() == SongRequestCommandService.Outcome.ALREADY_YOURS);
+        return aiResponse.savedAs(savedRequest.getId(), savedRequest.getRequestNumber(), savedRequest.getSongName(),
+                savedRequest.getVotes(), saved.outcome() == SongRequestCommandService.Outcome.ALREADY_YOURS);
     }
 
     // ---- Private helpers ----

@@ -113,6 +113,7 @@ public class DjDashboardController {
         model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
+        model.addAttribute(TIP_URL, settings.getTipUrl());
         model.addAttribute(COMMENT_STYLE, settings.getCommentStyle());
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
@@ -161,6 +162,7 @@ public class DjDashboardController {
         model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
+        model.addAttribute(TIP_URL, settings.getTipUrl());
         model.addAttribute(PERMANENT_LINK, guestUrl);
         model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_PRINT_SIZE, QR_PRINT_SIZE));
         model.addAttribute(QR_LAYOUT, "cards".equals(layout) ? "cards" : "poster");

@@ -46,7 +46,7 @@ controller/   HTTP: Thymeleaf views, HTML fragments for AJAX, a few JSON endpoin
 service/      business logic
 repository/   Spring Data JPA
 entity/       JPA entities        model/   enums, records        config/  Spring beans
-util/         CodeGenerator, SocialLinks, SongNames, Texts, Times, YouTubeSearchLinks
+util/         CodeGenerator, SocialLinks, SongNames, Texts, Times, TipLinks, YouTubeSearchLinks
 ```
 
 Server-rendered pages with AJAX: the DJ dashboard polls the guest queue every 3 s (ETag / 304) and sends its forms by `fetch` (the
@@ -74,13 +74,21 @@ the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en
 `tiktokUrl` (V24, ≤ 200: the DJ's profiles, set in a card under the dashboard's QR code — the guests see buttons with the sites' icons (Bootstrap Icons' paths inline, MIT) under "🎧 Gra: …" (new tab, `rel="noopener noreferrer
 nofollow"`), the QR print "Instagram @djkoko"; `POST /dj/dashboard/dj-links` takes "@name", a name or a link copied from the app and
 keeps an https address on that site, `util/SocialLinks` — anything else, a look-alike host too, is a 400 and nothing is saved; the
-form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `commentStyle` (V22, `CommentStyle`:
+form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `tipUrl` (V27, ≤ 200: the
+DJ's tip link — the DJ's page on Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee or Ko-fi; `POST /dj/dashboard/tip-link`,
+a field under the profiles; `util/TipLinks` keeps an https address on one of those hosts with a plain path — no query, login part or
+port; anything else is a 400 and nothing is saved; the guests see "💸 Napiwek dla DJ-a" with "revolut.me/djkoko · prosto do DJ-a, poza
+Scan2Play" under it on the party page and under an accepted request (`components :: tip`), the QR poster under the profiles and a card
+in its texts' column "Napiwek / Tip: revolut.me/djkoko"; the money never passes through Scan2Play — the privacy policy says so),
+`commentStyle` (V22, `CommentStyle`:
 CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
 the person", no profanity and no song's name in an accepted one; the dashboard's list "💬 Komentarze AI",
 `POST /dj/dashboard/comment-style`),
 `requestLimit` / `cooldownMinutes`
-(the guest's own limit, 1–100 / 1–1440), `duplicateCheckWindow` (0–50 recently played songs the AI must not repeat).
+(the guest's own limit, 1–100 / 1–1440), `duplicateCheckWindow` (0–50 recently played songs the AI must not repeat). The column
+`request_counter` (V28, not mapped — written only by `SongRequestRepository.nextRequestNumber`, so a save of the settings never
+overwrites it): how many song numbers the party has given.
 
 **`SongRequestEntity` → `song_requests`** — a guest's request. `partyCode`, `songName` (255; the song as the AI named it, `SongNames.tidy`: a control character is a dash, every dash "-" — the AI once copied a
 guest's "–" back as a backspace; the AI is given the guest's words with "-" too, `forPrompt`), `guestText`
@@ -88,6 +96,12 @@ guest's "–" back as a backspace; the AI is given the guest's words with "-" to
 it under the song — the DJ checks the AI, 2026-10-04; when the AI's song has none of the guest's words — `SongNames.sharesNoWord`: a
 word of 3+ letters, its stem — the first max(3, length − 2) letters — looked for in the `comparable` name — the queue and the history mark it
 "⚠ Sprawdź", `needsCheck()`, computed when shown; 2026-10-07 "orła cień" became another song by its mood), `votes` (V15, ≥ 1: how many guests asked for it — see below),
+`requestNumber` (V28: the song's number at its party, "#27" — given to a request that reaches the queue, from the party's
+`request_counter` raised in the same statement under the party's advisory lock (`UPDATE … RETURNING`; `SongRequestVotesIT`: 16 new
+songs at once get 1–16); "Wyczyść historię" sets the count back to the highest number still in use (`resetRequestCounter` — #1
+again with the queue empty), so a number a song has is never given twice; unique per party (`uk_song_requests_party_number`); a vote
+keeps the waiting song's number, a request the AI rejected has none), `tips` (V28, ≥ 0: the tips the DJ counted — see "Numbers and
+tips" below),
 `style` (the vibe it was judged against), `decision` (`accepted` / `rejected` / `played`), `djComment` (500), `energyLevel`,
 `requestedAt`, `trackUrl` (500; the "🔍 Podejrzyj" link — YouTube's search results for the song, `util/YouTubeSearchLinks`: a page the
 DJ's browser opens, no API; a `lyrics` request, and a song with none of the guest's words, is searched by the guest's own words,
@@ -116,6 +130,19 @@ votes and the guest's words, `skipped_at` cleared — unless the same song waits
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
 party's ranking); the guest page's list is sorted by them (below) and the result page says "Ktoś już o to prosił — dodaliśmy
 Twój głos! Głosów: N".
+
+**Numbers and tips** (V28, the owner 2026-10-08): every song in the queue has a stable number. The guests see "#27" before the song
+in "🔥 Prośby gości" and "Numer Twojej piosenki: #27" under an accepted request; with the DJ's tip link (V27) the button says what to
+write in the payment's title, gently ("Jeśli chcesz, wpisz #27 w tytule wpłaty…" under a request, "…numer piosenki z listy" on the
+party page — the owner: a plain order sounded off-putting). Scan2Play never sees the payment: the DJ sees it in their bank and taps
+"💸" at the song in the queue — not in the history, by the owner's choice (`POST /dj/dashboard/tip-count`, `id`,
+`add=false` takes one back; `DjService.countTip` → one atomic `UPDATE`, only the DJ's own song with a number, never below 0; the queue's
+cache goes, the fingerprint counts the tips). The DJ finds the song by typing "27" or "#27" in the search (`list-tools.js`: a number
+matches `data-song-number` exactly, words match names). The number is the song's ID, the first column of the DJ's queue and history
+("ID", sorted as a number; on a phone the queue card starts with it, the history card has it on the line under the song). The queue's
+own place numbers ("4.", a CSS counter before the title) stay on a wide screen only — on a phone the card shows the ID alone (the
+owner, 2026-10-08). A tip only marks the song ("💸 2"); it does not move it up (the owner's choice for now).
+The evening summary counts them ("Napiwki", "💸 N" at the songs) and the CSV has "Numer" and "Napiwki".
 
 **A guest's 👍** (`GuestVoteService`, the owner 2026-10-08, "A": one vote per song, as many songs as the guest likes): every waiting
 song on the guest page but the guest's own has a "👍 N" button — outlined, filled once given; a second tap takes it back →
@@ -190,8 +217,8 @@ never offered).
 (`.s2p-phone-settings`; folded by `app.css` alone, `settings-toggle.js` opens them and keeps the choice for the tab in
 `sessionStorage`); the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); the list scrolls with the page.
 
-**The active queue**: each request has its number — a CSS counter in `app.css`, so it follows the polled list, the sort and the
-search by itself. "🧹 Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
+**The active queue**: each request has its place before the title on a wide screen — a CSS counter in `app.css`, so it follows the
+polled list, the sort and the search by itself — and its ID in the first column ("#27", V28 — see "Numbers and tips"). "🧹 Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
 sends `POST /dj/dashboard/clear-queue`: the waiting requests go to the history's rejected ones, with `cleared_at` and the AI's
 comment (V25) — the history says "WYCZYSZCZONE" in place of the verdict ("🧹 Wyczyszczona przez DJ-a …" in its title), amber as a skip. Ending the party does not clear the
 queue (the DJ may pause it for a break or a limit).
@@ -291,7 +318,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ; `/start` → Google's login |
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), account deletion |
-| `DjSongController` | mark played, skip, clear the queue |
+| `DjSongController` | mark played, skip, clear the queue, count a tip ("💸", V28) |
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
 | `DjSessionHelper` | the party of the logged-in DJ (cached in the session; made on the first login — tabs that make it at once look again, `FirstLoginIT`) and **`validateOwnership`** (IDOR) |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
@@ -336,7 +363,9 @@ files under it); everything else keeps Spring Security's `no-store`,
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
 `qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `error.html`, `privacy[_pl].html`,
-`terms[_pl].html`; `fragments/`: `components.html` (`dj-nav`: the account buttons, the sticky tabs Panel / Kolejka / Historia, the
+`terms[_pl].html` — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
+`HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
+tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: the account buttons, the sticky tabs Panel / Kolejka / Historia, the
 feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
 dashboard and the guest page; `footer`), `guest-queue.html`. Texts the scripts need travel in `data-*`
 attributes. **No inline script, no `on…=` handler and no `style="…"`** on any page (`NoInlineCodeInTemplatesTest`).
@@ -358,7 +387,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V26`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V28`.
 
 ---
 
@@ -499,6 +528,8 @@ schema behind Flyway's back.
 | V24 | `party_settings.instagram_url`, `facebook_url`, `tiktok_url` varchar(200), nullable: the DJ's profiles |
 | V25 | `song_requests.cleared_at` timestamptz, nullable: when the DJ cleared the request with the queue; the old note "Cleared by the DJ 🧹" → NULL, its request time as `cleared_at` (`SkipCommentMigrationIT`) |
 | V26 | data + constraint: `comment_style` 'SARCASTIC_LIGHT' → 'SARCASTIC', the check without it (`CommentStyleMigrationIT`) |
+| V27 | `party_settings.tip_url` varchar(200), nullable: the DJ's tip link |
+| V28 | `party_settings.request_counter` int NOT NULL DEFAULT 0; `song_requests.request_number` int, `tips` int NOT NULL DEFAULT 0 (≥ 0); the songs so far that reached the queue numbered in request order per party, each count set to its last number; `uk_song_requests_party_number` (party, number) unique where numbered (`RequestNumberMigrationIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -567,6 +598,8 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/clear-history` | "🗑 Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
 | POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/comment-style`, `/limits` | settings |
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |
+| POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |
+| POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster / cards |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |

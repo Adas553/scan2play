@@ -129,6 +129,20 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("V28: the song's number in the history's first column; no \"💸\" there — the tips are counted in the queue")
+    void shouldShowTheSongsNumber_withoutTips() {
+        HistoryEntry played = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Played", null, "ANY", "played", null, 5,
+                null, 1, null, null, 27, 1);
+        HistoryEntry rejected = guest(2, "Rejected by the AI", "rejected");
+        String html = render(List.of(played, rejected), false, PL).replaceAll("\\s+", " ");
+
+        assertThat(html).containsPattern("<tr[^>]*data-song-number=\"27\"")
+                .contains("<th data-sort=\"number\" class=\"text-nowrap\">ID</th>",
+                        "<td class=\"text-nowrap s2p-number-cell\" data-sort-value=\"number\" data-val=\"27\">#27</td>")
+                .doesNotContain("tip-count", "💸");
+    }
+
+    @Test
     @DisplayName("\"Podsumowanie wieczoru\" opens in a new tab beside \"Wyczyść historię\", whose question points to it")
     void shouldOfferTheEveningSummary_beforeTheHistoryIsCleared() {
         String html = render(List.of(guest(1, "Alpha", "played")), false, PL);

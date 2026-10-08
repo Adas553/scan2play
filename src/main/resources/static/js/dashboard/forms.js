@@ -50,6 +50,11 @@ import { csrfHeaders, showPartyActive } from './common.js';
                 emit(EVENTS.HISTORY_CHANGED);
                 return;   // the history is fetched again: no button left to flash
             }
+            // A tip counted or taken back (V28): the queue is fetched again with the new count
+            if (action.includes('/dashboard/tip-count')) {
+                emit(EVENTS.GUEST_QUEUE_CHANGED);
+                return;
+            }
             // The history cleared: what is left of it (a skip that still keeps its song out) is fetched again
             if (action.includes('/dashboard/clear-history')) {
                 emit(EVENTS.HISTORY_CHANGED);

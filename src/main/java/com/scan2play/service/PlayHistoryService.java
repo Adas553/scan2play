@@ -71,6 +71,6 @@ public class PlayHistoryService {
         Instant at = song.getPlayedAt() != null ? song.getPlayedAt() : song.getRequestedAt();
         return new HistoryEntry(song.getId(), at, song.getSongName(), song.getTrackUrl(), song.getStyle(), song.getDecision(),
                 song.getDjComment(), song.getEnergyLevel(), song.getGuestText(), song.getVotes(), song.getSkippedAt(),
-                song.getClearedAt());
+                song.getClearedAt(), song.getRequestNumber(), song.getTips());
     }
 }

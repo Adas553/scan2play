@@ -75,6 +75,21 @@ public class DjSongController {
     }
 
     /**
+     * Counts a tip for a song ("💸", V28) — or takes one back ({@code add=false}) — at a song in the queue. Only the
+     * authenticated DJ's own party: the party code comes from the session, the song must be one of its ({@link DjService#countTip}).
+     *
+     * @param id The ID of the song request.
+     * @return Redirects back to the dashboard.
+     */
+    @PostMapping("/dashboard/tip-count")
+    public String countTip(@RequestParam Long id, @RequestParam(defaultValue = "true") boolean add,
+                           OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        djService.countTip(id, ownerPartyCode, add);
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
      * Clears the DJ's queue: every waiting request leaves it as rejected (it stays in the history). Only the authenticated DJ's own
      * party — the party code comes from the session, never from the form.
      *

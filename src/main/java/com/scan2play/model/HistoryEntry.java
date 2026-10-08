@@ -21,9 +21,18 @@ import java.time.Instant;
  * @param votes       how many guests asked for the song (V15)
  * @param skippedAt   when the DJ skipped it ("Pomiń", V20); {@code null} for every other entry
  * @param clearedAt   when the DJ cleared it with the whole queue ("Wyczyść kolejkę", V25); {@code null} for every other entry
+ * @param requestNumber the song's number at the party (V28, "#27"); {@code null} for one the AI rejected
+ * @param tips        how many tips the DJ counted for it (V28, "💸")
  */
 public record HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
-                           Integer energyLevel, String guestText, Integer votes, Instant skippedAt, Instant clearedAt) {
+                           Integer energyLevel, String guestText, Integer votes, Instant skippedAt, Instant clearedAt,
+                           Integer requestNumber, int tips) {
+
+    /** An entry without a number or tips (from before V28, a test). */
+    public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
+                        Integer energyLevel, String guestText, Integer votes, Instant skippedAt, Instant clearedAt) {
+        this(id, at, title, trackUrl, style, decision, djComment, energyLevel, guestText, votes, skippedAt, clearedAt, null, 0);
+    }
 
     /** An entry the DJ neither skipped nor cleared. */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,

@@ -7,8 +7,20 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
-- **2026-10-08, evening — not deployed yet (branch `claude/inspiring-einstein-sgh2tz`, a PR to `dev`):**
-  **"📊 Podsumowanie wieczoru"** (`/dj/summary`, PROJECT_CONTEXT 5.1): one evening (6:00–6:00 Polish time) to print / save as PDF,
+- **2026-10-08, night — not deployed yet (branch `claude/inspiring-einstein-sgh2tz`, a PR to `dev`):** **songs' numbers and the
+  DJ's tips** (V28, PROJECT_CONTEXT 4.1 "Numbers and tips"): "#27" for the guests (list, result, the tip's title — "Jeśli chcesz,
+  wpisz…") and the DJ (an "ID" column in the queue and the history, search "27"; the place numbers "4." on a wide screen only),
+  "💸" in the queue only counts a tip (`POST /dj/dashboard/tip-count`), the evening summary and the CSV count them; "Wyczyść
+  historię" starts the IDs again (#1 with the queue empty). Every page declares `color-scheme` (Samsung Internet's dark theme greyed
+  the logo). A tip only marks the song —
+  moving it up was left for when DJs ask. Tests: 447 unit, 39 database, 49 browser (`queue-search-by-number`, `tip-count-in-place` —
+  seen red without the scripts' change).
+- **2026-10-08, late evening — committed `e40faba`, not deployed yet:** **the DJ's tip link**
+  (V27 `party_settings.tip_url`, `util/TipLinks`, `POST /dj/dashboard/tip-link`): "💸 Napiwek dla DJ-a" on the party page and under an
+  accepted request, "Napiwek / Tip: revolut.me/…" on the QR print (a card: in the texts' column — the code's column was full,
+  `qr-print-cards-layout` caught it). Only links to Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi; the money
+  goes straight to the DJ; the privacy policy (PL / EN) says so. Tests: 442 unit, 36 database, 47 browser.
+- **Live 2026-10-08 (PR #27 / #28, `main` = `af6363c`, CI green, V26 applied at start):** **"📊 Podsumowanie wieczoru"** (`/dj/summary`, PROJECT_CONTEXT 5.1): one evening (6:00–6:00 Polish time) to print / save as PDF,
   and as CSV — the counts, how long the played requests waited, the 10 most wanted, "Chcieli, a nie usłyszeli", the most wanted
   artists, requests every half-hour (the owner wants to see how it looks), what played in order; a button beside "🗑 Wyczyść historię",
   whose question now points to it. **V26**: "Sarkastyczne (łagodne)" gone (the owner: "sarkastyczny wystarczy"), its parties now

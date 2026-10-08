@@ -194,6 +194,7 @@ h2 {
 }
 
 .songs .votes,
+.songs .tips,
 .songs .played,
 .songs .status,
 .songs .time {
@@ -216,6 +217,11 @@ h2 {
 
 .songs .played {
     color: #198754;
+}
+
+.songs .tips {
+    color: #b8860b;
+    font-weight: 600;
 }
 
 /* the legend of the status icons: needed only where the icons stand alone */

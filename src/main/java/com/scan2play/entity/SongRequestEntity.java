@@ -61,6 +61,21 @@ public class SongRequestEntity {
     @Builder.Default
     private int votes = 1;
 
+    /**
+     * The song's number at its party (V28): "#27" — the guests see it beside the song and write it in the title of a tip, the DJ
+     * finds the song by it. Given to a request that reaches the queue, from the party's own count (never used twice, also after
+     * "Wyczyść historię"); a vote on a waiting song keeps that song's number. {@code null} for a request the AI rejected.
+     */
+    private Integer requestNumber;
+
+    /**
+     * How many tips the DJ counted for this song (V28): the DJ sees a payment titled "#27" in their bank and taps "💸" at the song.
+     * Scan2Play never sees the money. Changed only by one atomic {@code UPDATE} ({@code SongRequestRepository.addTip}).
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private int tips = 0;
+
     private String style;
     private String decision;
 

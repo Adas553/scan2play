@@ -279,4 +279,28 @@ class DjServiceTest {
         assertThat(played.getDecision()).isEqualTo(DECISION_PLAYED);
         verify(songRequestRepository, never()).save(any());
     }
+
+    // ---- countTip (V28) ----
+
+    @Test
+    void countTip_countsOrTakesBack_onTheDjsOwnSong_andRefreshesTheQueue() {
+        org.springframework.cache.Cache cache = mock(org.springframework.cache.Cache.class);
+        when(cacheManager.getCache(DjService.QUEUE_CACHE)).thenReturn(cache);
+        when(songRequestRepository.addTip(5L, PARTY_CODE)).thenReturn(1);
+        when(songRequestRepository.removeTip(5L, PARTY_CODE)).thenReturn(1);
+
+        assertThat(djService.countTip(5L, PARTY_CODE, true)).isTrue();
+        assertThat(djService.countTip(5L, PARTY_CODE, false)).isTrue();
+
+        verify(cache, times(2)).evict(PARTY_CODE);
+    }
+
+    @Test
+    void countTip_onAnotherPartysSong_changesNothing() {
+        when(songRequestRepository.addTip(5L, PARTY_CODE)).thenReturn(0);
+
+        assertThat(djService.countTip(5L, PARTY_CODE, true)).isFalse();
+
+        verify(cacheManager, never()).getCache(any());
+    }
 }

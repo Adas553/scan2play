@@ -15,6 +15,28 @@
     };
     const song = function (id, name) { return { id: id, name: name, url: 'https://www.youtube.com/results?search_query=song' + id }; };
 
+    // V28: a tip titled "#27" came in — the DJ types 27 (or #27) and sees that song alone: the number, not "127" or a name with 27
+    S2P.scenario({
+        name: 'queue-search-by-number',
+        title: 'the active queue: "27" or "#27" in the search finds the song numbered 27 — not 127, not a name with 27 in it; words still find names',
+        setup: { queue: [
+            { id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=1', number: 27 },
+            { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=2', number: 127 },
+            { id: 3, name: 'Club 27', url: 'https://www.youtube.com/results?search_query=3', number: 5 }] },
+        run: async function (t) {
+            const list = document.getElementById('queueList');
+            const search = list.querySelector('[data-list-search]');
+            await t.waitFor(function () { return list.querySelectorAll('#song-list tr[data-song-id]').length === 3; }, 'the queue', 8000);
+            type(search, '27');
+            t.step('"27": the song numbered 27 alone', visibleNames(list), ['Wilki - Baśka']);
+            type(search, '#127');
+            t.step('"#127": the song numbered 127', visibleNames(list), ['sanah - Szampan']);
+            type(search, 'club');
+            t.step('a word still finds a name', visibleNames(list), ['Club 27']);
+            type(search, '');
+        }
+    });
+
     S2P.scenario({
         name: 'queue-list',
         title: 'the active queue: the search finds "Żółć" by "zolc", the count says "shown / all", "nothing matches" appears — and the poll keeps the search, the scroll position and the column sort',

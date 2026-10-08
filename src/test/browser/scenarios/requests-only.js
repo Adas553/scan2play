@@ -85,6 +85,32 @@ S2P.scenario({
     }
 });
 
+// V28: a payment titled "#27" came in — "💸" at the song counts the tip in the background; the page stays and the queue is fetched
+// again at once with the new count (not with the next 3 s poll)
+S2P.scenario({
+    name: 'tip-count-in-place',
+    title: 'the queue: "💸" counts a tip in the background — the page stays, and the queue comes back at once with "💸 1"',
+    setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki', number: 27 },
+                     { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah', number: 28 }] },
+    run: async function (t) {
+        let handledInPlace = null;
+        document.addEventListener('submit', function (e) {
+            handledInPlace = e.defaultPrevented;
+            e.preventDefault();
+        });
+        const tipButton = function () { return document.querySelector('#song-list tr[data-song-id="1"] form[action="/dj/dashboard/tip-count"] button'); };
+        await t.waitFor(function () { return !!tipButton(); }, 'the queue with its "💸"', 8000);
+        const clickedAt = performance.now();
+        tipButton().click();
+        t.step('the page stays (the form goes in the background)', handledInPlace, true);
+        await t.waitFor(function () { return tipButton() && tipButton().textContent === '💸 1'; }, 'the new count', 2500).catch(function () {});
+        t.step('the server was told which song', (await t.stand.requests('POST /dj/dashboard/tip-count')).map(function (r) { return r.q.id; }), ['1']);
+        t.check('the count shows at once, not with the next 3 s poll', tipButton() && tipButton().textContent === '💸 1'
+            && performance.now() - clickedAt < 2500);
+        t.check('the other song has none', document.querySelector('#song-list tr[data-song-id="2"] .s2p-btn-tip').textContent === '💸');
+    }
+});
+
 S2P.scenario({
     name: 'skip-undo',
     title: '"Pomiń" by mistake: a bar names the song and offers "Cofnij", which puts the request back in the queue at once',
@@ -133,7 +159,7 @@ S2P.scenario({
 
 S2P.scenario({
     name: 'queue-numbers-and-clear',
-    title: 'the active queue: every request has its number; "Wyczyść kolejkę" asks first, then empties the queue in place, and is gone with nothing to clear',
+    title: 'the active queue: every request has its place number (a wide screen); "Wyczyść kolejkę" asks first, then empties the queue in place, and is gone with nothing to clear',
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
                      { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
     run: async function (t) {
