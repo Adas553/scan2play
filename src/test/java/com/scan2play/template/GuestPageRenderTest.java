@@ -339,6 +339,22 @@ class GuestPageRenderTest {
         assertThat(render(PL, Map.of())).as("any vibe, no note: no box").doesNotContain("id=\"partyVibe\"");
     }
 
+    /**
+     * The installed app takes every address of the site: a DJ testing their QR code landed on the guest page in it with no way back
+     * (the owner, 2026-10-08). The guest page and the result page have "← Twój panel DJ-a", shown only in the app (app.css).
+     */
+    @Test
+    void theGuestPages_haveTheWayBackToTheDashboard_forTheApp() {
+        String page = render(PL, Map.of());
+        String result = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title"));
+
+        for (String html : List.of(page, result)) {
+            assertThat(html).contains("s2p-standalone-only", "id=\"backToDashboard\"", "href=\"/dj/dashboard\"", "← Twój panel DJ-a")
+                    .doesNotContain("??");
+        }
+        assertThat(render(Locale.ENGLISH, Map.of())).contains("← Your DJ dashboard");
+    }
+
     /** Who plays (V17): "🎧 Gra: DJ Koko" under the title, escaped; nothing when the DJ wrote nothing. */
     @Test
     void whoPlays_isShownUnderTheTitle() {
