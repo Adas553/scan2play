@@ -1,7 +1,7 @@
 # Scan2Play — Project Context
 
 > The application as it is on branch `dev` (2026-10-04). Read it before an architectural change; `AGENTS.md` says how to work,
-> `SESSION_HANDOFF.md` what is going on now, `REVIEW.md` the review of 2026-09-30 and what was fixed.
+> `SESSION_HANDOFF.md` what is going on now; the review of 2026-09-30 and what was fixed: `docs/history/review-2026-09-30.md`.
 > **History** — the decisions, the owner's reports, what was tried and measured, how every stage was verified — is in
 > `docs/history/project-context-2026-10-01.md` (this file word for word before it was cut down, review 7.1; it still describes the
 > YouTube player, Auto-Pilot and the background playlist) and `docs/history/session-handoff-2026-09.md`. The full application with
@@ -568,7 +568,7 @@ GuestQueueService          → DjService
 - The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
   Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`, injected by Cloudflare into the HTML) — switch that off in
   Cloudflare, or allow it in the CSP, before enforcing.
-- `REVIEW.md` lists what else is open.
+- The review of 2026-09-30 (`docs/history/review-2026-09-30.md`) is done; the one point left open is 2.3 (single instance, above).
 
 ### Front end
 - Polling every 3 s (ETag / 304), no WebSockets; a hidden window rests until it is shown (review 3.4).

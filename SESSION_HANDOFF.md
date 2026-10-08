@@ -1,9 +1,9 @@
-# Session Handoff — 2026-10-08
+# Session Handoff — 2026-10-08 (evening)
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
 (2026-10-02 … 04: the phone dashboard, votes, the vibe note, "Kto gra", the removal of Spotify and YouTube, package by package).
-Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. Review findings: `REVIEW.md`.
+Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. The review of 2026-09-30: `docs/history/review-2026-09-30.md` (done; 2.3, one instance, left open).
 
 ## Start here
 
@@ -187,7 +187,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **Live 2026-10-08 10:09 UTC (PR #21 / #22, `0a39b7d`), CI green:** Flyway applied V25 (0.03 s), started in 4 s, no error;
   `/<commit>/js/guest-party.js` answers `Cache-Control: public, max-age=31536000, immutable` (Cloudflare: `HIT`), the pages `no-store`.
 
-- **A guest's 👍 on the list (2026-10-08, the owner's idea and pick "A"; not deployed yet):** every waiting song on the guest page
+- **A guest's 👍 on the list (2026-10-08, the owner's idea and pick "A"; live 12:20 UTC, PR #23 / #24):** every waiting song on the guest page
   but the guest's own has "👍 N"; one vote per song, as many songs as the guest likes, a second tap takes it back. Then (the owner:
   too much — a song up to three times) **one list** "🔥 Prośby gości": the most votes first, the newest first among equals, 5 shown,
   the rest under "Pokaż pozostałe prośby (N)"; "Najwięcej głosów" and "Ostatnio wysłane" gone. **The screen does not jump** (the
@@ -212,7 +212,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   codes alike, ~1 in 12,000 runs — it now allows one pair). No migration. The start took 15 s, not 4: the sleeping database had
   closed the pool's connections right after Flyway, Spring Session waited twice 5 s for one ("Error while extracting database
   name") — the cost of the sleep again (Next / "Na później": switch the database's sleep off before customers).
-- **"← Twój panel DJ-a" in the app (2026-10-08, the owner; not deployed yet):** a DJ testing their QR code with the app installed
+- **"← Twój panel DJ-a" in the app (2026-10-08, the owner; live 13:05 UTC, PR #25 / #26, `a07d684`, CI green, started in 5.6 s):** a DJ testing their QR code with the app installed
   landed on the guest page inside it with no way back. Now the guest, result and "party ended" pages have the link, shown only in
   the installed app (`display-mode: standalone`; `guest-back-to-dashboard-in-the-app`, seen red). Not tried on a phone yet. The owner tried the first version locally: "działa dobrze". Not tried yet: a real
   phone.
@@ -249,8 +249,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
-6. From `REVIEW.md`: what is left is 2.3 (one instance) and 7.x (small tidy-ups; also the needless `hibernate.dialect` the start
-   log warns about).
+6. The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
+   the history, the needless `hibernate.dialect` gone). The prompt (2026-10-08): "not knowing a song is no reason to make one up"
+   — the owner tries it on production.
 
 ## Waiting for the owner (not code)
 

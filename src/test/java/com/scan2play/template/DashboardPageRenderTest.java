@@ -214,7 +214,7 @@ class DashboardPageRenderTest {
                 "id=\"history-content\"", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
         // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
         assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"party-full\"", "id=\"serverLimitsInfo\"");
-        // the scripts are ES modules (REVIEW.md 3.3): main.js imports the dashboard's parts
+        // the scripts are ES modules (review 3.3): main.js imports the dashboard's parts
         assertThat(html).contains("<script type=\"module\" src=\"/js/dashboard/main.js\">");
         // no player: the DJ's own software plays (the YouTube player, Auto-Pilot, the background playlist and the DJ pick are gone)
         assertThat(html).doesNotContain("id=\"yt-player\"", "/js/youtube-autopilot.js", "/js/wake-lock.js", "id=\"autoToggle\"",
