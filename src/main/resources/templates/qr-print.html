@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title th:text="#{qr.print.title}">Print the QR code - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a white page to print: a browser's own dark mode (Samsung Internet) must not darken it -->
+    <meta name="color-scheme" content="only light">
     <link href="/css/qr-print.css" th:href="@{/css/qr-print.css}" rel="stylesheet">
 </head>
 <!--/*

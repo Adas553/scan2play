@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title th:text="#{summary.title}">Evening summary - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a white page to print: a browser's own dark mode (Samsung Internet) must not darken it -->
+    <meta name="color-scheme" content="only light">
     <link href="/css/summary.css" th:href="@{/css/summary.css}" rel="stylesheet">
 </head>
 <!--/*
@@ -61,6 +63,9 @@
             <span th:text="#{summary.stat.cleared}">Cleared</span></div>
         <div th:if="${summary.waiting > 0}" class="stat"><strong th:text="${summary.waiting}">2</strong>
             <span th:text="#{summary.stat.waiting}">Still waiting</span></div>
+        <!--/* the tips the DJ counted (V28) — only when there were some */-->
+        <div th:if="${summary.tips > 0}" class="stat" id="tipsStat"><strong th:text="${summary.tips}">4</strong>
+            <span th:text="#{summary.stat.tips}">Tips</span><small th:text="#{summary.stat.tips.hint}">counted by you</small></div>
     </section>
     <!--/* how long the played requests waited — only when the DJ marked some as played */-->
     <p th:if="${summary.averageWaitMinutes != null}" class="wait" id="wait"
@@ -71,6 +76,7 @@
         <ol class="songs">
             <li th:each="song : ${summary.top}">
                 <span class="song" th:text="${song.songName}">Artist - Title</span>
+                <span th:if="${song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
                 <span class="votes" th:text="${'👍 ' + song.votes}">👍 5</span>
                 <span th:if="${song.decision == 'played'}" class="played" th:title="#{summary.top.played}"><span
                         class="icon" th:text="#{summary.icon.PLAYED}">✓</span> <span class="label" th:text="#{summary.top.played}">played</span></span>
@@ -85,6 +91,7 @@
         <ol class="songs">
             <li th:each="song : ${summary.missed}">
                 <span class="song" th:text="${song.songName}">Artist - Title</span>
+                <span th:if="${song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
                 <span class="votes" th:text="${'👍 ' + song.votes}">👍 3</span>
                 <!--/* on a phone the icon alone (summary.css), the legend under the heading says what each one means */-->
                 <span class="status" th:with="status=${summary.status(song)}" th:title="#{summary.csv.status.__${status}__}"><span
@@ -125,6 +132,7 @@
             <li th:each="song : ${summary.setlist}">
                 <span class="time" th:text="${times.clock(song.playedAt != null ? song.playedAt : song.requestedAt)}">22:14</span>
                 <span class="song" th:text="${song.songName}">Artist - Title</span>
+                <span th:if="${song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
                 <span class="votes" th:text="${'👍 ' + song.votes}">👍 3</span>
             </li>
         </ol>

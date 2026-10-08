@@ -124,6 +124,68 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
                 .containsExactly("played 4", "rejected 1", "accepted 1");
     }
 
+    /** A party with a settings row, as every real one has: the count of its numbers is there (V28). */
+    private String newParty() {
+        String party = newPartyCode();
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", party, "owner-" + party);
+        return party;
+    }
+
+    /**
+     * The songs' numbers (V28): many guests asking for different songs at once get different numbers, one after another — the
+     * party's count is raised under the advisory lock; a vote keeps the song's number; a request the AI rejected gets none. After
+     * "Wyczyść historię" the count goes back to the highest number left: past a song that still waits, to #1 with nothing left.
+     */
+    @Test
+    void manyNewSongsAtOnce_getDifferentNumbers_aVoteKeepsTheSongsNumber_aRejectionGetsNone() throws Exception {
+        String party = newParty();
+        ExecutorService pool = Executors.newFixedThreadPool(GUESTS);
+        try {
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<Integer>> asks = new ArrayList<>();
+            for (int i = 0; i < GUESTS; i++) {
+                String song = "Song " + i;
+                asks.add(pool.submit(() -> {
+                    start.await();
+                    return commands.saveOrVote(request(party, song, "accepted", LINK), Set.of()).request().getRequestNumber();
+                }));
+            }
+            start.countDown();
+            List<Integer> numbers = new ArrayList<>();
+            for (Future<Integer> ask : asks) {
+                numbers.add(ask.get(30, TimeUnit.SECONDS));
+            }
+            assertThat(numbers).containsExactlyInAnyOrderElementsOf(java.util.stream.IntStream.rangeClosed(1, GUESTS).boxed().toList());
+        } finally {
+            pool.shutdownNow();
+        }
+
+        SongRequestCommandService.Saved vote = commands.saveOrVote(request(party, "song 3", "accepted", LINK), Set.of());
+        assertThat(vote.outcome()).isEqualTo(Outcome.VOTE);
+        assertThat(vote.request().getRequestNumber()).isEqualTo(
+                jdbc.queryForObject("SELECT request_number FROM song_requests WHERE party_code = ? AND song_name = 'Song 3'",
+                        Integer.class, party));
+        assertThat(commands.saveOrVote(request(party, "Kult - Arahja", "rejected", null), Set.of()).request().getRequestNumber())
+                .isNull();
+
+        // the history cleared while "Song 5" still waits: the next number goes on past it, never one a song still has
+        jdbc.update("UPDATE song_requests SET decision = 'played', played_at = now() WHERE party_code = ? AND song_name <> 'Song 5'",
+                party);
+        Integer waiting = jdbc.queryForObject("SELECT request_number FROM song_requests WHERE party_code = ? AND song_name = 'Song 5'",
+                Integer.class, party);
+        dj.clearHistory(party);
+        assertThat(commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getRequestNumber())
+                .isEqualTo(waiting + 1);
+        // the queue emptied (played) and the history cleared: the numbers start again from #1
+        jdbc.update("UPDATE song_requests SET decision = 'played', played_at = now() WHERE party_code = ?", party);
+        dj.clearHistory(party);
+        assertThat(jdbc.queryForObject("SELECT request_counter FROM party_settings WHERE party_code = ?", Integer.class, party))
+                .isZero();
+        assertThat(commands.saveOrVote(request(party, "Kult - Arahja", "accepted", LINK), Set.of()).request().getRequestNumber())
+                .isEqualTo(1);
+    }
+
     @Test
     void aVoteNeverWritesTheWholeRowBack() {
         String party = newPartyCode();

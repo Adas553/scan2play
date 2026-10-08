@@ -172,13 +172,38 @@
 </div>
 
 <!--/* The DJ's tip link (V27) on the party page and under an accepted request: only an address util/TipLinks kept, on a service that
-     takes tips. The guests pay there, straight to the DJ — Scan2Play never sees the money, and the line under the button says so. */-->
-<p th:fragment="tip(tipUrl)" th:if="${tipUrl != null}" id="djTip" class="mb-2">
+     takes tips. The guests pay there, straight to the DJ — Scan2Play never sees the money, and the line under the button says so.
+     What to write in the payment's title (V28): the song's number — "#27" under a request, "the song's number from the list" on the
+     party page (number null); the DJ finds the song by it and counts the tip. */-->
+<p th:fragment="tip(tipUrl, number)" th:if="${tipUrl != null}" id="djTip" class="mb-2">
     <a th:href="${tipUrl}" target="_blank" rel="noopener noreferrer nofollow" id="tipLink"
        class="btn btn-sm btn-warning fw-bold" th:text="#{party.tip}">💸 Tip the DJ</a>
     <small class="d-block text-secondary mt-1"
            th:text="#{party.tip.note(${T(com.scan2play.util.TipLinks).display(tipUrl)})}">revolut.me/djkoko · straight to the DJ</small>
+    <small class="d-block text-light mt-1" id="tipTitleHint"
+           th:text="${number != null} ? #{party.tip.title(${'#' + number})} : #{party.tip.title.any}">In the payment's title write #27</small>
 </p>
+
+<!--/* The DJ's count of tips for a song in the queue (V28): "💸" counts one more (a payment titled "#27" came in), "−1" takes one
+     back. Only a song with a number. Plain forms with the CSRF field by hand, as the history's; forms.js sends them in the background
+     and fetches the queue again. */-->
+<span th:fragment="tipCount(id, number, tips)" th:if="${number != null}" class="d-inline-flex align-items-center gap-1 s2p-tip-count">
+    <form action="/dj/dashboard/tip-count" method="post" class="m-0">
+        <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="id" th:value="${id}" />
+        <button type="submit" class="btn btn-sm text-nowrap s2p-btn-tip" th:classappend="${tips > 0} ? 'btn-warning' : 'btn-outline-secondary'"
+                th:title="#{dashboard.tip.count.title(${'#' + number})}" th:text="${tips > 0} ? ${'💸 ' + tips} : '💸'">💸</button>
+    </form>
+    <!--/* "−1" keeps its place while there is nothing to take back (hidden, not left out): the first tip does not widen the column
+         and move the queue (the owner, 2026-10-08) */-->
+    <form action="/dj/dashboard/tip-count" method="post" class="m-0" th:classappend="${tips > 0} ? '' : 'invisible'">
+        <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="id" th:value="${id}" />
+        <input type="hidden" name="add" value="false" />
+        <button type="submit" class="btn btn-sm btn-link text-secondary px-1 s2p-btn-untip" th:title="#{dashboard.tip.uncount.title}"
+                th:disabled="${tips == 0}" th:attr="aria-hidden=${tips == 0}">−1</button>
+    </form>
+</span>
 
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 

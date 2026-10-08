@@ -67,6 +67,32 @@ class DashboardQueueFragmentTest {
     }
 
     @Test
+    @DisplayName("V28: the song's number in the first column (sortable, the search finds it), \"💸\" counts a tip, \"−1\" takes one back")
+    void shouldShowTheSongsNumberAndItsTips() {
+        SongRequestEntity tipped = accepted(1, "Alpha");
+        tipped.setRequestNumber(27);
+        tipped.setTips(2);
+        SongRequestEntity plain = accepted(2, "Beta");
+        plain.setRequestNumber(28);
+        String html = render(List.of(tipped, plain, accepted(3, "Before V28")), PL).replaceAll("\\s+", " ");
+
+        assertThat(html).containsPattern("<tr[^>]*data-song-id=\"1\"[^>]*data-song-number=\"27\"");
+        assertThat(html).contains("<td class=\"text-nowrap s2p-number-cell\" data-sort-value=\"number\" data-val=\"27\">#27</td>");
+        assertThat(html.indexOf(">#27</td>")).isLessThan(html.indexOf(">Alpha<"));
+        assertThat(html).contains("<form action=\"/dj/dashboard/tip-count\" method=\"post\" class=\"m-0\">",
+                "title=\"Przyszła wpłata z #27 w tytule? Policz napiwek\">💸 2</button>", "<input type=\"hidden\" name=\"add\" value=\"false\" />",
+                "title=\"Przyszła wpłata z #28 w tytule? Policz napiwek\">💸</button>");
+        // "−1" in every numbered row, so the first tip moves nothing — usable only where there are tips, hidden elsewhere
+        assertThat(html.split("name=\"add\" value=\"false\"", -1)).hasSize(3);
+        assertThat(html).containsOnlyOnce("class=\"m-0 invisible\"").containsOnlyOnce("aria-hidden=\"true\" disabled=\"disabled\">−1</button>");
+        assertThat(html.indexOf("data-song-id=\"2\"")).isLessThan(html.indexOf("class=\"m-0 invisible\""));
+        String beforeV28 = html.substring(html.indexOf("data-song-id=\"3\""));
+        assertThat(beforeV28).as("no number, no tips").doesNotContain("tip-count", ">#")
+                .contains("<td class=\"text-nowrap s2p-number-cell\" data-sort-value=\"number\"></td>");
+        assertThat(html).doesNotContain("??");
+    }
+
+    @Test
     @DisplayName("the polled tbody keeps its id, and every row its id and song name")
     void shouldKeepTheHooksOfTheScripts() {
         String html = render(List.of(accepted(1, "Alpha")), Locale.ENGLISH);

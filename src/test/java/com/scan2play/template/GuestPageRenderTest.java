@@ -215,12 +215,14 @@ class GuestPageRenderTest {
         String html = render(PL, Map.of("tipUrl", "https://revolut.me/djkoko"));
 
         assertThat(html).contains("id=\"djTip\"", "<a href=\"https://revolut.me/djkoko\" target=\"_blank\" rel=\"noopener noreferrer nofollow\"",
-                "💸 Napiwek dla DJ-a", "revolut.me/djkoko · prosto do DJ-a, poza Scan2Play");
+                "💸 Napiwek dla DJ-a", "revolut.me/djkoko · prosto do DJ-a, poza Scan2Play",
+                "Jeśli chcesz, wpisz w tytule wpłaty numer piosenki z listy (np. #27)");
         assertThat(render(PL, Map.of())).doesNotContain("djTip", "Napiwek");
 
-        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title"),
-                "https://www.paypal.com/paypalme/djkoko");
-        assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"", "paypal.com/paypalme/djkoko · prosto do DJ-a");
+        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title",
+                5L, 1, false, 27), "https://www.paypal.com/paypalme/djkoko");
+        assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"", "paypal.com/paypalme/djkoko · prosto do DJ-a",
+                "id=\"requestNumber\"", "Numer Twojej piosenki: #27", "Jeśli chcesz, wpisz #27 w tytule wpłaty — DJ będzie wiedział, za którą piosenkę");
         String rejected = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie dziś", "Nirvana - Lithium", 7, "title"),
                 "https://revolut.me/djkoko");
         assertThat(rejected).doesNotContain("djTip", "revolut.me");
@@ -246,10 +248,11 @@ class GuestPageRenderTest {
      */
     @Test
     void oneList_eachSongOnce_withItsVotes() {
-        SongRequestEntity wilki = SongRequestEntity.builder().id(1L).songName("Wilki - Baśka").votes(4).build();
+        SongRequestEntity wilki = SongRequestEntity.builder().id(1L).songName("Wilki - Baśka").votes(4).requestNumber(12).build();
         SongRequestEntity sanah = SongRequestEntity.builder().id(2L).songName("sanah - Szampan").votes(2).build();
         String html = render(PL, Map.of("guestQueue", queue(List.of(wilki, sanah, song(3, "Alone")), Set.of(), null)));
 
+        assertThat(html).as("the songs' numbers (V28), for the title of a tip").contains(">#12<").doesNotContain(">#null<");
         assertThat(html).contains("id=\"guestRequests\"", "🔥 Prośby gości", ">👍 4<", ">👍 2<", ">👍 1<")
                 .doesNotContain("??", "id=\"mostWanted\"", "id=\"upNext\"", "id=\"moreRequests\"", "Najwięcej głosów", "Ostatnio wysłane");
         assertThat(html.split(">Wilki - Baśka<", -1)).as("once").hasSize(2);

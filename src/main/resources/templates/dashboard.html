@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title th:text="#{dashboard.title}">DJ Dashboard - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
 
     <!-- CSRF Tokens for JavaScript requests -->
     <meta name="_csrf" th:content="${_csrf.token}"/>
@@ -273,6 +275,8 @@
         <table class="table table-dark table-hover table-sm align-middle">
             <thead>
             <tr>
+                <!--/* the song's number at the party (V28), "#27": the guests write it in the title of a tip; sortable */-->
+                <th data-sort="number" class="text-nowrap" th:text="#{dashboard.table.header.number}">No.</th>
                 <th class="d-none d-md-table-cell" data-sort="time" th:text="#{dashboard.table.header.time}">Time</th>
                 <th data-sort="song" th:text="#{dashboard.table.header.song}">Song</th>
                 <!--/* how many guests asked for the song (a request for a waiting song is a vote on it, SongRequestCommandService) */-->
@@ -290,7 +294,9 @@
             <tbody id="song-list" th:fragment="songTableBody">
             <tr th:each="req : ${history}" th:with="shownAt=${T(com.scan2play.util.Times).display(req.requestedAt)},
                           sortAt=${T(com.scan2play.util.Times).sortKey(req.requestedAt)}"
-                th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl}">
+                th:attr="data-song-id=${req.id},data-song-name=${req.songName},data-track-url=${req.trackUrl},data-song-number=${req.requestNumber}">
+                <td class="text-nowrap s2p-number-cell" data-sort-value="number" th:attr="data-val=${req.requestNumber}"
+                    th:text="${req.requestNumber != null} ? ${'#' + req.requestNumber} : ''">#27</td>
                 <td class="d-none d-md-table-cell text-nowrap" data-sort-value="time" th:attr="data-val=${sortAt}" th:title="${shownAt}">
                     <th:block th:replace="~{fragments/components :: moment(${req.requestedAt})}"></th:block>
                 </td>
@@ -338,14 +344,15 @@
                             <button type="submit" class="btn btn-sm btn-outline-light text-nowrap s2p-btn-skip" th:title="#{dashboard.table.button.dismiss.title}"
                                     th:text="#{dashboard.table.button.dismiss}">⏭ Skip</button>
                         </form>
+                        <span th:replace="~{fragments/components :: tipCount(${req.id}, ${req.requestNumber}, ${req.tips})}"></span>
                     </div>
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(history)}">
-                <td colspan="8" class="text-center text-light py-4 s2p-empty-row" th:text="#{dashboard.empty.queue}">No pending requests. Queue is empty! 🎵</td>
+                <td colspan="9" class="text-center text-light py-4 s2p-empty-row" th:text="#{dashboard.empty.queue}">No pending requests. Queue is empty! 🎵</td>
             </tr>
             <tr data-nomatch class="d-none">
-                <td colspan="8" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
+                <td colspan="9" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
             </tr>
             </tbody>
         </table>

@@ -86,7 +86,9 @@ class SummaryPageTest {
     private static List<SongRequestEntity> wedding() {
         List<SongRequestEntity> requests = new ArrayList<>();
         requests.add(request("Varius Manx - Orła cień", "played", at(19, 5), at(19, 40), 6));
-        requests.add(request("Zenek Martyniuk - Przekorny los", "played", at(20, 15), at(20, 30), 9));
+        SongRequestEntity zenek = request("Zenek Martyniuk - Przekorny los", "played", at(20, 15), at(20, 30), 9);
+        zenek.setTips(3);
+        requests.add(zenek);
         requests.add(request("Golec uOrkiestra - Ściernisko", "played", at(21, 2), at(21, 20), 4));
         requests.add(request("ABBA - Dancing Queen", "played", at(22, 10), at(22, 25), 7));
         requests.add(request("Bajm - Biała armia", "played", at(22, 30), at(23, 50), 2));
@@ -144,6 +146,9 @@ class SummaryPageTest {
         // the most wanted first; the rejected song is not one of them
         assertThat(html.indexOf("Przekorny los")).isLessThan(html.indexOf("Dancing Queen"));
         String top = html.substring(html.indexOf("id=\"top\""), html.indexOf("id=\"missed\"")).replaceAll("\\s+", " ");
+        // the tips the DJ counted (V28): a stat, and "💸 3" at the song
+        assertThat(html).contains("id=\"tipsStat\"", "<strong>3</strong>", "Napiwki");
+        assertThat(top).contains("<span class=\"tips\">💸 3</span>");
         assertThat(top).contains("👍 9", "<span class=\"played\" title=\"zagrana\"><span class=\"icon\">✓</span> <span class=\"label\">zagrana</span></span>")
                 .doesNotContain("Smells Like Teen Spirit");
         // how long the played ones waited: 35, 15, 18, 15, 80 and 15 minutes
@@ -208,7 +213,8 @@ class SummaryPageTest {
         assertThat(csv.getHeaders().getContentType()).hasToString("text/csv;charset=UTF-8");
         String text = new String(csv.getBody(), StandardCharsets.UTF_8);
         assertThat(text.split("\r\n")).hasSize(9);
-        assertThat(text).contains("Requested;Played;Song;Guest wrote;Votes;Status;AI comment;Energy", "\"rejected by the AI\"");
+        assertThat(text).contains("Number;Requested;Played;Song;Guest wrote;Votes;Tips;Status;AI comment;Energy",
+                "\"rejected by the AI\"");
 
         when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(List.of());
         assertThat(controller.csv(null, Locale.ENGLISH, null, new MockHttpSession()).getStatusCode().value()).isEqualTo(404);

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title th:text="#{result.title}">DJ's Verdict</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
@@ -29,9 +31,12 @@
 
         <p class="mt-4 lead fst-italic text-light" th:text="${response.comment}">DJ's Comment</p>
 
+        <!--/* the song's number (V28): the guest finds it in the list and writes it in the title of a tip */-->
+        <p th:if="${response.requestNumber != null and response.decision == 'accepted'}" id="requestNumber" class="mt-3 mb-0 fw-bold"
+           th:text="#{result.number(${'#' + response.requestNumber})}">Your song's number: #27</p>
         <!--/* the DJ's tip link (V27), only under a song that reached the DJ */-->
         <div th:if="${response.decision == 'accepted'}" class="mt-3">
-            <p th:replace="~{fragments/components :: tip(${tipUrl})}"></p>
+            <p th:replace="~{fragments/components :: tip(${tipUrl}, ${response.requestNumber})}"></p>
         </div>
 
         <div class="mt-4" th:unless="${response.unchecked}">

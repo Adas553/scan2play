@@ -96,6 +96,20 @@ class HtmlLangDeclarationTest {
         assertThat(checked).contains("dashboard", "landing", "index", "history", "result", "error", "party_ended");
     }
 
+    /**
+     * Every page says whether it is dark or white ({@code <meta name="color-scheme">}): a browser's own dark mode (Samsung Internet's
+     * "dark theme for websites") darkens a page that does not — it greyed the logo's dark tile and turned the yellow tip button
+     * brown (the owner's phone, 2026-10-08). The white print pages say "only light", so they are never darkened either.
+     */
+    @Test
+    @DisplayName("every page declares its colour scheme, so a browser's own dark mode leaves it as it is")
+    void shouldDeclareTheColourScheme_onEveryPage() throws IOException {
+        for (String page : pages()) {
+            String expected = page.equals("qr-print") || page.equals("summary") ? "only light" : "dark";
+            assertThat(source(page)).as(page).contains("<meta name=\"color-scheme\" content=\"" + expected + "\">");
+        }
+    }
+
     @Test
     @DisplayName("the legal pages have their text written in, one file per language: no message keys, and the language of the file")
     void shouldDeclareTheLanguageOfTheFile_onTheLegalPages() throws IOException {

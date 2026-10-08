@@ -89,14 +89,14 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                                  @Param("to") Instant to, Pageable pageable);
 
     /**
-     * Computes a lightweight fingerprint of the queue state (count + maxId + the votes, which change no row count).
-     * Used for ETag-based 304 Not Modified responses during AJAX polling.
+     * Computes a lightweight fingerprint of the queue state (count + maxId + the votes and the DJ's tips, which change no row
+     * count). Used for ETag-based 304 Not Modified responses during AJAX polling.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include.
-     * @return A string like "12-487-15" (count-maxId-votes), or "0-0-0" if empty.
+     * @return A string like "12-487-15-2" (count-maxId-votes-tips), or "0-0-0-0" if empty.
      */
-    @Query("SELECT CONCAT(COUNT(s), '-', COALESCE(MAX(s.id), 0), '-', COALESCE(SUM(s.votes), 0)) " +
+    @Query("SELECT CONCAT(COUNT(s), '-', COALESCE(MAX(s.id), 0), '-', COALESCE(SUM(s.votes), 0), '-', COALESCE(SUM(s.tips), 0)) " +
            "FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN :decisions")
     String computeFingerprint(@Param("partyCode") String partyCode,
                               @Param("decisions") Collection<String> decisions);
@@ -151,6 +151,44 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int removeGuestVote(@Param("id") Long id, @Param("partyCode") String partyCode);
 
     /**
+     * The next number of a song at the party (V28): the party's count one up, in the same statement — a song that reaches the queue
+     * gets it ({@code SongRequestCommandService}, under the party's advisory lock). The count is never lowered, so a number is never
+     * given twice, also after "Wyczyść historię" deleted the songs that had the last ones.
+     *
+     * @return the number, from 1; null when the party has no settings row (a request is never saved for one — only a test does)
+     */
+    @Query(value = "UPDATE party_settings SET request_counter = request_counter + 1 WHERE party_code = :partyCode "
+            + "RETURNING request_counter", nativeQuery = true)
+    Integer nextRequestNumber(@Param("partyCode") String partyCode);
+
+    /** The party's highest number so far — the next one without a settings row ({@link #nextRequestNumber}). */
+    @Query(value = "SELECT COALESCE(MAX(request_number), 0) FROM song_requests WHERE party_code = :partyCode", nativeQuery = true)
+    int maxRequestNumber(@Param("partyCode") String partyCode);
+
+    /**
+     * The DJ counts a tip for a song of their party (V28: a payment titled "#27" came in): one more, on a song with a number —
+     * whatever its decision now (the DJ taps "💸" in the queue, the song may have played meanwhile in another window). One atomic
+     * {@code UPDATE}; the party is part of the condition (the id comes from the DJ's form).
+     *
+     * @return 1 when it was counted, 0 when the song is not this party's or has no number
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.tips = s.tips + 1 "
+            + "WHERE s.id = :id AND s.partyCode = :partyCode AND s.requestNumber IS NOT NULL")
+    int addTip(@Param("id") Long id, @Param("partyCode") String partyCode);
+
+    /**
+     * The DJ takes back a tip counted by mistake: one less, never below 0.
+     *
+     * @return 1 when one was taken back, 0 when there was none (or the song is not this party's)
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.tips = s.tips - 1 WHERE s.id = :id AND s.partyCode = :partyCode AND s.tips > 0")
+    int removeTip(@Param("id") Long id, @Param("partyCode") String partyCode);
+
+    /**
      * The DJ clears the queue: every waiting (accepted) request of the party leaves it as rejected, with {@code clearedAt} set and
      * the AI's comment kept — it stays in the history's rejected requests, marked as cleared. One statement; a song that played
      * stays played.
@@ -176,6 +214,17 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     @Query("DELETE FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN ('played', 'rejected') "
             + "AND (s.skippedAt IS NULL OR s.skippedAt <= :skippedAfter)")
     int deleteHistory(@Param("partyCode") String partyCode, @Param("skippedAfter") Instant skippedAfter);
+
+    /**
+     * After "Wyczyść historię" (V28): the party's count of numbers goes back to the highest number still in use — 0 when no
+     * numbered song is left (the queue empty), so the next song is #1 again; never a number a song still has. Run under the
+     * party's advisory lock ({@code DjService.clearHistory}), as the numbers are given.
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE party_settings SET request_counter = (SELECT COALESCE(MAX(request_number), 0) FROM song_requests "
+            + "WHERE party_code = :partyCode) WHERE party_code = :partyCode", nativeQuery = true)
+    int resetRequestCounter(@Param("partyCode") String partyCode);
 
     /**
      * Deletes all song requests associated with a specific party.
