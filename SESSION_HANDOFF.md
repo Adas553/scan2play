@@ -7,7 +7,15 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
-- **2026-10-08, night — not deployed yet (branch `claude/inspiring-einstein-sgh2tz`, a PR to `dev`):** **songs' numbers and the
+- **2026-10-08, the end of the day:** **released** — PR #30 (`dev` → `main`, `48a20b5`, CI green) is on Railway since 20:20 UTC:
+  "Successfully applied 2 migrations … now at version v28", started in 5.5 s, no CSP violations, no AI errors (one "OAuth2 Login
+  Failed: [authorization_request_not_found]" three minutes after the restart — a login begun before it; the next one worked).
+  **Next PR to `dev`:** the result page no longer shows "revolut.me/… · prosto do DJ-a, poza Scan2Play" under the tip button (only
+  the party page does; `components :: tip(tipUrl, number, withNote)`). Still to do: the phone test of V27/V28, the iPhone test.
+  **Samsung Internet:** its own dark theme still greys the logo and turns the tip button brown, `color-scheme` or not — Samsung
+  gives sites no way out (developer.samsung.com forum); the owner: leave it. A Samsung user can switch it in Settings → Labs →
+  "Use website dark theme".
+- **2026-10-08, night — released (PR #29 → #30, `48a20b5`):** **songs' numbers and the
   DJ's tips** (V28, PROJECT_CONTEXT 4.1 "Numbers and tips"): "#27" for the guests (list, result, the tip's title — "Jeśli chcesz,
   wpisz…") and the DJ (an "ID" column in the queue and the history, search "27"; the place numbers "4." on a wide screen only),
   "💸" in the queue only counts a tip (`POST /dj/dashboard/tip-count`), the evening summary and the CSV count them; "Wyczyść
@@ -15,7 +23,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   the logo). A tip only marks the song —
   moving it up was left for when DJs ask. Tests: 447 unit, 39 database, 49 browser (`queue-search-by-number`, `tip-count-in-place` —
   seen red without the scripts' change).
-- **2026-10-08, late evening — committed `e40faba`, not deployed yet:** **the DJ's tip link**
+- **2026-10-08, late evening — released (PR #29 → #30, `48a20b5`):** **the DJ's tip link**
   (V27 `party_settings.tip_url`, `util/TipLinks`, `POST /dj/dashboard/tip-link`): "💸 Napiwek dla DJ-a" on the party page and under an
   accepted request, "Napiwek / Tip: revolut.me/…" on the QR print (a card: in the texts' column — the code's column was full,
   `qr-print-cards-layout` caught it). Only links to Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi; the money

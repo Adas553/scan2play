@@ -36,7 +36,7 @@
            th:text="#{result.number(${'#' + response.requestNumber})}">Your song's number: #27</p>
         <!--/* the DJ's tip link (V27), only under a song that reached the DJ */-->
         <div th:if="${response.decision == 'accepted'}" class="mt-3">
-            <p th:replace="~{fragments/components :: tip(${tipUrl}, ${response.requestNumber})}"></p>
+            <p th:replace="~{fragments/components :: tip(${tipUrl}, ${response.requestNumber}, false)}"></p>
         </div>
 
         <div class="mt-4" th:unless="${response.unchecked}">

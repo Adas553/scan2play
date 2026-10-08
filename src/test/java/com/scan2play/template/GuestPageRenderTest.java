@@ -221,7 +221,9 @@ class GuestPageRenderTest {
 
         String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title",
                 5L, 1, false, 27), "https://www.paypal.com/paypalme/djkoko");
-        assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"", "paypal.com/paypalme/djkoko · prosto do DJ-a",
+        // the link with "prosto do DJ-a" only on the party page: under a request one line fewer
+        assertThat(accepted).doesNotContain("prosto do DJ-a", "paypal.com/paypalme/djkoko ·");
+        assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"",
                 "id=\"requestNumber\"", "Numer Twojej piosenki: #27", "Jeśli chcesz, wpisz #27 w tytule wpłaty — DJ będzie wiedział, za którą piosenkę");
         String rejected = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie dziś", "Nirvana - Lithium", 7, "title"),
                 "https://revolut.me/djkoko");

@@ -77,8 +77,8 @@ keeps an https address on that site, `util/SocialLinks` — anything else, a loo
 form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `tipUrl` (V27, ≤ 200: the
 DJ's tip link — the DJ's page on Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee or Ko-fi; `POST /dj/dashboard/tip-link`,
 a field under the profiles; `util/TipLinks` keeps an https address on one of those hosts with a plain path — no query, login part or
-port; anything else is a 400 and nothing is saved; the guests see "💸 Napiwek dla DJ-a" with "revolut.me/djkoko · prosto do DJ-a, poza
-Scan2Play" under it on the party page and under an accepted request (`components :: tip`), the QR poster under the profiles and a card
+port; anything else is a 400 and nothing is saved; the guests see "💸 Napiwek dla DJ-a" on the party page — with "revolut.me/djkoko · prosto do DJ-a, poza
+Scan2Play" under it — and under an accepted request without that line (`components :: tip`, `withNote`), the QR poster under the profiles and a card
 in its texts' column "Napiwek / Tip: revolut.me/djkoko"; the money never passes through Scan2Play — the privacy policy says so),
 `commentStyle` (V22, `CommentStyle`:
 CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
