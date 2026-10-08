@@ -84,6 +84,14 @@ class MigrationIT extends PostgresIntegrationTest {
         }
     }
 
+    /** V27: the DJ's tip link — an address, or none. */
+    @Test
+    void aPartyHasATipLink_noneByDefault() {
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns"
+                + " WHERE table_name = 'party_settings' AND column_name = 'tip_url' AND is_nullable = 'YES'", Integer.class))
+                .isEqualTo(200);
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

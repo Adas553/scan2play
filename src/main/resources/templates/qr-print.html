@@ -52,6 +52,12 @@
         <span th:if="${fb != null}" th:text="${'Facebook ' + fb}">Facebook djkoko</span>
     </p>
     </th:block>
+    <!--/* The DJ's tip link (V27), as a guest types it from paper: on the poster under the profiles, on a card in the texts' column
+         (the code's column is full with three profiles) */-->
+    <p th:fragment="tipLink" th:if="${tipUrl != null}" class="tip">
+        <span lang="pl">Napiwek</span> / <span lang="en">Tip</span>:
+        <strong th:text="${T(com.scan2play.util.TipLinks).display(tipUrl)}">revolut.me/djkoko</strong>
+    </p>
 </main>
 
 <main th:if="${qrLayout == 'cards'}" class="cards">
@@ -69,6 +75,7 @@
                 <span lang="en" class="second">A title, an artist or a line of the lyrics</span></p>
             <p class="small link" th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</p>
             <p class="small"><span lang="pl">Kod</span> / <span lang="en">Code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
+            <p th:replace="~{qr-print :: tipLink}" class="small"></p>
         </div>
     </section>
 </main>

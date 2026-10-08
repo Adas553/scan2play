@@ -193,11 +193,39 @@ class GuestPageRenderTest {
     }
 
     private static String renderResult(com.scan2play.model.DjResponse response) {
+        return renderResult(response, null);
+    }
+
+    private static String renderResult(com.scan2play.model.DjResponse response, String tipUrl) {
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
-        context.setVariables(Map.of("response", response, "partyCode", "ABC12"));
+        Map<String, Object> model = new HashMap<>(Map.of("response", response, "partyCode", "ABC12"));
+        model.put("tipUrl", tipUrl);
+        context.setVariables(model);
         return engine.process("result", context);
+    }
+
+    /**
+     * The DJ's tip link (V27): a button on the party page, opened in a new tab, the link read under it with "straight to the DJ";
+     * under a request only when it reached the DJ; none without a link.
+     */
+    @Test
+    void theDjsTipLink_isAButton_onThePartyPage_andUnderAnAcceptedRequest() {
+        String html = render(PL, Map.of("tipUrl", "https://revolut.me/djkoko"));
+
+        assertThat(html).contains("id=\"djTip\"", "<a href=\"https://revolut.me/djkoko\" target=\"_blank\" rel=\"noopener noreferrer nofollow\"",
+                "💸 Napiwek dla DJ-a", "revolut.me/djkoko · prosto do DJ-a, poza Scan2Play");
+        assertThat(render(PL, Map.of())).doesNotContain("djTip", "Napiwek");
+
+        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title"),
+                "https://www.paypal.com/paypalme/djkoko");
+        assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"", "paypal.com/paypalme/djkoko · prosto do DJ-a");
+        String rejected = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie dziś", "Nirvana - Lithium", 7, "title"),
+                "https://revolut.me/djkoko");
+        assertThat(rejected).doesNotContain("djTip", "revolut.me");
+        assertThat(renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title")))
+                .doesNotContain("djTip");
     }
 
     /** The AI could not be asked: the request went to the DJ — "sent", not "yes", and no energy. */

@@ -77,6 +77,13 @@ public class PartySettingsEntity {
     @Column(length = LINK_MAX)
     private String tiktokUrl;
 
+    /**
+     * The DJ's tip link (V27): the DJ's page on a service that takes tips, as {@code util.TipLinks} wrote it — the guests pay
+     * there, straight to the DJ; null = no "💸 Napiwek dla DJ-a" button.
+     */
+    @Column(length = LINK_MAX)
+    private String tipUrl;
+
     /** How the AI words its comment to the guest (V22); {@link CommentStyle#CLASSIC} adds nothing to the prompt. */
     @Builder.Default
     @Enumerated(EnumType.STRING)

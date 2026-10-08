@@ -46,7 +46,7 @@ controller/   HTTP: Thymeleaf views, HTML fragments for AJAX, a few JSON endpoin
 service/      business logic
 repository/   Spring Data JPA
 entity/       JPA entities        model/   enums, records        config/  Spring beans
-util/         CodeGenerator, SocialLinks, SongNames, Texts, Times, YouTubeSearchLinks
+util/         CodeGenerator, SocialLinks, SongNames, Texts, Times, TipLinks, YouTubeSearchLinks
 ```
 
 Server-rendered pages with AJAX: the DJ dashboard polls the guest queue every 3 s (ETag / 304) and sends its forms by `fetch` (the
@@ -74,7 +74,13 @@ the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en
 `tiktokUrl` (V24, ≤ 200: the DJ's profiles, set in a card under the dashboard's QR code — the guests see buttons with the sites' icons (Bootstrap Icons' paths inline, MIT) under "🎧 Gra: …" (new tab, `rel="noopener noreferrer
 nofollow"`), the QR print "Instagram @djkoko"; `POST /dj/dashboard/dj-links` takes "@name", a name or a link copied from the app and
 keeps an https address on that site, `util/SocialLinks` — anything else, a look-alike host too, is a 400 and nothing is saved; the
-form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `commentStyle` (V22, `CommentStyle`:
+form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `tipUrl` (V27, ≤ 200: the
+DJ's tip link — the DJ's page on Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee or Ko-fi; `POST /dj/dashboard/tip-link`,
+a field under the profiles; `util/TipLinks` keeps an https address on one of those hosts with a plain path — no query, login part or
+port; anything else is a 400 and nothing is saved; the guests see "💸 Napiwek dla DJ-a" with "revolut.me/djkoko · prosto do DJ-a, poza
+Scan2Play" under it on the party page and under an accepted request (`components :: tip`), the QR poster under the profiles and a card
+in its texts' column "Napiwek / Tip: revolut.me/djkoko"; the money never passes through Scan2Play — the privacy policy says so),
+`commentStyle` (V22, `CommentStyle`:
 CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
 the person", no profanity and no song's name in an accepted one; the dashboard's list "💬 Komentarze AI",
@@ -358,7 +364,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V26`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V27`.
 
 ---
 
@@ -499,6 +505,7 @@ schema behind Flyway's back.
 | V24 | `party_settings.instagram_url`, `facebook_url`, `tiktok_url` varchar(200), nullable: the DJ's profiles |
 | V25 | `song_requests.cleared_at` timestamptz, nullable: when the DJ cleared the request with the queue; the old note "Cleared by the DJ 🧹" → NULL, its request time as `cleared_at` (`SkipCommentMigrationIT`) |
 | V26 | data + constraint: `comment_style` 'SARCASTIC_LIGHT' → 'SARCASTIC', the check without it (`CommentStyleMigrationIT`) |
+| V27 | `party_settings.tip_url` varchar(200), nullable: the DJ's tip link |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -567,6 +574,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/clear-history` | "🗑 Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
 | POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/comment-style`, `/limits` | settings |
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |
+| POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster / cards |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |

@@ -7,6 +7,7 @@ import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.util.SocialLinks;
 import com.scan2play.util.Texts;
+import com.scan2play.util.TipLinks;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -144,6 +145,26 @@ public class DjPartySettingsController {
             s.setFacebookUrl(facebookUrl);
             s.setTiktokUrl(tiktokUrl);
         });
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The DJ's tip link (V27): the guests see "💸 Napiwek dla DJ-a" on the party page and under an accepted request, and the link
+     * on the QR print. Kept as an https address on one of the services ({@link TipLinks}); empty clears it. 400 and nothing saved
+     * when it is not a page there.
+     */
+    @PostMapping("/dashboard/tip-link")
+    public String updateTipLink(@RequestParam String partyCode, @RequestParam(required = false) String tip,
+                                OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        String tipUrl;
+        try {
+            tipUrl = TipLinks.tipUrl(Texts.oneLine(tip, PartySettingsEntity.LINK_MAX));
+        } catch (IllegalArgumentException e) {
+            log.info("Party [{}]: the tip link not saved — {}", partyCode, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setTipUrl(tipUrl));
         return REDIRECT_DASHBOARD;
     }
 

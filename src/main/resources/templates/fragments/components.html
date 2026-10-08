@@ -171,6 +171,15 @@
     <a href="/dj/dashboard" id="backToDashboard" class="btn btn-sm btn-outline-light" th:text="#{guest.back_to_dashboard}">← Your DJ dashboard</a>
 </div>
 
+<!--/* The DJ's tip link (V27) on the party page and under an accepted request: only an address util/TipLinks kept, on a service that
+     takes tips. The guests pay there, straight to the DJ — Scan2Play never sees the money, and the line under the button says so. */-->
+<p th:fragment="tip(tipUrl)" th:if="${tipUrl != null}" id="djTip" class="mb-2">
+    <a th:href="${tipUrl}" target="_blank" rel="noopener noreferrer nofollow" id="tipLink"
+       class="btn btn-sm btn-warning fw-bold" th:text="#{party.tip}">💸 Tip the DJ</a>
+    <small class="d-block text-secondary mt-1"
+           th:text="#{party.tip.note(${T(com.scan2play.util.TipLinks).display(tipUrl)})}">revolut.me/djkoko · straight to the DJ</small>
+</p>
+
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
 <!-- ======================================================================

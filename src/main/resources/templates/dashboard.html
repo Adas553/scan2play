@@ -219,6 +219,20 @@
                     </div>
                     <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.dj.links.invalid}">Not a profile</div>
                 </form>
+                <!--/* The DJ's tip link (V27): the guests see "💸 Napiwek dla DJ-a"; the server keeps it only on a service that takes
+                     tips (TipLinks) — 400 otherwise */-->
+                <form th:action="@{/dj/dashboard/tip-link}" method="POST" class="m-0 mt-3" id="tipLinkForm">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <label for="tipInput" class="form-label d-block text-light small mb-2" th:text="#{dashboard.tip.label}">Tip link</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="tipInput" name="tip" maxlength="200" autocomplete="off"
+                               class="form-control form-control-sm bg-black text-light border-secondary"
+                               th:value="${tipUrl}" th:placeholder="#{dashboard.tip.placeholder}">
+                        <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
+                    </div>
+                    <div class="small text-secondary mt-1" th:text="#{dashboard.tip.help}">The money goes straight to you.</div>
+                    <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.tip.invalid}">Not a tip link</div>
+                </form>
             </div>
         </div>
     </div>

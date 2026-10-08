@@ -29,6 +29,11 @@
 
         <p class="mt-4 lead fst-italic text-light" th:text="${response.comment}">DJ's Comment</p>
 
+        <!--/* the DJ's tip link (V27), only under a song that reached the DJ */-->
+        <div th:if="${response.decision == 'accepted'}" class="mt-3">
+            <p th:replace="~{fragments/components :: tip(${tipUrl})}"></p>
+        </div>
+
         <div class="mt-4" th:unless="${response.unchecked}">
             <span class="badge bg-secondary p-2" th:text="#{result.energy(${response.energyLevel})}">Energy: 0/10</span>
         </div>

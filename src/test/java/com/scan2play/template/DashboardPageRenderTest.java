@@ -178,7 +178,7 @@ class DashboardPageRenderTest {
     /** A party of the product: the DJ plays from their own software, the guests' requests wait on the dashboard. */
     private static PartySettingsEntity party() {
         return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
-                .instagramUrl("https://www.instagram.com/dj.koko/").build();
+                .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko").build();
     }
 
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */
@@ -252,6 +252,9 @@ class DashboardPageRenderTest {
                 .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", "💬 Komentarze AI:",
                         "selected=\"selected\">Klasyczne<", ">Sarkastyczne<")
                 .doesNotContain("data-example", "commentStyleExample", "łagodne", "SARCASTIC_LIGHT");
+        assertThat(html).as("the DJ's tip link (V27): its own form, the saved link in it, a note for a refused one hidden until then")
+                .contains("action=\"/dj/dashboard/tip-link\"", "id=\"tipInput\" name=\"tip\"", "value=\"https://buycoffee.to/djkoko\"",
+                        "Link do napiwków", "Scan2Play ich nie dotyka", "Nie zapisano: to nie jest link do Twojej strony");
         assertThat(html).as("the DJ's profiles (V24), a note for a refused one hidden until then")
                 .contains("action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"", "id=\"facebookInput\"", "id=\"tiktokInput\"",
                         "value=\"https://www.instagram.com/dj.koko/\"", "Twoje profile (goście widzą je", "data-form-error hidden");
