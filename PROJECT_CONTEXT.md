@@ -114,8 +114,23 @@ again. **A skip by mistake is undone** ("Cofnij" in a bar for 8 s after the skip
 `POST /dj/dashboard/restore`, `DjService.restoreSkippedSong`, under the same lock): the request waits again in its old place with its
 votes and the guest's words, `skipped_at` cleared — unless the same song waits already. The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
-party's ranking); the guest page lists "🔥 Najwięcej głosów" — up to 3 waiting songs with more than one vote — and the result page
-says "Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: N".
+party's ranking); the guest page's list is sorted by them (below) and the result page says "Ktoś już o to prosił — dodaliśmy
+Twój głos! Głosów: N".
+
+**A guest's 👍** (`GuestVoteService`, the owner 2026-10-08, "A": one vote per song, as many songs as the guest likes): every waiting
+song on the guest page but the guest's own has a "👍 N" button — outlined, filled once given; a second tap takes it back →
+`POST /p/{partyCode}/vote` (`id`, `on`), sent by `guest-party.js` in the background, answered with the list again (a note when it did
+not count: the song played or skipped meanwhile, the network's limit, the party ended). Of that answer the page takes only each song's
+votes (`applyVote`; the answer is the fragment `voteAnswer` — that song's row, by `data-song-id`, or only the note): nothing moves under the guest's finger (the owner: "ekran nie może skakać") — the new order
+comes with the next fetch of the list; a song gone meanwhile stays in its place, dimmed, its 👍 off; the note floats over the page
+(`.s2p-vote-note`, fixed) for 4 s; the button has one width whatever the count. `SongRequestRepository.addGuestVote` /
+`removeGuestVote`: one atomic `UPDATE` each, only a song of that party that still waits (the id comes from the guest), never below
+1 (the first guest's own vote) — `SongRequestRepositoryIT`, 40 parallel votes on PostgreSQL. Which songs the guest gave their 👍 is
+kept in memory by session id (the check and the `UPDATE` in one Caffeine `compute`: a double tap counts once) and in the session
+(`myVotes_<code>`, ≤ 100; it outlives a deploy). The guest's own request is their vote already (no 👍 on it), and a song with their 👍
+asked for again is theirs (`ALREADY_YOURS`, "Ta piosenka już czeka w kolejce i ma Twój głos"). A 👍 refreshes the queue's cache, so the
+DJ's "Głosy" and the guest's count change at once. A guest who drops the cookie is a new guest — a vote is a hint for the DJ, not an
+election; `guest.limit.votes-per-ip-party` (300 per the per-network window) bounds one network.
 
 **`FeedbackEntity` → `feedback`** — the DJ's bug reports and ideas (`message` ≤ 2000).
 
@@ -205,10 +220,19 @@ longer knows what played. The History tab sends it in the background and loads i
 iTunes, asked by the browser) → `POST /p/{partyCode}/request` (`songName`; an async `Callable`) → the result page (decision, the AI's
 comment, the votes). A request the AI reads as a mood is not saved: the guest is back at the form with the text and
 `guest.error.song_only` (the DJ sets the mood). An empty request (only spaces) goes back at once with `guest.error.empty` — no
-limit used, no AI asked. Under the form: "🔥 Najwięcej głosów", "Ostatnio wysłane" (the 5 newest waiting
-requests, unnumbered — the DJ picks the order) and "Twoja prośba „…” czeka u DJ-a" — or, with several, "Czekają u DJ-a Twoje prośby: 3",
-the list marking them "Twoja" (`GuestQueueService`; not on the result page, which is about its one request; the guest's requests are
-remembered in the session) — fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. An ended party shows
+limit used, no AI asked. Under the form: "Twoja prośba „…” czeka u DJ-a" — or, with several, "Czekają u DJ-a Twoje prośby: 3" — and
+**one list**, "🔥 Prośby gości": every waiting request once, the most votes first and the newest first among equal votes
+(`GuestQueueService.byVotes`), unnumbered — the DJ picks the order —, the first 5 shown and the rest folded under "Pokaż pozostałe
+prośby (N)" (a `<details>`; **its rows are not in the list's fragment** — `GET /p/{partyCode}/queue/more`, the fragment `moreList`,
+fetched only when it is unfolded and again when the list is fetched while it is unfolded: with 300 waiting, every guest's refresh
+carrying them all was ~200 KB), with **"Szukaj w prośbach"** — the list filtered as it is typed, by every word, no accents needed
+("baska" finds "Baśka"), "Nie ma takiej prośby…" when nothing matches, cleared with folding; on the right of every song ONE pill of one size with its votes (the owner: badges of different sizes were
+untidy) — a "👍 N" button (Section 4, "A guest's 👍"), outlined, yellow once given, or, on the guest's own request, a green one that
+is not a button (it is their vote already) with "Twoja" beside the song's name; filled pills get a thin dark edge (a yellow 👍 on
+yellow vanished on Windows). The guest's own songs are marked on the party page only (not on the result page, which is about its
+one request; the guest's requests are remembered in the session).
+Until 2026-10-08 there were "🔥 Najwięcej głosów" and "Ostatnio wysłane" as well — one song showed up to three times (the owner:
+too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. An ended party shows
 "DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
 
 **What reaches the AI:** the guest's text as one line ≤ 150 characters, `"` made `'` (`SongEvaluationService.forPrompt`); the style
@@ -225,7 +249,8 @@ decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else 
    address — `guest.error.too_many_requests`;
 3. party: `guest.limit.per-party-daily` (300) per 24 h — `guest.error.party_daily_limit`.
 
-2 and 3 are `GuestRequestLimiter` (Caffeine, in memory); 0 switches a limit off. The address is `getRemoteAddr()` or the header named
+2 and 3 are `GuestRequestLimiter` (Caffeine, in memory); 0 switches a limit off. The guests' 👍 have their own per-network limit
+there (`guest.limit.votes-per-ip-party`, 300 per the same window, `tryAcquireVote`): no AI call, so a vote never uses up a request. The address is `getRemoteAddr()` or the header named
 by `guest.client-ip-header` (`CF-Connecting-IP` — set on Railway). The DJ sees the use of 2 and 3 under the limits form (badges:
 grey, yellow from 80 %, red) and a warning above the queue while the party's limit stops guest songs.
 
@@ -249,7 +274,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), account deletion |
 | `DjSongController` | mark played, skip, clear the queue |
 | `DjSessionHelper` | the party of the logged-in DJ (cached in the session; made on the first login — tabs that make it at once look again, `FirstLoginIT`) and **`validateOwnership`** (IDOR) |
-| `GuestController` | the guest's page, its list, the request (limits, style, evaluation) |
+| `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
@@ -263,7 +288,8 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`, the prompt per language) → the "🔍 Podejrzyj" link → save or vote |
 | `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played, skip (`dismissSong`), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
-| `GuestQueueService` | what the guest sees under the form (with the most wanted songs) |
+| `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes) |
+| `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock) |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
@@ -475,7 +501,8 @@ security updates switched on in GitHub.
 ## 11. Main Dependencies
 
 ```
-GuestController            → SongEvaluationService, GuestQueueService, GuestSessionService, GuestRequestLimiter, PartySettingsQueryService
+GuestController            → SongEvaluationService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartySettingsQueryService
+GuestVoteService           → SongRequestRepository, DjService
 DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsQueryService, DjSessionHelper, PushNotificationService
 DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper
 DjSongController           → DjService, DjSessionHelper
@@ -495,8 +522,10 @@ GuestQueueService          → DjService
 | GET | `/` | `HomeController.home` |
 | GET | `/start`, `/start/{kind}` | → Google's login (`{kind}`: the old tile links, ignored) |
 | GET | `/p/{partyCode}` | the guest's page (`party_ended` when closed) |
-| GET | `/p/{partyCode}/queue` | the guest's list alone (empty when closed, 404 for an unknown party) |
+| GET | `/p/{partyCode}/queue` | the guest's list alone: the first five (empty when closed, 404 for an unknown party) |
+| GET | `/p/{partyCode}/queue/more` | the rest of the guest's list, fetched when "Pokaż pozostałe prośby" is unfolded |
 | POST | `/p/{partyCode}/request` | a request: `songName` |
+| POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/privacy`, `/terms` | legal pages |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |

@@ -48,6 +48,28 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
         return jdbc.queryForList("SELECT song_name, decision, votes FROM song_requests WHERE party_code = ? ORDER BY id", party);
     }
 
+    /**
+     * A busy night, more than 100 requests waiting (the DJ marks nothing played): a song asked for again is still a vote, not a
+     * second row — the queue read for the match was the 100 oldest until 2026-10-08, and the 110th song came back as a new row. The
+     * DJ's queue and the guests' list hold it too.
+     */
+    @Test
+    void withMoreThanAHundredWaiting_aSongAskedForAgainIsStillAVote() {
+        String party = newPartyCode();
+        for (int i = 1; i <= 120; i++) {
+            SongRequestEntity song = request(party, "Song " + i, "accepted", LINK);
+            song.setRequestedAt(Instant.now().minusSeconds(1000 - i));   // oldest first, "Song 110" the 110th
+            requests.save(song);
+        }
+
+        SongRequestCommandService.Saved again = commands.saveOrVote(request(party, "song 110", "accepted", LINK), Set.of());
+
+        assertThat(again.outcome()).isEqualTo(Outcome.VOTE);
+        assertThat(again.request().getSongName()).isEqualTo("Song 110");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM song_requests WHERE party_code = ?", Integer.class, party)).isEqualTo(120);
+        assertThat(dj.getDashboardQueue(party)).as("the DJ's queue: every one of them").hasSize(120);
+    }
+
     @Test
     void manyGuestsAskingForTheSameSongAtOnce_makeOneRowWithAllTheirVotes() throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(GUESTS);

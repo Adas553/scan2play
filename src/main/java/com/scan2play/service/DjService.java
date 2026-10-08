@@ -61,14 +61,14 @@ public class DjService {
     /**
      * Returns the accepted songs (waiting in queue) for the dashboard in FIFO order.
      * Oldest request is at the top — DJ sees what will be played next immediately.
-     * Limited to the 100 oldest pending entries for performance.
+     * Limited to the 300 oldest pending entries (a day's requests of a party, see the repository).
      *
      * @param partyCode The unique code of the party.
-     * @return List of accepted song requests (max 100), oldest first.
+     * @return List of accepted song requests (max 300), oldest first.
      */
     @Cacheable(value = QUEUE_CACHE, key = "#partyCode")
     public List<SongRequestEntity> getDashboardQueue(String partyCode) {
-        return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
+        return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 partyCode, List.of(DECISION_ACCEPTED)
         );
     }
@@ -172,7 +172,7 @@ public class DjService {
 
     /** The party's waiting requests, read now (not through the 3 s cache of {@link #getDashboardQueue}). */
     private List<SongRequestEntity> getWaiting(String partyCode) {
-        return songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
+        return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
     }
 
     /**
@@ -211,6 +211,11 @@ public class DjService {
                 Instant.now().minus(SongRequestCommandService.SKIP_REMEMBERED));
         log.info("Party [{}]: the DJ cleared the history — {} request(s) deleted", ownerPartyCode, deleted);
         return deleted;
+    }
+
+    /** The party's waiting requests changed outside this class (a guest's 👍): read them again, not from the 3 s cache. */
+    public void refreshQueue(String partyCode) {
+        evictDashboardQueueAfterCommit(partyCode);
     }
 
     /**

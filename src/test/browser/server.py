@@ -14,6 +14,10 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
   POST /__config  {json}             merged into the state (see default_state for the keys)
   GET  /dj/history-view/fragment     the REAL history fragment (rendered by DashboardPageRenderTest: history-<filter>.html, and
                                      history-<filter>-more.html when the request has a limit — "Show more")
+  GET  /p/ABC12/queue/more           the REAL folded rest of the guest's list (guest-queue-more.html, GuestPageRenderTest)
+  POST /p/ABC12/vote                 a guest's 👍 (guest-party.js): the REAL answer, that song's row (state 'voteAnswer':
+                                     guest-vote-answer.html, or guest-vote-gone.html — GuestPageRenderTest); the X-Requested-With
+                                     header is logged with the form's fields
   GET  /__log                        {"requests": [{"m", "p", "q"}...], "state": {...}}
   POST /__result?name=NAME           a scenario's verdict: written to <results>/NAME.json and handed to the runner
 
@@ -58,6 +62,7 @@ def default_state():
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
+        'voteAnswer': 'guest-vote-answer',   # what POST /p/ABC12/vote answers ('guest-vote-gone': the song was played meanwhile)
         'requests': [],
     }
 
@@ -232,6 +237,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(stand.state)
         self._note('GET', path, self._fields(query, b'', ''))
         state = stand.state
+        if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
+            with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/updates':
             with stand.lock:
                 queue = list(state['queue'])
@@ -289,8 +297,13 @@ class Handler(BaseHTTPRequestHandler):
             stand.event(name).set()
             return self._json({})
         fields = self._fields(query, body, self.headers.get('Content-Type'))
+        if path.startswith('/p/') and path.endswith('/vote'):
+            fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         self._note('POST', path, fields)
         state = stand.state
+        if path.startswith('/p/') and path.endswith('/vote'):   # a guest's 👍: the list as the real server renders it after the vote
+            with open(os.path.join(stand.rendered, state['voteAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path in ('/dj/dashboard/play', '/dj/dashboard/dismiss'):   # the song leaves the queue, as on the real server
             with stand.lock:
                 leaving = [r for r in state['queue'] if str(r['id']) == str(fields.get('id'))]

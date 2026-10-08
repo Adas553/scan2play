@@ -35,8 +35,9 @@ class CodeGeneratorTest {
                 .mapToObj(i -> CodeGenerator.generatePartyCode())
                 .collect(Collectors.toSet());
 
-        // With 36^5 = 60M+ combinations, 100 codes should be unique
-        assertThat(codes).hasSize(100);
+        // With 36^5 = 60M+ combinations two of 100 codes are the same about once in 12,000 runs (it happened on CI, 2026-10-08):
+        // one such pair is chance, more than one a broken generator (a fixed or a short-cycled one gives far fewer)
+        assertThat(codes).hasSizeGreaterThanOrEqualTo(99);
     }
 }
 

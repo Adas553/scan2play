@@ -8,6 +8,7 @@ import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestRequestLimiter.Refusal;
 import com.scan2play.service.GuestRequestLimiter.Scope;
 import com.scan2play.service.GuestSessionService;
+import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.SongEvaluationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +55,8 @@ class GuestControllerTest {
     @Mock
     private GuestRequestLimiter guestRequestLimiter;
     @Mock
+    private GuestVoteService guestVoteService;
+    @Mock
     private MessageSource messageSource;
 
     @InjectMocks
@@ -72,6 +75,8 @@ class GuestControllerTest {
         redirectAttributes = new RedirectAttributesModelMap();
         org.mockito.Mockito.lenient().when(guestRequestLimiter.clientIp(request)).thenReturn(IP); // not read by the party page
         org.mockito.Mockito.lenient().when(partySettingsQueryService.getSettings(PARTY)).thenReturn(settings); // not read by styleOf
+        org.mockito.Mockito.lenient().when(guestQueueService.view(any(), any(), any()))   // an empty list, unless a test says otherwise
+                .thenReturn(new GuestQueueService.GuestQueue(java.util.List.of(), java.util.List.of(), java.util.Set.of(), null, 0, java.util.Set.of()));
     }
 
     private String request() throws Exception {
@@ -96,9 +101,9 @@ class GuestControllerTest {
 
     @Test
     void theListAlone_isTheFragmentThePageFetchesAgain() {
-        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(), null, 0, java.util.List.of());
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.List.of(), java.util.Set.of(), null, 0, java.util.Set.of());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of());
-        when(guestQueueService.view(PARTY, java.util.Set.of())).thenReturn(queue);
+        when(guestQueueService.view(PARTY, java.util.Set.of(), java.util.Set.of())).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
 
         assertThat(controller.partyQueue(PARTY, model, session)).isEqualTo("fragments/guest-queue :: guestQueue");
@@ -116,9 +121,9 @@ class GuestControllerTest {
 
     @Test
     void thePartyPage_showsTheQueueAsTheGuestSeesIt() {
-        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.Set.of(42L), "Mine", 1, java.util.List.of());
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.List.of(), java.util.Set.of(42L), "Mine", 1, java.util.Set.of());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of(42L));
-        when(guestQueueService.view(PARTY, java.util.Set.of(42L))).thenReturn(queue);
+        when(guestQueueService.view(PARTY, java.util.Set.of(42L), java.util.Set.of())).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
 
         assertThat(controller.partyIndex(PARTY, model, session)).isEqualTo("index");
@@ -302,7 +307,7 @@ class GuestControllerTest {
         assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);   // still once
         verify(guestSessionService).rememberRequest(session, PARTY, 6L);
-        verify(guestQueueService, never()).view(any(), any());   // the result is about this request alone
+        verify(guestQueueService, never()).view(any(), any(), any());   // the result is about this request alone
     }
 
     /**
@@ -323,5 +328,126 @@ class GuestControllerTest {
 
         assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);   // still once
+    }
+
+    // ---- A guest's 👍 on the list (the owner, 2026-10-08: one vote per song) ----
+
+    /** A song the guest gave their 👍 is theirs when they ask for it again: not one more vote, and still a 👍 they can take back. */
+    @Test
+    void aSongWithTheGuestsVote_askedForAgain_isNotCountedAgain_andStaysAVote() throws Exception {
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(guestVoteService.myVotes(session, PARTY)).thenReturn(java.util.Set.of(9L));
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(9L)))
+                .thenReturn(new DjResponse("accepted", "ok", "Song", 7, "title", 9L, 4, true));
+
+        assertThat(request("Song")).isEqualTo("result");
+        verify(guestSessionService).giveBack(session, PARTY);
+        verify(guestSessionService, never()).rememberRequest(any(), anyString(), any());   // not "Twoja": the 👍 stays
+    }
+
+    private String vote(long id, boolean on, String requestedWith, ExtendedModelMap model) {
+        return controller.vote(PARTY, id, on, requestedWith, model, session, request, redirectAttributes);
+    }
+
+    @Test
+    void aVoteInTheBackground_isCounted_andThatSongComesBackWithItsVotes() {
+        when(guestRequestLimiter.tryAcquireVote(IP, PARTY)).thenReturn(Optional.empty());
+        when(guestVoteService.vote(session, PARTY, 7L)).thenReturn(GuestVoteService.Result.COUNTED);
+        com.scan2play.entity.SongRequestEntity song = com.scan2play.entity.SongRequestEntity.builder().id(7L).songName("Song").votes(2).build();
+        com.scan2play.entity.SongRequestEntity other = com.scan2play.entity.SongRequestEntity.builder().id(8L).songName("Other").build();
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(other), java.util.List.of(song),
+                java.util.Set.of(), null, 0, java.util.Set.of(7L));
+        when(guestQueueService.view(PARTY, java.util.Set.of(), java.util.Set.of())).thenReturn(queue);
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertThat(vote(7L, true, "fetch", model)).as("that song's row only: the page moves nothing")
+                .isEqualTo("fragments/guest-queue :: voteAnswer");
+        assertThat(model).containsEntry(ViewAttributes.VOTE_SONG, song).containsEntry(ViewAttributes.PARTY_CODE, PARTY)
+                .containsEntry(ViewAttributes.VOTE_NOTE, null);
+    }
+
+    /** The folded rest of the list, fetched when the guest unfolds it. */
+    @Test
+    void theRestOfTheList_isAFragmentOfItsOwn() {
+        GuestQueueService.GuestQueue queue = new GuestQueueService.GuestQueue(java.util.List.of(), java.util.List.of(),
+                java.util.Set.of(), null, 0, java.util.Set.of());
+        when(guestQueueService.view(PARTY, java.util.Set.of(), java.util.Set.of())).thenReturn(queue);
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertThat(controller.partyQueueMore(PARTY, model, session)).isEqualTo("fragments/guest-queue :: moreList");
+        assertThat(model).containsEntry(ViewAttributes.GUEST_QUEUE, queue);
+    }
+
+    @Test
+    void takingTheVoteBack_goesToTheVoteService() {
+        when(guestRequestLimiter.tryAcquireVote(IP, PARTY)).thenReturn(Optional.empty());
+        when(guestVoteService.takeBack(session, PARTY, 7L)).thenReturn(GuestVoteService.Result.TAKEN_BACK);
+
+        vote(7L, false, "fetch", new ExtendedModelMap());
+
+        verify(guestVoteService).takeBack(session, PARTY, 7L);
+        verify(guestVoteService, never()).vote(any(), anyString(), org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void aVoteOnASongThatIsGone_saysSo() {
+        when(guestRequestLimiter.tryAcquireVote(IP, PARTY)).thenReturn(Optional.empty());
+        when(guestVoteService.vote(session, PARTY, 7L)).thenReturn(GuestVoteService.Result.GONE);
+        when(messageSource.getMessage(eq("guest.vote.gone"), any(), any())).thenReturn("gone");
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        vote(7L, true, "fetch", model);
+
+        assertThat(model).containsEntry(ViewAttributes.VOTE_NOTE, "gone");
+    }
+
+    /** The guest's own request is their vote already: no 👍 on it, nothing counted, no limit used. */
+    @Test
+    void noVoteOnTheGuestsOwnRequest() {
+        when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of(7L));
+
+        vote(7L, true, "fetch", new ExtendedModelMap());
+
+        verify(guestVoteService, never()).vote(any(), anyString(), org.mockito.ArgumentMatchers.anyLong());
+        verify(guestRequestLimiter, never()).tryAcquireVote(anyString(), anyString());
+    }
+
+    /** The network's limit of votes: nothing counted, a note. */
+    @Test
+    void tooManyVotesFromOneNetwork_countNothing() {
+        when(guestRequestLimiter.tryAcquireVote(IP, PARTY)).thenReturn(Optional.of(30L));
+        when(messageSource.getMessage(eq("guest.vote.too_many"), any(), any())).thenReturn("too many");
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        vote(7L, true, "fetch", model);
+
+        assertThat(model).containsEntry(ViewAttributes.VOTE_NOTE, "too many");
+        verify(guestVoteService, never()).vote(any(), anyString(), org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    /** Without the script (a plain form post): back to the party page, the note as the page's message. */
+    @Test
+    void aVoteWithoutTheScript_goesBackToThePartyPage() {
+        when(guestRequestLimiter.tryAcquireVote(IP, PARTY)).thenReturn(Optional.empty());
+        when(guestVoteService.vote(session, PARTY, 7L)).thenReturn(GuestVoteService.Result.GONE);
+        when(messageSource.getMessage(eq("guest.vote.gone"), any(), any())).thenReturn("gone");
+
+        assertThat(vote(7L, true, null, new ExtendedModelMap())).isEqualTo("redirect:/p/" + PARTY);
+        assertThat(new java.util.HashMap<String, Object>(redirectAttributes.getFlashAttributes()))
+                .containsEntry(ViewAttributes.ERROR_MESSAGE, "gone");
+    }
+
+    /** The party ended: nothing counted, a note, no list. */
+    @Test
+    void aVoteAfterThePartyEnded_countsNothing() {
+        settings.setActive(false);
+        when(messageSource.getMessage(eq("guest.vote.party_ended"), any(), any())).thenReturn("ended");
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        vote(7L, true, "fetch", model);
+
+        assertThat(model).containsEntry(ViewAttributes.VOTE_NOTE, "ended").doesNotContainKey(ViewAttributes.GUEST_QUEUE);
+        verify(guestVoteService, never()).vote(any(), anyString(), org.mockito.ArgumentMatchers.anyLong());
     }
 }
