@@ -501,6 +501,12 @@ th[data-sort].sort-desc::after {
 /* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
    played or skipped it) stays in its place, dimmed, until the list is fetched again; the note of a 👍 that did not count floats over
    the page — shown, it pushes nothing down (guest-party.js hides it after a few seconds). */
+/* "← Twój panel DJ-a" on a guest's page: only in the installed app (components.html, back-to-dashboard) — a browser has its own way
+   back, the app has none */
+.s2p-standalone-only { display: none; }
+@media (display-mode: standalone) {
+    .s2p-standalone-only { display: block; }
+}
 .s2p-vote-pill       { min-width: 4.25rem; }
 /* filled: a 👍 on the yellow (or green) pill vanished on a computer (Windows' emoji has no outline, a phone's has) — a thin dark edge */
 .s2p-vote-btn.btn-warning,

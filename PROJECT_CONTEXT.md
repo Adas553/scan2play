@@ -232,7 +232,12 @@ is not a button (it is their vote already) with "Twoja" beside the song's name; 
 yellow vanished on Windows). The guest's own songs are marked on the party page only (not on the result page, which is about its
 one request; the guest's requests are remembered in the session).
 Until 2026-10-08 there were "🔥 Najwięcej głosów" and "Ostatnio wysłane" as well — one song showed up to three times (the owner:
-too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. An ended party shows
+too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. In the installed app (the dashboard on
+the Home Screen) the guest page, the result page and the "party ended" page have "← Twój panel DJ-a" (`components.html`,
+`back-to-dashboard`; shown by `@media (display-mode: standalone)` only): the app takes every address of the site (`scope: "/"`), so
+a DJ testing their QR code landed on the guest page in it with no address bar and no "back". Only a DJ can have the app (the
+manifest is on the dashboard alone); the link leads to whoever is logged in. `scope: "/dj/"` was not chosen: the Google login
+passes through addresses outside it, and an iPhone's Home Screen app opens those apart, with its own cookies (not tried yet). An ended party shows
 "DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
 
 **What reaches the AI:** the guest's text as one line ≤ 150 characters, `"` made `'` (`SongEvaluationService.forPrompt`); the style

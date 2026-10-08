@@ -207,7 +207,14 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   `guest-vote-song-gone`, `guest-more-and-search`; seen red with the whole list put back after a vote, and without the fetch of the
   rest). Then (the owner, on the computer): one pill of one size on every row — the guest's own a green one, "Twoja" beside the
   name (`guest-list-tidy`, seen red) —, a dark edge on a filled pill's 👍, the hint "👍 Oddaj głos na piosenkę — DJ widzi, czego
-  chcecie najbardziej". The owner tried the first version locally: "działa dobrze". Not tried yet: a real
+  chcecie najbardziej".
+- **Live 2026-10-08 12:20 UTC (PR #23 / #24, `c1dfbe9`), CI green** (one flaky `CodeGeneratorTest` on the way: two of 100 random
+  codes alike, ~1 in 12,000 runs — it now allows one pair). No migration. The start took 15 s, not 4: the sleeping database had
+  closed the pool's connections right after Flyway, Spring Session waited twice 5 s for one ("Error while extracting database
+  name") — the cost of the sleep again (Next / "Na później": switch the database's sleep off before customers).
+- **"← Twój panel DJ-a" in the app (2026-10-08, the owner; not deployed yet):** a DJ testing their QR code with the app installed
+  landed on the guest page inside it with no way back. Now the guest, result and "party ended" pages have the link, shown only in
+  the installed app (`display-mode: standalone`; `guest-back-to-dashboard-in-the-app`, seen red). Not tried on a phone yet. The owner tried the first version locally: "działa dobrze". Not tried yet: a real
   phone.
 
 

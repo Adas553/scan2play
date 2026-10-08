@@ -11,6 +11,7 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
+            <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
             <div class="card p-5">
                 <h1 class="display-1 mb-3">👋</h1>
                 <h2 class="mb-4 fw-bold text-light-custom" th:text="#{party.ended.title}">This party has ended</h2>

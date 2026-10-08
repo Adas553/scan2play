@@ -50,6 +50,34 @@
         }
     });
 
+    // The installed app takes every address of the site: a DJ testing their QR code landed on the guest page in it, with no address
+    // bar and no "back" (the owner, 2026-10-08). "← Twój panel DJ-a" is there for the app only — a browser has its own way back.
+    S2P.scenario({
+        name: 'guest-back-to-dashboard-in-the-app',
+        title: 'the guest page: "← Twój panel DJ-a" hidden in a browser, shown by the stylesheet in the installed app (display-mode: standalone)',
+        page: 'guest',
+        viewport: '390,844',
+        run: async function (t) {
+            const link = document.getElementById('backToDashboard');
+            t.step('there, leading to the dashboard', [!!link, link && link.getAttribute('href')], [true, '/dj/dashboard']);
+            t.step('hidden in a browser', link.checkVisibility(), false);
+            // headless Chrome cannot be an installed app: the rule that shows it there, read from the real stylesheet
+            const rules = [];
+            Array.from(document.styleSheets).forEach(function (sheet) {
+                let list = [];
+                try { list = Array.from(sheet.cssRules); } catch (e) { /* another origin's sheet */ }
+                list.forEach(function (rule) {
+                    if (rule.media && /display-mode:\s*standalone/.test(rule.media.mediaText)) {
+                        Array.from(rule.cssRules).forEach(function (inner) {
+                            if (inner.selectorText === '.s2p-standalone-only') rules.push(inner.style.display);
+                        });
+                    }
+                });
+            });
+            t.step('shown in the app (the stylesheet\'s rule for display-mode: standalone)', rules, ['block']);
+        }
+    });
+
     S2P.scenario({
         name: 'guest-more-and-search',
         title: 'the guest page: the rest of the list is fetched only when unfolded; the search filters the list (no accents needed), says when nothing matches, and goes with folding',
