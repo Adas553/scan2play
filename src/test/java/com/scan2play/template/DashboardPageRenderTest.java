@@ -214,7 +214,7 @@ class DashboardPageRenderTest {
                 "id=\"history-content\"", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
         // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
         assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"party-full\"", "id=\"serverLimitsInfo\"");
-        // the scripts are ES modules (REVIEW.md 3.3): main.js imports the dashboard's parts
+        // the scripts are ES modules (review 3.3): main.js imports the dashboard's parts
         assertThat(html).contains("<script type=\"module\" src=\"/js/dashboard/main.js\">");
         // no player: the DJ's own software plays (the YouTube player, Auto-Pilot, the background playlist and the DJ pick are gone)
         assertThat(html).doesNotContain("id=\"yt-player\"", "/js/youtube-autopilot.js", "/js/wake-lock.js", "id=\"autoToggle\"",
@@ -250,8 +250,8 @@ class DashboardPageRenderTest {
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
         assertThat(html).as("the AI's comment style (V22): the party's own picked, saved as soon as picked")
                 .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", "💬 Komentarze AI:",
-                        "selected=\"selected\">Klasyczne<", ">Sarkastyczne (łagodne)<")
-                .doesNotContain("data-example", "commentStyleExample");
+                        "selected=\"selected\">Klasyczne<", ">Sarkastyczne<")
+                .doesNotContain("data-example", "commentStyleExample", "łagodne", "SARCASTIC_LIGHT");
         assertThat(html).as("the DJ's profiles (V24), a note for a refused one hidden until then")
                 .contains("action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"", "id=\"facebookInput\"", "id=\"tiktokInput\"",
                         "value=\"https://www.instagram.com/dj.koko/\"", "Twoje profile (goście widzą je", "data-form-error hidden");

@@ -10,7 +10,7 @@ Krok 1 — ustal piosenkę (pola "songName" i "requestKind"):
 - Tytuł w "songName" to tytuł, o który prosi gość. Piosenka o podobnie brzmiącym tytule to inna piosenka (np. "Somos Novios" nie jest "Somos Hermanos"); tak samo piosenka o podobnym klimacie. Nie wymyślaj piosenek, coverów, duetów ani remiksów.
 - Gość może się pomylić: literówki i przekręcone słowa znanego tytułu popraw (np. "bitelsi" to The Beatles). Ale gdy jego słowa są tytułem prawdziwej piosenki, chodzi mu o nią — nie zamieniaj jej na inną, choćby bardziej znaną.
 - Dopisuj wykonawcę albo resztę tytułu tylko wtedy, gdy słowa gościa wskazują jedną znaną piosenkę. Prośba za krótka albo zbyt ogólna, żeby wskazać jedną (np. "con que", "love") — przepisz słowa gościa.
-- Gdy nie wiesz, jaka to piosenka (na przykład nowa, której nie znasz), przepisz do "songName" słowa gościa, poprawiając tylko oczywiste literówki. To, że nie znasz piosenki, nie jest powodem do odrzucenia.
+- Gdy nie wiesz, jaka to piosenka (na przykład nowa, której nie znasz), przepisz do "songName" słowa gościa, poprawiając tylko oczywiste literówki. To, że nie znasz piosenki, nie jest powodem do odrzucenia — ale nie jest też powodem, by ją wymyślać: nie dopisuj wykonawcy, tytułu ani reszty tytułu, których nie jesteś pewien.
 
 Krok 2 — oceń, czy pasuje (pola "decision" i "energyLevel"):
 - Gatunek dowolny: przyjmij każdą prawdziwą piosenkę, chyba że wskazówki DJ-a niżej mówią inaczej.

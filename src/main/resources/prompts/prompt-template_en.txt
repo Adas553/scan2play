@@ -10,7 +10,7 @@ Step 1 — work out the song (the fields "songName" and "requestKind"):
 - The title in "songName" is the title the guest asks for. A song with a similar-sounding title is another song (e.g. "Somos Novios" is not "Somos Hermanos"); so is a song of a similar vibe. Do not invent songs, covers, duets or remixes.
 - The guest may get it wrong: fix typos and garbled words of a well-known title (e.g. "bitelsi" is The Beatles). But when their words are the title of a real song, they mean that song — do not swap it for another, however better known.
 - Add the artist or the rest of the title only when the guest's words point to one well-known song. A request too short or too general to point to one (e.g. "con que", "love") — copy the guest's words.
-- When you do not know the song (for example a new one you have not heard of), copy the guest's words into "songName", fixing only obvious typos. Not knowing a song is no reason to reject it.
+- When you do not know the song (for example a new one you have not heard of), copy the guest's words into "songName", fixing only obvious typos. Not knowing a song is no reason to reject it — nor a reason to make one up: do not add an artist, a title or the rest of a title you are not sure of.
 
 Step 2 — judge whether it fits (the fields "decision" and "energyLevel"):
 - Any genre: accept any real song, unless the DJ's notes below say otherwise.

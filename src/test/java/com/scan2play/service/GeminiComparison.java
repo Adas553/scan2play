@@ -121,6 +121,11 @@ public final class GeminiComparison {
             new Case("macarena", "Salsa", CommentStyle.CLASSIC, PL, "Macarena", null),
             // a new song the model cannot know (made up for the test): not knowing it is no reason to reject it
             new Case("Sobel - Fiołkowy Blask", null, CommentStyle.CLASSIC, PL, "Fiołkowy Blask", true),
+            // made-up songs without the whole name: not knowing them is no reason to make up the rest either (the owner, 2026-10-08)
+            new Case("fiołkowy blask", "=fiołkowy blask"),
+            new Case("lato w pucku remix", "=lato w pucku remix"),
+            new Case("ta nowa od sobla o fiołkach", null),
+            new Case("purple glow by the night owls", null, CommentStyle.CLASSIC, Locale.ENGLISH, "Purple Glow", true),
             new Case("despacito", "Despacito"),
             new Case("the one from titanic", null, CommentStyle.CLASSIC, Locale.ENGLISH, "My Heart Will Go On", true));
 
