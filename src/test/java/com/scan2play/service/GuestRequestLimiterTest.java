@@ -225,4 +225,19 @@ class GuestRequestLimiterTest {
         request.addHeader("CF-Connecting-IP", " 198.51.100.1 ");
         assertThat(limiter.clientIp(request)).isEqualTo("198.51.100.1");
     }
+
+    /** The guests' 👍 have a limit of their own per address and party: a vote never uses up a request, nor the other way round. */
+    @Test
+    void votes_haveTheirOwnLimitPerAddress_apartFromTheRequests() {
+        GuestRequestLimiter limiter = new GuestRequestLimiter(3, 10, 5, "", 2, clock);
+
+        assertThat(limiter.tryAcquireVote(IP, PARTY)).isEmpty();
+        assertThat(limiter.tryAcquireVote(IP, PARTY)).isEmpty();
+        assertThat(limiter.tryAcquireVote(IP, PARTY)).as("two votes per window").contains(600L);
+        assertThat(limiter.tryAcquireVote("198.51.100.1", PARTY)).as("another network").isEmpty();
+        assertThat(limiter.tryAcquire(IP, PARTY)).as("the requests are counted apart").isEmpty();
+
+        clock.advance(Duration.ofMinutes(10));
+        assertThat(limiter.tryAcquireVote(IP, PARTY)).as("a new window").isEmpty();
+    }
 }

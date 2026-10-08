@@ -108,7 +108,7 @@ public class SongRequestCommandService {
 
     /** The waiting song of the party that is the same as the request: the same name ({@link SongNames#same}). */
     private Optional<SongRequestEntity> sameSongWaiting(SongRequestEntity request) {
-        List<SongRequestEntity> waiting = songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
+        List<SongRequestEntity> waiting = songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 request.getPartyCode(), List.of(DECISION_ACCEPTED));
         return waiting.stream()
                 .filter(song -> SongNames.same(song.getSongName(), request.getSongName()))

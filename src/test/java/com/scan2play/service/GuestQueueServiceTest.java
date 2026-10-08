@@ -14,8 +14,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * What a guest sees of the requests: the ones sent lately (the newest first — the DJ plays them in the order the DJ likes), the
- * most wanted ones, and whether the guest's own song waits.
+ * What a guest sees of the requests: one list, the most votes first, the newest first among equals (the DJ plays them in the order
+ * the DJ likes), five shown and the rest folded, and whether the guest's own song waits.
  */
 class GuestQueueServiceTest {
 
@@ -37,28 +37,41 @@ class GuestQueueServiceTest {
                 .toList());
     }
 
-    @Test
-    void theMostWanted_areTheWaitingSongsOfMoreThanOneGuest_theMostVotesFirst_atMostThree() {
-        int[] votes = {1, 3, 2, 5, 1, 3};   // ids 10..15, oldest first
+    /** Waiting songs with these votes, ids 10.. in the order given — oldest first, as the dashboard's queue. */
+    private void givenVotes(int... votes) {
         List<SongRequestEntity> waiting = new java.util.ArrayList<>();
         for (int i = 0; i < votes.length; i++) {
             waiting.add(SongRequestEntity.builder().id(10L + i).partyCode(PARTY).songName("Song " + (10 + i)).votes(votes[i]).build());
         }
         when(djService.getDashboardQueue(PARTY)).thenReturn(waiting);
+    }
 
-        GuestQueue queue = service.view(PARTY, Set.of());
+    /**
+     * One list (the owner, 2026-10-08): the most votes first, the newest first among equal votes — a fresh request in sight to be
+     * voted for —, the first five shown, the rest folded.
+     */
+    @Test
+    void oneList_theMostVotesFirst_theNewestFirstAmongEquals_fiveShown() {
+        givenVotes(1, 3, 1, 2, 1, 3, 1);   // ids 10..16, oldest first
 
-        assertThat(queue.mostWanted()).extracting(SongRequestEntity::getId).as("5 votes, then the two with 3, the longer waiting first")
-                .containsExactly(13L, 11L, 15L);
+        GuestQueue queue = service.view(PARTY, Set.of(), Set.of(11L));
+
+        assertThat(queue.shown()).extracting(SongRequestEntity::getId).as("3 votes (the newer first), 2, then the newest of one vote")
+                .containsExactly(15L, 11L, 13L, 16L, 14L);
+        assertThat(queue.more()).extracting(SongRequestEntity::getId).containsExactly(12L, 10L);
+        assertThat(queue.total()).isEqualTo(7);
+        assertThat(queue.myVotes()).containsExactly(11L);
     }
 
     @Test
-    void theRequestsSentLately_areTheNewestFive_theNewestFirst() {
-        givenQueue(10, 11, 12, 13, 14, 15, 16);
+    void fiveOrFewerWaiting_areAllShown_nothingFolded() {
+        givenQueue(10, 11, 12, 13, 14);
 
         GuestQueue queue = service.view(PARTY, Set.of());
 
-        assertThat(queue.recent()).extracting(SongRequestEntity::getId).containsExactly(16L, 15L, 14L, 13L, 12L);
+        assertThat(queue.shown()).extracting(SongRequestEntity::getId).as("the newest first: no votes yet")
+                .containsExactly(14L, 13L, 12L, 11L, 10L);
+        assertThat(queue.more()).isEmpty();
         assertThat(queue.mySong()).isNull();
     }
 
@@ -83,19 +96,13 @@ class GuestQueueServiceTest {
     }
 
     @Test
-    void noSongWithMoreThanOneVote_noMostWanted() {
-        givenQueue(10, 11);
-
-        assertThat(service.view(PARTY, Set.of()).mostWanted()).isEmpty();
-    }
-
-    @Test
     void anEmptyQueue_showsNothing() {
         givenQueue();
 
         GuestQueue queue = service.view(PARTY, Set.of(1L));
 
-        assertThat(queue.recent()).isEmpty();
+        assertThat(queue.shown()).isEmpty();
+        assertThat(queue.more()).isEmpty();
         assertThat(queue.mySong()).isNull();
     }
 }

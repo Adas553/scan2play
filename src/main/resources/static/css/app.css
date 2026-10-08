@@ -498,8 +498,25 @@ th[data-sort].sort-desc::after {
 .s2p-alert-closed    { background-color: #2b2000 !important; color: #ffca2c !important; }
 .s2p-btn-muted       { color: #6c757d !important; border: 1px solid #6c757d !important; }
 .s2p-footer          { color: #6c757d !important; font-size: 0.85rem !important; }
-/* a song's votes on the guest page: a dark pill with a yellow edge — the 👍 emoji is yellow itself and vanished on a yellow one */
-.s2p-vote-badge      { background: #2b2000 !important; color: #ffca2c !important; border: 1px solid #ffc107 !important; }
+/* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
+   played or skipped it) stays in its place, dimmed, until the list is fetched again; the note of a 👍 that did not count floats over
+   the page — shown, it pushes nothing down (guest-party.js hides it after a few seconds). */
+.s2p-vote-pill       { min-width: 4.25rem; }
+/* filled: a 👍 on the yellow (or green) pill vanished on a computer (Windows' emoji has no outline, a phone's has) — a thin dark edge */
+.s2p-vote-btn.btn-warning,
+.s2p-vote-mine       { text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px rgba(0, 0, 0, 0.6); }
+/* the guest's own request: their vote already, nothing to tap */
+.s2p-vote-mine       { cursor: default; pointer-events: none; }
+.s2p-song-gone       { opacity: 0.45; }
+.s2p-vote-note {
+    position: fixed;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 2rem);
+    z-index: 1080;
+}
 
 /* --- The dashboard on a phone (dashboard.html; the DJ in the booth, phone in hand): the settings, the vibe and the QR code
        (.s2p-phone-settings) fold under one button, settings-toggle.js opens them (<body class="s2p-settings-open">), so the queue

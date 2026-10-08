@@ -27,6 +27,9 @@ import java.util.Optional;
  *         script that fakes addresses) cannot spend more than its own share.</li>
  * </ul>
  * Each limit is a fixed window that starts with the first request after the previous one ended. A limit of 0 or less is off.
+ * <p>
+ * The guests' 👍 on the songs of the list ({@link GuestVoteService}) have a limit of their own, per client IP + party
+ * ({@code guest.limit.votes-per-ip-party} per the same window): they cost no AI call, so a vote never uses up a request.
  * The counts are in memory, like the sessions (a single instance, Section 13 of {@code PROJECT_CONTEXT.md}).
  * <p>
  * The client address is {@link HttpServletRequest#getRemoteAddr()} — with {@code server.forward-headers-strategy=FRAMEWORK}
@@ -49,24 +52,38 @@ public class GuestRequestLimiter {
     }
 
     private final int perClientLimit;
+    private final int perClientVoteLimit;
     private final Duration clientWindow;
     private final int perPartyLimit;
     private final String clientIpHeader;
     private final Clock clock;
 
     private final Cache<String, Window> clientWindows;
+    private final Cache<String, Window> voteWindows;
     private final Cache<String, Window> partyWindows;
 
     @Autowired
     public GuestRequestLimiter(@Value("${guest.limit.per-ip-party:30}") int perClientLimit,
                                @Value("${guest.limit.per-ip-window-minutes:10}") int clientWindowMinutes,
                                @Value("${guest.limit.per-party-daily:300}") int perPartyLimit,
-                               @Value("${guest.client-ip-header:}") String clientIpHeader) {
-        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, Clock.systemUTC());
+                               @Value("${guest.client-ip-header:}") String clientIpHeader,
+                               @Value("${guest.limit.votes-per-ip-party:300}") int perClientVoteLimit) {
+        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, perClientVoteLimit, Clock.systemUTC());
+    }
+
+    /** With the votes' default limit (tests and the page renders). */
+    public GuestRequestLimiter(int perClientLimit, int clientWindowMinutes, int perPartyLimit, String clientIpHeader) {
+        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, 300, Clock.systemUTC());
     }
 
     GuestRequestLimiter(int perClientLimit, int clientWindowMinutes, int perPartyLimit, String clientIpHeader, Clock clock) {
+        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, 300, clock);
+    }
+
+    GuestRequestLimiter(int perClientLimit, int clientWindowMinutes, int perPartyLimit, String clientIpHeader,
+                        int perClientVoteLimit, Clock clock) {
         this.perClientLimit = perClientLimit;
+        this.perClientVoteLimit = perClientVoteLimit;
         this.clientWindow = Duration.ofMinutes(Math.max(1, clientWindowMinutes));
         this.perPartyLimit = perPartyLimit;
         this.clientIpHeader = clientIpHeader == null ? "" : clientIpHeader.strip();
@@ -74,6 +91,7 @@ public class GuestRequestLimiter {
         // Bounded, so a flood of fake addresses cannot grow the maps without end; an entry is dropped one window after its last
         // request at the latest (the window's own start decides whether it is still open).
         this.clientWindows = Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(100_000).build();
+        this.voteWindows = Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(100_000).build();
         this.partyWindows = Caffeine.newBuilder().expireAfterWrite(PARTY_WINDOW).maximumSize(10_000).build();
     }
 
@@ -104,6 +122,15 @@ public class GuestRequestLimiter {
         }
         return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
+    }
+
+    /**
+     * Counts one guest's 👍 (or its taking back) against the votes' limit of the client address at the party.
+     *
+     * @return empty if the vote may go on (it has been counted), otherwise the seconds to wait
+     */
+    public Optional<Long> tryAcquireVote(String clientIp, String partyCode) {
+        return acquire(voteWindows, clientIp + "|" + partyCode, perClientVoteLimit, clientWindow);
     }
 
     // ---- What the DJ's dashboard shows (reads only) ----

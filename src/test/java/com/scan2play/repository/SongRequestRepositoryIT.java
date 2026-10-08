@@ -69,7 +69,7 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         // a vote changes no row count and no id — the fingerprint still moves, so the DJ's page fetches the queue again
         assertThat(requests.addVote(first.getId())).isEqualTo(1);
         assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-3");
-        assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
+        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
                 .extracting(SongRequestEntity::getSongName).containsExactly("one", "two");
     }
 
@@ -88,14 +88,14 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
 
         assertThat(requests.rejectWaiting(party, clearedAt)).isEqualTo(2);
 
-        assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted"))).isEmpty();
+        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted"))).isEmpty();
         // the AI's comment stays (V25: no note over it); only the cleared ones are marked
         assertThat(jdbc.queryForList("SELECT song_name || ':' || decision || ':' || coalesce(dj_comment, '') || ':' "
                 + "|| coalesce(to_char(cleared_at AT TIME ZONE 'UTC', 'HH24:MI'), '-') FROM song_requests "
                 + "WHERE party_code = ? ORDER BY song_name", String.class, party))
                 .containsExactly("played:played:played!:-", "rejected by the AI:rejected:rejected by the AI!:-",
                         "waiting one:rejected:waiting one!:20:00", "waiting two:rejected:waiting two!:20:00");
-        assertThat(requests.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(other, List.of("accepted")))
+        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(other, List.of("accepted")))
                 .as("another party's queue is untouched").hasSize(1);
         assertThat(requests.rejectWaiting(party, Instant.now())).as("nothing left to clear").isZero();
     }
@@ -140,6 +140,57 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         assertThat(requests.deleteRequestedBefore(cutoff, 2)).isZero();
         assertThat(jdbc.queryForList("SELECT song_name FROM song_requests WHERE party_code = ?", String.class, party))
                 .containsExactlyInAnyOrder("fresh", "no age");
+    }
+
+    /**
+     * A guest's 👍 (GuestVoteService): only on a song of that party that still waits — the id comes from the guest —, and taking it
+     * back never goes below the first guest's own vote.
+     */
+    @Test
+    void aGuestsVote_countsOnlyOnTheirPartysWaitingSong_andTakingItBackStopsAtOne() {
+        String party = newPartyCode();
+        Long waiting = save(party, "waiting", "accepted", Instant.now(), null).getId();
+        Long played = save(party, "played", "played", Instant.now(), Instant.now()).getId();
+        Long elsewhere = save(newPartyCode(), "another party's", "accepted", Instant.now(), null).getId();
+        java.util.function.Function<Long, Integer> votes = id ->
+                jdbc.queryForObject("SELECT votes FROM song_requests WHERE id = ?", Integer.class, id);
+
+        assertThat(requests.addGuestVote(waiting, party)).isEqualTo(1);
+        assertThat(requests.addGuestVote(waiting, party)).isEqualTo(1);
+        assertThat(requests.addGuestVote(played, party)).as("played: no longer waits").isZero();
+        assertThat(requests.addGuestVote(elsewhere, party)).as("another party's song, by its id").isZero();
+        assertThat(List.of(votes.apply(waiting), votes.apply(played), votes.apply(elsewhere))).containsExactly(3, 1, 1);
+
+        assertThat(requests.removeGuestVote(waiting, party)).isEqualTo(1);
+        assertThat(requests.removeGuestVote(waiting, party)).isEqualTo(1);
+        assertThat(requests.removeGuestVote(waiting, party)).as("the first guest's own vote stays").isZero();
+        assertThat(requests.removeGuestVote(elsewhere, party)).isZero();
+        assertThat(votes.apply(waiting)).isEqualTo(1);
+    }
+
+    /** A room of guests tapping 👍 on one song at the same moment: every vote counted, none lost (one atomic UPDATE each). */
+    @Test
+    void guestsVotingAtTheSameMoment_eachVoteCounts() throws Exception {
+        String party = newPartyCode();
+        Long song = save(party, "the hit", "accepted", Instant.now(), null).getId();
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        List<java.util.concurrent.Future<Integer>> votes = new java.util.ArrayList<>();
+        for (int i = 0; i < 40; i++) {
+            votes.add(pool.submit(() -> {
+                start.await();
+                return requests.addGuestVote(song, party);
+            }));
+        }
+        start.countDown();
+        int counted = 0;
+        for (java.util.concurrent.Future<Integer> vote : votes) {
+            counted += vote.get(30, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        pool.shutdown();
+
+        assertThat(counted).isEqualTo(40);
+        assertThat(jdbc.queryForObject("SELECT votes FROM song_requests WHERE id = ?", Integer.class, song)).isEqualTo(41);
     }
 
     private SongRequestEntity save(String party, String song, String decision, Instant requestedAt, Instant playedAt) {

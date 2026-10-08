@@ -17,14 +17,16 @@ import java.util.List;
 public interface SongRequestRepository extends JpaRepository<SongRequestEntity, Long> {
 
     /**
-     * Finds the top 100 oldest song requests for the DJ dashboard queue (FIFO order).
-     * Oldest request is first — DJ sees what will play next at the top of the list.
+     * Finds the 300 oldest song requests for the DJ dashboard queue (FIFO order) — as many as a party may send in a day
+     * ({@code guest.limit.per-party-daily}), so every waiting request is in it: the DJ's queue, the guests' list and their 👍, and
+     * the match of a request for a song that waits already (a vote, not a second row). It was 100 until 2026-10-08: a song asked
+     * for again while 100 older ones waited became a second row. Bounded; {@code idx_party_decision_time} finds the rows.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include (e.g., ["accepted"]).
-     * @return A list of the top 100 matching song requests, ordered by oldest first.
+     * @return A list of the 300 oldest matching song requests, ordered by oldest first.
      */
-    List<SongRequestEntity> findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(String partyCode, Collection<String> decisions);
+    List<SongRequestEntity> findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(String partyCode, Collection<String> decisions);
 
     /**
      * The party's requests the DJ skipped ("Pomiń", {@code skipped_at}, V20) after {@code since}, the latest skip first — a request
@@ -103,6 +105,30 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE SongRequestEntity s SET s.votes = s.votes + 1 WHERE s.id = :id AND s.decision = 'accepted'")
     int addVote(@Param("id") Long id);
+
+    /**
+     * A guest's 👍 on a song in the list of the party page ({@code GuestVoteService}): one vote more, only for a song of this party
+     * that still waits — the id comes from the guest, so the party is part of the condition. Atomic, as {@link #addVote}: no lock
+     * needed, a vote that meets the DJ's "played" either counts or finds the song gone.
+     *
+     * @return 1 when the vote was added, 0 when the song no longer waits (or is not this party's)
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.votes = s.votes + 1 "
+            + "WHERE s.id = :id AND s.partyCode = :partyCode AND s.decision = 'accepted'")
+    int addGuestVote(@Param("id") Long id, @Param("partyCode") String partyCode);
+
+    /**
+     * A guest takes their 👍 back: one vote less, never below 1 — the guest who asked for the song first is not a 👍 to take back.
+     *
+     * @return 1 when a vote was taken back, 0 when the song no longer waits (or has one vote, or is not this party's)
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.votes = s.votes - 1 "
+            + "WHERE s.id = :id AND s.partyCode = :partyCode AND s.decision = 'accepted' AND s.votes > 1")
+    int removeGuestVote(@Param("id") Long id, @Param("partyCode") String partyCode);
 
     /**
      * The DJ clears the queue: every waiting (accepted) request of the party leaves it as rejected, with {@code clearedAt} set and

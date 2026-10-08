@@ -2,12 +2,16 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
 <!--/* The requests as a guest sees them — on the party page (GuestQueueService.GuestQueue in the model as guestQueue): "your
-     request waits for the DJ", the songs more than one guest asked for, and the requests sent lately, the newest first, unnumbered
-     (the DJ plays from their own software, in the order the DJ likes). Nothing at all when nothing waits. GET /p/{code}/queue renders
-     this fragment alone: the page fetches it again when the guest comes back to it (visibilitychange) and on "↻ Odśwież"
-     (index.html). */-->
+     request waits for the DJ" and ONE list of the waiting requests, the most votes first, the newest first among equal votes — the
+     first five shown, the rest folded under "Pokaż pozostałe prośby (N)" (the owner, 2026-10-08: three lists showed one song up to
+     three times). Unnumbered: the DJ plays from their own software, in the order the DJ likes. Nothing at all when nothing waits.
+     GET /p/{code}/queue renders this fragment alone: the page fetches it again when the guest comes back to it (visibilitychange)
+     and on "↻ Odśwież" (index.html). Every song but the guest's own has a 👍 to give or take back (POST /p/{code}/vote):
+     guest-party.js sends it in the background and puts only the song's new 👍 in place (the fragment voteAnswer) — the list keeps
+     its order until it is fetched again, so nothing moves under the guest's finger; a 👍 that did not count is a note floating
+     over the page. */-->
 <div th:fragment="guestQueue" class="w-100 guest-queue"
-     th:if="${guestQueue != null and not #lists.isEmpty(guestQueue.recent())}">
+     th:if="${guestQueue != null and not #lists.isEmpty(guestQueue.shown())}">
 
     <div class="d-flex justify-content-end mb-2">
         <button type="button" class="btn btn-sm btn-outline-secondary py-0" data-guest-queue-refresh
@@ -20,26 +24,62 @@
          th:text="${guestQueue.myWaiting() == 1} ? #{home.queue.my_waiting(${guestQueue.mySong()})}
                                                   : #{home.queue.my_waiting_many(${guestQueue.myWaiting()})}">Your request waits for the DJ</div>
 
-    <!--/* The waiting songs more than one guest asked for (GuestQueueService.mostWanted) — what the room wants most */-->
-    <th:block th:unless="${#lists.isEmpty(guestQueue.mostWanted())}">
-        <h6 class="queue-title text-center" th:text="#{home.queue.top_voted}">🔥 Most wanted</h6>
-        <ul class="list-group shadow-sm mb-3" id="mostWanted">
-            <li class="list-group-item d-flex justify-content-between align-items-center" th:each="song : ${guestQueue.mostWanted()}">
-                <span class="fw-bold me-auto" th:text="${song.songName}">Song Title</span>
-                <span class="badge rounded-pill s2p-vote-badge" th:text="#{home.queue.votes(${song.votes})}">👍 3</span>
-            </li>
-        </ul>
-    </th:block>
+    <h6 class="queue-title text-center" th:text="#{home.queue.title}">🔥 Guests' requests</h6>
+    <ul class="list-group shadow-sm" id="guestRequests">
+        <th:block th:each="song : ${guestQueue.shown()}"><li th:replace="~{fragments/guest-queue :: songRow(${song})}"></li></th:block>
+    </ul>
 
-    <h6 class="queue-title text-center" th:text="#{home.queue.recent}">Sent lately</h6>
-    <ol class="list-group shadow-sm" id="upNext">
-        <li class="list-group-item d-flex justify-content-between align-items-center" th:each="song : ${guestQueue.recent()}">
-            <span class="fw-bold ms-2 me-auto" th:text="${song.songName}">Song Title</span>
-            <span th:if="${song.votes > 1}" class="badge rounded-pill s2p-vote-badge me-1" th:text="#{home.queue.votes(${song.votes})}">👍 3</span>
-            <span th:if="${guestQueue.myIds().contains(song.id)}" class="badge rounded-pill bg-success text-dark"
-                  th:text="#{home.queue.yours}">Yours</span>
-        </li>
-    </ol>
+    <!--/* The rest, folded: only when more than five wait. Not in this fragment — with 300 waiting every guest's refresh would carry
+         them all: guest-party.js fetches them (GET /p/{code}/queue/more, the fragment moreList) when the guest unfolds them, and
+         again when the list is fetched again while unfolded. The search filters every song of the list as it is typed. */-->
+    <details th:unless="${#lists.isEmpty(guestQueue.more())}" id="moreRequests" class="mt-2"
+             th:attr="data-url=@{/p/{code}/queue/more(code=${partyCode})}">
+        <summary class="btn btn-sm btn-outline-light w-100" th:text="#{home.queue.more(${#lists.size(guestQueue.more())})}">Show the other requests (7)</summary>
+        <input type="search" class="form-control form-control-sm mt-2" id="requestSearch" autocomplete="off"
+               th:placeholder="#{home.queue.search}" th:attr="aria-label=#{home.queue.search}" placeholder="Search the requests"/>
+        <div class="s2p-more-list" aria-live="polite"></div>
+        <p id="requestSearchNone" class="small text-secondary text-center mt-2 mb-0 d-none" th:text="#{home.queue.search.none}">No such request — send it with the form above.</p>
+    </details>
+    <p class="small text-secondary text-center mt-2 mb-0" th:text="#{home.queue.vote.hint}">👍 Vote for a song — the DJ sees what you want most</p>
 </div>
+
+<!--/* The folded rest of the list (GET /p/{code}/queue/more): guest-party.js puts it in the unfolded "Pokaż pozostałe prośby". */-->
+<ul th:fragment="moreList" th:if="${guestQueue != null}" class="list-group shadow-sm mt-2">
+    <th:block th:each="song : ${guestQueue.more()}"><li th:replace="~{fragments/guest-queue :: songRow(${song})}"></li></th:block>
+</ul>
+
+<!--/* The answer to a 👍 sent in the background (POST /p/{code}/vote): that song's row with its new votes — none when it no longer
+     waits — and a note when the 👍 did not count. guest-party.js takes only the song's votes from it: nothing moves on the page. */-->
+<div th:fragment="voteAnswer">
+    <ul class="d-none" th:if="${voteSong != null}">
+        <li th:replace="~{fragments/guest-queue :: songRow(${voteSong})}"></li>
+    </ul>
+    <div th:if="${voteNote != null}" id="voteNote" class="alert alert-warning text-center py-2 mb-0 shadow s2p-vote-note" role="status"
+         th:text="${voteNote}">That song is no longer waiting.</div>
+</div>
+
+<!--/* One song of the list: its name, and on the right ONE pill of one size with its votes (the owner, 2026-10-08: the badges of
+     different sizes looked untidy) — filled means "your vote is in it": a 👍 button, outlined to give the vote, yellow once given (a
+     second tap takes it back); the guest's own request a green pill, no button — it is their vote already —, and "Twoja" beside its
+     name. A form: it works without the script too. data-song-id: guest-party.js finds the song's new votes in the answer by it. */-->
+<li th:fragment="songRow(song)" class="list-group-item d-flex justify-content-between align-items-center gap-2"
+    th:attr="data-song-id=${song.id}"
+    th:with="mine=${guestQueue.myIds().contains(song.id)},voted=${guestQueue.myVotes().contains(song.id)}">
+    <span class="me-auto text-break">
+        <span class="fw-bold s2p-song-name" th:text="${song.songName}">Song Title</span>
+        <span th:if="${mine}" class="badge rounded-pill bg-success text-dark align-middle ms-1" th:text="#{home.queue.yours}">Yours</span>
+    </span>
+    <span class="flex-shrink-0 s2p-vote-control">
+        <span th:if="${mine}" class="btn btn-sm rounded-pill btn-success s2p-vote-pill s2p-vote-mine" aria-disabled="true"
+              th:title="#{home.queue.yours.title}" th:text="#{home.queue.votes(${song.votes})}">👍 3</span>
+        <form th:unless="${mine}" th:action="@{/p/{code}/vote(code=${partyCode})}" method="post" class="m-0 s2p-vote-form">
+            <input type="hidden" name="id" th:value="${song.id}"/>
+            <input type="hidden" name="on" th:value="${!voted}"/>
+            <button type="submit" class="btn btn-sm rounded-pill s2p-vote-pill s2p-vote-btn" th:classappend="${voted} ? 'btn-warning' : 'btn-outline-warning'"
+                    th:attr="aria-pressed=${voted}" th:title="${voted} ? #{home.queue.vote.undo} : #{home.queue.vote}"
+                    th:text="#{home.queue.votes(${song.votes})}">👍 3</button>
+        </form>
+    </span>
+</li>
 </body>
 </html>

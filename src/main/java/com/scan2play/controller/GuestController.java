@@ -6,6 +6,7 @@ import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestSessionService;
+import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.SongEvaluationService;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +22,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import static com.scan2play.controller.ViewAttributes.*;
@@ -38,6 +41,7 @@ public class GuestController {
     private final GuestQueueService guestQueueService;
     private final PartySettingsQueryService partySettingsQueryService;
     private final GuestSessionService guestSessionService;
+    private final GuestVoteService guestVoteService;
     private final GuestRequestLimiter guestRequestLimiter;
     private final MessageSource messageSource;
 
@@ -57,7 +61,7 @@ public class GuestController {
             model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
             model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
             model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
-            model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
+            model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, session));
             model.addAttribute(PARTY_CODE, partyCode);
             return "index";
         } catch (IllegalArgumentException e) {
@@ -75,12 +79,85 @@ public class GuestController {
     public String partyQueue(@PathVariable String partyCode, Model model, HttpSession session) {
         try {
             if (partySettingsQueryService.getSettings(partyCode).isActive()) {
-                model.addAttribute(GUEST_QUEUE, guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode)));
+                model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, session));
+                model.addAttribute(PARTY_CODE, partyCode);
             }
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return "fragments/guest-queue :: guestQueue";
+    }
+
+    /**
+     * The folded rest of the list ("Pokaż pozostałe prośby"): fetched by the page only when the guest unfolds it — with 300 requests
+     * waiting, the list every guest's phone fetches again stays the first five. Empty when the party has ended.
+     */
+    @GetMapping("/{partyCode}/queue/more")
+    public String partyQueueMore(@PathVariable String partyCode, Model model, HttpSession session) {
+        try {
+            if (partySettingsQueryService.getSettings(partyCode).isActive()) {
+                model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, session));
+                model.addAttribute(PARTY_CODE, partyCode);
+            }
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return "fragments/guest-queue :: moreList";
+    }
+
+    /**
+     * A guest's 👍 on a waiting song of the list ({@code on=true}), or taking it back ({@code on=false}) — one vote per song, the
+     * guest's own request is their vote already ({@link GuestVoteService}). Sent by guest-party.js in the background
+     * ({@code X-Requested-With: fetch}): the answer is that song's row with its new votes (none when it no longer waits) and a note
+     * when the 👍 did not count — the page puts only the votes in place, nothing moves.
+     * Without the script (a plain form post): back to the party page.
+     */
+    @PostMapping("/{partyCode}/vote")
+    public String vote(@PathVariable String partyCode, @RequestParam long id, @RequestParam(defaultValue = "true") boolean on,
+                       @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+                       Model model, HttpSession session, HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        PartySettingsEntity settings;
+        try {
+            settings = partySettingsQueryService.getSettings(partyCode);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        String note = null;
+        if (!settings.isActive()) {
+            note = "guest.vote.party_ended";
+        } else if (!guestSessionService.myRequestIds(session, partyCode).contains(id)) {   // the guest's own song: no 👍 on it
+            Optional<Long> wait = guestRequestLimiter.tryAcquireVote(guestRequestLimiter.clientIp(request), partyCode);
+            if (wait.isPresent()) {
+                note = "guest.vote.too_many";
+            } else {
+                GuestVoteService.Result result = on ? guestVoteService.vote(session, partyCode, id)
+                        : guestVoteService.takeBack(session, partyCode, id);
+                if (result == GuestVoteService.Result.GONE) {
+                    note = "guest.vote.gone";
+                }
+            }
+        }
+        String noteText = note == null ? null : messageSource.getMessage(note, null, LocaleContextHolder.getLocale());
+        if (!"fetch".equals(requestedWith)) {
+            if (noteText != null) {
+                redirectAttributes.addFlashAttribute(ERROR_MESSAGE, noteText);
+            }
+            return "redirect:/p/" + partyCode;
+        }
+        if (settings.isActive()) {
+            GuestQueueService.GuestQueue queue = guestQueue(partyCode, session);
+            model.addAttribute(GUEST_QUEUE, queue);
+            model.addAttribute(PARTY_CODE, partyCode);
+            model.addAttribute(VOTE_SONG, queue.song(id).orElse(null));
+        }
+        model.addAttribute(VOTE_NOTE, noteText);
+        return "fragments/guest-queue :: voteAnswer";
+    }
+
+    /** What the guest sees of the requests: their own marked, their 👍 shown. */
+    private GuestQueueService.GuestQueue guestQueue(String partyCode, HttpSession session) {
+        return guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode),
+                guestVoteService.myVotes(session, partyCode));
     }
 
     /**
@@ -127,9 +204,11 @@ public class GuestController {
                     };
                 }
 
-                // The guest's earlier requests: the same song asked for again while it waits is not one more vote
+                // The guest's earlier requests and 👍: the same song asked for again while it waits is not one more vote
+                Set<Long> alreadyTheirs = new HashSet<>(guestSessionService.myRequestIds(session, partyCode));
+                alreadyTheirs.addAll(guestVoteService.myVotes(session, partyCode));
                 DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
-                        styleOf(settings, locale), guestSessionService.myRequestIds(session, partyCode));
+                        styleOf(settings, locale), alreadyTheirs);
                 // A request that came to nothing — a mood sent back to the form, a rejected song, the guest's own song asked for
                 // again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
                 if (response.isMood() || response.ownSong() || DECISION_REJECTED.equalsIgnoreCase(response.decision())) {
@@ -143,7 +222,10 @@ public class GuestController {
 
                 // Remembered in the session, so the party page can say that the guest's songs wait. The result itself is about this
                 // request alone: another of the guest's waiting songs named here read as the AI's mix-up (the owner, 2026-10-07).
-                guestSessionService.rememberRequest(session, partyCode, response.requestId());
+                // A song that already had the guest's vote (their request or 👍) stays as it was: a 👍 stays one they can take back.
+                if (!response.ownSong()) {
+                    guestSessionService.rememberRequest(session, partyCode, response.requestId());
+                }
                 model.addAttribute(RESPONSE, response);
                 model.addAttribute(PARTY_CODE, partyCode);
                 return "result";

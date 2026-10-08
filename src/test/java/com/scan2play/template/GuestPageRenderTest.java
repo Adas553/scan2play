@@ -52,8 +52,9 @@ class GuestPageRenderTest {
         engine.setTemplateEngineMessageSource(messages);
     }
 
-    private static GuestQueue queue(List<SongRequestEntity> recent, Set<Long> mine, String mySong, List<SongRequestEntity> mostWanted) {
-        return new GuestQueue(recent, mine, mySong, mine.size(), mostWanted);
+    /** A list of five or fewer (nothing folded), no 👍 given. */
+    private static GuestQueue queue(List<SongRequestEntity> shown, Set<Long> mine, String mySong) {
+        return new GuestQueue(shown, List.of(), mine, mySong, mine.size(), Set.of());
     }
 
     private static String render(Locale locale, Map<String, Object> flash) {
@@ -63,7 +64,7 @@ class GuestPageRenderTest {
                         .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()),
                 locale);
         Map<String, Object> model = new HashMap<>(Map.of(
-                "globalVibe", VibeType.ANY, "guestQueue", queue(List.of(), Set.of(), null, List.of()), "partyCode", "ABC12"));
+                "globalVibe", VibeType.ANY, "guestQueue", queue(List.of(), Set.of(), null), "partyCode", "ABC12"));
         model.putAll(flash);
         context.setVariables(model);
         context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
@@ -122,21 +123,21 @@ class GuestPageRenderTest {
         return SongRequestEntity.builder().id(id).songName(name).build();
     }
 
-    /** No order to tell (the DJ plays from their own software): the requests sent lately, unnumbered, and the guest's own "waits". */
+    /** No order to tell (the DJ plays from their own software): the guests' requests, unnumbered, and the guest's own "waits". */
     @Test
-    void theRequestsSentLately_areListed_andTheGuestsOwnWaitsForTheDj() {
+    void theGuestsRequests_areListed_andTheGuestsOwnWaitsForTheDj() {
         // with who plays and the DJ's three profiles: the browser tests load the page — the icons too — under the real CSP
         String html = render(PL, Map.of("guestQueue", queue(List.of(song(3, "Newest"), song(2, "Mine"), song(1, "Oldest")),
-                Set.of(2L), "Mine", List.of()), "djName", "DJ Koko", "instagramUrl", "https://www.instagram.com/dj.koko/",
+                Set.of(2L), "Mine"), "djName", "DJ Koko", "instagramUrl", "https://www.instagram.com/dj.koko/",
                 "facebookUrl", "https://www.facebook.com/djkoko", "tiktokUrl", "https://www.tiktok.com/@dj_koko"));
         writePreview("index-with-queue.html", html);
         writeForTheBrowserTests("guest.html", html);
 
         assertThat(html).doesNotContain("??");
         assertThat(html).contains("id=\"guestQueueBox\"", "data-url=\"/p/ABC12/queue\"");
-        assertThat(html).contains("Ostatnio wysłane", "Twoja prośba „Mine” czeka u DJ-a")
-                .doesNotContain("Następne w kolejce", "w kolejce", "Teraz gra", "list-group-numbered");
-        assertThat(html.indexOf("Newest")).as("the newest first").isLessThan(html.indexOf(">Mine<"));
+        assertThat(html).contains("🔥 Prośby gości", "Twoja prośba „Mine” czeka u DJ-a")
+                .doesNotContain("Następne w kolejce", "w kolejce", "Teraz gra", "list-group-numbered", "Ostatnio wysłane", "Najwięcej głosów");
+        assertThat(html.indexOf("Newest")).as("the order given (the service's)").isLessThan(html.indexOf(">Mine<"));
         String mine = html.substring(html.indexOf(">Mine<"), html.indexOf("Oldest"));
         assertThat(mine).as("the guest's own song is marked").contains("Twoja");
         assertThat(html.substring(html.indexOf("Newest"), html.indexOf(">Mine<"))).doesNotContain("Twoja");
@@ -146,7 +147,7 @@ class GuestPageRenderTest {
     @Test
     void severalOfTheGuestsSongsWaiting_areCounted_notNamed() {
         String html = render(PL, Map.of("guestQueue", queue(List.of(song(3, "Third"), song(2, "Second"), song(1, "First")),
-                Set.of(1L, 2L, 3L), null, List.of())));
+                Set.of(1L, 2L, 3L), null)));
 
         assertThat(html).contains("Czekają u DJ-a Twoje prośby: 3").doesNotContain("Twoja prośba „", "??");
         assertThat(html.split(">Twoja<", -1)).as("each of them marked in the list").hasSize(4);
@@ -167,7 +168,7 @@ class GuestPageRenderTest {
         WebContext context = new WebContext(
                 JakartaServletWebApplication.buildApplication(servletContext)
                         .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
-        context.setVariable("guestQueue", queue(List.of(song(1, "First")), Set.of(), null, List.of()));
+        context.setVariable("guestQueue", queue(List.of(song(1, "First")), Set.of(), null));
         String fragment = engine.process("fragments/guest-queue", Set.of("guestQueue"), context);
 
         assertThat(fragment).contains("data-guest-queue-refresh", "Odśwież", "First").doesNotContain("??", "<html");
@@ -180,7 +181,7 @@ class GuestPageRenderTest {
     void anEmptyQueue_showsNoList() {
         String html = render(PL, Map.of());
 
-        assertThat(html).doesNotContain("id=\"upNext\"", "id=\"myPosition\"");
+        assertThat(html).doesNotContain("id=\"guestRequests\"", "id=\"myPosition\"");
     }
 
     @Test
@@ -211,26 +212,102 @@ class GuestPageRenderTest {
         assertThat(accepted).contains("TAK!", "Energia: 7/10").doesNotContain("PRZEKAZANE", "Energy");
     }
 
-    /** The songs more than one guest asked for, listed with their votes above the list; the list's songs show theirs too. */
+    /**
+     * One list (the owner, 2026-10-08: three lists showed one song up to three times): each song once, in the service's order, with
+     * its 👍 and count — one guest's too; no "Najwięcej głosów", no "Ostatnio wysłane".
+     */
     @Test
-    void theMostWantedSongs_areListedWithTheirVotes() {
+    void oneList_eachSongOnce_withItsVotes() {
         SongRequestEntity wilki = SongRequestEntity.builder().id(1L).songName("Wilki - Baśka").votes(4).build();
         SongRequestEntity sanah = SongRequestEntity.builder().id(2L).songName("sanah - Szampan").votes(2).build();
-        String html = render(PL, Map.of("guestQueue", queue(List.of(sanah, wilki, song(3, "Alone")), Set.of(), null, List.of(wilki, sanah))));
+        String html = render(PL, Map.of("guestQueue", queue(List.of(wilki, sanah, song(3, "Alone")), Set.of(), null)));
 
-        assertThat(html).contains("id=\"mostWanted\"", "🔥 Najwięcej głosów", "👍 4", "👍 2").doesNotContain("??");
-        String mostWanted = html.substring(html.indexOf("id=\"mostWanted\""), html.indexOf("id=\"upNext\""));
-        assertThat(mostWanted.indexOf("Wilki - Baśka")).as("the most votes first").isLessThan(mostWanted.indexOf("sanah - Szampan"));
-        assertThat(mostWanted).doesNotContain("Alone");
-        assertThat(html.substring(html.indexOf("id=\"upNext\""))).as("one guest's song has no badge").contains("👍 4", "👍 2")
-                .doesNotContain("👍 1");
+        assertThat(html).contains("id=\"guestRequests\"", "🔥 Prośby gości", ">👍 4<", ">👍 2<", ">👍 1<")
+                .doesNotContain("??", "id=\"mostWanted\"", "id=\"upNext\"", "id=\"moreRequests\"", "Najwięcej głosów", "Ostatnio wysłane");
+        assertThat(html.split(">Wilki - Baśka<", -1)).as("once").hasSize(2);
+        assertThat(html.indexOf("Wilki - Baśka")).isLessThan(html.indexOf("sanah - Szampan"));
+        assertThat(html).contains("data-song-id=\"1\"", "data-song-id=\"2\"", "data-song-id=\"3\"");
     }
 
+    /**
+     * The 👍 (the owner, 2026-10-08: one vote per song): every song but the guest's own has a button with its count — outlined to
+     * give the vote, filled when given (a second tap takes it back); the guest's own shows "Twoja" and a green pill, no button.
+     */
     @Test
-    void noSongWithMoreThanOneVote_noMostWantedList() {
-        String html = render(PL, Map.of("guestQueue", queue(List.of(song(1, "Alone")), Set.of(), null, List.of())));
+    void everySongButTheGuestsOwn_hasAVoteButton_filledWhenGiven() {
+        SongRequestEntity mine = SongRequestEntity.builder().id(1L).songName("Mine").votes(1).build();
+        SongRequestEntity voted = SongRequestEntity.builder().id(2L).songName("Voted").votes(3).build();
+        SongRequestEntity other = SongRequestEntity.builder().id(3L).songName("Other").votes(1).build();
+        GuestQueue queue = new GuestQueue(List.of(voted, other, mine), List.of(), Set.of(1L), "Mine", 1, Set.of(2L));
+        String html = render(PL, Map.of("guestQueue", queue));
+        java.util.function.Function<String, String> row = name -> {
+            String from = html.substring(html.indexOf(">" + name + "<"));
+            return from.substring(0, from.indexOf("</li>"));
+        };
 
-        assertThat(html).doesNotContain("id=\"mostWanted\"", "Najwięcej głosów", "👍");
+        // one pill of one size on every row (the owner: badges of different sizes looked untidy); "Twoja" beside the name
+        assertThat(row.apply("Mine")).contains(">Twoja<", "s2p-vote-pill s2p-vote-mine", "btn-success", ">👍 1<",
+                "title=\"Twoja prośba — to już Twój głos\"").doesNotContain("<form", "s2p-vote-btn");
+        assertThat(row.apply("Mine").indexOf(">Twoja<")).as("beside the name, before the pill").isLessThan(row.apply("Mine").indexOf("s2p-vote-pill"));
+        assertThat(List.of(row.apply("Mine"), row.apply("Other"), row.apply("Voted"))).allSatisfy(r -> assertThat(r.split("s2p-vote-pill", -1)).hasSize(2));
+        assertThat(row.apply("Other")).contains("action=\"/p/ABC12/vote\"", "name=\"id\" value=\"3\"", "name=\"on\" value=\"true\"",
+                "btn-outline-warning", "aria-pressed=\"false\"", "title=\"Zagłosuj na tę piosenkę\"", ">👍 1<");
+        assertThat(row.apply("Voted")).contains("name=\"on\" value=\"false\"", "btn-warning", "aria-pressed=\"true\"",
+                "title=\"Twój głos — dotknij, aby go cofnąć\"", ">👍 3<").doesNotContain("btn-outline-warning");
+        assertThat(html).contains("👍 Oddaj głos na piosenkę — DJ widzi, czego chcecie najbardziej").doesNotContain("??", "id=\"moreRequests\"");
+    }
+
+    /** A fragment of guest-queue.html alone, as the server renders it for the page's script. */
+    private static String fragment(String name, Map<String, Object> variables) {
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(variables);
+        context.setVariable("partyCode", "ABC12");
+        return engine.process("fragments/guest-queue", Set.of(name), context);
+    }
+
+    /**
+     * More than five waiting: the rest folded under "Pokaż pozostałe prośby (N)", NOT in the page — fetched when unfolded (the
+     * fragment moreList: with 300 waiting, every guest's refresh carrying them all is too much) —, with a search over the list.
+     */
+    @Test
+    void moreThanFiveWaiting_theRestIsFolded_fetchedWhenUnfolded_withASearch() {
+        SongRequestEntity top = SongRequestEntity.builder().id(9L).songName("Top song").votes(5).build();
+        List<SongRequestEntity> shown = new java.util.ArrayList<>(List.of(top));
+        shown.addAll(java.util.stream.LongStream.rangeClosed(1, 4).mapToObj(i -> song(i, "Recent " + i)).toList());
+        List<SongRequestEntity> more = List.of(song(5, "Older 5"), song(6, "Wilki - Baśka"));
+        GuestQueue queue = new GuestQueue(shown, more, Set.of(), null, 0, Set.of());
+        String html = render(PL, Map.of("guestQueue", queue));
+        writeForTheBrowserTests("guest-many.html", html);
+
+        assertThat(html).contains("<details", "id=\"moreRequests\"", "data-url=\"/p/ABC12/queue/more\"", "Pokaż pozostałe prośby (2)",
+                "id=\"requestSearch\"", "placeholder=\"Szukaj w prośbach\"", "Nie ma takiej prośby").doesNotContain("??");
+        assertThat(html).as("the rest is not in the page").doesNotContain("Older 5", "Wilki - Baśka");
+
+        String rest = fragment("moreList", Map.of("guestQueue", queue));
+        assertThat(rest).contains("Older 5", "Wilki - Baśka", "data-song-id=\"6\"").doesNotContain("Top song", "Recent 1", "<html", "??");
+        assertThat(rest.split("s2p-vote-btn", -1)).as("a 👍 for each of the two").hasSize(3);
+        writeForTheBrowserTests("guest-queue-more.html", rest);
+    }
+
+    /**
+     * The answer to a 👍 sent in the background (the fragment voteAnswer): that song's row with its new votes, nothing else of the
+     * list — the page takes only the votes, nothing moves —; when the song no longer waits, only the note.
+     */
+    @Test
+    void theAnswerToAVote_isThatSongsRow_orTheNote() {
+        SongRequestEntity voted = SongRequestEntity.builder().id(4L).songName("Recent 4").votes(2).build();
+        GuestQueue queue = new GuestQueue(List.of(song(9, "Top song"), voted), List.of(), Set.of(), null, 0, Set.of(4L));
+        String answer = fragment("voteAnswer", Map.of("guestQueue", queue, "voteSong", voted));
+        assertThat(answer).contains("data-song-id=\"4\"", "aria-pressed=\"true\"", ">👍 2<")
+                .doesNotContain("Top song", "id=\"voteNote\"", "<html", "??");
+        writeForTheBrowserTests("guest-vote-answer.html", answer);
+
+        String gone = fragment("voteAnswer", Map.of("guestQueue", queue,
+                "voteNote", "Tej piosenki nie ma już w kolejce — DJ ją zagrał albo pominął."));
+        assertThat(gone).contains("id=\"voteNote\"", "s2p-vote-note", "nie ma już w kolejce").doesNotContain("data-song-id");
+        writeForTheBrowserTests("guest-vote-gone.html", gone);
     }
 
     /** The same song already waited: the guest's request was one more vote on it — or it was their own, and nothing changed. */
@@ -240,7 +317,7 @@ class GuestPageRenderTest {
         assertThat(vote).contains("Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: 3").doesNotContain("id=\"voteOwn\"");
 
         String own = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 2, true));
-        assertThat(own).contains("Twoja prośba o tę piosenkę już czeka w kolejce. Głosów: 2").doesNotContain("id=\"voteAdded\"");
+        assertThat(own).contains("Ta piosenka już czeka w kolejce i ma Twój głos. Głosów: 2").doesNotContain("id=\"voteAdded\"");
 
         String first = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 1, false));
         assertThat(first).doesNotContain("id=\"voteAdded\"", "id=\"voteOwn\"");
