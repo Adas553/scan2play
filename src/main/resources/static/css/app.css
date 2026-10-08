@@ -569,6 +569,7 @@ th[data-sort].sort-desc::after {
         box-shadow: none;
     }
     .page-dj #song-list > tr > td.song-cell { flex: 1 1 0; min-width: 0; }
+    .page-dj #song-list > tr > td.s2p-number-cell:empty { display: none; }
     .page-dj #song-list .song-title { font-size: 1.1rem; }
     /* a waiting request is accepted: its ✔ says nothing */
     .page-dj #song-list td.status-accepted { display: none; }
@@ -582,6 +583,10 @@ th[data-sort].sort-desc::after {
         min-height: 48px;
         font-size: 1rem;
     }
+    /* "💸" (V28) beside them, as big for a thumb but only as wide as it needs: "Zagrane" and "Pomiń" keep the row */
+    .page-dj #song-list > tr > td:last-child .s2p-tip-count { flex: none; }
+    .page-dj #song-list > tr > td:last-child .s2p-tip-count form { flex: none; }
+    .page-dj #song-list > tr > td:last-child .s2p-tip-count .btn { width: auto; min-width: 48px; }
 }
 
 /* --- The queue's buttons (dashboard.html): "▶ Zagrane" filled (the cyan of "ZAGRANE" in the history), "⏭ Pomiń" outlined but
@@ -633,6 +638,10 @@ th[data-sort].sort-desc::after {
         box-shadow: none;
     }
     .page-dj .s2p-history-table tbody > tr[data-decision] > td[data-sort-value="song"] { flex: 1 1 100%; }
+    /* the number on the line under the song, with the votes and the decision */
+    .page-dj .s2p-history-table tbody > tr[data-decision] > td.s2p-number-cell { order: 1; }
+    .page-dj .s2p-history-table tbody > tr[data-decision] > td.s2p-number-cell:empty { display: none; }
+    .page-dj .s2p-history-table tbody > tr[data-decision] > td:not([data-sort-value="song"]):not(.s2p-number-cell) { order: 2; }
     .page-dj .s2p-history-table td[class*="status-"] { display: flex !important; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
     .page-dj .s2p-history-table td[class*="status-"] form { margin: 0 !important; }
     /* the AI's comment: one line with "…", a tap shows the whole of it (list-tools.js, .s2p-comment-open) */
@@ -649,15 +658,22 @@ th[data-sort].sort-desc::after {
     .page-dj .s2p-history-table td.s2p-comment-cell:empty { display: none !important; }
 }
 
-/* --- The active queue (dashboard.html): every request has its number — a CSS counter, so it follows the polled <tbody>, the sort
-       and the search by itself (a row the search hides does not count). "Wyczyść kolejkę" shows only while a request waits. --- */
+/* --- The active queue (dashboard.html): on a wide screen every request has its place — a CSS counter, so it follows the polled
+       <tbody>, the sort and the search by itself (a row the search hides does not count). The song's ID (V28, "#27", the first
+       column of the queue and the history, muted) is another thing: what the guests write in the title of a tip. On a phone the
+       card shows the ID alone (the owner, 2026-10-08). "Wyczyść kolejkę" shows only while a request waits. --- */
 #song-list { counter-reset: s2p-queue; }
 #song-list > tr[data-song-id] { counter-increment: s2p-queue; }
-#song-list > tr[data-song-id] .song-title::before {
-    content: counter(s2p-queue) ". ";
-    color: var(--s2p-text-muted);
-    font-weight: 600;
+@media (min-width: 768px) {
+    #song-list > tr[data-song-id] .song-title::before {
+        content: counter(s2p-queue) ". ";
+        color: var(--s2p-text-muted);
+        font-weight: 600;
+    }
 }
+.s2p-number-cell { color: var(--s2p-text-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* "💸" and "💸 12" one width: the first tip does not widen the queue's last column (the owner, 2026-10-08) */
+.s2p-btn-tip { min-width: 4rem; font-variant-numeric: tabular-nums; }
 #queueList .s2p-clear-queue { display: none; }
 #queueList:has(#song-list > tr[data-song-id]) .s2p-clear-queue { display: block; }
 

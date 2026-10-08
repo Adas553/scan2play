@@ -77,7 +77,7 @@ class QrPrintPageTest {
     private static String render(String layout, Locale locale) throws IOException {
         return render(layout, locale, PartySettingsEntity.builder().partyCode(PARTY)
                 .instagramUrl("https://www.instagram.com/dj.koko/").tiktokUrl("https://www.tiktok.com/@dj_koko")
-                .facebookUrl("https://www.facebook.com/djkoko").build());
+                .facebookUrl("https://www.facebook.com/djkoko").tipUrl("https://revolut.me/djkoko").build());
     }
 
     private static String render(String layout, Locale locale, PartySettingsEntity party) throws IOException {
@@ -141,6 +141,10 @@ class QrPrintPageTest {
         assertThat(poster).containsOnlyOnce("class=\"dj-links\"")
                 .contains("<span>Instagram @dj.koko</span>", "<span>TikTok @dj_koko</span>", "<span>Facebook djkoko</span>");
         assertThat(poster.indexOf("class=\"code\"")).isLessThan(poster.indexOf("class=\"dj-links\""));
+        // the tip link (V27) under them, as a guest types it, in both languages; on a card the last line of the texts
+        assertThat(poster.replaceAll("\\s+", " ")).containsOnlyOnce("<p class=\"tip\">")
+                .contains("<span lang=\"pl\">Napiwek</span> / <span lang=\"en\">Tip</span>: <strong>revolut.me/djkoko</strong>");
+        assertThat(poster.indexOf("class=\"dj-links\"")).isLessThan(poster.indexOf("class=\"tip\""));
 
         // a card: the code's column has our logo above the code and the profiles under it (the owner, 2026-10-07)
         String cards = render("cards", Locale.ENGLISH);

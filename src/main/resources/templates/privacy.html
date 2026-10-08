@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
     <title>Privacy Policy - Scan2Play</title>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
@@ -23,6 +25,7 @@
             <li>Google account profile information (name, email, profile picture) via OAuth 2.0</li>
             <li>Party settings and configuration preferences</li>
             <li>If the DJ gives them: the addresses of the DJ’s Instagram, Facebook and TikTok profiles — shown publicly to the guests on the party page and on the QR print</li>
+            <li>If the DJ gives it: the link to the DJ’s tip page (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — shown publicly to the guests on the party page, under an accepted request and on the QR print</li>
             <li>Feedback messages submitted through the dashboard</li>
             <li>If the DJ switches on notifications on a device: that browser’s push subscription (the push service’s address of the browser and its encryption keys) and the dashboard’s language</li>
         </ul>
@@ -49,6 +52,10 @@
         </p>
         <p>The Instagram, Facebook and TikTok buttons on the party page lead to the DJ’s profiles there. Scan2Play embeds none of
             their content or scripts — the site opens only when a guest clicks, and its own privacy rules apply there.
+        </p>
+        <p>The “💸 Tip the DJ” button leads to the DJ’s page on a tipping service. The payment happens only there, straight to the
+            DJ: Scan2Play takes no part in it, sees neither the amount nor any payment details and takes no commission. The tip and
+            its settlement are between the guest, the DJ and that service, on its terms.
         </p>
 
         <h3>5. Data Retention</h3>

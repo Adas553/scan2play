@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title th:text="#{history.title}">Party History - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
 
     <!-- CSRF Tokens for JavaScript requests -->
     <meta name="_csrf" th:content="${_csrf.token}"/>
@@ -76,6 +78,8 @@
         <table class="table table-dark table-hover table-sm align-middle s2p-history-table">
             <thead>
             <tr>
+                <!--/* the song's number at the party (V28), "#27": the guests write it in the title of a tip; sortable */-->
+                <th data-sort="number" class="text-nowrap" th:text="#{dashboard.table.header.number}">No.</th>
                 <th class="d-none d-md-table-cell" data-sort="time" th:text="#{dashboard.table.header.time}">Time</th>
                 <th data-sort="song" th:text="#{dashboard.table.header.song}">Song</th>
                 <!--/* how many guests asked for the song — the history sorted by it is the party's ranking */-->
@@ -96,14 +100,16 @@
                  and every heading while the list is sorted by a column. */-->
             <tr th:if="${req.at != null and (iter.first or times.dayKey(history[iter.index - 1].at) != times.dayKey(req.at))}"
                 class="s2p-day-heading" data-day-heading th:with="ago=${times.daysAgo(req.at)}">
-                <td colspan="7">
+                <td colspan="8">
                     <span th:if="${ago == 0 or ago == 1}" class="fw-semibold text-light"
                           th:text="${ago == 0} ? #{time.today} + ' —' : #{time.yesterday} + ' —'">dziś —</span>
                     <span th:text="${times.weekday(req.at, #locale) + ', ' + times.day(req.at)}">sobota, 03.10</span>
                 </td>
             </tr>
-            <tr th:attr="data-song-name=${req.title},data-decision=${req.decision}"
+            <tr th:attr="data-song-name=${req.title},data-decision=${req.decision},data-song-number=${req.requestNumber}"
                 th:with="shownAt=${times.display(req.at)},sortAt=${times.sortKey(req.at)}">
+                <td class="text-nowrap s2p-number-cell" data-sort-value="number" th:attr="data-val=${req.requestNumber}"
+                    th:text="${req.requestNumber != null} ? ${'#' + req.requestNumber} : ''">#27</td>
                 <td class="d-none d-md-table-cell text-nowrap" data-sort-value="time" th:attr="data-val=${sortAt}" th:title="${shownAt}">
                     <th:block th:replace="~{fragments/components :: moment(${req.at})}"></th:block>
                 </td>
@@ -163,10 +169,10 @@
             </tr>
             </th:block>
             <tr th:if="${#lists.isEmpty(history)}">
-                <td colspan="7" class="text-center text-light py-4 s2p-empty-row" th:text="#{history.empty}">History is empty.</td>
+                <td colspan="8" class="text-center text-light py-4 s2p-empty-row" th:text="#{history.empty}">History is empty.</td>
             </tr>
             <tr data-nomatch class="d-none">
-                <td colspan="7" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
+                <td colspan="8" class="text-center text-secondary py-3 s2p-empty-row" th:text="#{dashboard.list.nomatch}">Nothing matches.</td>
             </tr>
             </tbody>
         </table>

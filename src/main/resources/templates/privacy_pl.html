@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
     <title>Polityka Prywatności - Scan2Play</title>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
@@ -23,6 +25,7 @@
             <li>Informacje z profilu Google (imię, email, zdjęcie profilowe) przez OAuth 2.0</li>
             <li>Ustawienia imprezy i preferencje konfiguracji</li>
             <li>Gdy DJ je poda: adresy jego profili na Instagramie, Facebooku i TikToku — publicznie widoczne dla gości na stronie imprezy i na wydruku kodu QR</li>
+            <li>Gdy DJ go poda: link do jego strony napiwków (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — publicznie widoczny dla gości na stronie imprezy, pod przyjętą prośbą i na wydruku kodu QR</li>
             <li>Wiadomości feedback przesłane przez panel DJ-a</li>
             <li>Gdy DJ włączy powiadomienia na urządzeniu: subskrypcja powiadomień tej przeglądarki (adres przeglądarki w usłudze powiadomień i jej klucze szyfrowania) oraz język panelu</li>
         </ul>
@@ -49,6 +52,10 @@
         </p>
         <p>Przyciski Instagram, Facebook i TikTok na stronie imprezy prowadzą do profili DJ-a w tych serwisach. Scan2Play nie osadza
             ich treści ani skryptów — dopiero po kliknięciu otwiera się strona serwisu, a tam obowiązują jego zasady prywatności.
+        </p>
+        <p>Przycisk „💸 Napiwek dla DJ-a” prowadzi na stronę DJ-a w serwisie napiwków. Płatność odbywa się wyłącznie w tym serwisie,
+            prosto do DJ-a: Scan2Play nie pośredniczy w niej, nie widzi kwoty ani danych płatności i nie pobiera prowizji. Za napiwek
+            i jego rozliczenie odpowiada DJ i ten serwis, na jego zasadach.
         </p>
 
         <h3>5. Okres przechowywania danych</h3>

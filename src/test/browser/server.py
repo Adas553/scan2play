@@ -49,7 +49,8 @@ def default_state():
         # Seconds to wait before answering a path, e.g. {'/dj/dashboard/updates': 2.5}: an answer that arrives late.
         # (The request is logged at once, and the answer says what the state was when the request came.)
         'delays': {},
-        # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the song's link).
+        # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the song's link) — and,
+        # optional, the song's number and the DJ's tips (V28): {number, tips} make the row's data-song-number and its "💸" form.
         # The rendered page itself has two rows, but the first poll replaces them with these.
         'queue': [],
         # The X-Guest-Limits header of every poll answer: 'none', or the server limits that stop guest songs now, e.g.
@@ -251,9 +252,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(304, headers=dict(limits, ETag=etag))
             # a row has the song cell that the column sort reads (data-sort-value / data-val) and, after the rows, the real
             # "nothing matches" row that the search box shows and hides
-            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"><td class="song-cell" data-sort-value="song" data-val="%s"><span class="song-title">%s</span></td></tr>'
+            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"%s><td class="song-cell" data-sort-value="song" data-val="%s"><span class="song-title">%s</span></td>%s</tr>'
                            % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True),
-                              html.escape(r['name'], True), html.escape(r['name']))
+                              ' data-song-number="%d"' % r['number'] if 'number' in r else '',
+                              html.escape(r['name'], True), html.escape(r['name']),
+                              ('<td><form action="/dj/dashboard/tip-count" method="post" class="m-0"><input type="hidden" name="id" value="%d">'
+                               '<button type="submit" class="btn btn-sm s2p-btn-tip">%s</button></form></td>'
+                               % (r['id'], '💸 %d' % r.get('tips', 0) if r.get('tips', 0) else '💸')) if 'number' in r else '')
                            for r in queue)
             body = '<tbody id="song-list">%s%s</tbody>' % (rows, stand.nomatch_row())
             return self._send(200, body, 'text/html; charset=utf-8', dict(limits, ETag=etag))
@@ -311,6 +316,12 @@ class Handler(BaseHTTPRequestHandler):
                 if path.endswith('/dismiss'):
                     state.setdefault('skipped', []).extend(leaving)
             return self._json({})
+        if path == '/dj/dashboard/tip-count':         # the DJ counts a tip (V28), or takes one back (add=false), as the real server
+            with stand.lock:
+                for r in state['queue']:
+                    if str(r['id']) == str(fields.get('id')) and 'number' in r:
+                        r['tips'] = max(0, r.get('tips', 0) + (-1 if fields.get('add') == 'false' else 1))
+            return self._send(302, headers={'Location': '/dj/dashboard'})
         if path == '/dj/dashboard/restore':           # a skipped request back in the queue ("Cofnij", "↩ Przywróć")
             with stand.lock:
                 back = [r for r in state.get('skipped', []) if str(r['id']) == str(fields.get('id'))]

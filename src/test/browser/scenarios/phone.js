@@ -157,8 +157,8 @@ S2P.scenario({
         t.step('the comment: one line, a tap opens the whole of it, another folds it',
             [folded < lineHeight * 1.5, opened > folded * 1.5, comment.getBoundingClientRect().height === folded],
             [true, true, true]);
-        t.step('the column sort stays: Piosenka and Głosy', Array.from(document.querySelectorAll('#history-content thead th'))
-            .filter(shows).map(function (th) { return th.getAttribute('data-sort'); }), ['song', 'votes']);
+        t.step('the column sort stays: ID (V28), Piosenka and Głosy', Array.from(document.querySelectorAll('#history-content thead th'))
+            .filter(shows).map(function (th) { return th.getAttribute('data-sort'); }), ['number', 'song', 'votes']);
         document.querySelector('#history-content [data-history-more]').click();   // the cleared one is older than the first four
         const clearedRow = function () { return document.querySelector('#history-content tr[data-song-name="Rejected Delta"]'); };
         await t.waitFor(clearedRow, 'the older entries', 5000);

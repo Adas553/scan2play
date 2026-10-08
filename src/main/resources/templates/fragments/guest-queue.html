@@ -66,7 +66,8 @@
     th:attr="data-song-id=${song.id}"
     th:with="mine=${guestQueue.myIds().contains(song.id)},voted=${guestQueue.myVotes().contains(song.id)}">
     <span class="me-auto text-break">
-        <span class="fw-bold s2p-song-name" th:text="${song.songName}">Song Title</span>
+        <span th:if="${song.requestNumber != null}" class="text-secondary small me-1 s2p-song-number" th:text="${'#' + song.requestNumber}">#27</span><span
+              class="fw-bold s2p-song-name" th:text="${song.songName}">Song Title</span>
         <span th:if="${mine}" class="badge rounded-pill bg-success text-dark align-middle ms-1" th:text="#{home.queue.yours}">Yours</span>
     </span>
     <span class="flex-shrink-0 s2p-vote-control">

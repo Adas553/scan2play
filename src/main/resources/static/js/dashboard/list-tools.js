@@ -41,7 +41,7 @@ function sortTbody(tbody, colKey, direction) {
     if (!tbody || !colKey || !direction) return;
     if (!serverOrders.has(tbody)) serverOrders.set(tbody, Array.from(tbody.children));
 
-    const isNumeric = (colKey === 'energy' || colKey === 'votes');
+    const isNumeric = (colKey === 'energy' || colKey === 'votes' || colKey === 'number');
 
     // Pre-extract { row, value } pairs — O(N) DOM reads, then pure array sort
     const items = [];
@@ -179,17 +179,23 @@ function normalize(text) {
     return (text || '').toLowerCase().normalize('NFD').replace(COMBINING_MARKS, '').replace(/ł/g, 'l');
 }
 
-/** The search box: hides the rows (of what is loaded) whose name does not contain the text. The filter buttons are the server's job. */
+/**
+ * The search box: hides the rows (of what is loaded) whose name does not contain the text — or, for a number ("27" or "#27"), the
+ * row of the song with that number (data-song-number, V28: a tip titled "#27" came in). The filter buttons are the server's job.
+ */
 export function applyListFilters(list) {
     if (!list) return;
     const searchInput = list.querySelector('[data-list-search]');
     const needle = normalize(searchInput ? searchInput.value.trim() : '');
     const filtering = needle !== '';
+    const number = /^#?\d+$/.test(needle) ? needle.replace('#', '') : null;
 
     const rows = list.querySelectorAll('tbody tr[data-song-name]');
     let shown = 0;
     for (let i = 0; i < rows.length; i++) {
-        const visible = needle === '' || normalize(rows[i].getAttribute('data-song-name')).indexOf(needle) >= 0;
+        const visible = needle === '' || (number !== null
+            ? rows[i].getAttribute('data-song-number') === number
+            : normalize(rows[i].getAttribute('data-song-name')).indexOf(needle) >= 0);
         rows[i].classList.toggle('d-none', !visible);
         if (visible) shown++;
     }

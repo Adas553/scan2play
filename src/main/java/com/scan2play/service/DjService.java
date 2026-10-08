@@ -170,6 +170,26 @@ public class DjService {
         return true;
     }
 
+    /**
+     * The DJ counts a tip for a song ("💸", V28: a payment titled with the song's number came in) or takes one back ({@code add}
+     * false) — one atomic {@code UPDATE}, only the DJ's own song with a number, never below 0. The queue's cache goes, so every
+     * window of the DJ shows the new count with its next poll.
+     *
+     * @return whether the count changed
+     */
+    @Transactional
+    public boolean countTip(Long id, String ownerPartyCode, boolean add) {
+        int changed = add ? songRequestRepository.addTip(id, ownerPartyCode) : songRequestRepository.removeTip(id, ownerPartyCode);
+        if (changed > 0) {
+            evictDashboardQueueAfterCommit(ownerPartyCode);
+            log.info("Party [{}]: the DJ {} a tip for song ID={}", ownerPartyCode, add ? "counted" : "took back", id);
+        } else {
+            log.warn("Tip not counted: DJ party {} asked for song {} (not theirs, no number, or no tip to take back)",
+                    ownerPartyCode, id);
+        }
+        return changed > 0;
+    }
+
     /** The party's waiting requests, read now (not through the 3 s cache of {@link #getDashboardQueue}). */
     private List<SongRequestEntity> getWaiting(String partyCode) {
         return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
@@ -209,6 +229,8 @@ public class DjService {
         songRequestRepository.lockRequests(SongRequestCommandService.lockKey(ownerPartyCode));
         int deleted = songRequestRepository.deleteHistory(ownerPartyCode,
                 Instant.now().minus(SongRequestCommandService.SKIP_REMEMBERED));
+        // the songs' numbers start again from the highest one left — #1 with the queue empty (the owner, 2026-10-08)
+        songRequestRepository.resetRequestCounter(ownerPartyCode);
         log.info("Party [{}]: the DJ cleared the history — {} request(s) deleted", ownerPartyCode, deleted);
         return deleted;
     }

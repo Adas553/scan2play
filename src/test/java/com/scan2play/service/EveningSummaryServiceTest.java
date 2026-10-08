@@ -41,6 +41,11 @@ class EveningSummaryServiceTest {
                 .playedAt(played == null ? null : at(played)).votes(votes).energyLevel(7).build();
     }
 
+    private static SongRequestEntity withTips(SongRequestEntity request, int tips) {
+        request.setTips(tips);
+        return request;
+    }
+
     @Test
     void anEveningRunsFromSixToSix_inPolishTime() {
         assertThat(EveningSummaryService.eveningOf(at("20:00"))).isEqualTo(EVENING);
@@ -77,10 +82,10 @@ class EveningSummaryServiceTest {
         cleared.setClearedAt(at("02:00"));
         List<SongRequestEntity> requests = List.of(
                 request("Played early", "played", "20:10", "20:30", 3),
-                request("Played late", "played", "20:20", "01:15", 5),
+                withTips(request("Played late", "played", "20:20", "01:15", 5), 2),
                 request("Waiting", "accepted", "01:00", null, 1),
                 request("Rejected by the AI", "rejected", "22:00", null, 1),
-                skipped, cleared);
+                withTips(skipped, 1), cleared);
 
         EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING, requests);
 
@@ -92,6 +97,7 @@ class EveningSummaryServiceTest {
         assertThat(summary.rejectedByAi()).isEqualTo(1);
         // the votes of what the AI let through: 3 + 5 + 1 + 2 + 1
         assertThat(summary.votes()).isEqualTo(12);
+        assertThat(summary.tips()).isEqualTo(3);
         assertThat(summary.first()).isEqualTo(at("20:10"));
         assertThat(summary.last()).isEqualTo(at("01:15"));
         assertThat(summary.setlist()).extracting(SongRequestEntity::getSongName).containsExactly("Played early", "Played late");
@@ -174,16 +180,20 @@ class EveningSummaryServiceTest {
         SongRequestEntity played = request("Varius Manx - Orła cień", "played", "21:00", "21:30", 4);
         played.setGuestText("orła cień \"ten\"");
         played.setDjComment("Klasyk!");
+        played.setRequestNumber(27);
+        played.setTips(2);
         SongRequestEntity formula = request("=HYPERLINK(\"http://x\")", "rejected", "22:00", null, 1);
         formula.setGuestText("@SUM(1;2)");
 
         String csv = EveningSummaryService.toCsv(List.of(played, formula), messages, Locale.forLanguageTag("pl"));
 
         String[] lines = csv.split("\r\n");
-        assertThat(lines[0]).isEqualTo((char) 0xFEFF + "Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Status;Komentarz AI;Energia");
-        assertThat(lines[1]).isEqualTo("\"2026-10-03 21:00\";\"2026-10-03 21:30\";\"Varius Manx - Orła cień\";"
-                + "\"orła cień \"\"ten\"\"\";4;\"zagrana\";\"Klasyk!\";7");
-        assertThat(lines[2]).isEqualTo("\"2026-10-03 22:00\";;\"'=HYPERLINK(\"\"http://x\"\")\";\"'@SUM(1;2)\";1;"
+        assertThat(lines[0]).isEqualTo((char) 0xFEFF
+                + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI;Energia");
+        assertThat(lines[1]).isEqualTo("27;\"2026-10-03 21:00\";\"2026-10-03 21:30\";\"Varius Manx - Orła cień\";"
+                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";7");
+        // a request the AI rejected has no number
+        assertThat(lines[2]).isEqualTo(";\"2026-10-03 22:00\";;\"'=HYPERLINK(\"\"http://x\"\")\";\"'@SUM(1;2)\";1;0;"
                 + "\"odrzucona przez AI\";;7");
         assertThat(lines).hasSize(3);
     }

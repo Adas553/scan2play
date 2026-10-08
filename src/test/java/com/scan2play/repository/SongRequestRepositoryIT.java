@@ -59,16 +59,20 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
     @Test
     void theFingerprintFollowsTheQueue() {
         String party = newPartyCode();
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("0-0-0");
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("0-0-0-0");
 
         SongRequestEntity first = save(party, "one", "accepted", Instant.now(), null);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("1-" + first.getId() + "-1");
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("1-" + first.getId() + "-1-0");
 
         SongRequestEntity second = save(party, "two", "accepted", Instant.now(), null);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-2");
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-2-0");
         // a vote changes no row count and no id — the fingerprint still moves, so the DJ's page fetches the queue again
         assertThat(requests.addVote(first.getId())).isEqualTo(1);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-3");
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-3-0");
+        // a tip the DJ counted (V28) moves it too: every window of the DJ shows the new count
+        jdbc.update("UPDATE song_requests SET request_number = 1 WHERE id = ?", first.getId());
+        assertThat(requests.addTip(first.getId(), party)).isEqualTo(1);
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-3-1");
         assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
                 .extracting(SongRequestEntity::getSongName).containsExactly("one", "two");
     }
@@ -191,6 +195,27 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
 
         assertThat(counted).isEqualTo(40);
         assertThat(jdbc.queryForObject("SELECT votes FROM song_requests WHERE id = ?", Integer.class, song)).isEqualTo(41);
+    }
+
+    /**
+     * The DJ's tips (V28): one more or one less with one statement, only on the party's own song with a number, never below 0.
+     */
+    @Test
+    void aTip_isCountedOnlyOnThePartysNumberedSong_andNeverGoesBelowZero() {
+        String party = newPartyCode();
+        SongRequestEntity numbered = save(party, "numbered", "played", Instant.now(), Instant.now());
+        jdbc.update("UPDATE song_requests SET request_number = 7 WHERE id = ?", numbered.getId());
+        SongRequestEntity rejected = save(party, "rejected by the AI", "rejected", Instant.now(), null);
+
+        assertThat(requests.addTip(numbered.getId(), party)).isEqualTo(1);
+        assertThat(requests.addTip(numbered.getId(), party)).isEqualTo(1);
+        assertThat(requests.addTip(numbered.getId(), newPartyCode())).as("another party's DJ").isZero();
+        assertThat(requests.addTip(rejected.getId(), party)).as("no number").isZero();
+        assertThat(requests.removeTip(numbered.getId(), party)).isEqualTo(1);
+        assertThat(requests.removeTip(numbered.getId(), party)).isEqualTo(1);
+        assertThat(requests.removeTip(numbered.getId(), party)).as("none left").isZero();
+        assertThat(jdbc.queryForObject("SELECT tips FROM song_requests WHERE id = ?", Integer.class, numbered.getId())).isZero();
+        assertThat(jdbc.queryForObject("SELECT tips FROM song_requests WHERE id = ?", Integer.class, rejected.getId())).isZero();
     }
 
     /**

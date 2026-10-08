@@ -73,10 +73,10 @@ public class EveningSummaryService {
      * One evening. The counts split the requests by how they ended: played, still waiting, skipped or cleared by the DJ, rejected
      * by the AI. {@code votes} adds up the votes of the songs the AI let through (each one's first request is a vote too).
      * {@code missed}: the wanted songs that did not play (waiting, skipped, cleared). The waits are the played requests' minutes
-     * from the request to "played" — null when no request was marked as played.
+     * from the request to "played" — null when no request was marked as played. {@code tips}: the tips the DJ counted (V28, "💸").
      */
     public record Summary(LocalDate evening, int requests, int played, int waiting, int skipped, int cleared, int rejectedByAi,
-                          int votes, Instant first, Instant last, List<SongRequestEntity> top, List<SongRequestEntity> missed,
+                          int votes, int tips, Instant first, Instant last, List<SongRequestEntity> top, List<SongRequestEntity> missed,
                           List<ArtistCount> artists, List<SongRequestEntity> setlist, List<TimeSlot> slots,
                           Long averageWaitMinutes, Long longestWaitMinutes, boolean truncated) {
 
@@ -134,6 +134,7 @@ public class EveningSummaryService {
         int cleared = 0;
         int rejectedByAi = 0;
         int votes = 0;
+        int tips = 0;
         List<SongRequestEntity> letThrough = new ArrayList<>();
         List<SongRequestEntity> missed = new ArrayList<>();
         List<SongRequestEntity> setlist = new ArrayList<>();
@@ -160,6 +161,7 @@ public class EveningSummaryService {
             if (status != Status.REJECTED_BY_AI) {
                 letThrough.add(request);
                 votes += request.getVotes();
+                tips += request.getTips();
                 if (status != Status.PLAYED) {
                     missed.add(request);
                 }
@@ -179,7 +181,7 @@ public class EveningSummaryService {
         letThrough.sort(mostWanted);
         missed.sort(mostWanted);
         setlist.sort(Comparator.comparing(EveningSummaryService::playedOrRequested, Comparator.nullsLast(Comparator.naturalOrder())));
-        return new Summary(evening, requests.size(), played, waiting, skipped, cleared, rejectedByAi, votes, first, last,
+        return new Summary(evening, requests.size(), played, waiting, skipped, cleared, rejectedByAi, votes, tips, first, last,
                 firstOf(letThrough, TOP_SONGS), firstOf(missed, TOP_SONGS), artists(letThrough), List.copyOf(setlist),
                 slots(perSlot, first),
                 waits.isEmpty() ? null : Math.round(waits.stream().mapToLong(Long::longValue).average().orElse(0)),
@@ -281,11 +283,13 @@ public class EveningSummaryService {
         for (SongRequestEntity request : requests) {
             String status = messages.getMessage("summary.csv.status." + statusOf(request).name(), null, locale);
             csv.append(String.join(";",
+                    request.getRequestNumber() == null ? "" : String.valueOf(request.getRequestNumber()),
                     cell(request.getRequestedAt() == null ? "" : CSV_TIME.format(request.getRequestedAt())),
                     cell(request.getPlayedAt() == null ? "" : CSV_TIME.format(request.getPlayedAt())),
                     cell(request.getSongName()),
                     cell(request.getGuestText()),
                     String.valueOf(request.getVotes()),
+                    String.valueOf(request.getTips()),
                     cell(status),
                     cell(request.getDjComment()),
                     String.valueOf(request.getEnergyLevel()))).append("\r\n");

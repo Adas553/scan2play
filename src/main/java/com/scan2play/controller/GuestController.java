@@ -61,6 +61,7 @@ public class GuestController {
             model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
             model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
             model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
+            model.addAttribute(TIP_URL, settings.getTipUrl());
             model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, session));
             model.addAttribute(PARTY_CODE, partyCode);
             return "index";
@@ -228,6 +229,8 @@ public class GuestController {
                 }
                 model.addAttribute(RESPONSE, response);
                 model.addAttribute(PARTY_CODE, partyCode);
+                // the DJ's tip link under an accepted request: the moment a guest is glad (V27)
+                model.addAttribute(TIP_URL, settings.getTipUrl());
                 return "result";
             } catch (IllegalArgumentException e) {
                 log.warn("Song request for unknown party code: {}", partyCode);

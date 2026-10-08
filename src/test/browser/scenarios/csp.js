@@ -89,7 +89,7 @@ S2P.scenario({
 });
 
 // The owner (2026-10-07): on a card our logo goes above the code and the DJ's profiles under it. A card is 68 mm high and clips what
-// does not fit (overflow: hidden) — the page has all three profiles, the most the column must hold.
+// does not fit (overflow: hidden) — the page has all three profiles, the most the column must hold, and the tip link (V27) in the texts' column.
 S2P.scenario({
     name: 'qr-print-cards-layout',
     title: 'the QR cards: our logo above the code, the DJ\'s three profiles under it, all inside the card; the texts beside the code',
@@ -98,12 +98,17 @@ S2P.scenario({
         await t.waitFor(function () { return document.querySelector('.card .qr').complete; }, 'the code', 3000).catch(function () {});
         const card = document.querySelector('.card');
         const box = function (selector) { return card.querySelector(selector).getBoundingClientRect(); };
-        const logo = box('.side .logo'), qr = box('.side .qr'), links = box('.side .dj-links'), text = box('.text'), whole = card.getBoundingClientRect();
+        const logo = box('.side .logo'), qr = box('.side .qr'), links = box('.side .dj-links'), tip = box('.text .tip'),
+            text = box('.text'), whole = card.getBoundingClientRect();
         t.step('the code\'s column: logo, code, profiles from the top', [logo.bottom <= qr.top + 0.5, qr.bottom <= links.top + 0.5], [true, true]);
         t.step('the three profiles, one under another', Array.from(card.querySelectorAll('.dj-links span')).map(function (s) { return s.textContent; }),
             ['Instagram @dj.koko', 'TikTok @dj_koko', 'Facebook djkoko']);
         t.check('nothing cut off: the profiles end inside the card (' + Math.round(whole.bottom - links.bottom) + ' px to spare)',
             links.bottom <= whole.bottom - 2);
+        // the tip link (V27): the last line of the texts, inside the card (the code's column is full)
+        t.step('the tip link', card.querySelector('.text .tip').textContent.replace(/\s+/g, ' ').trim(), 'Napiwek / Tip: revolut.me/djkoko');
+        t.check('nothing cut off: the tip link ends inside the card (' + Math.round(whole.bottom - tip.bottom) + ' px to spare)',
+            tip.bottom <= whole.bottom - 2 && tip.right <= whole.right - 2);
         t.check('the texts beside the code, not under it', text.left >= qr.right);
     }
 });

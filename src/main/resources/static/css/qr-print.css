@@ -157,6 +157,22 @@ body {
     display: block;
 }
 
+/* The tip link (V27): on the poster under the profiles, on a card the last line of the texts; a long one
+   (paypal.com/paypalme/…) wraps */
+.tip {
+    overflow-wrap: anywhere;
+}
+
+.poster .tip {
+    margin: 2mm 0 0;
+    font-size: 13pt;
+}
+
+.card .tip {
+    margin: 0;
+    font-size: 8pt;
+}
+
 /* Our logo: the mark (images/logo.svg) and the name with a cyan "2" — on the poster between the title and the code (the
    code's own white margin, the quiet zone, is the space under it), on a card above the code */
 .logo {

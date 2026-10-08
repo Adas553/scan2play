@@ -22,6 +22,8 @@ public final class ViewAttributes {
     public static final String INSTAGRAM_URL = "instagramUrl";
     public static final String FACEBOOK_URL = "facebookUrl";
     public static final String TIKTOK_URL = "tiktokUrl";
+    /** The DJ's tip link (V27): an https address on a service that takes tips, or null. */
+    public static final String TIP_URL = "tipUrl";
     public static final String COMMENT_STYLE = "commentStyle";
     public static final String PARTY_CODE = "partyCode";
     public static final String IS_ACTIVE = "isActive";
