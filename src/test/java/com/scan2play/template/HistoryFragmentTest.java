@@ -213,7 +213,7 @@ class HistoryFragmentTest {
         String row = html.substring(html.indexOf("data-song-name=\"Skipped\""));
         assertThat(row.substring(0, row.indexOf("</tr>"))).contains("action=\"/dj/dashboard/restore\"",
                 "name=\"id\" value=\"41\"", "↩ Przywróć", "title=\"Z powrotem do kolejki — pominięte przez pomyłkę\"",
-                "⏭ Pominięta przez DJ-a", "Klasyk wesel!");
+                ">Pominięte<", "title=\"⏭ Pominięta przez DJ-a — przez 2 godziny", "Klasyk wesel!");
         String aiRow = html.substring(html.indexOf("data-song-name=\"ByTheAi\""));
         assertThat(aiRow.substring(0, aiRow.indexOf("</tr>"))).as("rejected by the AI, not skipped").doesNotContain("Pominięta")
                 .contains("status-rejected", ">ODRZUCONE<", "✖");
@@ -222,7 +222,7 @@ class HistoryFragmentTest {
                 .doesNotContain("status-rejected", ">ODRZUCONE<", "✖", "ZAAKCEPTOWANE");
         // cleared with the whole queue (V25): said in the page's language, the AI's comment kept, no way back to the queue
         String clearedRow = html.substring(html.indexOf("data-song-name=\"Cleared\""));
-        assertThat(clearedRow.substring(0, clearedRow.indexOf("</tr>"))).contains("status-skipped", "🧹 Wyczyszczona przez DJ-a",
+        assertThat(clearedRow.substring(0, clearedRow.indexOf("</tr>"))).contains("status-skipped", ">Wyczyszczone<", "title=\"🧹 Wyczyszczona przez DJ-a",
                 "Hit na parkiet!").doesNotContain("restore", "Pominięta", "Cleared by the DJ", ">ODRZUCONE<", "✖");
     }
 

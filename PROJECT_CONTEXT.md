@@ -93,7 +93,7 @@ word of 3+ letters, its stem — the first max(3, length − 2) letters — look
 DJ's browser opens, no API; a `lyrics` request, and a song with none of the guest's words, is searched by the guest's own words,
 everything else by the AI's name — decided when saved), `playedAt`
 (V6; set only when the DJ marks it played), `skippedAt` (V20, "Pomiń"), `clearedAt` (V25: cleared with the whole queue — the AI's
-comment kept, the history says "🧹 Wyczyszczona przez DJ-a"; unlike a skip, no song kept out and no "↩ Przywróć"). Index `idx_party_decision_time (party_code, decision, requested_at DESC)`. `@PrePersist`
+comment kept, the history says "WYCZYSZCZONE" — on a phone 🧹; unlike a skip, no song kept out and no "↩ Przywróć"). Index `idx_party_decision_time (party_code, decision, requested_at DESC)`. `@PrePersist`
 truncates the long fields. **Retention: 30 days from `requestedAt`** — `SongRequestRetentionService` deletes nightly at 04:45 in
 batches of 1000, at most 200 batches a night; and with the account.
 
@@ -148,7 +148,7 @@ sees under the form), `PlayHistoryService.Page`.
 Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
-leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "⏭ Pominięta przez DJ-a" in place of the verdict (amber, not the red "ODRZUCONE"; on a phone only ⏭, beside the votes; still
+leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
 under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "🔍 Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
 limits and the use of the server limits; the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; feedback; end / resume the party, delete the account, log out. The forms are sent in the background (`forms.js`; not logout
@@ -178,7 +178,7 @@ never offered).
 **The active queue**: each request has its number — a CSS counter in `app.css`, so it follows the polled list, the sort and the
 search by itself. "🧹 Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
 sends `POST /dj/dashboard/clear-queue`: the waiting requests go to the history's rejected ones, with `cleared_at` and the AI's
-comment (V25) — the history says "🧹 Wyczyszczona przez DJ-a" in place of the verdict, amber as a skip. Ending the party does not clear the
+comment (V25) — the history says "WYCZYSZCZONE" in place of the verdict ("🧹 Wyczyszczona przez DJ-a …" in its title), amber as a skip. Ending the party does not clear the
 queue (the DJ may pause it for a break or a limit).
 
 Every dashboard window follows the party's state within one poll: the party open or closed (`X-Party-Active` — the "party closed"

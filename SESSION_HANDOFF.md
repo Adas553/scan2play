@@ -177,6 +177,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
     comment; `cleared_at` says it, the history shows "🧹 Wyczyszczona przez DJ-a" (amber as a skip, no "↩ Przywróć", still under
     "Rejected"). V25 turns the old notes into `cleared_at` (their request time; the AI's comment under them is lost). On a phone
     (the owner) the words go: the icon alone, ⏭ (with "↩ Przywróć") or 🧹, beside the votes as ▶ / ✖ (`history-phone`, seen red).
+    On a wide screen (the owner: the long words stretched the column, the songs broke into four lines) one word in capitals as
+    "ZAGRANE": "POMINIĘTE" / "WYCZYSZCZONE", the meaning in its title, "↩ Przywróć" on the same line (`history-wide-skip-and-clear`,
+    seen red).
   - **The versioned scripts and styles kept for a year** (`VersionedAssetCacheFilter`: `public, max-age=31536000, immutable` on
     `/<commit>/js|css/...`; never on `dev` locally; everything else `no-store` as before). After the deploy: check in the HTTP log /
     the browser that `main.js` comes from the cache on the second load.

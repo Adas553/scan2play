@@ -580,7 +580,9 @@ th[data-sort].sort-desc::after {
        table below a wide screen). A table's narrow columns broke a title into a word per line and pushed the skip off the screen
        (the owner, 2026-10-07). The column sort stays as a row of buttons; the list scrolls with the page. --- */
 /* a request the DJ skipped, in place of the AI's verdict: the colour of its "↩ Przywróć" (Bootstrap's warning), not the red of a rejection */
-.status-skipped { color: #ffc107 !important; font-weight: bold; }
+.status-skipped { color: #ffc107 !important; font-weight: bold; white-space: nowrap; }
+/* one word in capitals, as "ZAGRANE" / "ODRZUCONE" (the owner, 2026-10-08) */
+.s2p-skipped-label { text-transform: uppercase; }
 @media (max-width: 767.98px) {
     .page-dj .s2p-history-table { display: block; }
     .page-dj [data-list]:has(.s2p-history-table) .list-scroll { max-height: none; overflow: visible; }
