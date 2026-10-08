@@ -1,0 +1,290 @@
+/* The evening summary (templates/summary.html): white, black and one accent, to read on the screen and to print on A4. */
+
+@page {
+    size: A4;
+    margin: 14mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #ffffff;
+    color: #111111;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.4;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* ---- The bar on the screen (not printed) ---- */
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 16px;
+    background: #212529;
+    color: #f8f9fa;
+}
+
+.toolbar .pick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.toolbar a,
+.toolbar button,
+.toolbar select {
+    padding: 6px 12px;
+    border: 1px solid #6c757d;
+    border-radius: 6px;
+    background: transparent;
+    color: #f8f9fa;
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.toolbar select {
+    max-width: 100%;
+    background: #000000;
+}
+
+.toolbar #printBtn {
+    border-color: #0d6efd;
+    background: #0d6efd;
+}
+
+.toolbar .hint {
+    flex-basis: 100%;
+    margin: 0;
+    color: #adb5bd;
+    font-size: 0.85rem;
+}
+
+/* ---- The summary ---- */
+
+main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 32px;
+}
+
+.head {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.logo img {
+    width: 32px;
+    height: 32px;
+}
+
+.logo .two {
+    color: #0aa2c0;
+}
+
+h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.when {
+    margin: 4px 0 0;
+    color: #444444;
+}
+
+.dj {
+    margin: 4px 0 0;
+    font-weight: 600;
+}
+
+h2 {
+    margin: 24px 0 8px;
+    font-size: 1.2rem;
+    border-bottom: 2px solid #0aa2c0;
+    padding-bottom: 4px;
+}
+
+.empty,
+.note {
+    color: #555555;
+    text-align: center;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    break-inside: avoid;
+}
+
+.stat strong {
+    font-size: 1.8rem;
+    line-height: 1.1;
+}
+
+.stat small {
+    color: #666666;
+}
+
+.wait {
+    margin: 12px 0 0;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* One row per song: the number, the name taking what is left (it wraps there), then the votes and the status as columns on the
+   right — on a phone the votes no longer jump under the name or stay beside it by the name's length. */
+.songs {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: song;
+}
+
+.songs li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid #eeeeee;
+    break-inside: avoid;
+    counter-increment: song;
+}
+
+.songs li::before {
+    content: counter(song) ".";
+    flex: none;
+    min-width: 1.6em;
+    text-align: right;
+    color: #555555;
+    font-variant-numeric: tabular-nums;
+}
+
+.songs .song {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.songs .votes,
+.songs .played,
+.songs .status,
+.songs .time {
+    flex: none;
+    color: #555555;
+    white-space: nowrap;
+}
+
+/* the votes always last, at the right edge: a row without "✓ played" keeps them in the same column */
+.songs .votes {
+    order: 1;
+    min-width: 3em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.songs .time {
+    font-variant-numeric: tabular-nums;
+}
+
+.songs .played {
+    color: #198754;
+}
+
+/* the legend of the status icons: needed only where the icons stand alone */
+.legend {
+    display: none;
+    margin: 0 0 6px;
+    color: #555555;
+    font-size: 0.85rem;
+}
+
+/* On a phone the status is its icon alone ("wyczyszczona z kolejką" squeezed the song's name to a word a line); the full text is
+   the element's title, and the legend under the heading says what each icon means. */
+@media (max-width: 575.98px) {
+    .songs .status .label,
+    .songs .played .label {
+        display: none;
+    }
+
+    .legend {
+        display: block;
+    }
+}
+
+.busiest {
+    margin: 0 0 8px;
+    font-weight: 600;
+}
+
+.hours {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.hours th {
+    width: 4.5em;
+    text-align: left;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
+.hours td {
+    padding: 2px 0;
+}
+
+.hours meter {
+    width: 100%;
+    height: 14px;
+}
+
+.hours .count {
+    width: 3em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.foot {
+    margin-top: 32px;
+    text-align: center;
+    color: #777777;
+    font-size: 0.85rem;
+}
+
+@media print {
+    .no-print {
+        display: none;
+    }
+
+    main {
+        max-width: none;
+        padding: 0;
+    }
+}

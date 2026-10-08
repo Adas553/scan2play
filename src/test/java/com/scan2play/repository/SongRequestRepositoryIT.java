@@ -193,6 +193,35 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT votes FROM song_requests WHERE id = ?", Integer.class, song)).isEqualTo(41);
     }
 
+    /**
+     * The evening summary: an evening is a day in Polish time from 6:00 to 6:00 — a request at 01:30 is the evening before's, one at
+     * 06:00 the next day's —, the latest first, bounded; the evening's requests in the order asked, every decision, only the party's.
+     */
+    @Test
+    void theEvenings_runFromSixToSix_inPolishTime() {
+        String party = newPartyCode();
+        java.time.ZoneId warsaw = java.time.ZoneId.of("Europe/Warsaw");
+        Instant saturday20 = java.time.LocalDateTime.of(2026, 10, 3, 20, 0).atZone(warsaw).toInstant();
+        Instant sunday0130 = java.time.LocalDateTime.of(2026, 10, 4, 1, 30).atZone(warsaw).toInstant();
+        Instant sunday0559 = java.time.LocalDateTime.of(2026, 10, 4, 5, 59).atZone(warsaw).toInstant();
+        Instant sunday0600 = java.time.LocalDateTime.of(2026, 10, 4, 6, 0).atZone(warsaw).toInstant();
+        Instant friday23 = java.time.LocalDateTime.of(2026, 9, 25, 23, 0).atZone(warsaw).toInstant();
+        save(party, "saturday", "played", saturday20, saturday20.plus(10, ChronoUnit.MINUTES));
+        save(party, "after midnight", "accepted", sunday0130, null);
+        save(party, "just before six", "rejected", sunday0559, null);
+        save(party, "sunday", "accepted", sunday0600, null);
+        save(party, "a week before", "played", friday23, null);
+        save(newPartyCode(), "another party", "played", saturday20, null);
+
+        assertThat(requests.findEvenings(party, 10)).extracting(row -> row[0] + " " + row[1])
+                .containsExactly("2026-10-04 1", "2026-10-03 3", "2026-09-25 1");
+        assertThat(requests.findEvenings(party, 2)).hasSize(2);
+        Instant from = java.time.LocalDateTime.of(2026, 10, 3, 6, 0).atZone(warsaw).toInstant();
+        assertThat(requests.findRequestedBetween(party, from, sunday0600, PageRequest.of(0, 10)))
+                .extracting(SongRequestEntity::getSongName).containsExactly("saturday", "after midnight", "just before six");
+        assertThat(requests.findRequestedBetween(party, from, sunday0600, PageRequest.of(0, 2))).hasSize(2);
+    }
+
     private SongRequestEntity save(String party, String song, String decision, Instant requestedAt, Instant playedAt) {
         return save(party, song, decision, requestedAt, playedAt, null);
     }

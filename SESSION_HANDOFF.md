@@ -1,12 +1,19 @@
-# Session Handoff — 2026-10-08
+# Session Handoff — 2026-10-08 (evening)
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
 (2026-10-02 … 04: the phone dashboard, votes, the vibe note, "Kto gra", the removal of Spotify and YouTube, package by package).
-Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. Review findings: `REVIEW.md`.
+Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. The review of 2026-09-30: `docs/history/review-2026-09-30.md` (done; 2.3, one instance, left open).
 
 ## Start here
 
+- **2026-10-08, evening — not deployed yet (branch `claude/inspiring-einstein-sgh2tz`, a PR to `dev`):**
+  **"📊 Podsumowanie wieczoru"** (`/dj/summary`, PROJECT_CONTEXT 5.1): one evening (6:00–6:00 Polish time) to print / save as PDF,
+  and as CSV — the counts, how long the played requests waited, the 10 most wanted, "Chcieli, a nie usłyszeli", the most wanted
+  artists, requests every half-hour (the owner wants to see how it looks), what played in order; a button beside "🗑 Wyczyść historię",
+  whose question now points to it. **V26**: "Sarkastyczne (łagodne)" gone (the owner: "sarkastyczny wystarczy"), its parties now
+  "Sarkastyczne". The prompt's "not knowing a song is no reason to make one up" (`8b638ef`; all of it one PR to `dev`). Tests: 414 unit,
+  35 database, 47 browser.
 - **Branch `dev`. The product is the requests-only party** ("Twój program DJ-a"; the owner's decision 2026-10-04: YouTube — 100 API
   searches a day shared by every party, its terms; Spotify — development mode, its policy). The full app is archived: tag
   `full-player-2026-10-04`, branch `archive/full-player` (both pushed), the clone `D:\Coding\scan2play-full` with its own database
@@ -79,7 +86,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   The confirmation says the guests' words go and the AI forgets what played. Without the summary of the night for now (Next,
   item 2). Tests: 293 unit, 28 database, 36 browser (`history-clear`, seen red with `forms.js`' branch taken out).
 - **The AI's comment style (2026-10-07, the owner's picks; live, PR #11 / #12):** "💬 Komentarze AI" under the vibe — Klasyczne (the
-  prompt as before), Zabawne, Sarkastyczne (łagodne), Sarkastyczne (the owner: sharp, the DJ's own responsibility), Krótkie (an
+  prompt as before), Zabawne, Sarkastyczne (łagodne — gone in V26, 2026-10-08), Sarkastyczne (the owner: sharp, the DJ's own responsibility), Krótkie (an
   example under the list was tried and dropped: the owner did not want it). **V22** `party_settings.comment_style`; the blocks in
   `prompts/prompt-comment-style_{pl,en}.txt`; every style keeps "no profanity, mock the request, not the person" and reminds the
   AI not to name an accepted song (the sarcastic one did in the owner's local try).
@@ -187,7 +194,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **Live 2026-10-08 10:09 UTC (PR #21 / #22, `0a39b7d`), CI green:** Flyway applied V25 (0.03 s), started in 4 s, no error;
   `/<commit>/js/guest-party.js` answers `Cache-Control: public, max-age=31536000, immutable` (Cloudflare: `HIT`), the pages `no-store`.
 
-- **A guest's 👍 on the list (2026-10-08, the owner's idea and pick "A"; not deployed yet):** every waiting song on the guest page
+- **A guest's 👍 on the list (2026-10-08, the owner's idea and pick "A"; live 12:20 UTC, PR #23 / #24):** every waiting song on the guest page
   but the guest's own has "👍 N"; one vote per song, as many songs as the guest likes, a second tap takes it back. Then (the owner:
   too much — a song up to three times) **one list** "🔥 Prośby gości": the most votes first, the newest first among equals, 5 shown,
   the rest under "Pokaż pozostałe prośby (N)"; "Najwięcej głosów" and "Ostatnio wysłane" gone. **The screen does not jump** (the
@@ -212,7 +219,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   codes alike, ~1 in 12,000 runs — it now allows one pair). No migration. The start took 15 s, not 4: the sleeping database had
   closed the pool's connections right after Flyway, Spring Session waited twice 5 s for one ("Error while extracting database
   name") — the cost of the sleep again (Next / "Na później": switch the database's sleep off before customers).
-- **"← Twój panel DJ-a" in the app (2026-10-08, the owner; not deployed yet):** a DJ testing their QR code with the app installed
+- **"← Twój panel DJ-a" in the app (2026-10-08, the owner; live 13:05 UTC, PR #25 / #26, `a07d684`, CI green, started in 5.6 s):** a DJ testing their QR code with the app installed
   landed on the guest page inside it with no way back. Now the guest, result and "party ended" pages have the link, shown only in
   the installed app (`display-mode: standalone`; `guest-back-to-dashboard-in-the-app`, seen red). Not tried on a phone yet. The owner tried the first version locally: "działa dobrze". Not tried yet: a real
   phone.
@@ -233,7 +240,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    "Sign in with Apple" (an Apple Developer account, $99 a year), a sign-in link by e-mail (a mail service — Resend / Postmark —
    and a table of accounts), e-mail and password (not advised: hashing, resets, lockouts). Until then: Google only.
 2. **The owner liked (2026-10-06):** the **"clear the history"** button — built 2026-10-07 (Start here) —, best paired with a
-   **summary of the night** to download first (CSV / PDF; not started); the
+   **summary of the night** to download first (built 2026-10-08, Start here); the
    **DJ's branding on the guest page**: the profiles are built (2026-10-07, Start here); left: **the DJ's logo** (small,
    re-encoded on the server to PNG, kept in the database, served from our address — the CSP needs no change; the privacy policy
    to update). A candidate "premium" feature.
@@ -249,8 +256,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
-6. From `REVIEW.md`: what is left is 2.3 (one instance) and 7.x (small tidy-ups; also the needless `hibernate.dialect` the start
-   log warns about).
+6. The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
+   the history, the needless `hibernate.dialect` gone). The prompt (2026-10-08): "not knowing a song is no reason to make one up"
+   — the owner tries it on production.
 
 ## Waiting for the owner (not code)
 

@@ -128,6 +128,17 @@ class HistoryFragmentTest {
         assertThat(render(List.of(), false, PL)).doesNotContain("clear-history", "clearHistoryBtn");
     }
 
+    @Test
+    @DisplayName("\"Podsumowanie wieczoru\" opens in a new tab beside \"Wyczyść historię\", whose question points to it")
+    void shouldOfferTheEveningSummary_beforeTheHistoryIsCleared() {
+        String html = render(List.of(guest(1, "Alpha", "played")), false, PL);
+
+        assertThat(html).contains("href=\"/dj/summary\" target=\"_blank\" rel=\"noopener\" id=\"summaryLink\"", "📊 Podsumowanie wieczoru",
+                "Najpierw otwórz podsumowanie wieczoru.");
+        assertThat(html.indexOf("id=\"summaryLink\"")).isLessThan(html.indexOf("id=\"clearHistoryBtn\""));
+        assertThat(render(List.of(), false, PL)).doesNotContain("summaryLink");
+    }
+
     private static String renderWithFilter(String filter) {
         Context context = new Context(Locale.ENGLISH);
         context.setVariable("history", List.of(guest(1, "Alpha", "played")));

@@ -1,6 +1,5 @@
 # The DJ's comment style (CommentStyle, V22): one line per style, added after the prompt's Step 3 (the comment). CLASSIC has none
 # (Step 3 as it is). Read by SongEvaluationService; a style missing here is a start-up error.
 FUNNY=Comment style (replaces the tone of Step 3): funny — a joke, a pun or a funny comparison, light and upbeat. The other rules of Step 3 still apply.
-SARCASTIC_LIGHT=Comment style (replaces the tone of Step 3): sarcastic but gentle — good-natured irony, the guest should smile, not feel hurt; extra gentle when rejecting. The other rules of Step 3 still apply.
 SARCASTIC=Comment style (replaces the tone of Step 3): sarcastic — biting irony about the chosen song and the taste, also when accepting; it may be sharp, but never about the person (looks, age, origin, gender). The other rules of Step 3 still apply.
 SHORT=Comment style (replaces the tone of Step 3): short — one matter-of-fact sentence, at most 80 characters, no jokes and no emoji. The other rules of Step 3 still apply.

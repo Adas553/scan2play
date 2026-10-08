@@ -47,6 +47,8 @@ class VibeMessagesTest {
             assertThat(english).as(key + " en").isNotBlank();
             assertThat(polish).as(key + " pl").isNotBlank().isNotEqualTo(english);
         }
-        assertThat(messages.getMessage("comment.style.SARCASTIC_LIGHT", null, pl)).isEqualTo("Sarkastyczne (łagodne)");
+        assertThat(messages.getMessage("comment.style.SHORT", null, pl)).isEqualTo("Krótkie");
+        // V26: "sarcastic (gentle)" is gone with its text
+        assertThat(messages.getMessage("comment.style.SARCASTIC_LIGHT", null, null, pl)).isNull();
     }
 }

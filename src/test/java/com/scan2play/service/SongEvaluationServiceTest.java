@@ -126,8 +126,8 @@ class SongEvaluationServiceTest {
     /** A style without its line in a prompt file would quietly be the classic one: the start stops instead. */
     @Test
     void aCommentStyleWithoutItsBlock_stopsTheStart() {
-        String file = "# comment" + System.lineSeparator() + "FUNNY=a" + System.lineSeparator() + "SARCASTIC_LIGHT=b"
-                + System.lineSeparator() + System.lineSeparator() + "SARCASTIC=c";
+        String file = "# comment" + System.lineSeparator() + "FUNNY=a" + System.lineSeparator() + System.lineSeparator()
+                + "SARCASTIC=c";
 
         assertThatThrownBy(() -> SongEvaluationService.commentStyleRules(file, "pl")).hasMessageContaining("SHORT");
         assertThat(SongEvaluationService.commentStyleRules(file + System.lineSeparator() + "SHORT= d ", "pl"))
@@ -152,6 +152,8 @@ class SongEvaluationServiceTest {
         assertThat(song).contains("Prośba gościa: \"chciałbym być marynarzem\"", "\"lyrics\"", "\"mood\"").doesNotContain("%s");
         // a song the model does not know (a new one: "Shakira & Burna Boy – Dai Dai", May 2026) is not rejected for that
         assertThat(song).contains("To, że nie znasz piosenki, nie jest powodem do odrzucenia");
+        // ... nor made up: no artist or rest of a title the model is not sure of
+        assertThat(song).contains("nie jest też powodem, by ją wymyślać");
         // never another song of a similar vibe, and the song worked out before it is judged (2026-10-07: "orła cień" became Dżem)
         assertThat(song).contains("Piosenka o podobnie brzmiącym tytule to inna piosenka", "tak samo piosenka o podobnym klimacie",
                 "naprawdę są słowa gościa");
