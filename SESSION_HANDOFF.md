@@ -184,6 +184,32 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
     `/<commit>/js|css/...`; never on `dev` locally; everything else `no-store` as before). After the deploy: check in the HTTP log /
     the browser that `main.js` comes from the cache on the second load.
   - Tests: 372 unit, 30 database, all browser scenarios; the new ones seen red without the change.
+- **Live 2026-10-08 10:09 UTC (PR #21 / #22, `0a39b7d`), CI green:** Flyway applied V25 (0.03 s), started in 4 s, no error;
+  `/<commit>/js/guest-party.js` answers `Cache-Control: public, max-age=31536000, immutable` (Cloudflare: `HIT`), the pages `no-store`.
+
+- **A guest's 👍 on the list (2026-10-08, the owner's idea and pick "A"; not deployed yet):** every waiting song on the guest page
+  but the guest's own has "👍 N"; one vote per song, as many songs as the guest likes, a second tap takes it back. Then (the owner:
+  too much — a song up to three times) **one list** "🔥 Prośby gości": the most votes first, the newest first among equals, 5 shown,
+  the rest under "Pokaż pozostałe prośby (N)"; "Najwięcej głosów" and "Ostatnio wysłane" gone. **The screen does not jump** (the
+  owner): after a 👍 only the songs' votes are put in place (`applyVotes`), the order changes with the next fetch; a song gone
+  meanwhile stays dimmed; the note floats over the page. `POST /p/{code}/vote` (sent in the background by `guest-party.js`),
+  `GuestVoteService` (memory by session id — a double tap counts once — and the session, so it outlives a
+  deploy), `addGuestVote` / `removeGuestVote` (atomic, this party's waiting song only, never below 1), a per-network limit of its own
+  (`guest.limit.votes-per-ip-party`, 300 / 10 min). No migration; the DJ's side unchanged (the "Głosy" column). A song with the
+  guest's 👍 asked for again is theirs ("Ta piosenka już czeka w kolejce i ma Twój głos"). The privacy policy PL / EN names the 👍.
+  **A busy night (the owner: "a co jak mamy 300 próśb?"):** the waiting queue was read 100 oldest at a time — the DJ's queue, the
+  guests' list and the match of a song asked for again: with more than 100 waiting a vote became a second row. Now the 300 oldest
+  (`findTop300…`, a party's day of requests; `SongRequestVotesIT`, 120 waiting, seen red with 100). The guests' folded rest is
+  fetched only when unfolded (`GET /p/{code}/queue/more`) and has "Szukaj w prośbach" (no accents needed); a 👍 is answered with
+  that song's row only (the fragment `voteAnswer`).
+  Tests: 395 unit (`GuestVoteServiceTest`, `GuestVoteWebTest` — the CSRF token of the list's forms, 403 without it), 33 database
+  (40 parallel votes; 120 waiting), 45 browser (`guest-vote` — nothing moves, measured with the page scrolled —,
+  `guest-vote-song-gone`, `guest-more-and-search`; seen red with the whole list put back after a vote, and without the fetch of the
+  rest). Then (the owner, on the computer): one pill of one size on every row — the guest's own a green one, "Twoja" beside the
+  name (`guest-list-tidy`, seen red) —, a dark edge on a filled pill's 👍, the hint "👍 Oddaj głos na piosenkę — DJ widzi, czego
+  chcecie najbardziej". The owner tried the first version locally: "działa dobrze". Not tried yet: a real
+  phone.
+
 
 ## Next (the owner picks)
 

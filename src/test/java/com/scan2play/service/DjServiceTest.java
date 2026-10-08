@@ -223,7 +223,7 @@ class DjServiceTest {
         when(songRequestRepository.findById(6L)).thenReturn(Optional.of(foreign));
         when(songRequestRepository.findById(7L)).thenReturn(Optional.of(byTheAi));
         when(songRequestRepository.findById(8L)).thenReturn(Optional.of(skipped));
-        when(songRequestRepository.findTop100ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
+        when(songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
                 .thenReturn(List.of(SongRequestEntity.builder().id(9L).songName("wilki baśka").decision(DECISION_ACCEPTED).build()));
 
         assertThat(djService.restoreSkippedSong(6L, PARTY_CODE)).isFalse();

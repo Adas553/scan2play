@@ -49,8 +49,12 @@ public final class ViewAttributes {
     public static final String PUSH_PUBLIC_KEY = "pushPublicKey";
 
     // --- Index/Guest Attributes ---
-    /** The requests sent lately and whether the guest's own song waits ({@code GuestQueueService.GuestQueue}). */
+    /** The guests' requests (one list, by votes) and whether the guest's own song waits ({@code GuestQueueService.GuestQueue}). */
     public static final String GUEST_QUEUE = "guestQueue";
+    /** A note over the guest's page after a 👍 that did not count (the song gone, the network's limit). */
+    public static final String VOTE_NOTE = "voteNote";
+    /** The song of a 👍 as it is now (its new votes), or null when it no longer waits. */
+    public static final String VOTE_SONG = "voteSong";
     public static final String ERROR_MESSAGE = "errorMessage";
     /** The text of a request sent back to the form (a mood, not a song). */
     public static final String LAST_REQUEST = "lastRequest";
