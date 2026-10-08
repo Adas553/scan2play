@@ -163,6 +163,14 @@
 
 <!--/* Our logo: the mark (static/images/logo.svg — QR corners and a play triangle) and the name with a cyan "2". Sized by the
      font of the element it replaces (the mark is 1.15em); the name is one span, so the flex gap stays between mark and name. */-->
+<!--/* The way back to the DJ's own dashboard from a guest's page — shown only in the installed app (app.css,
+     display-mode: standalone). The app takes every address of the site, so the DJ testing their QR code landed on the guest page
+     inside it with no address bar and no "back" (the owner, 2026-10-08). Only a DJ has the app: the manifest is on the dashboard
+     alone. "Twój": it leads to the dashboard of whoever is logged in, never to this party's. */-->
+<div th:fragment="back-to-dashboard" class="w-100 s2p-mw-500 mb-2 s2p-standalone-only">
+    <a href="/dj/dashboard" id="backToDashboard" class="btn btn-sm btn-outline-light" th:text="#{guest.back_to_dashboard}">← Your DJ dashboard</a>
+</div>
+
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
 <!-- ======================================================================
