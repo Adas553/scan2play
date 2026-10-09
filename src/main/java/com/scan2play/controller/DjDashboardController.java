@@ -9,7 +9,6 @@ import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.QrCodeService;
-import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.util.SongList;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -55,7 +54,6 @@ public class DjDashboardController {
     private final GuestRequestLimiter guestRequestLimiter;
     private final PushNotificationService pushNotificationService;
     private final PartyStaffService partyStaffService;
-    private final PartySettingsRepository partySettingsRepository;
 
     /**
      * On every answer of the queue poll, 304 too: the limits that stop guest songs now, comma-separated —
@@ -120,8 +118,7 @@ public class DjDashboardController {
         model.addAttribute(IS_OWNER, owner);
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
         model.addAttribute(STAFF_JOIN_NOTE, joinNote);
-        boolean hasOwnParty = owner || partySettingsRepository.findByOwnerId(authentication.getName()).isPresent();
-        model.addAttribute(PANELS, partyStaffService.panelsOf(authentication.getName(), hasOwnParty));
+        model.addAttribute(PANELS, partyStaffService.panelsOf(authentication.getName()));
         if (owner) {
             model.addAttribute(STAFF, partyStaffService.staffOf(partyCode));
             // the address the owner opened the panel at, not the guests' one: the invitation leads through Google's login, which works
@@ -207,7 +204,8 @@ public class DjDashboardController {
     @GetMapping("/qr-print")
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, Model model,
                           OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getOwnedPartySettings(authentication, session);
+        // the staff's too (V30): the code is on the tables anyway, a bartender prints a new one
+        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
         String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
         model.addAttribute(PARTY_CODE, partyCode);

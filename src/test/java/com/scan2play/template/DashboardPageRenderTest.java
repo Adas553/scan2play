@@ -47,8 +47,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -119,7 +117,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsQueryService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.repository.PartySettingsRepository.class));
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -309,6 +307,8 @@ class DashboardPageRenderTest {
                         "value=\"http://127.0.0.1:8080/join/Inv_123-xyzInv_123-xyz\" id=\"staffLinkInput\"",
                         "data-copy-target=\"staffLinkInput\"", "action=\"/dj/dashboard/staff-link\"")
                 .doesNotContain("id=\"panelSwitcher\"", "id=\"staffBanner\"", "id=\"staffJoinNote\"");
+        assertThat(html).as("the owner deletes their account; leaving a staff is not theirs")
+                .contains("action=\"/dj/delete-account\"").doesNotContain("id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"");
         write("dashboard.html", html);
     }
 
@@ -332,7 +332,7 @@ class DashboardPageRenderTest {
         com.scan2play.service.PartyStaffService staff = mock(com.scan2play.service.PartyStaffService.class);
         when(staff.join("invite", "kasia", "Kasia")).thenReturn(new com.scan2play.service.PartyStaffService.Joined(
                 com.scan2play.service.PartyStaffService.JoinOutcome.JOINED, pub));
-        when(staff.panelsOf(eq("kasia"), anyBoolean())).thenReturn(List.of(new com.scan2play.service.PartyStaffService.Panel(null, null, true),
+        when(staff.panelsOf("kasia")).thenReturn(List.of(new com.scan2play.service.PartyStaffService.Panel(null, null, true),
                 new com.scan2play.service.PartyStaffService.Panel(PARTY, "Klub Ola", false)));
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("pendingStaffInvitation", "invite");
@@ -345,14 +345,22 @@ class DashboardPageRenderTest {
         assertThat(session.getAttribute("pendingStaffInvitation")).as("the invitation is taken once").isNull();
         assertThat(html).doesNotContain("??");
         assertThat(html).contains("id=\"staffJoinNote\"", "👥 Dołączono do obsługi: Klub Ola.",
-                "id=\"staffBanner\"", "👥 Obsługujesz imprezę: Klub Ola — kolejka i historia.",
+                "id=\"staffBanner\"", "👥 Obsługujesz imprezę: Klub Ola — kolejka, historia i kod QR.",
                 "id=\"panelSwitcher\"", "action=\"/dj/panel\"", ">🎧 Mój panel<", ">👥 Klub Ola<", "name=\"party\" value=\"HARN1\"",
                 "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "id=\"pushToggle\"",
-                "action=\"/dj/end-party\"");
-        assertThat(html).as("the owner's: the settings, the limits, the lists, the QR code, the profiles, the staff")
+                "action=\"/dj/end-party\"",
+                // a link pasted in the app (its browser has a login of its own): for the staff too
+                "id=\"joinStaffForm\"", "action=\"/dj/join\"", "Masz zaproszenie do obsługi innej imprezy? Wklej link",
+                // not "Usuń konto": on the owner's party it read as deleting the party (the owner, 2026-10-09)
+                "id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"", "Opuścić obsługę tej imprezy?");
+        assertThat(html).doesNotContain("action=\"/dj/delete-account\"");
+        assertThat(html).as("the QR code, its link and its print: the staff's too — it is on the tables anyway (the owner, 2026-10-09)")
+                .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"");
+        assertThat(html).as("the owner's: the settings, the limits, the lists, the profiles, the tip link, the staff")
                 .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
-                        "id=\"staffCard\"", "id=\"partyLinkInput\"", "action=\"/dj/dashboard/tip-link\"", "/join/", "/h/",
-                        "class=\"col-md-8\"");
+                        "id=\"staffCard\"", "action=\"/dj/dashboard/dj-links\"", "action=\"/dj/dashboard/tip-link\"",
+                        // the owner's links (the paste field's placeholder shows "/join/…", so the links by their fields and tokens)
+                        "id=\"staffLinkInput\"", "Inv_123-xyz", "id=\"hostLinkInput\"", "/h/");
         String current = html.substring(html.indexOf("name=\"party\" value=\"HARN1\""));
         assertThat(current.substring(0, current.indexOf("</button>"))).as("the panel open now is lit").contains("aria-current=\"page\"");
     }
@@ -412,7 +420,7 @@ class DashboardPageRenderTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.getPartySettings(any(), any())).thenReturn(party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.repository.PartySettingsRepository.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());

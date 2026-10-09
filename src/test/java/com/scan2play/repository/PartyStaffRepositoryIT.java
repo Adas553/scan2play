@@ -53,6 +53,7 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
         PartyStaffEntity kasia = member(pub.getPartyCode(), "kasia");
         PartyStaffEntity elsewhere = member(other.getPartyCode(), "kasia");
 
+        assertThat(staff.deleteMember(pub.getPartyCode(), "nobody")).as("leaving a staff one is not on").isZero();
         assertThat(staff.deleteFromParty(elsewhere.getId(), pub.getPartyCode())).as("a row of another party").isZero();
         assertThat(staff.deleteFromParty(kasia.getId(), pub.getPartyCode())).isOne();
         assertThat(staff.existsByPartyCodeAndMemberId(other.getPartyCode(), "kasia")).isTrue();

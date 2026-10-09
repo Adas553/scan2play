@@ -63,7 +63,16 @@
 
         <!-- Delete Account — separated by a vertical divider to signal destructive action -->
         <div class="border-start border-secondary ms-1 ps-3">
-            <form th:action="@{/dj/delete-account}" method="POST" th:data-confirm="#{dashboard.confirm.delete_account}">
+            <!--/* On another party's staff (V30) the panel is not theirs: "Opuść obsługę" in place of "Usuń konto", which deleted the
+                 person's own account but read as deleting the party (the owner, 2026-10-09). The account is deleted from "Mój panel". */-->
+            <form th:if="${isOwner == false}" th:action="@{/dj/staff/leave}" method="POST" th:data-confirm="#{dashboard.confirm.leave_staff}">
+                <button type="submit" id="leaveStaffBtn"
+                        class="btn btn-sm fw-bold d-flex align-items-center gap-1 s2p-btn-muted"
+                        th:title="#{dashboard.button.leave_staff}">
+                    🚪 <span class="d-none d-sm-inline" th:text="#{dashboard.button.leave_staff}">Leave the staff</span>
+                </button>
+            </form>
+            <form th:unless="${isOwner == false}" th:action="@{/dj/delete-account}" method="POST" th:data-confirm="#{dashboard.confirm.delete_account}">
                 <button type="submit"
                         class="btn btn-sm fw-bold d-flex align-items-center gap-1 s2p-btn-muted"
                         th:title="#{dashboard.button.delete_account}">

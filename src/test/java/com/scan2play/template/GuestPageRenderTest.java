@@ -123,11 +123,16 @@ class GuestPageRenderTest {
         return SongRequestEntity.builder().id(id).songName(name).build();
     }
 
+    /** A song with its number at the party (V28): "#18" before it on the list. */
+    private static SongRequestEntity numbered(long id, String name, int number) {
+        return SongRequestEntity.builder().id(id).songName(name).requestNumber(number).build();
+    }
+
     /** No order to tell (the DJ plays from their own software): the guests' requests, unnumbered, and the guest's own "waits". */
     @Test
     void theGuestsRequests_areListed_andTheGuestsOwnWaitsForTheDj() {
         // with who plays and the DJ's three profiles: the browser tests load the page — the icons too — under the real CSP
-        String html = render(PL, Map.of("guestQueue", queue(List.of(song(3, "Newest"), song(2, "Mine"), song(1, "Oldest")),
+        String html = render(PL, Map.of("guestQueue", queue(List.of(numbered(3, "Newest", 18), numbered(2, "Mine", 17), numbered(1, "Oldest", 16)),
                 Set.of(2L), "Mine"), "djName", "DJ Koko", "instagramUrl", "https://www.instagram.com/dj.koko/",
                 "facebookUrl", "https://www.facebook.com/djkoko", "tiktokUrl", "https://www.tiktok.com/@dj_koko"));
         writePreview("index-with-queue.html", html);
@@ -218,6 +223,31 @@ class GuestPageRenderTest {
             assertThat(html).doesNotContain("??");
             assertThat(html).contains("id=\"joinButton\"", "href=\"/start\"", "content=\"no-referrer\"", "noindex");
         }
+    }
+
+    /** "👥 Jestem z obsługi" on the landing page (V30): folded, a form to POST /join; open with a note after a link that did not work. */
+    @Test
+    void theLandingPage_letsTheStaffPasteTheirLink() {
+        String[] pages = new String[2];
+        for (int i = 0; i < 2; i++) {
+            MockServletContext servletContext = new MockServletContext();
+            MockHttpServletRequest request = new MockHttpServletRequest(servletContext);
+            if (i == 1) {
+                request.setParameter("staffLink", "invalid");
+            }
+            WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                    .buildExchange(request, new MockHttpServletResponse()), PL);
+            context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+            pages[i] = engine.process("landing", context);
+        }
+        writePreview("landing.html", pages[0]);
+
+        assertThat(pages[0]).doesNotContain("??");
+        assertThat(pages[0]).contains("id=\"staffLogin\"", "Masz zaproszenie do zespołu imprezy? Dołącz →", "action=\"/join\"",
+                "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"");
+        assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");
+        assertThat(tag(pages[1], "staffLogin")).as("open after a link that did not work").contains("open");
+        assertThat(pages[1]).contains("id=\"staffLinkInvalid\"", "Ten link nie działa — poproś organizatora o nowy.");
     }
 
     @Test

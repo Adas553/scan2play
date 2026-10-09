@@ -31,6 +31,12 @@ public interface PartyStaffRepository extends JpaRepository<PartyStaffEntity, Lo
     @Query("DELETE FROM PartyStaffEntity s WHERE s.id = :id AND s.partyCode = :partyCode")
     int deleteFromParty(@Param("id") long id, @Param("partyCode") String partyCode);
 
+    /** The person leaves one party's staff ("Opuść obsługę"). */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM PartyStaffEntity s WHERE s.partyCode = :partyCode AND s.memberId = :memberId")
+    int deleteMember(@Param("partyCode") String partyCode, @Param("memberId") String memberId);
+
     /** A deleted account: wherever the person worked. */
     @Modifying
     @Transactional
