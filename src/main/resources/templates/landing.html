@@ -42,9 +42,10 @@
             <!--/* The party's staff (V30, the owner 2026-10-09): a bartender pastes the owner's invitation link here — the installed app
                  starts on this page, and a link from an e-mail would open in the browser, with a login of its own. POST /join: a link of
                  a party goes straight to Google's login (StaffController), anything else comes back with ?staffLink=invalid.
-                 A <details>: it opens without a script (CSP). */-->
-            <details class="s2p-staff-login mt-4 text-start" id="staffLogin" th:open="${param.staffLink != null}">
-                <summary class="btn btn-outline-light w-100" th:text="#{landing.staff.summary}">👥 I am on the staff (a bartender, a second DJ)</summary>
+                 A <details>: it opens without a script (CSP). Quiet, a line of text under the DJs' card — the DJs are who the page is for
+                 (the owner, 2026-10-09: the full-width button was too loud, "Jestem z obsługi" too casual). */-->
+            <details class="s2p-staff-login s2p-mw-500 mx-auto mt-4 text-start" id="staffLogin" th:open="${param.staffLink != null}">
+                <summary class="text-center small text-secondary" th:text="#{landing.staff.summary}">Invited to a party's team? Join →</summary>
                 <form th:action="@{/join}" method="post" class="mt-3" id="staffLoginForm">
                     <label for="staffLinkPaste" class="form-label small" th:text="#{landing.staff.label}">Paste the invitation link you got from the owner</label>
                     <input type="text" id="staffLinkPaste" name="link" maxlength="300" autocomplete="off" required

@@ -1,5 +1,5 @@
 // The party's staff (V30). The staff's panel (dashboard-staff.html: a bartender on the owner's party) runs the panel's real scripts
-// without the owner's parts — no settings, no QR code — and works the queue in the background like the owner's; its panel switcher
+// without the owner's settings, lists and staff — with the QR code — and works the queue in the background like the owner's; its panel switcher
 // is a full page load (the other party's panel comes whole). The owner's staff card: "Usuń dostęp" and the invitation link are full
 // page loads too (the list and the link are shown at once), and its "Kopiuj" copies the invitation link.
 
@@ -21,7 +21,8 @@ S2P.scenario({
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' }] },
     run: async function (t) {
         const handled = s2pRecordSubmits();
-        t.check('no settings, no QR code', !document.getElementById('vibeSelect') && !document.getElementById('partyLinkInput')
+        // the QR code is the staff's too (it is on the tables anyway); the settings, the lists and the staff are not
+        t.check('no settings, but the QR code', !document.getElementById('vibeSelect') && !!document.getElementById('partyLinkInput')
             && !document.getElementById('hostListsCard') && !document.getElementById('staffCard'));
         t.check('the banner says whose party it is', !!document.getElementById('staffBanner'));
 

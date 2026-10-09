@@ -22,9 +22,9 @@ import java.util.Optional;
  * index — an access the owner took away ends with the next request), and falls back to the person's own party otherwise.
  * <p>
  * Two kinds of checks for the DJ's endpoints, against IDOR (a guessed 5-character code) and against a staff member doing what only
- * the owner may: {@link #validateAccess} — the owner or the staff (the queue, the history, the party open or closed) — and
- * {@link #validateOwnership} / {@link #getOwnedPartySettings} — the owner alone (the settings, the lists and links, the staff, the
- * QR print, the evening summary, clearing the history).
+ * the owner may: {@link #validateAccess} — the owner or the staff (the queue, the history, the party open or closed, the QR code
+ * and its print) — and {@link #validateOwnership} / {@link #getOwnedPartySettings} — the owner alone (the settings, the lists and
+ * links, the staff, the evening summary, clearing the history).
  */
 @Component
 @RequiredArgsConstructor

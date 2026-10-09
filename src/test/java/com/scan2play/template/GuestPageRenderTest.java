@@ -243,11 +243,11 @@ class GuestPageRenderTest {
         writePreview("landing.html", pages[0]);
 
         assertThat(pages[0]).doesNotContain("??");
-        assertThat(pages[0]).contains("id=\"staffLogin\"", "👥 Jestem z obsługi (barman, drugi DJ)", "action=\"/join\"",
+        assertThat(pages[0]).contains("id=\"staffLogin\"", "Masz zaproszenie do zespołu imprezy? Dołącz →", "action=\"/join\"",
                 "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"");
         assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");
         assertThat(tag(pages[1], "staffLogin")).as("open after a link that did not work").contains("open");
-        assertThat(pages[1]).contains("id=\"staffLinkInvalid\"", "Ten link nie działa — poproś właściciela o nowy.");
+        assertThat(pages[1]).contains("id=\"staffLinkInvalid\"", "Ten link nie działa — poproś organizatora o nowy.");
     }
 
     @Test

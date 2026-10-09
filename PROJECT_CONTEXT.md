@@ -298,14 +298,14 @@ when the person works somewhere. **A link pasted in the app**: the dashboard on 
 the browser, which has a login of its own (an iPhone always) — so under the notifications there is "👥 Masz zaproszenie do obsługi
 innej imprezy? Wklej link" (`POST /dj/join`, `link`: the token at the end of the link, or the token alone; kept in the session like
 one opened by the link, and the panel joins — a page load). **On the landing page** (where the installed app starts for someone
-not logged in), "👥 Jestem z obsługi (barman, drugi DJ)" — a `<details>` with the same field (`POST /join`, public): a party's link goes
+not logged in), "Masz zaproszenie do zespołu imprezy? Dołącz →" — a quiet line of text under the DJs' card, a `<details>` with the same field (`POST /join`, public): a party's link goes
 straight to Google's login with the token in the session, anything else back to `/?staffLink=invalid` ("Ten link nie działa"), before
 any login. **On another party's panel** the account buttons have "🚪 Opuść obsługę" (`POST /dj/staff/leave`: the person's row goes, the
 panel opens their own party — made now for a bartender) in place of "Usuń konto", which read as deleting the party (the owner,
 2026-10-09); the account is deleted from "Mój panel". **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
 (no "Wyczyść historię", no evening summary), "Zakończ / Wznów imprezę", the notifications (their own devices get every new request
-too) and "👥 Obsługujesz imprezę: …"; **not** the settings, the limits, the hosts' lists, the staff, the QR code, the profiles or the
-tip link — hidden in the page (`isOwner`) and refused by the server (`DjSessionHelper.validateOwnership` / `getOwnedPartySettings`:
+too), the QR code with its link and print (2026-10-09: it is on the tables anyway) and "👥 Obsługujesz imprezę: …"; **not** the
+settings, the limits, the hosts' lists, the staff, the profiles or the tip link — hidden in the page (`isOwner`) and refused by the server (`DjSessionHelper.validateOwnership` / `getOwnedPartySettings`:
 403). `#partyCode`, which the scripts read, is outside the owner's parts (inside them the staff's queue was never polled — the
 browser scenario `staff-panel` found it).
 
