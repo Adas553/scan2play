@@ -487,6 +487,9 @@ th[data-sort].sort-desc::after {
 .s2p-mw-800          { max-width: 800px !important; }
 /* the hosts' link (V29) beside its buttons: wide enough to read, the buttons wrap under it when the column is narrow */
 .s2p-host-link       { flex-basis: 18rem; }
+/* the guests' list: the song's number and its name side by side; may shrink, so a long name wraps (under the name, not the number) */
+.s2p-song-line,
+.s2p-song-text       { min-width: 0; }
 .s2p-z-10            { z-index: 10 !important; }
 .s2p-z-toast         { z-index: 1090 !important; }
 .s2p-dashboard-qr    { max-width: 200px !important; height: auto !important; }

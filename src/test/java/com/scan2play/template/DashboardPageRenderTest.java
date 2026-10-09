@@ -47,8 +47,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -119,7 +117,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsQueryService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.repository.PartySettingsRepository.class));
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -332,7 +330,7 @@ class DashboardPageRenderTest {
         com.scan2play.service.PartyStaffService staff = mock(com.scan2play.service.PartyStaffService.class);
         when(staff.join("invite", "kasia", "Kasia")).thenReturn(new com.scan2play.service.PartyStaffService.Joined(
                 com.scan2play.service.PartyStaffService.JoinOutcome.JOINED, pub));
-        when(staff.panelsOf(eq("kasia"), anyBoolean())).thenReturn(List.of(new com.scan2play.service.PartyStaffService.Panel(null, null, true),
+        when(staff.panelsOf("kasia")).thenReturn(List.of(new com.scan2play.service.PartyStaffService.Panel(null, null, true),
                 new com.scan2play.service.PartyStaffService.Panel(PARTY, "Klub Ola", false)));
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("pendingStaffInvitation", "invite");
@@ -348,10 +346,14 @@ class DashboardPageRenderTest {
                 "id=\"staffBanner\"", "👥 Obsługujesz imprezę: Klub Ola — kolejka i historia.",
                 "id=\"panelSwitcher\"", "action=\"/dj/panel\"", ">🎧 Mój panel<", ">👥 Klub Ola<", "name=\"party\" value=\"HARN1\"",
                 "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "id=\"pushToggle\"",
-                "action=\"/dj/end-party\"");
+                "action=\"/dj/end-party\"",
+                // a link pasted in the app (its browser has a login of its own): for the staff too
+                "id=\"joinStaffForm\"", "action=\"/dj/join\"", "Masz zaproszenie do obsługi innej imprezy? Wklej link");
         assertThat(html).as("the owner's: the settings, the limits, the lists, the QR code, the profiles, the staff")
                 .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
-                        "id=\"staffCard\"", "id=\"partyLinkInput\"", "action=\"/dj/dashboard/tip-link\"", "/join/", "/h/",
+                        "id=\"staffCard\"", "id=\"partyLinkInput\"", "action=\"/dj/dashboard/tip-link\"",
+                        // the owner's links (the paste field's placeholder shows "/join/…", so the links by their fields and tokens)
+                        "id=\"staffLinkInput\"", "Inv_123-xyz", "id=\"hostLinkInput\"", "/h/",
                         "class=\"col-md-8\"");
         String current = html.substring(html.indexOf("name=\"party\" value=\"HARN1\""));
         assertThat(current.substring(0, current.indexOf("</button>"))).as("the panel open now is lit").contains("aria-current=\"page\"");
@@ -412,7 +414,7 @@ class DashboardPageRenderTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.getPartySettings(any(), any())).thenReturn(party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.repository.PartySettingsRepository.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());

@@ -7,6 +7,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-09, afternoon — released before (PR #32, `main` = `f57047d`, v30 applied, CI green, two people joined the staff of
+  14FMF); now on the branch, not committed yet:** "🎧 Mój panel" always offered (the owner joined with a second account from
+  the installed app and had no way to make a party of their own — the button showed only to those who had one), and an
+  invitation link pasted in the app (`POST /dj/join`; the Home Screen app opens e-mail links in the browser, with its own
+  login). Tests: 488 unit, 45 database, 52 browser (`staff-panel` seen red without the `forms.js` change). Then the guests'
+  list: the song's number a column of its own, a long name wraps under the name, not under "#18" (`guest-list-number-column`,
+  seen red with the old row) — 53 browser.
 - **2026-10-09, evening — not committed yet:** the panel's settings fold under "⚙️ Ustawienia, klimat i kod QR" **on a computer
   too** (the owner: there are many of them now); `.s2p-phone-settings` is `.s2p-settings`; folded, the heading's column takes the
   whole width, unfolded the vibe's box goes under the logo. Scenarios `requests-only-dashboard` (folded on a wide screen) and

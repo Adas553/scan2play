@@ -80,6 +80,23 @@ class StaffControllerTest {
         assertThat(session.getAttribute(StaffController.SESSION_PENDING_INVITATION)).isNull();
     }
 
+    /** A link pasted in the app (its browser has a login of its own): the token waits for the panel, which joins. */
+    @Test
+    void aPastedLink_keepsItsTokenForThePanel_whateverShapeItIsPastedIn() throws Exception {
+        String[][] pasted = {
+                {"https://www.scan2play.com.pl/join/AbC_12-x", "AbC_12-x"},
+                {"  http://localhost:8080/join/AbC_12-x/  ", "AbC_12-x"},
+                {"AbC_12-x", "AbC_12-x"},
+                {"https://evil.example/whatever?x=1", "-"},
+        };
+        for (String[] link : pasted) {
+            MockHttpSession session = new MockHttpSession();
+            mockMvc.perform(post("/dj/join").param("link", link[0]).principal(user("kasia")).session(session))
+                    .andExpect(redirectedUrl("/dj/dashboard"));
+            assertThat(session.getAttribute(StaffController.SESSION_PENDING_INVITATION)).as(link[0]).isEqualTo(link[1]);
+        }
+    }
+
     @Test
     void theSwitcher_opensAPartyTheyWorkAt_orTheirOwnPanel() throws Exception {
         mockMvc.perform(post("/dj/panel").param("party", "PUB01").principal(user("kasia")).session(new MockHttpSession()))

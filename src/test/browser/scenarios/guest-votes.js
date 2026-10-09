@@ -50,6 +50,25 @@
         }
     });
 
+    // The owner (2026-10-09): "#18 Dawid Podsiadło - Let You / Down" — the second line of a long name went under the number. The number
+    // is a column of its own: every line of the name starts where the name does, right of the number.
+    S2P.scenario({
+        name: 'guest-list-number-column',
+        title: 'the guest page: a long song name wraps under the name, not under its number "#18"',
+        page: 'guest',
+        viewport: '390,844',
+        run: async function (t) {
+            const row = rowOf('Newest');
+            const name = row.querySelector('.s2p-song-name');
+            name.textContent = 'Dawid Podsiadło - Let You Down (a long name that takes two lines or more)';
+            const lines = Array.from(name.getClientRects());
+            const number = row.querySelector('.s2p-song-number').getBoundingClientRect();
+            t.check('the name takes more than one line', lines.length > 1);
+            t.step('every line starts where the name does', new Set(lines.map(function (r) { return Math.round(r.left); })).size, 1);
+            t.check('right of the number', lines.every(function (r) { return r.left >= number.right; }));
+        }
+    });
+
     // The installed app takes every address of the site: a DJ testing their QR code landed on the guest page in it, with no address
     // bar and no "back" (the owner, 2026-10-08). "← Twój panel DJ-a" is there for the app only — a browser has its own way back.
     S2P.scenario({

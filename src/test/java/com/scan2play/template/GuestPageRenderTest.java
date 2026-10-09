@@ -123,11 +123,16 @@ class GuestPageRenderTest {
         return SongRequestEntity.builder().id(id).songName(name).build();
     }
 
+    /** A song with its number at the party (V28): "#18" before it on the list. */
+    private static SongRequestEntity numbered(long id, String name, int number) {
+        return SongRequestEntity.builder().id(id).songName(name).requestNumber(number).build();
+    }
+
     /** No order to tell (the DJ plays from their own software): the guests' requests, unnumbered, and the guest's own "waits". */
     @Test
     void theGuestsRequests_areListed_andTheGuestsOwnWaitsForTheDj() {
         // with who plays and the DJ's three profiles: the browser tests load the page — the icons too — under the real CSP
-        String html = render(PL, Map.of("guestQueue", queue(List.of(song(3, "Newest"), song(2, "Mine"), song(1, "Oldest")),
+        String html = render(PL, Map.of("guestQueue", queue(List.of(numbered(3, "Newest", 18), numbered(2, "Mine", 17), numbered(1, "Oldest", 16)),
                 Set.of(2L), "Mine"), "djName", "DJ Koko", "instagramUrl", "https://www.instagram.com/dj.koko/",
                 "facebookUrl", "https://www.facebook.com/djkoko", "tiktokUrl", "https://www.tiktok.com/@dj_koko"));
         writePreview("index-with-queue.html", html);
