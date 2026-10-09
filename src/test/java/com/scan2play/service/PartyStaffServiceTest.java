@@ -100,10 +100,10 @@ class PartyStaffServiceTest {
         when(query.getSettings("PUB01")).thenReturn(PartySettingsEntity.builder().partyCode("PUB01").ownerId("pub").build());
         when(query.getSettings("GONE1")).thenThrow(new IllegalArgumentException("deleted"));
 
-        assertThat(service.panelsOf("kasia", true)).containsExactly(new PartyStaffService.Panel(null, null, true),
+        assertThat(service.panelsOf("kasia")).containsExactly(new PartyStaffService.Panel(null, null, true),
                 new PartyStaffService.Panel(PARTY, "DJ Koko", false), new PartyStaffService.Panel("PUB01", "PUB01", false));
-        assertThat(service.panelsOf("kasia", false)).as("a bartender without a party of their own").hasSize(2)
-                .noneMatch(PartyStaffService.Panel::own);
+        // no party of their own yet (a bartender): "Mój panel" all the same — it makes one (2026-10-09: without it they never could)
+        assertThat(service.panelsOf("ola")).containsExactly(new PartyStaffService.Panel(null, null, true));
     }
 
     @Test

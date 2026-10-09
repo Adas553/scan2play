@@ -61,7 +61,7 @@ class DjDashboardControllerHistoryTest {
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class), sessionHelper,
                 historyService,
-                mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.repository.PartySettingsRepository.class))).build();
+                mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");

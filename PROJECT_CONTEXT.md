@@ -292,8 +292,12 @@ the person (`DjDashboardController.joinPendingInvitation` → `PartyStaffService
 opens that party: "👥 Dołączono do obsługi: …". **The panel's party** is kept in the session (`DjSessionHelper`): every request
 checks that the person still may open it (the owner without a query, a staff member by the unique index — an access taken away
 ends with the next request; the panel falls back to their own party). A person without a party of their own who works at one (a
-bartender) opens it at once and gets no party made until "🎧 Mój panel". The panel switcher (`POST /dj/panel`, a page load) shows
-when the person works somewhere. **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
+bartender) opens it at once and gets no party made until "🎧 Mój panel" — which the switcher always offers (2026-10-09: offered
+only to those with a party, a person who joined first could never make one). The panel switcher (`POST /dj/panel`, a page load) shows
+when the person works somewhere. **A link pasted in the app**: the dashboard on a phone's Home Screen opens a link from an e-mail in
+the browser, which has a login of its own (an iPhone always) — so under the notifications there is "👥 Masz zaproszenie do obsługi
+innej imprezy? Wklej link" (`POST /dj/join`, `link`: the token at the end of the link, or the token alone; kept in the session like
+one opened by the link, and the panel joins — a page load). **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
 (no "Wyczyść historię", no evening summary), "Zakończ / Wznów imprezę", the notifications (their own devices get every new request
 too) and "👥 Obsługujesz imprezę: …"; **not** the settings, the limits, the hosts' lists, the staff, the QR code, the profiles or the
 tip link — hidden in the page (`isOwner`) and refused by the server (`DjSessionHelper.validateOwnership` / `getOwnedPartySettings`:
@@ -659,6 +663,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/host-lists` | `blocked`, `wanted`: the hosts' lists (V29, `SongList.tidy`; empty clears) |
 | POST | `/dj/dashboard/staff-link` | `link` = `new` / `off`: the staff's invitation link (V30; the owner's) |
 | POST | `/dj/dashboard/staff-remove` | `id`: one person's access taken away (V30; the owner's, a row of their own party only) |
+| POST | `/dj/join` | `link`: an invitation link pasted in the app — its token waits in the session, the panel joins (V30) |
 | POST | `/dj/panel` | `party` (none = "Mój panel", made now for a bartender): the panel's party (V30; 403 for a party the person does not work at) |
 | POST | `/dj/dashboard/host-link` | `link` = `new` (a new secret: the old link dead) / `off` (no link); anything else 400 |
 | POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |

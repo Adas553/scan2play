@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import static com.scan2play.controller.ViewAttributes.*;
 
 /**
@@ -47,6 +50,22 @@ public class StaffController {
         model.addAttribute(JOIN_PARTY_NAME, PartyStaffService.nameOf(party));
         model.addAttribute(JOIN_URL, loggedIn ? "/dj/dashboard" : "/start");
         return "join";
+    }
+
+    /** The token at the end of a pasted invitation link ("https://…/join/AbC_1", "…/join/AbC_1/", or the token alone). */
+    private static final Pattern PASTED_LINK = Pattern.compile("(?:.*/join/)?([A-Za-z0-9_-]{1,32})/?");
+
+    /**
+     * An invitation link pasted in the panel (V30): the app on a phone's Home Screen opens a link from an e-mail in the browser, which
+     * has a login of its own — so the person pastes it in the app instead. The token waits in the session like one opened by the link,
+     * and the panel joins (or says the link no longer works).
+     */
+    @PostMapping("/dj/join")
+    public String joinByPastedLink(@RequestParam String link, HttpSession session) {
+        Matcher token = PASTED_LINK.matcher(link.strip());
+        // something else than a link of ours: kept as it is, so the panel says the link does not work
+        session.setAttribute(SESSION_PENDING_INVITATION, token.matches() ? token.group(1) : "-");
+        return REDIRECT_DASHBOARD;
     }
 
     /** Opens a panel: {@code party} = a party the person works at (or owns); none = the person's own ("Mój panel"). */

@@ -123,14 +123,13 @@ public class PartyStaffService {
     }
 
     /**
-     * The panels the person may switch between: their own first (when they have one, or always for the owner of the current party),
-     * then the parties they work at, named as the guests see who plays ("DJ Koko") or by the code.
+     * The panels the person may switch between: their own first — always, also for someone who has no party yet (a bartender): it
+     * is made when they open it ("🎧 Mój panel"; 2026-10-09, without it such a person could never make one) — then the parties they
+     * work at, named as the guests see who plays ("DJ Koko") or by the code.
      */
-    public List<Panel> panelsOf(String userId, boolean hasOwnParty) {
+    public List<Panel> panelsOf(String userId) {
         List<Panel> panels = new ArrayList<>();
-        if (hasOwnParty) {
-            panels.add(new Panel(null, null, true));
-        }
+        panels.add(new Panel(null, null, true));
         for (PartySettingsEntity party : partiesOf(userId)) {
             panels.add(new Panel(party.getPartyCode(), nameOf(party), false));
         }

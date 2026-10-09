@@ -35,6 +35,13 @@ S2P.scenario({
         const own = Array.from(document.querySelectorAll('#panelSwitcher form')).find(function (f) { return !f.querySelector('input[name="party"]'); });
         own.querySelector('button').click();
         t.step('"Mój panel" is a page load (not sent in the background)', handled.shift(), ['/dj/panel', false]);
+
+        // an invitation pasted in the app (its browser has a login of its own): a page load, the panel of the other party comes whole
+        document.getElementById('settingsToggle').click();   // under "⚙️ Ustawienia…", with the notifications
+        t.check('the field shows once the settings are unfolded', document.getElementById('joinLinkInput').getClientRects().length > 0);
+        document.getElementById('joinLinkInput').value = 'https://www.scan2play.com.pl/join/AbC_12-x';
+        document.querySelector('#joinStaffForm button[type="submit"]').click();
+        t.step('a pasted invitation is a page load (not sent in the background)', handled.shift(), ['/dj/join', false]);
     }
 });
 

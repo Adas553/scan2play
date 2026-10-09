@@ -152,6 +152,18 @@
                     <div class="text-warning small mt-1 d-none" data-push-state="unsupported" th:text="#{dashboard.push.unsupported}">This browser does not support notifications.</div>
                     <div class="text-danger small mt-1 d-none" data-push-state="error" th:text="#{dashboard.push.error}">Could not switch notifications on.</div>
                 </div>
+                <!--/* An invitation to another party's staff pasted here (V30): the app on the Home Screen opens a link from an e-mail in
+                     the browser, which has a login of its own (an iPhone always). POST /dj/join keeps the token for the panel, which joins
+                     as after /join/{token} — a page load (forms.js leaves /dj/join alone). For the owner and the staff alike. */-->
+                <form th:action="@{/dj/join}" method="POST" class="border-top border-secondary mt-3 pt-3 m-0" id="joinStaffForm">
+                    <label for="joinLinkInput" class="form-label text-light small mb-1" th:text="#{dashboard.join.label}">👥 Got an invitation link? Paste it</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="joinLinkInput" name="link" maxlength="300" autocomplete="off" required
+                               class="form-control form-control-sm bg-black text-light border-secondary"
+                               th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
+                        <button type="submit" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{dashboard.join.button}">Join</button>
+                    </div>
+                </form>
             </div>
 
             <div th:if="${isOwner}" class="card bg-dark border-secondary mb-4 p-3 shadow-sm s2p-settings">
