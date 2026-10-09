@@ -42,6 +42,11 @@ S2P.scenario({
         document.getElementById('joinLinkInput').value = 'https://www.scan2play.com.pl/join/AbC_12-x';
         document.querySelector('#joinStaffForm button[type="submit"]').click();
         t.step('a pasted invitation is a page load (not sent in the background)', handled.shift(), ['/dj/join', false]);
+
+        // "🚪 Opuść obsługę" in place of "Usuń konto" (it read as deleting the party): a page load, their own panel comes whole
+        t.check('no "Usuń konto" on another party\'s panel', !document.querySelector('form[action="/dj/delete-account"]'));
+        document.getElementById('leaveStaffBtn').click();
+        t.step('leaving the staff is a page load (not sent in the background)', handled.shift(), ['/dj/staff/leave', false]);
     }
 });
 

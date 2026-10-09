@@ -297,7 +297,12 @@ only to those with a party, a person who joined first could never make one). The
 when the person works somewhere. **A link pasted in the app**: the dashboard on a phone's Home Screen opens a link from an e-mail in
 the browser, which has a login of its own (an iPhone always) — so under the notifications there is "👥 Masz zaproszenie do obsługi
 innej imprezy? Wklej link" (`POST /dj/join`, `link`: the token at the end of the link, or the token alone; kept in the session like
-one opened by the link, and the panel joins — a page load). **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
+one opened by the link, and the panel joins — a page load). **On the landing page** (where the installed app starts for someone
+not logged in), "👥 Jestem z obsługi (barman, drugi DJ)" — a `<details>` with the same field (`POST /join`, public): a party's link goes
+straight to Google's login with the token in the session, anything else back to `/?staffLink=invalid` ("Ten link nie działa"), before
+any login. **On another party's panel** the account buttons have "🚪 Opuść obsługę" (`POST /dj/staff/leave`: the person's row goes, the
+panel opens their own party — made now for a bartender) in place of "Usuń konto", which read as deleting the party (the owner,
+2026-10-09); the account is deleted from "Mój panel". **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
 (no "Wyczyść historię", no evening summary), "Zakończ / Wznów imprezę", the notifications (their own devices get every new request
 too) and "👥 Obsługujesz imprezę: …"; **not** the settings, the limits, the hosts' lists, the staff, the QR code, the profiles or the
 tip link — hidden in the page (`isOwner`) and refused by the server (`DjSessionHelper.validateOwnership` / `getOwnedPartySettings`:
@@ -486,7 +491,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "🔍 Podejrzyj" is a p
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join/*` (V30), `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
 under the deploy's version), `/images/**`, `/webjars/**`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party (IDOR): what
 only the owner may do by `DjSessionHelper.validateOwnership` / `getOwnedPartySettings`, the queue and the history by `validateAccess` —
@@ -641,6 +646,7 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/request` | a request: `songName` |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one |
+| POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid` |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, keeps the token in the session for the login; 404 for an unknown or old one |
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" |
 | GET | `/privacy`, `/terms` | legal pages |
@@ -664,6 +670,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/staff-link` | `link` = `new` / `off`: the staff's invitation link (V30; the owner's) |
 | POST | `/dj/dashboard/staff-remove` | `id`: one person's access taken away (V30; the owner's, a row of their own party only) |
 | POST | `/dj/join` | `link`: an invitation link pasted in the app — its token waits in the session, the panel joins (V30) |
+| POST | `/dj/staff/leave` | "🚪 Opuść obsługę": the person leaves the staff of the panel's party, their own panel opens (V30; nothing for the owner) |
 | POST | `/dj/panel` | `party` (none = "Mój panel", made now for a bartender): the panel's party (V30; 403 for a party the person does not work at) |
 | POST | `/dj/dashboard/host-link` | `link` = `new` (a new secret: the old link dead) / `off` (no link); anything else 400 |
 | POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |

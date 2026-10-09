@@ -307,6 +307,8 @@ class DashboardPageRenderTest {
                         "value=\"http://127.0.0.1:8080/join/Inv_123-xyzInv_123-xyz\" id=\"staffLinkInput\"",
                         "data-copy-target=\"staffLinkInput\"", "action=\"/dj/dashboard/staff-link\"")
                 .doesNotContain("id=\"panelSwitcher\"", "id=\"staffBanner\"", "id=\"staffJoinNote\"");
+        assertThat(html).as("the owner deletes their account; leaving a staff is not theirs")
+                .contains("action=\"/dj/delete-account\"").doesNotContain("id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"");
         write("dashboard.html", html);
     }
 
@@ -348,7 +350,10 @@ class DashboardPageRenderTest {
                 "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "id=\"pushToggle\"",
                 "action=\"/dj/end-party\"",
                 // a link pasted in the app (its browser has a login of its own): for the staff too
-                "id=\"joinStaffForm\"", "action=\"/dj/join\"", "Masz zaproszenie do obsługi innej imprezy? Wklej link");
+                "id=\"joinStaffForm\"", "action=\"/dj/join\"", "Masz zaproszenie do obsługi innej imprezy? Wklej link",
+                // not "Usuń konto": on the owner's party it read as deleting the party (the owner, 2026-10-09)
+                "id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"", "Opuścić obsługę tej imprezy?");
+        assertThat(html).doesNotContain("action=\"/dj/delete-account\"");
         assertThat(html).as("the owner's: the settings, the limits, the lists, the QR code, the profiles, the staff")
                 .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
                         "id=\"staffCard\"", "id=\"partyLinkInput\"", "action=\"/dj/dashboard/tip-link\"",

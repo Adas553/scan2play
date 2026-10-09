@@ -11,7 +11,7 @@ import { csrfHeaders, showPartyActive } from './common.js';
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account, the hosts' link, the staff's link and access, the panel switcher and a pasted invitation (V30) —
+// Excluded: logout, delete-account, the hosts' link, the staff's link and access, the panel switcher, a pasted invitation and leaving a staff (V30) —
 // a page reload / redirect is expected: the new link, the list or the other party's panel is shown at once.
 // ==========================================================================
 
@@ -29,7 +29,7 @@ import { csrfHeaders, showPartyActive } from './common.js';
         const action = form.action || '';
         if (action.includes('/logout') || action.includes('/delete-account') || action.includes('/host-link')
             || action.includes('/staff-link') || action.includes('/staff-remove') || action.includes('/dj/panel')
-            || action.includes('/dj/join')) return;
+            || action.includes('/dj/join') || action.includes('/dj/staff/leave')) return;
 
         e.preventDefault();
 
