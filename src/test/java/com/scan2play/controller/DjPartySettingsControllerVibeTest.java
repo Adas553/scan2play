@@ -47,7 +47,7 @@ class DjPartySettingsControllerVibeTest {
         settingsService = mock(PartySettingsCommandService.class);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
-                settingsService, mock(AccountDeletionService.class), sessionHelper)).build();
+                settingsService, mock(AccountDeletionService.class), sessionHelper, mock(com.scan2play.service.PartyStaffService.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");

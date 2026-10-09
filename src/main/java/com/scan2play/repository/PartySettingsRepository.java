@@ -24,4 +24,10 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
      * @return An Optional containing the PartySettingsEntity if found.
      */
     Optional<PartySettingsEntity> findByOwnerId(String ownerId);
+
+    /** The party whose hosts' link (V29, {@code /h/{token}}) has this secret — the unique index of the column. */
+    Optional<PartySettingsEntity> findByHostToken(String hostToken);
+
+    /** The party whose staff invitation link (V30, {@code /join/{token}}) has this secret — the unique index of the column. */
+    Optional<PartySettingsEntity> findByStaffToken(String staffToken);
 }

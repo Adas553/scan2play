@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{host.title}">The hosts' list - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <!-- a secret link (HostController): no search engine, and no Referer that would carry it to another site -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* The hosts' page (V29, /h/{token}): the couple, the host or the pub's owner write the songs not to play and the songs to play,
+     one per line — the DJ's panel shows the same lists. No account: the DJ gave them this link. */-->
+<body class="page-guest">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500">
+        <div class="text-center mb-3">
+            <h1 class="display-6 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
+            <h2 class="h4 fw-bold mt-2" th:text="#{host.heading}">Your list for the DJ</h2>
+            <p th:if="${djName != null}" id="djName" class="fw-bold mb-1" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</p>
+            <p class="text-secondary mb-0" th:text="#{host.intro}">Write the songs or artists, one per line.</p>
+        </div>
+
+        <div th:if="${hostSaved}" id="hostSaved" class="alert alert-success text-center fw-bold py-2" role="status"
+             th:text="#{host.saved}">✓ Saved — the DJ sees your list</div>
+
+        <form th:action="@{/h/{token}(token=${hostToken})}" method="post" class="m-0" id="hostForm">
+            <label for="blocked" class="form-label fw-bold" th:text="#{host.blocked.label}">🚫 Don't play</label>
+            <p class="small text-secondary mb-1" th:text="#{host.blocked.help}">A guest who asks for one hears that you asked the DJ not to play it.</p>
+            <textarea id="blocked" name="blocked" rows="6" maxlength="16000" class="form-control mb-3"
+                      th:text="${hostBlocked}" th:placeholder="#{host.blocked.placeholder}"></textarea>
+
+            <label for="wanted" class="form-label fw-bold" th:text="#{host.wanted.label}">⭐ Must play</label>
+            <p class="small text-secondary mb-1" th:text="#{host.wanted.help}">A guest's request for one always reaches the DJ, marked ⭐.</p>
+            <textarea id="wanted" name="wanted" rows="6" maxlength="16000" class="form-control mb-3"
+                      th:text="${hostWanted}" th:placeholder="#{host.wanted.placeholder}"></textarea>
+
+            <button type="submit" class="btn btn-warning fw-bold w-100" th:text="#{host.save}">Save</button>
+        </form>
+        <p class="small text-secondary text-center mt-3 mb-0" th:text="#{host.footer}">Up to 100 lines on each list. You can come back and change it any time.</p>
+    </div>
+</div>
+</body>
+</html>

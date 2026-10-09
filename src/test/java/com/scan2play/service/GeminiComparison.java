@@ -220,7 +220,7 @@ public final class GeminiComparison {
                 }
                 : real;
         SongEvaluationService service = new SongEvaluationService(null, new ObjectMapper(), null, null, new StaticMessageSource(),
-                loader, null, null, null);
+                loader, null, null, null, null);
         ReflectionTestUtils.setField(service, "modelName", "gemini-2.5-flash");
         service.init();
         return service;

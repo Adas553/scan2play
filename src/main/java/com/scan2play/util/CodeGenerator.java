@@ -1,6 +1,7 @@
 package com.scan2play.util;
 
 import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Random;
 
 public final class CodeGenerator {
@@ -24,5 +25,15 @@ public final class CodeGenerator {
             sb.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
         }
         return sb.toString();
+    }
+
+    /**
+     * A secret for a link that opens without an account — the hosts' lists (V29, {@code /h/{token}}): 128 random bits as 22
+     * characters of base64url, no one guesses it.
+     */
+    public static String generateSecret() {
+        byte[] bytes = new byte[16];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

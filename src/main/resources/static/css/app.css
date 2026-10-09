@@ -485,6 +485,8 @@ th[data-sort].sort-desc::after {
 .s2p-mw-350          { max-width: 350px !important; }
 .s2p-mw-500          { max-width: 500px !important; }
 .s2p-mw-800          { max-width: 800px !important; }
+/* the hosts' link (V29) beside its buttons: wide enough to read, the buttons wrap under it when the column is narrow */
+.s2p-host-link       { flex-basis: 18rem; }
 .s2p-z-10            { z-index: 10 !important; }
 .s2p-z-toast         { z-index: 1090 !important; }
 .s2p-dashboard-qr    { max-width: 200px !important; height: auto !important; }
@@ -524,11 +526,11 @@ th[data-sort].sort-desc::after {
     z-index: 1080;
 }
 
-/* --- The dashboard on a phone (dashboard.html; the DJ in the booth, phone in hand): the settings, the vibe and the QR code
-       (.s2p-phone-settings) fold under one button, settings-toggle.js opens them (<body class="s2p-settings-open">), so the queue
-       comes right under the heading — and every waiting request is a card with big buttons. Folded by CSS alone, so nothing jumps while the page loads. The polled <tbody> is
+/* --- The dashboard's settings, the vibe, the lists, the staff and the QR code (.s2p-settings) fold under one button on every
+       screen (the owner, 2026-10-09: on a phone first, on a computer too once there were many of them); settings-toggle.js opens
+       them (<body class="s2p-settings-open">), so the queue comes right under the heading.
+       On a phone (dashboard.html; the DJ in the booth, phone in hand) every waiting request is a card with big buttons. Folded by CSS alone, so nothing jumps while the page loads. The polled <tbody> is
        replaced every 3 s; these rules style whatever it brings. --- */
-.s2p-settings-toggle { display: none !important; }
 /* its own colours: Bootstrap's outline button fills white on hover and focus, and on a phone the tap leaves it so until the next
    tap elsewhere; the keyboard's focus ring stays */
 .s2p-settings-toggle {
@@ -539,11 +541,19 @@ th[data-sort].sort-desc::after {
     --bs-btn-active-color: #f8f9fa;
     --bs-btn-active-border-color: #f8f9fa;
 }
+.page-dj .s2p-settings-toggle::after { content: " \25BE"; }
+.page-dj.s2p-settings-open .s2p-settings-toggle::after { content: " \25B4"; }
+.page-dj:not(.s2p-settings-open) .s2p-settings { display: none !important; }
+/* on a wide screen the button is as wide as its words, beside the logo — on a phone the whole width */
+@media (min-width: 768px) {
+    .page-dj .s2p-settings-toggle { width: auto !important; flex-shrink: 0; }
+    /* folded, the QR code's column is gone: the heading's column takes the whole width, the button goes to the right edge */
+    .page-dj:not(.s2p-settings-open) .s2p-panel-main { flex: 0 0 100%; max-width: 100%; }
+    /* unfolded, the vibe's box goes under the logo and the button: beside them it was squeezed */
+    .page-dj.s2p-settings-open .s2p-panel-head { flex-wrap: wrap; }
+    .page-dj.s2p-settings-open .s2p-panel-head > .s2p-settings { flex-basis: 100%; }
+}
 @media (max-width: 767.98px) {
-    .page-dj .s2p-settings-toggle { display: block !important; }
-    .page-dj .s2p-settings-toggle::after { content: " \25BE"; }
-    .page-dj.s2p-settings-open .s2p-settings-toggle::after { content: " \25B4"; }
-    .page-dj:not(.s2p-settings-open) .s2p-phone-settings { display: none !important; }
 
     /* the list scrolls with the page: a box of its own inside a phone's screen leaves too little to see */
     .page-dj #queueList .list-scroll { max-height: none; overflow: visible; }

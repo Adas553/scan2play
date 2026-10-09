@@ -3,6 +3,7 @@ package com.scan2play.entity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.VibeType;
 import com.scan2play.util.CodeGenerator;
+import com.scan2play.util.SongList;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -83,6 +84,27 @@ public class PartySettingsEntity {
      */
     @Column(length = LINK_MAX)
     private String tipUrl;
+
+    /**
+     * The hosts' lists (V29), one song or artist per line as {@code util.SongList} keeps them; null = empty. A request for a song
+     * of {@code hostBlocked} ("🚫 nie grać") is refused before it reaches the DJ; one of {@code hostWanted} ("⭐ koniecznie") is
+     * accepted even against the AI's verdict and marked in the queue.
+     */
+    @Column(length = SongList.TEXT_MAX)
+    private String hostBlocked;
+
+    @Column(length = SongList.TEXT_MAX)
+    private String hostWanted;
+
+    /** The secret of the hosts' link ({@code /h/{token}}, V29): they fill the lists without an account; null = no link. */
+    @Column(length = 32, unique = true)
+    @ToString.Exclude
+    private String hostToken;
+
+    /** The secret of the staff's invitation link ({@code /join/{token}}, V30): a bartender joins with it; null = no link. */
+    @Column(length = 32, unique = true)
+    @ToString.Exclude
+    private String staffToken;
 
     /** How the AI words its comment to the guest (V22); {@link CommentStyle#CLASSIC} adds nothing to the prompt. */
     @Builder.Default
