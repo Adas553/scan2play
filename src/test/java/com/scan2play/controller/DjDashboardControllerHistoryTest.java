@@ -61,13 +61,13 @@ class DjDashboardControllerHistoryTest {
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
                 mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class), sessionHelper,
                 historyService,
-                mock(GuestRequestLimiter.class), mock(PushNotificationService.class))).build();
+                mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.repository.PartySettingsRepository.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
         session = new MockHttpSession();
         when(sessionHelper.getPartySettings(token, session))
-                .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
+                .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").build());
     }
 
     private static List<HistoryEntry> entries(int count) {
@@ -255,14 +255,14 @@ class DjDashboardControllerHistoryTest {
 
         mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).principal(token).session(session));
 
-        verify(sessionHelper).validateOwnership(PARTY, token, session);
+        verify(sessionHelper).validateAccess(PARTY, token, session);   // the owner or the staff (V30)
     }
 
     @Test
     @DisplayName("a party owned by someone else is rejected and no history is read")
     void shouldNotReadTheHistory_whenPartyBelongsToSomeoneElse() {
         doThrow(new AccessDeniedException("You do not own party: OTHER"))
-                .when(sessionHelper).validateOwnership(anyString(), any(), any());
+                .when(sessionHelper).validateAccess(anyString(), any(), any());
 
         assertThatThrownBy(() -> mockMvc.perform(get("/dj/history-view/fragment")
                         .param("partyCode", "OTHER").principal(token).session(session)))

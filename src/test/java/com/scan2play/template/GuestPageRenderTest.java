@@ -177,6 +177,49 @@ class GuestPageRenderTest {
         assertThat(engine.process("fragments/guest-queue", Set.of("guestQueue"), context).strip()).isEmpty();
     }
 
+    /** The hosts' page (V29, /h/{token}): both lists, the form to its own secret address, no Referer and no search engine. */
+    @Test
+    void theHostsPage_showsBothLists_andPostsToItsLink() {
+        for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            MockServletContext servletContext = new MockServletContext();
+            WebContext context = new WebContext(
+                    JakartaServletWebApplication.buildApplication(servletContext)
+                            .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
+            context.setVariables(Map.of("hostToken", "AbC_123-xyz", "djName", "DJ Koko", "hostBlocked", "Akcent\nBaby Shark",
+                    "hostWanted", "Hej sokoły", "hostSaved", true));
+            context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+            String html = engine.process("host", context);
+            if (locale == PL) {
+                writePreview("host.html", html);
+                assertThat(html).contains("🚫 Nie grać", "⭐ Koniecznie zagrać", "✓ Zapisane", "🎧 Gra: DJ Koko");
+            }
+
+            assertThat(html).doesNotContain("??");
+            assertThat(html).contains("action=\"/h/AbC_123-xyz\"", "method=\"post\"", "content=\"no-referrer\"", "noindex");
+            assertThat(html).contains(">Akcent\nBaby Shark</textarea>", ">Hej sokoły</textarea>");
+        }
+    }
+
+    /** The staff's invitation (V30, /join/{token}): the party named, one button through the login, no Referer, no search engine. */
+    @Test
+    void theInvitationPage_namesTheParty_andLeadsToTheLogin() {
+        for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            MockServletContext servletContext = new MockServletContext();
+            WebContext context = new WebContext(
+                    JakartaServletWebApplication.buildApplication(servletContext)
+                            .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
+            context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinUrl", "/start"));
+            String html = engine.process("join", context);
+            if (locale == PL) {
+                writePreview("join.html", html);
+                assertThat(html).contains("👥 Zaproszenie do obsługi: Klub Ola", ">Zaloguj się przez Google i dołącz<");
+            }
+
+            assertThat(html).doesNotContain("??");
+            assertThat(html).contains("id=\"joinButton\"", "href=\"/start\"", "content=\"no-referrer\"", "noindex");
+        }
+    }
+
     @Test
     void anEmptyQueue_showsNoList() {
         String html = render(PL, Map.of());
@@ -221,7 +264,9 @@ class GuestPageRenderTest {
 
         String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title",
                 5L, 1, false, 27), "https://www.paypal.com/paypalme/djkoko");
-        assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"", "paypal.com/paypalme/djkoko · prosto do DJ-a",
+        // the link with "prosto do DJ-a" only on the party page: under a request one line fewer
+        assertThat(accepted).doesNotContain("prosto do DJ-a", "paypal.com/paypalme/djkoko ·");
+        assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"",
                 "id=\"requestNumber\"", "Numer Twojej piosenki: #27", "Jeśli chcesz, wpisz #27 w tytule wpłaty — DJ będzie wiedział, za którą piosenkę");
         String rejected = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie dziś", "Nirvana - Lithium", 7, "title"),
                 "https://revolut.me/djkoko");

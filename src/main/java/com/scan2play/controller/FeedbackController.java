@@ -40,7 +40,7 @@ public class FeedbackController {
             OAuth2AuthenticationToken authentication,
             HttpSession session) {
 
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.validateAccess(partyCode, authentication, session);   // the owner or the staff (V30)
 
         if (message == null || message.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Message cannot be empty"));
@@ -49,7 +49,7 @@ public class FeedbackController {
             return ResponseEntity.badRequest().body(Map.of("error", "Message too long (max 2000 characters)"));
         }
 
-        String ownerId = authentication.getName();   // /dj/** needs the login; validateOwnership has used it already
+        String ownerId = authentication.getName();   // /dj/** needs the login; validateAccess has used it already
 
         FeedbackEntity feedback = FeedbackEntity.builder()
                 .partyCode(partyCode)

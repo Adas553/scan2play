@@ -174,11 +174,12 @@
 <!--/* The DJ's tip link (V27) on the party page and under an accepted request: only an address util/TipLinks kept, on a service that
      takes tips. The guests pay there, straight to the DJ — Scan2Play never sees the money, and the line under the button says so.
      What to write in the payment's title (V28): the song's number — "#27" under a request, "the song's number from the list" on the
-     party page (number null); the DJ finds the song by it and counts the tip. */-->
-<p th:fragment="tip(tipUrl, number)" th:if="${tipUrl != null}" id="djTip" class="mb-2">
+     party page (number null); the DJ finds the song by it and counts the tip. The link with "straight to the DJ" (withNote) only
+     on the party page: under a request it was one line too many (the owner, 2026-10-08). */-->
+<p th:fragment="tip(tipUrl, number, withNote)" th:if="${tipUrl != null}" id="djTip" class="mb-2">
     <a th:href="${tipUrl}" target="_blank" rel="noopener noreferrer nofollow" id="tipLink"
        class="btn btn-sm btn-warning fw-bold" th:text="#{party.tip}">💸 Tip the DJ</a>
-    <small class="d-block text-secondary mt-1"
+    <small th:if="${withNote}" class="d-block text-secondary mt-1"
            th:text="#{party.tip.note(${T(com.scan2play.util.TipLinks).display(tipUrl)})}">revolut.me/djkoko · straight to the DJ</small>
     <small class="d-block text-light mt-1" id="tipTitleHint"
            th:text="${number != null} ? #{party.tip.title(${'#' + number})} : #{party.tip.title.any}">In the payment's title write #27</small>

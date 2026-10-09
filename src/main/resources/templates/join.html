@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{join.title}">Join the staff - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <!-- a secret link (StaffController): no search engine, and no Referer that would carry it to another site -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* The staff's invitation (V30, /join/{token}): it names the party; the button goes through Google's login (or straight, logged
+     in already) to the panel, where the person joins — the token waits in the session. */-->
+<body class="page-guest">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500 text-center">
+        <h1 class="display-6 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
+        <h2 class="h4 fw-bold mt-2" id="joinHeading" th:text="#{join.heading(${joinPartyName})}">👥 Join the staff of DJ Koko</h2>
+        <p class="text-secondary" th:text="#{join.intro}">You will see the guests' requests and mark them played.</p>
+        <a th:href="${joinUrl}" id="joinButton" class="btn btn-warning fw-bold w-100" th:text="#{join.button}">Log in with Google and join</a>
+        <p class="small text-secondary mt-3 mb-0" th:text="#{join.footer}">The owner can take your access away at any time.</p>
+    </div>
+</div>
+</body>
+</html>

@@ -110,7 +110,8 @@ public class DjSongController {
      */
     @PostMapping("/dashboard/clear-history")
     public String clearHistory(OAuth2AuthenticationToken authentication, HttpSession session) {
-        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        // the owner alone (V30): the staff work the queue, the history is the owner's record of the evenings
+        String ownerPartyCode = sessionHelper.getOwnedPartySettings(authentication, session).getPartyCode();
         djService.clearHistory(ownerPartyCode);
         return "redirect:/dj/history-view";
     }

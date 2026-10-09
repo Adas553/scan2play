@@ -105,7 +105,7 @@ class SummaryPageTest {
                 .map(e -> new Object[]{e.day().toString(), e.requests()}).toList());
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(requests);
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        when(sessionHelper.getPartySettings(any(), any()))
+        when(sessionHelper.getOwnedPartySettings(any(), any()))
                 .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").build());
         DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages);
 
@@ -203,7 +203,7 @@ class SummaryPageTest {
         when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(List.<Object[]>of(new Object[]{"2026-10-03", 8L}));
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(wedding());
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        when(sessionHelper.getPartySettings(any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
+        when(sessionHelper.getOwnedPartySettings(any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
         DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages);
 
         ResponseEntity<byte[]> csv = controller.csv(null, Locale.ENGLISH, null, new MockHttpSession());

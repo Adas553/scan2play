@@ -68,6 +68,10 @@ public class SecurityConfig {
                         .requestMatchers("/*/js/**", "/*/css/**").permitAll()
                         // The browsers' reports of the Content-Security-Policy
                         .requestMatchers("/csp-report").permitAll()
+                        // The hosts' lists (V29): a page opened by its secret link, without an account (HostController)
+                        .requestMatchers("/h/*").permitAll()
+                        // The staff's invitation (V30): opened before the login, it names the party (StaffController)
+                        .requestMatchers("/join/*").permitAll()
                         // Legal pages (Privacy Policy, Terms of Service)
                         .requestMatchers("/privacy", "/terms").permitAll()
                         // OAuth2 login endpoints must be public

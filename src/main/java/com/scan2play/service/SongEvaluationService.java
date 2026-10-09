@@ -14,6 +14,7 @@ import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.SongList;
 import com.scan2play.util.SongNames;
 import com.scan2play.util.Texts;
 import com.scan2play.util.YouTubeSearchLinks;
@@ -38,7 +39,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
 import static com.scan2play.service.DjService.DECISION_REJECTED;
@@ -116,6 +116,7 @@ public class SongEvaluationService {
     private final SongRequestCommandService songRequestCommandService;
     private final AiHealthMonitor aiHealthMonitor;
     private final PushNotificationService pushNotificationService;
+    private final PartyStaffService partyStaffService;
 
     /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt). */
     private Map<String, String> promptTemplates;
@@ -217,10 +218,18 @@ public class SongEvaluationService {
         log.info("Party [{}]: Evaluating request: '{}' with style: '{}'", partyCode, songName, style);
 
         PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
-        String recentSongs = getRecentSongsContext(partyCode, settings.getDuplicateCheckWindow());
 
         // Capture locale in the main thread (where LocaleContextHolder is available)
         Locale locale = LocaleContextHolder.getLocale();
+
+        // The hosts asked not to play it (V29) and the guest named it: refused before the AI is asked — nothing to judge
+        SongList blocked = SongList.of(settings.getHostBlocked());
+        if (blocked.matches(songName)) {
+            return blockedByTheHosts(partyCode, songName, DjResponse.KIND_TITLE, locale);
+        }
+
+        List<String> recentlyPlayed = recentlyPlayed(partyCode, settings.getDuplicateCheckWindow());
+        String recentSongs = recentSongsContext(recentlyPlayed, settings.getDuplicateCheckWindow());
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
         DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(), locale);
@@ -234,6 +243,11 @@ public class SongEvaluationService {
             log.info("Party [{}]: '{}' reads as a mood, not a song — not saved", partyCode, songName);
             return aiResponse;
         }
+        // the song the AI worked out from a line of the lyrics or an artist may be one the hosts asked not to play
+        if (blocked.matches(aiResponse.songName())) {
+            return blockedByTheHosts(partyCode, aiResponse.songName(), aiResponse.requestKind(), locale);
+        }
+        aiResponse = withTheHostsWish(partyCode, aiResponse, SongList.of(settings.getHostWanted()), recentlyPlayed, locale);
 
         // 2. The "🔍 Podejrzyj" link of an accepted song: YouTube's search results (a page the DJ's browser opens, no API)
         String trackUrl = DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())
@@ -249,8 +263,12 @@ public class SongEvaluationService {
         }
         SongRequestEntity savedRequest = saved.request();
         if (saved.outcome() == SongRequestCommandService.Outcome.NEW && DECISION_ACCEPTED.equals(savedRequest.getDecision())) {
-            // A new song on the DJ's list (a vote on a waiting one is not news): the DJ's devices that asked for it get a notification
+            // A new song on the DJ's list (a vote on a waiting one is not news): the devices that asked for it get a notification —
+            // the owner's and the staff's (V30)
             pushNotificationService.notifyNewRequest(settings.getOwnerId(), partyCode, savedRequest.getSongName());
+            for (String member : partyStaffService.memberIds(partyCode)) {
+                pushNotificationService.notifyNewRequest(member, partyCode, savedRequest.getSongName());
+            }
         }
         if (saved.outcome() != SongRequestCommandService.Outcome.NEW && !DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
             // The AI rejected this time a song the party took already and that still waits: the guest hears the verdict it was taken with
@@ -265,21 +283,50 @@ public class SongEvaluationService {
     // ---- Private helpers ----
 
     /**
-     * The songs the AI must not accept again: the party's recently PLAYED ones. A song that still waits is not on the list — a
-     * request for it becomes one more vote on it ({@link SongRequestCommandService}).
+     * A request for a song on the hosts' "nie grać" list (V29): not saved, the guest is asked for another one — the way a song the
+     * DJ skipped is refused. The DJ does not see it: the hosts decided.
      */
-    private String getRecentSongsContext(String partyCode, int duplicateCheckWindow) {
+    private DjResponse blockedByTheHosts(String partyCode, String songName, String requestKind, Locale locale) {
+        log.info("Party [{}]: '{}' is on the hosts' do-not-play list — refused", partyCode, songName);
+        return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.host_blocked", null, locale), songName, 0,
+                requestKind);
+    }
+
+    /**
+     * The AI's verdict, unless it rejected a song on the hosts' "koniecznie zagrać" list (V29): the hosts want it whatever the
+     * vibe, so it goes to the DJ — marked ⭐ in the queue — with a comment that says why. Not when the song played lately (the
+     * duplicate rule the DJ set still holds): then the AI's refusal stands.
+     */
+    DjResponse withTheHostsWish(String partyCode, DjResponse aiResponse, SongList wanted, List<String> recentlyPlayed,
+                                Locale locale) {
+        if (DECISION_ACCEPTED.equals(aiResponse.decision()) || !wanted.matches(aiResponse.songName())
+                || recentlyPlayed.stream().anyMatch(played -> SongNames.same(played, aiResponse.songName()))) {
+            return aiResponse;
+        }
+        log.info("Party [{}]: '{}' rejected by the AI, but the hosts want it — accepted", partyCode, aiResponse.songName());
+        return aiResponse.withVerdict(DECISION_ACCEPTED, messageSource.getMessage("guest.host_wanted", null, locale),
+                aiResponse.energyLevel());
+    }
+
+    /**
+     * The names of the party's recently PLAYED songs — the ones the AI must not accept again; none when the DJ's duplicate window is
+     * 0. A song that still waits is not on the list — a request for it becomes one more vote on it ({@link SongRequestCommandService}).
+     */
+    private List<String> recentlyPlayed(String partyCode, int duplicateCheckWindow) {
+        if (duplicateCheckWindow <= 0) {
+            return List.of();
+        }
+        return songRequestRepository.findRecentlyPlayed(partyCode, PageRequest.of(0, duplicateCheckWindow)).stream()
+                .map(SongRequestEntity::getSongName)
+                .toList();
+    }
+
+    /** The recently played songs as the prompt's duplicate rule lists them: null without the rule, "None" when none played. */
+    private static String recentSongsContext(List<String> recentlyPlayed, int duplicateCheckWindow) {
         if (duplicateCheckWindow <= 0) {
             return null;
         }
-
-        List<SongRequestEntity> recentRequests = songRequestRepository.findRecentlyPlayed(partyCode, PageRequest.of(0, duplicateCheckWindow));
-
-        String recentSongs = recentRequests.stream()
-                .map(SongRequestEntity::getSongName)
-                .collect(Collectors.joining(", "));
-
-        return recentSongs.isEmpty() ? "None" : recentSongs;
+        return recentlyPlayed.isEmpty() ? "None" : String.join(", ", recentlyPlayed);
     }
 
     /** The AI's answer, or null when the AI could not be asked (an error, a timeout, an answer that is not JSON). */

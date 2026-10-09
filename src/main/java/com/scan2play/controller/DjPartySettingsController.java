@@ -5,7 +5,10 @@ import com.scan2play.model.CommentStyle;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PartyStaffService;
+import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.SocialLinks;
+import com.scan2play.util.SongList;
 import com.scan2play.util.Texts;
 import com.scan2play.util.TipLinks;
 import jakarta.servlet.http.HttpSession;
@@ -48,6 +51,7 @@ public class DjPartySettingsController {
     private final PartySettingsCommandService partySettingsCommandService;
     private final AccountDeletionService accountDeletionService;
     private final DjSessionHelper sessionHelper;
+    private final PartyStaffService partyStaffService;
 
     /**
      * Re-activates the party session.
@@ -165,6 +169,67 @@ public class DjPartySettingsController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         partySettingsCommandService.updateSettings(partyCode, s -> s.setTipUrl(tipUrl));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The hosts' lists (V29), as the DJ edits them: "🚫 nie grać" and "⭐ koniecznie zagrać", one song or artist per line
+     * ({@link SongList#tidy}); an empty one clears it.
+     */
+    @PostMapping("/dashboard/host-lists")
+    public String updateHostLists(@RequestParam String partyCode, @RequestParam(required = false) String blocked,
+                                  @RequestParam(required = false) String wanted,
+                                  OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        String blockedList = SongList.tidy(blocked);
+        String wantedList = SongList.tidy(wanted);
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setHostBlocked(blockedList);
+            s.setHostWanted(wantedList);
+        });
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The hosts' link (V29, {@code /h/{token}}): {@code link=new} makes one — a new secret, so a link given for the last event stops
+     * working —, {@code link=off} takes it away.
+     */
+    @PostMapping("/dashboard/host-link")
+    public String updateHostLink(@RequestParam String partyCode, @RequestParam String link,
+                                 OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        String token = switch (link) {
+            case "new" -> CodeGenerator.generateSecret();
+            case "off" -> null;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        };
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setHostToken(token));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The staff's invitation link (V30, {@code /join/{token}}): {@code link=new} makes one — a new secret, so a link sent before
+     * stops working —, {@code link=off} takes it away. The people already on the staff stay.
+     */
+    @PostMapping("/dashboard/staff-link")
+    public String updateStaffLink(@RequestParam String partyCode, @RequestParam String link,
+                                  OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        String token = switch (link) {
+            case "new" -> CodeGenerator.generateSecret();
+            case "off" -> null;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        };
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setStaffToken(token));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /** Takes one person's access away (V30): their next request opens their own panel. Only a person of the owner's own party. */
+    @PostMapping("/dashboard/staff-remove")
+    public String removeStaff(@RequestParam String partyCode, @RequestParam long id,
+                              OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.validateOwnership(partyCode, authentication, session);
+        partyStaffService.remove(partyCode, id);
         return REDIRECT_DASHBOARD;
     }
 

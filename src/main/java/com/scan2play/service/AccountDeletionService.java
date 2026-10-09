@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.repository.PartyStaffRepository;
 import com.scan2play.repository.PushSubscriptionRepository;
 import com.scan2play.repository.SongRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class AccountDeletionService {
     private final SongRequestRepository songRequestRepository;
     private final FeedbackRepository feedbackRepository;
     private final PushSubscriptionRepository pushSubscriptionRepository;
+    private final PartyStaffRepository partyStaffRepository;
     private final CacheManager cacheManager;
 
     /**
@@ -54,8 +56,9 @@ public class AccountDeletionService {
         if (partyOpt.isPresent()) {
             String partyCode = partyOpt.get().getPartyCode();
 
-            // 2. Delete all song requests for this party
+            // 2. Delete all song requests for this party, and its staff (V30)
             songRequestRepository.deleteByPartyCode(partyCode);
+            partyStaffRepository.deleteByParty(partyCode);
             log.info("Deleted song requests for partyCode={}", partyCode);
 
             // 3. Delete party settings
@@ -72,6 +75,9 @@ public class AccountDeletionService {
 
         // 5. The devices that took notifications of new requests
         pushSubscriptionRepository.deleteByOwnerId(ownerId);
+
+        // 6. Wherever the person worked on another party's staff (V30)
+        partyStaffRepository.deleteByMember(ownerId);
 
         log.info("Account deletion completed for ownerId={}", ownerId);
     }

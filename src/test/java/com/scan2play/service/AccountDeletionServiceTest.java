@@ -43,6 +43,8 @@ class AccountDeletionServiceTest {
     @Mock
     private PushSubscriptionRepository pushSubscriptionRepository;
     @Mock
+    private com.scan2play.repository.PartyStaffRepository partyStaffRepository;
+    @Mock
     private CacheManager cacheManager;
     @Mock
     private Cache cache;
@@ -63,6 +65,7 @@ class AccountDeletionServiceTest {
         order.verify(partySettingsRepository).delete(party);
         order.verify(feedbackRepository).deleteByOwnerId(OWNER);
         verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
+        verify(partyStaffRepository).deleteByMember(OWNER);   // wherever they worked (V30)
     }
 
     @Test
@@ -87,6 +90,7 @@ class AccountDeletionServiceTest {
 
         verify(feedbackRepository).deleteByOwnerId(OWNER);
         verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
+        verify(partyStaffRepository).deleteByMember(OWNER);   // wherever they worked (V30)
         verifyNoInteractions(songRequestRepository, cacheManager);
     }
 }

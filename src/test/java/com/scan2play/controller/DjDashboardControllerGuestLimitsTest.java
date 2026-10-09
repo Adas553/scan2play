@@ -41,7 +41,7 @@ class DjDashboardControllerGuestLimitsTest {
         settingsService = mock(PartySettingsQueryService.class);
         limiter = mock(GuestRequestLimiter.class);
         controller = new DjDashboardController(djService, settingsService, mock(QrCodeService.class), mock(DjSessionHelper.class),
-                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class));
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.repository.PartySettingsRepository.class));
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getDashboardQueue(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
@@ -103,5 +103,17 @@ class DjDashboardControllerGuestLimitsTest {
         party.setActive(false);
         assertThat(poll(true).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("false");
         assertThat(poll(false).getHeader(DjDashboardController.PARTY_ACTIVE_HEADER)).isEqualTo("false");
+    }
+
+    /** The hosts' wish list changed (V29): the queue is sent again, so a waiting song gets its ⭐ with nothing else changed. */
+    @Test
+    void aChangeOfTheHostsWishes_isANewVersionOfTheQueue() {
+        party.setHostWanted("Hej sokoły");
+        MockHttpServletResponse withWishes = poll(true);
+        assertThat(withWishes.getStatus()).as("the old version is not this one any more").isEqualTo(200);
+        String etag = withWishes.getHeader("ETag");
+
+        party.setHostWanted("Hej sokoły\nAkcent");
+        assertThat(poll(false).getHeader("ETag")).isNotEqualTo(etag).startsWith("\"q-3-42-w");
     }
 }

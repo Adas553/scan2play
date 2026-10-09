@@ -59,12 +59,12 @@
                 </div>
                 <!--/* One evening of the party to print, save as PDF or download as CSV (DjSummaryController) — before the history is
                      cleared, which takes it too */-->
-                <a th:unless="${#lists.isEmpty(history)}" href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
+                <a th:unless="${#lists.isEmpty(history) or isOwner == false}" href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
                    class="btn btn-sm btn-outline-info" th:text="#{summary.open}">📊 Evening summary</a>
                 <!--/* The party's played and rejected requests deleted (DjService.clearHistory: not the waiting ones, not a skip that
                      still keeps its song out); asks first (data-confirm, dj-nav.js). In the History tab forms.js sends it in the
                      background and loads the tab again; on the standalone page the server sends it back to itself. */-->
-                <form th:unless="${#lists.isEmpty(history)}" action="/dj/dashboard/clear-history" method="post" class="m-0"
+                <form th:unless="${#lists.isEmpty(history) or isOwner == false}" action="/dj/dashboard/clear-history" method="post" class="m-0"
                       th:attr="data-confirm=#{history.clear.confirm}">
                     <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                     <button type="submit" id="clearHistoryBtn" class="btn btn-sm btn-outline-danger"

@@ -92,6 +92,37 @@ class MigrationIT extends PostgresIntegrationTest {
                 .isEqualTo(200);
     }
 
+    /** V29: the hosts' lists (room for 100 lines of 150 characters) and their link's secret — one party per secret. */
+    @Test
+    void aPartyHasTheHostsLists_andASecretOfItsOwn() {
+        for (String column : List.of("host_blocked", "host_wanted")) {
+            assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns"
+                    + " WHERE table_name = 'party_settings' AND column_name = ? AND is_nullable = 'YES'", Integer.class, column))
+                    .as(column).isEqualTo(com.scan2play.util.SongList.TEXT_MAX);
+        }
+        String a = "V29" + (System.nanoTime() % 100);
+        String b = "V2B" + (System.nanoTime() % 100);
+        for (String code : List.of(a, b)) {
+            jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                    + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        }
+        jdbc.update("UPDATE party_settings SET host_token = 'secret-of-a' WHERE party_code = ?", a);
+
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET host_token = 'secret-of-a' WHERE party_code = ?", b))
+                .hasMessageContaining("uk_party_settings_host_token");
+    }
+
+    /** V30: the party's staff — its table with the unique (party, person), the index by person, and the invitation link's secret. */
+    @Test
+    void thePartysStaff_hasItsTable_andItsIndexes() {
+        List<String> indexes = jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class);
+
+        assertThat(indexes).contains("uk_party_staff_member", "idx_party_staff_member_id", "uk_party_settings_staff_token");
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns"
+                + " WHERE table_name = 'party_settings' AND column_name = 'staff_token' AND is_nullable = 'YES'", Integer.class))
+                .isEqualTo(32);
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");
