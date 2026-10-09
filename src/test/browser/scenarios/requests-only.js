@@ -10,9 +10,16 @@ S2P.scenario({
         t.check('a waiting request can be skipped ("⏭ Pomiń")', dismiss && dismiss.textContent.trim() === '⏭ Pomiń');
         t.check('and marked as played', !!document.querySelector('form[action="/dj/dashboard/play"]'));
         t.check('there is no player on the page', !document.getElementById('yt-player') && !window.onYouTubeIframeAPIReady);
+        // on a computer too the settings fold under the button (the owner, 2026-10-09: there are many of them), the queue first
         const fold = document.getElementById('settingsToggle');
-        t.check('on a wide screen the settings show and the button that folds them on a phone does not',
-            document.getElementById('vibeSelect').getClientRects().length > 0 && !!fold && fold.getClientRects().length === 0);
+        const shown = function (id) { return document.getElementById(id).getClientRects().length > 0; };
+        t.step('on a wide screen the settings and the QR code are folded, the button that unfolds them shows',
+            [shown('vibeSelect'), shown('partyLinkInput'), shown('hostListsCard'), !!fold && fold.getClientRects().length > 0],
+            [false, false, false, true]);
+        fold.click();
+        t.step('the button unfolds them', [shown('vibeSelect'), shown('partyLinkInput'), shown('hostListsCard')], [true, true, true]);
+        fold.click();
+        t.step('and folds them again', shown('vibeSelect'), false);
 
         await t.waitFor(function () { return document.querySelector('#song-list [data-song-id="1"]'); }, 'the queue poll', 8000);
         t.step('the queue is polled and shown', document.querySelector('#song-list [data-song-id="1"]').getAttribute('data-song-name'),

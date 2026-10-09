@@ -67,4 +67,32 @@ public final class ViewAttributes {
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";
+
+    // --- The hosts' lists (V29): the DJ's card and the hosts' page /h/{token} ---
+    public static final String HOST_BLOCKED = "hostBlocked";
+    public static final String HOST_WANTED = "hostWanted";
+    /** The hosts' link to give them, or null when the DJ made none. */
+    public static final String HOST_LINK = "hostLink";
+    /** The hosts' list of wishes as the DJ's queue checks its songs for the ⭐ ({@code util.SongList}). */
+    public static final String WANTED_SONGS = "wantedSongs";
+    public static final String HOST_TOKEN = "hostToken";
+    /** "Zapisane" on the hosts' page after a save. */
+    public static final String HOST_SAVED = "hostSaved";
+
+    // --- The party's staff (V30) ---
+    /** Whether the person owns the panel's party: a staff member sees the queue and the history only. */
+    public static final String IS_OWNER = "isOwner";
+    /** The panel's party as its staff sees it named ("DJ Koko", else its code). */
+    public static final String PARTY_NAME = "partyName";
+    /** The panels the person may switch between ({@code PartyStaffService.Panel}): their own, the parties they work at. */
+    public static final String PANELS = "panels";
+    /** The owner's list of the staff ({@code PartyStaffEntity}). */
+    public static final String STAFF = "staff";
+    /** The staff's invitation link, or null when the owner made none. */
+    public static final String STAFF_LINK = "staffLink";
+    /** The message key of what an invitation link did when the person came back from the login ("Dołączono…"), or null. */
+    public static final String STAFF_JOIN_NOTE = "staffJoinNote";
+    /** The invitation page: the party's name and where its button leads. */
+    public static final String JOIN_PARTY_NAME = "joinPartyName";
+    public static final String JOIN_URL = "joinUrl";
 }

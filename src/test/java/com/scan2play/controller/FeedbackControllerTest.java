@@ -66,7 +66,7 @@ class FeedbackControllerTest {
     @Test
     void someoneElsesParty_isRefused_beforeAnythingIsStored() {
         doThrow(new AccessDeniedException("You do not own party: ZZZ99"))
-                .when(sessionHelper).validateOwnership(eq("ZZZ99"), any(), any());
+                .when(sessionHelper).validateAccess(eq("ZZZ99"), any(), any());
 
         assertThatThrownBy(() -> controller.submitFeedback("ZZZ99", "hello", dj, session)).isInstanceOf(AccessDeniedException.class);
         verify(repository, never()).save(any());

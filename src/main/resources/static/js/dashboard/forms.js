@@ -11,7 +11,8 @@ import { csrfHeaders, showPartyActive } from './common.js';
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account (page reload / redirect is expected).
+// Excluded: logout, delete-account, the hosts' link, the staff's link and access, the panel switcher (V30) — a page reload /
+// redirect is expected: the new link, the list or the other party's panel is shown at once.
 // ==========================================================================
 
 (function initAjaxFormInterceptor() {
@@ -26,7 +27,8 @@ import { csrfHeaders, showPartyActive } from './common.js';
 
         // Allow these actions to do a full page reload
         const action = form.action || '';
-        if (action.includes('/logout') || action.includes('/delete-account')) return;
+        if (action.includes('/logout') || action.includes('/delete-account') || action.includes('/host-link')
+            || action.includes('/staff-link') || action.includes('/staff-remove') || action.includes('/dj/panel')) return;
 
         e.preventDefault();
 
@@ -49,6 +51,10 @@ import { csrfHeaders, showPartyActive } from './common.js';
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
                 emit(EVENTS.HISTORY_CHANGED);
                 return;   // the history is fetched again: no button left to flash
+            }
+            // The hosts' lists saved (V29): the queue is fetched again — a song on the wish list gets its ⭐
+            if (action.includes('/dashboard/host-lists')) {
+                emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
             // A tip counted or taken back (V28): the queue is fetched again with the new count
             if (action.includes('/dashboard/tip-count')) {
@@ -148,11 +154,11 @@ document.querySelectorAll('select[data-auto-submit]').forEach(function (select) 
     select.addEventListener('change', function () { select.form.requestSubmit(); });
 });
 // ==========================================================================
-// COPY PARTY LINK
+// COPY THE PARTY LINK (and the hosts' link, V29: data-copy-target names its input)
 // ==========================================================================
 
-function copyPartyLink(button) {
-    const input = document.getElementById('partyLinkInput');
+function copyPartyLink(button, inputId) {
+    const input = document.getElementById(inputId);
     navigator.clipboard.writeText(input.value).then(function() {
         const original = button.innerText;
         const copied = button.getAttribute('data-copied') || 'Copied!';
@@ -167,4 +173,7 @@ function copyPartyLink(button) {
 }
 
 const copyButton = document.getElementById('copyPartyLinkBtn');
-if (copyButton) copyButton.addEventListener('click', function () { copyPartyLink(copyButton); });
+if (copyButton) copyButton.addEventListener('click', function () { copyPartyLink(copyButton, 'partyLinkInput'); });
+document.querySelectorAll('button[data-copy-target]').forEach(function (button) {
+    button.addEventListener('click', function () { copyPartyLink(button, button.getAttribute('data-copy-target')); });
+});

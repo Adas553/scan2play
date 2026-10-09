@@ -57,13 +57,29 @@ class DashboardQueueFragmentTest {
     }
 
     private static String render(List<SongRequestEntity> queue, Locale locale) {
+        return render(queue, locale, null);
+    }
+
+    private static String render(List<SongRequestEntity> queue, Locale locale, com.scan2play.util.SongList wanted) {
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(
                 JakartaServletWebApplication.buildApplication(servletContext)
                         .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()),
                 locale);
         context.setVariable("history", queue);
+        context.setVariable("wantedSongs", wanted);
         return engine.process("dashboard", Set.of("songTableBody"), context);
+    }
+
+    @Test
+    @DisplayName("V29: a song on the hosts' \"koniecznie zagrać\" list is marked ⭐ in the queue")
+    void shouldMarkTheSongsTheHostsWant() {
+        String html = render(List.of(accepted(1, "Golec uOrkiestra - Hej sokoły"), accepted(2, "Beta")), PL,
+                com.scan2play.util.SongList.of("Hej sokoly"));
+
+        assertThat(html).containsOnlyOnce("s2p-host-wanted").contains("⭐ Życzenie gospodarzy").doesNotContain("??");
+        assertThat(html.indexOf("s2p-host-wanted")).isLessThan(html.indexOf(">Beta<"));
+        assertThat(render(List.of(accepted(1, "Hej sokoły")), PL)).as("no list, no mark").doesNotContain("s2p-host-wanted");
     }
 
     @Test

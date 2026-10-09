@@ -339,6 +339,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/dj-links':           # the DJ's profiles: a redirect when saved, as the real server, or 400
             status = state.get('djLinksStatus', 302)
             return self._send(status, headers={'Location': '/dj/dashboard'}) if status == 302 else self._send(status)
+        if path in ('/dj/dashboard/host-lists', '/dj/dashboard/host-link', '/dj/dashboard/staff-link', '/dj/dashboard/staff-remove',
+                    '/dj/panel'):   # the hosts' lists and link (V29), the staff and the panel switcher (V30): a redirect
+            return self._send(302, headers={'Location': '/dj/dashboard'})
         if path == '/dj/push/unsubscribe':
             return self._send(204)
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/vibe-note', '/dj/dashboard/dj-name', '/dj/dashboard/comment-style',

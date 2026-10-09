@@ -45,7 +45,7 @@ public class DjSummaryController {
     @GetMapping
     public String summary(@RequestParam(required = false) String evening, Model model,
                           OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+        PartySettingsEntity settings = sessionHelper.getOwnedPartySettings(authentication, session);
         List<EveningSummaryService.Evening> evenings = eveningSummaryService.evenings(settings.getPartyCode());
         LocalDate shown = pick(evening, evenings);
         model.addAttribute(PARTY_CODE, settings.getPartyCode());
@@ -60,7 +60,7 @@ public class DjSummaryController {
     @GetMapping("/csv")
     public ResponseEntity<byte[]> csv(@RequestParam(required = false) String evening, Locale locale,
                                       OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+        PartySettingsEntity settings = sessionHelper.getOwnedPartySettings(authentication, session);
         LocalDate shown = pick(evening, eveningSummaryService.evenings(settings.getPartyCode()));
         if (shown == null) {
             return ResponseEntity.notFound().build();

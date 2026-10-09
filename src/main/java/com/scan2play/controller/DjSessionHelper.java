@@ -1,8 +1,10 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PartyStaffService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,15 +13,18 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Optional;
+
 /**
- * Shared helper for resolving the current DJ's party settings from the HTTP session.
- * Caches the partyCode in the session to avoid redundant DB lookups on every request.
+ * The party the logged-in person works on now — the panel's party — kept in the HTTP session: their own, or one whose staff they
+ * are (V30). Every request checks that the person still may open it (the owner without a query; a staff member by the unique
+ * index — an access the owner took away ends with the next request), and falls back to the person's own party otherwise.
  * <p>
- * Also provides ownership validation to prevent IDOR attacks — all DJ endpoints
- * that accept a {@code partyCode} parameter should call {@link #validateOwnership}
- * before performing any mutation.
- * <p>
- * Used by all DJ-facing controllers that need access to the current party context.
+ * Two kinds of checks for the DJ's endpoints, against IDOR (a guessed 5-character code) and against a staff member doing what only
+ * the owner may: {@link #validateAccess} — the owner or the staff (the queue, the history, the party open or closed) — and
+ * {@link #validateOwnership} / {@link #getOwnedPartySettings} — the owner alone (the settings, the lists and links, the staff, the
+ * QR print, the evening summary, clearing the history).
  */
 @Component
 @RequiredArgsConstructor
@@ -33,30 +38,80 @@ public class DjSessionHelper {
 
     private final PartySettingsQueryService partySettingsQueryService;
     private final PartySettingsCommandService partySettingsCommandService;
+    private final PartySettingsRepository partySettingsRepository;
+    private final PartyStaffService partyStaffService;
 
     /**
-     * Resolves party settings using a cached partyCode from the HTTP session when available.
-     * Falls back to {@code getOrCreatePartyForDj} (DB lookup by ownerId) on first access,
-     * then stores the partyCode in the session for subsequent requests.
-     *
-     * @param authentication The OAuth2 authentication token.
-     * @param session        The current HTTP session.
-     * @return The PartySettingsEntity for this DJ.
+     * The panel's party: the one in the session while the person may still open it, else their own party — or, for a person
+     * without one who works at a party (a bartender), that party: a bartender gets no party of their own until they open "Mój
+     * panel". The first login of a DJ makes their party.
      */
     public PartySettingsEntity getPartySettings(OAuth2AuthenticationToken authentication, HttpSession session) {
+        String userId = authentication.getName();
         String cachedPartyCode = (String) session.getAttribute(SESSION_PARTY_CODE);
 
         if (cachedPartyCode != null) {
             try {
-                return partySettingsQueryService.getSettings(cachedPartyCode);
+                PartySettingsEntity settings = partySettingsQueryService.getSettings(cachedPartyCode);
+                if (partyStaffService.hasAccess(settings, userId)) {
+                    return settings;
+                }
+                log.info("{} no longer has access to party {} — back to their own panel", userId, cachedPartyCode);
             } catch (IllegalArgumentException e) {
                 log.warn("Cached partyCode '{}' no longer valid, falling back to ownerId lookup", cachedPartyCode);
-                session.removeAttribute(SESSION_PARTY_CODE);
             }
+            session.removeAttribute(SESSION_PARTY_CODE);
         }
 
-        PartySettingsEntity settings = getOrCreateParty(authentication.getName());
+        PartySettingsEntity settings = defaultParty(userId);
         session.setAttribute(SESSION_PARTY_CODE, settings.getPartyCode());
+        return settings;
+    }
+
+    private PartySettingsEntity defaultParty(String userId) {
+        Optional<PartySettingsEntity> own = partySettingsRepository.findByOwnerId(userId);
+        if (own.isPresent()) {
+            return own.get();
+        }
+        List<PartySettingsEntity> workedAt = partyStaffService.partiesOf(userId);
+        return workedAt.isEmpty() ? getOrCreateParty(userId) : workedAt.getFirst();
+    }
+
+    /** Whether the person owns the panel's party (else they are on its staff). */
+    public boolean isOwner(OAuth2AuthenticationToken authentication, HttpSession session) {
+        return PartyStaffService.isOwner(getPartySettings(authentication, session), authentication.getName());
+    }
+
+    /** The panel's party when the person owns it; a staff member gets a 403 (what only the owner may do). */
+    public PartySettingsEntity getOwnedPartySettings(OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartySettingsEntity settings = getPartySettings(authentication, session);
+        if (!PartyStaffService.isOwner(settings, authentication.getName())) {
+            log.warn("{} (staff of party {}) tried what only the owner may", authentication.getName(), settings.getPartyCode());
+            throw new AccessDeniedException("Only the party's owner may do this");
+        }
+        return settings;
+    }
+
+    /** Opens the person's own party in the panel ("Mój panel"): made now when they have none (a bartender who starts DJ-ing). */
+    public PartySettingsEntity switchToOwnParty(OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartySettingsEntity own = getOrCreateParty(authentication.getName());
+        session.setAttribute(SESSION_PARTY_CODE, own.getPartyCode());
+        return own;
+    }
+
+    /** Opens a party the person works at (or owns) in the panel; a 403 for any other. */
+    public PartySettingsEntity switchTo(String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartySettingsEntity settings;
+        try {
+            settings = partySettingsQueryService.getSettings(partyCode);
+        } catch (IllegalArgumentException e) {
+            throw new AccessDeniedException("No such party: " + partyCode);
+        }
+        if (!partyStaffService.hasAccess(settings, authentication.getName())) {
+            log.warn("IDOR attempt: {} tried to open the panel of party {}", authentication.getName(), partyCode);
+            throw new AccessDeniedException("Not your party: " + partyCode);
+        }
+        session.setAttribute(SESSION_PARTY_CODE, partyCode);
         return settings;
     }
 
@@ -79,24 +134,33 @@ public class DjSessionHelper {
     }
 
     /**
-     * Validates that the given {@code partyCode} belongs to the currently authenticated DJ.
-     * Compares against the session-cached partyCode (set during {@link #getPartySettings}).
-     * <p>
-     * <b>Must be called in every DJ endpoint that accepts {@code partyCode} as a request parameter</b>
-     * to prevent IDOR attacks (an attacker guessing/brute-forcing a 5-char code).
+     * Validates that {@code partyCode} is the panel's party and that the person <b>owns</b> it: the settings and everything else
+     * only the owner may change. <b>Must be called in every such endpoint that accepts {@code partyCode}</b> (IDOR: a
+     * guessed or brute-forced 5-character code).
      *
-     * @param partyCode      The partyCode from the incoming request.
-     * @param authentication The current DJ's OAuth2 token.
-     * @param session        The current HTTP session.
-     * @throws AccessDeniedException if the partyCode does not belong to this DJ.
+     * @throws AccessDeniedException if the party is not the panel's, or the person is only on its staff
      */
     public void validateOwnership(String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = getPartySettings(authentication, session);
+        PartySettingsEntity settings = getOwnedPartySettings(authentication, session);
         if (!settings.getPartyCode().equals(partyCode)) {
             log.warn("IDOR attempt: DJ {} tried to access party {} (owns {})",
                     authentication.getName(), partyCode, settings.getPartyCode());
             throw new AccessDeniedException("You do not own party: " + partyCode);
         }
     }
-}
 
+    /**
+     * Validates that {@code partyCode} is the panel's party — the person owns it or is on its staff: the queue, the history and the
+     * feedback.
+     *
+     * @throws AccessDeniedException if the party is not the panel's
+     */
+    public void validateAccess(String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartySettingsEntity settings = getPartySettings(authentication, session);
+        if (!settings.getPartyCode().equals(partyCode)) {
+            log.warn("IDOR attempt: {} tried to access party {} (works on {})",
+                    authentication.getName(), partyCode, settings.getPartyCode());
+            throw new AccessDeniedException("Not the panel's party: " + partyCode);
+        }
+    }
+}

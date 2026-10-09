@@ -50,6 +50,8 @@ class SongEvaluationServiceTest {
     private MessageSource messageSource;
     @Mock
     private PushNotificationService pushNotifications;
+    @Mock
+    private PartyStaffService partyStaff;
 
     private SongEvaluationService service;
     private final AiHealthMonitor aiHealth = new AiHealthMonitor();
@@ -58,7 +60,7 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications);
+                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications, partyStaff);
         service.init();
     }
 
@@ -262,7 +264,7 @@ class SongEvaluationServiceTest {
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, new DefaultResourceLoader(),
-                new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications) {
+                new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications, partyStaff) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -561,6 +563,64 @@ class SongEvaluationServiceTest {
         assertThat(response.comment()).isEqualTo("Pick another one");
         assertThat(response.requestId()).isNull();
         verify(songRequestRepository, never()).save(any());
+    }
+
+    // ---- The hosts' lists (V29) ----
+
+    @Test
+    void aSongTheHostsBlocked_namedByTheGuest_isRefusedBeforeTheAiIsAsked() {
+        aParty(0).setHostBlocked("Akcent\nBaby Shark");
+        when(messageSource.getMessage(eq("guest.host_blocked"), any(), any(Locale.class))).thenReturn("The hosts asked not to");
+
+        DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "puść coś z Akcent", "ANY");
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("The hosts asked not to");
+        assertThat(response.requestId()).isNull();
+        assertThat(prompts).as("nothing for the AI to judge").isEmpty();
+        verify(songRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void aSongTheHostsBlocked_thatTheAiWorkedOutFromTheLyrics_isRefused() {
+        aParty(0).setHostBlocked("Przez twe oczy zielone");
+        when(messageSource.getMessage(eq("guest.host_blocked"), any(), any(Locale.class))).thenReturn("The hosts asked not to");
+
+        DjResponse response = answering("{\"decision\":\"accepted\",\"comment\":\"Hit!\",\"songName\":\"Akcent - Przez twe oczy zielone\","
+                + "\"energyLevel\":9,\"requestKind\":\"lyrics\"}").evaluateAndSaveSong(PARTY_CODE, "oczy zielone zielone", "ANY");
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.songName()).isEqualTo("Akcent - Przez twe oczy zielone");
+        verify(songRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void aSongTheHostsWant_rejectedByTheAi_goesToTheDjAnyway() {
+        aParty(0).setHostWanted("Hej sokoły");
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+        when(messageSource.getMessage(eq("guest.host_wanted"), any(), any(Locale.class))).thenReturn("The hosts want it too");
+
+        DjResponse response = answering("{\"decision\":\"rejected\",\"comment\":\"Nie ten klimat\",\"songName\":\"Hej sokoły\","
+                + "\"energyLevel\":6,\"requestKind\":\"title\"}").evaluateAndSaveSong(PARTY_CODE, "hej sokoly", "Club");
+
+        assertThat(response.decision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(response.comment()).isEqualTo("The hosts want it too");
+        assertThat(saved.getValue().getDecision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(saved.getValue().getTrackUrl()).as("an accepted song's 🔍 Podejrzyj").isNotNull();
+    }
+
+    @Test
+    void aSongTheHostsWant_thatPlayedLately_staysRejected() {
+        aParty(5).setHostWanted("Hej sokoły");
+        savesWithId();
+        when(songRequestRepository.findRecentlyPlayed(eq(PARTY_CODE), any()))
+                .thenReturn(List.of(SongRequestEntity.builder().songName("Hej Sokoły").build()));
+
+        DjResponse response = answering("{\"decision\":\"rejected\",\"comment\":\"Już było\",\"songName\":\"Hej sokoły\","
+                + "\"energyLevel\":6,\"requestKind\":\"title\"}").evaluateAndSaveSong(PARTY_CODE, "hej sokoly", "ANY");
+
+        assertThat(response.decision()).as("the DJ's duplicate rule still holds").isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("Już było");
     }
 
     @Test

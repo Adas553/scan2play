@@ -47,6 +47,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -99,6 +101,16 @@ class DashboardPageRenderTest {
 
     private static String renderDashboard(PartySettingsEntity settings, List<SongRequestEntity> queue, Locale locale,
                                           GuestRequestLimiter limiter) {
+        com.scan2play.service.PartyStaffService staff = mock(com.scan2play.service.PartyStaffService.class);
+        when(staff.staffOf(PARTY)).thenReturn(List.of(com.scan2play.entity.PartyStaffEntity.builder().id(7L).partyCode(PARTY)
+                .memberId("kasia").memberName("Kasia").joinedAt(java.time.Instant.now()).build()));
+        return renderDashboard(settings, queue, locale, limiter, ownerToken(), staff, new MockHttpSession());
+    }
+
+    /** The same for {@code user} — the owner, or someone on the party's staff (V30) — with the staff service given. */
+    private static String renderDashboard(PartySettingsEntity settings, List<SongRequestEntity> queue, Locale locale,
+                                          GuestRequestLimiter limiter, OAuth2AuthenticationToken user,
+                                          com.scan2play.service.PartyStaffService staff, MockHttpSession session) {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         DjService djService = mock(DjService.class);
         QrCodeService qrCodeService = mock(QrCodeService.class);
@@ -107,12 +119,17 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsQueryService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey());
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.repository.PartySettingsRepository.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
-        String view = controller.dashboard(model, ownerToken(), new MockHttpSession());
+        // the panel opened at http://127.0.0.1:8080, the guests' address http://localhost:8080/ (rawBaseUrl below): the invitation
+        // link follows the panel's (it needs Google's login), the hosts' link and the QR code the guests'
+        MockHttpServletRequest panelRequest = new MockHttpServletRequest();
+        panelRequest.setServerName("127.0.0.1");
+        panelRequest.setServerPort(8080);
+        String view = controller.dashboard(model, user, session, panelRequest);
         assertThat(view).isEqualTo("dashboard");
 
         MockServletContext servletContext = new MockServletContext();
@@ -178,7 +195,8 @@ class DashboardPageRenderTest {
     /** A party of the product: the DJ plays from their own software, the guests' requests wait on the dashboard. */
     private static PartySettingsEntity party() {
         return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
-                .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko").build();
+                .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko")
+                .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz").staffToken("Inv_123-xyzInv_123-xyz").build();
     }
 
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */
@@ -258,13 +276,19 @@ class DashboardPageRenderTest {
         assertThat(html).as("the DJ's profiles (V24), a note for a refused one hidden until then")
                 .contains("action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"", "id=\"facebookInput\"", "id=\"tiktokInput\"",
                         "value=\"https://www.instagram.com/dj.koko/\"", "Twoje profile (goście widzą je", "data-form-error hidden");
+        assertThat(html).as("the hosts' lists (V29): both in one form, the hosts' link to copy, a new one asks first")
+                .contains("action=\"/dj/dashboard/host-lists\"", "name=\"blocked\"", ">Hej sokoły</textarea>", "📝 Lista gospodarzy",
+                        "value=\"http://localhost:8080/h/AbC_123-xyzAbC_123-xyz\" id=\"hostLinkInput\"", "data-copy-target=\"hostLinkInput\"",
+                        "action=\"/dj/dashboard/host-link\"", "🔗 Nowy link", "data-confirm=\"Utworzyć nowy link? Stary przestanie działać.\"",
+                        "Wyłącz link");
         assertThat(html).as("who plays (V17)").contains("action=\"/dj/dashboard/dj-name\"", "id=\"djNameInput\"", "Kto gra (widzą goście)");
         assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
         assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
         assertThat(html.split(">⚠ Sprawdź<", -1)).as("only the song with none of the guest's words").hasSize(2);
         // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)
         assertThat(html).contains("id=\"settingsToggle\"", "⚙️ Ustawienia, klimat i kod QR");
-        assertThat(html.split("s2p-phone-settings", -1).length - 1).as("the folded parts: vibe, the kind of party, limits, QR code").isEqualTo(4);
+        // the class alone, not the button's s2p-settings-toggle
+        assertThat(html.split("s2p-settings(?![-\\w])", -1).length - 1).as("the folded parts: vibe, the kind of party, limits, the hosts' lists, the staff, QR code").isEqualTo(6);
         // "Wyczyść kolejkę": the DJ's own queue (no party code in the form), asks first
         assertThat(html).contains("action=\"/dj/dashboard/clear-queue\"", "id=\"clearQueueBtn\"", "🧹 Wyczyść kolejkę",
                 "data-confirm=\"Usunąć wszystkie czekające prośby z kolejki?");
@@ -279,6 +303,12 @@ class DashboardPageRenderTest {
         // "Cofnij" after "Pomiń": a bar forms.js shows for a few seconds after a skip; hidden until then
         assertThat(html).contains("id=\"undoSkip\"", "Pominięto:", "data-undo-button", ">Cofnij<");
         assertThat(html.substring(html.indexOf("id=\"undoSkip\""), html.indexOf("data-undo-song"))).contains("hidden");
+        assertThat(html).as("the staff (V30): who has access, each with its button, the invitation link to copy")
+                .contains("id=\"staffCard\"", "👥 Obsługa (barman, drugi DJ)", ">Kasia<", "action=\"/dj/dashboard/staff-remove\"",
+                        "name=\"id\" value=\"7\"", "data-confirm=\"Usunąć dostęp: Kasia?\"",
+                        "value=\"http://127.0.0.1:8080/join/Inv_123-xyzInv_123-xyz\" id=\"staffLinkInput\"",
+                        "data-copy-target=\"staffLinkInput\"", "action=\"/dj/dashboard/staff-link\"")
+                .doesNotContain("id=\"panelSwitcher\"", "id=\"staffBanner\"", "id=\"staffJoinNote\"");
         write("dashboard.html", html);
     }
 
@@ -287,6 +317,44 @@ class DashboardPageRenderTest {
     void shouldWriteThePolicyForTheBrowserTests() throws IOException {
         assertThat(SecurityConfig.CONTENT_SECURITY_POLICY).contains("script-src 'self'").doesNotContain("'unsafe-eval'", "youtube", "ytimg");
         write("csp.txt", SecurityConfig.CONTENT_SECURITY_POLICY);
+    }
+
+    /**
+     * The panel of someone on the party's staff (V30): the queue, the history, the notifications, closing the party — no settings, no
+     * limits, no lists, no QR code, no staff; the banner whose party it is and the switcher to their own panel. The invitation they
+     * opened before the login is taken here: they join, and the panel opens on that party. {@code dashboard-staff.html} for the
+     * browser tests.
+     */
+    @Test
+    void theStaffsPanel_isTheQueueAndTheHistory_withTheSwitcher() throws IOException {
+        PartySettingsEntity pub = party();
+        pub.setDjName("Klub Ola");
+        com.scan2play.service.PartyStaffService staff = mock(com.scan2play.service.PartyStaffService.class);
+        when(staff.join("invite", "kasia", "Kasia")).thenReturn(new com.scan2play.service.PartyStaffService.Joined(
+                com.scan2play.service.PartyStaffService.JoinOutcome.JOINED, pub));
+        when(staff.panelsOf(eq("kasia"), anyBoolean())).thenReturn(List.of(new com.scan2play.service.PartyStaffService.Panel(null, null, true),
+                new com.scan2play.service.PartyStaffService.Panel(PARTY, "Klub Ola", false)));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("pendingStaffInvitation", "invite");
+        OAuth2AuthenticationToken kasia = new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"),
+                Map.of("sub", "kasia", "name", "Kasia"), "sub"), AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
+
+        String html = renderDashboard(pub, List.of(song(1, "Wilki - Baśka")), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia, staff, session);
+        write("dashboard-staff.html", html);
+
+        assertThat(session.getAttribute("pendingStaffInvitation")).as("the invitation is taken once").isNull();
+        assertThat(html).doesNotContain("??");
+        assertThat(html).contains("id=\"staffJoinNote\"", "👥 Dołączono do obsługi: Klub Ola.",
+                "id=\"staffBanner\"", "👥 Obsługujesz imprezę: Klub Ola — kolejka i historia.",
+                "id=\"panelSwitcher\"", "action=\"/dj/panel\"", ">🎧 Mój panel<", ">👥 Klub Ola<", "name=\"party\" value=\"HARN1\"",
+                "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "id=\"pushToggle\"",
+                "action=\"/dj/end-party\"");
+        assertThat(html).as("the owner's: the settings, the limits, the lists, the QR code, the profiles, the staff")
+                .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
+                        "id=\"staffCard\"", "id=\"partyLinkInput\"", "action=\"/dj/dashboard/tip-link\"", "/join/", "/h/",
+                        "class=\"col-md-8\"");
+        String current = html.substring(html.indexOf("name=\"party\" value=\"HARN1\""));
+        assertThat(current.substring(0, current.indexOf("</button>"))).as("the panel open now is lit").contains("aria-current=\"page\"");
     }
 
     @Test
@@ -344,7 +412,7 @@ class DashboardPageRenderTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.getPartySettings(any(), any())).thenReturn(party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.repository.PartySettingsRepository.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
