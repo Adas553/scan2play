@@ -51,8 +51,7 @@
     <input type="hidden" id="partyCode" th:value="${partyCode}">
 
     <div class="row mb-4">
-        <!--/* the staff see no settings and no QR code column: the queue's column takes the width */-->
-        <div th:class="${isOwner} ? 'col-md-8 s2p-panel-main' : 'col-12 s2p-panel-main'">
+        <div class="col-md-8 s2p-panel-main">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3 s2p-panel-head">
                 <!--/* The app's name as on the guest page, the page's own heading under it */-->
                 <div class="text-center text-md-start">
@@ -299,8 +298,9 @@
             </div>
         </div>
 
-        <!-- QR Code Section -->
-        <div th:if="${isOwner}" class="col-md-4 text-center s2p-settings">
+        <!--/* The QR code: the staff's too (the owner, 2026-10-09) — it is on the tables anyway, and a bartender shows it to a guest or
+             prints a new one; the profiles and the tip link under it are the owner's settings. */-->
+        <div class="col-md-4 text-center s2p-settings">
             <div class="card bg-dark border-secondary p-3 shadow-sm qr-card-center">
                 <h5 class="text-light mb-3" th:text="#{dashboard.qr.title}">Scan to Request Songs</h5>
                 <img th:if="${qrCodeBase64}"
@@ -327,7 +327,7 @@
             <!--/* The DJ's profiles (V24) beside the QR code they are printed with: the guests see them under "Kto gra" and on
                  the print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks) —
                  400 when it is not a profile there */-->
-            <div class="card bg-dark border-secondary p-3 shadow-sm mt-3 text-start">
+            <div th:if="${isOwner}" class="card bg-dark border-secondary p-3 shadow-sm mt-3 text-start">
                 <form th:action="@{/dj/dashboard/dj-links}" method="POST" class="m-0" id="djLinksForm">
                     <input type="hidden" name="partyCode" th:value="${partyCode}">
                     <span class="form-label d-block text-light small mb-2" th:text="#{dashboard.dj.links.label}">Your profiles</span>

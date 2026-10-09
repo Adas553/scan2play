@@ -204,7 +204,8 @@ public class DjDashboardController {
     @GetMapping("/qr-print")
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, Model model,
                           OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getOwnedPartySettings(authentication, session);
+        // the staff's too (V30): the code is on the tables anyway, a bartender prints a new one
+        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
         String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
         model.addAttribute(PARTY_CODE, partyCode);

@@ -109,6 +109,15 @@ public class PartyStaffService {
         return removed;
     }
 
+    /** The person leaves the party's staff ("🚪 Opuść obsługę"); false when they were not on it. */
+    public boolean leave(String partyCode, String userId) {
+        boolean left = staffRepository.deleteMember(partyCode, userId) > 0;
+        if (left) {
+            log.info("Party [{}]: {} left the staff", partyCode, userId);
+        }
+        return left;
+    }
+
     /** The parties the person works at (not their own), as their settings — a party gone meanwhile is left out. */
     public List<PartySettingsEntity> partiesOf(String userId) {
         List<PartySettingsEntity> parties = new ArrayList<>();

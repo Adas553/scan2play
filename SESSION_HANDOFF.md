@@ -7,6 +7,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-09, evening — `dev` = `705ad3c` (PR #33, CI green, not on `main` yet); on the branch, committed next:** the staff's
+  login on the landing page ("👥 Jestem z obsługi": paste the link → Google's login → joined; a bad link is told before any
+  login) and "🚪 Opuść obsługę" in place of "Usuń konto" on another party's panel (the owner: it read as deleting the party).
+  Tests: 492 unit, 45 database, 53 browser (`staff-panel` seen red without the `forms.js` change).
 - **2026-10-09, afternoon — released before (PR #32, `main` = `f57047d`, v30 applied, CI green, two people joined the staff of
   14FMF); now on the branch, not committed yet:** "🎧 Mój panel" always offered (the owner joined with a second account from
   the installed app and had no way to make a party of their own — the button showed only to those who had one), and an

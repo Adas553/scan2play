@@ -107,6 +107,14 @@ class PartyStaffServiceTest {
     }
 
     @Test
+    void aPersonLeavesTheStaff_onlyTheirOwnRow() {
+        when(staff.deleteMember(PARTY, "kasia")).thenReturn(1);
+
+        assertThat(service.leave(PARTY, "kasia")).isTrue();
+        assertThat(service.leave(PARTY, "stranger")).as("not on the staff").isFalse();
+    }
+
+    @Test
     void theOwnerRemovesOnlyARowOfTheirOwnParty() {
         when(staff.deleteFromParty(7L, PARTY)).thenReturn(1);
 

@@ -97,6 +97,37 @@ class StaffControllerTest {
         }
     }
 
+    /** "👥 Jestem z obsługi" on the landing page: a party's link goes straight to Google's login; anything else back, before a login. */
+    @Test
+    void theLinkPastedOnTheLandingPage_goesToTheLogin_orBackWithANote() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(post("/join").param("link", " https://www.scan2play.com.pl/join/" + TOKEN + " ").session(session))
+                .andExpect(redirectedUrl("/start"));
+        assertThat(session.getAttribute(StaffController.SESSION_PENDING_INVITATION)).isEqualTo(TOKEN);
+
+        for (String bad : new String[]{"https://www.scan2play.com.pl/join/old-token", "not a link at all ?", ""}) {
+            MockHttpSession other = new MockHttpSession();
+            mockMvc.perform(post("/join").param("link", bad).session(other)).andExpect(redirectedUrl("/?staffLink=invalid"));
+            assertThat(other.getAttribute(StaffController.SESSION_PENDING_INVITATION)).as(bad).isNull();
+        }
+    }
+
+    /** "🚪 Opuść obsługę": a staff member leaves and gets their own panel; the owner of the panel's party leaves nothing. */
+    @Test
+    void leavingTheStaff_isForTheStaff_andOpensTheirOwnPanel() throws Exception {
+        when(sessionHelper.getPartySettings(any(), any()))
+                .thenReturn(PartySettingsEntity.builder().partyCode("PUB01").ownerId("pub-owner").build());
+
+        mockMvc.perform(post("/dj/staff/leave").principal(user("kasia")).session(new MockHttpSession()))
+                .andExpect(redirectedUrl("/dj/dashboard"));
+        mockMvc.perform(post("/dj/staff/leave").principal(user("pub-owner")).session(new MockHttpSession()))
+                .andExpect(redirectedUrl("/dj/dashboard"));
+
+        verify(staff).leave("PUB01", "kasia");
+        verify(staff, never()).leave("PUB01", "pub-owner");
+        verify(sessionHelper).switchToOwnParty(any(), any());
+    }
+
     @Test
     void theSwitcher_opensAPartyTheyWorkAt_orTheirOwnPanel() throws Exception {
         mockMvc.perform(post("/dj/panel").param("party", "PUB01").principal(user("kasia")).session(new MockHttpSession()))

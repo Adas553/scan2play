@@ -82,7 +82,7 @@ class QrPrintPageTest {
 
     private static String render(String layout, Locale locale, PartySettingsEntity party) throws IOException {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        when(sessionHelper.getOwnedPartySettings(any(), any())).thenReturn(party);
+        when(sessionHelper.getPartySettings(any(), any())).thenReturn(party);
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
                 new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
                 mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class));

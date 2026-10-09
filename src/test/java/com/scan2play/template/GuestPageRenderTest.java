@@ -225,6 +225,31 @@ class GuestPageRenderTest {
         }
     }
 
+    /** "👥 Jestem z obsługi" on the landing page (V30): folded, a form to POST /join; open with a note after a link that did not work. */
+    @Test
+    void theLandingPage_letsTheStaffPasteTheirLink() {
+        String[] pages = new String[2];
+        for (int i = 0; i < 2; i++) {
+            MockServletContext servletContext = new MockServletContext();
+            MockHttpServletRequest request = new MockHttpServletRequest(servletContext);
+            if (i == 1) {
+                request.setParameter("staffLink", "invalid");
+            }
+            WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                    .buildExchange(request, new MockHttpServletResponse()), PL);
+            context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+            pages[i] = engine.process("landing", context);
+        }
+        writePreview("landing.html", pages[0]);
+
+        assertThat(pages[0]).doesNotContain("??");
+        assertThat(pages[0]).contains("id=\"staffLogin\"", "Masz zaproszenie do zespołu imprezy? Dołącz →", "action=\"/join\"",
+                "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"");
+        assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");
+        assertThat(tag(pages[1], "staffLogin")).as("open after a link that did not work").contains("open");
+        assertThat(pages[1]).contains("id=\"staffLinkInvalid\"", "Ten link nie działa — poproś organizatora o nowy.");
+    }
+
     @Test
     void anEmptyQueue_showsNoList() {
         String html = render(PL, Map.of());
