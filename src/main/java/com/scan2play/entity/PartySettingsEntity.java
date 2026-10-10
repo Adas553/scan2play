@@ -26,6 +26,9 @@ import lombok.ToString;
 @Builder(toBuilder = true)   // toBuilder: PartySettingsQueryService hands out copies of the cached settings
 public class PartySettingsEntity {
 
+    /** The longest organiser's name kept (the column, V32). */
+    public static final int OWNER_NAME_MAX = 100;
+
     /** The longest vibe note (the column, V16). */
     public static final int VIBE_NOTE_MAX = 150;
     /** The longest DJ name (the column, V17). */
@@ -105,6 +108,13 @@ public class PartySettingsEntity {
     @Column(length = 32, unique = true)
     @ToString.Exclude
     private String staffToken;
+
+    /**
+     * The organiser's name from their Google account (V32), kept when they open the panel: the party's staff see it where the party has
+     * no "Kto gra" ("Klub Ola" or "Ola Kowalska", not the code). Null until the organiser opens the panel after V32.
+     */
+    @Column(length = OWNER_NAME_MAX)
+    private String ownerName;
 
     /** How the AI words its comment to the guest (V22); {@link CommentStyle#CLASSIC} adds nothing to the prompt. */
     @Builder.Default

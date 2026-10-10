@@ -130,6 +130,15 @@ class MigrationIT extends PostgresIntegrationTest {
                 + " AND column_name = 'energy_level'", String.class)).isEmpty();
     }
 
+    /** V32: what each person of the staff may do (no default: the app always says it) and the organiser's name. */
+    @Test
+    void theStaffsPermissions_andTheOrganisersName_haveTheirColumns() {
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns WHERE table_name = 'party_staff'"
+                + " AND column_name = 'permissions' AND is_nullable = 'NO' AND column_default IS NULL", Integer.class)).isEqualTo(200);
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'owner_name' AND is_nullable = 'YES'", Integer.class)).isEqualTo(100);
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

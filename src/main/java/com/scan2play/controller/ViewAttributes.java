@@ -79,20 +79,35 @@ public final class ViewAttributes {
     /** "Zapisane" on the hosts' page after a save. */
     public static final String HOST_SAVED = "hostSaved";
 
-    // --- The party's staff (V30) ---
-    /** Whether the person owns the panel's party: a staff member sees the queue and the history only. */
+    // --- The party's staff (V30, V32) ---
+    /** Whether the person owns the panel's party (else they are on its staff, {@link #ACCESS}). */
     public static final String IS_OWNER = "isOwner";
-    /** The panel's party as its staff sees it named ("DJ Koko", else its code). */
+    /** What the person may do at the panel's party ({@code PartyStaffService.Access}: {@code may(…)}, {@code role()}). */
+    public static final String ACCESS = "access";
+    /** What the person may do, as the queue poll's {@code X-Panel-Access} says it: the page reloads when the poll says otherwise. */
+    public static final String PANEL_ACCESS = "panelAccess";
+    /** The panel's party as its staff sees it named ("DJ Koko", else the organiser's name, else its code). */
     public static final String PARTY_NAME = "partyName";
     /** The panels the person may switch between ({@code PartyStaffService.Panel}): their own, the parties they work at. */
     public static final String PANELS = "panels";
+    /** Whether the person has a party of their own (else the menu offers "Załóż własną imprezę"). */
+    public static final String HAS_OWN_PARTY = "hasOwnParty";
     /** The owner's list of the staff ({@code PartyStaffEntity}). */
     public static final String STAFF = "staff";
     /** The staff's invitation link, or null when the owner made none. */
     public static final String STAFF_LINK = "staffLink";
-    /** The message key of what an invitation link did when the person came back from the login ("Dołączono…"), or null. */
-    public static final String STAFF_JOIN_NOTE = "staffJoinNote";
-    /** The invitation page: the party's name and where its button leads. */
+    /** The roles and the permissions, in the order of the owner's list and checkboxes. */
+    public static final String STAFF_ROLES = "staffRoles";
+    public static final String STAFF_PERMISSIONS = "staffPermissions";
+    /** "Zapisano" on the staff page after a change ({@code DjSessionHelper.Note} kind of message key), or null. */
+    public static final String STAFF_SAVED = "staffSaved";
+    /** A note for the panel ({@code DjSessionHelper.Note}: "Dołączono…", "Organizator usunął Twój dostęp…"), or null. */
+    public static final String PANEL_NOTE = "panelNote";
+    /** The invitation page: the party's name, its organiser, whether the person is logged in, the role they get, what went wrong. */
     public static final String JOIN_PARTY_NAME = "joinPartyName";
-    public static final String JOIN_URL = "joinUrl";
+    public static final String JOIN_OWNER_NAME = "joinOwnerName";
+    public static final String JOIN_TOKEN = "joinToken";
+    public static final String JOIN_LOGGED_IN = "joinLoggedIn";
+    public static final String JOIN_ROLE = "joinRole";
+    public static final String JOIN_PROBLEM = "joinProblem";
 }

@@ -105,12 +105,12 @@ class SummaryPageTest {
                 .map(e -> new Object[]{e.day().toString(), e.requests()}).toList());
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(requests);
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        when(sessionHelper.getOwnedPartySettings(any(), any()))
+        when(sessionHelper.require(any(), any(), any(), any()))
                 .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").build());
         DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages);
 
         ConcurrentModel model = new ConcurrentModel();
-        String view = controller.summary(evening, model, null, new MockHttpSession());
+        String view = controller.summary(evening, null, model, null, new MockHttpSession());
         assertThat(view).isEqualTo("summary");
 
         MockServletContext servletContext = new MockServletContext();
@@ -138,7 +138,7 @@ class SummaryPageTest {
         // the evenings to pick, the shown one selected
         assertThat(html).contains("<option value=\"2026-10-03\" selected=\"selected\">sobota, 03.10 (8)</option>",
                 "<option value=\"2026-09-26\">sobota, 26.09 (3)</option>");
-        assertThat(html).contains("href=\"/dj/summary/csv?evening=2026-10-03\"", "id=\"printBtn\"");
+        assertThat(html).contains("href=\"/dj/summary/csv?evening=2026-10-03&amp;party=" + PARTY + "\"", "id=\"printBtn\"");
         // 8 requests, 6 played, the votes of the 7 the AI let through, 1 rejected by it, 1 waiting; no skipped, no cleared
         assertThat(html).contains("<strong>8</strong><span>Prośby</span>", "<strong>6</strong><span>Zagrane</span>",
                 "<strong>34</strong><span>Głosy gości</span>", "<strong>1</strong><span>Odrzucone przez AI</span>",
@@ -203,10 +203,10 @@ class SummaryPageTest {
         when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(List.<Object[]>of(new Object[]{"2026-10-03", 8L}));
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(wedding());
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        when(sessionHelper.getOwnedPartySettings(any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
         DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages);
 
-        ResponseEntity<byte[]> csv = controller.csv(null, Locale.ENGLISH, null, new MockHttpSession());
+        ResponseEntity<byte[]> csv = controller.csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
 
         assertThat(csv.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION))
                 .isEqualTo("attachment; filename=\"scan2play-2026-10-03.csv\"");
@@ -217,6 +217,6 @@ class SummaryPageTest {
                 "\"rejected by the AI\"");
 
         when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(List.of());
-        assertThat(controller.csv(null, Locale.ENGLISH, null, new MockHttpSession()).getStatusCode().value()).isEqualTo(404);
+        assertThat(controller.csv(null, null, Locale.ENGLISH, null, new MockHttpSession()).getStatusCode().value()).isEqualTo(404);
     }
 }

@@ -50,7 +50,7 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest,�
   `<script>` put into the rendered dashboard fails an ordinary scenario; `itunes.apple.com` taken out of `connect-src` fails the guest
   page's scenario, `data:` out of `img-src` the print page's.
 * **Other pages:** `GuestPageRenderTest` writes `guest.html` (the guest page with a queue) and `QrPrintPageTest` writes
-  `qr-print-poster.html` / `qr-print-cards.html`; a scenario names them with `page:` like the dashboards. Their scenarios
+  `qr-print-poster.html` / `qr-print-cards.html`, `StaffPageRenderTest` the owner's page "Obsługa" `staff.html` (V32); a scenario names them with `page:` like the dashboards. Their scenarios
   (`scenarios/csp.js`) use what the page's scripts do — the mode switch, the iTunes suggestions (the host is blocked in Chrome: the CSP
   check comes before the network), "↻", "Print" — so their requests meet the policy too.
 * **The stand-in** knows nothing about music. `POST /__config` merges a JSON object into its state (`server.py`, `default_state()`,

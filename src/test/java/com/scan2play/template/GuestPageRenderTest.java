@@ -213,16 +213,41 @@ class GuestPageRenderTest {
             WebContext context = new WebContext(
                     JakartaServletWebApplication.buildApplication(servletContext)
                             .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
-            context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinUrl", "/start"));
+            context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinOwnerName", "Ola Kowalska", "joinLoggedIn", false,
+                    "joinToken", "invite", "joinRole", com.scan2play.model.StaffRole.QUEUE));
             String html = engine.process("join", context);
             if (locale == PL) {
                 writePreview("join.html", html);
-                assertThat(html).contains(">Zaproszenie do obsługi: Klub Ola<", ">Zaloguj się przez Google i dołącz<");
+                assertThat(html).contains(">Zaproszenie do obsługi: Klub Ola<", ">Zaprasza: Ola Kowalska<",
+                        "Zaczynasz z rolą „Obsługa kolejki”. Możesz:", ">Zagrane, Pomiń, Cofnij, Przywróć<", ">Historia<",
+                        ">Zaloguj się przez Google i dołącz<");
             }
 
-            assertThat(html).doesNotContain("??");
+            assertThat(html).doesNotContain("??", "action=\"/join/invite\"");
             assertThat(html).contains("id=\"joinButton\"", "href=\"/start\"", "content=\"no-referrer\"", "noindex");
         }
+    }
+
+    /**
+     * Logged in, the invitation asks: "Dołącz" is a form (POST, its CSRF token), "Nie, dziękuję" leads away — opening the page joins
+     * nothing (the review, 2026-10-10). A full staff or an old link says what happened.
+     */
+    @Test
+    void theInvitationPage_loggedIn_asks_andAProblemIsSaid() {
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinLoggedIn", true, "joinToken", "invite",
+                "joinRole", com.scan2play.model.StaffRole.QUEUE));
+        String html = engine.process("join", context);
+        writePreview("join-confirm.html", html);
+        assertThat(html).contains("action=\"/join/invite\" method=\"post\"", ">Dołącz<", "id=\"joinDecline\"", ">Nie, dziękuję<")
+                .doesNotContain("href=\"/start\"", "id=\"joinOwner\"", "??");
+
+        context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinProblem", "join.problem.full"));
+        String full = engine.process("join", context);
+        assertThat(full).contains(">Nie można dołączyć<", "Obsługa jest pełna (10 osób): Klub Ola.")
+                .doesNotContain("id=\"joinButton\"", "??");
     }
 
     /** "👥 Jestem z obsługi" on the landing page (V30): folded, a form to POST /join; open with a note after a link that did not work. */
