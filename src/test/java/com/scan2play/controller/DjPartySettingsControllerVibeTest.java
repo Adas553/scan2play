@@ -47,7 +47,7 @@ class DjPartySettingsControllerVibeTest {
         settingsService = mock(PartySettingsCommandService.class);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
-                settingsService, mock(AccountDeletionService.class), sessionHelper, mock(com.scan2play.service.PartyStaffService.class))).build();
+                settingsService, mock(AccountDeletionService.class), sessionHelper)).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
@@ -78,7 +78,7 @@ class DjPartySettingsControllerVibeTest {
         }
         mockMvc.perform(request).andExpect(status().is3xxRedirection());
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
-        verify(sessionHelper).validateOwnership(eq(PARTY), any(), any());
+        verify(sessionHelper).require(eq(PARTY), eq(com.scan2play.model.StaffPermission.VIBE), any(), any());   // a co-organiser's too (V32)
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());
         PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Old").build();
         updater.getValue().accept(party);
@@ -123,7 +123,7 @@ class DjPartySettingsControllerVibeTest {
     @Test
     void anotherDjsParty_isNotChanged() throws Exception {
         doThrow(new org.springframework.security.access.AccessDeniedException("not yours"))
-                .when(sessionHelper).validateOwnership(eq(PARTY), any(), any());
+                .when(sessionHelper).require(eq(PARTY), any(), any(), any());
 
         try {
             mockMvc.perform(post("/dj/dashboard/vibe-note").param("partyCode", PARTY).param("vibeNote", "x").principal(token).session(session));
@@ -139,7 +139,7 @@ class DjPartySettingsControllerVibeTest {
         mockMvc.perform(post("/dj/dashboard/comment-style").param("partyCode", PARTY).param("commentStyle", "SARCASTIC")
                 .principal(token).session(session)).andExpect(status().is3xxRedirection());
 
-        verify(sessionHelper).validateOwnership(eq(PARTY), any(), any());
+        verify(sessionHelper).require(eq(PARTY), eq(com.scan2play.model.StaffPermission.VIBE), any(), any());   // a co-organiser's too (V32)
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());
         PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).build();

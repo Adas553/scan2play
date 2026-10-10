@@ -48,8 +48,9 @@
                     <label for="staffLinkPaste" class="form-label small" th:text="#{landing.staff.label}">Paste the invitation link you got from the owner</label>
                     <input type="text" id="staffLinkPaste" name="link" maxlength="300" autocomplete="off" required
                            class="form-control mb-2" th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
+                    <!--/* a guests' link pasted by mistake (…/p/…) is told apart: it never was an invitation */-->
                     <div th:if="${param.staffLink != null}" id="staffLinkInvalid" class="text-danger small mb-2" role="alert"
-                         th:text="#{landing.staff.invalid}">That link does not work — ask the owner for a new one.</div>
+                         th:text="${param.staffLink[0] == 'guests'} ? #{landing.staff.guests} : #{landing.staff.invalid}">That link does not work — ask the owner for a new one.</div>
                     <button type="submit" class="btn btn-action w-100" th:text="#{join.button}">Log in with Google and join</button>
                 </form>
             </details>

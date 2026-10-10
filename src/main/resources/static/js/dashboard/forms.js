@@ -2,7 +2,7 @@
  * The forms of the DJ panel: the POST forms submitted by AJAX, and the "copy" button of the party link.
  */
 import { EVENTS, emit } from './events.js';
-import { csrfHeaders, showPartyActive } from './common.js';
+import { csrfHeaders, partyCode, showPartyActive } from './common.js';
 
 // ==========================================================================
 // AJAX FORM INTERCEPTOR
@@ -36,7 +36,7 @@ import { csrfHeaders, showPartyActive } from './common.js';
         fetch(action, {
             method: 'POST',
             headers: csrfHeaders(),
-            body: new FormData(form),
+            body: withParty(new FormData(form)),
             redirect: 'manual'
         }).then(function(response) {
             // A song played or skipped, or the queue cleared: the queue is fetched now, so the rows go at once
@@ -99,6 +99,17 @@ import { csrfHeaders, showPartyActive } from './common.js';
     });
 })();
 
+/**
+ * The party the page shows goes with every form (V32): the server works on that party and checks the person's permissions there —
+ * two tabs on two parties each do what they show (until 2026-10-10 the session's one party decided, and a tab still showing
+ * another party's queue cleared the person's own).
+ */
+function withParty(body) {
+    const party = partyCode();
+    if (party && !body.has('partyCode')) body.append('partyCode', party);
+    return body;
+}
+
 /** Whether the server took a form: it answers with a redirect to the dashboard (fetch with redirect: 'manual' sees opaqueredirect). */
 function accepted(response) {
     return response.type === 'opaqueredirect' || response.ok;
@@ -138,6 +149,7 @@ if (undoButton) {
         const bar = document.getElementById('undoSkip');
         const body = new FormData();
         body.append('id', bar.getAttribute('data-undo-id'));
+        withParty(body);
         clearTimeout(undoTimer);
         hideUndo();
         fetch('/dj/dashboard/restore', { method: 'POST', headers: csrfHeaders(), body: body, redirect: 'manual' })

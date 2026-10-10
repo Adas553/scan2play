@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.StaffPermission;
 import com.scan2play.service.EveningSummaryService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -43,9 +44,9 @@ public class DjSummaryController {
 
     /** The evening {@code evening} ("2026-10-03"); none, or one that is not a date, is the latest evening with requests. */
     @GetMapping
-    public String summary(@RequestParam(required = false) String evening, Model model,
-                          OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getOwnedPartySettings(authentication, session);
+    public String summary(@RequestParam(required = false) String evening, @RequestParam(required = false) String party,
+                          Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartySettingsEntity settings = sessionHelper.require(party, StaffPermission.SUMMARY, authentication, session);
         List<EveningSummaryService.Evening> evenings = eveningSummaryService.evenings(settings.getPartyCode());
         LocalDate shown = pick(evening, evenings);
         model.addAttribute(PARTY_CODE, settings.getPartyCode());
@@ -58,9 +59,9 @@ public class DjSummaryController {
 
     /** The evening's requests as a CSV file, "scan2play-2026-10-03.csv"; 404 when the party has no evening at all. */
     @GetMapping("/csv")
-    public ResponseEntity<byte[]> csv(@RequestParam(required = false) String evening, Locale locale,
-                                      OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getOwnedPartySettings(authentication, session);
+    public ResponseEntity<byte[]> csv(@RequestParam(required = false) String evening, @RequestParam(required = false) String party,
+                                      Locale locale, OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartySettingsEntity settings = sessionHelper.require(party, StaffPermission.SUMMARY, authentication, session);
         LocalDate shown = pick(evening, eveningSummaryService.evenings(settings.getPartyCode()));
         if (shown == null) {
             return ResponseEntity.notFound().build();

@@ -2,14 +2,16 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryFilter;
+import com.scan2play.model.StaffPermission;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
-import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.util.SongList;
+import com.scan2play.util.Texts;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,7 +25,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.util.Objects;
+import java.util.Optional;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -47,7 +51,7 @@ import static com.scan2play.controller.ViewAttributes.*;
 public class DjDashboardController {
 
     private final DjService djService;
-    private final PartySettingsQueryService partySettingsQueryService;
+    private final PartySettingsCommandService partySettingsCommandService;
     private final QrCodeService qrCodeService;
     private final DjSessionHelper sessionHelper;
     private final PlayHistoryService playHistoryService;
@@ -98,34 +102,51 @@ public class DjDashboardController {
     }
 
     /**
-     * Displays the DJ/Admin control panel (Active Queue).
+     * On every answer of the queue poll, 304 too: what the person may do at the party ({@code owner}, or the permissions' names) — a
+     * window whose page was made with other permissions loads itself again (the organiser changed the person's role, V32).
+     */
+    static final String PANEL_ACCESS_HEADER = "X-Panel-Access";
+
+    /**
+     * The DJ panel: the party {@code party} names, else the default panel ({@link DjSessionHelper#panel}); none at all — a person who
+     * came by an invitation that did not work, or whose access was taken away — is the page "no-panel". A person back from Google's
+     * login with an invitation waiting is asked "Dołączyć?" first ({@code /join/{token}}).
      */
     @GetMapping("/dashboard")
-    public String dashboard(Model model, OAuth2AuthenticationToken authentication, HttpSession session,
-                            HttpServletRequest request) {
-        // an invitation link opened before the login (/join/{token}, StaffController): the person joins the party's staff now
-        String joinNote = joinPendingInvitation(authentication, session);
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+    public String dashboard(@RequestParam(required = false) String party, Model model, OAuth2AuthenticationToken authentication,
+                            HttpSession session) {
+        Object pending = session.getAttribute(StaffController.SESSION_PENDING_INVITATION);
+        if (pending != null) {
+            session.removeAttribute(StaffController.SESSION_PENDING_INVITATION);
+            return "redirect:/join/" + pending;
+        }
+        Optional<PartyStaffService.Access> panel = sessionHelper.panel(party, authentication, session);
+        model.addAttribute(PANEL_NOTE, sessionHelper.takeNote(session).orElse(null));
+        if (panel.isEmpty()) {
+            return "no-panel";
+        }
+        PartyStaffService.Access access = panel.get();
+        PartySettingsEntity settings = access.party();
         String partyCode = settings.getPartyCode();
-        boolean owner = PartyStaffService.isOwner(settings, authentication.getName());
+        boolean owner = access.owner();
 
         log.info("DJ Dashboard access: ownerId={}, partyCode={}, owner={}", authentication.getName(), partyCode, owner);
+        if (owner) {
+            keepOwnerName(settings, authentication);
+        }
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
 
-        // --- Who works on it (V30): the owner sees everything, the staff the queue and the history; the panels to switch between ---
+        // --- Who works on it (V30, V32): the owner everything, the staff what the owner gave them; the panels to switch between ---
         model.addAttribute(IS_OWNER, owner);
+        model.addAttribute(ACCESS, access);
+        model.addAttribute(PANEL_ACCESS, accessValue(access));
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
-        model.addAttribute(STAFF_JOIN_NOTE, joinNote);
         model.addAttribute(PANELS, partyStaffService.panelsOf(authentication.getName()));
+        model.addAttribute(HAS_OWN_PARTY, owner || partyStaffService.hasOwnParty(authentication.getName()));
         if (owner) {
             model.addAttribute(STAFF, partyStaffService.staffOf(partyCode));
-            // the address the owner opened the panel at, not the guests' one: the invitation leads through Google's login, which works
-            // only where the panel does — locally the guests' address is the computer's in the local network, and Google refuses a
-            // login there ("device_id and device_name are required for private IP", 2026-10-09)
-            model.addAttribute(STAFF_LINK, settings.getStaffToken() == null ? null
-                    : ServletUriComponentsBuilder.fromContextPath(request).path("/join/{token}").buildAndExpand(settings.getStaffToken()).toUriString());
         }
 
         // --- Party State ---
@@ -170,26 +191,21 @@ public class DjDashboardController {
     }
 
     /**
-     * Joins the person to the staff of the party whose invitation link they opened (the token waits in the session, put there by
-     * {@code StaffController}), and opens that party in the panel. The message key of what happened, or null without an invitation.
+     * The organiser's name from their Google account, kept for their staff (V32: "Ola Kowalska" where the party has no "Kto gra",
+     * not its code) — written only when it changed.
      */
-    private String joinPendingInvitation(OAuth2AuthenticationToken authentication, HttpSession session) {
-        String token = (String) session.getAttribute(StaffController.SESSION_PENDING_INVITATION);
-        if (token == null) {
-            return null;
-        }
-        session.removeAttribute(StaffController.SESSION_PENDING_INVITATION);
+    private void keepOwnerName(PartySettingsEntity settings, OAuth2AuthenticationToken authentication) {
         Object name = authentication.getPrincipal().getAttribute("name");
-        PartyStaffService.Joined joined = partyStaffService.join(token, authentication.getName(), name == null ? null : name.toString());
-        if (joined.party() != null) {
-            sessionHelper.switchTo(joined.party().getPartyCode(), authentication, session);
+        String kept = Texts.oneLine(name == null ? null : name.toString(), PartySettingsEntity.OWNER_NAME_MAX);
+        String value = kept.isEmpty() ? null : kept;
+        if (!Objects.equals(value, settings.getOwnerName())) {
+            partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setOwnerName(value));
         }
-        return switch (joined.outcome()) {
-            case JOINED, ALREADY -> "dashboard.staff.joined";
-            case OWNER -> "dashboard.staff.own_link";
-            case FULL -> "dashboard.staff.full";
-            case UNKNOWN_LINK -> "dashboard.staff.old_link";
-        };
+    }
+
+    /** The value of {@link #PANEL_ACCESS_HEADER}: "owner", or the permissions' names. */
+    static String accessValue(PartyStaffService.Access access) {
+        return access.owner() ? "owner" : StaffPermission.format(access.permissions());
     }
 
     /** The side of the QR code on the print page, in pixels: sharp on an A4 poster (the cards show it smaller). */
@@ -202,10 +218,10 @@ public class DjDashboardController {
      * {@code cards} is the poster.
      */
     @GetMapping("/qr-print")
-    public String qrPrint(@RequestParam(defaultValue = "poster") String layout, Model model,
-                          OAuth2AuthenticationToken authentication, HttpSession session) {
+    public String qrPrint(@RequestParam(defaultValue = "poster") String layout, @RequestParam(required = false) String party,
+                          Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
         // the staff's too (V30): the code is on the tables anyway, a bartender prints a new one
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+        PartySettingsEntity settings = sessionHelper.access(party, authentication, session).party();
         String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
         model.addAttribute(PARTY_CODE, partyCode);
@@ -231,14 +247,17 @@ public class DjDashboardController {
      */
     @GetMapping("/history-view")
     public String historyView(@RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit,
-                              @RequestParam(required = false) String filter, Model model,
-                              OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+                              @RequestParam(required = false) String filter, @RequestParam(required = false) String party,
+                              Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
+        PartyStaffService.Access access = sessionHelper.access(party, authentication, session);
+        PartySettingsEntity settings = sessionHelper.require(access.party().getPartyCode(), StaffPermission.HISTORY, authentication, session);
         String partyCode = settings.getPartyCode();
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
-        model.addAttribute(IS_OWNER, PartyStaffService.isOwner(settings, authentication.getName()));
+        model.addAttribute(IS_OWNER, access.owner());
+        model.addAttribute(ACCESS, access);
+        model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
         addHistory(model, settings, limit, filter);
 
         return "history";
@@ -256,9 +275,11 @@ public class DjDashboardController {
                                   @RequestParam(defaultValue = "" + HISTORY_PAGE_SIZE) int limit,
                                   @RequestParam(required = false) String filter, Model model,
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateAccess(partyCode, authentication, session);
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
-        model.addAttribute(IS_OWNER, PartyStaffService.isOwner(settings, authentication.getName()));
+        PartyStaffService.Access access = sessionHelper.access(partyCode, authentication, session);
+        PartySettingsEntity settings = sessionHelper.require(partyCode, StaffPermission.HISTORY, authentication, session);
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(IS_OWNER, access.owner());
+        model.addAttribute(ACCESS, access);
         addHistory(model, settings, limit, filter);
         // The fragment lands under the dashboard's other panels: it gets a heading of its own (the standalone page has one)
         model.addAttribute(HISTORY_HEADING, true);
@@ -294,8 +315,10 @@ public class DjDashboardController {
     public String getDashboardUpdates(@RequestParam String partyCode, Model model,
                                       HttpServletRequest request, HttpServletResponse response,
                                       OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateAccess(partyCode, authentication, session);   // the owner or the staff (V30)
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode); // cached
+        // the owner or anyone of the staff (V30); an access taken away is a 403 — the page loads itself again and says so
+        PartyStaffService.Access access = sessionHelper.access(partyCode, authentication, session);
+        PartySettingsEntity settings = access.party();
+        response.setHeader(PANEL_ACCESS_HEADER, accessValue(access));
         // Not part of the ETag: the warnings follow the limits even while the queue stays the same
         response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode));
         response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
@@ -319,6 +342,8 @@ public class DjDashboardController {
         response.setHeader("ETag", etag);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
         model.addAttribute(WANTED_SONGS, SongList.of(settings.getHostWanted()));
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
         return "dashboard :: songTableBody";
     }
 

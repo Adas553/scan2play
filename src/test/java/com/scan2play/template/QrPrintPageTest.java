@@ -5,7 +5,9 @@ import com.scan2play.controller.DjSessionHelper;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
-import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.model.StaffPermission;
+import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.QrCodeService;
@@ -82,15 +84,15 @@ class QrPrintPageTest {
 
     private static String render(String layout, Locale locale, PartySettingsEntity party) throws IOException {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        when(sessionHelper.getPartySettings(any(), any())).thenReturn(party);
-        DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsQueryService.class),
+        when(sessionHelper.access(any(), any(), any())).thenReturn(new PartyStaffService.Access(party, true, StaffPermission.all()));
+        DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
-                mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class));
+                mock(PushNotificationService.class), mock(PartyStaffService.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "https://www.scan2play.com.pl/");
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
-        String view = controller.qrPrint(layout, model, ownerToken(), new MockHttpSession());
+        String view = controller.qrPrint(layout, null, model, ownerToken(), new MockHttpSession());
         assertThat(view).isEqualTo("qr-print");
 
         MockServletContext servletContext = new MockServletContext();

@@ -7,11 +7,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.scan2play.model.StaffPermission;
+import com.scan2play.model.StaffRole;
+
 import java.time.Instant;
+import java.util.Set;
 
 /**
- * One person of a party's staff (V30): a bartender or a second DJ who logs in with their own Google account and works the owner's
- * queue and history — no settings. Joined by the owner's invitation link; the owner takes the access away.
+ * One person of a party's staff (V30): a bartender, a second DJ, the venue's manager — someone who logs in with their own Google
+ * account and works the owner's party as far as the owner allows ({@link #permissions}, V32). Joined by the owner's invitation link;
+ * the owner takes the access away.
  */
 @Entity
 @Table(name = "party_staff", indexes = {
@@ -44,4 +49,15 @@ public class PartyStaffEntity {
 
     @Column(nullable = false)
     private Instant joinedAt;
+
+    /** What the person may do (V32): the organiser's pick, a role's set or ticked one by one ({@code StaffRole.of} names it). */
+    @Builder.Default
+    @Convert(converter = StaffPermissionsConverter.class)
+    @Column(nullable = false, length = 200)
+    private Set<StaffPermission> permissions = StaffRole.DEFAULT.permissions();
+
+    /** The role the permissions make ({@link StaffRole#CUSTOM} when ticked one by one) — the owner's page shows it picked. */
+    public StaffRole role() {
+        return StaffRole.of(permissions);
+    }
 }

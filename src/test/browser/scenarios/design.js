@@ -69,10 +69,13 @@
                 const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
                 return !(hit === item || item.contains(hit));
             }).map(function (item) { return item.textContent.trim(); });
-            t.step('every item of the menu can be tapped: nothing (the sticky tab bar) lies over one', [items.length, covered], [3, []]);
+            // the owner's four (V32: "Obsługa imprezy" first — the staff's page), every one in reach
+            t.step('every item of the menu can be tapped: nothing (the sticky tab bar) lies over one', [items.length, covered], [4, []]);
             t.step('every item is at least 44 px high', items.filter(function (i) { return i.getBoundingClientRect().height < 44 - 0.5; }).length, 0);
-            t.check('the deletion of the account is the last one, in red', items[2] && items[2].id === 'deleteAccountBtn'
-                && getComputedStyle(items[2]).color === 'rgb(255, 123, 123)');
+            const last = items[items.length - 1];
+            t.check('the deletion of the account is the last one, in red', last && last.id === 'deleteAccountBtn'
+                && getComputedStyle(last).color === 'rgb(255, 123, 123)');
+            t.step('the page of the staff is the first one', items[0] && items[0].id, 'staffMenuLink');
         }
     });
 

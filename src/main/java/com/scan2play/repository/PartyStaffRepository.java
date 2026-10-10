@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 /** The parties' staff (V30). Every read is bounded: a party has at most 10, a person works at a few. */
 @Repository
@@ -22,6 +23,9 @@ public interface PartyStaffRepository extends JpaRepository<PartyStaffEntity, Lo
 
     /** Whether this person is on the party's staff: checked on every request of a staff member (the unique index). */
     boolean existsByPartyCodeAndMemberId(String partyCode, String memberId);
+
+    /** This person's row on the party's staff — what they may do: read on every request of a staff member (the unique index). */
+    Optional<PartyStaffEntity> findByPartyCodeAndMemberId(String partyCode, String memberId);
 
     long countByPartyCode(String partyCode);
 

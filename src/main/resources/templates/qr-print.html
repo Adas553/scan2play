@@ -17,12 +17,12 @@
 
 <nav class="toolbar no-print">
     <strong th:text="#{qr.print.title}">Print the QR code</strong>
-    <a th:href="@{/dj/qr-print(layout='poster')}" th:classappend="${qrLayout == 'poster'} ? 'active'"
+    <a th:href="@{/dj/qr-print(layout='poster',party=${partyCode})}" th:classappend="${qrLayout == 'poster'} ? 'active'"
        th:text="#{qr.print.layout.poster}">A4 poster</a>
-    <a th:href="@{/dj/qr-print(layout='cards')}" th:classappend="${qrLayout == 'cards'} ? 'active'"
+    <a th:href="@{/dj/qr-print(layout='cards',party=${partyCode})}" th:classappend="${qrLayout == 'cards'} ? 'active'"
        th:text="#{qr.print.layout.cards}">Table cards</a>
     <button type="button" id="printBtn" th:text="#{qr.print.print}">Print</button>
-    <a href="/dj/dashboard" th:text="#{qr.print.back}">Back to the dashboard</a>
+    <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" th:text="#{qr.print.back}">Back to the dashboard</a>
     <p class="hint" th:text="#{qr.print.hint}">This bar is not printed.</p>
 </nav>
 

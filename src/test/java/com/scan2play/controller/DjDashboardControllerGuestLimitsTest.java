@@ -3,7 +3,9 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
-import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.model.StaffPermission;
+import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.QrCodeService;
@@ -17,6 +19,8 @@ import org.springframework.ui.ExtendedModelMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,7 +34,7 @@ class DjDashboardControllerGuestLimitsTest {
     private static final String ETAG = "\"q-3-42\"";
 
     private DjService djService;
-    private PartySettingsQueryService settingsService;
+    private DjSessionHelper sessionHelper;
     private GuestRequestLimiter limiter;
     private DjDashboardController controller;
     private PartySettingsEntity party;
@@ -38,14 +42,14 @@ class DjDashboardControllerGuestLimitsTest {
     @BeforeEach
     void setUp() {
         djService = mock(DjService.class);
-        settingsService = mock(PartySettingsQueryService.class);
+        sessionHelper = mock(DjSessionHelper.class);
         limiter = mock(GuestRequestLimiter.class);
-        controller = new DjDashboardController(djService, settingsService, mock(QrCodeService.class), mock(DjSessionHelper.class),
+        controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
                 mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class));
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getDashboardQueue(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
-        when(settingsService.getSettings(PARTY)).thenReturn(party);
+        when(sessionHelper.access(eq(PARTY), any(), any())).thenReturn(new PartyStaffService.Access(party, true, StaffPermission.all()));
     }
 
     /** Polls the queue; {@code unchanged} = the client already has this version (the answer is a 304). */

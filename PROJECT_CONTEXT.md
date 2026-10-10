@@ -83,6 +83,8 @@ in its texts' column "Napiwek / Tip: revolut.me/djkoko"; the money never passes 
 `hostBlocked` / `hostWanted` (V29, ≤ 16000: the hosts' lists, one song or artist per line — see "The hosts' lists" below),
 `hostToken` (V29, ≤ 32, UNIQUE, null = no link: the secret of the hosts' link `/h/{token}`, `CodeGenerator.generateSecret` — 128
 random bits, base64url), `staffToken` (V30, the same kind: the staff's invitation link `/join/{token}` — see `PartyStaffEntity`),
+`ownerName` (V32, ≤ 100: the organiser's name from their Google account, written when they open the panel and it changed — the
+staff and the invitation name a party by "Kto gra", else by it, else by the code: `PartyStaffService.nameOf`),
 `commentStyle` (V22, `CommentStyle`:
 CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
@@ -187,13 +189,20 @@ service, or with the account.
 
 **`PartyStaffEntity` → `party_staff`** (V30, the owner 2026-10-09: a pub's bartender) — one person on a party's staff: `partyCode`
 (FK to `party_settings.party_code`, ON DELETE CASCADE), `memberId` (their Google subject), `memberName` (≤ 100, the name of their
-Google account — the owner's list), `joinedAt`; UNIQUE (party, member), index by member. At most 10 per party
-(`PartyStaffService.MAX_STAFF`). Gone when the owner takes the access away, with the member's account, or with the party.
+Google account — the owner's list), `joinedAt`, `permissions` (V32, ≤ 200, NOT NULL: what the person may do — the names of
+`model/StaffPermission`, comma-separated, `StaffPermissionsConverter`; the role is not stored: `StaffRole.of` names the set); UNIQUE
+(party, member), index by member. At most 10 per party (`PartyStaffService.MAX_STAFF`, counted under the party row's lock —
+`PartySettingsRepository.lockByPartyCode`). Gone when the owner takes the access away, with the member's account, or with the party.
 **`spring_session`, `spring_session_attributes`** (V11, Spring Session's own schema, no entity) — the HTTP sessions; expired ones are
 deleted every minute.
 
 ### 4.2 Enums
 
+`StaffPermission` (V32) QUEUE ("Zagrane", "Pomiń", "Cofnij", "↩ Przywróć"), TIPS (💸), CLEAR_QUEUE, OPEN_CLOSE (end / resume the
+party), HISTORY, VIBE (the card "Impreza"), LIMITS, HOST_LISTS (the lists and their link), SUMMARY (the evening summary and its CSV) ·
+`StaffRole` (V32, ready sets by what the person does, not by their job) VIEWER "Podgląd" (HISTORY), QUEUE "Obsługa kolejki" (QUEUE,
+TIPS, CLEAR_QUEUE, OPEN_CLOSE, HISTORY — what every person of the staff could do before V32; `DEFAULT`, a joiner's), CO_ORGANISER
+"Współorganizator" (all of them), CUSTOM "Własne" (ticked one by one) ·
 `HistoryFilter` all / played / rejected (an old link's "guest" / "background" reads as all) · `VibeType` ANY and 16 genres (V16:
 Polish hits, 2000s/2010s, R&B & soul, folk / biesiada, kids added; bachata, salsa and reggaeton merged into LATINO — the rows moved
 by the migration).
@@ -237,7 +246,7 @@ never offered).
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
 
-**The heading** is one row: our logo, small, and the button "Ustawienia, klimat i kod QR" (the staff: "Kod QR"); the page's h1 "Panel DJ-a"
+**The heading** is one row: our logo, small, and the button "Ustawienia, klimat i kod QR" (the staff without a settings card: "Kod QR"); the page's h1 "Panel DJ-a"
 is for screen readers. **The settings fold** under that button on every screen (on a phone first; on a computer too since
 2026-10-09, the owner: there were many of them): cards of one pattern — a heading, one line of help, the fields, one "Zapisz" — "Impreza"
 (the vibe, the AI's comments, the vibe note, "Kto gra"), "Limity gości", "Lista gospodarzy", "Obsługa" on the left; "Kod QR imprezy", "Profile i napiwki" and "To
@@ -288,36 +297,56 @@ half-hours between too, the busiest named), what played in the order it played, 
 file (`scan2play-<day>.csv`; BOM and ";" for Excel, the DJ's language, every value quoted, and one that starts with `= + - @` or a tab
 gets an apostrophe — a guest's text is never a formula).
 
-**The party's staff** (V30, the owner 2026-10-09): a bartender or a second DJ works the owner's party with their own Google account.
-The owner's card "Obsługa" (under the hosts' lists): who has access, each with "Usuń dostęp" (asks first), and the invitation link
-— "🔗 Utwórz link zaproszenia" / "Nowy link" (the old one dead; who joined stays) / "Wyłącz link"; these forms are full page loads.
-The link `/join/{token}` — built from the address the owner opened the panel at, not `scan2play.guest-url`: it leads through
-Google's login, which refuses a computer's address in the local network ("device_id and device_name are required for private IP";
-locally test it on `localhost`, a second Google account in a private window) — (public, `StaffController`, `join.html`, `noindex`,
-`no-referrer`) names the party and keeps the token in the
-session; its button goes through Google's login (`/start`) — or, logged in already, straight — to `/dj/dashboard`, which joins
-the person (`DjDashboardController.joinPendingInvitation` → `PartyStaffService.join`: not the owner, not twice, at most 10) and
-opens that party: "Dołączono do obsługi: …". **The panel's party** is kept in the session (`DjSessionHelper`): every request
-checks that the person still may open it (the owner without a query, a staff member by the unique index — an access taken away
-ends with the next request; the panel falls back to their own party). A person without a party of their own who works at one (a
-bartender) opens it at once and gets no party made until "Mój panel" — which the switcher always offers (2026-10-09: offered
-only to those with a party, a person who joined first could never make one). The panel switcher (`POST /dj/panel`, a page load) shows
-when the person works somewhere. **A link pasted in the app**: the dashboard on a phone's Home Screen opens a link from an e-mail in
-the browser, which has a login of its own (an iPhone always) — so under the notifications there is "Masz zaproszenie do obsługi
-innej imprezy? Wklej link" (`POST /dj/join`, `link`: the token at the end of the link, or the token alone; kept in the session like
-one opened by the link, and the panel joins — a page load). **On the landing page** (where the installed app starts for someone
-not logged in), "Masz zaproszenie do obsługi imprezy? Dołącz →" — a quiet line of text under the DJs' card, a `<details>` with the same field (`POST /join`, public): a party's link goes
-straight to Google's login with the token in the session, anything else back to `/?staffLink=invalid` ("Ten link nie działa"), before
-any login. **On another party's panel** the menu "Konto" has "Opuść obsługę" (`POST /dj/staff/leave`: the person's row goes, the
-panel opens their own party — made now for a bartender) in place of "Usuń konto", which read as deleting the party (the owner,
-2026-10-09); the account is deleted from "Mój panel". Right after joining only the note "Dołączono do obsługi: …" shows; the banner
-"Obsługujesz imprezę: … Ustawienia i listy ma organizator." from the next page on (one message at a time). The texts call the
-party's owner "organizator" (and the people "obsługa") wherever the staff read them. **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
-(no "Wyczyść historię", no evening summary), "Zakończ / Wznów imprezę", the notifications (their own devices get every new request
-too), the QR code with its link and print (2026-10-09: it is on the tables anyway) and "Obsługujesz imprezę: …"; **not** the
-settings, the limits, the hosts' lists, the staff, the profiles or the tip link — hidden in the page (`isOwner`) and refused by the server (`DjSessionHelper.validateOwnership` / `getOwnedPartySettings`:
-403). `#partyCode`, which the scripts read, is outside the owner's parts (inside them the staff's queue was never polled — the
-browser scenario `staff-panel` found it).
+**The party's staff** (V30, the owner 2026-10-09; roles and permissions V32, 2026-10-10 after the review of the staff's flows,
+https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx): a bartender, a second DJ, the venue's manager works the owner's party with their
+own Google account, **as far as the owner allows**. The owner's page **"Obsługa"** (`/dj/staff`, `staff.html`; from the menu "Konto" →
+"Obsługa imprezy" and the card "Obsługa" in the settings, which only counts the people — the card was 1750 px down a phone and 990 px
+tall with ten people): a card per person — the name, "w obsłudze od 10.10", **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
+kolejki", "Współorganizator", "Własne") and, under "Uprawnienia po kolei", a checkbox per `StaffPermission` (`js/staff.js`: a role
+ticks its set, a tick changed picks the role it makes — "Własne" when none; the server decides the same way), "Zapisz" (`POST
+/dj/staff/permissions`, "✓ Zapisano") and "Usuń dostęp" (asks first, `POST /dj/staff/remove`); the invitation link — "Utwórz link
+zaproszenia" / "Nowy link" (the old one dead, asks first) / "Wyłącz link (osoby z listy zostają)" (`POST /dj/staff/link`). Full page
+loads. Never handed over: the staff, the DJ's profiles and tip link (money), "Wyczyść historię", the account.
+**Joining** — never a side effect of opening a page (the review: two top-level navigations of a foreign site joined a logged-in DJ to
+its party and showed it their Google name): `/join/{token}` (public, `join.html`, `noindex`, `no-referrer`) names the party and who
+invites ("Zaprasza: Ola Kowalska" — the organiser's name, when it is not the party's name already), the role a person starts with and
+what it allows. Logged in, it asks: "Dołącz" (`POST /join/{token}`, CSRF) or "Nie, dziękuję"; not logged in, its button goes through
+Google's login (`/start`) with the token in the session, and the panel sends the person back to the question. The link
+is built from the address the owner opened the page at, not `scan2play.guest-url`: Google's login refuses a computer's address in
+the local network ("device_id and device_name are required for private IP"; locally test it on `localhost`, a second Google account
+in a private window). Joined (`PartyStaffService.join`, `@Transactional`: the party row locked, then not the owner, not twice, at
+most 10 — `PartyStaffRepositoryIT`, 20 at once make 10), the panel opens that party: "Dołączono do obsługi: Klub Ola." A full staff
+or an old link: the invitation page says what happened (409 / 404) — "Obsługa jest pełna (10 osób): …", "Ten link zaproszenia już
+nie działa — organizator mógł utworzyć nowy". A link pasted in the app (an iPhone's Home Screen app has a login of its own; the field
+"Masz zaproszenie do obsługi innej imprezy? Wklej link" in "To urządzenie", `POST /dj/join`) leads to that invitation; a guests' link
+(`…/p/…`) is told apart ("To link dla gości…, nie zaproszenie"). On the landing page, "Masz zaproszenie do obsługi imprezy? Dołącz →"
+(a `<details>`, `POST /join`, public): a party's link goes to Google's login, anything else back to `/?staffLink=invalid` (or
+`guests`) before any login.
+**Which party a request works on** (`DjSessionHelper`, V32): **the page names it** — every form and fetch of the panel sends
+`partyCode` (hidden inputs; `forms.js` adds it to what it sends, the "Cofnij" bar too), the pages' links carry `?party=`, and the
+server checks the person's access to *that* party on every request (the owner without a query, a person of the staff by their row —
+an access taken away or a permission changed counts at once). Until V32 the session held one panel party for every tab: a tab still
+showing another party's queue cleared the person's own ("Wyczyść kolejkę", "Zakończ imprezę" — the review; on Android the installed
+app and Chrome share one session). The session keeps only the **default panel** (`/dj/dashboard` without `?party=`; a request
+without a code — a page of an older version — works on it). `require(partyCode, permission)` — the owner, or a person given it;
+`requireOwner(partyCode)` — what is never handed over; anything else is a 403 (`StaffPermissionEndpointsTest` walks every endpoint:
+refused without its permission, let through with it). A person **without a party of their own** gets none made behind their back: a
+bartender opens the party they work at; one whose access was taken away, or whose invitation did not work, gets the page
+**"no-panel"** ("Nie obsługujesz teraz żadnej imprezy": the note why, an invitation to paste, "Załóż własną imprezę" — `POST
+/dj/panel` without a party); a DJ's first login, with no note waiting, makes the DJ's party as before.
+**The panel of a person of the staff**: one line under the tabs — **"Klub Ola · Obsługa kolejki ▾"** (`#panelBar`, a `<details>`):
+unfolded, "Co możesz na tej imprezie" (the permissions given) and, with more than one panel, "Otwórz inny panel" (the own one named as
+the guests see it, "DJ Kuba (Twoja impreza)" — "Mój panel" was gone: for a bartender a click made a DJ's party); a note above it once
+("Dołączono…", "Organizator usunął Twój dostęp do imprezy: …" — `DjSessionHelper.Note`, kept in the session until shown). The page
+shows the buttons of the permissions given (hidden, not greyed; the poll's rows too) and refuses the rest on the server; a
+co-organiser gets the settings' cards they were given (the button says "Ustawienia, klimat i kod QR" then, else "Kod QR"). The QR card
+says "Link dla gości" (it said "Twój link do imprezy" to the staff). "Zakończyć imprezę: Klub Ola?" names the party. The menu
+"Konto": "Opuść obsługę" (`POST /dj/staff/leave`, the party the page shows; another panel opens, or "no-panel") in place of "Usuń
+konto"; "Załóż własną imprezę" for someone without one. **Every poll** says what the person may do (`X-Panel-Access`: "owner" or the
+permissions' names): another value than the page was made with (`#panelAccess`), or a 403 (the access taken away), and the page loads
+itself again and says so — before, the queue stood still and only the console knew (`polling.js`; browser scenarios
+`staff-access-taken-away`, `staff-access-changed`). Their devices get the notifications of new requests too.
+The texts call the party's owner "organizator" and the people "obsługa".
 
 ### 5.2 Guest Flow
 
@@ -385,11 +414,11 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 |-------|---------|
 | `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ; `/start` → Google's login |
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
-| `StaffController` | the staff's invitation page `/join/{token}` (public) and the panel switcher `POST /dj/panel` (V30) |
-| `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), the staff's link and access (V30), account deletion |
+| `StaffController` | the staff's invitation `/join/{token}` (public; "Dołącz" a POST), the panel switcher `POST /dj/panel`, leaving a staff, a pasted link (V30); the owner's page "Obsługa" `/dj/staff`: permissions, the link, removing (V32) |
+| `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
 | `DjSongController` | mark played, skip, clear the queue, count a tip ("💸", V28) |
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
-| `DjSessionHelper` | the panel's party (in the session: the person's own or one they work at, V30 — access checked on every request; made on the first login — tabs that make it at once look again, `FirstLoginIT`), **`validateOwnership`** / `getOwnedPartySettings` (the owner alone) and **`validateAccess`** (the owner or the staff) — IDOR |
+| `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
@@ -413,7 +442,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `QrCodeService` | QR codes (ZXing, cached) |
 | `AccountDeletionService` | deletes all of a DJ's data (their party's staff and their places on other staffs too) and evicts the caches after the commit |
-| `PartyStaffService` | the party's staff (V30): who may open a party, joining by the invitation link, the owner's list, taking access away, the panels |
+| `PartyStaffService` | the party's staff (V30, V32): what a person may do at a party (`Access`), joining by the invitation link (under the party's lock), the owner's list, permissions, taking access away, the panels, the party's name |
 | `SongRequestRetentionService` | the nightly purge of song requests (Section 4.1) |
 | `PushSubscriptionService` / `PushNotificationService` | the DJ's devices of the notifications (checked addresses, ≤ 10 per DJ) / sending a new request to them (Web Push, `zerodep-web-push-java`, off the request thread) |
 | `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …" |
@@ -434,7 +463,7 @@ files under it); everything else keeps Spring Security's `no-store`,
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
 `qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html`,
-`terms[_pl].html` — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
+`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32), `no-panel.html` (no panel at all, V32) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
 `HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
 tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: the account buttons, the sticky tabs Panel / Kolejka / Historia, the
 feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
@@ -447,6 +476,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 |------|---------|
 | `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `push.js` (the switch of notifications on this device), `install.js` ("📲 Zainstaluj aplikację"), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
+| `js/staff.js` | the owner's page "Obsługa" (V32): a role ticks its permissions, a tick picks the role it makes; "Kopiuj" of the invitation link |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side) |
@@ -527,9 +557,10 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
 under the deploy's version), `/images/**`, `/webjars/**`,
-`/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party (IDOR): what
-only the owner may do by `DjSessionHelper.validateOwnership` / `getOwnedPartySettings`, the queue and the history by `validateAccess` —
-the owner or the party's staff (V30). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). Logout `POST
+`/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party the page
+names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
+`requireOwner` for what is never handed over (the staff, the profiles, the tip link, clearing the history, the account), `access` for
+what every person of the staff sees (the queue's poll, the QR print). `POST /join/{token}` joins only logged in, with CSRF. CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.
 
 **Content-Security-Policy** (`SecurityConfig.CONTENT_SECURITY_POLICY`): `script-src 'self'`, styles and fonts from the app only —
@@ -625,6 +656,7 @@ schema behind Flyway's back.
 | V29 | `party_settings.host_blocked`, `host_wanted` varchar(16000), `host_token` varchar(32) (unique index `uk_party_settings_host_token`), all nullable: the hosts' lists and their link |
 | V30 | `party_settings.staff_token` varchar(32) (unique index `uk_party_settings_staff_token`); table `party_staff` (id, `party_code` FK ON DELETE CASCADE, `member_id`, `member_name` varchar(100), `joined_at`; UNIQUE (party, member), index `idx_party_staff_member_id`): the party's staff |
 | V31 | `song_requests.energy_level` dropped: the AI's energy rating (1–10) is no longer asked for or shown (the owner, 2026-10-10: nobody used it) |
+| V32 | `party_staff.permissions` varchar(200) NOT NULL (no default: the app always writes it) — the people on a staff get the role "Obsługa kolejki" (`QUEUE,TIPS,CLEAR_QUEUE,OPEN_CLOSE,HISTORY`, what they could do before; `StaffPermissionMigrationIT`); `party_settings.owner_name` varchar(100), nullable: the organiser's Google name |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -652,10 +684,10 @@ security updates switched on in GitHub.
 ```
 GuestController            → SongEvaluationService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartySettingsQueryService
 GuestVoteService           → SongRequestRepository, DjService
-DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsQueryService, DjSessionHelper, PushNotificationService, PartyStaffService, PartySettingsRepository
-DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper, PartyStaffService
+DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsCommandService, DjSessionHelper, PushNotificationService, PartyStaffService
+DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper
 DjSessionHelper            → PartySettingsQueryService, PartySettingsCommandService, PartySettingsRepository, PartyStaffService
-StaffController            → PartyStaffService, DjSessionHelper
+StaffController            → PartyStaffService, PartySettingsCommandService, DjSessionHelper
 PartyStaffService          → PartyStaffRepository, PartySettingsRepository, PartySettingsQueryService
 HostController             → PartySettingsRepository, PartySettingsCommandService
 DjSongController           → DjService, DjSessionHelper
@@ -682,18 +714,19 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one |
 | POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid` |
-| GET | `/join/{token}` | the staff's invitation (V30): names the party, keeps the token in the session for the login; 404 for an unknown or old one |
+| GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
+| POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" |
 | GET | `/privacy`, `/terms` | legal pages |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |
 
-### DJ (logged in; every endpoint with a `partyCode` checks it — the owner's alone, or the owner's and the staff's: the queue, the history, start / end, feedback, push)
+### DJ (logged in; every endpoint works on the party the page names — `partyCode` / `party`, none: the default panel — and checks the person's permission there, V32)
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/dj/dashboard` | the dashboard |
-| GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active` |
+| GET | `/dj/dashboard` | `party` (none: the default panel): the dashboard; "no-panel" when the person has none (V32); with an invitation waiting after the login, back to it |
+| GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own skip, not when the same song waits) |
@@ -702,11 +735,13 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/comment-style`, `/limits` | settings |
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |
 | POST | `/dj/dashboard/host-lists` | `blocked`, `wanted`: the hosts' lists (V29, `SongList.tidy`; empty clears) |
-| POST | `/dj/dashboard/staff-link` | `link` = `new` / `off`: the staff's invitation link (V30; the owner's) |
-| POST | `/dj/dashboard/staff-remove` | `id`: one person's access taken away (V30; the owner's, a row of their own party only) |
-| POST | `/dj/join` | `link`: an invitation link pasted in the app — its token waits in the session, the panel joins (V30) |
-| POST | `/dj/staff/leave` | "🚪 Opuść obsługę": the person leaves the staff of the panel's party, their own panel opens (V30; nothing for the owner) |
-| POST | `/dj/panel` | `party` (none = "Mój panel", made now for a bartender): the panel's party (V30; 403 for a party the person does not work at) |
+| GET | `/dj/staff` | `party`: the owner's page "Obsługa" (V32; the owner's) |
+| POST | `/dj/staff/permissions` | `partyCode`, `id`, `role` (VIEWER / QUEUE / CO_ORGANISER / CUSTOM), `permissions` (with CUSTOM): what one person may do (V32; the owner's, a row of their own party only) |
+| POST | `/dj/staff/link` | `partyCode`, `link` = `new` / `off`: the staff's invitation link (V30, moved in V32; the owner's) |
+| POST | `/dj/staff/remove` | `partyCode`, `id`: one person's access taken away (V30, moved in V32; the owner's, a row of their own party only) |
+| POST | `/dj/join` | `link`: an invitation link pasted in the app → that invitation, which asks (V30, V32); else back with a note |
+| POST | `/dj/staff/leave` | `partyCode`: "Opuść obsługę" — the person leaves the staff of the party the page shows (V30; nothing for the owner) |
+| POST | `/dj/panel` | `party` (none = "Załóż własną imprezę", made now): the default panel (V30; 403 for a party the person does not work at) → `?party=` |
 | POST | `/dj/dashboard/host-link` | `link` = `new` (a new secret: the old link dead) / `off` (no link); anything else 400 |
 | POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
@@ -714,7 +749,7 @@ GuestQueueService          → DjService
 | GET | `/dj/qr-print` | `layout` = poster / cards |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
-| POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | |
+| POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE) |
 
 ---
 

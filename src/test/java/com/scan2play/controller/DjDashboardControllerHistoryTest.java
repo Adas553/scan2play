@@ -4,7 +4,9 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.HistoryEntry;
 import com.scan2play.model.HistoryFilter;
 import com.scan2play.service.DjService;
-import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.model.StaffPermission;
+import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.GuestRequestLimiter;
@@ -29,6 +31,7 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -59,15 +62,16 @@ class DjDashboardControllerHistoryTest {
         historyService = mock(PlayHistoryService.class);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjDashboardController(
-                mock(DjService.class), mock(PartySettingsQueryService.class), mock(QrCodeService.class), sessionHelper,
+                mock(DjService.class), mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
                 historyService,
-                mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class))).build();
+                mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
         session = new MockHttpSession();
-        when(sessionHelper.getPartySettings(token, session))
-                .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").build());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").build();
+        when(sessionHelper.access(any(), eq(token), eq(session))).thenReturn(new PartyStaffService.Access(party, true, StaffPermission.all()));
+        when(sessionHelper.require(any(), eq(StaffPermission.HISTORY), eq(token), eq(session))).thenReturn(party);
     }
 
     private static List<HistoryEntry> entries(int count) {
@@ -255,14 +259,14 @@ class DjDashboardControllerHistoryTest {
 
         mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).principal(token).session(session));
 
-        verify(sessionHelper).validateAccess(PARTY, token, session);   // the owner or the staff (V30)
+        verify(sessionHelper).require(PARTY, StaffPermission.HISTORY, token, session);   // the owner or the staff given the history (V32)
     }
 
     @Test
     @DisplayName("a party owned by someone else is rejected and no history is read")
     void shouldNotReadTheHistory_whenPartyBelongsToSomeoneElse() {
         doThrow(new AccessDeniedException("You do not own party: OTHER"))
-                .when(sessionHelper).validateAccess(anyString(), any(), any());
+                .when(sessionHelper).access(anyString(), any(), any());
 
         assertThatThrownBy(() -> mockMvc.perform(get("/dj/history-view/fragment")
                         .param("partyCode", "OTHER").principal(token).session(session)))

@@ -59,7 +59,8 @@
                 </div>
                 <!--/* One evening of the party to print, save as PDF or download as CSV (DjSummaryController) — before the history is
                      cleared, which takes it too */-->
-                <a th:unless="${#lists.isEmpty(history) or isOwner == false}" href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
+                <a th:unless="${#lists.isEmpty(history) or (access != null ? !access.may('SUMMARY') : isOwner == false)}"
+                   th:href="${partyCode != null ? '/dj/summary?party=' + partyCode : '/dj/summary'}" href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
                    class="btn btn-sm btn-outline-light" th:text="#{summary.open}">Evening summary</a>
                 <!--/* The party's played and rejected requests deleted (DjService.clearHistory: not the waiting ones, not a skip that
                      still keeps its song out); asks first (data-confirm, dj-nav.js). In the History tab forms.js sends it in the
@@ -67,6 +68,7 @@
                 <form th:unless="${#lists.isEmpty(history) or isOwner == false}" action="/dj/dashboard/clear-history" method="post" class="m-0"
                       th:attr="data-confirm=#{history.clear.confirm}">
                     <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="partyCode" th:value="${partyCode}" />
                     <button type="submit" id="clearHistoryBtn" class="btn btn-sm btn-outline-danger"
                             th:text="#{history.clear}">🗑 Clear the history</button>
                 </form>
@@ -152,10 +154,11 @@
                     </th:block>
                     <!--/* It can go back to the queue — a skip by mistake (DjService.restoreSkippedSong). In the History tab forms.js sends
                          it in the background; on the standalone page it lands on the dashboard. Beside the word, on the same line. */-->
-                    <form th:if="${req.skippedByDj()}" action="/dj/dashboard/restore" method="post" class="d-inline-block m-0 ms-md-2">
+                    <form th:if="${req.skippedByDj() and (access == null or access.may('QUEUE'))}" action="/dj/dashboard/restore" method="post" class="d-inline-block m-0 ms-md-2">
                         <!--/* the CSRF field by hand: the fragment is rendered without a web context too (HistoryFragmentTest) */-->
                         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                         <input type="hidden" name="id" th:value="${req.id}" />
+                        <input type="hidden" name="partyCode" th:value="${partyCode}" />
                         <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap" th:title="#{history.restore.title}"
                                 th:text="#{history.restore}">↩ Restore</button>
                     </form>
@@ -179,7 +182,7 @@
     </div>
 
     <div class="d-flex justify-content-end mb-3">
-        <a href="/dj/dashboard" class="btn btn-outline-light" th:text="#{history.back.to.dashboard}">Back to Dashboard</a>
+        <a th:href="${partyCode != null ? '/dj/dashboard?party=' + partyCode : '/dj/dashboard'}" href="/dj/dashboard" class="btn btn-outline-light" th:text="#{history.back.to.dashboard}">Back to Dashboard</a>
     </div>
 </div>
 

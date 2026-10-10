@@ -26,7 +26,9 @@
         <h3 class="fw-bold mb-3" th:text="#{dashboard.alert.party_closed.title}">⚠️ Party is CLOSED</h3>
         <p th:text="#{dashboard.alert.party_closed.description}">Guests scanning your QR code will see that the party has ended. They cannot add new songs.</p>
 
-        <form th:action="@{/dj/start-party}" method="POST">
+        <!--/* every form of the panel names the party it shows (V32: two tabs, two parties) */-->
+        <form th:if="${access == null or access.may('OPEN_CLOSE')}" th:action="@{/dj/start-party}" method="POST">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
             <button type="submit" class="btn btn-action btn-lg" th:text="#{dashboard.button.resume_party}">
                 ▶ Resume Party and Open the Dancefloor
             </button>
@@ -39,10 +41,12 @@
          bar (.s2p-account-bar), so the open menu is not under it. */-->
     <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end mb-2 s2p-account-bar">
 
-        <form id="end-party-form"
+        <!--/* the question names the party: a person of the staff closes the organiser's (the review, 2026-10-10) */-->
+        <form id="end-party-form" th:if="${access == null or access.may('OPEN_CLOSE')}"
               th:classappend="${!isActive} ? 'd-none' : ''"
               th:action="@{/dj/end-party}" method="POST"
-              th:data-confirm="#{dashboard.confirm.end_party}">
+              th:data-confirm="#{dashboard.confirm.end_party(${partyName != null ? partyName : partyCode})}">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
             <button type="submit" class="btn btn-sm btn-outline-warning fw-semibold text-nowrap" th:text="#{dashboard.button.end_party}">End Party</button>
         </form>
 
@@ -50,10 +54,22 @@
             <button type="button" id="accountMenuBtn" class="btn btn-sm btn-outline-secondary dropdown-toggle"
                     data-bs-toggle="dropdown" aria-expanded="false" th:text="#{dashboard.account}">Account</button>
             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" aria-labelledby="accountMenuBtn">
+                <!--/* the owner's page of the staff (V32): who helps and what each may do — first, the menu's most used */-->
+                <li th:if="${isOwner == true}">
+                    <a class="dropdown-item" id="staffMenuLink" th:href="@{/dj/staff(party=${partyCode})}"
+                       th:text="#{dashboard.staff.menu}">The party's staff</a>
+                </li>
                 <li>
                     <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#feedbackModal"
                             th:attr="data-party-code=${partyCode}" th:title="#{feedback.button.title}"
                             th:text="#{feedback.button.label}">Send feedback</button>
+                </li>
+                <!--/* someone without a party of their own (on another's staff): makes one here, on purpose — never by a click on
+                     "Mój panel" or by an access taken away (the review, 2026-10-10) */-->
+                <li th:if="${hasOwnParty == false}">
+                    <form th:action="@{/dj/panel}" method="POST" class="m-0">
+                        <button type="submit" id="makeOwnPartyBtn" class="dropdown-item" th:text="#{panel.make_own}">Start your own party</button>
+                    </form>
                 </li>
                 <li>
                     <form th:action="@{/dj/logout}" method="POST" class="m-0" th:data-confirm="#{dashboard.confirm.logout}">
@@ -65,6 +81,7 @@
                     <!--/* On another party's staff (V30) the panel is not theirs: "Opuść obsługę" in place of "Usuń konto", which deleted the
                          person's own account but read as deleting the party (the owner, 2026-10-09). The account is deleted from "Mój panel". */-->
                     <form th:if="${isOwner == false}" th:action="@{/dj/staff/leave}" method="POST" class="m-0" th:data-confirm="#{dashboard.confirm.leave_staff}">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
                         <button type="submit" id="leaveStaffBtn" class="dropdown-item text-danger"
                                 th:text="#{dashboard.button.leave_staff}">Leave the staff</button>
                     </form>
@@ -87,17 +104,17 @@
             <li class="nav-item">
                 <a class="nav-link" data-dj-tab="panel" th:classappend="${activeTab == 'panel' ? 'active' : ''}"
                    th:aria-current="${activeTab == 'panel' ? 'page' : null}"
-                   href="/dj/dashboard#top" th:text="#{dashboard.nav.panel}">DJ Panel</a>
+                   href="/dj/dashboard#top" th:href="@{/dj/dashboard(party=${partyCode})} + '#top'" th:text="#{dashboard.nav.panel}">DJ Panel</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" data-dj-tab="queue" th:classappend="${activeTab == 'queue' ? 'active' : ''}"
                    th:aria-current="${activeTab == 'queue' ? 'page' : null}"
-                   href="/dj/dashboard#queue-content" th:text="#{dashboard.nav.queue}">Queue</a>
+                   href="/dj/dashboard#queue-content" th:href="@{/dj/dashboard(party=${partyCode})} + '#queue-content'" th:text="#{dashboard.nav.queue}">Queue</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item" th:if="${access == null or access.may('HISTORY')}">
                 <a class="nav-link" data-dj-tab="history" th:classappend="${activeTab == 'history' ? 'active' : ''}"
                    th:aria-current="${activeTab == 'history' ? 'page' : null}"
-                   href="/dj/history-view" th:text="#{dashboard.nav.history}">History</a>
+                   href="/dj/history-view" th:href="@{/dj/history-view(party=${partyCode})}" th:text="#{dashboard.nav.history}">History</a>
             </li>
         </ul>
     </nav>
@@ -196,6 +213,7 @@
     <form action="/dj/dashboard/tip-count" method="post" class="m-0">
         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <input type="hidden" name="id" th:value="${id}" />
+        <input type="hidden" name="partyCode" th:value="${partyCode}" />
         <button type="submit" class="btn btn-sm text-nowrap s2p-btn-tip" th:classappend="${tips > 0} ? 'btn-warning' : 'btn-outline-secondary'"
                 th:title="#{dashboard.tip.count.title(${'#' + number})}" th:text="${tips > 0} ? ${'💸 ' + tips} : '💸'">💸</button>
     </form>
@@ -204,6 +222,7 @@
     <form action="/dj/dashboard/tip-count" method="post" class="m-0" th:classappend="${tips > 0} ? '' : 'invisible'">
         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <input type="hidden" name="id" th:value="${id}" />
+        <input type="hidden" name="partyCode" th:value="${partyCode}" />
         <input type="hidden" name="add" value="false" />
         <button type="submit" class="btn btn-sm btn-link text-secondary px-1 s2p-btn-untip" th:title="#{dashboard.tip.uncount.title}"
                 th:disabled="${tips == 0}" th:attr="aria-hidden=${tips == 0}">−1</button>

@@ -1,5 +1,6 @@
 package com.scan2play.controller;
 
+import com.scan2play.model.StaffPermission;
 import com.scan2play.service.DjService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,9 @@ import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
 
 /**
  * Controller responsible for song queue actions performed by the DJ.
+ * <p>
+ * Every action works on the party the page names ({@code partyCode}; none: the default panel, a page of an older version) and
+ * checks what the person may do there ({@link DjSessionHelper#require}, V32).
  * <p>
  * Handles:
  * <ul>
@@ -38,9 +42,9 @@ public class DjSongController {
      * @return Redirects back to the dashboard.
      */
     @PostMapping("/dashboard/play")
-    public String markAsPlayed(@RequestParam Long id,
+    public String markAsPlayed(@RequestParam Long id, @RequestParam(required = false) String partyCode,
                                OAuth2AuthenticationToken authentication, HttpSession session) {
-        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session).getPartyCode();
         djService.markSongAsPlayed(id, ownerPartyCode);
         return REDIRECT_DASHBOARD;
     }
@@ -53,9 +57,9 @@ public class DjSongController {
      * @return Redirects back to the dashboard.
      */
     @PostMapping("/dashboard/dismiss")
-    public String dismiss(@RequestParam Long id,
+    public String dismiss(@RequestParam Long id, @RequestParam(required = false) String partyCode,
                           OAuth2AuthenticationToken authentication, HttpSession session) {
-        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session).getPartyCode();
         djService.dismissSong(id, ownerPartyCode);
         return REDIRECT_DASHBOARD;
     }
@@ -68,8 +72,9 @@ public class DjSongController {
      * @return Redirects back to the dashboard (the standalone history page's form lands there, with the song in the queue).
      */
     @PostMapping("/dashboard/restore")
-    public String restore(@RequestParam Long id, OAuth2AuthenticationToken authentication, HttpSession session) {
-        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+    public String restore(@RequestParam Long id, @RequestParam(required = false) String partyCode,
+                          OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session).getPartyCode();
         djService.restoreSkippedSong(id, ownerPartyCode);
         return REDIRECT_DASHBOARD;
     }
@@ -83,8 +88,9 @@ public class DjSongController {
      */
     @PostMapping("/dashboard/tip-count")
     public String countTip(@RequestParam Long id, @RequestParam(defaultValue = "true") boolean add,
+                           @RequestParam(required = false) String partyCode,
                            OAuth2AuthenticationToken authentication, HttpSession session) {
-        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+        String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.TIPS, authentication, session).getPartyCode();
         djService.countTip(id, ownerPartyCode, add);
         return REDIRECT_DASHBOARD;
     }
@@ -96,8 +102,9 @@ public class DjSongController {
      * @return Redirects back to the dashboard.
      */
     @PostMapping("/dashboard/clear-queue")
-    public String clearQueue(OAuth2AuthenticationToken authentication, HttpSession session) {
-        String ownerPartyCode = sessionHelper.getPartySettings(authentication, session).getPartyCode();
+    public String clearQueue(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
+                             HttpSession session) {
+        String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.CLEAR_QUEUE, authentication, session).getPartyCode();
         djService.clearQueue(ownerPartyCode);
         return REDIRECT_DASHBOARD;
     }
@@ -109,11 +116,12 @@ public class DjSongController {
      * @return Redirects to the standalone history page (the dashboard's History tab sends it in the background and reloads the tab).
      */
     @PostMapping("/dashboard/clear-history")
-    public String clearHistory(OAuth2AuthenticationToken authentication, HttpSession session) {
+    public String clearHistory(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
+                             HttpSession session) {
         // the owner alone (V30): the staff work the queue, the history is the owner's record of the evenings
-        String ownerPartyCode = sessionHelper.getOwnedPartySettings(authentication, session).getPartyCode();
+        String ownerPartyCode = sessionHelper.requireOwner(partyCode, authentication, session).getPartyCode();
         djService.clearHistory(ownerPartyCode);
-        return "redirect:/dj/history-view";
+        return "redirect:/dj/history-view?party=" + ownerPartyCode;
     }
 }
 

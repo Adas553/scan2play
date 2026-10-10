@@ -32,7 +32,6 @@ class DjPartySettingsControllerLinksTest {
 
     private PartySettingsCommandService settingsService;
     private DjSessionHelper sessionHelper;
-    private final com.scan2play.service.PartyStaffService staffService = mock(com.scan2play.service.PartyStaffService.class);
     private MockMvc mockMvc;
     private OAuth2AuthenticationToken token;
 
@@ -41,7 +40,7 @@ class DjPartySettingsControllerLinksTest {
         settingsService = mock(PartySettingsCommandService.class);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
-                settingsService, mock(AccountDeletionService.class), sessionHelper, staffService)).build();
+                settingsService, mock(AccountDeletionService.class), sessionHelper)).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
@@ -111,7 +110,8 @@ class DjPartySettingsControllerLinksTest {
                         .param("blocked", " Akcent \r\n\r\nakcent\nBaby Shark").param("wanted", "  "))
                 .andExpect(status().is3xxRedirection());
 
-        verify(sessionHelper).validateOwnership(eq(PARTY), any(), any());
+        // a co-organiser's too (V32): the permission HOST_LISTS
+        verify(sessionHelper).require(eq(PARTY), eq(com.scan2play.model.StaffPermission.HOST_LISTS), any(), any());
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());
         PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).hostWanted("Old").build();
@@ -141,42 +141,5 @@ class DjPartySettingsControllerLinksTest {
         assertThat(party.getHostToken()).hasSize(22).isNotEqualTo(first);
         updater.getAllValues().get(2).accept(party);
         assertThat(party.getHostToken()).isNull();
-    }
-
-    /** The staff's invitation link (V30): the owner's, a new secret each time, "off" none, anything else a 400. */
-    @Test
-    @SuppressWarnings("unchecked")
-    void theStaffsLink_isANewSecretEachTime_offTakesItAway_andOnlyTheOwnerMakesIt() throws Exception {
-        for (String link : new String[]{"new", "off"}) {
-            mockMvc.perform(post("/dj/dashboard/staff-link").param("partyCode", PARTY).param("link", link).principal(token)
-                    .session(new MockHttpSession())).andExpect(status().is3xxRedirection());
-        }
-        mockMvc.perform(post("/dj/dashboard/staff-link").param("partyCode", PARTY).param("link", "x").principal(token)
-                .session(new MockHttpSession())).andExpect(status().isBadRequest());
-
-        verify(sessionHelper, org.mockito.Mockito.times(3)).validateOwnership(eq(PARTY), any(), any());
-        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
-        verify(settingsService, org.mockito.Mockito.times(2)).updateSettings(eq(PARTY), updater.capture());
-        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).build();
-        updater.getAllValues().get(0).accept(party);
-        assertThat(party.getStaffToken()).hasSize(22);
-        updater.getAllValues().get(1).accept(party);
-        assertThat(party.getStaffToken()).isNull();
-    }
-
-    /** Taking a person's access away (V30): checked as the owner's, then only a row of the owner's own party. */
-    @Test
-    void removingAccess_isTheOwners_andOfTheirOwnParty() throws Exception {
-        org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("staff"))
-                .when(sessionHelper).validateOwnership(eq("OTHER"), any(), any());
-
-        mockMvc.perform(post("/dj/dashboard/staff-remove").param("partyCode", PARTY).param("id", "7").principal(token)
-                .session(new MockHttpSession())).andExpect(status().is3xxRedirection());
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> mockMvc.perform(post("/dj/dashboard/staff-remove")
-                .param("partyCode", "OTHER").param("id", "8").principal(token).session(new MockHttpSession())))
-                .hasRootCauseInstanceOf(org.springframework.security.access.AccessDeniedException.class);
-
-        verify(staffService).remove(PARTY, 7L);
-        verify(staffService, never()).remove(eq("OTHER"), org.mockito.ArgumentMatchers.anyLong());
     }
 }

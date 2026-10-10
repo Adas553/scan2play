@@ -12,16 +12,40 @@
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<!--/* The staff's invitation (V30, /join/{token}): it names the party; the button goes through Google's login (or straight, logged
-     in already) to the panel, where the person joins — the token waits in the session. */-->
+<!--/* The staff's invitation (V30, /join/{token}). It names the party and who invites, and what the person will be able to do (the
+     role they start with, V32). Logged in: "Dołącz" (POST, CSRF) or "Nie, dziękuję" — joining is never a side effect of opening a
+     page. Not logged in: Google's login first, then this question again. A link that no longer works, or a full staff: what
+     happened and what to do (joinProblem). */-->
 <body class="page-guest">
 <div class="container d-flex flex-column align-items-center">
     <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500 text-center">
         <h1 class="display-6 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
-        <h2 class="h4 fw-bold mt-2" id="joinHeading" th:text="#{join.heading(${joinPartyName})}">👥 Join the staff of DJ Koko</h2>
-        <p class="text-secondary" th:text="#{join.intro}">You will see the guests' requests and mark them played.</p>
-        <a th:href="${joinUrl}" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.button}">Log in with Google and join</a>
-        <p class="small text-secondary mt-3 mb-0" th:text="#{join.footer}">The owner can take your access away at any time.</p>
+
+        <th:block th:if="${joinProblem != null}">
+            <h2 class="h4 fw-bold mt-2" id="joinHeading" th:text="#{join.problem.title}">This invitation cannot be used</h2>
+            <p class="text-light" id="joinProblem"
+               th:text="${joinPartyName != null} ? #{__${joinProblem}__(${joinPartyName})} : #{__${joinProblem}__}">The link no longer works.</p>
+            <a href="/" class="btn btn-outline-light" th:text="#{join.home}">Home page</a>
+        </th:block>
+
+        <th:block th:if="${joinProblem == null}">
+            <h2 class="h4 fw-bold mt-2" id="joinHeading" th:text="#{join.heading(${joinPartyName})}">An invitation to the staff of DJ Koko</h2>
+            <p th:if="${joinOwnerName != null and joinOwnerName != joinPartyName}" class="text-secondary mb-2" id="joinOwner" th:text="#{join.from(${joinOwnerName})}">From: Ola Kowalska</p>
+            <div class="text-start mx-auto mb-3" id="joinRole" th:with="roleName=#{__${'staff.role.' + joinRole}__}">
+                <p class="mb-1" th:text="#{join.role(${roleName})}">You start as: Queue. You can:</p>
+                <ul class="mb-1">
+                    <li th:text="#{panel.can.always}">See the queue and the QR code</li>
+                    <li th:each="permission : ${joinRole.permissions()}" th:text="#{__${'staff.permission.' + permission}__}">Played, Skip</li>
+                </ul>
+                <p class="small text-secondary mb-0" th:text="#{join.footer}">The organiser can change it or take the access away at any time.</p>
+            </div>
+            <form th:if="${joinLoggedIn}" th:action="@{/join/{token}(token=${joinToken})}" method="post" class="m-0">
+                <button type="submit" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.confirm}">Join</button>
+            </form>
+            <a th:if="${joinLoggedIn}" href="/dj/dashboard" id="joinDecline" class="btn btn-link text-secondary mt-2"
+               th:text="#{join.decline}">No, thanks</a>
+            <a th:unless="${joinLoggedIn}" href="/start" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.button}">Log in with Google and join</a>
+        </th:block>
     </div>
 </div>
 </body>
