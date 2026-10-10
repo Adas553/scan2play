@@ -236,7 +236,8 @@ sees under the form), `PlayHistoryService.Page`.
 Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
-leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
+leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (on a wide screen every verdict's word as wide as the longer of "ZAGRANE" /
+"POMINIĘTE" — hidden copies in an inline grid, `.s2p-decision-word` —, so the "↩ Przywróć" after them stand in one column; amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
 under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1; "Zagrane" has both too, 2026-10-10) and "Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra";
 the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person: "Zgłoś uwagę" (feedback), "Wyloguj",
@@ -317,6 +318,12 @@ filters All / Played / Rejected applied by the server, "Show more" (50 at a time
 column (`captureListState` / `restoreListState` in the tab; on the standalone page, which loads itself again, through
 `sessionStorage` once). A heading row where a new day starts, Polish time (`tr[data-day-heading]`: "dziś — sobota, 03.10",
 "wczoraj — …", "wtorek, 29.09"; `Times.dayKey` / `weekday`) — the history keeps 30 days, so the parties of a month share it.
+**On a wide screen** (the design review of 2026-10-10, variant C, https://claude.ai/artifact/HJ7JdqVoXRpBGdD7h3d2Wv) the columns are
+ID, the time, the song, the votes and "Decyzja" (was "Werdykt AI" over the DJ's own decisions): under the song **one muted line**, the
+guest's words · the AI's comment, cut with "…", the whole of it in its title (`.s2p-history-sub`; the comment's column was the widest
+and the loudest, the songs broke inside words — "Małomiasteczk / owy" —, four entries fitted the list's 540 px, now seven); no column
+"Klimat" ("Dowolny" in every row) — the vibe the AI judged by is the decision's title ("Klimat: Wesele"); the decision a coloured dot
+and one quiet word in capitals (eight colours of text competed in a row). Browser scenario `history-wide-calm`.
 On a phone (narrower than 768 px) every entry is **one line** (2026-10-10, `cards.js`; 52 px, was a card of 191 px): the song (cut with
 "…"), "⚠", the votes, the decision ▶ / ⏭ / ✖ / 🧹 and, for a skip or a played one, "↩" (44 × 44 — the one thing done in the history, so still one tap;
 its words kept for a screen reader). A tap on the line (or its "▾") unfolds the card: the whole song across it, "⚠ Sprawdź", the guest's
@@ -347,7 +354,8 @@ gets an apostrophe — a guest's text is never a formula).
 https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx): a bartender, a second DJ, the venue's manager works the owner's party with their
 own Google account, **as far as the owner allows**. The owner's page **"Obsługa"** (`/dj/staff`, `staff.html`; from the row "Obsługa ·
 Osób: 1" of the settings and the jumps of "Ustawienia imprezy" — not the menu "Konto", which is about the person, 2026-10-10; the card in
-the settings was 1750 px down a phone and 990 px tall with ten people): a card per person, **folded to one line** — the name, the role,
+the settings was 1750 px down a phone and 990 px tall with ten people; its heading leads back to "← Ustawienia" and to "Panel" of the
+same party — the one row of the settings with a page of its own, 2026-10-10): a card per person, **folded to one line** — the name, the role,
 "w obsłudze od 10.10" (a `<details>`; the owner, 2026-10-10: ten unfolded cards repeated the same picker; the one just saved comes back
 unfolded with "Zapisano"); unfolded, **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
 kolejki", "Współorganizator", "Własne") and, under "Uprawnienia po kolei", a checkbox per `StaffPermission` (`js/staff.js`: a role
@@ -595,6 +603,10 @@ What every page shares, so a new screen looks like the others:
   which; a tap on a control is the control's alone; unfolded items survive the list being replaced (remembered by id). Not on a wide
   screen. Browser scenarios: `queue-cards-folded`, `queue-card-open-survives-poll`, `queue-cards-viewer`, `queue-cards-wide-screen`,
   `history-lines-phone`.
+- **A table on a wide screen** gives its width to what identifies a row (the song), never lets a title break inside a word, and puts the
+  secondary words (the guest's, the AI's comment) in one muted line under it, the whole in the title; what is the same in every row is
+  not a column; colour marks a state only where it tells something apart (a dot at the decision, ⚠, votes above 1) — the words stay
+  quiet (the history, 2026-10-10; `history-wide-calm`).
 - **Emoji** only as markers in a list or a status (⭐ ⚠ 💸 👍 ▶ ⏭, "🎧 Gra: …", 🚫 / ⭐ of the hosts' lists) — not in card titles,
   headings or ordinary buttons. **Words**: "Ty" to everyone, "Wy" only on the hosts' page; "organizator" (the party's owner), "obsługa"
   (bartender, second DJ), "gospodarze", "goście"; no English words ("Zgłoś uwagę", not "Feedback"); "DJ‑a" in a heading with a

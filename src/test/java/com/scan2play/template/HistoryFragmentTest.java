@@ -108,13 +108,26 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("a party with no genre (the style ANY) shows \"Dowolny\" / \"Any\", never the raw ANY; the column is \"Klimat\"")
-    void shouldNameTheVibeOfNoGenre() {
+    @DisplayName("the vibe the AI judged by is the decision's title — \"Dowolny\" / \"Any\" for no genre, never the raw ANY; no column \"Klimat\" (the same in every row, the review of 2026-10-10)")
+    void shouldNameTheVibeInTheDecisionsTitle() {
         HistoryEntry any = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "ANY", "played", null, null);
 
-        assertThat(render(List.of(any), false, PL)).contains(">Dowolny<", ">Klimat<").doesNotContain(">ANY<", ">Vibe<");
-        assertThat(render(List.of(any), false, Locale.ENGLISH)).contains(">Any<").doesNotContain(">ANY<");
-        assertThat(render(List.of(guest(1, "Alpha", "played")), false, PL)).as("a genre as it was saved").contains(">Pop<");
+        assertThat(render(List.of(any), false, PL)).contains("title=\"Klimat: Dowolny\"").doesNotContain(">Klimat<", ">Dowolny<", "ANY", ">Vibe<");
+        assertThat(render(List.of(any), false, Locale.ENGLISH)).contains("title=\"Vibe: Any\"").doesNotContain("ANY");
+        assertThat(render(List.of(guest(1, "Alpha", "played")), false, PL)).as("a genre as it was saved").contains("title=\"Klimat: Pop\"");
+    }
+
+    @Test
+    @DisplayName("on a wide screen one line under the song: the guest's words · the AI's comment (either alone when the other is missing, none without both), the whole of it in its title; the columns end with \"Decyzja\"")
+    void shouldPutTheGuestsWordsAndTheCommentUnderTheSong() {
+        Instant at = Instant.parse("2026-09-29T18:00:00Z");
+        String html = render(List.of(new HistoryEntry(1L, at, "Both", null, "Pop", "played", "Hit na parkiet!", "orła cień", 1),
+                new HistoryEntry(2L, at, "Words", null, "Pop", "played", null, "bravo", 1),
+                new HistoryEntry(3L, at, "None", null, "Pop", "played", null, null, 1)), false, PL);
+
+        assertThat(html).contains("title=\"Gość: „orła cień” · AI: Hit na parkiet!\">Gość: „orła cień” · AI: Hit na parkiet!<", ">Gość: „bravo”<");
+        assertThat(html.split("s2p-history-sub", -1)).as("no line without the words and the comment").hasSize(3);
+        assertThat(html).contains(">Decyzja<").doesNotContain("Werdykt AI", "Komentarz AI");
     }
 
     @Test
@@ -163,11 +176,11 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("a song shows its style, and the \"Preview\" link to YouTube's search results — no energy rating")
+    @DisplayName("a song shows its style (in the decision's title since 2026-10-10), and the \"Preview\" link to YouTube's search results — no energy rating")
     void shouldRenderASong() {
         String html = render(List.of(guest(1, "Alpha Beta", "played")), false, Locale.ENGLISH);
 
-        assertThat(html).contains(">Pop<").doesNotContain("7/10", "data-sort=\"energy\"");
+        assertThat(html).contains("title=\"Vibe: Pop\"").doesNotContain("7/10", "data-sort=\"energy\"");
         assertThat(html).contains("href=\"https://www.youtube.com/results?search_query=Alpha+Beta\"", ">Preview<");
         assertThat(html).doesNotContain(">LINK<", "🎶");
     }
