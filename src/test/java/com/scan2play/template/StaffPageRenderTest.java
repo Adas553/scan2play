@@ -8,6 +8,8 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartyStaffService;
+import com.scan2play.service.StaffInvitationService;
+import com.scan2play.entity.StaffInvitationEntity;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -80,11 +82,14 @@ class StaffPageRenderTest {
         Files.writeString(OUT.resolve(name), html, StandardCharsets.UTF_8);
     }
 
-    /** Kasia with the role "Obsługa kolejki", Tomek with permissions ticked one by one; the invitation link made. */
+    /**
+     * Kasia with the role "Obsługa kolejki", Tomek with permissions ticked one by one, Ola invited by e-mail and waiting (V34); the
+     * invitation link made with "Podgląd" (V33).
+     */
     @Test
-    void theStaffPage_listsWhatEachMayDo_andTheLink() throws IOException {
+    void theStaffPage_listsWhatEachMayDo_theInvitations_andTheLink() throws IOException {
         PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("Klub Ola")
-                .staffToken("Inv_123-xyzInv_123-xyz").build();
+                .staffToken("Inv_123-xyzInv_123-xyz").staffLinkPermissions(StaffRole.VIEWER.permissions()).build();
         DjSessionHelper helper = mock(DjSessionHelper.class);
         when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
         PartyStaffService staff = mock(PartyStaffService.class);
@@ -94,7 +99,12 @@ class StaffPageRenderTest {
                 PartyStaffEntity.builder().id(8L).partyCode(PARTY).memberId("tomek").memberName(null)
                         .joinedAt(Instant.parse("2026-10-09T18:00:00Z"))
                         .permissions(EnumSet.of(StaffPermission.QUEUE, StaffPermission.SUMMARY)).build()));
-        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper);
+        when(staff.placesTaken(PARTY)).thenReturn(3L);
+        StaffInvitationService invitations = mock(StaffInvitationService.class);
+        when(invitations.waitingAt(PARTY)).thenReturn(List.of(StaffInvitationEntity.builder().id(3L).partyCode(PARTY)
+                .email("ola.kowalska@gmail.com").emailKey("olakowalska@gmail.com").permissions(StaffRole.CO_ORGANISER.permissions())
+                .invitedAt(Instant.parse("2026-10-10T08:00:00Z")).build()));
+        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper, invitations);
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("staffSaved", 7L);
         MockHttpServletRequest panelRequest = new MockHttpServletRequest();
@@ -118,7 +128,22 @@ class StaffPageRenderTest {
                 // the invitation follows the panel's address (Google's login works only there)
                 "value=\"http://127.0.0.1:8080/join/Inv_123-xyzInv_123-xyz\"", "data-copy-target=\"staffLinkInput\"",
                 "action=\"/dj/staff/link\"", ">Wyłącz link (osoby z listy zostają)<",
-                "href=\"/dj/dashboard?party=HARN1\"", "/js/staff.js", "/js/dj-nav.js");
+                "href=\"/dj/dashboard?party=HARN1\"", "/js/staff.js", "/js/dj-nav.js",
+                // the invitation by e-mail waiting: the address, since when, the role, "Cofnij zaproszenie" (asks first)
+                "data-invitation-id=\"3\"", ">ola.kowalska@gmail.com<", ">zaproszono 10.10 · czeka na zalogowanie<",
+                ">Rola: Współorganizator<", "action=\"/dj/staff/invitation/cancel\"",
+                "data-confirm=\"Cofnąć zaproszenie: ola.kowalska@gmail.com?\"", ">Cofnij zaproszenie<",
+                // "Zaproś": the address and the role (Obsługa kolejki, as a joiner had it), one action button on the page
+                "action=\"/dj/staff/invite\"", "type=\"email\"", "name=\"email\"", "id=\"role-invite\"", ">Zaproś<",
+                // the link says its role, and a new one is made with the role picked beside it
+                ">Ten link: Podgląd<", "id=\"role-link\"", ">Rola nowego linku (stary przestanie działać)<");
+        assertThat(html.split("btn-action", -1)).as("one action button on the page").hasSize(2);
+        String invite = html.substring(html.indexOf("id=\"staffInviteForm\""), html.indexOf("id=\"staffLinkCard\""));
+        assertThat(invite).containsPattern("<option value=\"QUEUE\"[^>]*selected");
+        String link = html.substring(html.indexOf("id=\"staffLinkForm\""));
+        assertThat(link).containsPattern("<option value=\"VIEWER\"[^>]*selected")
+                .containsPattern("value=\"HISTORY\"[^>]*checked").doesNotContainPattern("value=\"QUEUE\"[^>]*checked");
+        assertThat(html).doesNotContain("id=\"staffFull\"", "id=\"staffInviteResult\"");
         // Kasia's role is picked; Tomek's ticks are no role's: "Własne", the ticks unfolded
         String kasia = html.substring(html.indexOf("data-staff-id=\"7\""), html.indexOf("data-staff-id=\"8\""));
         assertThat(kasia).containsPattern("<option value=\"QUEUE\"[^>]*selected").doesNotContain("<details class=\"mb-2 s2p-staff-perms\" open");
@@ -126,6 +151,35 @@ class StaffPageRenderTest {
         assertThat(tomek).containsPattern("<option value=\"CUSTOM\"[^>]*selected").contains("<details class=\"mb-2 s2p-staff-perms\" open")
                 .doesNotContain("data-staff-saved");
         assertThat(session.getAttribute("staffSaved")).as("\"Zapisano\" once").isNull();
+    }
+
+    /**
+     * "Zaproś" with a typo, every place taken (V34): the page says why, keeps the address in the field to correct; no link made yet —
+     * its role is the default one; nobody on the list yet.
+     */
+    @Test
+    void theStaffPage_afterAWrongAddress_keepsIt_andSaysThePlacesAreTaken() throws IOException {
+        PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("Klub Ola").build();
+        DjSessionHelper helper = mock(DjSessionHelper.class);
+        when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
+        PartyStaffService staff = mock(PartyStaffService.class);
+        when(staff.placesTaken(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF);
+        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper,
+                mock(StaffInvitationService.class));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("staffInvited", new StaffController.InviteResult("INVALID_ADDRESS", "ola@gmail", true));
+
+        ConcurrentModel model = new ConcurrentModel();
+        controller.staffPage(PARTY, model, null, session, new MockHttpServletRequest());
+        String html = render("staff", model.asMap(), PL);
+        write("staff-invite-problem.html", html);
+
+        assertThat(html).doesNotContain("??", "id=\"staffLinkInput\"", "id=\"staffLinkRole\"", "id=\"staffList\"");
+        assertThat(html).contains("id=\"staffEmpty\"", "To nie wygląda na adres e-mail: ola@gmail", "alert alert-warning",
+                "value=\"ola@gmail\"", "id=\"staffFull\"", "Zajęte 10 z 10 miejsc", ">Utwórz link zaproszenia<",
+                ">Co może osoba, która dołączy przez link<");
+        String link = html.substring(html.indexOf("id=\"staffLinkForm\""));
+        assertThat(link).containsPattern("<option value=\"QUEUE\"[^>]*selected").doesNotContain("data-confirm");
     }
 
     /** No panel at all (the access taken away, no party of their own): what happened, an invitation to paste, a party on purpose. */

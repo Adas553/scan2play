@@ -73,14 +73,16 @@ class StaffPermissionEndpointsTest {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff);
+                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class));
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new DjSongController(mock(DjService.class), helper),
                         new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), helper),
                         dashboard,
-                        new DjSummaryController(mock(EveningSummaryService.class), helper, new StaticMessageSource()))
+                        new DjSummaryController(mock(EveningSummaryService.class), helper, new StaticMessageSource()),
+                        new StaffController(staff, mock(PartySettingsCommandService.class), helper,
+                                mock(com.scan2play.service.StaffInvitationService.class)))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -131,7 +133,14 @@ class StaffPermissionEndpointsTest {
         return Stream.of(
                 Arguments.of(post("/dj/dashboard/dj-links").param("partyCode", PUB).param("instagram", "@x")),
                 Arguments.of(post("/dj/dashboard/tip-link").param("partyCode", PUB).param("tip", "")),
-                Arguments.of(post("/dj/dashboard/clear-history").param("partyCode", PUB)));
+                Arguments.of(post("/dj/dashboard/clear-history").param("partyCode", PUB)),
+                // the staff and its invitations (V32, V33, V34)
+                Arguments.of(get("/dj/staff").param("party", PUB)),
+                Arguments.of(post("/dj/staff/permissions").param("partyCode", PUB).param("id", "7").param("role", "VIEWER")),
+                Arguments.of(post("/dj/staff/remove").param("partyCode", PUB).param("id", "7")),
+                Arguments.of(post("/dj/staff/link").param("partyCode", PUB).param("link", "new").param("role", "CO_ORGANISER")),
+                Arguments.of(post("/dj/staff/invite").param("partyCode", PUB).param("email", "ola@gmail.com").param("role", "CO_ORGANISER")),
+                Arguments.of(post("/dj/staff/invitation/cancel").param("partyCode", PUB).param("id", "3")));
     }
 
     @ParameterizedTest(name = "{0}")

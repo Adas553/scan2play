@@ -214,11 +214,12 @@ class GuestPageRenderTest {
                     JakartaServletWebApplication.buildApplication(servletContext)
                             .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
             context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinOwnerName", "Ola Kowalska", "joinLoggedIn", false,
-                    "joinToken", "invite", "joinRole", com.scan2play.model.StaffRole.QUEUE));
+                    "joinToken", "invite", "joinRole", com.scan2play.model.StaffRole.QUEUE,
+                    "joinPermissions", List.copyOf(com.scan2play.model.StaffRole.QUEUE.permissions())));
             String html = engine.process("join", context);
             if (locale == PL) {
                 writePreview("join.html", html);
-                assertThat(html).contains(">Zaproszenie do obsługi: Klub Ola<", ">Zaprasza: Ola Kowalska<",
+                assertThat(html).contains(">Ola Kowalska zaprasza Cię do obsługi imprezy: Klub Ola<",
                         "Zaczynasz z rolą „Obsługa kolejki”. Możesz:", ">Zagrane, Pomiń, Cofnij, Przywróć<", ">Historia<",
                         ">Zaloguj się przez Google i dołącz<");
             }
@@ -238,16 +239,47 @@ class GuestPageRenderTest {
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
         context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinLoggedIn", true, "joinToken", "invite",
-                "joinRole", com.scan2play.model.StaffRole.QUEUE));
+                "joinRole", com.scan2play.model.StaffRole.QUEUE, "joinPermissions", List.copyOf(com.scan2play.model.StaffRole.QUEUE.permissions())));
         String html = engine.process("join", context);
         writePreview("join-confirm.html", html);
-        assertThat(html).contains("action=\"/join/invite\" method=\"post\"", ">Dołącz<", "id=\"joinDecline\"", ">Nie, dziękuję<")
-                .doesNotContain("href=\"/start\"", "id=\"joinOwner\"", "??");
+        assertThat(html).contains(">Zaproszenie do obsługi: Klub Ola<", "action=\"/join/invite\" method=\"post\"", ">Dołącz<",
+                        "id=\"joinDecline\"", ">Nie, dziękuję<")
+                .doesNotContain("href=\"/start\"", "zaprasza Cię", "/dj/invitation", "??");
+
+        // a link made with "Własne" (V33): its ticked permissions — none ticked: only what everyone on the staff has
+        context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinLoggedIn", true, "joinToken", "invite",
+                "joinRole", com.scan2play.model.StaffRole.CUSTOM, "joinPermissions",
+                List.of(com.scan2play.model.StaffPermission.TIPS, com.scan2play.model.StaffPermission.SUMMARY)));
+        String custom = engine.process("join", context);
+        assertThat(custom).contains("Zaczynasz z rolą „Własne”. Możesz:", ">Liczenie napiwków 💸<", ">Podsumowanie wieczoru<")
+                .doesNotContain(">Historia<", "??");
 
         context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinProblem", "join.problem.full"));
         String full = engine.process("join", context);
         assertThat(full).contains(">Nie można dołączyć<", "Obsługa jest pełna (10 osób): Klub Ola.")
                 .doesNotContain("id=\"joinButton\"", "??");
+    }
+
+    /**
+     * An invitation by e-mail (V34, /dj/invitation): who invites, to which party, with which role; "Dołącz" and "Nie, dziękuję" are
+     * both forms that name the invitation (POST, CSRF) — declining it takes it off the organiser's list.
+     */
+    @Test
+    void anInvitationByEmail_asks_andBothAnswersArePosts() {
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinOwnerName", "Ola Kowalska", "joinLoggedIn", true,
+                "joinInvitationId", 3L, "joinRole", com.scan2play.model.StaffRole.VIEWER,
+                "joinPermissions", List.of(com.scan2play.model.StaffPermission.HISTORY)));
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+        String html = engine.process("join", context);
+        writePreview("join-invitation.html", html);
+
+        assertThat(html).contains(">Ola Kowalska zaprasza Cię do obsługi imprezy: Klub Ola<", "Zaczynasz z rolą „Podgląd”. Możesz:",
+                "action=\"/dj/invitation/accept\" method=\"post\"", "action=\"/dj/invitation/decline\" method=\"post\"",
+                "name=\"id\" value=\"3\"", ">Dołącz<", ">Nie, dziękuję<")
+                .doesNotContain("action=\"/join/", "href=\"/dj/dashboard\"", "href=\"/start\"", "??");
     }
 
     /** "👥 Jestem z obsługi" on the landing page (V30): folded, a form to POST /join; open with a note after a link that did not work. */

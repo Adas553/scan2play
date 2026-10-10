@@ -1,6 +1,8 @@
 package com.scan2play.entity;
 
 import com.scan2play.model.CommentStyle;
+import com.scan2play.model.StaffPermission;
+import com.scan2play.model.StaffRole;
 import com.scan2play.model.VibeType;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.SongList;
@@ -11,6 +13,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.util.EnumSet;
+import java.util.Set;
 
 /**
  * One party, owned by one DJ. Getters and setters, no {@code @Data}: an entity's equality is not "all fields equal" (Lombok's
@@ -110,6 +115,14 @@ public class PartySettingsEntity {
     private String staffToken;
 
     /**
+     * What whoever joins by the invitation link may do (V33): the organiser's pick when making the link — a role's set or ticked one
+     * by one; null while there is no link. A new role is a new link ({@code StaffController.updateStaffLink}).
+     */
+    @Convert(converter = StaffPermissionsConverter.class)
+    @Column(length = 200)
+    private Set<StaffPermission> staffLinkPermissions;
+
+    /**
      * The organiser's name from their Google account (V32), kept when they open the panel: the party's staff see it where the party has
      * no "Kto gra" ("Klub Ola" or "Ola Kowalska", not the code). Null until the organiser opens the panel after V32.
      */
@@ -135,6 +148,12 @@ public class PartySettingsEntity {
     @Builder.Default
     @Column(nullable = false)
     private int duplicateCheckWindow = 15;
+
+    /** What the invitation link gives (a copy): its permissions, or the role "Obsługa kolejki" for a link of a version before V33. */
+    public Set<StaffPermission> staffLinkGrants() {
+        return staffLinkPermissions == null ? StaffRole.DEFAULT.permissions()
+                : staffLinkPermissions.isEmpty() ? EnumSet.noneOf(StaffPermission.class) : EnumSet.copyOf(staffLinkPermissions);
+    }
 
     @PrePersist
     public void generateCode() {

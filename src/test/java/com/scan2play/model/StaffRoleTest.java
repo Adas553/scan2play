@@ -36,11 +36,12 @@ class StaffRoleTest {
 
         assertThat(converter.convertToDatabaseColumn(EnumSet.of(StaffPermission.HISTORY, StaffPermission.QUEUE))).isEqualTo("QUEUE,HISTORY");
         assertThat(converter.convertToDatabaseColumn(EnumSet.noneOf(StaffPermission.class))).isEmpty();
-        assertThat(converter.convertToDatabaseColumn(null)).isEmpty();
         assertThat(converter.convertToEntityAttribute("QUEUE, HISTORY,,DELETE_EVERYTHING"))
                 .containsExactly(StaffPermission.QUEUE, StaffPermission.HISTORY);
         assertThat(converter.convertToEntityAttribute("")).isEmpty();
-        assertThat(converter.convertToEntityAttribute(null)).isEmpty();
+        // null stays null (V33: no invitation link, so no role for one) — never "none granted" in disguise
+        assertThat(converter.convertToDatabaseColumn(null)).isNull();
+        assertThat(converter.convertToEntityAttribute(null)).isNull();
         assertThat(converter.convertToEntityAttribute(converter.convertToDatabaseColumn(StaffPermission.all()))).isEqualTo(StaffPermission.all());
     }
 }

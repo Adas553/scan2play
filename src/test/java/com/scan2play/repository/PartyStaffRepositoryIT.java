@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
@@ -21,14 +23,16 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The party's staff on a real PostgreSQL (V30, V32): one row per person and party (the unique key), the owner removes only a row of
- * their own party, a person's rows go with their account and a party's with the party (the foreign key), an invitation link joins
- * once — and people joining at the same moment never pass the limit (the party row's lock) —, what each may do is kept.
+ * The party's staff on a real PostgreSQL (V30, V32, V33): one row per person and party (the unique key), the owner removes only a row
+ * of their own party, a person's rows go with their account and a party's with the party (the foreign key), an invitation link joins
+ * once — and people joining at the same moment never pass the limit (the party row's lock) —, what each may do is kept, the link
+ * gives its role, and a link renewed while someone joins by the old one joins nobody.
  */
 class PartyStaffRepositoryIT extends PostgresIntegrationTest {
 
@@ -36,6 +40,7 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
     @Autowired PartySettingsRepository parties;
     @Autowired PartyStaffService service;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PlatformTransactionManager transactions;
 
     private PartySettingsEntity party(String owner) {
         return parties.saveAndFlush(PartySettingsEntity.builder().partyCode(newPartyCode()).ownerId(owner + "-" + System.nanoTime())
@@ -122,6 +127,64 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
         assertThat(service.accessOf(pub, kasia).orElseThrow().permissions()).containsExactly(StaffPermission.HISTORY, StaffPermission.SUMMARY);
         assertThat(service.setPermissions(pub.getPartyCode(), id, EnumSet.noneOf(StaffPermission.class))).isTrue();
         assertThat(jdbc.queryForObject("SELECT permissions FROM party_staff WHERE id = ?", String.class, id)).isEmpty();
+    }
+
+    /** The link gives the role it was made with (V33), kept as the names in SQL too. */
+    @Test
+    void theLink_givesTheRoleItWasMadeWith() {
+        PartySettingsEntity pub = party("pub");
+        pub.setStaffToken("it-role-" + System.nanoTime());
+        pub.setStaffLinkPermissions(StaffRole.VIEWER.permissions());
+        parties.saveAndFlush(pub);
+        assertThat(jdbc.queryForObject("SELECT staff_link_permissions FROM party_settings WHERE party_code = ?", String.class,
+                pub.getPartyCode())).isEqualTo("HISTORY");
+
+        String kasia = "kasia-" + System.nanoTime();
+        assertThat(service.join(pub.getStaffToken(), kasia, "Kasia").outcome()).isEqualTo(PartyStaffService.JoinOutcome.JOINED);
+        assertThat(service.accessOf(pub, kasia).orElseThrow().permissions()).containsExactly(StaffPermission.HISTORY);
+    }
+
+    /**
+     * The organiser makes a new link (another role) while someone joins by the old one: the join waits for the organiser's
+     * transaction (the row's lock, read by the token) and PostgreSQL then sees the token changed — the old link joins nobody. Seen
+     * red when the link was read before the lock: the old link joined, with the role read before the change.
+     */
+    @Test
+    void aLinkRenewedWhileSomeoneJoins_theOldOneJoinsNobody() throws Exception {
+        PartySettingsEntity pub = party("pub");
+        String oldToken = "it-old-" + System.nanoTime();
+        pub.setStaffToken(oldToken);
+        pub.setStaffLinkPermissions(StaffRole.CO_ORGANISER.permissions());
+        parties.saveAndFlush(pub);
+        String kasia = "kasia-" + System.nanoTime();
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch renewed = new CountDownLatch(1);
+        CountDownLatch joinStarted = new CountDownLatch(1);
+        try {
+            Future<?> organiser = pool.submit(() -> new TransactionTemplate(transactions).executeWithoutResult(status -> {
+                jdbc.update("UPDATE party_settings SET staff_token = ?, staff_link_permissions = 'HISTORY' WHERE party_code = ?",
+                        "it-new-" + System.nanoTime(), pub.getPartyCode());
+                renewed.countDown();
+                try {
+                    joinStarted.await(5, TimeUnit.SECONDS);
+                    Thread.sleep(700);   // the join is waiting for this row by now
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }));
+            renewed.await(5, TimeUnit.SECONDS);
+            Future<PartyStaffService.JoinOutcome> joining = pool.submit(() -> {
+                joinStarted.countDown();
+                return service.join(oldToken, kasia, "Kasia").outcome();
+            });
+            organiser.get(10, TimeUnit.SECONDS);
+
+            assertThat(joining.get(10, TimeUnit.SECONDS)).isEqualTo(PartyStaffService.JoinOutcome.UNKNOWN_LINK);
+            assertThat(staff.existsByPartyCodeAndMemberId(pub.getPartyCode(), kasia)).isFalse();
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     /**

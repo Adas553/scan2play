@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* The owner's page "Obsługa" (staff.html): what a person may do, picked in each of its three forms (a person, "Zaproś", the
+     link) — a role's set, or "Własne": the ticks under it, unfolded (StaffRole.of names the set; js/staff.js keeps the two in step).
+     `prefix` makes the fields' ids unique, `granted` are the permissions shown ticked, `label` the field's label. */-->
+<th:block th:fragment="rolePicker(prefix, role, granted, label)">
+    <label class="form-label small text-light mb-1" th:for="${'role-' + prefix}" th:text="${label}">What they can do</label>
+    <select class="form-select bg-black text-light border-secondary mb-1" name="role" th:id="${'role-' + prefix}" data-role-select>
+        <option th:each="r : ${staffRoles}" th:value="${r}" th:selected="${r == role}"
+                th:attr="data-permissions=${r.permissionNames()},data-help=#{__${'staff.role.' + r + '.help'}__}"
+                th:text="#{__${'staff.role.' + r}__}">Queue</option>
+    </select>
+    <p class="small text-secondary mb-2" data-role-help th:text="#{__${'staff.role.' + role + '.help'}__}">Played, Skip, tips…</p>
+    <details class="mb-2 s2p-staff-perms" th:open="${role.name() == 'CUSTOM'}">
+        <summary class="small text-light" th:text="#{staff.member.permissions}">Each permission</summary>
+        <div class="d-flex flex-column gap-1 mt-2">
+            <div th:each="p : ${staffPermissions}" class="form-check">
+                <input class="form-check-input" type="checkbox" name="permissions" th:value="${p}"
+                       th:id="${'perm-' + prefix + '-' + p}" th:checked="${granted.contains(p)}" data-permission-box>
+                <label class="form-check-label small text-light" th:for="${'perm-' + prefix + '-' + p}"
+                       th:text="#{__${'staff.permission.' + p}__}">Played, Skip, Undo</label>
+            </div>
+        </div>
+    </details>
+</th:block>
+</body>
+</html>

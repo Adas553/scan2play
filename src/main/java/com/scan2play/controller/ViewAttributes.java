@@ -99,8 +99,17 @@ public final class ViewAttributes {
     /** The roles and the permissions, in the order of the owner's list and checkboxes. */
     public static final String STAFF_ROLES = "staffRoles";
     public static final String STAFF_PERMISSIONS = "staffPermissions";
+    /** The role "Zaproś" starts with (a joiner's before V33: "Obsługa kolejki"). */
+    public static final String STAFF_DEFAULT_ROLE = "staffDefaultRole";
     /** "Zapisano" on the staff page after a change ({@code DjSessionHelper.Note} kind of message key), or null. */
     public static final String STAFF_SAVED = "staffSaved";
+    /** The role the invitation link gives (V33) and its permissions — the link's form shows them picked. */
+    public static final String STAFF_LINK_ROLE = "staffLinkRole";
+    public static final String STAFF_LINK_PERMISSIONS = "staffLinkPermissions";
+    /** The invitations by e-mail waiting (V34, {@code StaffInvitationEntity}), what came of the last "Zaproś", the places left of 10. */
+    public static final String STAFF_INVITATIONS = "staffInvitations";
+    public static final String STAFF_INVITE_RESULT = "staffInviteResult";
+    public static final String STAFF_PLACES_LEFT = "staffPlacesLeft";
     /** A note for the panel ({@code DjSessionHelper.Note}: "Dołączono…", "Organizator usunął Twój dostęp…"), or null. */
     public static final String PANEL_NOTE = "panelNote";
     /** The invitation page: the party's name, its organiser, whether the person is logged in, the role they get, what went wrong. */
@@ -109,5 +118,9 @@ public final class ViewAttributes {
     public static final String JOIN_TOKEN = "joinToken";
     public static final String JOIN_LOGGED_IN = "joinLoggedIn";
     public static final String JOIN_ROLE = "joinRole";
+    /** The permissions the invitation gives (a role's set, or ticked one by one). */
+    public static final String JOIN_PERMISSIONS = "joinPermissions";
+    /** An invitation by e-mail (V34): its id — the page's "Dołącz" / "Nie, dziękuję" answer it; null for the link. */
+    public static final String JOIN_INVITATION_ID = "joinInvitationId";
     public static final String JOIN_PROBLEM = "joinProblem";
 }

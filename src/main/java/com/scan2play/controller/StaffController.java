@@ -5,6 +5,7 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartyStaffService;
+import com.scan2play.service.StaffInvitationService;
 import com.scan2play.util.CodeGenerator;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,8 +41,10 @@ import static com.scan2play.controller.ViewAttributes.*;
  *     joins; not logged in, it keeps the token in the session and its button leads through Google's login back to this question
  *     (the panel sends a person with a waiting invitation here). Joining is never a side effect of opening a page (the review,
  *     2026-10-10: two navigations of a foreign site could join a logged-in DJ to its party and show it the DJ's Google name).</li>
+ *     <li>{@code /dj/invitation} — an invitation by e-mail (V34) waiting for the person who logged in: the panel sends them here
+ *     first; "Dołącz" / "Nie, dziękuję" are POSTs, as with the link.</li>
  *     <li>{@code /dj/staff} — the owner's page "Obsługa": who has access, what each may do (a role or ticked one by one), the
- *     invitation link.</li>
+ *     invitations by e-mail, the invitation link and its role (V33).</li>
  *     <li>{@code POST /dj/panel}, {@code /dj/staff/leave}, {@code /dj/join} — the panel switcher, leaving a staff, a link pasted in
  *     the app.</li>
  * </ul>
@@ -56,6 +60,7 @@ public class StaffController {
     private final PartyStaffService partyStaffService;
     private final PartySettingsCommandService partySettingsCommandService;
     private final DjSessionHelper sessionHelper;
+    private final StaffInvitationService staffInvitationService;
 
     // ---------------------------------------------------------------- the invitation
 
@@ -76,8 +81,14 @@ public class StaffController {
         model.addAttribute(JOIN_OWNER_NAME, party.get().getOwnerName());
         model.addAttribute(JOIN_TOKEN, token);
         model.addAttribute(JOIN_LOGGED_IN, loggedIn);
-        model.addAttribute(JOIN_ROLE, StaffRole.DEFAULT);
+        addRole(model, party.get().staffLinkGrants());
         return "join";
+    }
+
+    /** The role the invitation gives and its permissions (the link's, V33, or the e-mail invitation's, V34). */
+    private static void addRole(Model model, Set<StaffPermission> permissions) {
+        model.addAttribute(JOIN_ROLE, StaffRole.of(permissions));
+        model.addAttribute(JOIN_PERMISSIONS, permissions.stream().sorted().toList());
     }
 
     /** "Dołącz" on the invitation (logged in; else the login first, the token waiting in the session). */
@@ -158,6 +169,83 @@ public class StaffController {
         return token.matches() ? Optional.of(token.group(1)) : Optional.empty();
     }
 
+    // ---------------------------------------------------------------- the invitation by e-mail (V34)
+
+    /**
+     * The address Google verified for the logged-in account, or null: an invitation by e-mail is matched only against it (the scope
+     * {@code email}; an unverified address could be anyone's). Google's OpenID user says {@code email_verified} as a boolean, a plain
+     * OAuth 2 user may say it as a text.
+     */
+    public static String verifiedAddress(Authentication authentication) {
+        if (!(authentication instanceof OAuth2AuthenticationToken oauth) || !(oauth.getPrincipal() instanceof OAuth2User user)) {
+            return null;
+        }
+        Object address = user.getAttribute("email");
+        Object verified = user.getAttribute("email_verified");
+        boolean isVerified = Boolean.TRUE.equals(verified) || "true".equalsIgnoreCase(String.valueOf(verified));
+        return isVerified && address instanceof String text && !text.isBlank() ? text : null;
+    }
+
+    /**
+     * The invitation by e-mail waiting for the person (the panel sends them here before anything else): the party, who invites, the
+     * role — "Dołącz" or "Nie, dziękuję". None waiting: the panel.
+     */
+    @GetMapping("/dj/invitation")
+    public String emailInvitation(Model model, OAuth2AuthenticationToken authentication) {
+        Optional<StaffInvitationService.Waiting> waiting = staffInvitationService.waitingFor(verifiedAddress(authentication));
+        if (waiting.isEmpty()) {
+            return REDIRECT_DASHBOARD;
+        }
+        PartySettingsEntity party = waiting.get().party();
+        model.addAttribute(JOIN_PARTY_NAME, PartyStaffService.nameOf(party));
+        model.addAttribute(JOIN_OWNER_NAME, party.getOwnerName());
+        model.addAttribute(JOIN_LOGGED_IN, true);
+        model.addAttribute(JOIN_INVITATION_ID, waiting.get().invitation().getId());
+        addRole(model, waiting.get().invitation().getPermissions());
+        return "join";
+    }
+
+    /** "Dołącz" on an invitation by e-mail: only the person whose verified address it names; the panel of that party opens. */
+    @PostMapping("/dj/invitation/accept")
+    public String acceptEmailInvitation(@RequestParam long id, Model model, OAuth2AuthenticationToken authentication,
+                                        HttpSession session, HttpServletResponse response) {
+        Object name = authentication.getPrincipal().getAttribute("name");
+        StaffInvitationService.Answer answer = staffInvitationService.accept(id, verifiedAddress(authentication),
+                authentication.getName(), name == null ? null : name.toString());
+        return switch (answer.outcome()) {
+            case JOINED, ALREADY -> {
+                String code = answer.party().getPartyCode();
+                sessionHelper.switchTo(code, authentication, session);
+                sessionHelper.note(session, new DjSessionHelper.Note("dashboard.staff.joined", PartyStaffService.nameOf(answer.party()), false));
+                yield REDIRECT_DASHBOARD + "?party=" + code;
+            }
+            case OWNER -> {
+                sessionHelper.note(session, new DjSessionHelper.Note("dashboard.invitation.own_party", null, false));
+                yield REDIRECT_DASHBOARD + "?party=" + answer.party().getPartyCode();
+            }
+            case FULL -> {
+                model.addAttribute(JOIN_PARTY_NAME, PartyStaffService.nameOf(answer.party()));
+                yield joinProblem(model, response, "join.problem.full", HttpStatus.CONFLICT);
+            }
+            case GONE -> {
+                sessionHelper.note(session, new DjSessionHelper.Note("dashboard.invitation.gone", null, true));
+                yield REDIRECT_DASHBOARD;
+            }
+        };
+    }
+
+    /**
+     * "Nie, dziękuję": the invitation goes; the panel opens — the next invitation, the person's own panel, or "no-panel" (the note
+     * keeps a DJ's party from being made for someone who came for an invitation only).
+     */
+    @PostMapping("/dj/invitation/decline")
+    public String declineEmailInvitation(@RequestParam long id, OAuth2AuthenticationToken authentication, HttpSession session) {
+        if (staffInvitationService.decline(id, verifiedAddress(authentication))) {
+            sessionHelper.note(session, new DjSessionHelper.Note("dashboard.invitation.declined", null, false));
+        }
+        return REDIRECT_DASHBOARD;
+    }
+
     // ---------------------------------------------------------------- the person of the staff
 
     /**
@@ -201,15 +289,68 @@ public class StaffController {
         // login there ("device_id and device_name are required for private IP", 2026-10-09)
         model.addAttribute(STAFF_LINK, settings.getStaffToken() == null ? null
                 : ServletUriComponentsBuilder.fromContextPath(request).path("/join/{token}").buildAndExpand(settings.getStaffToken()).toUriString());
+        Set<StaffPermission> linkGrants = settings.getStaffToken() == null ? StaffRole.DEFAULT.permissions() : settings.staffLinkGrants();
+        model.addAttribute(STAFF_LINK_ROLE, StaffRole.of(linkGrants));
+        model.addAttribute(STAFF_LINK_PERMISSIONS, linkGrants);
+        model.addAttribute(STAFF_INVITATIONS, staffInvitationService.waitingAt(partyCode));
+        model.addAttribute(STAFF_PLACES_LEFT, Math.max(0, PartyStaffService.MAX_STAFF - partyStaffService.placesTaken(partyCode)));
         model.addAttribute(STAFF_ROLES, StaffRole.values());
+        model.addAttribute(STAFF_DEFAULT_ROLE, StaffRole.DEFAULT);
         model.addAttribute(STAFF_PERMISSIONS, StaffPermission.values());
         model.addAttribute(STAFF_SAVED, session.getAttribute(SESSION_STAFF_SAVED));
         session.removeAttribute(SESSION_STAFF_SAVED);
+        Object invited = session.getAttribute(SESSION_STAFF_INVITED);
+        session.removeAttribute(SESSION_STAFF_INVITED);
+        if (invited instanceof InviteResult result) {
+            model.addAttribute(STAFF_INVITE_RESULT, result);
+        }
         return "staff";
     }
 
     /** "Zapisano" for the next showing of the staff page (after the redirect). */
     static final String SESSION_STAFF_SAVED = "staffSaved";
+
+    /** What came of "Zaproś", for the next showing of the staff page: the outcome and the address typed (kept in the field when wrong). */
+    static final String SESSION_STAFF_INVITED = "staffInvited";
+
+    /** @param outcome {@link StaffInvitationService.InviteOutcome}'s name — the message key's last part */
+    public record InviteResult(String outcome, String address, boolean problem) implements java.io.Serializable {
+    }
+
+    /**
+     * "Zaproś": the address of the person's Google account and what they will be able to do (a role's set, or with
+     * {@code role=CUSTOM} the ticked permissions). The owner's alone; the page says what came of it.
+     */
+    @PostMapping("/dj/staff/invite")
+    public String invite(@RequestParam String partyCode, @RequestParam(required = false) String email,
+                         @RequestParam(required = false) StaffRole role, @RequestParam(required = false) List<StaffPermission> permissions,
+                         OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.requireOwner(partyCode, authentication, session);
+        StaffInvitationService.InviteOutcome outcome = staffInvitationService.invite(partyCode, email, granted(role, permissions));
+        boolean problem = outcome == StaffInvitationService.InviteOutcome.INVALID_ADDRESS || outcome == StaffInvitationService.InviteOutcome.FULL;
+        String typed = email == null ? "" : email.strip();
+        session.setAttribute(SESSION_STAFF_INVITED, new InviteResult(outcome.name(),
+                typed.length() > 254 ? typed.substring(0, 254) : typed, problem));
+        return backToStaffPage(partyCode);
+    }
+
+    /** "Cofnij zaproszenie": only an invitation of the owner's own party. */
+    @PostMapping("/dj/staff/invitation/cancel")
+    public String cancelInvitation(@RequestParam String partyCode, @RequestParam long id,
+                                   OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.requireOwner(partyCode, authentication, session);
+        staffInvitationService.cancel(partyCode, id);
+        return backToStaffPage(partyCode);
+    }
+
+    /** A role's set, or with {@link StaffRole#CUSTOM} the ticked permissions; no role: {@link StaffRole#DEFAULT}. */
+    private static Set<StaffPermission> granted(StaffRole role, List<StaffPermission> permissions) {
+        if (role == null) {
+            return StaffRole.DEFAULT.permissions();
+        }
+        return role != StaffRole.CUSTOM ? role.permissions()
+                : permissions == null || permissions.isEmpty() ? EnumSet.noneOf(StaffPermission.class) : EnumSet.copyOf(permissions);
+    }
 
     /**
      * What one person may do: a role's set, or with {@code role=CUSTOM} the ticked {@code permissions}. Only a person of the owner's
@@ -220,25 +361,33 @@ public class StaffController {
                                  @RequestParam(required = false) List<StaffPermission> permissions,
                                  OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.requireOwner(partyCode, authentication, session);
-        Set<StaffPermission> granted = role != StaffRole.CUSTOM ? role.permissions()
-                : permissions == null || permissions.isEmpty() ? EnumSet.noneOf(StaffPermission.class) : EnumSet.copyOf(permissions);
-        if (partyStaffService.setPermissions(partyCode, id, granted)) {
+        if (partyStaffService.setPermissions(partyCode, id, granted(role, permissions))) {
             session.setAttribute(SESSION_STAFF_SAVED, id);
         }
         return backToStaffPage(partyCode);
     }
 
-    /** The invitation link: {@code link=new} makes one (the old one dead; who joined stays), {@code link=off} takes it away. */
+    /**
+     * The invitation link: {@code link=new} makes one with the role picked beside it (V33: a role's set or the ticked permissions —
+     * whoever joins by it gets them; the old link dead, who joined stays), {@code link=off} takes it away. A link's role is changed
+     * only by a new link (the owner, 2026-10-10: a link sent as "Podgląd" must never start to give more).
+     */
     @PostMapping("/dj/staff/link")
     public String updateStaffLink(@RequestParam String partyCode, @RequestParam String link,
+                                  @RequestParam(required = false) StaffRole role, @RequestParam(required = false) List<StaffPermission> permissions,
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.requireOwner(partyCode, authentication, session);
-        String token = switch (link) {
-            case "new" -> CodeGenerator.generateSecret();
-            case "off" -> null;
+        boolean make = switch (link) {
+            case "new" -> true;
+            case "off" -> false;
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         };
-        partySettingsCommandService.updateSettings(partyCode, s -> s.setStaffToken(token));
+        String token = make ? CodeGenerator.generateSecret() : null;
+        Set<StaffPermission> grants = make ? granted(role, permissions) : null;
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setStaffToken(token);
+            s.setStaffLinkPermissions(grants);
+        });
         return backToStaffPage(partyCode);
     }
 

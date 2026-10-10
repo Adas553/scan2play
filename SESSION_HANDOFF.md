@@ -7,6 +7,22 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-10, afternoon — the invitation's role and invitations by e-mail, on the branch `claude/inspiring-einstein-sgh2tz` (on top
+  of `dev` = `0156658`, PR #38 / #39 merged, CI green), not committed yet.** The owner's picks: the link's role changes only with a
+  new link ("A"), an invitation by e-mail waits 30 days, its address is shown only while it waits (gone when answered), the staff and
+  the invitations share the 10 places, "Nie, dziękuję" deletes it. Done, PROJECT_CONTEXT 4.1 / 5.1: **V33**
+  `party_settings.staff_link_permissions` (the link made with a role — "Ten link: Podgląd"; old links give "Obsługa kolejki");
+  **V34** `staff_invitation` (the organiser types the address of a Google account and the role on "Obsługa"; nothing is sent — whoever
+  logs in with that verified address is sent to `/dj/invitation` before any panel: "Ola Kowalska zaprasza Cię do obsługi imprezy: …
+  [Dołącz] [Nie, dziękuję]"; Gmail's dots and "+…" ignored, `util/EmailAddresses`); the join by a link reads the party by the token
+  with its row locked (a link renewed meanwhile joins nobody); the privacy policy PL / EN (the address, nothing sent, 30 days).
+  Then (the owner): "Wklej link" of an invitation only on the person's own panel and "no-panel", not on another's party
+  (`staff-panel` seen red with the old template; `owner-pastes-an-invitation`).
+  Tests: 585 unit, 60 database (`StaffInvitationIT` — two "Dołącz" at once, invitations and joins at once never pass 10, seen red
+  without the lock; `PartyStaffRepositoryIT` — a link renewed while someone joins, seen red with the old read; `StaffLinkMigrationIT`),
+  65 browser (`staff-link-role`, `staff-invite-by-email`, seen red with the forms' `data-staff-form` / the question taken out of the
+  rendered page). **Next:** the owner tries it locally (a second Google account in a private window, on `localhost`), then a PR to
+  `dev` and `dev` → `main` (V33 + V34 on that deploy).
 - **2026-10-10 — the staff reviewed and rebuilt, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `4a6d2de`), not
   committed yet.** The review (every path of the organiser and the invited person on the real app, phone and computer):
   https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx — the owner picked **variant B** (roles + "Własne"), roles by what a person does,
@@ -22,9 +38,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   Tests: 553 unit (`StaffPermissionEndpointsTest`: every endpoint refused without its permission), 50 database
   (`StaffPermissionMigrationIT`, `PartyStaffRepositoryIT` 20 joins at once — seen red without the lock), 62 browser
   (`forms-name-the-party`, `staff-access-taken-away`, `staff-access-changed` seen red on the old scripts; `staff-page-roles`,
-  `staff-access-same`). **Next (the owner's decision, 2026-10-10 — both yes):** (1) the role chosen with the invitation link (whoever
-  joins by it gets that role; editable after, as now); (2) an invitation by e-mail with "zaproszony / dołączył" (the review's item
-  05; the staff's e-mail kept — the privacy policy). Released by a PR to `dev`, then `dev` → `main` (V32 on that deploy).
+  `staff-access-same`). Released (PR #38 → `dev`, PR #39 → `main`, CI green); both next steps done the same day (above).
 - **2026-10-09, night — the design review and all of its fixes, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` =
   `66c0007`), not committed yet.** The review (every screen on a phone 390×844 and a computer 1280×900, the contrast and the touch
   targets measured): https://claude.ai/artifact/NXTvqH6d2TauoH1RSVVJaJ — the owner: "zrób wszystko". Done: one action colour (the

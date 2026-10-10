@@ -351,7 +351,8 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/dj/dashboard/host-lists', '/dj/dashboard/host-link', '/dj/panel'):
             # the hosts' lists and link (V29), the panel switcher (V30): a redirect
             return self._send(302, headers={'Location': '/dj/dashboard'})
-        if path in ('/dj/staff/link', '/dj/staff/remove', '/dj/staff/permissions'):   # the owner's page "Obsługa" (V32): back to it
+        if path in ('/dj/staff/link', '/dj/staff/remove', '/dj/staff/permissions', '/dj/staff/invite', '/dj/staff/invitation/cancel'):
+            # the owner's page "Obsługa" (V32, V34): back to it
             return self._send(302, headers={'Location': '/dj/staff'})
         if path == '/dj/push/unsubscribe':
             return self._send(204)
