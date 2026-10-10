@@ -10,6 +10,7 @@
 import { EVENTS, on } from './events.js';
 import { csrfHeaders, partyCode, showPartyActive } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
+import { reopenCards } from './cards.js';
 
 let currentETag = null;
 
@@ -162,6 +163,8 @@ async function refreshTable() {
 
         // The rows are new: apply the search text again, and update the number of songs in the heading
         applyListFilters(document.getElementById('queueList'));
+        // …and open again the cards of a phone that were open (cards.js)
+        reopenCards(document.getElementById('song-list'));
     } catch (err) {
         console.error('[Polling] Refresh error:', err);
     } finally {

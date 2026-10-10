@@ -11,6 +11,7 @@
 import { EVENTS, on } from './events.js';
 import { csrfHeaders, partyCode } from './common.js';
 import { captureListState, initSortableHeaders, restoreListState, setHistoryReloader } from './list-tools.js';
+import { reopenCards } from './cards.js';
 
 (function initTabs() {
     const bar = document.getElementById('djTabBar');
@@ -117,6 +118,7 @@ import { captureListState, initSortableHeaders, restoreListState, setHistoryRelo
             historyContent.innerHTML = html;
             initSortableHeaders(historyContent);
             restoreListState(historyContent.querySelector('[data-list]'), state);
+            reopenCards(historyContent);
             const newBox = historyContent.querySelector('.list-scroll');
             if (newBox) newBox.scrollTop = scrollTop;
             return true;
@@ -171,6 +173,7 @@ import { captureListState, initSortableHeaders, restoreListState, setHistoryRelo
             setLit('history');
             // Init sorting on dynamically loaded history table
             initSortableHeaders(historyContent);
+            reopenCards(historyContent);
             revealContent(historyContent);
         })
         .catch(function(err) { console.error('[Tabs] History load error:', err); });

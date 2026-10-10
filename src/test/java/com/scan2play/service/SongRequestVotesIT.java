@@ -44,6 +44,11 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
                 .requestedAt(Instant.now()).build();
     }
 
+    /** The party's played songs, as the AI's duplicate rule reads them (SongRequestRepository.findRecentlyPlayed: decision 'played'). */
+    private List<String> played(String party) {
+        return jdbc.queryForList("SELECT song_name FROM song_requests WHERE party_code = ? AND decision = 'played' ORDER BY id", String.class, party);
+    }
+
     private List<Map<String, Object>> rows(String party) {
         return jdbc.queryForList("SELECT song_name, decision, votes FROM song_requests WHERE party_code = ? ORDER BY id", party);
     }
@@ -240,26 +245,61 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
         Long wilki = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
         dj.dismissSong(wilki, party);
 
-        assertThat(dj.restoreSkippedSong(wilki, newPartyCode())).as("another party's DJ").isFalse();
-        assertThat(dj.restoreSkippedSong(wilki, party)).isTrue();
+        assertThat(dj.restoreSong(wilki, newPartyCode())).as("another party's DJ").isFalse();
+        assertThat(dj.restoreSong(wilki, party)).isTrue();
         assertThat(jdbc.queryForObject("SELECT decision || ' ' || (skipped_at IS NULL) FROM song_requests WHERE id = ?", String.class, wilki))
                 .isEqualTo("accepted true");
         assertThat(commands.saveOrVote(request(party, "wilki baśka", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.VOTE);
-        assertThat(dj.restoreSkippedSong(wilki, party)).as("waiting already: nothing to put back").isFalse();
+        assertThat(dj.restoreSong(wilki, party)).as("waiting already: nothing to put back").isFalse();
 
         Long rejectedByTheAi = commands.saveOrVote(request(party, "Kult - Arahja", "rejected", null), Set.of()).request().getId();
-        assertThat(dj.restoreSkippedSong(rejectedByTheAi, party)).as("only the DJ's skips").isFalse();
+        assertThat(dj.restoreSong(rejectedByTheAi, party)).as("only the DJ's skips").isFalse();
 
         // the same song asked for again once the skip was forgotten, then the old skipped request: the song waits already
         Long sanah = commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of()).request().getId();
         dj.dismissSong(sanah, party);
         jdbc.update("UPDATE song_requests SET skipped_at = now() - interval '3 hours' WHERE id = ?", sanah);
         commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of());
-        assertThat(dj.restoreSkippedSong(sanah, party)).isFalse();
+        assertThat(dj.restoreSong(sanah, party)).isFalse();
 
         assertThat(rows(party)).extracting(row -> row.get("song_name") + " " + row.get("decision") + " " + row.get("votes"))
                 .containsExactly("Wilki - Baśka accepted 2", "Kult - Arahja rejected 1", "sanah - Szampan rejected 1",
                         "sanah - Szampan accepted 1");
+    }
+
+    /**
+     * "Zagrane" by mistake (the owner, 2026-10-10), "Cofnij" / "↩ Przywróć" at any time: the request waits again, is no longer among
+     * the played songs the AI's duplicate rule reads, and the next guest's request for it is a vote on it. Not when the same song was
+     * asked for again meanwhile and waits; never a song cleared with the queue.
+     */
+    @Test
+    void aPlayedRequestPutBack_waitsAgain_isNoLongerPlayed_andTheNextRequestIsAVoteOnIt() {
+        String party = newPartyCode();
+        Long wilki = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
+        dj.markSongAsPlayed(wilki, party);
+        jdbc.update("UPDATE song_requests SET played_at = now() - interval '5 hours' WHERE id = ?", wilki);   // no limit in time
+        assertThat(played(party)).containsExactly("Wilki - Baśka");
+
+        assertThat(dj.restoreSong(wilki, newPartyCode())).as("another party's DJ").isFalse();
+        assertThat(dj.restoreSong(wilki, party)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT decision || ' ' || (played_at IS NULL) FROM song_requests WHERE id = ?", String.class, wilki))
+                .isEqualTo("accepted true");
+        assertThat(played(party)).as("the AI no longer reads it as played").isEmpty();
+        assertThat(commands.saveOrVote(request(party, "wilki baśka", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.VOTE);
+
+        // played, then asked for again (a new request waits): the old one stays played
+        Long sanah = commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of()).request().getId();
+        dj.markSongAsPlayed(sanah, party);
+        commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of());
+        assertThat(dj.restoreSong(sanah, party)).as("the same song waits already").isFalse();
+
+        Long kult = commands.saveOrVote(request(party, "Kult - Arahja", "accepted", LINK), Set.of()).request().getId();
+        dj.clearQueue(party);
+        assertThat(dj.restoreSong(kult, party)).as("cleared with the queue: not a mistake to put right").isFalse();
+
+        assertThat(rows(party)).extracting(row -> row.get("song_name") + " " + row.get("decision") + " " + row.get("votes"))
+                .containsExactly("Wilki - Baśka rejected 2", "sanah - Szampan played 1", "sanah - Szampan rejected 1",
+                        "Kult - Arahja rejected 1");
     }
 
     /**

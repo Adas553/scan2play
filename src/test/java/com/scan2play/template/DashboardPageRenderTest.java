@@ -366,6 +366,40 @@ class DashboardPageRenderTest {
                 new DjSessionHelper.Note("dashboard.staff.joined", "Klub Ola", false));
     }
 
+    /** A waiting request with its number (V28), the guest's words, the AI's comment, the votes and the DJ's tips. */
+    private static SongRequestEntity numbered(long id, int number, String name, String guestText, int votes, int tips) {
+        SongRequestEntity request = song(id, name);
+        request.setRequestNumber(number);
+        request.setGuestText(guestText);
+        request.setDjComment("Klasyk parkietu — idealny, żeby rozkręcić salę!");
+        request.setVotes(votes);
+        request.setTips(tips);
+        return request;
+    }
+
+    /**
+     * The queue a phone folds (the review of 2026-10-10, cards.js): a request with tips counted ("💸 2" stays folded), one with none
+     * of the guest's words ("⚠ Sprawdź", the guest's words stay), one on the hosts' list ("⭐", party(): "Hej sokoły") — for the owner
+     * ({@code dashboard-cards.html}) and for the staff's "Podgląd", who has no buttons ({@code dashboard-cards-viewer.html}).
+     */
+    @Test
+    void shouldRenderTheFoldedCardsForTheBrowserTests() throws IOException {
+        List<SongRequestEntity> queue = List.of(
+                numbered(11, 12, "Daft Punk - One More Time", "daft punk one more time", 4, 2),
+                numbered(12, 13, "sanah - Szampan", "orła cień", 1, 0),
+                numbered(13, 14, "Golec uOrkiestra - Hej sokoły", "hej sokoły dla babci", 2, 0));
+        String owner = renderDashboard(party(), queue, PL);
+        assertThat(owner).contains("class=\"btn btn-sm d-md-none s2p-card-toggle\" aria-expanded=\"false\"",
+                "aria-label=\"Szczegóły\"", "s2p-check-song", "s2p-host-wanted", "💸 2", ">Podejrzyj<");
+        write("dashboard-cards.html", owner);
+
+        PartyStaffService staff = mock(PartyStaffService.class);
+        String viewer = renderDashboard(party(), queue, PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(), staff,
+                new MockHttpSession(), new PartyStaffService.Access(party(), false, StaffRole.VIEWER.permissions()), null);
+        assertThat(viewer).contains("s2p-card-toggle").doesNotContain("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/tip-count\"");
+        write("dashboard-cards-viewer.html", viewer);
+    }
+
     /**
      * The panel of someone on the party's staff with the role "Obsługa kolejki" (V30, V32): the queue, the history, the notifications,
      * closing the party, the QR code — no settings, no lists, no staff. One line says whose panel it is and the role; unfolded, what

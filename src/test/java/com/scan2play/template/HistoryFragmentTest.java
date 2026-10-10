@@ -224,19 +224,23 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("a request the DJ skipped has \"↩ Przywróć\" (back to the queue); one the AI rejected, and one that played, have not")
-    void shouldOfferToRestoreOnlyWhatTheDjSkipped() {
+    @DisplayName("a request the DJ skipped or marked played has \"↩ Przywróć\" (back to the queue); one the AI rejected, and one cleared with the queue, have not")
+    void shouldOfferToRestoreWhatTheDjSkippedOrPlayed() {
         java.time.Instant at = java.time.Instant.parse("2026-09-29T18:00:00Z");
         HistoryEntry skipped = new HistoryEntry(41L, at, "Skipped", null, "Pop", "rejected", "Klasyk wesel!", null, 2, at, null);
         HistoryEntry byTheAi = new HistoryEntry(42L, at, "ByTheAi", null, "Pop", "rejected", "Not tonight", null, 1);
         HistoryEntry cleared = new HistoryEntry(44L, at, "Cleared", null, "Pop", "rejected", "Hit na parkiet!", null, 1, null, at);
         String html = render(List.of(skipped, byTheAi, guest(43, "Played", "played"), cleared), false, Locale.forLanguageTag("pl"));
 
-        assertThat(html.split("action=\"/dj/dashboard/restore\"", -1)).as("one restore form").hasSize(2);
+        assertThat(html.split("action=\"/dj/dashboard/restore\"", -1)).as("two restore forms: the skip's and the played one's").hasSize(3);
         String row = html.substring(html.indexOf("data-song-name=\"Skipped\""));
         assertThat(row.substring(0, row.indexOf("</tr>"))).contains("action=\"/dj/dashboard/restore\"",
-                "name=\"id\" value=\"41\"", "↩ Przywróć", "title=\"Z powrotem do kolejki — pominięte przez pomyłkę\"",
+                "name=\"id\" value=\"41\"", "↩ Przywróć", "title=\"Z powrotem do kolejki — pominięte albo zagrane przez pomyłkę\"",
                 ">Pominięte<", "title=\"⏭ Pominięta przez DJ-a — przez 2 godziny", "Klasyk wesel!");
+        // "Zagrane" by mistake (the owner, 2026-10-10): back to the queue at any time, it then no longer counts as played
+        String playedRow = html.substring(html.indexOf("data-song-name=\"Played\""));
+        assertThat(playedRow.substring(0, playedRow.indexOf("</tr>"))).contains("action=\"/dj/dashboard/restore\"",
+                "name=\"id\" value=\"43\"", "↩ Przywróć", ">ZAGRANE<");
         String aiRow = html.substring(html.indexOf("data-song-name=\"ByTheAi\""));
         assertThat(aiRow.substring(0, aiRow.indexOf("</tr>"))).as("rejected by the AI, not skipped").doesNotContain("Pominięta")
                 .contains("status-rejected", ">ODRZUCONE<", "✖");

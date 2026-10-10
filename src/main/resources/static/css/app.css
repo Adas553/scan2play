@@ -352,6 +352,9 @@ th[data-sort].sort-desc::after {
     border-radius: 22%;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
+/* the name's own baseline is the logo's: an inline-flex takes its first item's, and the mark's bottom raised "Scan2Play" by ~3 px
+   above the words beside it ("Scan2Play · 🎧 Gra: DJ Adam" of the result page, the owner's phone, 2026-10-10) */
+.s2p-logo > span { align-self: baseline; }
 .s2p-logo-mark { width: 1.15em; height: 1.15em; }
 .s2p-logo-two  { color: #0dcaf0; }
 .s2p-hero-mark { width: 96px; height: 96px; }
@@ -673,13 +676,14 @@ th[data-sort].sort-desc::after {
     .page-dj #song-list > tr {
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.75rem;
-        margin-bottom: 0.75rem;
+        align-items: flex-start;
+        gap: 0.5rem 0.6rem;
+        padding: 0.6rem 0.75rem;
+        margin-bottom: 0.5rem;
         background: #232323;
         border: 1px solid var(--s2p-border);
         border-radius: 12px;
+        cursor: pointer;
     }
     .page-dj #song-list > tr > td {
         display: block;
@@ -690,10 +694,31 @@ th[data-sort].sort-desc::after {
     }
     .page-dj #song-list > tr > td.song-cell { flex: 1 1 0; min-width: 0; }
     .page-dj #song-list > tr > td.s2p-number-cell:empty { display: none; }
-    .page-dj #song-list .song-title { font-size: 1.1rem; }
+    .page-dj #song-list .song-title { font-size: 1rem; flex: 1 1 100%; }
+    /* the title on a line of its own, ⚠ / ⭐ side by side under it, then the guest's words and the AI's comment */
+    .page-dj #song-list .song-cell > div > span.d-flex { flex-flow: row wrap !important; align-items: center; gap: 0.15rem 0.4rem; }
+    .page-dj #song-list .guest-text,
+    .page-dj #song-list .s2p-queue-comment { flex: 1 1 100%; }
     /* a waiting request is accepted: its ✔ says nothing */
     .page-dj #song-list td.status-accepted { display: none; }
+    .page-dj #song-list td[data-sort-value="votes"] { display: flex; align-items: center; gap: 0.25rem; }
     .page-dj #song-list td[data-sort-value="votes"] .badge { font-size: 1rem; }
+    /* the "▾" a 44 px target that reaches into the card's padding: the line of the title keeps its height */
+    .page-dj #song-list .s2p-card-toggle { margin-block: -0.6rem; margin-right: -0.4rem; }
+
+    /* Folded (the review of 2026-10-10; cards.js): the song, ⚠ / ⭐, the votes and the row "▶ Zagrane / ⏭ Pomiń" — a card was
+       204 px, three and a half on a screen, now 106 px. A tap on the card unfolds the guest's words, the whole AI's comment,
+       "Podejrzyj" and 💸 / "−1". With "⚠ Sprawdź" the guest's words stay: they are why. "💸 2" stays once a tip is counted: a
+       state the DJ is to see; the first one is counted unfolded. */
+    .page-dj #song-list > tr:not(.s2p-open) .guest-text,
+    .page-dj #song-list > tr:not(.s2p-open) .s2p-queue-comment,
+    .page-dj #song-list > tr:not(.s2p-open) .song-cell a.btn { display: none; }
+    .page-dj #song-list > tr:not(.s2p-open):has(.s2p-check-song) .guest-text { display: block; }
+    .page-dj #song-list > tr:not(.s2p-open) .s2p-tip-count:not(:has(.s2p-btn-tip.btn-warning)),
+    .page-dj #song-list > tr:not(.s2p-open) .s2p-tip-count form:has(.s2p-btn-untip) { display: none !important; }
+    /* nothing to tap in the row (the staff's "Podgląd"): no empty row under the song */
+    .page-dj #song-list > tr:not(.s2p-open) > td:last-child:not(:has(.s2p-btn-played, .s2p-btn-skip, .s2p-btn-tip.btn-warning)) { display: none; }
+    .page-dj #song-list > tr.s2p-open .s2p-queue-comment { display: block; -webkit-line-clamp: none; line-clamp: none; }
     /* the buttons: a row across the card, big enough for a thumb — "▶ Zagrane", the one used most, two thirds of it */
     .page-dj #song-list > tr > td:last-child { flex: 1 1 100%; }
     .page-dj #song-list > tr > td:last-child form { flex: 1 1 0; }
@@ -764,18 +789,48 @@ th[data-sort].sort-desc::after {
     .page-dj .s2p-history-table tbody > tr[data-decision] > td:not([data-sort-value="song"]):not(.s2p-number-cell) { order: 2; }
     .page-dj .s2p-history-table td[class*="status-"] { display: flex !important; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
     .page-dj .s2p-history-table td[class*="status-"] form { margin: 0 !important; }
-    /* the AI's comment: one line with "…", a tap shows the whole of it (list-tools.js, .s2p-comment-open) */
-    .page-dj .s2p-history-table td.s2p-comment-cell {
-        display: -webkit-box !important;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 1;
-        line-clamp: 1;
-        overflow: hidden;
-        flex: 1 1 100%;
-        cursor: pointer;
-    }
-    .page-dj .s2p-history-table td.s2p-comment-cell.s2p-comment-open { display: block !important; }
+    /* the AI's comment, under the rest */
+    .page-dj .s2p-history-table td.s2p-comment-cell { display: block !important; flex: 1 1 100%; order: 3; }
     .page-dj .s2p-history-table td.s2p-comment-cell:empty { display: none !important; }
+
+    /* Folded to one line (the review of 2026-10-10; cards.js): the song (cut with "…"), ⚠, the votes, the decision ▶ / ⏭ / ✖ / 🧹
+       and the "↩" of a skip — the one thing done in the history, so one tap still (its words come back unfolded). An entry was
+       191 px, one in the first screen, now 52 px. A tap on the line unfolds the whole title, the guest's words, "Podejrzyj", the
+       number and the AI's comment. */
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) { flex-wrap: nowrap; padding-block: 0.25rem; min-height: 52px; gap: 0.5rem; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) > td[data-sort-value="song"] { flex: 1 1 0; min-width: 0; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[data-sort-value="song"] :is(div, span.d-flex) {
+        flex-direction: row !important; align-items: center !important; min-width: 0; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[data-sort-value="song"] .fw-bold {
+        min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.guest-text, td[data-sort-value="song"] a.btn, td.s2p-number-cell, td.s2p-comment-cell) {
+        display: none !important; }
+    /* "⚠ Sprawdź" as its sign alone, "↩ Przywróć" as its arrow alone (the words stay for a screen reader) */
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.s2p-check-song, form[action$="/restore"] .btn) { font-size: 0; flex: none; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-check-song { padding: 3px 5px; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-check-song::before { content: "\26A0"; font-size: 0.8rem; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) form[action$="/restore"] .btn { width: 44px; padding: 0; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) form[action$="/restore"] .btn::before { content: "\21A9"; font-size: 1.1rem; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[class*="status-"] { flex-wrap: nowrap; gap: 0.5rem; }
+}
+
+/* The "▾" of a folded card on a phone (dashboard.html, history.html; cards.js): it turns to "▴" unfolded; hidden on a wide screen
+   (d-md-none), where the table shows everything */
+.s2p-card-toggle {
+    --bs-btn-color: var(--s2p-text-muted);
+    --bs-btn-border-color: transparent;
+    --bs-btn-hover-color: #f8f9fa;
+    --bs-btn-hover-border-color: transparent;
+    --bs-btn-active-border-color: transparent;
+    width: 2.25rem;
+    padding: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+.s2p-card-toggle::before { content: "\25BE"; }
+.s2p-card-toggle[aria-expanded="true"]::before { content: "\25B4"; }
+@media (max-width: 767.98px) {
+    .page-dj .s2p-history-table tbody > tr[data-decision] { cursor: pointer; }
 }
 
 /* --- The active queue (dashboard.html): on a wide screen every request has its place — a CSS counter, so it follows the polled
