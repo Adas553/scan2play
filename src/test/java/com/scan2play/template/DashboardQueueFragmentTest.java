@@ -52,7 +52,7 @@ class DashboardQueueFragmentTest {
 
     private static SongRequestEntity accepted(int i, String songName) {
         return SongRequestEntity.builder().id((long) i).partyCode("ABC12").songName(songName).style("Pop")
-                .decision("accepted").djComment("ok").energyLevel(7).requestedAt(java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant())
+                .decision("accepted").djComment("ok").requestedAt(java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant())
                 .trackUrl("https://www.youtube.com/results?search_query=" + songName).build();
     }
 
@@ -141,7 +141,7 @@ class DashboardQueueFragmentTest {
     void shouldRenderAnEmptyQueue() {
         String html = render(List.of(), Locale.ENGLISH);
 
-        assertThat(html).contains("Queue is empty!");
+        assertThat(html).contains("No pending requests.");
         assertThat(html).doesNotContain("data-song-id");
     }
 

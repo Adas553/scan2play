@@ -42,9 +42,12 @@ body {
 .toolbar a,
 .toolbar button,
 .toolbar select {
-    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 6px 14px;
     border: 1px solid #6c757d;
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
     color: #f8f9fa;
     font: inherit;
@@ -57,9 +60,12 @@ body {
     background: #000000;
 }
 
+/* the page's one main action in the colour of Scan2Play's actions (the cyan of the "2"), dark text — as on every other page */
 .toolbar #printBtn {
-    border-color: #0d6efd;
-    background: #0d6efd;
+    border-color: #0dcaf0;
+    background: #0dcaf0;
+    color: #062c33;
+    font-weight: 600;
 }
 
 .toolbar .hint {
@@ -130,7 +136,8 @@ h2 {
 
 .stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    /* six counts: one row on A4 and a computer, two rows of three on a phone — never five and one left alone */
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 10px;
 }
 

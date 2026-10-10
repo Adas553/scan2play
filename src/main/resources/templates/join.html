@@ -20,7 +20,7 @@
         <h1 class="display-6 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
         <h2 class="h4 fw-bold mt-2" id="joinHeading" th:text="#{join.heading(${joinPartyName})}">👥 Join the staff of DJ Koko</h2>
         <p class="text-secondary" th:text="#{join.intro}">You will see the guests' requests and mark them played.</p>
-        <a th:href="${joinUrl}" id="joinButton" class="btn btn-warning fw-bold w-100" th:text="#{join.button}">Log in with Google and join</a>
+        <a th:href="${joinUrl}" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.button}">Log in with Google and join</a>
         <p class="small text-secondary mt-3 mb-0" th:text="#{join.footer}">The owner can take your access away at any time.</p>
     </div>
 </div>

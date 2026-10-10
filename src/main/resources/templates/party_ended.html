@@ -14,7 +14,7 @@
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
             <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
-            <div class="card p-5">
+            <div class="card p-4 p-sm-5">
                 <h1 class="display-1 mb-3">👋</h1>
                 <h2 class="mb-4 fw-bold text-light-custom" th:text="#{party.ended.title}">This party has ended</h2>
                 <p class="lead text-secondary-bright" th:text="#{party.ended.subtitle}">Thanks for partying with Scan2Play!</p>
@@ -23,7 +23,7 @@
                      scanning the code again. The landing page is for DJs (a Google login) — only a small link to it. */-->
                 <div class="mt-4">
                     <a th:href="${partyCode != null} ? ${'/p/' + partyCode} : '/'" id="checkAgainBtn"
-                       class="btn btn-outline-light btn-lg px-5" th:text="#{party.ended.check_again}">↻ Check again</a>
+                       class="btn btn-action px-4" th:text="#{party.ended.check_again}">↻ Check again</a>
                 </div>
                 <p class="mt-4 mb-0 small">
                     <a href="/" class="text-secondary-bright" th:text="#{party.ended.own_party}">Want this at your own party? Scan2Play</a>

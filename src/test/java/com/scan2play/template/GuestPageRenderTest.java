@@ -88,7 +88,7 @@ class GuestPageRenderTest {
                     .doesNotContain("id=\"modeMood\"", "id=\"modeSong\"", "name=\"requestMode\"", "name=\"style\"", "id=\"styleInput\"");
             assertThat(html).as("no YouTube on the page").doesNotContain("Powered by YouTube", "YouTube API Services");
             assertThat(html).as("our logo is the page's heading").containsPattern(
-                    "<h1 class=\"display-4 fw-bold\"><span class=\"s2p-logo\"><img src=\"/images/logo.svg\"[^>]*><span>Scan<span class=\"s2p-logo-two\">2</span>Play</span></span></h1>");
+                    "<h1 class=\"display-5 fw-bold mb-2\"><span class=\"s2p-logo\"><img src=\"/images/logo.svg\"[^>]*><span>Scan<span class=\"s2p-logo-two\">2</span>Play</span></span></h1>");
             // no inline script (CSP, review 5.1): the page's script is a file
             DashboardPageRenderTest.assertNothingInline(html);
             assertThat(html).contains("<script src=\"/js/guest-party.js\">");
@@ -140,7 +140,7 @@ class GuestPageRenderTest {
 
         assertThat(html).doesNotContain("??");
         assertThat(html).contains("id=\"guestQueueBox\"", "data-url=\"/p/ABC12/queue\"");
-        assertThat(html).contains("🔥 Prośby gości", "Twoja prośba „Mine” czeka u DJ-a")
+        assertThat(html).contains(">Prośby gości<", "Twoja prośba „Mine” czeka u DJ-a")
                 .doesNotContain("Następne w kolejce", "w kolejce", "Teraz gra", "list-group-numbered", "Ostatnio wysłane", "Najwięcej głosów");
         assertThat(html.indexOf("Newest")).as("the order given (the service's)").isLessThan(html.indexOf(">Mine<"));
         String mine = html.substring(html.indexOf(">Mine<"), html.indexOf("Oldest"));
@@ -161,7 +161,7 @@ class GuestPageRenderTest {
     /** The result page is about this request alone: no other of the guest's waiting songs on it. */
     @Test
     void theResultPage_namesNoOtherWaitingSong() {
-        String html = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "Golec uOrkiestra - Ściernisko", 7, "title"));
+        String html = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "Golec uOrkiestra - Ściernisko", "title"));
 
         assertThat(html).contains("TAK!").doesNotContain("id=\"myPosition\"", "czeka u DJ-a", "Czekają u DJ-a");
     }
@@ -217,7 +217,7 @@ class GuestPageRenderTest {
             String html = engine.process("join", context);
             if (locale == PL) {
                 writePreview("join.html", html);
-                assertThat(html).contains("👥 Zaproszenie do obsługi: Klub Ola", ">Zaloguj się przez Google i dołącz<");
+                assertThat(html).contains(">Zaproszenie do obsługi: Klub Ola<", ">Zaloguj się przez Google i dołącz<");
             }
 
             assertThat(html).doesNotContain("??");
@@ -243,7 +243,7 @@ class GuestPageRenderTest {
         writePreview("landing.html", pages[0]);
 
         assertThat(pages[0]).doesNotContain("??");
-        assertThat(pages[0]).contains("id=\"staffLogin\"", "Masz zaproszenie do zespołu imprezy? Dołącz →", "action=\"/join\"",
+        assertThat(pages[0]).contains("id=\"staffLogin\"", "Masz zaproszenie do obsługi imprezy? Dołącz →", "action=\"/join\"",
                 "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"");
         assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");
         assertThat(tag(pages[1], "staffLogin")).as("open after a link that did not work").contains("open");
@@ -292,29 +292,30 @@ class GuestPageRenderTest {
                 "Jeśli chcesz, wpisz w tytule wpłaty numer piosenki z listy (np. #27)");
         assertThat(render(PL, Map.of())).doesNotContain("djTip", "Napiwek");
 
-        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title",
+        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title",
                 5L, 1, false, 27), "https://www.paypal.com/paypalme/djkoko");
         // the link with "prosto do DJ-a" only on the party page: under a request one line fewer
         assertThat(accepted).doesNotContain("prosto do DJ-a", "paypal.com/paypalme/djkoko ·");
         assertThat(accepted).contains("href=\"https://www.paypal.com/paypalme/djkoko\"",
                 "id=\"requestNumber\"", "Numer Twojej piosenki: #27", "Jeśli chcesz, wpisz #27 w tytule wpłaty — DJ będzie wiedział, za którą piosenkę");
-        String rejected = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie dziś", "Nirvana - Lithium", 7, "title"),
+        String rejected = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie dziś", "Nirvana - Lithium", "title"),
                 "https://revolut.me/djkoko");
         assertThat(rejected).doesNotContain("djTip", "revolut.me");
-        assertThat(renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title")))
+        assertThat(renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title")))
                 .doesNotContain("djTip");
     }
 
     /** The AI could not be asked: the request went to the DJ — "sent", not "yes", and no energy. */
     @Test
     void aRequestPassedOnWithoutTheAi_saysItWentToTheDj() {
-        String unchecked = renderResult(new com.scan2play.model.DjResponse("accepted", "AI jest chwilowo niedostępne", "sanah", 0,
+        String unchecked = renderResult(new com.scan2play.model.DjResponse("accepted", "AI jest chwilowo niedostępne", "sanah",
                 com.scan2play.model.DjResponse.KIND_UNCHECKED));
         assertThat(unchecked).contains("PRZEKAZANE", "AI jest chwilowo niedostępne").doesNotContain("TAK!", "Energia", "Energy");
         assertThat(unchecked).as("no YouTube API").doesNotContain("YouTube API Services");
 
-        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title"));
-        assertThat(accepted).contains("TAK!", "Energia: 7/10").doesNotContain("PRZEKAZANE", "Energy");
+        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title"));
+        // no energy rating anywhere (the owner, 2026-10-10)
+        assertThat(accepted).contains("TAK!").doesNotContain("PRZEKAZANE", "Energia", "Energy");
     }
 
     /**
@@ -328,7 +329,7 @@ class GuestPageRenderTest {
         String html = render(PL, Map.of("guestQueue", queue(List.of(wilki, sanah, song(3, "Alone")), Set.of(), null)));
 
         assertThat(html).as("the songs' numbers (V28), for the title of a tip").contains(">#12<").doesNotContain(">#null<");
-        assertThat(html).contains("id=\"guestRequests\"", "🔥 Prośby gości", ">👍 4<", ">👍 2<", ">👍 1<")
+        assertThat(html).contains("id=\"guestRequests\"", ">Prośby gości<", ">👍 4<", ">👍 2<", ">👍 1<")
                 .doesNotContain("??", "id=\"mostWanted\"", "id=\"upNext\"", "id=\"moreRequests\"", "Najwięcej głosów", "Ostatnio wysłane");
         assertThat(html.split(">Wilki - Baśka<", -1)).as("once").hasSize(2);
         assertThat(html.indexOf("Wilki - Baśka")).isLessThan(html.indexOf("sanah - Szampan"));
@@ -419,28 +420,28 @@ class GuestPageRenderTest {
     /** The same song already waited: the guest's request was one more vote on it — or it was their own, and nothing changed. */
     @Test
     void aVote_andTheGuestsOwnSongAskedForAgain_sayWhatHappened() {
-        String vote = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 3, false));
-        assertThat(vote).contains("Ktoś już o to prosił — dodaliśmy Twój głos! Głosów: 3").doesNotContain("id=\"voteOwn\"");
+        String vote = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", "title", 5L, 3, false));
+        assertThat(vote).contains("Ktoś już o to prosił — dodaliśmy Twój głos! Głosów:\u00a03").doesNotContain("id=\"voteOwn\"");
 
-        String own = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 2, true));
-        assertThat(own).contains("Ta piosenka już czeka w kolejce i ma Twój głos. Głosów: 2").doesNotContain("id=\"voteAdded\"");
+        String own = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", "title", 5L, 2, true));
+        assertThat(own).contains("Ta piosenka już czeka w kolejce i ma Twój głos. Głosów:\u00a02").doesNotContain("id=\"voteAdded\"");
 
-        String first = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", 7, "title", 5L, 1, false));
+        String first = renderResult(new com.scan2play.model.DjResponse("accepted", "Klasyk!", "Wilki - Baśka", "title", 5L, 1, false));
         assertThat(first).doesNotContain("id=\"voteAdded\"", "id=\"voteOwn\"");
     }
 
-    /** The DJ's vibe and note (V16) in one calm box above the button; the guests pick no vibe. */
+    /** The DJ's vibe and note (V16) in one quiet line under who plays (the design review, 2026-10-09: a pale box between the field and the button); the guests pick no vibe. */
     @Test
     void theDjsVibeAndNote_areShownInOneBox() {
         String withNote = render(PL, Map.of("vibeNote", "wesele 40+, <b>bez rapu</b>"));
-        assertThat(withNote).contains("id=\"vibeNote\"", "🎧 Klimat imprezy", "wesele 40+, &lt;b&gt;bez rapu&lt;/b&gt;")
+        assertThat(withNote).contains("id=\"vibeNote\"", ">Klimat imprezy<", "wesele 40+, &lt;b&gt;bez rapu&lt;/b&gt;")
                 .doesNotContain("??", "id=\"styleInput\"");
         assertThat(withNote).as("no vibe of the list: no name after the title, the colon still — the note follows it")
-                .doesNotContain("id=\"partyVibeName\"").contains("🎧 Klimat imprezy</span>:");
+                .doesNotContain("id=\"partyVibeName\"").contains("Klimat imprezy</span><span class=\"text-secondary\">:</span> <span id=\"vibeNote\"");
 
         String both = render(PL, Map.of("vibeNote", "wesele +40", "globalVibe", VibeType.CLUB_AND_EDM));
-        assertThat(both).containsOnlyOnce("id=\"partyVibe\"").contains("id=\"partyVibeName\">Klubowa &amp; EDM<", "wesele +40")
-                .contains("🎧 Klimat imprezy</span>: <span")
+        assertThat(both).containsOnlyOnce("id=\"partyVibe\"").contains("id=\"partyVibeName\" class=\"fw-semibold\">Klubowa &amp; EDM<", "wesele +40")
+                .contains("Klimat imprezy</span><span class=\"text-secondary\">:</span> <span id=\"partyVibeName\"")
                 .doesNotContain("UWAGA", "id=\"styleInput\"", "name=\"style\"");
         assertThat(render(PL, Map.of())).as("any vibe, no note: no box").doesNotContain("id=\"partyVibe\"");
     }
@@ -452,7 +453,7 @@ class GuestPageRenderTest {
     @Test
     void theGuestPages_haveTheWayBackToTheDashboard_forTheApp() {
         String page = render(PL, Map.of());
-        String result = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", 7, "title"));
+        String result = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title"));
 
         for (String html : List.of(page, result)) {
             assertThat(html).contains("s2p-standalone-only", "id=\"backToDashboard\"", "href=\"/dj/dashboard\"", "← Twój panel DJ-a")

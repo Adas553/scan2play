@@ -82,7 +82,6 @@ public class SongRequestEntity {
     @Column(length = DJ_COMMENT_MAX)
     private String djComment;
 
-    private int energyLevel;
     private Instant requestedAt;
 
     @Column(length = TRACK_URL_MAX)
