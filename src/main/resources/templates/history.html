@@ -107,7 +107,7 @@
                     <span th:text="${times.weekday(req.at, #locale) + ', ' + times.day(req.at)}">sobota, 03.10</span>
                 </td>
             </tr>
-            <tr th:attr="data-song-name=${req.title},data-decision=${req.decision},data-song-number=${req.requestNumber}"
+            <tr th:attr="data-history-id=${req.id},data-song-name=${req.title},data-decision=${req.decision},data-song-number=${req.requestNumber}"
                 th:with="shownAt=${times.display(req.at)},sortAt=${times.sortKey(req.at)}">
                 <td class="text-nowrap s2p-number-cell" data-sort-value="number" th:attr="data-val=${req.requestNumber}"
                     th:text="${req.requestNumber != null} ? ${'#' + req.requestNumber} : ''">#27</td>
@@ -152,9 +152,10 @@
                         <span class="d-inline d-md-none s2p-decision-icon" th:title="${byTheDjTitle}" th:attr="aria-label=${byTheDjTitle}"
                               th:text="${req.skippedByDj() ? '⏭' : '🧹'}">⏭</span>
                     </th:block>
-                    <!--/* It can go back to the queue — a skip by mistake (DjService.restoreSkippedSong). In the History tab forms.js sends
+                    <!--/* It can go back to the queue — a skip or a "Zagrane" by mistake, at any time (DjService.restoreSong; the owner,
+                         2026-10-10: a song marked played by mistake was gone, and the AI then refused it as played). In the History tab forms.js sends
                          it in the background; on the standalone page it lands on the dashboard. Beside the word, on the same line. */-->
-                    <form th:if="${req.skippedByDj() and (access == null or access.may('QUEUE'))}" action="/dj/dashboard/restore" method="post" class="d-inline-block m-0 ms-md-2">
+                    <form th:if="${(req.skippedByDj() or req.decision == 'played') and (access == null or access.may('QUEUE'))}" action="/dj/dashboard/restore" method="post" class="d-inline-block m-0 ms-md-2">
                         <!--/* the CSRF field by hand: the fragment is rendered without a web context too (HistoryFragmentTest) */-->
                         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                         <input type="hidden" name="id" th:value="${req.id}" />
@@ -162,6 +163,10 @@
                         <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap" th:title="#{history.restore.title}"
                                 th:text="#{history.restore}">↩ Restore</button>
                     </form>
+                    <!--/* On a phone the entry is one line (cards.js, app.css): the song, the votes, the decision and "↩" of a skip or a played one — this "▾"
+                         (or a tap on the line) unfolds the rest. A wide screen shows it all. */-->
+                    <button type="button" class="btn btn-sm d-md-none s2p-card-toggle" aria-expanded="false"
+                            th:attr="aria-label=#{dashboard.card.toggle}" th:title="#{dashboard.card.toggle}"></button>
                 </td>
                 <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap s2p-comment-cell" th:text="${req.djComment}">Comment</td>
             </tr>
@@ -188,6 +193,8 @@
 
 <!-- The dashboard's list tools: sorting, search, filters and "Show more" (it sets up the table's headers itself) -->
 <script type="module" src="/js/dashboard/list-tools.js" th:src="@{/js/dashboard/list-tools.js}"></script>
+<!-- On a phone: the entries folded to one line, a tap unfolds one -->
+<script type="module" src="/js/dashboard/cards.js" th:src="@{/js/dashboard/cards.js}"></script>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 

@@ -7,6 +7,29 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-10, night — the folded cards of a phone, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `016fa29`;
+  `main` = `c4f6bc5`, V33 + V34 applied on Railway, CI green), not committed yet.** The review (the cards measured on the real rendered
+  page at 390×844, variants A / B / C swipe / D icons as CSS over the real styles): https://claude.ai/artifact/5Znq2bBpZQZB2rzHYkX9v1 —
+  the owner: "zrób zgodnie z Twoimi sugestiami" (B for the queue, one line for the history with "↩" in it, "💸" folded until counted).
+  Done, PROJECT_CONTEXT 5.1 / 6.5 / 6.7: `js/dashboard/cards.js` (a tap on a card or its "▾" unfolds it; a tap on a control is the
+  control's; unfolded ones remembered by id and opened again after the poll — `polling.js` — and the History tab's reloads — `tabs.js`;
+  the standalone history page loads it too); the "▾" `.s2p-card-toggle` in `dashboard.html` (the votes' cell) and `history.html` (the
+  decision's cell; rows got `data-history-id`), `dashboard.card.toggle` ("Szczegóły"); `app.css`: a queue card 204 → 106 px (⚠ keeps
+  the guest's words, "💸 2" stays, no empty row for "Podgląd"), a history entry 191 → 52 px; the history's tap on the comment
+  (`list-tools.js`) gone — the card unfolds as a whole. Also (the owner's photo of the result page): "Scan2Play" sat ~3 px above
+  "🎧 Gra: DJ Adam" — the logo's inline-flex took the mark's bottom as its baseline; `.s2p-logo > span { align-self: baseline }`.
+  Tests: 591 unit (`DashboardPageRenderTest` writes `dashboard-cards.html` / `-viewer.html`), 75 browser — new, seen red on `HEAD`:
+  `queue-cards-folded`, `queue-card-open-survives-poll`, `queue-cards-viewer`, `history-lines-phone` (`queue-cards-wide-screen`, the
+  computer unchanged, green on both); rewritten consciously: `history-phone` (unfolds the card first; the whole comment, no one-line
+  fold of its own). The stand-in's polled rows take `card: true` (the guest's words, the comment, the "▾"). No migration.
+  Then (the owner: "a co jak ktoś przez przypadek naciśnie zagrane?" — it had no way back, and the AI's duplicate rule then refused the
+  song as played; "bez limitu czasowego"): **"Zagrane" is undone as a skip** — the "Cofnij" bar after it ("Zagrane:" / "Pominięto:",
+  `forms.js`, `data-undo-label`), "↩ Przywróć" at every played entry of the history (in the folded line too); `DjService.restoreSkippedSong`
+  → `restoreSong` (a skip or a played request, any time: `played_at` cleared, so it is no longer played; never one the AI rejected or
+  one cleared with the queue; not when the same song waits); `dashboard.undo.played`, `history.restore.title` for both. Tests: 592
+  unit (`DjServiceTest`, `HistoryFragmentTest` rewritten: two restore forms), 61 database (`SongRequestVotesIT`
+  `aPlayedRequestPutBack…`), 76 browser (`play-undo`; `skip-undo` says "Pominięto:"; `history-lines-phone` "↩" at a played one) —
+  the new ones seen red with the three conditions taken out in a copy. **Next:** the owner looks at it on a phone, then a PR to `dev`.
 - **2026-10-10, evening — the panel's clean-up (variant B), on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` =
   `3d07ee6`, PR #40 merged, CI green; `dev` → `main` with V33 + V34 not merged yet), not committed yet.** The review (every screen of the
   panel measured on a phone 390×844 and a computer 1280×900 — owner, "Obsługa kolejki", co-organiser, empty and full queue; three
