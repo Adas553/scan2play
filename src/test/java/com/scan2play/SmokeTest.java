@@ -239,4 +239,18 @@ class SmokeTest {
                     language.equals("pl") ? "zaszyfrowana od końca do końca" : "end-to-end encrypted");
         }
     }
+
+    @Test
+    @DisplayName("The privacy policy, in both languages, names the invited person's e-mail address, that nothing is sent to it, and how long it waits")
+    void privacyPolicy_namesTheAddressOfAnInvitationByEmail() throws Exception {
+        for (String language : new String[] {"en", "pl"}) {
+            String html = mockMvc.perform(get("/privacy").header("Accept-Language", language))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+            int days = com.scan2play.entity.StaffInvitationEntity.MAX_AGE_DAYS;
+            assertThat(html).as(language).contains(language.equals("pl")
+                    ? new String[] {"po adresie e-mail jego konta Google", "Na ten adres nic nie wysyłamy", "najdłużej " + days + " dni"}
+                    : new String[] {"by the e-mail address of their Google account", "No e-mail is sent to it", "at most " + days + " days"});
+        }
+    }
 }

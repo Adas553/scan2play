@@ -2,7 +2,8 @@
 // no party of her own) runs the panel's real scripts without the owner's settings, lists and staff — with the QR code — and works
 // the queue in the background like the owner's; every form names the party the page shows. The page loads itself again when the
 // organiser takes the access away (the poll's 403) or changes it (X-Panel-Access). The owner's page "Obsługa" (staff.html): a role
-// ticks its permissions, a tick changed picks the role it makes; its forms are page loads; "Kopiuj" copies the invitation link.
+// ticks its permissions, a tick changed picks the role it makes — in each of its forms: a person, "Zaproś" by e-mail (V34), the
+// link's role (V33); its forms are page loads; "Kopiuj" copies the invitation link.
 
 /** Records whether each submit was taken by the panel's scripts (sent in the background) or left to the browser; stays on the page. */
 function s2pRecordSubmits() {
@@ -63,18 +64,30 @@ S2P.scenario({
         document.getElementById('makeOwnPartyBtn').click();
         t.step('"Załóż własną imprezę" is a page load (not sent in the background)', handled.shift(), ['/dj/panel', false]);
 
-        // an invitation pasted in the app (its browser has a login of its own): a page load, the invitation asks
+        // no "Wklej link" on another's party (the owner, 2026-10-10: she has joined already — it read as if she still had to);
+        // her own panel and "no-panel" keep it, and an invitation by e-mail comes by itself
         document.getElementById('settingsToggle').click();   // under "Kod QR", with the notifications
-        t.check('the field shows once the settings are unfolded', document.getElementById('joinLinkInput').getClientRects().length > 0);
-        document.getElementById('joinLinkInput').value = 'https://www.scan2play.com.pl/join/AbC_12-x';
-        document.querySelector('#joinStaffForm button[type="submit"]').click();
-        t.step('a pasted invitation is a page load (not sent in the background)', handled.shift(), ['/dj/join', false]);
+        t.check('"To urządzenie" without the field for an invitation link', !!document.getElementById('pushToggle')
+            && !document.getElementById('joinStaffForm') && !document.getElementById('joinLinkInput'));
 
         // "Opuść obsługę" in place of "Usuń konto" (it read as deleting the party): a page load, another panel comes whole
         t.check('no "Usuń konto" on another party\'s panel', !document.querySelector('form[action="/dj/delete-account"]'));
         document.getElementById('leaveStaffBtn').click();
         t.step('leaving the staff is a page load (not sent in the background)', handled.shift(), ['/dj/staff/leave', false]);
         t.step('…of the party the page shows', document.querySelector('form[action="/dj/staff/leave"] input[name="partyCode"]').value, 'HARN1');
+    }
+});
+
+S2P.scenario({
+    name: 'owner-pastes-an-invitation',
+    title: 'the organiser\'s own panel keeps "Masz zaproszenie do obsługi innej imprezy? Wklej link" — a page load, the invitation asks',
+    run: async function (t) {
+        const handled = s2pRecordSubmits();
+        document.getElementById('settingsToggle').click();
+        t.check('the field shows once the settings are unfolded', document.getElementById('joinLinkInput').getClientRects().length > 0);
+        document.getElementById('joinLinkInput').value = 'https://www.scan2play.com.pl/join/AbC_12-x';
+        document.querySelector('#joinStaffForm button[type="submit"]').click();
+        t.step('a pasted invitation is a page load (not sent in the background)', handled.shift(), ['/dj/join', false]);
     }
 });
 
@@ -179,5 +192,99 @@ S2P.scenario({
         document.querySelector('button[data-copy-target="staffLinkInput"]').click();
         await t.sleep(100);
         t.step('"Kopiuj" copies the invitation link', copied, document.getElementById('staffLinkInput').value);
+    }
+});
+
+/**
+ * The submits of the owner's page "Obsługa", each with what its form sends and the question it asked first (data-confirm) — the
+ * page loads are stopped (the stand-in has no page to go to).
+ */
+function s2pRecordStaffForms() {
+    const sent = [];
+    let asked = null;
+    window.confirm = function (question) { asked = question; return true; };
+    document.addEventListener('submit', function (e) {
+        const fields = {};
+        new FormData(e.target).forEach(function (value, name) {
+            if (name === '_csrf') return;
+            fields[name] = name in fields ? [].concat(fields[name], value) : value;
+        });
+        sent.push({ action: e.target.getAttribute('action'), inBackground: e.defaultPrevented, asked: asked, fields: fields });
+        asked = null;
+        e.preventDefault();
+    });
+    return sent;
+}
+
+S2P.scenario({
+    name: 'staff-link-role',
+    title: 'the invitation link says its role ("Podgląd"); a new link is made with the role picked beside it — "Własne" its ticks',
+    page: 'staff',
+    run: async function (t) {
+        const sent = s2pRecordStaffForms();
+        const form = document.getElementById('staffLinkForm');
+        const select = form.querySelector('[data-role-select]');
+        const ticked = function () {
+            return Array.from(form.querySelectorAll('[data-permission-box]')).filter(function (b) { return b.checked; })
+                .map(function (b) { return b.value; });
+        };
+        t.step('the link says its role', document.getElementById('staffLinkRole').textContent.trim(), 'Ten link: Podgląd');
+        t.step('the new link starts with the same role', [select.value, ticked()], ['VIEWER', ['HISTORY']]);
+
+        select.value = 'CO_ORGANISER';
+        select.dispatchEvent(new Event('change'));
+        t.step('"Współorganizator" ticks everything', ticked().length, 9);
+        form.querySelector('details').open = true;   // the ticks, as a person opens them
+        form.querySelector('[data-permission-box][value="LIMITS"]').click();
+        t.step('a tick taken away: "Własne"', select.value, 'CUSTOM');
+
+        document.getElementById('staffLinkNewBtn').click();
+        const link = sent.shift();
+        t.step('"Nowy link" is a page load, after the question (the old link stops working)',
+            [link && link.action, link && link.inBackground, !!(link && link.asked)], ['/dj/staff/link', false, true]);
+        t.step('…and sends the role with its ticks', link && [link.fields.link, link.fields.role, link.fields.permissions.length,
+            link.fields.permissions.indexOf('LIMITS')], ['new', 'CUSTOM', 8, -1]);
+    }
+});
+
+S2P.scenario({
+    name: 'staff-invite-by-email',
+    title: '"Zaproś" by e-mail: the address and a role, a page load; the invitation waiting is listed, "Cofnij zaproszenie" asks first',
+    page: 'staff',
+    viewport: '390,844',
+    run: async function (t) {
+        const sent = s2pRecordStaffForms();
+        const ola = document.querySelector('[data-invitation-id="3"]');
+        t.step('the invitation waiting is on the list, after the staff',
+            [!!ola, ola && ola.querySelector('[data-invitation-status]').textContent.trim(),
+                !!(ola && ola.compareDocumentPosition(document.querySelector('[data-staff-id="8"]')) & Node.DOCUMENT_POSITION_PRECEDING)],
+            [true, 'zaproszono 10.10 · czeka na zalogowanie', true]);
+
+        const form = document.getElementById('staffInviteForm');
+        const select = form.querySelector('[data-role-select]');
+        t.step('"Zaproś" starts with "Obsługa kolejki"', select.value, 'QUEUE');
+        select.value = 'VIEWER';
+        select.dispatchEvent(new Event('change'));
+        t.step('…a role picked ticks its set', Array.from(form.querySelectorAll('[data-permission-box]'))
+            .filter(function (b) { return b.checked; }).map(function (b) { return b.value; }), ['HISTORY']);
+        t.step('…and says what it is', form.querySelector('[data-role-help]').textContent, 'Widzi kolejkę i historię, niczego nie zmienia.');
+
+        const email = document.getElementById('staffInviteEmail');
+        t.step('the field is for an e-mail address (a phone shows the "@" keyboard)', [email.type, email.required], ['email', true]);
+        email.value = 'bartek.nowak@gmail.com';
+        document.getElementById('staffInviteBtn').click();
+        const invited = sent.shift();
+        t.step('"Zaproś" is a page load with the address and the role', invited && [invited.action, invited.inBackground,
+            invited.fields.email, invited.fields.role, invited.fields.partyCode], ['/dj/staff/invite', false,
+            'bartek.nowak@gmail.com', 'VIEWER', 'HARN1']);
+
+        const button = document.getElementById('staffInviteBtn').getBoundingClientRect();
+        t.check('"Zaproś" is a phone\'s full-width target, 44 px high', button.height >= 44 && button.width >= 300);
+
+        ola.querySelector('form[action="/dj/staff/invitation/cancel"] button').click();
+        const cancelled = sent.shift();
+        t.step('"Cofnij zaproszenie" asks first and is a page load', cancelled && [cancelled.action, cancelled.inBackground,
+            cancelled.asked, cancelled.fields.id], ['/dj/staff/invitation/cancel', false,
+            'Cofnąć zaproszenie: ola.kowalska@gmail.com?', '3']);
     }
 });

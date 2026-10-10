@@ -126,7 +126,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff);
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -322,6 +322,8 @@ class DashboardPageRenderTest {
         assertThat(playForm.substring(0, playForm.indexOf("</form>"))).contains("name=\"partyCode\" value=\"HARN1\"");
         assertThat(html).as("the owner deletes their account; leaving a staff is not theirs")
                 .contains("action=\"/dj/delete-account\"").doesNotContain("id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"");
+        assertThat(html).as("an invitation link pasted in the app (its browser has a login of its own): on the person's own panel")
+                .contains("id=\"joinStaffForm\"", "action=\"/dj/join\"");
         write("dashboard.html", html);
     }
 
@@ -366,8 +368,6 @@ class DashboardPageRenderTest {
                 "data-permission=\"QUEUE\"", "Zagrane, Pomiń, Cofnij, Przywróć", "data-permission=\"CLEAR_QUEUE\"",
                 "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "id=\"pushToggle\"",
                 "action=\"/dj/end-party\"", "Zakończyć imprezę: Klub Ola?",
-                // a link pasted in the app (its browser has a login of its own): for the staff too
-                "id=\"joinStaffForm\"", "action=\"/dj/join\"",
                 "id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"", "Opuścić obsługę tej imprezy?",
                 // no party of her own: made on purpose from the menu, never by a click on "Mój panel"
                 "id=\"makeOwnPartyBtn\"", ">Załóż własną imprezę<",
@@ -375,6 +375,8 @@ class DashboardPageRenderTest {
         assertThat(html).as("one panel only: nothing to switch to").doesNotContain("id=\"panelSwitcher\"", "Mój panel");
         assertThat(html).as("the staff's button opens the QR code only").contains(">Kod QR<").doesNotContain("Ustawienia, klimat i kod QR");
         assertThat(html).doesNotContain("action=\"/dj/delete-account\"", "id=\"staffMenuLink\"");
+        assertThat(html).as("no \"Wklej link\" on another's party: she has joined already (the owner, 2026-10-10)")
+                .doesNotContain("id=\"joinStaffForm\"", "action=\"/dj/join\"");
         assertThat(html).as("the QR code, its link and its print: the staff's too — it is on the tables anyway (the owner, 2026-10-09)")
                 .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"", "Link dla gości:");
         assertThat(html).as("the owner's: the settings, the limits, the lists, the profiles, the tip link, the staff")
@@ -473,7 +475,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());

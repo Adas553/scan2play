@@ -6,6 +6,7 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.PartyStaffRepository;
+import com.scan2play.repository.StaffInvitationRepository;
 import com.scan2play.service.PartyStaffService.JoinOutcome;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +26,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** The party's staff (V30, V32): who may open a party and do what there, what an invitation link does, the panels to switch between. */
+/**
+ * The party's staff (V30, V32, V33): who may open a party and do what there, what an invitation link does — with the role it was made
+ * with —, the places the staff and the invitations by e-mail share, the panels to switch between.
+ */
 class PartyStaffServiceTest {
 
     private static final String PARTY = "ABC12";
     private static final String TOKEN = "invite-token";
 
     private PartyStaffRepository staff;
+    private StaffInvitationRepository invitations;
     private PartySettingsRepository parties;
     private PartySettingsQueryService query;
     private PartyStaffService service;
@@ -42,9 +47,11 @@ class PartyStaffServiceTest {
         staff = mock(PartyStaffRepository.class);
         parties = mock(PartySettingsRepository.class);
         query = mock(PartySettingsQueryService.class);
-        service = new PartyStaffService(staff, parties, query);
+        invitations = mock(StaffInvitationRepository.class);
+        service = new PartyStaffService(staff, invitations, parties, query);
         party = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("DJ Koko").staffToken(TOKEN).build();
         when(parties.findByStaffToken(TOKEN)).thenReturn(Optional.of(party));
+        when(parties.lockByStaffToken(TOKEN)).thenReturn(Optional.of(party));
     }
 
     @Test
@@ -70,19 +77,49 @@ class PartyStaffServiceTest {
         assertThat(saved.getValue().getMemberId()).isEqualTo("kasia");
         assertThat(saved.getValue().getMemberName()).isEqualTo("Kasia Nowak");
         assertThat(saved.getValue().getJoinedAt()).isNotNull();
-        assertThat(saved.getValue().getPermissions()).as("the role a person starts with (V32): what the staff could do before")
+        assertThat(saved.getValue().getPermissions()).as("a link made before V33: what the staff could do before V32")
                 .isEqualTo(StaffRole.QUEUE.permissions());
     }
 
-    /** Counted under the party row's lock: people joining at once never pass the limit ({@code StaffJoinIT} on PostgreSQL). */
+    /** The link gives the role it was made with (V33): "Podgląd", or permissions ticked one by one — none ticked too. */
     @Test
-    void joining_locksTheParty_beforeItCounts() {
+    void theLink_givesTheRoleItWasMadeWith() {
+        party.setStaffLinkPermissions(EnumSet.of(StaffPermission.HISTORY, StaffPermission.SUMMARY));
+        service.join(TOKEN, "kasia", "Kasia");
+        party.setStaffLinkPermissions(EnumSet.noneOf(StaffPermission.class));
+        service.join(TOKEN, "ola", "Ola");
+
+        ArgumentCaptor<PartyStaffEntity> saved = ArgumentCaptor.forClass(PartyStaffEntity.class);
+        verify(staff, org.mockito.Mockito.times(2)).save(saved.capture());
+        assertThat(saved.getAllValues().get(0).getPermissions()).containsExactly(StaffPermission.HISTORY, StaffPermission.SUMMARY);
+        assertThat(saved.getAllValues().get(1).getPermissions()).isEmpty();
+    }
+
+    /**
+     * The link is read with the party row locked, and counted under that lock: people joining at once never pass the limit, and a new
+     * link made at that moment is waited for ({@code PartyStaffRepositoryIT} on PostgreSQL).
+     */
+    @Test
+    void joining_locksThePartyByItsLink_beforeItCounts() {
         service.join(TOKEN, "kasia", "Kasia");
 
         InOrder order = inOrder(parties, staff);
-        order.verify(parties).lockByPartyCode(PARTY);
+        order.verify(parties).lockByStaffToken(TOKEN);
         order.verify(staff).countByPartyCode(PARTY);
         order.verify(staff).save(any());
+        verify(parties, never()).findByStaffToken(any());
+    }
+
+    /** The staff and the invitations by e-mail waiting share the 10 places (V34): nine people and one invitation — the link is full. */
+    @Test
+    void theInvitationsWaiting_takePlacesToo() {
+        when(staff.countByPartyCode(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF - 1);
+        when(invitations.countByPartyCodeAndInvitedAtAfter(org.mockito.ArgumentMatchers.eq(PARTY), any())).thenReturn(1L);
+
+        assertThat(service.placesTaken(PARTY)).isEqualTo(PartyStaffService.MAX_STAFF);
+        assertThat(service.join(TOKEN, "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.FULL);
+        // answering one of those invitations: its own place is already counted
+        assertThat(service.addToStaff(party, "ola", "Ola", StaffRole.VIEWER.permissions(), true)).isEqualTo(JoinOutcome.JOINED);
     }
 
     @Test

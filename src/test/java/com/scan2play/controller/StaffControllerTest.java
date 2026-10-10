@@ -6,6 +6,8 @@ import com.scan2play.model.StaffRole;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PartyStaffService.JoinOutcome;
+import com.scan2play.service.StaffInvitationService;
+import com.scan2play.entity.StaffInvitationEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -17,7 +19,9 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Instant;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -42,7 +46,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-/** The staff's invitation, the panel switcher, leaving a staff and the owner's page "Obsługa" (V30, V32). */
+/**
+ * The staff's invitation — by the link with its role (V33) and by e-mail (V34) —, the panel switcher, leaving a staff and the owner's
+ * page "Obsługa" (V30, V32).
+ */
 class StaffControllerTest {
 
     private static final String TOKEN = "invite-token";
@@ -51,6 +58,7 @@ class StaffControllerTest {
     private PartyStaffService staff;
     private PartySettingsCommandService settings;
     private DjSessionHelper sessionHelper;
+    private StaffInvitationService invitations;
     private MockMvc mockMvc;
     private final PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PUB).ownerId("pub-owner").djName("Klub Ola")
             .ownerName("Ola Kowalska").build();
@@ -60,8 +68,9 @@ class StaffControllerTest {
         staff = mock(PartyStaffService.class);
         settings = mock(PartySettingsCommandService.class);
         sessionHelper = mock(DjSessionHelper.class);
+        invitations = mock(StaffInvitationService.class);
         // views under a prefix of their own: the view "staff" of /dj/staff is not the handler's own address again
-        mockMvc = MockMvcBuilders.standaloneSetup(new StaffController(staff, settings, sessionHelper))
+        mockMvc = MockMvcBuilders.standaloneSetup(new StaffController(staff, settings, sessionHelper, invitations))
                 .setViewResolvers(new org.springframework.web.servlet.view.InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
         when(staff.partyOfLink(anyString())).thenReturn(Optional.empty());
         when(staff.partyOfLink(TOKEN)).thenReturn(Optional.of(pub));
@@ -71,6 +80,13 @@ class StaffControllerTest {
     private static OAuth2AuthenticationToken user(String id) {
         return new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"),
                 Map.of("sub", id, "name", "Kasia"), "sub"), AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
+    }
+
+    /** A logged-in account with the address Google gives ({@code email_verified} as Google's OpenID user says it: a boolean). */
+    private static OAuth2AuthenticationToken user(String id, String email, Object verified) {
+        return new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"),
+                Map.of("sub", id, "name", "Kasia", "email", email, "email_verified", verified), "sub"),
+                AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
     }
 
     // ---------------------------------------------------------------- the invitation
@@ -85,6 +101,7 @@ class StaffControllerTest {
                 .andExpect(model().attribute("joinPartyName", "Klub Ola"))
                 .andExpect(model().attribute("joinOwnerName", "Ola Kowalska"))
                 .andExpect(model().attribute("joinRole", StaffRole.QUEUE))
+                .andExpect(model().attribute("joinPermissions", List.copyOf(StaffRole.QUEUE.permissions())))
                 .andExpect(model().attribute("joinLoggedIn", false));
 
         assertThat(session.getAttribute(StaffController.SESSION_PENDING_INVITATION)).isEqualTo(TOKEN);
@@ -188,6 +205,93 @@ class StaffControllerTest {
                 .andExpect(redirectedUrl("/?staffLink=guests"));
     }
 
+    /** The link says the role it was made with (V33): "Podgląd", or the permissions ticked one by one. */
+    @Test
+    void theInvitation_saysTheRoleOfItsLink() throws Exception {
+        pub.setStaffLinkPermissions(EnumSet.of(StaffPermission.HISTORY));
+        mockMvc.perform(get("/join/" + TOKEN).session(new MockHttpSession()))
+                .andExpect(model().attribute("joinRole", StaffRole.VIEWER))
+                .andExpect(model().attribute("joinPermissions", List.of(StaffPermission.HISTORY)));
+
+        pub.setStaffLinkPermissions(EnumSet.of(StaffPermission.SUMMARY, StaffPermission.QUEUE));
+        mockMvc.perform(get("/join/" + TOKEN).session(new MockHttpSession()))
+                .andExpect(model().attribute("joinRole", StaffRole.CUSTOM))
+                .andExpect(model().attribute("joinPermissions", List.of(StaffPermission.QUEUE, StaffPermission.SUMMARY)));
+        pub.setStaffLinkPermissions(null);
+    }
+
+    // ---------------------------------------------------------------- the invitation by e-mail (V34)
+
+    /** Only an address Google verified counts: an unverified one could be anyone's. */
+    @Test
+    void theAddress_countsOnlyWhenGoogleVerifiedIt() {
+        assertThat(StaffController.verifiedAddress(user("kasia", "kasia@gmail.com", true))).isEqualTo("kasia@gmail.com");
+        assertThat(StaffController.verifiedAddress(user("kasia", "kasia@gmail.com", "true"))).isEqualTo("kasia@gmail.com");
+        assertThat(StaffController.verifiedAddress(user("kasia", "kasia@gmail.com", false))).isNull();
+        assertThat(StaffController.verifiedAddress(user("kasia"))).as("no address given").isNull();
+        assertThat(StaffController.verifiedAddress(null)).isNull();
+    }
+
+    private static StaffInvitationEntity invitation(long id, Set<StaffPermission> permissions) {
+        return StaffInvitationEntity.builder().id(id).partyCode(PUB).email("kasia@gmail.com").emailKey("kasia@gmail.com")
+                .permissions(permissions).invitedAt(Instant.now()).build();
+    }
+
+    /** The panel sends a person with an invitation waiting here: the party, who invites, the role; answered by a POST. */
+    @Test
+    void anInvitationByEmail_asks_withItsRole() throws Exception {
+        when(invitations.waitingFor("kasia@gmail.com")).thenReturn(Optional.of(
+                new StaffInvitationService.Waiting(invitation(3L, StaffRole.CO_ORGANISER.permissions()), pub)));
+
+        mockMvc.perform(get("/dj/invitation").principal(user("kasia", "kasia@gmail.com", true)).session(new MockHttpSession()))
+                .andExpect(view().name("join"))
+                .andExpect(model().attribute("joinPartyName", "Klub Ola"))
+                .andExpect(model().attribute("joinOwnerName", "Ola Kowalska"))
+                .andExpect(model().attribute("joinInvitationId", 3L))
+                .andExpect(model().attribute("joinLoggedIn", true))
+                .andExpect(model().attribute("joinRole", StaffRole.CO_ORGANISER));
+
+        // nothing waiting (answered in another tab, an unverified address): the panel
+        mockMvc.perform(get("/dj/invitation").principal(user("kasia", "kasia@gmail.com", false)).session(new MockHttpSession()))
+                .andExpect(redirectedUrl("/dj/dashboard"));
+        verify(invitations).waitingFor(null);
+    }
+
+    @Test
+    void dolacz_onAnInvitationByEmail_opensTheParty_orSaysWhatHappened() throws Exception {
+        when(invitations.accept(3L, "kasia@gmail.com", "kasia", "Kasia"))
+                .thenReturn(new StaffInvitationService.Answer(StaffInvitationService.AnswerOutcome.JOINED, pub));
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(post("/dj/invitation/accept").param("id", "3").principal(user("kasia", "kasia@gmail.com", true)).session(session))
+                .andExpect(redirectedUrl("/dj/dashboard?party=PUB01"));
+        verify(sessionHelper).switchTo(eq(PUB), any(), eq(session));
+        verify(sessionHelper).note(session, new DjSessionHelper.Note("dashboard.staff.joined", "Klub Ola", false));
+
+        when(invitations.accept(4L, "kasia@gmail.com", "kasia", "Kasia"))
+                .thenReturn(new StaffInvitationService.Answer(StaffInvitationService.AnswerOutcome.GONE, null));
+        MockHttpSession gone = new MockHttpSession();
+        mockMvc.perform(post("/dj/invitation/accept").param("id", "4").principal(user("kasia", "kasia@gmail.com", true)).session(gone))
+                .andExpect(redirectedUrl("/dj/dashboard"));
+        verify(sessionHelper).note(gone, new DjSessionHelper.Note("dashboard.invitation.gone", null, true));
+
+        when(invitations.accept(5L, "kasia@gmail.com", "kasia", "Kasia"))
+                .thenReturn(new StaffInvitationService.Answer(StaffInvitationService.AnswerOutcome.FULL, pub));
+        mockMvc.perform(post("/dj/invitation/accept").param("id", "5").principal(user("kasia", "kasia@gmail.com", true))
+                        .session(new MockHttpSession()))
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("joinProblem", "join.problem.full"));
+    }
+
+    /** "Nie, dziękuję": the invitation goes; the panel says so (and makes no DJ's party for someone who came to help). */
+    @Test
+    void nieDziekuje_declinesTheInvitation() throws Exception {
+        when(invitations.decline(3L, "kasia@gmail.com")).thenReturn(true);
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(post("/dj/invitation/decline").param("id", "3").principal(user("kasia", "kasia@gmail.com", true)).session(session))
+                .andExpect(redirectedUrl("/dj/dashboard"));
+        verify(sessionHelper).note(session, new DjSessionHelper.Note("dashboard.invitation.declined", null, false));
+    }
+
     // ---------------------------------------------------------------- the person of the staff
 
     /** "Opuść obsługę": a person of the staff leaves the party the page shows; the owner of it leaves nothing. */
@@ -281,8 +385,68 @@ class StaffControllerTest {
         PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PUB).build();
         updater.getAllValues().get(0).accept(party);
         assertThat(party.getStaffToken()).hasSize(22);
+        assertThat(party.getStaffLinkPermissions()).as("no role sent: the default").isEqualTo(StaffRole.DEFAULT.permissions());
         updater.getAllValues().get(1).accept(party);
         assertThat(party.getStaffToken()).isNull();
+        assertThat(party.getStaffLinkPermissions()).isNull();
+    }
+
+    /** A new link carries the role picked beside it (V33): a role's set, or with "Własne" the ticked permissions. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void aNewLink_carriesTheRolePickedWithIt() throws Exception {
+        mockMvc.perform(post("/dj/staff/link").param("partyCode", PUB).param("link", "new").param("role", "VIEWER")
+                .param("permissions", "QUEUE").principal(user("pub-owner")).session(new MockHttpSession()));
+        mockMvc.perform(post("/dj/staff/link").param("partyCode", PUB).param("link", "new").param("role", "CUSTOM")
+                .param("permissions", "QUEUE", "SUMMARY").principal(user("pub-owner")).session(new MockHttpSession()));
+
+        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
+        verify(settings, times(2)).updateSettings(eq(PUB), updater.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PUB).build();
+        updater.getAllValues().get(0).accept(party);
+        assertThat(party.getStaffLinkPermissions()).containsExactly(StaffPermission.HISTORY);
+        String first = party.getStaffToken();
+        updater.getAllValues().get(1).accept(party);
+        assertThat(party.getStaffLinkPermissions()).containsExactly(StaffPermission.QUEUE, StaffPermission.SUMMARY);
+        assertThat(party.getStaffToken()).as("another role is another link").isNotEqualTo(first);
+    }
+
+    /** "Zaproś": the owner's; the address and the role go to the service; the page says what came of it (the address kept). */
+    @Test
+    void zapros_invitesAnAddress_withTheRole_andThePageSaysWhatCameOfIt() throws Exception {
+        when(invitations.invite(eq(PUB), any(), any())).thenReturn(StaffInvitationService.InviteOutcome.INVITED);
+        when(invitations.invite(PUB, "ola", StaffRole.VIEWER.permissions())).thenReturn(StaffInvitationService.InviteOutcome.INVALID_ADDRESS);
+
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(post("/dj/staff/invite").param("partyCode", PUB).param("email", " Ola@Gmail.com ").param("role", "CUSTOM")
+                        .param("permissions", "HISTORY", "SUMMARY").principal(user("pub-owner")).session(session))
+                .andExpect(redirectedUrl("/dj/staff?party=PUB01"));
+        verify(invitations).invite(PUB, " Ola@Gmail.com ", EnumSet.of(StaffPermission.HISTORY, StaffPermission.SUMMARY));
+        assertThat(session.getAttribute(StaffController.SESSION_STAFF_INVITED))
+                .isEqualTo(new StaffController.InviteResult("INVITED", "Ola@Gmail.com", false));
+
+        mockMvc.perform(post("/dj/staff/invite").param("partyCode", PUB).param("email", "ola").param("role", "VIEWER")
+                .principal(user("pub-owner")).session(session));
+        assertThat(session.getAttribute(StaffController.SESSION_STAFF_INVITED))
+                .as("a wrong address stays in the field").isEqualTo(new StaffController.InviteResult("INVALID_ADDRESS", "ola", true));
+
+        // the page shows it once
+        when(sessionHelper.requireOwner(eq(PUB), any(), any())).thenReturn(pub);
+        mockMvc.perform(get("/dj/staff").param("party", PUB).principal(user("pub-owner")).session(session))
+                .andExpect(model().attribute("staffInviteResult", new StaffController.InviteResult("INVALID_ADDRESS", "ola", true)));
+        assertThat(session.getAttribute(StaffController.SESSION_STAFF_INVITED)).isNull();
+
+        doThrow(new AccessDeniedException("staff")).when(sessionHelper).requireOwner(eq("OTHER"), any(), any());
+        assertThatThrownBy(() -> mockMvc.perform(post("/dj/staff/invite").param("partyCode", "OTHER").param("email", "x@y.pl")
+                .principal(user("kasia")).session(new MockHttpSession()))).hasRootCauseInstanceOf(AccessDeniedException.class);
+        verify(invitations, never()).invite(eq("OTHER"), any(), any());
+    }
+
+    @Test
+    void cancellingAnInvitation_isTheOwners_ofTheirOwnParty() throws Exception {
+        mockMvc.perform(post("/dj/staff/invitation/cancel").param("partyCode", PUB).param("id", "3").principal(user("pub-owner"))
+                .session(new MockHttpSession())).andExpect(redirectedUrl("/dj/staff?party=PUB01"));
+        verify(invitations).cancel(PUB, 3L);
     }
 
     /** Taking a person's access away: checked as the owner's, then only a row of the owner's own party. */

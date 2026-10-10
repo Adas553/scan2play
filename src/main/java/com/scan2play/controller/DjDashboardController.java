@@ -9,6 +9,7 @@ import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.PartyStaffService;
+import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.util.SongList;
 import com.scan2play.util.Texts;
@@ -58,6 +59,7 @@ public class DjDashboardController {
     private final GuestRequestLimiter guestRequestLimiter;
     private final PushNotificationService pushNotificationService;
     private final PartyStaffService partyStaffService;
+    private final StaffInvitationService staffInvitationService;
 
     /**
      * On every answer of the queue poll, 304 too: the limits that stop guest songs now, comma-separated —
@@ -110,7 +112,8 @@ public class DjDashboardController {
     /**
      * The DJ panel: the party {@code party} names, else the default panel ({@link DjSessionHelper#panel}); none at all — a person who
      * came by an invitation that did not work, or whose access was taken away — is the page "no-panel". A person back from Google's
-     * login with an invitation waiting is asked "Dołączyć?" first ({@code /join/{token}}).
+     * login with an invitation waiting is asked "Dołączyć?" first ({@code /join/{token}}), and so is one whose Google address an
+     * organiser invited (V34, {@code /dj/invitation}) — before any panel, so no DJ's party is made for someone who came to help.
      */
     @GetMapping("/dashboard")
     public String dashboard(@RequestParam(required = false) String party, Model model, OAuth2AuthenticationToken authentication,
@@ -119,6 +122,9 @@ public class DjDashboardController {
         if (pending != null) {
             session.removeAttribute(StaffController.SESSION_PENDING_INVITATION);
             return "redirect:/join/" + pending;
+        }
+        if (staffInvitationService.waitingFor(StaffController.verifiedAddress(authentication)).isPresent()) {
+            return "redirect:/dj/invitation";
         }
         Optional<PartyStaffService.Access> panel = sessionHelper.panel(party, authentication, session);
         model.addAttribute(PANEL_NOTE, sessionHelper.takeNote(session).orElse(null));

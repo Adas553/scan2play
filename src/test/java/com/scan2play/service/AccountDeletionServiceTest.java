@@ -45,6 +45,8 @@ class AccountDeletionServiceTest {
     @Mock
     private com.scan2play.repository.PartyStaffRepository partyStaffRepository;
     @Mock
+    private com.scan2play.repository.StaffInvitationRepository staffInvitationRepository;
+    @Mock
     private CacheManager cacheManager;
     @Mock
     private Cache cache;
@@ -66,6 +68,7 @@ class AccountDeletionServiceTest {
         order.verify(feedbackRepository).deleteByOwnerId(OWNER);
         verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
         verify(partyStaffRepository).deleteByMember(OWNER);   // wherever they worked (V30)
+        verify(staffInvitationRepository).deleteByParty(PARTY);   // the party's invitations by e-mail (V34)
     }
 
     @Test

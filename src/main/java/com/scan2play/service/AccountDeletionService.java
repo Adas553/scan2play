@@ -6,6 +6,7 @@ import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.PartyStaffRepository;
 import com.scan2play.repository.PushSubscriptionRepository;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.repository.StaffInvitationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
@@ -38,6 +39,7 @@ public class AccountDeletionService {
     private final FeedbackRepository feedbackRepository;
     private final PushSubscriptionRepository pushSubscriptionRepository;
     private final PartyStaffRepository partyStaffRepository;
+    private final StaffInvitationRepository staffInvitationRepository;
     private final CacheManager cacheManager;
 
     /**
@@ -56,9 +58,10 @@ public class AccountDeletionService {
         if (partyOpt.isPresent()) {
             String partyCode = partyOpt.get().getPartyCode();
 
-            // 2. Delete all song requests for this party, and its staff (V30)
+            // 2. Delete all song requests for this party, its staff (V30) and its invitations by e-mail (V34)
             songRequestRepository.deleteByPartyCode(partyCode);
             partyStaffRepository.deleteByParty(partyCode);
+            staffInvitationRepository.deleteByParty(partyCode);
             log.info("Deleted song requests for partyCode={}", partyCode);
 
             // 3. Delete party settings

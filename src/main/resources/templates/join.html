@@ -12,10 +12,11 @@
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<!--/* The staff's invitation (V30, /join/{token}). It names the party and who invites, and what the person will be able to do (the
-     role they start with, V32). Logged in: "Dołącz" (POST, CSRF) or "Nie, dziękuję" — joining is never a side effect of opening a
-     page. Not logged in: Google's login first, then this question again. A link that no longer works, or a full staff: what
-     happened and what to do (joinProblem). */-->
+<!--/* The staff's invitation: by the link (V30, /join/{token}) or by e-mail (V34, /dj/invitation — joinInvitationId). It names the
+     party and who invites, and what the person will be able to do (the role the link or the invitation gives, V33 / V34). Logged in:
+     "Dołącz" (POST, CSRF) or "Nie, dziękuję" — joining is never a side effect of opening a page; an invitation by e-mail is declined
+     by a POST too (it goes from the organiser's list). Not logged in: Google's login first, then this question again. A link that
+     no longer works, or a full staff: what happened and what to do (joinProblem). */-->
 <body class="page-guest">
 <div class="container d-flex flex-column align-items-center">
     <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500 text-center">
@@ -29,21 +30,32 @@
         </th:block>
 
         <th:block th:if="${joinProblem == null}">
-            <h2 class="h4 fw-bold mt-2" id="joinHeading" th:text="#{join.heading(${joinPartyName})}">An invitation to the staff of DJ Koko</h2>
-            <p th:if="${joinOwnerName != null and joinOwnerName != joinPartyName}" class="text-secondary mb-2" id="joinOwner" th:text="#{join.from(${joinOwnerName})}">From: Ola Kowalska</p>
+            <h2 class="h4 fw-bold mt-2" id="joinHeading"
+                th:text="${joinOwnerName != null and joinOwnerName != joinPartyName} ? #{join.heading.from(${joinOwnerName}, ${joinPartyName})}
+                         : #{join.heading(${joinPartyName})}">Ola Kowalska invites you to the staff: Klub Ola</h2>
             <div class="text-start mx-auto mb-3" id="joinRole" th:with="roleName=#{__${'staff.role.' + joinRole}__}">
                 <p class="mb-1" th:text="#{join.role(${roleName})}">You start as: Queue. You can:</p>
                 <ul class="mb-1">
                     <li th:text="#{panel.can.always}">See the queue and the QR code</li>
-                    <li th:each="permission : ${joinRole.permissions()}" th:text="#{__${'staff.permission.' + permission}__}">Played, Skip</li>
+                    <li th:each="permission : ${joinPermissions}" th:text="#{__${'staff.permission.' + permission}__}">Played, Skip</li>
                 </ul>
                 <p class="small text-secondary mb-0" th:text="#{join.footer}">The organiser can change it or take the access away at any time.</p>
             </div>
-            <form th:if="${joinLoggedIn}" th:action="@{/join/{token}(token=${joinToken})}" method="post" class="m-0">
+            <form th:if="${joinLoggedIn and joinInvitationId == null}" th:action="@{/join/{token}(token=${joinToken})}" method="post" class="m-0">
                 <button type="submit" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.confirm}">Join</button>
             </form>
-            <a th:if="${joinLoggedIn}" href="/dj/dashboard" id="joinDecline" class="btn btn-link text-secondary mt-2"
+            <a th:if="${joinLoggedIn and joinInvitationId == null}" href="/dj/dashboard" id="joinDecline" class="btn btn-link text-secondary mt-2"
                th:text="#{join.decline}">No, thanks</a>
+            <th:block th:if="${joinInvitationId != null}">
+                <form th:action="@{/dj/invitation/accept}" method="post" class="m-0">
+                    <input type="hidden" name="id" th:value="${joinInvitationId}">
+                    <button type="submit" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.confirm}">Join</button>
+                </form>
+                <form th:action="@{/dj/invitation/decline}" method="post" class="m-0">
+                    <input type="hidden" name="id" th:value="${joinInvitationId}">
+                    <button type="submit" id="joinDecline" class="btn btn-link text-secondary mt-2" th:text="#{join.decline}">No, thanks</button>
+                </form>
+            </th:block>
             <a th:unless="${joinLoggedIn}" href="/start" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.button}">Log in with Google and join</a>
         </th:block>
     </div>

@@ -6,6 +6,7 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.PartyStaffRepository;
+import com.scan2play.repository.StaffInvitationRepository;
 import com.scan2play.util.Texts;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ public class PartyStaffService {
     public static final int MAX_STAFF = 10;
 
     private final PartyStaffRepository staffRepository;
+    private final StaffInvitationRepository invitationRepository;
     private final PartySettingsRepository partySettingsRepository;
     private final PartySettingsQueryService partySettingsQueryService;
 
@@ -108,34 +110,53 @@ public class PartyStaffService {
     }
 
     /**
-     * The person said "Dołącz" on the invitation: they join the party's staff with the role {@link StaffRole#DEFAULT} — unless they
-     * own it, are on it already, or it has {@value #MAX_STAFF} people. Under the party row's lock ({@code SELECT … FOR UPDATE}): people
-     * joining at the same moment are counted one after another, so the staff never passes its limit and a person joining in two
-     * tabs at once makes one row ({@code StaffJoinIT}).
+     * The person said "Dołącz" on the invitation link: they join the party's staff with what the link gives (its role, V33) — unless
+     * they own it, are on it already, or its places are taken ({@link #addToStaff}). The party is read with its row locked
+     * ({@code SELECT … FOR UPDATE} by the token): people joining at the same moment are counted one after another, so the staff never
+     * passes its limit and a person joining in two tabs at once makes one row; and a new link made at that moment is waited for — the
+     * old one then joins nobody ({@code PartyStaffRepositoryIT}).
      */
     @Transactional
     public Joined join(String token, String userId, String name) {
-        Optional<PartySettingsEntity> found = partyOfLink(token);
+        if (token == null || token.isEmpty() || token.length() > 32) {
+            return new Joined(JoinOutcome.UNKNOWN_LINK, null);
+        }
+        Optional<PartySettingsEntity> found = partySettingsRepository.lockByStaffToken(token);
         if (found.isEmpty()) {
             return new Joined(JoinOutcome.UNKNOWN_LINK, null);
         }
         PartySettingsEntity party = found.get();
+        return new Joined(addToStaff(party, userId, name, party.staffLinkGrants(), false), party);
+    }
+
+    /**
+     * Adds the person to the party's staff with these permissions — the caller holds the party row's lock, in its transaction. Not the
+     * owner, not twice; and the staff with the invitations waiting by e-mail (V34) take at most {@value #MAX_STAFF} places — an
+     * invitation being answered ({@code answeringAnInvitation}) is one of them already.
+     */
+    JoinOutcome addToStaff(PartySettingsEntity party, String userId, String name, Set<StaffPermission> permissions,
+                           boolean answeringAnInvitation) {
         if (isOwner(party, userId)) {
-            return new Joined(JoinOutcome.OWNER, party);
+            return JoinOutcome.OWNER;
         }
-        partySettingsRepository.lockByPartyCode(party.getPartyCode());
         if (staffRepository.existsByPartyCodeAndMemberId(party.getPartyCode(), userId)) {
-            return new Joined(JoinOutcome.ALREADY, party);
+            return JoinOutcome.ALREADY;
         }
-        if (staffRepository.countByPartyCode(party.getPartyCode()) >= MAX_STAFF) {
-            return new Joined(JoinOutcome.FULL, party);
+        if (placesTaken(party.getPartyCode()) - (answeringAnInvitation ? 1 : 0) >= MAX_STAFF) {
+            return JoinOutcome.FULL;
         }
         String kept = Texts.oneLine(name, PartyStaffEntity.NAME_MAX);
         staffRepository.save(PartyStaffEntity.builder().partyCode(party.getPartyCode()).memberId(userId)
                 .memberName(kept.isEmpty() ? null : kept).joinedAt(Instant.now())
-                .permissions(StaffRole.DEFAULT.permissions()).build());
-        log.info("Party [{}]: {} joined the staff", party.getPartyCode(), userId);
-        return new Joined(JoinOutcome.JOINED, party);
+                .permissions(permissions.isEmpty() ? EnumSet.noneOf(StaffPermission.class) : EnumSet.copyOf(permissions)).build());
+        log.info("Party [{}]: {} joined the staff as {}", party.getPartyCode(), userId, StaffPermission.format(permissions));
+        return JoinOutcome.JOINED;
+    }
+
+    /** The party's places taken: its staff and the invitations by e-mail still waiting (V34) — together at most {@value #MAX_STAFF}. */
+    public long placesTaken(String partyCode) {
+        return staffRepository.countByPartyCode(partyCode)
+                + invitationRepository.countByPartyCodeAndInvitedAtAfter(partyCode, StaffInvitationService.waitingSince());
     }
 
     /** The party's staff, for the owner's list. */
