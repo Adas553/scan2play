@@ -92,7 +92,7 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
-                .thenReturn(new DjResponse("ACCEPTED", "Song", "ok", 5, "title", 42L));
+                .thenReturn(new DjResponse("ACCEPTED", "Song", "ok", "title", 42L));
 
         assertThat(request()).isEqualTo("result");
         // the guest's request is remembered, so the party page can say where it waits
@@ -244,7 +244,7 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "Jazz", java.util.Set.of()))
-                .thenReturn(new DjResponse("accepted", "ok", "Song", 5, "title", 42L));
+                .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 42L));
 
         org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.of("pl"));
         try {
@@ -269,7 +269,7 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of()))
-                .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", 0, "mood"));
+                .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", "mood"));
         when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
 
         assertThat(request("coś do tańca")).isEqualTo("redirect:/p/" + PARTY);
@@ -285,7 +285,7 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
-                .thenReturn(new DjResponse("accepted", "Sent to the DJ", "Song", 0, DjResponse.KIND_UNCHECKED, 7L));
+                .thenReturn(new DjResponse("accepted", "Sent to the DJ", "Song", DjResponse.KIND_UNCHECKED, 7L));
 
         assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService, never()).giveBack(any(), anyString());
@@ -298,8 +298,8 @@ class GuestControllerTest {
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of(5L));
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(5L)))
-                .thenReturn(new DjResponse("accepted", "ok", "Song", 7, "title", 5L, 2, true))
-                .thenReturn(new DjResponse("accepted", "ok", "Other", 7, "title", 6L, 3, false));
+                .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 5L, 2, true))
+                .thenReturn(new DjResponse("accepted", "ok", "Other", "title", 6L, 3, false));
 
         assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);
@@ -320,8 +320,8 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
-                .thenReturn(new DjResponse("rejected", "Not tonight", "Song", 2, "title", 5L))
-                .thenReturn(new DjResponse("accepted", "Yes", "Song", 7, "title", 6L));
+                .thenReturn(new DjResponse("rejected", "Not tonight", "Song", "title", 5L))
+                .thenReturn(new DjResponse("accepted", "Yes", "Song", "title", 6L));
 
         assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);
@@ -339,7 +339,7 @@ class GuestControllerTest {
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(guestVoteService.myVotes(session, PARTY)).thenReturn(java.util.Set.of(9L));
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(9L)))
-                .thenReturn(new DjResponse("accepted", "ok", "Song", 7, "title", 9L, 4, true));
+                .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 9L, 4, true));
 
         assertThat(request("Song")).isEqualTo("result");
         verify(guestSessionService).giveBack(session, PARTY);

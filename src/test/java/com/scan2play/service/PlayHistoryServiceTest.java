@@ -42,7 +42,7 @@ class PlayHistoryServiceTest {
 
     private static SongRequestEntity song(long id, String name, String decision, Instant requestedAt, Instant playedAt) {
         return SongRequestEntity.builder().id(id).partyCode(PARTY).songName(name).style("Pop").decision(decision)
-                .djComment("ok").energyLevel(6).trackUrl("https://www.youtube.com/results?search_query=x")
+                .djComment("ok").trackUrl("https://www.youtube.com/results?search_query=x")
                 .requestedAt(requestedAt).playedAt(playedAt).build();
     }
 
@@ -61,7 +61,7 @@ class PlayHistoryServiceTest {
         HistoryEntry entry = service.getHistory(PARTY, 50).entries().getFirst();
 
         assertThat(entry).isEqualTo(new HistoryEntry(7L, NOON, "Wilki - Baśka", "https://www.youtube.com/results?search_query=x",
-                "Pop", "played", "ok", 6, "ta o Baśce", 3));
+                "Pop", "played", "ok", "ta o Baśce", 3));
     }
 
     @Test

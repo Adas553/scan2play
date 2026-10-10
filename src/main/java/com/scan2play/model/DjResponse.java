@@ -11,7 +11,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * @param decision    The decision made by the DJ (e.g., "accepted", "rejected").
  * @param comment     A short comment or feedback from the DJ.
  * @param songName    The confirmed name of the song.
- * @param energyLevel The energy level of the song on a scale of 1-10.
  * @param requestKind What the guest typed, as the AI reads it: {@value #KIND_TITLE}, {@value #KIND_ARTIST}, {@value #KIND_LYRICS}
  *                    or {@value #KIND_MOOD}; {@value #KIND_UNCHECKED} when the AI could not be asked and the request went to the
  *                    DJ unchecked; null when the AI did not say (an older answer, an error). For {@value #KIND_LYRICS}
@@ -29,7 +28,6 @@ public record DjResponse(
         String decision,
         String comment,
         String songName,
-        int energyLevel,
         String requestKind,
         Long requestId,
         int votes,
@@ -44,24 +42,24 @@ public record DjResponse(
     public static final String KIND_UNCHECKED = "unchecked";
 
     /** A response without a number of the song (not in the queue). */
-    public DjResponse(String decision, String comment, String songName, int energyLevel, String requestKind, Long requestId,
+    public DjResponse(String decision, String comment, String songName, String requestKind, Long requestId,
                       int votes, boolean ownSong) {
-        this(decision, comment, songName, energyLevel, requestKind, requestId, votes, ownSong, null);
+        this(decision, comment, songName, requestKind, requestId, votes, ownSong, null);
     }
 
     /** A response before it is saved, or one that was saved as a new request (votes untold). */
-    public DjResponse(String decision, String comment, String songName, int energyLevel, String requestKind, Long requestId) {
-        this(decision, comment, songName, energyLevel, requestKind, requestId, 0, false);
+    public DjResponse(String decision, String comment, String songName, String requestKind, Long requestId) {
+        this(decision, comment, songName, requestKind, requestId, 0, false);
     }
 
     /** A response without the kind of the request (an error, a test). */
-    public DjResponse(String decision, String comment, String songName, int energyLevel) {
-        this(decision, comment, songName, energyLevel, null, null);
+    public DjResponse(String decision, String comment, String songName) {
+        this(decision, comment, songName, null, null);
     }
 
     /** The AI's answer: not saved yet. */
-    public DjResponse(String decision, String comment, String songName, int energyLevel, String requestKind) {
-        this(decision, comment, songName, energyLevel, requestKind, null);
+    public DjResponse(String decision, String comment, String songName, String requestKind) {
+        this(decision, comment, songName, requestKind, null);
     }
 
     /** Whether the guest typed a fragment of the lyrics, as the AI reads it. */
@@ -86,12 +84,12 @@ public record DjResponse(
 
     /** The same response under another song name (what the guest typed, when the AI left the name empty). */
     public DjResponse withSongName(String name) {
-        return new DjResponse(decision, comment, name, energyLevel, requestKind, requestId, votes, ownSong, requestNumber);
+        return new DjResponse(decision, comment, name, requestKind, requestId, votes, ownSong, requestNumber);
     }
 
     /** The same request with another verdict: the one a song waiting in the queue was taken with. */
-    public DjResponse withVerdict(String newDecision, String newComment, int newEnergyLevel) {
-        return new DjResponse(newDecision, newComment, songName, newEnergyLevel, requestKind, requestId, votes, ownSong,
+    public DjResponse withVerdict(String newDecision, String newComment) {
+        return new DjResponse(newDecision, newComment, songName, requestKind, requestId, votes, ownSong,
                 requestNumber);
     }
 
@@ -100,6 +98,6 @@ public record DjResponse(
      * and votes), or the guest's own song that already waited ({@code ownSong}) — with the song's number ({@code null}: none).
      */
     public DjResponse savedAs(Long id, Integer number, String name, int votesNow, boolean guestsOwnSong) {
-        return new DjResponse(decision, comment, name, energyLevel, requestKind, id, votesNow, guestsOwnSong, number);
+        return new DjResponse(decision, comment, name, requestKind, id, votesNow, guestsOwnSong, number);
     }
 }

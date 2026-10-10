@@ -12,12 +12,16 @@
 <body class="page-guest">
 <div class="container d-flex flex-column align-items-center text-center">
     <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
-    <div class="card p-5 shadow-lg text-white">
+    <div class="card p-4 p-sm-5 shadow-lg text-white">
 
-        <h2 class="mb-4 text-white" th:text="${response.songName}">Song Name</h2>
+        <!--/* the same party as the page the guest came from: our logo and who plays, small (the design review, 2026-10-09) */-->
+        <p class="fw-bold mb-3"><th:block th:replace="~{fragments/components :: logo}"></th:block><th:block th:if="${djName != null}"><span
+                class="text-secondary fw-normal"> · </span><span id="djName" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</span></th:block></p>
+
+        <h2 class="mb-3 text-white" th:text="${response.songName}">Song Name</h2>
         <!--/* unchecked: the AI could not be asked, and the request went on to the DJ unchecked */-->
         <div th:class="${response.decision == 'accepted' ? 'accepted' : 'rejected'}">
-            <h1 class="display-1 fw-bold"
+            <h1 class="s2p-verdict mb-0"
                 th:text="${response.unchecked} ? #{result.decision.to_dj} : (${response.decision == 'accepted'} ? #{result.decision.accepted} : #{result.decision.rejected})">
                 STATUS
             </h1>
@@ -39,11 +43,8 @@
             <p th:replace="~{fragments/components :: tip(${tipUrl}, ${response.requestNumber}, false)}"></p>
         </div>
 
-        <div class="mt-4" th:unless="${response.unchecked}">
-            <span class="badge bg-secondary p-2" th:text="#{result.energy(${response.energyLevel})}">Energy: 0/10</span>
-        </div>
-
-        <a th:href="@{/p/{code}(code=${partyCode})}" class="btn btn-outline-light mt-5" th:text="#{result.button.suggest_another}">Suggest another one</a>
+        <!--/* the next step is the page's one action (filled); the tip above it is the second kind (the design review, 2026-10-09) */-->
+        <a th:href="@{/p/{code}(code=${partyCode})}" class="btn btn-action btn-lg mt-4" th:text="#{result.button.suggest_another}">Suggest another one</a>
     </div>
 </div>
 <div th:replace="~{fragments/components :: footer}"></div>

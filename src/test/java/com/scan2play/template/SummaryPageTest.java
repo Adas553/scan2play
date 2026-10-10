@@ -79,7 +79,7 @@ class SummaryPageTest {
 
     private static SongRequestEntity request(String song, String decision, Instant asked, Instant played, int votes) {
         return SongRequestEntity.builder().partyCode(PARTY).songName(song).decision(decision).requestedAt(asked).playedAt(played)
-                .votes(votes).energyLevel(8).build();
+                .votes(votes).build();
     }
 
     /** A wedding: requests from 19:00 to 01:00, most of them played, a few rejected by the AI, one waiting. */
@@ -213,7 +213,7 @@ class SummaryPageTest {
         assertThat(csv.getHeaders().getContentType()).hasToString("text/csv;charset=UTF-8");
         String text = new String(csv.getBody(), StandardCharsets.UTF_8);
         assertThat(text.split("\r\n")).hasSize(9);
-        assertThat(text).contains("Number;Requested;Played;Song;Guest wrote;Votes;Tips;Status;AI comment;Energy",
+        assertThat(text).contains("Number;Requested;Played;Song;Guest wrote;Votes;Tips;Status;AI comment",
                 "\"rejected by the AI\"");
 
         when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(List.of());

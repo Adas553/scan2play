@@ -231,6 +231,8 @@ public class GuestController {
                 model.addAttribute(PARTY_CODE, partyCode);
                 // the DJ's tip link under an accepted request: the moment a guest is glad (V27)
                 model.addAttribute(TIP_URL, settings.getTipUrl());
+                // who plays, at the top as on the party page: the result is the same party, not another app (the design review, 2026-10-09)
+                model.addAttribute(DJ_NAME, settings.getDjName());
                 return "result";
             } catch (IllegalArgumentException e) {
                 log.warn("Song request for unknown party code: {}", partyCode);

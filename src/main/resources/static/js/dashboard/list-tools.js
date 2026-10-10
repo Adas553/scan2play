@@ -3,7 +3,7 @@
  * this module alone): sorting by a column header, the search box, the filter buttons and "Show more".
  *
  * TABLE SORTING — persistent across polling refreshes
- *   - Each sortable <th> has a data-sort attribute (e.g. "time", "song", "energy")
+ *   - Each sortable <th> has a data-sort attribute (e.g. "time", "song", "votes")
  *   - Each sortable <td> has data-sort-value + data-val with the raw value
  *   - Clicking a header toggles ASC → DESC → (reset to default server order); a header with data-sort-first="desc" starts
  *     with DESC (the votes: the most wanted song first)
@@ -26,7 +26,7 @@
  */
 
 // Sort state for the main queue table (survives polling refreshes)
-let queueSortColumn = null;   // e.g. "time", "song", "energy"
+let queueSortColumn = null;   // e.g. "time", "song", "votes"
 let queueSortDir    = null;   // "asc" or "desc"
 
 /** The rows of a <tbody> in the server's order, kept at its first sort, so that undoing the sort puts them back (restoreServerOrder). */
@@ -41,7 +41,7 @@ function sortTbody(tbody, colKey, direction) {
     if (!tbody || !colKey || !direction) return;
     if (!serverOrders.has(tbody)) serverOrders.set(tbody, Array.from(tbody.children));
 
-    const isNumeric = (colKey === 'energy' || colKey === 'votes' || colKey === 'number');
+    const isNumeric = (colKey === 'votes' || colKey === 'number');
 
     // Pre-extract { row, value } pairs — O(N) DOM reads, then pure array sort
     const items = [];

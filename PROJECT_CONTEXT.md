@@ -105,8 +105,7 @@ songs at once get 1–16); "Wyczyść historię" sets the count back to the high
 again with the queue empty), so a number a song has is never given twice; unique per party (`uk_song_requests_party_number`); a vote
 keeps the waiting song's number, a request the AI rejected has none), `tips` (V28, ≥ 0: the tips the DJ counted — see "Numbers and
 tips" below),
-`style` (the vibe it was judged against), `decision` (`accepted` / `rejected` / `played`), `djComment` (500), `energyLevel`,
-`requestedAt`, `trackUrl` (500; the "🔍 Podejrzyj" link — YouTube's search results for the song, `util/YouTubeSearchLinks`: a page the
+`style` (the vibe it was judged against), `decision` (`accepted` / `rejected` / `played`), `djComment` (500), `requestedAt`, `trackUrl` (500; the "Podejrzyj" link — YouTube's search results for the song, `util/YouTubeSearchLinks`: a page the
 DJ's browser opens, no API; a `lyrics` request, and a song with none of the guest's words, is searched by the guest's own words,
 everything else by the AI's name — decided when saved), `playedAt`
 (V6; set only when the DJ marks it played), `skippedAt` (V20, "Pomiń"), `clearedAt` (V25: cleared with the whole queue — the AI's
@@ -135,7 +134,7 @@ party's ranking); the guest page's list is sorted by them (below) and the result
 Twój głos! Głosów: N".
 
 **Numbers and tips** (V28, the owner 2026-10-08): every song in the queue has a stable number. The guests see "#27" before the song
-in "🔥 Prośby gości" and "Numer Twojej piosenki: #27" under an accepted request; with the DJ's tip link (V27) the button says what to
+in "Prośby gości" and "Numer Twojej piosenki: #27" under an accepted request; with the DJ's tip link (V27) the button says what to
 write in the payment's title, gently ("Jeśli chcesz, wpisz #27 w tytule wpłaty…" under a request, "…numer piosenki z listy" on the
 party page — the owner: a plain order sounded off-putting). Scan2Play never sees the payment: the DJ sees it in their bank and taps
 "💸" at the song in the queue — not in the history, by the owner's choice (`POST /dj/dashboard/tip-count`, `id`,
@@ -201,7 +200,7 @@ by the migration).
 
 ### 4.3 Records
 
-`DjResponse` (the AI's answer: `decision`, `comment`, `songName`, `energyLevel`, `requestKind` title / artist / lyrics / mood /
+`DjResponse` (the AI's answer: `decision`, `comment`, `songName`, `requestKind` title / artist / lyrics / mood /
 unchecked, `requestId`, votes, `ownSong`), `HistoryEntry` (one line of the history), `GuestQueueService.GuestQueue` (what the guest
 sees under the form), `PlayHistoryService.Page`.
 
@@ -215,12 +214,13 @@ Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google'
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
 leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
-under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "🔍 Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
+under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
 limits and the use of the server limits; the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
-history; feedback; end / resume the party, delete the account, log out. The forms are sent in the background (`forms.js`; not logout
-and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
+history; "Zakończ / Wznów imprezę" (in words, beside the account's menu) and the menu "Konto" — "Zgłoś uwagę" (feedback), "Wyloguj",
+"Usuń konto" (red, the last one) — in place of four icons without words (the design review, 2026-10-09; `.s2p-account-bar` keeps the open
+menu over the sticky tab bar). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
 
-**Notifications on the DJ's devices** (Web Push; only when the server has the VAPID keys — Section 10): the switch "🔔 Powiadomienia
+**Notifications on the DJ's devices** (Web Push; only when the server has the VAPID keys — Section 10): the switch "Powiadomienia
 na tym urządzeniu" in the card "Twój program DJ-a" (`js/dashboard/push.js`), per browser — the permission, the service worker
 `/sw.js` (scope `/dj/`), the subscription with the server's key → `POST /dj/push/subscribe`; off → `/dj/push/unsubscribe`. A **new**
 song on the list (accepted, or unchecked with the AI down; not a vote on a waiting one) → `PushNotificationService` sends
@@ -228,7 +228,7 @@ song on the list (accepted, or unchecked with the AI down; not a vote on a waiti
 service worker folds the notifications of one party into one ("🎵 Nowe prośby: 3"), a tap opens the dashboard. On an iPhone only
 the dashboard added to the Home Screen (the web app manifest `/manifest.webmanifest`, iOS 16.4+) can take them — the switch says
 so in Safari. Delivery is best effort: the dashboard stays the truth.
-**"📲 Zainstaluj aplikację"** in the same card (`js/dashboard/install.js`): the browser's own offer to install comes when it decides
+**"Zainstaluj aplikację"** in the same card (`js/dashboard/install.js`): the browser's own offer to install comes when it decides
 and, once dismissed or the app removed, not again for months — the button asks when the DJ wants (Chrome / Edge: the kept
 `beforeinstallprompt` opens the install window — once per offer: closed without installing, the next click says where the browser's
 menu has it; an iPhone's Safari: the steps "Udostępnij → Do ekranu początkowego"; nothing in the installed app or a browser that
@@ -237,13 +237,21 @@ never offered).
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
 
-**The settings fold** under one button "⚙️ Ustawienia, klimat i kod QR" on every screen (on a phone first; on a computer too since
-2026-10-09, the owner: there were many of them): the vibe, the limits, the hosts' lists, the staff and the QR code (`.s2p-settings`;
-folded by `app.css` alone, `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`). **On a phone**
+**The heading** is one row: our logo, small, and the button "Ustawienia, klimat i kod QR" (the staff: "Kod QR"); the page's h1 "Panel DJ-a"
+is for screen readers. **The settings fold** under that button on every screen (on a phone first; on a computer too since
+2026-10-09, the owner: there were many of them): cards of one pattern — a heading, one line of help, the fields, one "Zapisz" — "Impreza"
+(the vibe, the AI's comments, the vibe note, "Kto gra"), "Limity gości", "Lista gospodarzy", "Obsługa" on the left; "Kod QR imprezy", "Profile i napiwki" and "To
+urządzenie" (the app, the notifications, an invitation pasted — the phone's, not the party's; the owner, 2026-10-10: the right
+column had room) on the right — the staff get the right column alone, in the middle (`.s2p-settings`; folded by
+`app.css` alone, `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`). **On a phone**
 (narrower than 768 px) the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); the list scrolls with the page.
 
-**The active queue**: each request has its place before the title on a wide screen — a CSS counter in `app.css`, so it follows the
-polled list, the sort and the search by itself — and its ID in the first column ("#27", V28 — see "Numbers and tips"). "🧹 Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
+**The active queue** has five columns — ID, the time, the song (under it the guest's words, "AI: …" the AI's comment in one line, ⭐ / ⚠),
+the votes, the buttons (2026-10-09: the vibe, "ZAAKCEPTOWANE" and the AI's energy rating said the same in every row and pushed "Pomiń" and 💸 off a
+1280 px screen). With nothing waiting, the table and its search give way to the next step (`#queueEmpty`, shown by `:has`): "Kolejka
+jest pusta", the QR code, "Wydrukuj na ścianę / stoliki", "Kopiuj link" and, for the owner, "Ustaw klimat" (`data-open-settings`:
+`settings-toggle.js` opens the settings at the "Impreza" card). Each request has its place before the title on a wide screen — a CSS counter in `app.css`, so it follows the
+polled list, the sort and the search by itself — and its ID in the first column ("#27", V28 — see "Numbers and tips"). "Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
 sends `POST /dj/dashboard/clear-queue`: the waiting requests go to the history's rejected ones, with `cleared_at` and the AI's
 comment (V25) — the history says "WYCZYSZCZONE" in place of the verdict ("🧹 Wyczyszczona przez DJ-a …" in its title), amber as a skip. Ending the party does not clear the
 queue (the DJ may pause it for a break or a limit).
@@ -260,13 +268,13 @@ column (`captureListState` / `restoreListState` in the tab; on the standalone pa
 On a phone (narrower than 768 px) every entry is a card, as in the queue: the song across it, then the votes, the decision, the skip
 and "↩ Przywróć", and the AI's comment — one line with "…", a tap opens it (`.s2p-history-table`, `app.css`, `list-tools.js`); the column sort stays as a row of buttons.
 `list-tools.js`: the search hides a heading with no row left under it; a sort by a column hides them all (`.s2p-sorted`), undoing it
-puts the server's order back. **"🗑 Wyczyść historię"** (shown while the history is not empty; asks first — `data-confirm`) sends
+puts the server's order back. **"Wyczyść historię"** (shown while the history is not empty; asks first — `data-confirm`) sends
 `POST /dj/dashboard/clear-history` (`DjService.clearHistory`, under the party's lock "S2PR"): the party's played and rejected requests
 are **deleted**, the guests' words with them — never a waiting one, and never one the DJ skipped within the last 2 hours (it keeps its
 song out of the queue and stays in the history until that ends). The AI's duplicate rule reads the played songs, so after it the AI no
 longer knows what played. The History tab sends it in the background and loads itself again (`s2p:history-changed`).
 
-**"📊 Podsumowanie wieczoru"** (beside "🗑 Wyczyść historię", a new tab; its question points to it): `/dj/summary`
+**"Podsumowanie wieczoru"** (beside "Wyczyść historię", a new tab; its question points to it): `/dj/summary`
 (`DjSummaryController`, `EveningSummaryService`, `summary.html`) — one evening of the DJ's own party (no party code asked for) on a
 white page to print or save as PDF ("🖨 Drukuj / PDF", `js/summary.js`, `css/summary.css`): an **evening runs from 6:00 to 6:00 Polish
 time** (`EVENING_STARTS`; a wedding past midnight is one evening); the evenings with requests to pick (≤ 31, latest first, with their
@@ -281,7 +289,7 @@ file (`scan2play-<day>.csv`; BOM and ";" for Excel, the DJ's language, every val
 gets an apostrophe — a guest's text is never a formula).
 
 **The party's staff** (V30, the owner 2026-10-09): a bartender or a second DJ works the owner's party with their own Google account.
-The owner's card "👥 Obsługa" (under the hosts' lists): who has access, each with "Usuń dostęp" (asks first), and the invitation link
+The owner's card "Obsługa" (under the hosts' lists): who has access, each with "Usuń dostęp" (asks first), and the invitation link
 — "🔗 Utwórz link zaproszenia" / "Nowy link" (the old one dead; who joined stays) / "Wyłącz link"; these forms are full page loads.
 The link `/join/{token}` — built from the address the owner opened the panel at, not `scan2play.guest-url`: it leads through
 Google's login, which refuses a computer's address in the local network ("device_id and device_name are required for private IP";
@@ -289,34 +297,37 @@ locally test it on `localhost`, a second Google account in a private window) —
 `no-referrer`) names the party and keeps the token in the
 session; its button goes through Google's login (`/start`) — or, logged in already, straight — to `/dj/dashboard`, which joins
 the person (`DjDashboardController.joinPendingInvitation` → `PartyStaffService.join`: not the owner, not twice, at most 10) and
-opens that party: "👥 Dołączono do obsługi: …". **The panel's party** is kept in the session (`DjSessionHelper`): every request
+opens that party: "Dołączono do obsługi: …". **The panel's party** is kept in the session (`DjSessionHelper`): every request
 checks that the person still may open it (the owner without a query, a staff member by the unique index — an access taken away
 ends with the next request; the panel falls back to their own party). A person without a party of their own who works at one (a
-bartender) opens it at once and gets no party made until "🎧 Mój panel" — which the switcher always offers (2026-10-09: offered
+bartender) opens it at once and gets no party made until "Mój panel" — which the switcher always offers (2026-10-09: offered
 only to those with a party, a person who joined first could never make one). The panel switcher (`POST /dj/panel`, a page load) shows
 when the person works somewhere. **A link pasted in the app**: the dashboard on a phone's Home Screen opens a link from an e-mail in
-the browser, which has a login of its own (an iPhone always) — so under the notifications there is "👥 Masz zaproszenie do obsługi
+the browser, which has a login of its own (an iPhone always) — so under the notifications there is "Masz zaproszenie do obsługi
 innej imprezy? Wklej link" (`POST /dj/join`, `link`: the token at the end of the link, or the token alone; kept in the session like
 one opened by the link, and the panel joins — a page load). **On the landing page** (where the installed app starts for someone
-not logged in), "Masz zaproszenie do zespołu imprezy? Dołącz →" — a quiet line of text under the DJs' card, a `<details>` with the same field (`POST /join`, public): a party's link goes
+not logged in), "Masz zaproszenie do obsługi imprezy? Dołącz →" — a quiet line of text under the DJs' card, a `<details>` with the same field (`POST /join`, public): a party's link goes
 straight to Google's login with the token in the session, anything else back to `/?staffLink=invalid` ("Ten link nie działa"), before
-any login. **On another party's panel** the account buttons have "🚪 Opuść obsługę" (`POST /dj/staff/leave`: the person's row goes, the
+any login. **On another party's panel** the menu "Konto" has "Opuść obsługę" (`POST /dj/staff/leave`: the person's row goes, the
 panel opens their own party — made now for a bartender) in place of "Usuń konto", which read as deleting the party (the owner,
-2026-10-09); the account is deleted from "Mój panel". **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
+2026-10-09); the account is deleted from "Mój panel". Right after joining only the note "Dołączono do obsługi: …" shows; the banner
+"Obsługujesz imprezę: … Ustawienia i listy ma organizator." from the next page on (one message at a time). The texts call the
+party's owner "organizator" (and the people "obsługa") wherever the staff read them. **The staff see** the queue ("Zagrane", "Pomiń", "Cofnij", 💸, "Wyczyść kolejkę"), the history
 (no "Wyczyść historię", no evening summary), "Zakończ / Wznów imprezę", the notifications (their own devices get every new request
-too), the QR code with its link and print (2026-10-09: it is on the tables anyway) and "👥 Obsługujesz imprezę: …"; **not** the
+too), the QR code with its link and print (2026-10-09: it is on the tables anyway) and "Obsługujesz imprezę: …"; **not** the
 settings, the limits, the hosts' lists, the staff, the profiles or the tip link — hidden in the page (`isOwner`) and refused by the server (`DjSessionHelper.validateOwnership` / `getOwnedPartySettings`:
 403). `#partyCode`, which the scripts read, is outside the owner's parts (inside them the staff's queue was never polled — the
 browser scenario `staff-panel` found it).
 
 ### 5.2 Guest Flow
 
-`/p/{partyCode}` (no login) → the form: one field for a song — a title, an artist or a line of the lyrics (song suggestions from
+`/p/{partyCode}` (no login) → our logo, "🎧 Gra: …" and the vibe as one quiet line ("Klimat imprezy: …"), then the form — the question
+"Co chcesz usłyszeć?" is the label of its one field for a song — a title, an artist or a line of the lyrics (song suggestions from
 iTunes, asked by the browser) → `POST /p/{partyCode}/request` (`songName`; an async `Callable`) → the result page (decision, the AI's
 comment, the votes). A request the AI reads as a mood is not saved: the guest is back at the form with the text and
 `guest.error.song_only` (the DJ sets the mood). An empty request (only spaces) goes back at once with `guest.error.empty` — no
 limit used, no AI asked. Under the form: "Twoja prośba „…” czeka u DJ-a" — or, with several, "Czekają u DJ-a Twoje prośby: 3" — and
-**one list**, "🔥 Prośby gości": every waiting request once, the most votes first and the newest first among equal votes
+**one list**, "Prośby gości": every waiting request once, the most votes first and the newest first among equal votes
 (`GuestQueueService.byVotes`), unnumbered — the DJ picks the order —, the first 5 shown and the rest folded under "Pokaż pozostałe
 prośby (N)" (a `<details>`; **its rows are not in the list's fragment** — `GET /p/{partyCode}/queue/more`, the fragment `moreList`,
 fetched only when it is unfolded and again when the list is fetched while it is unfolded: with 300 waiting, every guest's refresh
@@ -325,7 +336,10 @@ carrying them all was ~200 KB), with **"Szukaj w prośbach"** — the list filte
 untidy) — a "👍 N" button (Section 4, "A guest's 👍"), outlined, yellow once given, or, on the guest's own request, a green one that
 is not a button (it is their vote already) with "Twoja" beside the song's name; filled pills get a thin dark edge (a yellow 👍 on
 yellow vanished on Windows). The guest's own songs are marked on the party page only (not on the result page, which is about its
-one request; the guest's requests are remembered in the session).
+one request; the guest's requests are remembered in the session). The DJ's profiles and "💸 Napiwek dla DJ-a" come **under the list**
+(`#djSupport`; the design review, 2026-10-09: above the form they pushed the field to the lower half of a phone's screen). The result
+page has the logo and "🎧 Gra: …" at the top (`djName`), the verdict sized to the screen (`.s2p-verdict`: "PRZEKAZANE" broke into
+"PRZEKAZAN / E") and "Zaproponuj kolejną" as its one main button.
 Until 2026-10-08 there were "🔥 Najwięcej głosów" and "Ostatnio wysłane" as well — one song showed up to three times (the owner:
 too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. In the installed app (the dashboard on
 the Home Screen) the guest page, the result page and the "party ended" page have "← Twój panel DJ-a" (`components.html`,
@@ -388,10 +402,10 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 
 | Class | Purpose |
 |-------|---------|
-| `SongEvaluationService` | the guest's request: Gemini (`askAi`, the prompt per language) → the "🔍 Podejrzyj" link → save or vote |
+| `SongEvaluationService` | the guest's request: Gemini (`askAi`, the prompt per language) → the "Podejrzyj" link → save or vote |
 | `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played, skip (`dismissSong`), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
-| `EveningSummaryService` | "📊 Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1) |
+| `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1) |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes) |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock) |
@@ -436,7 +450,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side) |
-| `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles |
+| `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles — the look of Section 6.7 |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them, a tap opens the dashboard; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
 | `images/logo.svg`, `favicon.ico` | our mark: three QR finder corners and a cyan play triangle on the dark tile (2026-10-04); on the landing page, the dashboard, the guest page, the QR poster and cards; the favicon is the same mark at 16 / 32 / 48 px |
@@ -444,7 +458,27 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V30`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V31`.
+
+### 6.7 The look (`app.css`, the design review of 2026-10-09)
+
+What every page shares, so a new screen looks like the others:
+
+- **Three kinds of button.** The action — `.btn-action`, the cyan of the logo's "2" with dark text, **one per screen** ("Wyślij prośbę",
+  "▶ Zagrane", "Zaloguj się przez Google i dołącz", "Zapisz listę", "Zaproponuj kolejną", "Drukuj"); the second kind — an outline
+  (`btn-outline-light` / `-secondary`, the picked one of a group filled light): "Pomiń", "Zapisz" in the settings, "Podejrzyj", the
+  tip (`btn-outline-warning`: money); the text one — `btn-link` ("↻ Odśwież", "−1"). What deletes is an outline in `--s2p-danger-text`,
+  never filled red. Green (`btn-success`, dark text) and yellow are statuses — "Twoja", a given 👍, ⚠, 💸 — not actions.
+- **Colours** as tokens on `:root`: `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under
+  WCAG AA; `.text-secondary` / `.text-muted` use it), `--s2p-danger-text`, `--s2p-green-ink`. Messages (`.alert-*`) are a tint of their
+  colour with a coloured edge and light text — Bootstrap's pale boxes were the brightest things on a dark page.
+- **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
+  field, tab and menu item is **at least 44 px high** (browser scenarios `guest-touch-targets`, `dashboard-touch-targets`).
+- **Cards** of the settings: `.s2p-card-title` and one line of `.s2p-card-help`, then the fields, then one "Zapisz".
+- **Emoji** only as markers in a list or a status (⭐ ⚠ 💸 👍 ▶ ⏭, "🎧 Gra: …", 🚫 / ⭐ of the hosts' lists) — not in card titles,
+  headings or ordinary buttons. **Words**: "Ty" to everyone, "Wy" only on the hosts' page; "organizator" (the party's owner), "obsługa"
+  (bartender, second DJ), "gospodarze", "goście"; no English words ("Zgłoś uwagę", not "Feedback"); "DJ‑a" in a heading with a
+  non-breaking hyphen.
 
 ---
 
@@ -459,7 +493,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
   checkable song right in 2.7–3.1 s on average (≤ 8.3 s), ~$2.5 per 1000 requests; 2.5 Flash named another song for a line of the
   lyrics on each try; 3.5 Flash-Lite made up artists.
 - **The prompt** (rewritten 2026-10-07, measured by the same comparison): three steps — work out the song (`songName`,
-  `requestKind`), judge it (`decision`, `energyLevel`), write the comment —, and `ANSWER_SCHEMA` orders the answer the same way
+  `requestKind`), judge it (`decision`), write the comment —, and `ANSWER_SCHEMA` orders the answer the same way
   (the verdict first let the model judge a song it had not named yet). A plain tone (no "ruthless DJ", no capitals); the DJ's note
   comes before the genre ("Salsa" with the genre ANY: Macarena rejected — the owner: salsa, not latino); in doubt, accept.
 - The prompt per language (PL / EN by the guest's locale, else EN). The answer is JSON (`DjResponse`) of a given shape
@@ -484,7 +518,7 @@ logged. No keys → off (`PushNotificationService.isEnabled`), keys that do not 
 
 ### 7.3 YouTube — no API
 
-Scan2Play uses no YouTube API (removed 2026-10-04, V19). "🔍 Podejrzyj" is a plain link to YouTube's search results
+Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain link to YouTube's search results
 (`https://www.youtube.com/results?search_query=…`, `util/YouTubeSearchLinks`), opened by the DJ's browser.
 
 ---
@@ -590,6 +624,7 @@ schema behind Flyway's back.
 | V28 | `party_settings.request_counter` int NOT NULL DEFAULT 0; `song_requests.request_number` int, `tips` int NOT NULL DEFAULT 0 (≥ 0); the songs so far that reached the queue numbered in request order per party, each count set to its last number; `uk_song_requests_party_number` (party, number) unique where numbered (`RequestNumberMigrationIT`) |
 | V29 | `party_settings.host_blocked`, `host_wanted` varchar(16000), `host_token` varchar(32) (unique index `uk_party_settings_host_token`), all nullable: the hosts' lists and their link |
 | V30 | `party_settings.staff_token` varchar(32) (unique index `uk_party_settings_staff_token`); table `party_staff` (id, `party_code` FK ON DELETE CASCADE, `member_id`, `member_name` varchar(100), `joined_at`; UNIQUE (party, member), index `idx_party_staff_member_id`): the party's staff |
+| V31 | `song_requests.energy_level` dropped: the AI's energy rating (1–10) is no longer asked for or shown (the owner, 2026-10-10: nobody used it) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -662,8 +697,8 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own skip, not when the same song waits) |
-| POST | `/dj/dashboard/clear-queue` | "🧹 Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, `cleared_at`, the AI's comment kept (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
-| POST | `/dj/dashboard/clear-history` | "🗑 Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
+| POST | `/dj/dashboard/clear-queue` | "Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, `cleared_at`, the AI's comment kept (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
+| POST | `/dj/dashboard/clear-history` | "Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
 | POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/comment-style`, `/limits` | settings |
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |
 | POST | `/dj/dashboard/host-lists` | `blocked`, `wanted`: the hosts' lists (V29, `SongList.tidy`; empty clears) |

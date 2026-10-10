@@ -38,7 +38,7 @@ class EveningSummaryServiceTest {
 
     private static SongRequestEntity request(String song, String decision, String asked, String played, int votes) {
         return SongRequestEntity.builder().partyCode("SUMM1").songName(song).decision(decision).requestedAt(at(asked))
-                .playedAt(played == null ? null : at(played)).votes(votes).energyLevel(7).build();
+                .playedAt(played == null ? null : at(played)).votes(votes).build();
     }
 
     private static SongRequestEntity withTips(SongRequestEntity request, int tips) {
@@ -189,12 +189,12 @@ class EveningSummaryServiceTest {
 
         String[] lines = csv.split("\r\n");
         assertThat(lines[0]).isEqualTo((char) 0xFEFF
-                + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI;Energia");
+                + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI");
         assertThat(lines[1]).isEqualTo("27;\"2026-10-03 21:00\";\"2026-10-03 21:30\";\"Varius Manx - Orła cień\";"
-                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";7");
+                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\"");
         // a request the AI rejected has no number
         assertThat(lines[2]).isEqualTo(";\"2026-10-03 22:00\";;\"'=HYPERLINK(\"\"http://x\"\")\";\"'@SUM(1;2)\";1;0;"
-                + "\"odrzucona przez AI\";;7");
+                + "\"odrzucona przez AI\";");
         assertThat(lines).hasSize(3);
     }
 

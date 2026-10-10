@@ -14,7 +14,7 @@
      th:if="${guestQueue != null and not #lists.isEmpty(guestQueue.shown())}">
 
     <div class="d-flex justify-content-end mb-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary py-0" data-guest-queue-refresh
+        <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" data-guest-queue-refresh
                 th:text="#{home.queue.refresh}">↻ Refresh</button>
     </div>
 
@@ -69,7 +69,7 @@
     <span class="me-auto d-flex align-items-baseline gap-1 s2p-song-line">
         <span th:if="${song.requestNumber != null}" class="text-secondary small flex-shrink-0 s2p-song-number" th:text="${'#' + song.requestNumber}">#27</span>
         <span class="text-break s2p-song-text"><span class="fw-bold s2p-song-name" th:text="${song.songName}">Song Title</span>
-            <span th:if="${mine}" class="badge rounded-pill bg-success text-dark align-middle ms-1" th:text="#{home.queue.yours}">Yours</span></span>
+            <span th:if="${mine}" class="badge rounded-pill s2p-badge-mine align-middle ms-1" th:text="#{home.queue.yours}">Yours</span></span>
     </span>
     <span class="flex-shrink-0 s2p-vote-control">
         <span th:if="${mine}" class="btn btn-sm rounded-pill btn-success s2p-vote-pill s2p-vote-mine" aria-disabled="true"

@@ -291,8 +291,7 @@ public class EveningSummaryService {
                     String.valueOf(request.getVotes()),
                     String.valueOf(request.getTips()),
                     cell(status),
-                    cell(request.getDjComment()),
-                    String.valueOf(request.getEnergyLevel()))).append("\r\n");
+                    cell(request.getDjComment()))).append("\r\n");
         }
         return csv.toString();
     }

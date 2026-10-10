@@ -27,4 +27,13 @@ const KEY = 'scan2play.settingsOpen';
             else sessionStorage.removeItem(KEY);
         } catch (e) { /* storage blocked: only this page remembers */ }
     });
+
+    // "Ustaw klimat" under an empty queue (data-open-settings): the settings open, the party's card comes into view
+    document.querySelectorAll('[data-open-settings]').forEach(function (opener) {
+        opener.addEventListener('click', function () {
+            if (!document.body.classList.contains('s2p-settings-open')) button.click();
+            const card = document.getElementById('partyCard');
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
 })();

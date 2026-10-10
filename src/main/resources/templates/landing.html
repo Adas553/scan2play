@@ -25,14 +25,12 @@
 
             <div class="provider-cards">
                 <!--/* For DJs: no player — the DJ plays from their own software, Scan2Play collects the guests' requests (Google login) */-->
-                <a href="/start" class="provider-card provider-card--recommended provider-card--requests text-center">
-                    <span class="badge bg-info text-dark mb-2" th:text="#{landing.badge.requests}">🎧 For DJs</span>
-                    <div class="icon">🎧</div>
-                    <div class="btn btn-requests btn-lg w-100" th:text="#{landing.btn.start.requests}">
+                <a href="/start" class="provider-card provider-card--requests text-center">
+                    <div class="btn btn-action btn-lg w-100" th:text="#{landing.btn.start.requests}">
                         Collect guest requests
                     </div>
                     <small class="d-block mt-2 s2p-hint" th:text="#{landing.hint.requests}">Requires a Google account</small>
-                    <small class="d-block mt-2 fst-italic s2p-hint s2p-hint-note"
+                    <small class="d-block mt-2 s2p-hint s2p-hint-note"
                            th:text="#{landing.hint.requests.note}">
                         You play from your own software. Guests request songs by QR code, the AI filters out the junk. No player.
                     </small>
@@ -52,7 +50,7 @@
                            class="form-control mb-2" th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
                     <div th:if="${param.staffLink != null}" id="staffLinkInvalid" class="text-danger small mb-2" role="alert"
                          th:text="#{landing.staff.invalid}">That link does not work — ask the owner for a new one.</div>
-                    <button type="submit" class="btn btn-warning fw-bold w-100" th:text="#{join.button}">Log in with Google and join</button>
+                    <button type="submit" class="btn btn-action w-100" th:text="#{join.button}">Log in with Google and join</button>
                 </form>
             </details>
 

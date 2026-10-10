@@ -14,63 +14,47 @@
 
     <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
 
-    <!-- Main Request Form -->
+    <!--/* The party page in the order a guest uses it (the design review, 2026-10-09: the field came only after the profiles and the
+         tip): who plays, the vibe in one quiet line, the field and "Wyślij prośbę", the list — and the DJ's profiles and tip under it. */-->
     <div class="card p-4 shadow-lg w-100 text-white mb-4">
-        <div class="text-center mb-4">
-            <h1 class="display-4 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
+        <div class="text-center mb-3">
+            <h1 class="display-5 fw-bold mb-2"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
             <!--/* Who plays, as the DJ wrote it (V17) */-->
             <p th:if="${djName != null}" id="djName" class="fs-5 fw-bold mb-1" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</p>
-            <!--/* The DJ's profiles (V24): only https addresses on those sites, as SocialLinks wrote them. The icons are Bootstrap Icons
-                 1.11.3 (MIT), their paths copied here: drawn in the text's colour, no file, no script */-->
-            <p th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null}" id="djLinks"
-               class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-                <a th:if="${instagramUrl != null}" th:href="${instagramUrl}" target="_blank" rel="noopener noreferrer nofollow"
-                   class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.92c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92m-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217m0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334"/></svg><span>Instagram</span></a>
-                <a th:if="${facebookUrl != null}" th:href="${facebookUrl}" target="_blank" rel="noopener noreferrer nofollow"
-                   class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951"/></svg><span>Facebook</span></a>
-                <a th:if="${tiktokUrl != null}" th:href="${tiktokUrl}" target="_blank" rel="noopener noreferrer nofollow"
-                   class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3z"/></svg><span>TikTok</span></a>
+            <!--/* The party's vibe as the DJ set it: the vibe of the list (when not "any") and the DJ's own words (V16) — a line of
+                 text, not a box: it tells the guest what fits, the form is what they came for */-->
+            <p class="mb-0 s2p-party-vibe" id="partyVibe" th:if="${vibeNote != null or globalVibe.name() != 'ANY'}">
+                <span class="text-secondary" th:text="#{party.vibe.title}">Tonight's vibe</span><span class="text-secondary">:</span><th:block
+                    th:if="${globalVibe.name() != 'ANY'}"> <span id="partyVibeName" class="fw-semibold" th:text="#{vibe.__${globalVibe}__}">Club & EDM</span></th:block><th:block
+                    th:if="${vibeNote != null}"> <span id="vibeNote" class="fst-italic" th:text="${vibeNote}">40+ wedding, Polish hits, no rap</span></th:block>
             </p>
-            <p th:replace="~{fragments/components :: tip(${tipUrl}, null, true)}"></p>
-            <p class="text-secondary" th:text="#{home.subtitle}">What do you want to hear?</p>
         </div>
 
-        <div th:if="${errorMessage}" class="alert alert-danger text-center shadow-sm fw-bold" role="alert">
+        <div th:if="${errorMessage}" class="alert alert-danger text-center fw-bold" role="alert">
             <span th:text="${errorMessage}"></span>
         </div>
 
         <!-- Dynamic form action based on party code -->
-        <form id="requestForm" th:action="@{/p/{partyCode}/request(partyCode=${partyCode})}" method="POST" class="p-3 border border-secondary rounded bg-dark text-light">
+        <form id="requestForm" th:action="@{/p/{partyCode}/request(partyCode=${partyCode})}" method="POST" class="m-0">
 
             <!-- Hidden Party Code Input -->
             <input type="hidden" name="partyCode" th:value="${partyCode}" />
 
             <!--/* A specific song: a title, an artist or a line of the lyrics (the DJ sets the mood). A request the AI reads as a mood
-                 comes back here with its text (lastRequest), asking for a song. */-->
-            <div class="mb-4">
-                <label for="songInput" class="form-label fw-bold" th:text="#{home.form.input.label}">Your choice</label>
+                 comes back here with its text (lastRequest), asking for a song. The question is the field's label. */-->
+            <div class="mb-3">
+                <label for="songInput" class="form-label fw-bold fs-5" th:text="#{home.subtitle}">What do you want to hear?</label>
                 <div class="song-autocomplete-wrapper">
                     <!--/* the placeholder in the suggestions' own format ("Artist – Title", song-autocomplete.js) — the owner, 2026-10-07 */-->
-                    <input type="text" id="songInput" name="songName" class="form-control" required
+                    <input type="text" id="songInput" name="songName" class="form-control form-control-lg" required
                            data-autocomplete="songs" th:value="${lastRequest}" th:placeholder="#{home.form.input.placeholder}">
                     <!-- Dropdown injected here by song-autocomplete.js -->
                 </div>
-                <div id="songInputHelp" class="form-text text-white-50 mt-2"
+                <div id="songInputHelp" class="form-text text-secondary mt-2"
                      th:text="#{home.form.input.help.song}">A title, an artist or a line of the lyrics</div>
             </div>
 
-            <!--/* The party's vibe as the DJ set it, in one box: the vibe of the list (when not "any") and the DJ's own words (V16) */-->
-            <div class="alert alert-info text-dark text-center shadow-sm mb-4" id="partyVibe"
-                 th:if="${vibeNote != null or globalVibe.name() != 'ANY'}">
-                <!--/* the colon always: the vibe's name or the DJ's words follow it */-->
-                <div class="fw-bold">
-                    <span th:text="#{party.vibe.title}">🎧 Tonight's vibe</span>:<th:block th:if="${globalVibe.name() != 'ANY'}"> <span
-                        id="partyVibeName" th:text="#{vibe.__${globalVibe}__}">Club & EDM</span></th:block>
-                </div>
-                <div th:if="${vibeNote != null}" id="vibeNote" th:text="${vibeNote}">40+ wedding, Polish hits, no rap</div>
-            </div>
-
-            <button type="submit" id="submitBtn" class="btn btn-success w-100 fw-bold shadow-sm py-2"
+            <button type="submit" id="submitBtn" class="btn btn-action btn-lg w-100"
                     th:attr="data-text-submitting=#{home.form.button.submitting}">
                 <span id="submitBtnText" th:text="#{home.form.button.submit}">Send to DJ!</span>
             </button>
@@ -82,6 +66,22 @@
     <div id="guestQueueBox" class="w-100 s2p-mw-500"
          th:attr="data-url=@{/p/{code}/queue(code=${partyCode})}">
         <div th:replace="~{fragments/guest-queue :: guestQueue}"></div>
+    </div>
+
+    <!--/* The DJ's profiles (V24) and tip link (V27), under the list: only https addresses on those sites, as SocialLinks and TipLinks
+         wrote them. The icons are Bootstrap Icons 1.11.3 (MIT), their paths copied here: drawn in the text's colour, no file, no script */-->
+    <div th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null or tipUrl != null}"
+         class="w-100 s2p-mw-500 text-center mt-4 s2p-support" id="djSupport">
+        <p th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null}" id="djLinks"
+           class="d-flex flex-wrap justify-content-center gap-2 mb-0">
+            <a th:if="${instagramUrl != null}" th:href="${instagramUrl}" target="_blank" rel="noopener noreferrer nofollow"
+               class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.92c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92m-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217m0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334"/></svg><span>Instagram</span></a>
+            <a th:if="${facebookUrl != null}" th:href="${facebookUrl}" target="_blank" rel="noopener noreferrer nofollow"
+               class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951"/></svg><span>Facebook</span></a>
+            <a th:if="${tiktokUrl != null}" th:href="${tiktokUrl}" target="_blank" rel="noopener noreferrer nofollow"
+               class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3z"/></svg><span>TikTok</span></a>
+        </p>
+        <p th:replace="~{fragments/components :: tip(${tipUrl}, null, true)}"></p>
     </div>
 
 </div>

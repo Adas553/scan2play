@@ -15,7 +15,6 @@ import java.time.Instant;
  * @param style       the guest's song style as the AI judged it
  * @param decision    {@code played} or {@code rejected}
  * @param djComment   the AI's comment
- * @param energyLevel the AI's energy rating
  * @param guestText   what the guest typed (V14), always shown under {@code title} (the DJ checks the AI); {@code null} for a
  *                    request from before V14
  * @param votes       how many guests asked for the song (V15)
@@ -25,19 +24,19 @@ import java.time.Instant;
  * @param tips        how many tips the DJ counted for it (V28, "💸")
  */
 public record HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
-                           Integer energyLevel, String guestText, Integer votes, Instant skippedAt, Instant clearedAt,
+                           String guestText, Integer votes, Instant skippedAt, Instant clearedAt,
                            Integer requestNumber, int tips) {
 
     /** An entry without a number or tips (from before V28, a test). */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
-                        Integer energyLevel, String guestText, Integer votes, Instant skippedAt, Instant clearedAt) {
-        this(id, at, title, trackUrl, style, decision, djComment, energyLevel, guestText, votes, skippedAt, clearedAt, null, 0);
+                        String guestText, Integer votes, Instant skippedAt, Instant clearedAt) {
+        this(id, at, title, trackUrl, style, decision, djComment, guestText, votes, skippedAt, clearedAt, null, 0);
     }
 
     /** An entry the DJ neither skipped nor cleared. */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
-                        Integer energyLevel, String guestText, Integer votes) {
-        this(id, at, title, trackUrl, style, decision, djComment, energyLevel, guestText, votes, null, null);
+                        String guestText, Integer votes) {
+        this(id, at, title, trackUrl, style, decision, djComment, guestText, votes, null, null);
     }
 
     /** Whether the DJ skipped this request — the history offers to put it back in the queue ("↩ Przywróć"). */
@@ -57,7 +56,7 @@ public record HistoryEntry(Long id, Instant at, String title, String trackUrl, S
 
     /** An entry with the guest's words, one guest's: a request nobody else asked for. */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
-                        Integer energyLevel, String guestText) {
-        this(id, at, title, trackUrl, style, decision, djComment, energyLevel, guestText, 1);
+                        String guestText) {
+        this(id, at, title, trackUrl, style, decision, djComment, guestText, 1);
     }
 }
