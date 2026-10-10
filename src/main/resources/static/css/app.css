@@ -28,12 +28,22 @@
     --s2p-bg-elevated:   #1e1e1e;
     --s2p-bg-input:      #000;
     --s2p-text:          #e0e0e0;
-    --s2p-text-muted:    #aaa;
+    /* the second line of text (hints, numbers, the footer): 7.3 : 1 on a card — Bootstrap's #6c757d was 3.3–4.2 : 1, under WCAG AA */
+    --s2p-text-muted:    #a3acb6;
     --s2p-border:        #333;
     --s2p-green:         #1DB954;
     --s2p-green-hover:   #1ed760;
+    --s2p-green-ink:     #0b2e13;   /* text on the green: white on it was 2.6 : 1 */
     --s2p-red:           #ff4444;
+    --s2p-danger-text:   #ff7b7b;   /* a red outline or text on the dark: 6 : 1 (Bootstrap's #dc3545 was 3.4–4.1 : 1) */
     --s2p-cyan:          #0dcaf0;
+    /* THE action colour: the cyan of the "2" in the logo, dark text on it — one filled button per screen (the design review,
+       2026-10-09: the main button was cyan, green, yellow or blue depending on the page) */
+    --s2p-action:        #0dcaf0;
+    --s2p-action-hover:  #31d2f2;
+    --s2p-action-ink:    #062c33;
+    --s2p-radius:        8px;       /* buttons and fields */
+    --s2p-radius-card:   12px;      /* cards */
     --s2p-font:          'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -55,18 +65,106 @@ body {
 .status-rejected { color: var(--s2p-red)   !important; font-weight: bold; text-transform: uppercase; }
 .status-played   { color: var(--s2p-cyan)  !important; font-weight: bold; text-transform: uppercase; }
 
-/* --- Energy badge --- */
-.badge-energy {
-    background: var(--s2p-border);
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 20px;
-    border: 1px solid #444;
+/* --- THE LOOK (the design review, 2026-10-09) — what every page shares. Three kinds of button: the action (filled cyan, one per
+       screen: .btn-action), the second kind (an outline, light text: .btn-outline-light / -secondary), the text one (.btn-link);
+       red only as an outline, for what deletes. Green says "accepted", yellow money and "check" — statuses, not actions. --- */
+.btn-action,
+.btn-requests {
+    --bs-btn-color: var(--s2p-action-ink);
+    --bs-btn-bg: var(--s2p-action);
+    --bs-btn-border-color: var(--s2p-action);
+    --bs-btn-hover-color: var(--s2p-action-ink);
+    --bs-btn-hover-bg: var(--s2p-action-hover);
+    --bs-btn-hover-border-color: var(--s2p-action-hover);
+    --bs-btn-active-color: var(--s2p-action-ink);
+    --bs-btn-active-bg: #3dd5f3;
+    --bs-btn-active-border-color: #3dd5f3;
+    --bs-btn-disabled-color: var(--s2p-action-ink);
+    --bs-btn-disabled-bg: var(--s2p-action);
+    --bs-btn-disabled-border-color: var(--s2p-action);
+    font-weight: 600;
 }
+.btn { --bs-btn-border-radius: var(--s2p-radius); --bs-btn-border-radius-sm: var(--s2p-radius); }
+.form-control,
+.form-select { border-radius: var(--s2p-radius); }
+.btn-success {
+    --bs-btn-color: var(--s2p-green-ink);
+    --bs-btn-bg: var(--s2p-green);
+    --bs-btn-border-color: var(--s2p-green);
+    --bs-btn-hover-color: var(--s2p-green-ink);
+    --bs-btn-hover-bg: var(--s2p-green-hover);
+    --bs-btn-hover-border-color: var(--s2p-green-hover);
+    --bs-btn-active-color: var(--s2p-green-ink);
+    --bs-btn-active-bg: var(--s2p-green-hover);
+    --bs-btn-active-border-color: var(--s2p-green-hover);
+    font-weight: 600;
+}
+/* the second kind, grey: readable light text (Bootstrap's grey text was 3.3 : 1), the picked one of a group filled light */
+.btn-outline-secondary {
+    --bs-btn-color: #ced4da;
+    --bs-btn-border-color: #6c757d;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: rgba(255, 255, 255, 0.08);
+    --bs-btn-hover-border-color: #adb5bd;
+    --bs-btn-active-color: #212529;
+    --bs-btn-active-bg: #f8f9fa;
+    --bs-btn-active-border-color: #f8f9fa;
+}
+.btn-outline-danger {
+    --bs-btn-color: var(--s2p-danger-text);
+    --bs-btn-border-color: var(--s2p-danger-text);
+    --bs-btn-hover-color: var(--s2p-danger-text);
+    --bs-btn-hover-bg: rgba(255, 123, 123, 0.12);
+    --bs-btn-hover-border-color: var(--s2p-danger-text);
+    --bs-btn-active-color: var(--s2p-danger-text);
+    --bs-btn-active-bg: rgba(255, 123, 123, 0.2);
+    --bs-btn-active-border-color: var(--s2p-danger-text);
+}
+.text-secondary,
+.text-muted,
+.text-white-50 { color: var(--s2p-text-muted) !important; }
+.text-danger   { color: var(--s2p-danger-text) !important; }
+/* the guest's own song ("Twoja"): the green of the pill beside it, dark text */
+.s2p-badge-mine { background: var(--s2p-green); color: var(--s2p-green-ink); }
 
-/* --- Green button override --- */
-.btn-success       { background-color: var(--s2p-green); border: none; font-weight: 600; }
-.btn-success:hover  { background-color: var(--s2p-green-hover); }
+/* Messages on the dark page: a tint of their colour, a coloured edge and light text — Bootstrap's pale boxes were the brightest
+   things on the screen, brighter than the action */
+.alert-info,
+.alert-success,
+.alert-warning,
+.alert-danger,
+.alert-secondary {
+    --bs-alert-color: #e9ecef;
+    --bs-alert-link-color: #fff;
+}
+.alert-info      { --bs-alert-bg: rgba(13, 202, 240, 0.12);  --bs-alert-border-color: rgba(13, 202, 240, 0.45); }
+.alert-success   { --bs-alert-bg: rgba(29, 185, 84, 0.12);   --bs-alert-border-color: rgba(29, 185, 84, 0.5); }
+.alert-warning   { --bs-alert-bg: rgba(255, 193, 7, 0.12);   --bs-alert-border-color: rgba(255, 193, 7, 0.5); }
+.alert-danger    { --bs-alert-bg: rgba(255, 123, 123, 0.12); --bs-alert-border-color: rgba(255, 123, 123, 0.55); }
+.alert-secondary { --bs-alert-bg: rgba(255, 255, 255, 0.05); --bs-alert-border-color: #495057; }
+
+/* A card's heading and its one line of help: every card of the dashboard's settings the same way */
+.s2p-card-title { font-size: 1.05rem; font-weight: 700; color: #f8f9fa; margin-bottom: 0.25rem; }
+.s2p-card-help  { font-size: 0.875rem; color: var(--s2p-text-muted); margin-bottom: 0.75rem; }
+
+/* Something to tap on a phone is at least 44 px high (WCAG's target size; the buttons and fields were 31 px, the 👍 too) */
+@media (max-width: 767.98px), (pointer: coarse) {
+    .btn,
+    .form-control,
+    .form-select { min-height: 44px; }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35em;
+    }
+    .s2p-footer a { display: inline-block; padding: 0.75rem 0.25rem; }
+    .dj-tabbar .nav-link { min-height: 44px; display: flex; align-items: center; }
+    .dropdown-item { min-height: 44px; display: flex; align-items: center; }
+    /* a line of text one taps: "Masz zaproszenie…? Dołącz →", "Strona główna" on an error page, "Chcesz taką imprezę u siebie?" */
+    .s2p-staff-login > summary { padding-block: 0.75rem; }
+    .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
+}
 
 /* --- DJ Navigation tabs --- */
 .nav-link        { color: var(--s2p-text-muted); font-weight: 600; }
@@ -94,7 +192,8 @@ body {
 }
 /* A jump to an anchor (the "Queue" link of another page) must not leave the top of the target under the bar. */
 #queue-content,
-#history-content { scroll-margin-top: 4rem; }
+#history-content,
+#partyCard { scroll-margin-top: 4rem; }
 
 /* --- Table border --- */
 .table { border-color: var(--s2p-border); }
@@ -156,7 +255,8 @@ th[data-sort].sort-desc::after {
  * 4. DJ PAGES — dashboard.html, history.html
  *    Body class: .page-dj
  * ========================================================================== */
-.page-dj .container {
+/* the page's own card: a direct child only — the footer's .container is not a second card (it showed as a dark band) */
+.page-dj > .container {
     background: var(--s2p-bg-card);
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -167,14 +267,6 @@ th[data-sort].sort-desc::after {
     font-size: 1.8rem;
 }
 
-/* QR code card centering (dashboard only) */
-.qr-card-center {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 370px;
-}
 
 /* The song of a queue row: broken between words only (Bootstrap's .text-break broke "Wilki - Baśka" letter by letter when the
    comment beside it took the width), and on a computer the column keeps room for a title and the "🔍 Podejrzyj" button beside it */
@@ -225,12 +317,23 @@ th[data-sort].sort-desc::after {
 }
 .page-guest .accepted { color: var(--s2p-green); }
 .page-guest .rejected { color: var(--s2p-red); }
+/* The result's verdict ("TAK!", "NIE", "PRZEKAZANE"): as big as a phone's width allows — display-1 broke "PRZEKAZAN / E" */
+.s2p-verdict {
+    font-size: clamp(2.25rem, 11vw, 5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    overflow-wrap: normal;
+    word-break: keep-all;
+}
+/* The DJ's profiles and tip on the party page: under the list, one quiet block (the form comes first) */
+.s2p-support { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
 
 /* ==========================================================================
  * 6. LANDING PAGE
  *    Body class: .page-landing
  * ========================================================================== */
 .page-landing { background-color: #121212; color: #fff; }
+.page-landing h1 { text-wrap: balance; }
 /* Vertical padding only: the element is also a Bootstrap .container, whose side padding the row inside it (negative margins)
    relies on — a `padding: 100px 0` took it away and the page was 12 px wider than a phone, so it could be nudged sideways. */
 .hero-section  { padding-block: 100px; text-align: center; }
@@ -270,17 +373,9 @@ th[data-sort].sort-desc::after {
 .provider-card:hover { transform: translateY(-4px); border-color: #555; }
 .provider-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
-/* The landing page's one tile ("For DJs") — green glow highlight */
-.provider-card--recommended {
-    border-color: var(--s2p-green);
-    box-shadow: 0 0 18px rgba(29, 185, 84, 0.15);
-}
-.provider-card--recommended:hover { border-color: var(--s2p-green-hover); }
-
-/* The same tile — the info colour of its button */
-.provider-card--requests:hover { border-color: #0dcaf0; }
-.btn-requests { background-color: #0dcaf0; border: none; color: #111; font-weight: 700; }
-.btn-requests:hover { background-color: #31d2f2; color: #111; }
+/* The landing page's one tile: a quiet card around its one action (the colour is the button's, not a glowing frame) */
+.provider-card--requests { max-width: 26rem; }
+.provider-card--requests:hover { border-color: var(--s2p-action); }
 
 
 /* --- How-it-works guide (landing page) --- */
@@ -307,7 +402,7 @@ th[data-sort].sort-desc::after {
     transition: border-color 0.2s;
 }
 .guide-step:hover {
-    border-color: var(--s2p-green);
+    border-color: #555;
 }
 .guide-step-number {
     flex-shrink: 0;
@@ -317,8 +412,9 @@ th[data-sort].sort-desc::after {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: var(--s2p-green);
-    color: #000;
+    background: #262626;
+    border: 1px solid #555;
+    color: var(--s2p-action);
     font-weight: 800;
     font-size: 1.1rem;
 }
@@ -454,18 +550,16 @@ th[data-sort].sort-desc::after {
     flex: 1;
 }
 
-/* --- Error page --- */
+/* --- Error page: the same dark card as every other page (it had a purple look of its own) --- */
 .page-error .card {
-    background-color: #1c1c38;
-    border: 1px solid #4a4a70;
-    box-shadow: 0 0 50px rgba(120, 120, 255, 0.12);
+    background-color: var(--s2p-bg-elevated);
+    border: 1px solid var(--s2p-border);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
     border-radius: 20px;
 }
 .page-error h2       { color: #fff; }
-.page-error .desc    { color: #b0b8d0; }
-.btn-home            { background-color: #5a5aaa; border: none; color: #fff; }
-.btn-home:hover      { background-color: #7070cc; color: #fff; }
-.error-code          { color: #7a7a9a; font-size: 0.85rem; }
+.page-error .desc    { color: #cfcfcf; }
+.error-code          { color: var(--s2p-text-muted); font-size: 0.85rem; }
 
 /* --- Party ended page --- */
 .page-ended .card {
@@ -476,9 +570,6 @@ th[data-sort].sort-desc::after {
 }
 .text-light-custom     { color: #f8f9fa !important; }
 .text-secondary-bright { color: #cfcfcf !important; }
-/* the DJ's pages: Bootstrap's grey (#6c757d) is a little brighter — the hints and limits under the forms were hard to read in
-   daylight on the dark background */
-.page-dj .text-secondary { color: #8a939b !important; }
 
 /* --- Classes instead of style="…" in the templates (the CSP allows no inline style). !important: they stand for inline styles,
        which win over Bootstrap's rules. --- */
@@ -496,18 +587,18 @@ th[data-sort].sort-desc::after {
 .s2p-song-line,
 .s2p-song-text       { min-width: 0; }
 .s2p-z-10            { z-index: 10 !important; }
+/* the account buttons (components.html, dj-nav): above the sticky tab bar (z-index 1020), so the open "Konto" menu is not under it */
+.s2p-account-bar     { position: relative; z-index: 1030; }
 .s2p-z-toast         { z-index: 1090 !important; }
 .s2p-dashboard-qr    { max-width: 200px !important; height: auto !important; }
 .s2p-list-search     { max-width: 16rem !important; }
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
 .s2p-empty-row       { background: #232323 !important; }
-.s2p-link-small      { font-size: 0.7rem !important; }
 .s2p-hint            { color: #adb5bd !important; }
 .s2p-hint-note       { font-size: 0.8rem !important; max-width: 260px !important; margin-inline: auto !important; }
 .s2p-alert-closed    { background-color: #2b2000 !important; color: #ffca2c !important; }
-.s2p-btn-muted       { color: #6c757d !important; border: 1px solid #6c757d !important; }
-.s2p-footer          { color: #6c757d !important; font-size: 0.85rem !important; }
+.s2p-footer          { color: var(--s2p-text-muted) !important; font-size: 0.85rem !important; }
 /* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
    played or skipped it) stays in its place, dimmed, until the list is fetched again; the note of a 👍 that did not count floats over
    the page — shown, it pushes nothing down (guest-party.js hides it after a few seconds). */
@@ -525,6 +616,7 @@ th[data-sort].sort-desc::after {
 .s2p-vote-mine       { cursor: default; pointer-events: none; }
 .s2p-song-gone       { opacity: 0.45; }
 .s2p-vote-note {
+    --bs-alert-bg: #2e2810;   /* floats over the list: solid, not a see-through tint */
     position: fixed;
     left: 50%;
     bottom: 1rem;
@@ -552,14 +644,9 @@ th[data-sort].sort-desc::after {
 .page-dj .s2p-settings-toggle::after { content: " \25BE"; }
 .page-dj.s2p-settings-open .s2p-settings-toggle::after { content: " \25B4"; }
 .page-dj:not(.s2p-settings-open) .s2p-settings { display: none !important; }
-/* on a wide screen the button is as wide as its words, beside the logo — on a phone the whole width */
-@media (min-width: 768px) {
-    .page-dj .s2p-settings-toggle { width: auto !important; flex-shrink: 0; }
-    /* folded, the QR code's column is gone: the heading's column takes the whole width, the button goes to the right edge */
-    .page-dj:not(.s2p-settings-open) .s2p-panel-main { flex: 0 0 100%; max-width: 100%; }
-    /* unfolded, the vibe's box goes under the logo and the button: beside them it was squeezed */
-    .page-dj.s2p-settings-open .s2p-panel-head { flex-wrap: wrap; }
-    .page-dj.s2p-settings-open .s2p-panel-head > .s2p-settings { flex-basis: 100%; }
+/* on a wide screen the button is as wide as its words, beside the logo — on a phone the whole width, under it */
+@media (max-width: 767.98px) {
+    .page-dj .s2p-settings-toggle { flex: 1 1 100%; }
 }
 @media (max-width: 767.98px) {
 
@@ -694,6 +781,20 @@ th[data-sort].sort-desc::after {
 .s2p-btn-tip { min-width: 4rem; font-variant-numeric: tabular-nums; }
 #queueList .s2p-clear-queue { display: none; }
 #queueList:has(#song-list > tr[data-song-id]) .s2p-clear-queue { display: block; }
+/* nothing waits: what to do next (the QR code, the print, the vibe) in place of the table and its search */
+#queueList .s2p-queue-empty { display: none; }
+#queueList:not(:has(#song-list > tr[data-song-id])) .s2p-queue-empty { display: block; }
+#queueList:not(:has(#song-list > tr[data-song-id])) .table-responsive,
+#queueList:not(:has(#song-list > tr[data-song-id])) [data-list-search] { display: none; }
+/* the AI's comment under a song of the queue: one line, the whole of it in the title */
+.s2p-queue-comment {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    overflow: hidden;
+    max-width: 36rem;
+}
 
 /* --- The history's day headings (history.html): a row where a new day starts. Hidden while the list is sorted by a column
        (list-tools.js puts .s2p-sorted on the table): the rows of a day are no longer together then. --- */

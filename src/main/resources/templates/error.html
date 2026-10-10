@@ -13,7 +13,7 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
-            <div class="card p-5">
+            <div class="card p-4 p-sm-5">
 
             <!-- 403 – session expired or access denied -->
             <th:block th:if="${status == 403}">
@@ -44,7 +44,7 @@
             <div class="mt-4">
                 <a th:href="${path != null and #strings.startsWith(path, '/p/') and #arrays.length(#strings.arraySplit(path, '/')) > 1}
                             ? ${'/p/' + #strings.arraySplit(path, '/')[1]} : (${path != null} ? ${path} : '/')"
-                   id="retryBtn" class="btn btn-home btn-lg px-5" th:text="#{error.btn.retry}">↻ Try again</a>
+                   id="retryBtn" class="btn btn-action px-4" th:text="#{error.btn.retry}">↻ Try again</a>
             </div>
             <p class="mt-4 mb-0 small">
                 <a href="/" class="text-secondary" th:text="#{error.btn.home}">Home page</a>

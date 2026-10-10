@@ -23,7 +23,7 @@
     <div th:replace="~{fragments/components :: dj-nav(activeTab='history', isActive=${isActive}, partyCode=${partyCode})}"></div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0" th:text="#{history.title}">📜 Party History</h1>
+        <h1 class="mb-0" th:text="#{history.title}">Party history</h1>
         <div class="text-secondary small">
             Party Code: <span class="text-white fw-bold" th:text="${partyCode}">CODE</span>
         </div>
@@ -39,7 +39,7 @@
          th:with="activeFilter=${historyFilter != null ? historyFilter : 'all'}">
         <!--/* A heading only where the list arrives by itself under the dashboard's other panels (the History tab, model
              attribute historyHeading): the standalone page has its own h1 above. It tells the DJ what has just appeared. */-->
-        <h4 th:if="${historyHeading}" class="text-white mb-2" th:text="#{history.title}">📜 Party History</h4>
+        <h4 th:if="${historyHeading}" class="text-white mb-2" th:text="#{history.title}">Party history</h4>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <span class="badge text-bg-secondary" data-list-count
@@ -60,7 +60,7 @@
                 <!--/* One evening of the party to print, save as PDF or download as CSV (DjSummaryController) — before the history is
                      cleared, which takes it too */-->
                 <a th:unless="${#lists.isEmpty(history) or isOwner == false}" href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
-                   class="btn btn-sm btn-outline-info" th:text="#{summary.open}">📊 Evening summary</a>
+                   class="btn btn-sm btn-outline-light" th:text="#{summary.open}">Evening summary</a>
                 <!--/* The party's played and rejected requests deleted (DjService.clearHistory: not the waiting ones, not a skip that
                      still keeps its song out); asks first (data-confirm, dj-nav.js). In the History tab forms.js sends it in the
                      background and loads the tab again; on the standalone page the server sends it back to itself. */-->
@@ -90,7 +90,6 @@
                     <span class="d-inline d-md-none">AI</span>
                 </th>
                 <th class="d-none d-lg-table-cell" th:text="#{dashboard.table.header.comment}">DJ's Comment</th>
-                <th class="d-none d-md-table-cell" data-sort="energy" th:text="#{dashboard.table.header.energy}">Energy</th>
             </tr>
             </thead>
             <tbody>
@@ -125,8 +124,8 @@
                                   th:text="#{dashboard.guest_text(${req.guestText})}">guest wrote: “…”</span>
                         </span>
                         <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
-                           class="btn btn-sm btn-secondary shadow-sm fw-bold flex-shrink-0 text-nowrap s2p-link-small"
-                           th:text="#{dashboard.queue.preview}">🔍 Preview</a>
+                           class="btn btn-sm btn-outline-secondary flex-shrink-0 text-nowrap"
+                           th:text="#{dashboard.queue.preview}">Preview</a>
                     </div>
                 </td>
                 <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
@@ -162,10 +161,6 @@
                     </form>
                 </td>
                 <td class="d-none d-lg-table-cell fst-italic text-secondary text-wrap s2p-comment-cell" th:text="${req.djComment}">Comment</td>
-                <td class="d-none d-md-table-cell" data-sort-value="energy" th:attr="data-val=${req.energyLevel != null ? req.energyLevel : 0}">
-                    <span th:if="${req.energyLevel != null}" class="badge-energy" th:text="${req.energyLevel + '/10'}">10/10</span>
-                    <span th:if="${req.energyLevel == null}" class="text-secondary">—</span>
-                </td>
             </tr>
             </th:block>
             <tr th:if="${#lists.isEmpty(history)}">

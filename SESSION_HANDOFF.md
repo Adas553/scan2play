@@ -7,22 +7,40 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
-- **2026-10-09, evening — `dev` = `705ad3c` (PR #33, CI green, not on `main` yet); on the branch, committed next:** the staff's
+- **2026-10-09, night — the design review and all of its fixes, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` =
+  `66c0007`), not committed yet.** The review (every screen on a phone 390×844 and a computer 1280×900, the contrast and the touch
+  targets measured): https://claude.ai/artifact/NXTvqH6d2TauoH1RSVVJaJ — the owner: "zrób wszystko". Done: one action colour (the
+  cyan of the "2", `.btn-action`: the guest's "Wyślij prośbę" was green, the invitation and the hosts' page yellow, the prints blue),
+  the grey text at 7 : 1 (was 3.3–4.2 : 1), 44 px targets on a phone, dark messages in place of pale boxes, the guest page in the
+  order a guest uses it (the field first, the profiles and the tip under the list), the result page (logo and "Gra: …" at the top,
+  "PRZEKAZANE" no longer "PRZEKAZAN / E", no energy, "Zaproponuj kolejną" the main button), the panel's heading in one row, the
+  account under a "Konto" menu ("Zakończ imprezę" in words), the queue in five columns (no vibe / verdict / energy, "AI: …" under the
+  song) and an empty queue that offers the QR code and "Ustaw klimat", the settings as cards of one pattern ("Źródło odtwarzania"
+  gone), one message at a time for the staff, emoji only as markers, the words "organizator" / "obsługa", "Zgłoś uwagę", "Polityka
+  prywatności". PROJECT_CONTEXT 6.7 "The look" is the small design system for new screens. Tests: 492 unit, 58 browser (`design.js`:
+  `guest-touch-targets`, `dashboard-touch-targets`, `account-menu`, `queue-empty-next-step` seen red without the `app.css` /
+  `settings-toggle.js` change; `guest-form-first`; `tabs` now unfolds the settings first — folded, the queue is in view already).
+  Then (2026-10-10, the owner: "dużo lepiej"): "To urządzenie" moved to the right column, under the profiles (the staff: the right
+  column alone, in the middle), and **the AI's energy rating gone from the whole project** (the owner: not needed) — the prompt and
+  `ANSWER_SCHEMA` no longer ask for it, `DjResponse` / `HistoryEntry` / the entity without it, the history's column and the CSV's
+  last column gone, **V31** drops `song_requests.energy_level` (`MigrationIT`). Tests: 492 unit, 46 database, 58 browser.
+  Next: the owner looks at it on a phone, then a PR to `dev` (V31 on the deploy to `main`).
+- **2026-10-09, evening — released (PR #35 → `dev`, on `main` = `432d563` with PR #34, CI green):** the staff's
   login on the landing page ("👥 Jestem z obsługi": paste the link → Google's login → joined; a bad link is told before any
   login) and "🚪 Opuść obsługę" in place of "Usuń konto" on another party's panel (the owner: it read as deleting the party).
   Tests: 492 unit, 45 database, 53 browser (`staff-panel` seen red without the `forms.js` change).
 - **2026-10-09, afternoon — released before (PR #32, `main` = `f57047d`, v30 applied, CI green, two people joined the staff of
-  14FMF); now on the branch, not committed yet:** "🎧 Mój panel" always offered (the owner joined with a second account from
+  14FMF); then released with PR #33 → `dev` and PR #34 → `main`:** "🎧 Mój panel" always offered (the owner joined with a second account from
   the installed app and had no way to make a party of their own — the button showed only to those who had one), and an
   invitation link pasted in the app (`POST /dj/join`; the Home Screen app opens e-mail links in the browser, with its own
   login). Tests: 488 unit, 45 database, 52 browser (`staff-panel` seen red without the `forms.js` change). Then the guests'
   list: the song's number a column of its own, a long name wraps under the name, not under "#18" (`guest-list-number-column`,
   seen red with the old row) — 53 browser.
-- **2026-10-09, evening — not committed yet:** the panel's settings fold under "⚙️ Ustawienia, klimat i kod QR" **on a computer
+- **2026-10-09, evening — released (PR #31 → `dev`, PR #32 → `main`):** the panel's settings fold under "⚙️ Ustawienia, klimat i kod QR" **on a computer
   too** (the owner: there are many of them now); `.s2p-phone-settings` is `.s2p-settings`; folded, the heading's column takes the
   whole width, unfolded the vibe's box goes under the logo. Scenarios `requests-only-dashboard` (folded on a wide screen) and
   `host-lists` (measures the layout unfolded — before, it measured a hidden card and passed on zeros).
-- **2026-10-09, later — not committed yet, on top of the V29 work below:** **the party's staff** (V30, PROJECT_CONTEXT 5.1 "The
+- **2026-10-09, later — released (PR #31 / #32, V30 applied), on top of the V29 work below:** **the party's staff** (V30, PROJECT_CONTEXT 5.1 "The
   party's staff"): a bartender joins by the owner's invitation link `/join/{token}` with their own Google account and sees the queue
   and the history only; the owner's card "👥 Obsługa" lists them ("Usuń dostęp"); the panel switcher "🎧 Mój panel / 👥 …"; their
   devices get the notifications too; the privacy policy says what is kept (their Google id and name). Owner's decisions: a
@@ -31,7 +49,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   the old `forms.js`; `staff-panel` also found the staff's queue never polled: `#partyCode` was inside the owner's settings).
   Next: the owner tries it with a second Google account (an invitation on a phone), then one PR to `dev` with V29 + V30 and
   `c41c7c8`.
-- **2026-10-09 — not committed yet (branch `claude/inspiring-einstein-sgh2tz`, on top of `c41c7c8`):** **the hosts' lists** (V29,
+- **2026-10-09 — released (PR #31 / #32, V29 applied):** **the hosts' lists** (V29,
   PROJECT_CONTEXT 4.1 "The hosts' lists": "🚫 Nie grać" refused before the AI or after it, "⭐ Koniecznie zagrać" accepted against
   the AI and marked in the queue, the hosts' own page `/h/{token}` without an account) — "🎶 Teraz leci Twoja piosenka" on the guest page was built
   and taken out again (the owner: a DJ marks several songs played at once, so it would lie); the card moved under the limits, the lists side by side (in the right column it left a gap on a

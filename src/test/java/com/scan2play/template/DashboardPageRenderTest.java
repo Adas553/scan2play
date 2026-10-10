@@ -200,7 +200,7 @@ class DashboardPageRenderTest {
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */
     private static SongRequestEntity song(long id, String name) {
         return SongRequestEntity.builder().id(id).partyCode(PARTY).songName(name).style("Pop").decision("accepted")
-                .djComment("ok").energyLevel(7).requestedAt(java.time.LocalDateTime.of(2026, 9, 29, 20, 0, (int) id).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant())
+                .djComment("ok").requestedAt(java.time.LocalDateTime.of(2026, 9, 29, 20, 0, (int) id).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant())
                 .trackUrl("https://www.youtube.com/results?search_query=" + java.net.URLEncoder.encode(name, StandardCharsets.UTF_8)).build();
     }
 
@@ -256,16 +256,23 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html);
         assertThat(html).contains("Wilki - Baśka", "sanah - Szampan");
-        assertThat(html).contains("Twój program DJ-a", "Grasz ze swojego programu");
+        // every settings card the same way: a heading and one line of help (the design review, 2026-10-09)
+        assertThat(html).contains("id=\"partyCard\"", ">Impreza<", "id=\"limitsCard\"", ">Limity gości<", "id=\"deviceCard\"",
+                ">To urządzenie<", "id=\"linksCard\"", ">Profile i napiwki<").doesNotContain("Źródło odtwarzania");
+        assertThat(html).as("the AI's comment a line under the song, no vibe / verdict / energy columns in the waiting queue")
+                .contains("class=\"small text-secondary s2p-queue-comment\"", ">AI: ok<")
+                .doesNotContain("ZAAKCEPTOWANE", "badge-energy", "data-sort=\"energy\"");
+        assertThat(html).as("the account's buttons under one menu, the party's end in words")
+                .contains("id=\"accountMenuBtn\"", ">Konto<", ">Zgłoś uwagę<", ">Wyloguj<", "id=\"deleteAccountBtn\"", ">Zakończ imprezę<");
         assertThat(html).as("the time of a request: the clock, the day under it, the full moment in the title")
                 .contains("title=\"29.09.2026 20:00:01\"", ">20:00</span>", ">29.09</span>").doesNotContain(">29.09.2026 20:00:01<");
         assertThat(html).as("our logo above the page's heading").contains(
                 "<span class=\"s2p-logo\"><img src=\"/images/logo.svg\" alt=\"\" class=\"s2p-logo-mark\"><span>Scan<span class=\"s2p-logo-two\">2</span>Play</span></span>",
-                "<h1 class=\"h4 mb-0 text-secondary\">Panel DJ-a</h1>");
+                "<h1 class=\"visually-hidden\">Panel DJ-a</h1>");
         assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
         assertThat(html).as("the AI's comment style (V22): the party's own picked, saved as soon as picked")
-                .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", "💬 Komentarze AI:",
+                .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", ">Komentarze AI:<",
                         "selected=\"selected\">Klasyczne<", ">Sarkastyczne<")
                 .doesNotContain("data-example", "commentStyleExample", "łagodne", "SARCASTIC_LIGHT");
         assertThat(html).as("the DJ's tip link (V27): its own form, the saved link in it, a note for a refused one hidden until then")
@@ -275,34 +282,34 @@ class DashboardPageRenderTest {
                 .contains("action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"", "id=\"facebookInput\"", "id=\"tiktokInput\"",
                         "value=\"https://www.instagram.com/dj.koko/\"", "Twoje profile (goście widzą je", "data-form-error hidden");
         assertThat(html).as("the hosts' lists (V29): both in one form, the hosts' link to copy, a new one asks first")
-                .contains("action=\"/dj/dashboard/host-lists\"", "name=\"blocked\"", ">Hej sokoły</textarea>", "📝 Lista gospodarzy",
+                .contains("action=\"/dj/dashboard/host-lists\"", "name=\"blocked\"", ">Hej sokoły</textarea>", ">Lista gospodarzy<",
                         "value=\"http://localhost:8080/h/AbC_123-xyzAbC_123-xyz\" id=\"hostLinkInput\"", "data-copy-target=\"hostLinkInput\"",
-                        "action=\"/dj/dashboard/host-link\"", "🔗 Nowy link", "data-confirm=\"Utworzyć nowy link? Stary przestanie działać.\"",
+                        "action=\"/dj/dashboard/host-link\"", ">Nowy link<", "data-confirm=\"Utworzyć nowy link? Stary przestanie działać.\"",
                         "Wyłącz link");
         assertThat(html).as("who plays (V17)").contains("action=\"/dj/dashboard/dj-name\"", "id=\"djNameInput\"", "Kto gra (widzą goście)");
         assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
         assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
         assertThat(html.split(">⚠ Sprawdź<", -1)).as("only the song with none of the guest's words").hasSize(2);
         // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)
-        assertThat(html).contains("id=\"settingsToggle\"", "⚙️ Ustawienia, klimat i kod QR");
+        assertThat(html).contains("id=\"settingsToggle\"", ">Ustawienia, klimat i kod QR<");
         // the class alone, not the button's s2p-settings-toggle
-        assertThat(html.split("s2p-settings(?![-\\w])", -1).length - 1).as("the folded parts: vibe, the kind of party, limits, the hosts' lists, the staff, QR code").isEqualTo(6);
+        assertThat(html.split("s2p-settings(?![-\\w])", -1).length - 1).as("the folded parts: the row of the settings' cards and its two columns").isEqualTo(3);
         // "Wyczyść kolejkę": the DJ's own queue (no party code in the form), asks first
-        assertThat(html).contains("action=\"/dj/dashboard/clear-queue\"", "id=\"clearQueueBtn\"", "🧹 Wyczyść kolejkę",
+        assertThat(html).contains("action=\"/dj/dashboard/clear-queue\"", "id=\"clearQueueBtn\"", ">Wyczyść kolejkę<",
                 "data-confirm=\"Usunąć wszystkie czekające prośby z kolejki?");
-        assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">⏭ Pomiń<", "🔍 Podejrzyj",
+        assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">⏭ Pomiń<", ">Podejrzyj<",
                 "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
         // the request's buttons: "▶ Zagrane" filled and short (one line), "⏭ Pomiń" outlined but readable (the owner, 2026-10-07)
-        assertThat(html).containsPattern("class=\"btn btn-sm btn-info text-nowrap s2p-btn-played\"[^>]*>▶ Zagrane<")
+        assertThat(html).containsPattern("class=\"btn btn-sm btn-action text-nowrap s2p-btn-played\"[^>]*>▶ Zagrane<")
                 .containsPattern("class=\"btn btn-sm btn-outline-light text-nowrap s2p-btn-skip\"[^>]*>⏭ Pomiń<")
-                .containsPattern("class=\"btn btn-sm btn-secondary [^\"]*\"[^>]*>🔍 Podejrzyj<")   // grey, as in the history: red deletes
+                .containsPattern("class=\"btn btn-sm btn-outline-secondary [^\"]*\"[^>]*>Podejrzyj<")   // the second kind, as in the history: red deletes
                 .doesNotContain("btn-outline-danger text-danger", "Oznacz jako zagrane", "btn-outline-secondary\" title=\"Nie tę");
         assertThat(html).doesNotContain("Powered by YouTube", "🔍 YOUTUBE", "▶ YOUTUBE", "YouTube API Services");
         // "Cofnij" after "Pomiń": a bar forms.js shows for a few seconds after a skip; hidden until then
         assertThat(html).contains("id=\"undoSkip\"", "Pominięto:", "data-undo-button", ">Cofnij<");
         assertThat(html.substring(html.indexOf("id=\"undoSkip\""), html.indexOf("data-undo-song"))).contains("hidden");
         assertThat(html).as("the staff (V30): who has access, each with its button, the invitation link to copy")
-                .contains("id=\"staffCard\"", "👥 Obsługa (barman, drugi DJ)", ">Kasia<", "action=\"/dj/dashboard/staff-remove\"",
+                .contains("id=\"staffCard\"", ">Obsługa (barman, drugi DJ)<", ">Kasia<", "action=\"/dj/dashboard/staff-remove\"",
                         "name=\"id\" value=\"7\"", "data-confirm=\"Usunąć dostęp: Kasia?\"",
                         "value=\"http://127.0.0.1:8080/join/Inv_123-xyzInv_123-xyz\" id=\"staffLinkInput\"",
                         "data-copy-target=\"staffLinkInput\"", "action=\"/dj/dashboard/staff-link\"")
@@ -344,15 +351,18 @@ class DashboardPageRenderTest {
 
         assertThat(session.getAttribute("pendingStaffInvitation")).as("the invitation is taken once").isNull();
         assertThat(html).doesNotContain("??");
-        assertThat(html).contains("id=\"staffJoinNote\"", "👥 Dołączono do obsługi: Klub Ola.",
-                "id=\"staffBanner\"", "👥 Obsługujesz imprezę: Klub Ola — kolejka, historia i kod QR.",
-                "id=\"panelSwitcher\"", "action=\"/dj/panel\"", ">🎧 Mój panel<", ">👥 Klub Ola<", "name=\"party\" value=\"HARN1\"",
+        assertThat(html).contains("id=\"staffJoinNote\"", "Dołączono do obsługi: Klub Ola.",
+                "id=\"staffBanner\"", "Obsługujesz imprezę: Klub Ola — widzisz kolejkę, historię i kod QR.",
+                "id=\"panelSwitcher\"", "action=\"/dj/panel\"", ">Mój panel<", ">Klub Ola<", "name=\"party\" value=\"HARN1\"",
                 "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "id=\"pushToggle\"",
                 "action=\"/dj/end-party\"",
                 // a link pasted in the app (its browser has a login of its own): for the staff too
                 "id=\"joinStaffForm\"", "action=\"/dj/join\"", "Masz zaproszenie do obsługi innej imprezy? Wklej link",
                 // not "Usuń konto": on the owner's party it read as deleting the party (the owner, 2026-10-09)
                 "id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"", "Opuścić obsługę tej imprezy?");
+        assertThat(html).as("one message at a time: right after joining, the note — the banner waits for the next page")
+                .containsPattern("id=\"staffBanner\" class=\"alert alert-secondary py-2 d-none\"");
+        assertThat(html).as("the staff's button opens the QR code only").contains(">Kod QR<").doesNotContain("Ustawienia, klimat i kod QR");
         assertThat(html).doesNotContain("action=\"/dj/delete-account\"");
         assertThat(html).as("the QR code, its link and its print: the staff's too — it is on the tables anyway (the owner, 2026-10-09)")
                 .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"");
@@ -371,7 +381,7 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party(), List.of(song(1, "Song One")), Locale.ENGLISH);
 
         assertWhatTheScriptsNeed(html);
-        assertThat(html).contains(">⏭ Skip<", ">▶ Played<", "🔍 Preview");
+        assertThat(html).contains(">⏭ Skip<", ">▶ Played<", ">Preview<");
         write("dashboard-en.html", html);
     }
 
@@ -383,7 +393,7 @@ class DashboardPageRenderTest {
         // A German browser: there is no German bundle, the texts are the English ones — and so is the declared language
         // (a `${#locale.language}` would have said "de" over English texts)
         String german = renderDashboard(party(), List.of(song(1, "Song One")), Locale.GERMAN);
-        assertThat(german).contains("🔍 Preview", "<html lang=\"en\">");
+        assertThat(german).contains(">Preview<", "<html lang=\"en\">");
     }
 
     /**
@@ -400,7 +410,7 @@ class DashboardPageRenderTest {
         // the 3rd the DJ skipped ("⏭ Pominięta przez DJ-a", "↩ Przywróć"), with the AI's longer comment kept (a phone's card shows it);
         // the 6th the DJ cleared with the queue
         return new HistoryEntry((long) i, historyAt(i), title, "https://www.youtube.com/results?search_query=song" + i, "Pop", decision,
-                i == 3 ? "Klasyk wesel, ale parkiet chce dziś czegoś szybszego — może później?" : "ok", 5 + i % 5,
+                i == 3 ? "Klasyk wesel, ale parkiet chce dziś czegoś szybszego — może później?" : "ok",
                 // the guest's words: the 2nd's are not in its song ("⚠ Sprawdź"), the 4th's are
                 i == 2 ? "orła cień" : i == 4 ? "bravo" : null,
                 i == 5 ? 12 : i == 8 ? 3 : 1,   // the votes: a ranking to sort (12 before 3 — as numbers)

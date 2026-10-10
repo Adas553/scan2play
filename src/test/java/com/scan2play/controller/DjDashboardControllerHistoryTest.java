@@ -73,7 +73,7 @@ class DjDashboardControllerHistoryTest {
     private static List<HistoryEntry> entries(int count) {
         return IntStream.range(0, count)
                 .mapToObj(i -> new HistoryEntry((long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant().minus(i, ChronoUnit.MINUTES),
-                        "Song " + i, null, "Pop", "played", "ok", 5, null))
+                        "Song " + i, null, "Pop", "played", "ok", null))
                 .toList();
     }
 

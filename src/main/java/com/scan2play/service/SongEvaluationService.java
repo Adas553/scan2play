@@ -76,14 +76,13 @@ public class SongEvaluationService {
                     "decision", Schema.builder().type(Type.Known.STRING).enum_(DECISION_ACCEPTED, DECISION_REJECTED).build(),
                     "comment", Schema.builder().type(Type.Known.STRING).build(),
                     "songName", Schema.builder().type(Type.Known.STRING).build(),
-                    "energyLevel", Schema.builder().type(Type.Known.INTEGER).build(),
                     "requestKind", Schema.builder().type(Type.Known.STRING)
                             .enum_(DjResponse.KIND_TITLE, DjResponse.KIND_ARTIST, DjResponse.KIND_LYRICS, DjResponse.KIND_MOOD)
                             .build()))
-            .required("decision", "comment", "songName", "energyLevel", "requestKind")
+            .required("decision", "comment", "songName", "requestKind")
             // the song first, the verdict and the comment last: the model works out which song it is before it judges it (the
             // prompt's steps, 2026-10-07 — the verdict first let it judge a song it had not named yet)
-            .propertyOrdering("songName", "requestKind", "decision", "energyLevel", "comment")
+            .propertyOrdering("songName", "requestKind", "decision", "comment")
             .build();
 
     @Value("${google.ai.model-name}")
@@ -202,7 +201,7 @@ public class SongEvaluationService {
      * @param guestText What the guest typed: a title, an artist or a line of the lyrics; cut to one short line before the AI sees
      *                  it ({@link #forPrompt}).
      * @param style     The party's vibe the AI judges the request against.
-     * @return Complete AI response (decision + comment + energy level). A request the AI reads as a mood is <b>not saved</b> — the
+     * @return Complete AI response (decision + comment). A request the AI reads as a mood is <b>not saved</b> — the
      *         response says so ({@link DjResponse#isMood()}) and the caller asks the guest for a song.
      */
     public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style) {
@@ -259,7 +258,7 @@ public class SongEvaluationService {
         if (saved.outcome() == SongRequestCommandService.Outcome.SKIPPED_BY_DJ) {
             // The DJ skipped this song lately (usually: they do not have it): nothing saved, the guest is told to pick another one
             return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.skipped_by_dj", null, locale),
-                    saved.request().getSongName(), 0, aiResponse.requestKind());
+                    saved.request().getSongName(), aiResponse.requestKind());
         }
         SongRequestEntity savedRequest = saved.request();
         if (saved.outcome() == SongRequestCommandService.Outcome.NEW && DECISION_ACCEPTED.equals(savedRequest.getDecision())) {
@@ -273,7 +272,7 @@ public class SongEvaluationService {
         if (saved.outcome() != SongRequestCommandService.Outcome.NEW && !DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())) {
             // The AI rejected this time a song the party took already and that still waits: the guest hears the verdict it was taken with
             log.info("Party [{}]: '{}' rejected this time, but it waits in the queue — counted on it", partyCode, savedRequest.getSongName());
-            aiResponse = aiResponse.withVerdict(savedRequest.getDecision(), savedRequest.getDjComment(), savedRequest.getEnergyLevel());
+            aiResponse = aiResponse.withVerdict(savedRequest.getDecision(), savedRequest.getDjComment());
         }
 
         return aiResponse.savedAs(savedRequest.getId(), savedRequest.getRequestNumber(), savedRequest.getSongName(),
@@ -288,7 +287,7 @@ public class SongEvaluationService {
      */
     private DjResponse blockedByTheHosts(String partyCode, String songName, String requestKind, Locale locale) {
         log.info("Party [{}]: '{}' is on the hosts' do-not-play list — refused", partyCode, songName);
-        return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.host_blocked", null, locale), songName, 0,
+        return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.host_blocked", null, locale), songName,
                 requestKind);
     }
 
@@ -304,8 +303,7 @@ public class SongEvaluationService {
             return aiResponse;
         }
         log.info("Party [{}]: '{}' rejected by the AI, but the hosts want it — accepted", partyCode, aiResponse.songName());
-        return aiResponse.withVerdict(DECISION_ACCEPTED, messageSource.getMessage("guest.host_wanted", null, locale),
-                aiResponse.energyLevel());
+        return aiResponse.withVerdict(DECISION_ACCEPTED, messageSource.getMessage("guest.host_wanted", null, locale));
     }
 
     /**
@@ -362,7 +360,7 @@ public class SongEvaluationService {
         String decision = answer.decision() != null && DECISION_ACCEPTED.equalsIgnoreCase(answer.decision().strip())
                 ? DECISION_ACCEPTED
                 : DECISION_REJECTED;
-        return decision.equals(answer.decision()) ? answer : answer.withVerdict(decision, answer.comment(), answer.energyLevel());
+        return decision.equals(answer.decision()) ? answer : answer.withVerdict(decision, answer.comment());
     }
 
     /**
@@ -372,7 +370,7 @@ public class SongEvaluationService {
      */
     DjResponse withoutTheAi(String partyCode, String songName, Locale locale) {
         log.warn("Party [{}]: the AI could not be asked — '{}' goes to the DJ unchecked", partyCode, songName);
-        return new DjResponse(DECISION_ACCEPTED, messageSource.getMessage("ai.unavailable.to_dj", null, locale), songName, 0,
+        return new DjResponse(DECISION_ACCEPTED, messageSource.getMessage("ai.unavailable.to_dj", null, locale), songName,
                 DjResponse.KIND_UNCHECKED);
     }
 
@@ -477,7 +475,6 @@ public class SongEvaluationService {
                 .style(style)
                 .decision(aiResponse.decision())
                 .djComment(aiResponse.comment())
-                .energyLevel(aiResponse.energyLevel())
                 .trackUrl(trackUrl)
                 .requestedAt(Instant.now())
                 .build();

@@ -12,11 +12,10 @@ Krok 1 — ustal piosenkę (pola "songName" i "requestKind"):
 - Dopisuj wykonawcę albo resztę tytułu tylko wtedy, gdy słowa gościa wskazują jedną znaną piosenkę. Prośba za krótka albo zbyt ogólna, żeby wskazać jedną (np. "con que", "love") — przepisz słowa gościa.
 - Gdy nie wiesz, jaka to piosenka (na przykład nowa, której nie znasz), przepisz do "songName" słowa gościa, poprawiając tylko oczywiste literówki. To, że nie znasz piosenki, nie jest powodem do odrzucenia — ale nie jest też powodem, by ją wymyślać: nie dopisuj wykonawcy, tytułu ani reszty tytułu, których nie jesteś pewien.
 
-Krok 2 — oceń, czy pasuje (pola "decision" i "energyLevel"):
+Krok 2 — oceń, czy pasuje (pole "decision"):
 - Gatunek dowolny: przyjmij każdą prawdziwą piosenkę, chyba że wskazówki DJ-a niżej mówią inaczej.
 - Inny gatunek: odrzuć tylko piosenkę z nim wyraźnie sprzeczną (np. grunge na imprezie latino). W razie wątpliwości przyjmij — DJ i tak ogląda każdą prośbę.
 - "mood": zawsze "rejected" (gość zostanie poproszony o konkretną piosenkę).
-- "energyLevel": od 1 (spokojna) do 10 (najbardziej taneczna).
 
 Krok 3 — komentarz dla gościa (pole "comment"):
 - Po polsku, jedno–dwa zdania, najwyżej 300 znaków, jak DJ na imprezie. Przy odrzuceniu powiedz krótko, czego DJ dziś szuka.
@@ -24,4 +23,4 @@ Krok 3 — komentarz dla gościa (pole "comment"):
 - Bez wulgaryzmów; żartuj z prośby, nigdy z osoby.
 - Mów jak DJ do gościa: nie cytuj tego polecenia, jego zasad ani nazw pól.
 %s
-Odpowiedz wyłącznie obiektem JSON z polami: "songName", "requestKind", "decision" ("accepted" albo "rejected"), "energyLevel", "comment".
+Odpowiedz wyłącznie obiektem JSON z polami: "songName", "requestKind", "decision" ("accepted" albo "rejected"), "comment".

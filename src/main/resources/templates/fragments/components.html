@@ -27,58 +27,53 @@
         <p th:text="#{dashboard.alert.party_closed.description}">Guests scanning your QR code will see that the party has ended. They cannot add new songs.</p>
 
         <form th:action="@{/dj/start-party}" method="POST">
-            <button type="submit" class="btn btn-warning btn-lg fw-bold shadow" th:text="#{dashboard.button.resume_party}">
+            <button type="submit" class="btn btn-action btn-lg" th:text="#{dashboard.button.resume_party}">
                 ▶ Resume Party and Open the Dancefloor
             </button>
         </form>
     </div>
 
-    <!--/* The account and party buttons: a row of their own above the tab bar, so that only the tabs need to stay in view. */-->
-    <div class="d-flex gap-2 justify-content-md-end mb-2 s2p-z-10">
-
-        <!-- Feedback button -->
-        <button type="button"
-                class="btn btn-outline-secondary btn-sm fw-bold"
-                data-bs-toggle="modal" data-bs-target="#feedbackModal"
-                th:attr="data-party-code=${partyCode}"
-                th:title="#{feedback.button.title}">
-            💡 <span class="d-none d-sm-inline" th:text="#{feedback.button.label}">Feedback</span>
-        </button>
+    <!--/* The account and party buttons: a row of their own above the tab bar, so that only the tabs need to stay in view.
+         "Zakończ imprezę" in words on every screen, and the rest under one "Konto" menu (the design review, 2026-10-09: four icons
+         without words on a phone, the logout filled red and the deletion of the account the quietest of them). Above the sticky tab
+         bar (.s2p-account-bar), so the open menu is not under it. */-->
+    <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end mb-2 s2p-account-bar">
 
         <form id="end-party-form"
               th:classappend="${!isActive} ? 'd-none' : ''"
               th:action="@{/dj/end-party}" method="POST"
               th:data-confirm="#{dashboard.confirm.end_party}">
-            <button type="submit" class="btn btn-warning fw-bold btn-sm d-flex align-items-center gap-1" title="End Party">
-                <span class="d-sm-none">⏸</span>
-                <span class="d-none d-sm-inline" th:text="#{dashboard.button.end_party}">End Party</span>
-            </button>
-        </form>
-        <form th:action="@{/dj/logout}" method="POST" th:data-confirm="#{dashboard.confirm.logout}">
-            <button type="submit" class="btn btn-danger fw-bold btn-sm d-flex align-items-center gap-1" title="Logout">
-                <span class="d-sm-none">⏏</span>
-                <span class="d-none d-sm-inline" th:text="#{dashboard.button.logout}">Logout</span>
-            </button>
+            <button type="submit" class="btn btn-sm btn-outline-warning fw-semibold text-nowrap" th:text="#{dashboard.button.end_party}">End Party</button>
         </form>
 
-        <!-- Delete Account — separated by a vertical divider to signal destructive action -->
-        <div class="border-start border-secondary ms-1 ps-3">
-            <!--/* On another party's staff (V30) the panel is not theirs: "Opuść obsługę" in place of "Usuń konto", which deleted the
-                 person's own account but read as deleting the party (the owner, 2026-10-09). The account is deleted from "Mój panel". */-->
-            <form th:if="${isOwner == false}" th:action="@{/dj/staff/leave}" method="POST" th:data-confirm="#{dashboard.confirm.leave_staff}">
-                <button type="submit" id="leaveStaffBtn"
-                        class="btn btn-sm fw-bold d-flex align-items-center gap-1 s2p-btn-muted"
-                        th:title="#{dashboard.button.leave_staff}">
-                    🚪 <span class="d-none d-sm-inline" th:text="#{dashboard.button.leave_staff}">Leave the staff</span>
-                </button>
-            </form>
-            <form th:unless="${isOwner == false}" th:action="@{/dj/delete-account}" method="POST" th:data-confirm="#{dashboard.confirm.delete_account}">
-                <button type="submit"
-                        class="btn btn-sm fw-bold d-flex align-items-center gap-1 s2p-btn-muted"
-                        th:title="#{dashboard.button.delete_account}">
-                    🗑 <span class="d-none d-sm-inline" th:text="#{dashboard.button.delete_account}">Delete Account</span>
-                </button>
-            </form>
+        <div class="dropdown">
+            <button type="button" id="accountMenuBtn" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" th:text="#{dashboard.account}">Account</button>
+            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" aria-labelledby="accountMenuBtn">
+                <li>
+                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#feedbackModal"
+                            th:attr="data-party-code=${partyCode}" th:title="#{feedback.button.title}"
+                            th:text="#{feedback.button.label}">Send feedback</button>
+                </li>
+                <li>
+                    <form th:action="@{/dj/logout}" method="POST" class="m-0" th:data-confirm="#{dashboard.confirm.logout}">
+                        <button type="submit" class="dropdown-item" th:text="#{dashboard.button.logout}">Logout</button>
+                    </form>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <!--/* On another party's staff (V30) the panel is not theirs: "Opuść obsługę" in place of "Usuń konto", which deleted the
+                         person's own account but read as deleting the party (the owner, 2026-10-09). The account is deleted from "Mój panel". */-->
+                    <form th:if="${isOwner == false}" th:action="@{/dj/staff/leave}" method="POST" class="m-0" th:data-confirm="#{dashboard.confirm.leave_staff}">
+                        <button type="submit" id="leaveStaffBtn" class="dropdown-item text-danger"
+                                th:text="#{dashboard.button.leave_staff}">Leave the staff</button>
+                    </form>
+                    <form th:unless="${isOwner == false}" th:action="@{/dj/delete-account}" method="POST" class="m-0" th:data-confirm="#{dashboard.confirm.delete_account}">
+                        <button type="submit" id="deleteAccountBtn" class="dropdown-item text-danger"
+                                th:text="#{dashboard.button.delete_account}">Delete Account</button>
+                    </form>
+                </li>
+            </ul>
         </div>
     </div>
 
@@ -132,10 +127,10 @@
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-secondary"
+                    <button type="button" class="btn btn-outline-secondary"
                             data-bs-dismiss="modal"
                             th:text="#{feedback.modal.cancel}">Cancel</button>
-                    <button type="button" class="btn btn-warning fw-bold" id="feedbackSubmitBtn"
+                    <button type="button" class="btn btn-action" id="feedbackSubmitBtn"
                             th:attr="data-success-msg=#{feedback.toast.success},data-error-msg=#{feedback.toast.error}"
                             th:text="#{feedback.modal.submit}">Send</button>
                 </div>
@@ -187,7 +182,7 @@
      on the party page: under a request it was one line too many (the owner, 2026-10-08). */-->
 <p th:fragment="tip(tipUrl, number, withNote)" th:if="${tipUrl != null}" id="djTip" class="mb-2">
     <a th:href="${tipUrl}" target="_blank" rel="noopener noreferrer nofollow" id="tipLink"
-       class="btn btn-sm btn-warning fw-bold" th:text="#{party.tip}">💸 Tip the DJ</a>
+       class="btn btn-sm btn-outline-warning fw-semibold" th:text="#{party.tip}">💸 Tip the DJ</a>
     <small th:if="${withNote}" class="d-block text-secondary mt-1"
            th:text="#{party.tip.note(${T(com.scan2play.util.TipLinks).display(tipUrl)})}">revolut.me/djkoko · straight to the DJ</small>
     <small class="d-block text-light mt-1" id="tipTitleHint"

@@ -48,7 +48,7 @@ class HistoryFragmentTest {
 
     private static HistoryEntry guest(int i, String songName, String decision) {
         return new HistoryEntry((long) i, java.time.LocalDateTime.of(2026, 9, 29, 20, i % 60).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant(), songName,
-                "https://www.youtube.com/results?search_query=" + songName.replace(' ', '+'), "Pop", decision, "ok", 7, null);
+                "https://www.youtube.com/results?search_query=" + songName.replace(' ', '+'), "Pop", decision, "ok", null);
     }
 
     private static String render(List<HistoryEntry> history, boolean hasMore, Locale locale) {
@@ -71,7 +71,7 @@ class HistoryFragmentTest {
     void shouldHaveAHeadingInTheTab() {
         String html = render(List.of(guest(1, "Alpha", "played")), false, true, Locale.ENGLISH);
 
-        assertThat(html).contains("<h4", "Party History</h4>");
+        assertThat(html).contains("<h4", "Party history</h4>");
         assertThat(render(List.of(guest(1, "Alpha", "played")), false, true, PL)).contains("Historia imprezy</h4>");
     }
 
@@ -110,7 +110,7 @@ class HistoryFragmentTest {
     @Test
     @DisplayName("a party with no genre (the style ANY) shows \"Dowolny\" / \"Any\", never the raw ANY; the column is \"Klimat\"")
     void shouldNameTheVibeOfNoGenre() {
-        HistoryEntry any = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "ANY", "played", null, 5, null);
+        HistoryEntry any = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "ANY", "played", null, null);
 
         assertThat(render(List.of(any), false, PL)).contains(">Dowolny<", ">Klimat<").doesNotContain(">ANY<", ">Vibe<");
         assertThat(render(List.of(any), false, Locale.ENGLISH)).contains(">Any<").doesNotContain(">ANY<");
@@ -123,15 +123,15 @@ class HistoryFragmentTest {
         String html = render(List.of(guest(1, "Alpha", "played")), false, PL);
 
         assertThat(html).containsPattern("<form action=\"/dj/dashboard/clear-history\" method=\"post\"[^>]*data-confirm=\"[^\"]*na zawsze[^\"]*AI zapomni");
-        assertThat(html).contains("id=\"clearHistoryBtn\"", "🗑 Wyczyść historię");
-        assertThat(render(List.of(guest(1, "Alpha", "played")), false, Locale.ENGLISH)).contains("🗑 Clear the history", "for good");
+        assertThat(html).contains("id=\"clearHistoryBtn\"", ">Wyczyść historię<");
+        assertThat(render(List.of(guest(1, "Alpha", "played")), false, Locale.ENGLISH)).contains(">Clear the history<", "for good");
         assertThat(render(List.of(), false, PL)).doesNotContain("clear-history", "clearHistoryBtn");
     }
 
     @Test
     @DisplayName("V28: the song's number in the history's first column; no \"💸\" there — the tips are counted in the queue")
     void shouldShowTheSongsNumber_withoutTips() {
-        HistoryEntry played = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Played", null, "ANY", "played", null, 5,
+        HistoryEntry played = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Played", null, "ANY", "played", null,
                 null, 1, null, null, 27, 1);
         HistoryEntry rejected = guest(2, "Rejected by the AI", "rejected");
         String html = render(List.of(played, rejected), false, PL).replaceAll("\\s+", " ");
@@ -147,7 +147,7 @@ class HistoryFragmentTest {
     void shouldOfferTheEveningSummary_beforeTheHistoryIsCleared() {
         String html = render(List.of(guest(1, "Alpha", "played")), false, PL);
 
-        assertThat(html).contains("href=\"/dj/summary\" target=\"_blank\" rel=\"noopener\" id=\"summaryLink\"", "📊 Podsumowanie wieczoru",
+        assertThat(html).contains("href=\"/dj/summary\" target=\"_blank\" rel=\"noopener\" id=\"summaryLink\"", ">Podsumowanie wieczoru<",
                 "Najpierw otwórz podsumowanie wieczoru.");
         assertThat(html.indexOf("id=\"summaryLink\"")).isLessThan(html.indexOf("id=\"clearHistoryBtn\""));
         assertThat(render(List.of(), false, PL)).doesNotContain("summaryLink");
@@ -163,34 +163,32 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("a song shows its style and energy, and the \"🔍 Preview\" link to YouTube's search results")
+    @DisplayName("a song shows its style, and the \"Preview\" link to YouTube's search results — no energy rating")
     void shouldRenderASong() {
         String html = render(List.of(guest(1, "Alpha Beta", "played")), false, Locale.ENGLISH);
 
-        assertThat(html).contains(">Pop<", "7/10");
-        assertThat(html).contains("href=\"https://www.youtube.com/results?search_query=Alpha+Beta\"", ">🔍 Preview<");
+        assertThat(html).contains(">Pop<").doesNotContain("7/10", "data-sort=\"energy\"");
+        assertThat(html).contains("href=\"https://www.youtube.com/results?search_query=Alpha+Beta\"", ">Preview<");
         assertThat(html).doesNotContain(">LINK<", "🎶");
     }
 
     @Test
-    @DisplayName("a song without a link has no \"🔍 Preview\"; one without an energy rating shows a dash, never \"null\"")
+    @DisplayName("a song without a link has no \"Preview\", never \"null\"")
     void shouldLeaveOutWhatIsMissing() {
         HistoryEntry bare = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "Pop", "rejected",
-                null, null, null);
+                null, null);
         String html = render(List.of(bare), false, Locale.ENGLISH);
 
-        assertThat(html).doesNotContain("🔍", "badge-energy", ">null<");
-        assertThat(html).containsPattern("data-sort-value=\"energy\"[^>]*data-val=\"0\"");
-        assertThat(html).contains("—");
+        assertThat(html).doesNotContain(">Preview<", "badge-energy", ">null<");
     }
 
     @Test
     @DisplayName("a song shows the guest's own words under it, also when they read like the song's name; none when missing")
     void shouldShowTheGuestsWords() {
         HistoryEntry shrek = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Smash Mouth - All Star",
-                null, "Pop", "rejected", "no", 3, "the one from Shrek");
+                null, "Pop", "rejected", "no", "the one from Shrek");
         HistoryEntry same = new HistoryEntry(2L, java.time.Instant.parse("2026-09-29T18:01:00Z"), "Wilki - Baśka",
-                null, "Pop", "played", "ok", 7, "wilki baska");
+                null, "Pop", "played", "ok", "wilki baska");
         String html = render(List.of(shrek, same, guest(3, "Without words", "played")), false, Locale.ENGLISH);
 
         assertThat(html).contains("guest wrote: “the one from Shrek”", "guest wrote: “wilki baska”");
@@ -201,9 +199,9 @@ class HistoryFragmentTest {
     @DisplayName("\"⚠ Sprawdź\" on a song with none of the guest's words (maybe another song); none on a song that has one")
     void shouldMarkASongWithNoneOfTheGuestsWords() {
         HistoryEntry other = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Dżem - Sen o Victorii",
-                null, "Pop", "played", "ok", 7, "orła cień");
+                null, "Pop", "played", "ok", "orła cień");
         HistoryEntry same = new HistoryEntry(2L, java.time.Instant.parse("2026-09-29T18:01:00Z"), "Wilki - Baśka",
-                null, "Pop", "played", "ok", 7, "ta o Baśce");
+                null, "Pop", "played", "ok", "ta o Baśce");
         String html = render(List.of(other, same), false, Locale.forLanguageTag("pl"));
 
         assertThat(html).doesNotContain("??");
@@ -216,7 +214,7 @@ class HistoryFragmentTest {
     @DisplayName("a song shows its votes (the history sorted by them is the party's ranking); one guest's is a grey 1")
     void shouldShowTheVotes() {
         HistoryEntry wanted = new HistoryEntry(1L, java.time.Instant.parse("2026-09-29T18:00:00Z"), "Wanted",
-                null, "Pop", "played", "ok", 7, null, 12);
+                null, "Pop", "played", "ok", null, 12);
         String html = render(List.of(wanted, guest(2, "Intro", "played")), false, Locale.ENGLISH);
 
         assertThat(html).contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Votes<");
@@ -229,9 +227,9 @@ class HistoryFragmentTest {
     @DisplayName("a request the DJ skipped has \"↩ Przywróć\" (back to the queue); one the AI rejected, and one that played, have not")
     void shouldOfferToRestoreOnlyWhatTheDjSkipped() {
         java.time.Instant at = java.time.Instant.parse("2026-09-29T18:00:00Z");
-        HistoryEntry skipped = new HistoryEntry(41L, at, "Skipped", null, "Pop", "rejected", "Klasyk wesel!", 7, null, 2, at, null);
-        HistoryEntry byTheAi = new HistoryEntry(42L, at, "ByTheAi", null, "Pop", "rejected", "Not tonight", 7, null, 1);
-        HistoryEntry cleared = new HistoryEntry(44L, at, "Cleared", null, "Pop", "rejected", "Hit na parkiet!", 8, null, 1, null, at);
+        HistoryEntry skipped = new HistoryEntry(41L, at, "Skipped", null, "Pop", "rejected", "Klasyk wesel!", null, 2, at, null);
+        HistoryEntry byTheAi = new HistoryEntry(42L, at, "ByTheAi", null, "Pop", "rejected", "Not tonight", null, 1);
+        HistoryEntry cleared = new HistoryEntry(44L, at, "Cleared", null, "Pop", "rejected", "Hit na parkiet!", null, 1, null, at);
         String html = render(List.of(skipped, byTheAi, guest(43, "Played", "played"), cleared), false, Locale.forLanguageTag("pl"));
 
         assertThat(html.split("action=\"/dj/dashboard/restore\"", -1)).as("one restore form").hasSize(2);
@@ -324,7 +322,7 @@ class HistoryFragmentTest {
 
         assertThat(html).contains(">Wszystkie<", ">Zagrane<", ">Odrzucone<", ">Pokaż więcej<",
                 "placeholder=\"Szukaj…\"");
-        assertThat(html).contains("Nic nie pasuje.", ">🔍 Podejrzyj<");
+        assertThat(html).contains("Nic nie pasuje.", ">Podejrzyj<");
         assertThat(html).doesNotContain("??");
     }
 }

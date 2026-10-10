@@ -37,6 +37,9 @@
         setup: {},
         run: async function (t) {
             document.body.style.paddingBottom = '2500px';
+            // Folded, the settings leave the queue right under the heading (the design review, 2026-10-09) — in the upper part of
+            // the screen already, where a tab need not scroll. Unfolded they push it down, as for a DJ who left them open.
+            document.getElementById('settingsToggle').click();
             const fetches = function () { return t.stand.count('GET /dj/history-view/fragment'); };
 
             // The script scrolls smoothly unless the browser asks for reduced motion (then at once). This scenario is about the smooth

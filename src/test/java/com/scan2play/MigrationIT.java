@@ -123,6 +123,13 @@ class MigrationIT extends PostgresIntegrationTest {
                 .isEqualTo(32);
     }
 
+    /** V31: no energy rating — the AI is not asked for one, nothing shows it. */
+    @Test
+    void theRequestsHaveNoEnergyLevel() {
+        assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns WHERE table_name = 'song_requests'"
+                + " AND column_name = 'energy_level'", String.class)).isEmpty();
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");
