@@ -116,16 +116,19 @@ S2P.scenario({
 });
 
 // The owner (2026-10-07): on a phone the history was a table of narrow columns — a title broke into a word per line, the skip's label
-// ran off the screen. Now a card per request, as the queue.
+// ran off the screen. Now a card per request, as the queue — folded to one line since 2026-10-10 (cards.js; the line itself:
+// cards.js history-lines-phone), so the card is unfolded here first.
 S2P.scenario({
     name: 'history-phone',
-    title: 'the history on a phone: a card per request — the song across it, a skip (⏭) or a clear (🧹) as an icon beside the votes, "↩ Przywróć" inside the screen, the AI\'s comment shown',
+    title: 'the history on a phone: a card per request — unfolded, the song across it, a skip (⏭) or a clear (🧹) as an icon beside the votes, "↩ Przywróć" inside the screen, the AI\'s whole comment',
     viewport: '390,844',
     setup: {},
     run: async function (t) {
         document.querySelector('[data-dj-tab="history"]').click();
         await t.waitFor(function () { return document.querySelector('#history-content tr[data-decision]'); }, 'the history', 5000);
         const card = document.querySelector('#history-content tr[data-song-name="Rejected Beat"]');
+        card.querySelector('td[data-sort-value="song"] .fw-bold').click();
+        t.step('a tap unfolds the card', card.classList.contains('s2p-open'), true);
         const cardBox = card.getBoundingClientRect();
         const songBox = card.querySelector('td[data-sort-value="song"]').getBoundingClientRect();
         t.step('a request is a card', getComputedStyle(card).display, 'flex');
@@ -148,15 +151,8 @@ S2P.scenario({
         t.check('"↩ Przywróć" shows inside the screen', shows(restore) && restore.getBoundingClientRect().right <= window.innerWidth);
         const comment = card.querySelector('td.s2p-comment-cell');
         t.check('the AI\'s comment shows (hidden in the table below a wide screen)', shows(comment) && /parkiet/.test(comment.textContent));
-        // one line of it, a tap shows the whole of it, a second tap folds it (the owner, 2026-10-07: the comments took the cards)
-        const lineHeight = parseFloat(getComputedStyle(comment).lineHeight);
-        const folded = comment.getBoundingClientRect().height;
-        comment.click();
-        const opened = comment.getBoundingClientRect().height;
-        comment.click();
-        t.step('the comment: one line, a tap opens the whole of it, another folds it',
-            [folded < lineHeight * 1.5, opened > folded * 1.5, comment.getBoundingClientRect().height === folded],
-            [true, true, true]);
+        // the whole of it (2026-10-07 … 10: one line, a tap on it showed the rest; now the card folds as a whole)
+        t.step('the whole comment, not cut to one line', getComputedStyle(comment).webkitLineClamp, 'none');
         t.step('the column sort stays: ID (V28), Piosenka and Głosy', Array.from(document.querySelectorAll('#history-content thead th'))
             .filter(shows).map(function (th) { return th.getAttribute('data-sort'); }), ['number', 'song', 'votes']);
         document.querySelector('#history-content [data-history-more]').click();   // the cleared one is older than the first four

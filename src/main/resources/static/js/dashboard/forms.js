@@ -43,11 +43,12 @@ import { csrfHeaders, partyCode, showPartyActive } from './common.js';
             if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/clear-queue')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
-            // A skip that went through: "Cofnij" for a few seconds (the server answers with a redirect, read as opaqueredirect)
-            if (action.includes('/dashboard/dismiss') && accepted(response)) {
-                offerUndo(form);
+            // A skip or a "Zagrane" that went through: "Cofnij" for a few seconds (the server answers with a redirect, read as
+            // opaqueredirect) — "Zagrane" is the button tapped most, so the one tapped by mistake most (the owner, 2026-10-10)
+            if ((action.includes('/dashboard/dismiss') || action.includes('/dashboard/play')) && accepted(response)) {
+                offerUndo(form, action.includes('/dashboard/play') ? 'play' : 'dismiss');
             }
-            // A skipped request put back from the history: it is in the queue again and no longer in the history
+            // A skipped or played request put back from the history: it is in the queue again and no longer in the history
             if (action.includes('/dashboard/restore')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
                 emit(EVENTS.HISTORY_CHANGED);
@@ -116,21 +117,25 @@ function accepted(response) {
 }
 
 // ==========================================================================
-// "COFNIJ" AFTER "POMIŃ"
+// "COFNIJ" AFTER "POMIŃ" OR "ZAGRANE"
 //
-// A skip by mistake (a thumb on a phone) is put right at once: for UNDO_MS a bar at the bottom of the screen names the song and
-// offers "Cofnij", which puts the request back in the queue (POST /dj/dashboard/restore). A later skip replaces the bar; after the
-// bar is gone the history still offers "↩ Przywróć".
+// A skip or a "Zagrane" by mistake (a thumb on a phone) is put right at once: for UNDO_MS a bar at the bottom of the screen says
+// which ("Pominięto:" / "Zagrane:"), names the song and offers "Cofnij", which puts the request back in the queue (POST
+// /dj/dashboard/restore — a "Zagrane" taken back no longer counts as played, so the AI no longer refuses the song as played). A later
+// one replaces the bar; after the bar is gone the history still offers "↩ Przywróć".
 // ==========================================================================
 
 const UNDO_MS = 8000;
 let undoTimer = null;
 
-function offerUndo(form) {
+function offerUndo(form, kind) {
     const bar = document.getElementById('undoSkip');
     const idInput = form.querySelector('input[name="id"]');
     if (!bar || !idInput) return;
     const row = form.closest('tr[data-song-name]');
+    bar.querySelectorAll('[data-undo-label]').forEach(function (label) {
+        label.hidden = label.getAttribute('data-undo-label') !== kind;
+    });
     bar.querySelector('[data-undo-song]').textContent = row ? row.getAttribute('data-song-name') : '';
     bar.setAttribute('data-undo-id', idInput.value);
     bar.hidden = false;

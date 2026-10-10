@@ -136,24 +136,27 @@ public class DjService {
     }
 
     /**
-     * Undoes a skip ("Cofnij" right after it, "↩ Przywróć" in the history): the request the DJ skipped waits in the queue again, in
-     * its old place (by its request time), with its votes and the guest's words, and the song is no longer kept out of the queue.
-     * Only a request skipped by the DJ — not one the AI rejected, not one cleared with the queue — and only the DJ's own.
+     * Undoes a skip or a "Zagrane" ("Cofnij" right after it, "↩ Przywróć" in the history — at any time, the owner 2026-10-10): the
+     * request waits in the queue again, in its old place (by its request time), with its votes, the guest's words and its tips. A skip
+     * no longer keeps the song out of the queue; a "Zagrane" by mistake no longer counts as played — the AI's duplicate rule ("już
+     * leciała") reads only the played ones, so the guests may ask for it again. Only a request skipped by the DJ or played — not one
+     * the AI rejected, not one cleared with the queue — and only the DJ's own.
      * <p>
      * Under the party's lock of the guests' requests ({@code SongRequestCommandService}): when the same song waits in the queue
-     * already (asked for again once the skip was no longer remembered), nothing changes — the song is in the queue.
+     * already (asked for again meanwhile), nothing changes — the song is in the queue.
      *
      * @return whether the request went back to the queue
      */
     @Transactional
-    public boolean restoreSkippedSong(Long id, String ownerPartyCode) {
+    public boolean restoreSong(Long id, String ownerPartyCode) {
         songRequestRepository.lockRequests(SongRequestCommandService.lockKey(ownerPartyCode));
         SongRequestEntity song = songRequestRepository.findById(id).orElse(null);
         if (song == null || !song.getPartyCode().equals(ownerPartyCode)) {
             log.warn("Restore refused: DJ party {} asked for song {} (not theirs, or gone)", ownerPartyCode, id);
             return false;
         }
-        if (!DECISION_REJECTED.equals(song.getDecision()) || song.getSkippedAt() == null) {
+        boolean skipped = DECISION_REJECTED.equals(song.getDecision()) && song.getSkippedAt() != null;
+        if (!skipped && !DECISION_PLAYED.equals(song.getDecision())) {
             return false;
         }
         boolean alreadyWaiting = getWaiting(ownerPartyCode).stream()
@@ -164,9 +167,10 @@ public class DjService {
         }
         song.setDecision(DECISION_ACCEPTED);
         song.setSkippedAt(null);   // with the AI's comment, as before the skip
+        song.setPlayedAt(null);    // …or the "Zagrane"
         songRequestRepository.save(song);
         evictDashboardQueueAfterCommit(ownerPartyCode);
-        log.info("Song ID={} restored to the queue by the DJ of party {}", id, ownerPartyCode);
+        log.info("Song ID={} ({}) restored to the queue by the DJ of party {}", id, skipped ? "skipped" : "played", ownerPartyCode);
         return true;
     }
 
@@ -218,7 +222,7 @@ public class DjService {
      * {@link SongRequestCommandService#SKIP_REMEMBERED} — deleting them would let the song back into the queue. The AI's duplicate
      * rule reads the songs that played, so after this it no longer knows what played before.
      * <p>
-     * Under the party's lock of the guests' requests, as {@link #restoreSkippedSong}: a skip put back at the same moment is either
+     * Under the party's lock of the guests' requests, as {@link #restoreSong}: a skip put back at the same moment is either
      * back in the queue or deleted, never half of each.
      *
      * @param ownerPartyCode the partyCode of the authenticated DJ (from the session) — only their own history

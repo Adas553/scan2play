@@ -130,9 +130,12 @@ DJ's "played" / "skip" writes only the columns it changed, so a vote that commit
 the DJ skipped** ("Pomiń" — usually "I do not have it") is not saved again for 2 hours from the skip (`skipped_at`, V20; the owner:
 12 h was too long): the next guest who asks for it hears `guest.skipped_by_dj` ("Tej piosenki DJ teraz nie zagra — wybierz inną"),
 nothing reaches the queue (`Outcome.SKIPPED_BY_DJ`, `findSkippedByTheDj`). A song only cleared with the whole queue may be asked for
-again. **A skip by mistake is undone** ("Cofnij" in a bar for 8 s after the skip, "↩ Przywróć" at the request in the history;
-`POST /dj/dashboard/restore`, `DjService.restoreSkippedSong`, under the same lock): the request waits again in its old place with its
-votes and the guest's words, `skipped_at` cleared — unless the same song waits already. The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
+again. **A skip or a "Zagrane" by mistake is undone** ("Cofnij" in a bar for 8 s after either — "Pominięto:" / "Zagrane:" —, "↩
+Przywróć" at the request in the history, at any time; `POST /dj/dashboard/restore`, `DjService.restoreSong`, under the same lock):
+the request waits again in its old place with its votes, the guest's words and its tips, `skipped_at` / `played_at` cleared — a
+played one no longer counts as played, so the AI's duplicate rule lets it through again (the owner, 2026-10-10: "Zagrane" by mistake
+had no way back, and the AI then refused the song as played) — unless the same song waits already. Never a request the AI rejected
+or one cleared with the queue. The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
 party's ranking); the guest page's list is sorted by them (below) and the result page says "Ktoś już o to prosił — dodaliśmy
 Twój głos! Głosów: N".
@@ -234,7 +237,7 @@ Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google'
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
 leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
-under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra";
+under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1; "Zagrane" has both too, 2026-10-10) and "Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra";
 the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person: "Zgłoś uwagę" (feedback), "Wyloguj",
 "Usuń konto" (red, the last one) — in place of four icons without words (the design review, 2026-10-09; `.s2p-account-bar` keeps the open
@@ -283,7 +286,17 @@ the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszen
 background as the panel's (`settings-page.js` loads `forms.js`, `push.js`, `install.js`; the page links the manifest, so a browser
 offers the app there). **On a phone**
 (narrower than 768 px) the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); "Podejrzyj" a grey outlined button as in the history (a link in the guest's line was tried
-on 2026-10-10 — the owner: the button reads better); the list scrolls with the page.
+on 2026-10-10 — the owner: the button reads better); the list scrolls with the page. **The card is folded** (the review of 2026-10-10,
+https://claude.ai/artifact/5Znq2bBpZQZB2rzHYkX9v1 — the owner picked "B"; `js/dashboard/cards.js`, `app.css`): the number, the song,
+"⚠ Sprawdź" / "⭐ Życzenie gospodarzy", the votes, "▾" and the row "▶ Zagrane / ⏭ Pomiń" — 106 px (was 204), four in the first screen
+(was two), "Zagrane" still one tap. With "⚠" the guest's words stay (they are why); "💸 2" stays once a tip is counted, the first one
+is counted unfolded. A tap on the card (or "▾", `.s2p-card-toggle`, a real button with `aria-expanded`) unfolds the guest's words,
+the AI's whole comment, "Podejrzyj" and 💸 / "−1"; a tap on a button, link or form of the card is that control's alone — the fold never
+sends anything. Unfolded cards are remembered by the request's id and opened again after each poll (`reopenCards`; an id gone from the
+list is forgotten — a request put back comes back folded). The staff's "Podgląd" (no buttons) sees one line per request. Folded A
+(one line, actions unfolded: two taps for "Zagrane"), a swipe (unseen, accidental, against the poll and the phone's own back gesture)
+and icon buttons ▶ ⏭ ("▶" reads as "play", and a played song has no undo) were measured and turned down. A wide screen is the table as
+before (no "▾", a click on a row does nothing).
 
 **The active queue** has five columns — ID, the time, the song (under it the guest's words, "AI: …" the AI's comment in one line, ⭐ / ⚠),
 the votes, the buttons (2026-10-09: the vibe, "ZAAKCEPTOWANE" and the AI's energy rating said the same in every row and pushed "Pomiń" and 💸 off a
@@ -304,8 +317,11 @@ filters All / Played / Rejected applied by the server, "Show more" (50 at a time
 column (`captureListState` / `restoreListState` in the tab; on the standalone page, which loads itself again, through
 `sessionStorage` once). A heading row where a new day starts, Polish time (`tr[data-day-heading]`: "dziś — sobota, 03.10",
 "wczoraj — …", "wtorek, 29.09"; `Times.dayKey` / `weekday`) — the history keeps 30 days, so the parties of a month share it.
-On a phone (narrower than 768 px) every entry is a card, as in the queue: the song across it, then the votes, the decision, the skip
-and "↩ Przywróć", and the AI's comment — one line with "…", a tap opens it (`.s2p-history-table`, `app.css`, `list-tools.js`); the column sort stays as a row of buttons.
+On a phone (narrower than 768 px) every entry is **one line** (2026-10-10, `cards.js`; 52 px, was a card of 191 px): the song (cut with
+"…"), "⚠", the votes, the decision ▶ / ⏭ / ✖ / 🧹 and, for a skip or a played one, "↩" (44 × 44 — the one thing done in the history, so still one tap;
+its words kept for a screen reader). A tap on the line (or its "▾") unfolds the card: the whole song across it, "⚠ Sprawdź", the guest's
+words, "Podejrzyj", the number, "↩ Przywróć" in words and the AI's whole comment; it stays unfolded after "Pokaż więcej", a filter or
+a skip put back (`tabs.js` → `reopenCards`). The column sort stays as a row of buttons.
 `list-tools.js`: the search hides a heading with no row left under it; a sort by a column hides them all (`.s2p-sorted`), undoing it
 puts the server's order back. **"Wyczyść historię"** (shown while the history is not empty; asks first — `data-confirm`) sends
 `POST /dj/dashboard/clear-history` (`DjService.clearHistory`, under the party's lock "S2PR"): the party's played and rejected requests
@@ -533,7 +549,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `polling.js` (the queue every 3 s and its headers — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"); they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `polling.js` (the queue every 3 s and its headers — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"); they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes; "Kopiuj" of the invitation link |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
@@ -573,6 +589,12 @@ What every page shares, so a new screen looks like the others:
   may not do is hidden, not greyed. A list of alike things with the same fields (the people of "Obsługa") is folded to one line each —
   what tells them apart (the name, the role) — and unfolds on a tap. Browser scenarios: `settings-more-rows`, `dashboard-heading-one-row`,
   `settings-page-touch-targets`, `staff-people-folded`.
+- **A list one works through on a phone** (the queue, the history; 2026-10-10) folds each item to what the DJ decides by and does most:
+  the queue keeps its action row ("▶ Zagrane" one tap), the history its one action ("↩"); a state that needs attention stays in the
+  folded item (⚠ with the guest's words, ⭐, "💸 2"). A tap on the item unfolds it, "▾" / "▴" (a button with `aria-expanded`) says
+  which; a tap on a control is the control's alone; unfolded items survive the list being replaced (remembered by id). Not on a wide
+  screen. Browser scenarios: `queue-cards-folded`, `queue-card-open-survives-poll`, `queue-cards-viewer`, `queue-cards-wide-screen`,
+  `history-lines-phone`.
 - **Emoji** only as markers in a list or a status (⭐ ⚠ 💸 👍 ▶ ⏭, "🎧 Gra: …", 🚫 / ⭐ of the hosts' lists) — not in card titles,
   headings or ordinary buttons. **Words**: "Ty" to everyone, "Wy" only on the hosts' page; "organizator" (the party's owner), "obsługa"
   (bartender, second DJ), "gospodarze", "goście"; no English words ("Zgłoś uwagę", not "Feedback"); "DJ‑a" in a heading with a
@@ -803,7 +825,7 @@ GuestQueueService          → DjService
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
-| POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own skip, not when the same song waits) |
+| POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped or marked played → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own, not one the AI rejected or cleared with the queue, not when the same song waits) |
 | POST | `/dj/dashboard/clear-queue` | "Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, `cleared_at`, the AI's comment kept (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
 | POST | `/dj/dashboard/clear-history` | "Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
 | GET | `/dj/settings` | `party`: the page "Ustawienia imprezy" (2026-10-10) — its cards by the person's permissions; anyone with access to the party, 403 for another |

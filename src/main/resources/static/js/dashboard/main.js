@@ -9,6 +9,7 @@
  *   polling.js         the guest queue every 3 s, the server's guest limits
  *   settings-toggle.js on a phone: the settings folded under one button
  *   settings-rows.js   the rows of "Więcej" in the settings: whether this browser gets the notifications
+ *   cards.js           on a phone: the requests of the queue and the history folded, a tap unfolds one
  *
  * "Zainstaluj aplikację" (install.js) and the notifications' switch (push.js) are on the page "Ustawienia imprezy" since 2026-10-10
  * (settings-page.js loads them with forms.js).
@@ -22,3 +23,4 @@ import './tabs.js';
 import './polling.js';
 import './settings-toggle.js';
 import './settings-rows.js';
+import './cards.js';

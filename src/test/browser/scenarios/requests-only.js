@@ -132,6 +132,8 @@ S2P.scenario({
         document.querySelector('#song-list tr[data-song-id="1"] form[action="/dj/dashboard/dismiss"] button').click();
         await t.waitFor(shows, 'the "Cofnij" bar', 2500).catch(function () {});
         t.step('after the skip the bar names the song', shows() ? bar.querySelector('[data-undo-song]').textContent : null, 'Wilki - Baśka');
+        t.step('…and says "Pominięto:" (after "Zagrane": "Zagrane:", play-undo)', Array.from(bar.querySelectorAll('[data-undo-label]'))
+            .filter(function (el) { return !el.hidden; }).map(function (el) { return el.textContent.trim(); }), ['Pominięto:']);
         await t.waitFor(function () { return !document.querySelector('#song-list tr[data-song-id="1"]'); }, 'the row to go', 2500)
             .catch(function () {});
 
@@ -161,6 +163,37 @@ S2P.scenario({
         await t.waitFor(function () { return !shows(); }, 'the bar to go by itself', 12000).catch(function () {});
         t.check('it goes by itself, after some seconds — not at once', !shows() && performance.now() - shownAt > 5000);
         t.step('nothing was put back', await t.stand.count('POST /dj/dashboard/restore'), 0);
+    }
+});
+
+// The owner (2026-10-10): "Zagrane" by mistake could not be taken back — the song was gone, and the AI then refused it as played.
+S2P.scenario({
+    name: 'play-undo',
+    title: '"Zagrane" by mistake: the bar says "Zagrane:", names the song and offers "Cofnij", which puts the request back in the queue at once',
+    setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' },
+                     { id: 2, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=sanah' }] },
+    run: async function (t) {
+        const bar = document.getElementById('undoSkip');
+        const shows = function () { return !!bar && !bar.hidden && bar.getClientRects().length > 0; };
+        const label = function () {
+            return Array.from(bar.querySelectorAll('[data-undo-label]')).filter(function (el) { return !el.hidden; })
+                .map(function (el) { return el.textContent.trim(); });
+        };
+        // the rendered rows have the buttons (the stand-in's polled rows do not): click before the first poll replaces them
+        document.querySelector('#song-list tr[data-song-id="1"] form[action="/dj/dashboard/play"] button').click();
+        await t.waitFor(shows, 'the "Cofnij" bar', 2500).catch(function () {});
+        t.step('after "Zagrane" the bar says so and names the song',
+            shows() ? [label(), bar.querySelector('[data-undo-song]').textContent] : null, [['Zagrane:'], 'Wilki - Baśka']);
+        await t.waitFor(function () { return !document.querySelector('#song-list tr[data-song-id="1"]'); }, 'the row to go', 2500)
+            .catch(function () {});
+
+        bar.querySelector('[data-undo-button]').click();
+        t.check('"Cofnij" hides the bar at once', !shows());
+        await t.waitFor(function () { return document.querySelector('#song-list tr[data-song-id="1"]'); }, 'the request back', 2500)
+            .catch(function () {});
+        t.step('the server was told which request to put back', (await t.stand.requests('POST /dj/dashboard/restore'))
+            .map(function (r) { return r.q.id; }), ['1']);
+        t.check('the request is back in the queue', !!document.querySelector('#song-list tr[data-song-id="1"]'));
     }
 });
 

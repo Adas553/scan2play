@@ -305,6 +305,10 @@
                 </td>
                 <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
                     <span class="badge" th:classappend="${req.votes > 1} ? 'text-bg-warning' : 'text-bg-secondary'" th:text="${req.votes}">1</span>
+                    <!--/* On a phone the card is folded (cards.js, app.css): the song, ⚠ / ⭐, the votes, "Zagrane" / "Pomiń" — this "▾"
+                         (or a tap on the card) unfolds the guest's words, the AI's comment, "Podejrzyj" and 💸. A wide screen shows them all. */-->
+                    <button type="button" class="btn btn-sm d-md-none s2p-card-toggle" aria-expanded="false"
+                            th:attr="aria-label=#{dashboard.card.toggle}" th:title="#{dashboard.card.toggle}"></button>
                 </td>
                 <td>
                     <div class="d-flex gap-2">
@@ -360,9 +364,12 @@
     <!-- History content loaded via AJAX (the DJ keeps their place on the page) -->
     <div id="history-content" hidden></div>
 
-    <!--/* "Cofnij" after "Pomiń": shown by forms.js for a few seconds after a skip, puts the request back (/dj/dashboard/restore) */-->
+    <!--/* "Cofnij" after "Pomiń" or "Zagrane": shown by forms.js for a few seconds after either, puts the request back
+         (/dj/dashboard/restore). The id stays "undoSkip": the browser scenarios and the CSS know it by it. */-->
     <div id="undoSkip" class="s2p-undo-toast" role="status" aria-live="polite" hidden>
-        <span th:text="#{dashboard.undo.skipped}">Skipped:</span>
+        <!--/* after "Pomiń" or "Zagrane" (forms.js shows the one that happened): both put right by "Cofnij" (DjService.restoreSong) */-->
+        <span data-undo-label="dismiss" th:text="#{dashboard.undo.skipped}">Skipped:</span>
+        <span data-undo-label="play" th:text="#{dashboard.undo.played}" hidden>Played:</span>
         <span class="fw-bold text-break" data-undo-song>Song</span>
         <button type="button" class="btn btn-action flex-shrink-0 ms-auto" data-undo-button
                 th:text="#{dashboard.undo.button}">Undo</button>
