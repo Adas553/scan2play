@@ -151,6 +151,44 @@ public class DjDashboardController {
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
         model.addAttribute(PANELS, partyStaffService.panelsOf(authentication.getName()));
         model.addAttribute(HAS_OWN_PARTY, owner || partyStaffService.hasOwnParty(authentication.getName()));
+        addSettings(model, settings, owner);
+
+        // --- QR Code ---
+        String guestUrl = guestUrl(partyCode);
+        String qrCodeBase64Str = qrCodeService.generateQrCodeBase64(guestUrl, 250, 250);
+        model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
+        model.addAttribute(PERMANENT_LINK, guestUrl);
+
+        // --- Active Queue (Accepted songs only) ---
+        model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
+        model.addAttribute(WANTED_SONGS, SongList.of(settings.getHostWanted()));
+
+        return "dashboard";
+    }
+
+    /**
+     * The page "Ustawienia imprezy" (the design review, 2026-10-10): what a DJ sets before a party, not during it — the hosts' lists,
+     * the profiles and the tip link, the guests' limits, this device. The panel keeps the vibe, "Kto gra" and the QR code, and lists
+     * these as rows with their state that lead here. Each section only for whom may change it (V32: hidden, not greyed); a person
+     * with none of them still has "To urządzenie". The party the page names ({@code ?party=}), as the panel; one the person may not
+     * open is a 403.
+     */
+    @GetMapping("/settings")
+    public String settingsPage(@RequestParam(required = false) String party, Model model, OAuth2AuthenticationToken authentication,
+                               HttpSession session) {
+        PartyStaffService.Access access = sessionHelper.access(party, authentication, session);
+        PartySettingsEntity settings = access.party();
+        model.addAttribute(PARTY_CODE, settings.getPartyCode());
+        model.addAttribute(IS_OWNER, access.owner());
+        model.addAttribute(ACCESS, access);
+        model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
+        addSettings(model, settings, access.owner());
+        return "settings";
+    }
+
+    /** What the panel's settings and the page "Ustawienia imprezy" show: the party's own values and the server's limits' use. */
+    private void addSettings(Model model, PartySettingsEntity settings, boolean owner) {
+        String partyCode = settings.getPartyCode();
         if (owner) {
             model.addAttribute(STAFF, partyStaffService.staffOf(partyCode));
         }
@@ -167,6 +205,8 @@ public class DjDashboardController {
         // --- The hosts' lists (V29) and the link that lets them fill the lists ---
         model.addAttribute(HOST_BLOCKED, settings.getHostBlocked());
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
+        model.addAttribute(HOST_BLOCKED_COUNT, entries(settings.getHostBlocked()));
+        model.addAttribute(HOST_WANTED_COUNT, entries(settings.getHostWanted()));
         model.addAttribute(HOST_LINK, settings.getHostToken() == null ? null : cleanBaseUrl + "/h/" + settings.getHostToken());
         model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
@@ -182,18 +222,11 @@ public class DjDashboardController {
 
         // --- Notifications on the DJ's devices (offered only when the server has the keys) ---
         model.addAttribute(PUSH_PUBLIC_KEY, pushNotificationService.publicKey());
+    }
 
-        // --- QR Code ---
-        String guestUrl = guestUrl(partyCode);
-        String qrCodeBase64Str = qrCodeService.generateQrCodeBase64(guestUrl, 250, 250);
-        model.addAttribute(QR_CODE_BASE64, qrCodeBase64Str);
-        model.addAttribute(PERMANENT_LINK, guestUrl);
-
-        // --- Active Queue (Accepted songs only) ---
-        model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
-        model.addAttribute(WANTED_SONGS, SongList.of(settings.getHostWanted()));
-
-        return "dashboard";
+    /** The entries of a hosts' list as stored ({@code SongList.tidy}: one per line), 0 for none. */
+    static int entries(String list) {
+        return list == null || list.isBlank() ? 0 : list.split("\n").length;
     }
 
     /**

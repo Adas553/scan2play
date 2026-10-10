@@ -64,11 +64,14 @@ S2P.scenario({
         document.getElementById('makeOwnPartyBtn').click();
         t.step('"Załóż własną imprezę" is a page load (not sent in the background)', handled.shift(), ['/dj/panel', false]);
 
-        // no "Wklej link" on another's party (the owner, 2026-10-10: she has joined already — it read as if she still had to);
-        // her own panel and "no-panel" keep it, and an invitation by e-mail comes by itself
-        document.getElementById('settingsToggle').click();   // under "Kod QR", with the notifications
-        t.check('"To urządzenie" without the field for an invitation link', !!document.getElementById('pushToggle')
-            && !document.getElementById('joinStaffForm') && !document.getElementById('joinLinkInput'));
+        // under "Kod QR": the QR code and one row, "To urządzenie" (the page "Ustawienia imprezy" has its card — without "Wklej link" on
+        // another's party: she has joined already, the owner 2026-10-10; SettingsPageRenderTest)
+        document.getElementById('settingsToggle').click();
+        const rows = Array.from(document.querySelectorAll('#settingsMore [data-settings-row]')).filter(function (row) { return row.getClientRects().length > 0; });
+        t.step('"Więcej" has this device alone, leading to its card', rows.map(function (row) {
+            return [row.dataset.settingsRow, row.getAttribute('href')];
+        }), [['device', '/dj/settings?party=HARN1#deviceCard']]);
+        t.check('no field for an invitation link on the panel', !document.getElementById('joinStaffForm') && !document.getElementById('joinLinkInput'));
 
         // "Opuść obsługę" in place of "Usuń konto" (it read as deleting the party): a page load, another panel comes whole
         t.check('no "Usuń konto" on another party\'s panel', !document.querySelector('form[action="/dj/delete-account"]'));
@@ -80,11 +83,12 @@ S2P.scenario({
 
 S2P.scenario({
     name: 'owner-pastes-an-invitation',
-    title: 'the organiser\'s own panel keeps "Masz zaproszenie do obsługi innej imprezy? Wklej link" — a page load, the invitation asks',
+    title: 'the organiser\'s own "To urządzenie" keeps "Zaproszenie do obsługi? Wklej link" — a page load, the invitation asks',
+    page: 'settings',
     run: async function (t) {
         const handled = s2pRecordSubmits();
-        document.getElementById('settingsToggle').click();
-        t.check('the field shows once the settings are unfolded', document.getElementById('joinLinkInput').getClientRects().length > 0);
+        t.check('the field shows in "To urządzenie"', document.getElementById('joinLinkInput').getClientRects().length > 0
+            && !!document.getElementById('joinLinkInput').closest('#deviceCard'));
         document.getElementById('joinLinkInput').value = 'https://www.scan2play.com.pl/join/AbC_12-x';
         document.querySelector('#joinStaffForm button[type="submit"]').click();
         t.step('a pasted invitation is a page load (not sent in the background)', handled.shift(), ['/dj/join', false]);

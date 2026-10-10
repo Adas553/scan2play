@@ -107,8 +107,8 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.HISTORY, get("/dj/history-view").param("party", PUB)),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/vibe").param("partyCode", PUB).param("newVibe", "ANY")),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/comment-style").param("partyCode", PUB).param("commentStyle", "FUNNY")),
-                Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/vibe-note").param("partyCode", PUB).param("vibeNote", "x")),
-                Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/dj-name").param("partyCode", PUB).param("djName", "x")),
+                Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/party-words").param("partyCode", PUB).param("vibeNote", "x")
+                        .param("djName", "x")),
                 Arguments.of(StaffPermission.LIMITS, post("/dj/dashboard/limits").param("partyCode", PUB).param("requestLimit", "2")
                         .param("cooldownMinutes", "3").param("duplicateCheckWindow", "5")),
                 Arguments.of(StaffPermission.HOST_LISTS, post("/dj/dashboard/host-lists").param("partyCode", PUB).param("blocked", "x")),
@@ -148,6 +148,19 @@ class StaffPermissionEndpointsTest {
     void whatIsNeverHandedOver_isRefusedEvenWithEveryPermission(MockHttpServletRequestBuilder request) {
         kasiaMay(StaffPermission.all());
         assertThatThrownBy(() -> perform(request)).hasRootCauseInstanceOf(AccessDeniedException.class);
+    }
+
+    /**
+     * The page "Ustawienia imprezy" (2026-10-10) opens for anyone on the staff — "To urządzenie" is everyone's; each card is shown by
+     * its permission — and never for another party.
+     */
+    @org.junit.jupiter.api.Test
+    void theSettingsPage_opensForTheStaff_withoutAPermission_andNeverForAnotherParty() {
+        kasiaMay(EnumSet.noneOf(StaffPermission.class));
+        assertThatCode(() -> perform(get("/dj/settings").param("party", PUB))).doesNotThrowAnyException();
+
+        when(staff.accessOf(pub, "kasia")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> perform(get("/dj/settings").param("party", PUB))).hasRootCauseInstanceOf(AccessDeniedException.class);
     }
 
     /** Another party than one the person works at: refused whatever the code says, nothing falls back to another party. */

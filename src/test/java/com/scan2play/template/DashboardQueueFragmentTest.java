@@ -179,7 +179,7 @@ class DashboardQueueFragmentTest {
         same.setGuestText("wilki baśka");
         String html = render(List.of(shrek, same, accepted(3, "Without words")), PL);
 
-        assertThat(html).contains("gość napisał: „ta z Shreka &lt;b&gt;na wesele&lt;/b&gt;”", "gość napisał: „wilki baśka”");
+        assertThat(html).contains("Gość: „ta z Shreka &lt;b&gt;na wesele&lt;/b&gt;”", "Gość: „wilki baśka”");
         assertThat(html.split("guest-text", -1)).as("the two rows with words have the line, the one without none").hasSize(3);
     }
 

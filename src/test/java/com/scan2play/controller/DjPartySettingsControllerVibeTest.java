@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * The party's vibe: the DJ's own words about it ({@code POST /dj/dashboard/vibe-note}, V16) — one line, at most 150 characters,
+ * The party's vibe: the DJ's own words about it ({@code POST /dj/dashboard/party-words}, V16, with "Kto gra") — one line, at most 150 characters,
  * empty clears them, only the party's own DJ — and the vibes of the list (V16: LATINO instead of three).
  */
 class DjPartySettingsControllerVibeTest {
@@ -54,25 +54,16 @@ class DjPartySettingsControllerVibeTest {
         session = new MockHttpSession();
     }
 
-    /** Posts the note and gives the party's note after what the controller asked the settings service to change. */
+    /**
+     * Posts the card "Impreza"'s words (one form, {@code POST /dj/dashboard/party-words}, the design review 2026-10-10) and gives the
+     * party after what the controller asked the settings service to change.
+     */
     @SuppressWarnings("unchecked")
-    private String send(String note) throws Exception {
-        var request = post("/dj/dashboard/vibe-note").param("partyCode", PARTY).principal(token).session(session);
+    private PartySettingsEntity sendWords(String note, String name) throws Exception {
+        var request = post("/dj/dashboard/party-words").param("partyCode", PARTY).principal(token).session(session);
         if (note != null) {
             request.param("vibeNote", note);
         }
-        mockMvc.perform(request).andExpect(status().is3xxRedirection());
-        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
-        verify(settingsService).updateSettings(eq(PARTY), updater.capture());
-        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).vibeNote("the old note").build();
-        updater.getValue().accept(party);
-        return party.getVibeNote();
-    }
-
-    /** Posts who plays (V17) and gives the party's DJ name after what the controller asked the settings service to change. */
-    @SuppressWarnings("unchecked")
-    private String sendDjName(String name) throws Exception {
-        var request = post("/dj/dashboard/dj-name").param("partyCode", PARTY).principal(token).session(session);
         if (name != null) {
             request.param("djName", name);
         }
@@ -80,9 +71,26 @@ class DjPartySettingsControllerVibeTest {
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(sessionHelper).require(eq(PARTY), eq(com.scan2play.model.StaffPermission.VIBE), any(), any());   // a co-organiser's too (V32)
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());
-        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Old").build();
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).vibeNote("the old note").djName("DJ Old").build();
         updater.getValue().accept(party);
-        return party.getDjName();
+        return party;
+    }
+
+    /** The note alone (the name's field left empty). */
+    private String send(String note) throws Exception {
+        return sendWords(note, null).getVibeNote();
+    }
+
+    /** Who plays (V17) alone. */
+    private String sendDjName(String name) throws Exception {
+        return sendWords(null, name).getDjName();
+    }
+
+    @Test
+    void theNoteAndWhoPlays_areSavedTogether() throws Exception {
+        PartySettingsEntity party = sendWords("wesele 40+", "DJ Koko");
+        assertThat(party.getVibeNote()).isEqualTo("wesele 40+");
+        assertThat(party.getDjName()).isEqualTo("DJ Koko");
     }
 
     @Test
@@ -126,7 +134,7 @@ class DjPartySettingsControllerVibeTest {
                 .when(sessionHelper).require(eq(PARTY), any(), any(), any());
 
         try {
-            mockMvc.perform(post("/dj/dashboard/vibe-note").param("partyCode", PARTY).param("vibeNote", "x").principal(token).session(session));
+            mockMvc.perform(post("/dj/dashboard/party-words").param("partyCode", PARTY).param("vibeNote", "x").principal(token).session(session));
         } catch (Exception expected) {
             // the access denial surfaces from the standalone MockMvc
         }

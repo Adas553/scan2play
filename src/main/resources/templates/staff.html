@@ -34,15 +34,22 @@
     <p th:if="${#lists.isEmpty(staff) and #lists.isEmpty(staffInvitations)}" id="staffEmpty" class="text-secondary"
        th:text="#{dashboard.staff.empty}">Nobody has joined yet.</p>
     <div class="d-flex flex-column gap-3 mb-4" id="staffList" th:unless="${#lists.isEmpty(staff) and #lists.isEmpty(staffInvitations)}">
-        <section th:each="member : ${staff}" class="card bg-dark border-secondary p-3 s2p-staff-member"
+        <!--/* Folded to one line — the name, the role, since when (the owner, 2026-10-10: ten unfolded cards repeated the same picker);
+             a tap unfolds what the person may do. The one just saved comes back unfolded, with "Zapisano". */-->
+        <details th:each="member : ${staff}" class="card bg-dark border-secondary s2p-staff-member"
                  th:with="who=${member.memberName != null ? member.memberName : #messages.msg('dashboard.staff.no_name')},
                           role=${member.role()}"
+                 th:open="${staffSaved != null and staffSaved == member.id}"
                  th:attr="data-staff-id=${member.id}">
-            <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-2">
-                <h2 class="s2p-card-title mb-0 text-break" th:text="${who}">Bartek Nowak</h2>
-                <span class="small text-secondary"
+            <summary class="s2p-staff-summary">
+                <span class="s2p-staff-who">
+                    <span class="s2p-card-title mb-0 text-break" th:text="${who}">Bartek Nowak</span>
+                    <span class="small text-secondary" data-staff-role th:text="#{__${'staff.role.' + role}__}">Obsługa kolejki</span>
+                </span>
+                <span class="small text-secondary text-nowrap"
                       th:text="#{staff.member.since(${T(com.scan2play.util.Times).day(member.joinedAt)})}">joined 10.10</span>
-            </div>
+            </summary>
+            <div class="s2p-staff-body">
             <form th:action="@{/dj/staff/permissions}" method="POST" class="m-0" data-staff-form>
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <input type="hidden" name="id" th:value="${member.id}">
@@ -59,7 +66,8 @@
                 <input type="hidden" name="id" th:value="${member.id}">
                 <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{dashboard.staff.remove}">Remove access</button>
             </form>
-        </section>
+            </div>
+        </details>
 
         <section th:each="invitation : ${staffInvitations}" class="card bg-dark border-secondary p-3 s2p-staff-invited"
                  th:attr="data-invitation-id=${invitation.id}">

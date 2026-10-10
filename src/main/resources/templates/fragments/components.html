@@ -39,7 +39,10 @@
          "Zakończ imprezę" in words on every screen, and the rest under one "Konto" menu (the design review, 2026-10-09: four icons
          without words on a phone, the logout filled red and the deletion of the account the quietest of them). Above the sticky tab
          bar (.s2p-account-bar), so the open menu is not under it. */-->
-    <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end mb-2 s2p-account-bar">
+    <!--/* One row with our logo (2026-10-10, the design review: the logo had a row of its own under the tabs — four rows above a
+         phone's queue) */-->
+    <div class="d-flex align-items-center gap-2 mb-2 s2p-account-bar">
+        <div class="fs-4 fw-bold text-white me-auto s2p-min-w-0"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
 
         <!--/* the question names the party: a person of the staff closes the organiser's (the review, 2026-10-10) */-->
         <form id="end-party-form" th:if="${access == null or access.may('OPEN_CLOSE')}"
@@ -47,18 +50,17 @@
               th:action="@{/dj/end-party}" method="POST"
               th:data-confirm="#{dashboard.confirm.end_party(${partyName != null ? partyName : partyCode})}">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
-            <button type="submit" class="btn btn-sm btn-outline-warning fw-semibold text-nowrap" th:text="#{dashboard.button.end_party}">End Party</button>
+            <!--/* "Zakończ" on a phone, beside the logo; the question names the party */-->
+            <button type="submit" class="btn btn-sm btn-outline-warning fw-semibold text-nowrap" th:attr="aria-label=#{dashboard.button.end_party}">
+                <span class="d-none d-sm-inline" th:text="#{dashboard.button.end_party}">End Party</span><span class="d-sm-none" th:text="#{dashboard.button.end_party.short}">End</span>
+            </button>
         </form>
 
         <div class="dropdown">
             <button type="button" id="accountMenuBtn" class="btn btn-sm btn-outline-secondary dropdown-toggle"
                     data-bs-toggle="dropdown" aria-expanded="false" th:text="#{dashboard.account}">Account</button>
             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" aria-labelledby="accountMenuBtn">
-                <!--/* the owner's page of the staff (V32): who helps and what each may do — first, the menu's most used */-->
-                <li th:if="${isOwner == true}">
-                    <a class="dropdown-item" id="staffMenuLink" th:href="@{/dj/staff(party=${partyCode})}"
-                       th:text="#{dashboard.staff.menu}">The party's staff</a>
-                </li>
+                <!--/* the menu is about the person; the party's staff is a row of the settings ("Obsługa", 2026-10-10) */-->
                 <li>
                     <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#feedbackModal"
                             th:attr="data-party-code=${partyCode}" th:title="#{feedback.button.title}"

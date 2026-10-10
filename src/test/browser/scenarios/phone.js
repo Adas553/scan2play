@@ -12,7 +12,7 @@ async function phoneDashboard(t, buttons) {
     t.step('the window is a phone\'s', window.innerWidth < 768, true);
     const toggle = document.getElementById('settingsToggle');
     t.step('the settings, the vibe and the QR code are folded; the button to unfold them shows',
-        [shows(document.getElementById('vibeSelect')), shows(document.getElementById('requestLimit')),
+        [shows(document.getElementById('vibeSelect')), shows(document.getElementById('settingsMore')),
          shows(document.getElementById('partyLinkInput')), shows(toggle)],
         [false, false, false, true]);
 
