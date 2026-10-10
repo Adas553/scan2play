@@ -20,9 +20,15 @@
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <div class="fs-3 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
-        <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" id="backToPanel" class="btn btn-sm btn-outline-light"
-           th:text="#{staff.page.back}">← Back to the panel</a>
+        <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+        <!--/* "Obsługa" is a row of the settings that leads to a page of its own: back to "Ustawienia imprezy" first, the panel beside
+             it (the owner, 2026-10-10: only "Wróć do panelu" was there) */-->
+        <div class="d-flex gap-2">
+            <a th:href="@{/dj/settings(party=${partyCode})}" href="/dj/settings" id="backToSettings" class="btn btn-sm btn-outline-light"
+               th:text="#{staff.page.back.settings}">← Settings</a>
+            <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" id="backToPanel" class="btn btn-sm btn-outline-light"
+               th:text="#{staff.page.back}">Panel</a>
+        </div>
     </div>
 
     <h1 class="h3 text-white mb-1" th:text="#{staff.page.heading}">The party's staff</h1>
