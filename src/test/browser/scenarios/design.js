@@ -155,6 +155,27 @@
         }
     });
 
+    // The owner (2026-10-10): "Obsługa" is the one row of the settings that leads to a page of its own, and it led only "back to the
+    // panel". It goes back to "Ustawienia imprezy" as well, in the heading's one row.
+    S2P.scenario({
+        name: 'staff-page-way-back',
+        title: 'the owner\'s page "Obsługa" on a phone: "← Ustawienia" and "Panel" (the same party) beside the logo, in one row, 44 px high',
+        page: 'staff',
+        viewport: '390,844',
+        run: async function (t) {
+            const settings = document.getElementById('backToSettings');
+            const panel = document.getElementById('backToPanel');
+            t.step('back to the settings and to the panel of the same party',
+                [settings && settings.getAttribute('href'), panel && panel.getAttribute('href')],
+                ['/dj/settings?party=HARN1', '/dj/dashboard?party=HARN1']);
+            const middle = function (el) { const box = el.getBoundingClientRect(); return box.top + box.height / 2; };
+            const logo = document.querySelector('.s2p-logo');
+            t.check('in the logo\'s row', !!settings && Math.abs(middle(settings) - middle(logo)) < 8 && Math.abs(middle(panel) - middle(logo)) < 8);
+            t.step('nothing to tap is lower than 44 px, nothing wider than the screen',
+                [tooSmall(settings.parentElement), document.documentElement.scrollWidth <= window.innerWidth], [[], true]);
+        }
+    });
+
     S2P.scenario({
         name: 'settings-page-touch-targets',
         title: 'the page "Ustawienia imprezy" on a phone: every button, field, jump and the server limits\' line at least 44 px high; no sideways scroll',

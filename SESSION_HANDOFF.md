@@ -7,6 +7,23 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-10, late night — two small fixes after the release, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` =
+  `3174e19`; PR #43 → `dev`, PR #44 → `main` = `f6c67ed`).** The owner's screenshots: on a computer the history's "↩ Przywróć" stood
+  at different places after "ZAGRANE" and the longer "POMINIĘTE" — every verdict's word now takes the width of the longer of the two
+  (hidden copies in an inline grid, `.s2p-decision-word`, `history.html`); the page "Obsługa" led only "← Wróć do panelu" — now
+  "← Ustawienia" and "Panel" (`staff.html`, `staff.page.back.settings`). Tests: 592 unit (`StaffPageRenderTest`), 78 browser — new,
+  seen red before the fix: `history-wide-restore-aligned` (left edges 622 / 634 px), `staff-page-way-back`. The owner also asked
+  whether the look is professional — the answer named the desktop history table as the weakest screen (the vibe badge repeated in
+  every row, four colours of verdicts and buttons, the long italic comments). Then the review of the desktop history (1280×900, the
+  real page with a realistic history; variants A tidy / B one line with unfolding / C two calm lines):
+  https://claude.ai/artifact/HJ7JdqVoXRpBGdD7h3d2Wv — the owner: "zrób C". Done, PROJECT_CONTEXT 5.1 / 6.7: `history.html` — under the
+  song one muted line "Gość: „…” · AI: …" (wide screens only, `.s2p-history-sub`, the whole in its title; the guest's own line and the
+  comment's cell now only for the phone's card), no columns "Klimat" (the vibe is the decision's title, "Klimat: Pop") and "Komentarz
+  AI" (`dashboard.table.header.comment` gone), "Decyzja" in place of "Werdykt AI"; `app.css` — the decision a coloured dot and one
+  quiet word. Measured: an entry 102 → 56 px on average, four → seven in the list's 540 px, the song's column 209 → ~700 px. Tests:
+  593 unit (`HistoryFragmentTest`: the vibe in the title, the line under the song; `shouldRenderASong` rewritten), 79 browser —
+  `history-wide-calm` seen red on the code before C. Then (the owner: the colours of the dots hard to tell) the dot a 10 px circle of
+  CSS (was the glyph "●", ~7 px). **Next:** a PR to `dev`, then `dev` → `main`.
 - **2026-10-10, night — the folded cards of a phone, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `016fa29`;
   `main` = `c4f6bc5`, V33 + V34 applied on Railway, CI green), not committed yet.** The review (the cards measured on the real rendered
   page at 390×844, variants A / B / C swipe / D icons as CSS over the real styles): https://claude.ai/artifact/5Znq2bBpZQZB2rzHYkX9v1 —

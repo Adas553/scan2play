@@ -126,3 +126,56 @@ S2P.scenario({
             [['WYCZYSZCZONE', true], 0]);
     }
 });
+
+// The design review of 2026-10-10 (variant C, https://claude.ai/artifact/HJ7JdqVoXRpBGdD7h3d2Wv): on a computer the comment's column was
+// the widest and the loudest, the songs broke inside words, "Klimat" said the same in every row, eight colours of text competed.
+S2P.scenario({
+    name: 'history-wide-calm',
+    title: 'the history on a wide screen: no "Klimat" or comment column, under the song one muted line "Gość: … · AI: …" (the whole in its title), the decision a coloured dot and one quiet word, the vibe in its title',
+    setup: {},
+    run: async function (t) {
+        document.querySelector('[data-dj-tab="history"]').click();
+        await t.waitFor(function () { return document.querySelector('#history-content tr[data-song-name="Rejected Beat"]'); }, 'the history', 5000);
+        const row = function (name) { return document.querySelector('#history-content tr[data-song-name="' + name + '"]'); };
+        const shows = function (el) { return !!el && el.getClientRects().length > 0; };
+        t.step('the columns: ID, time, song, votes, decision', Array.from(document.querySelectorAll('#history-content thead th')).filter(shows)
+            .map(function (th) { return th.innerText.trim().split('\n')[0].toLowerCase(); }), ['id', 'godzina', 'piosenka', 'głosy', 'decyzja']);
+
+        const alpha = row('Played Alpha');
+        const sub = alpha.querySelector('.s2p-history-sub');
+        t.step('under the song one line: the guest\'s words · the AI\'s comment; no separate guest\'s line, no comment cell',
+            [shows(sub) && sub.textContent.trim(), shows(alpha.querySelector('.guest-text')), shows(alpha.querySelector('td.s2p-comment-cell'))],
+            ['Gość: „orła cień” · AI: ok', false, false]);
+        const long = row('Rejected Beat').querySelector('.s2p-history-sub');
+        t.check('a long comment: one line, the whole of it in the title (' + Math.round(long.getBoundingClientRect().height) + ' px)',
+            long.getBoundingClientRect().height < 1.6 * parseFloat(getComputedStyle(long).lineHeight) && /parkiet chce dziś czegoś szybszego/.test(long.title));
+        const table = document.querySelector('#history-content table').getBoundingClientRect();
+        t.check('the song takes the width (its column at least 45 % of the table)',
+            alpha.querySelector('td[data-sort-value="song"]').getBoundingClientRect().width >= table.width * 0.45);
+
+        const word = function (name) { return row(name).querySelector('.s2p-decision-word'); };
+        const colour = function (el, pseudo) { return getComputedStyle(el, pseudo).color; };
+        const words = ['Played Alpha', 'Rejected Beat', 'Played Bravo'].map(function (name) { return colour(word(name)); });
+        t.step('the words one quiet colour', new Set(words).size, 1);
+        t.step('the dots tell played from skipped', colour(word('Played Alpha'), '::before') !== colour(word('Rejected Beat'), '::before'), true);
+        t.step('the vibe the AI judged by: the decision\'s title', word('Played Alpha').closest('td').title, 'Klimat: Pop');
+    }
+});
+
+// The owner (2026-10-10): with "↩ Przywróć" at the played ones too, the buttons stood at different places — right after "ZAGRANE",
+// further after the longer "POMINIĘTE". The words take one width (the longest of those with a button), so the buttons form a column.
+S2P.scenario({
+    name: 'history-wide-restore-aligned',
+    title: 'the history on a wide screen: every "↩ Przywróć" (after "ZAGRANE" or "POMINIĘTE") starts at the same place',
+    setup: {},
+    run: async function (t) {
+        document.querySelector('[data-dj-tab="history"]').click();
+        await t.waitFor(function () { return document.querySelector('#history-content tr[data-song-name="Rejected Beat"]'); }, 'the history', 5000);
+        const buttons = Array.from(document.querySelectorAll('#history-content form[action="/dj/dashboard/restore"] button'))
+            .filter(function (b) { return b.getClientRects().length > 0; });
+        const lefts = buttons.map(function (b) { return Math.round(b.getBoundingClientRect().left); });
+        const words = buttons.map(function (b) { return b.closest('td').innerText.replace(b.innerText, '').trim(); });
+        t.step('after a played and a skipped one', [words.indexOf('ZAGRANE') >= 0, words.indexOf('POMINIĘTE') >= 0], [true, true]);
+        t.check('one column of buttons (left edges ' + lefts.join(', ') + ')', Math.max.apply(null, lefts) - Math.min.apply(null, lefts) <= 1);
+    }
+});

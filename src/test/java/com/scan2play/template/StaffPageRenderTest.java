@@ -117,6 +117,9 @@ class StaffPageRenderTest {
         write("staff.html", html);
 
         assertThat(html).doesNotContain("??");
+        assertThat(html).as("back to the settings (a row of which led here) and to the panel, of the same party (the owner, 2026-10-10)")
+                .contains("href=\"/dj/settings?party=HARN1\" id=\"backToSettings\"", ">← Ustawienia<",
+                        "href=\"/dj/dashboard?party=HARN1\" id=\"backToPanel\"", ">Panel<");
         assertThat(html).contains("<h1 class=\"h3 text-white mb-1\">Obsługa imprezy</h1>", "Osoby, które pomagają Ci przy imprezie. Każdej wybierasz, co może",
                 ">Kasia<", "w obsłudze od 10.10", ">Bez imienia<", "w obsłudze od 09.10",
                 "action=\"/dj/staff/permissions\"", "name=\"partyCode\" value=\"HARN1\"", "name=\"id\" value=\"7\"",
