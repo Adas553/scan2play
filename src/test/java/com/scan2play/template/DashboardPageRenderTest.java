@@ -145,30 +145,45 @@ class DashboardPageRenderTest {
         return engine.process(view, context);
     }
 
-    /** The use of each server limit is a badge the DJ notices: grey, yellow from 80 %, red at the limit. */
+    /**
+     * The row "Limity gości" says the guests' own limit — and, from 80 % of a server limit, its use in yellow, the party's before the
+     * network's (the design review, 2026-10-10: the use was three lines in a card of its own); above the queue a warning from 80 % of
+     * the party's limit, under it ("wyczerpany" takes over at the limit).
+     */
     @Test
-    void theUseOfTheServerLimits_standsOut_andTurnsYellowThenRed() {
+    void nearAServerLimit_theRowOfTheLimitsAndTheQueueSayIt() {
         GuestRequestLimiter limiter = new GuestRequestLimiter(30, 10, 300, "");
+        String calm = renderDashboard(party(), List.of(), PL, limiter);
+        assertThat(element(calm, "data-limit-calm")).doesNotContain("hidden").endsWith(">2 na gościa · 3 min przerwy");
+        assertThat(element(calm, "data-limit-near=\"network\"")).contains("hidden");
+        assertThat(element(calm, "data-limit-near=\"party\" data-limit")).contains("hidden=\"hidden\"");
+
         for (int i = 0; i < 24; i++) {
             limiter.tryAcquire("203.0.113.7", PARTY);
         }
-        String html = renderDashboard(party(), List.of(), PL, limiter);
-        assertThat(badge(html, "network")).contains("text-bg-warning").endsWith(">24/30");
-        assertThat(badge(html, "party")).contains("text-bg-secondary").endsWith(">24/300");
+        String network = renderDashboard(party(), List.of(), PL, limiter);
+        assertThat(element(network, "data-limit-calm")).contains("hidden");
+        assertThat(element(network, "data-limit-near=\"network\"")).doesNotContain("hidden").endsWith(">Sieć 24/30")
+                .contains("data-template=\"Sieć {used}/{limit}\"");
 
-        for (int i = 0; i < 6; i++) {
-            limiter.tryAcquire("203.0.113.7", PARTY);
+        GuestRequestLimiter busy = new GuestRequestLimiter(0, 10, 300, "");
+        for (int i = 0; i < 250; i++) {
+            busy.tryAcquire("203.0.113." + (i % 200), PARTY);
         }
-        html = renderDashboard(party(), List.of(), PL, limiter);
-        assertThat(badge(html, "network")).contains("text-bg-danger").endsWith(">30/30");
+        String party = renderDashboard(party(), List.of(), PL, busy);
+        String warning = party.substring(party.indexOf("id=\"guestLimitWarnings\""));
+        assertThat(element(warning, "data-limit-near=\"party\"")).doesNotContain("hidden").endsWith(">Impreza: 250 z 300 próśb na dobę")
+                .contains("data-below=\"true\"", "data-template=\"Impreza: {used} z {limit} próśb na dobę\"");
+        String row = party.substring(party.indexOf("data-settings-row=\"limits\""));
+        assertThat(element(row, "data-limit-near=\"party\"")).doesNotContain("hidden").endsWith(">Impreza 250/300");
     }
 
-    /** The badge of one limit's use, from its opening tag to its text. */
-    private static String badge(String html, String limit) {
-        int at = html.indexOf("data-limit-use=\"" + limit + "\"");
-        assertThat(at).as("the badge of " + limit).isPositive();
-        int start = html.lastIndexOf("<span", at);
-        return html.substring(start, html.indexOf("</span>", at));
+    /** One element, from its opening tag to the end of its text, found by a piece of its opening tag. */
+    private static String element(String html, String piece) {
+        int at = html.indexOf(piece);
+        assertThat(at).as(piece).isPositive();
+        int start = html.lastIndexOf("<", at);
+        return html.substring(start, html.indexOf("</", at));
     }
 
     private static OAuth2AuthenticationToken ownerToken() {
@@ -233,7 +248,7 @@ class DashboardPageRenderTest {
         assertThat(html).contains("id=\"queueList\"", "data-list-search", "data-list-count", "data-nomatch", "id=\"queue-content\"",
                 "id=\"history-content\"", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
         // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
-        assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"party-full\"", "id=\"serverLimitsInfo\"");
+        assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"party-full\"", "data-limit-near=\"party\"");
         // the scripts are ES modules (review 3.3): main.js imports the dashboard's parts
         assertThat(html).contains("<script type=\"module\" src=\"/js/dashboard/main.js\">");
         // no player: the DJ's own software plays (the YouTube player, Auto-Pilot, the background playlist and the DJ pick are gone)
@@ -260,9 +275,18 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html);
         assertThat(html).contains("Wilki - Baśka", "sanah - Szampan");
-        // every settings card the same way: a heading and one line of help (the design review, 2026-10-09)
-        assertThat(html).contains("id=\"partyCard\"", ">Impreza<", "id=\"limitsCard\"", ">Limity gości<", "id=\"deviceCard\"",
-                ">To urządzenie<", "id=\"linksCard\"", ">Profile i napiwki<").doesNotContain("Źródło odtwarzania");
+        // the settings (the design review, 2026-10-10): the card "Impreza" and the QR code, then a row with its state for each rare
+        // setting — the cards themselves are on the page "Ustawienia imprezy" (SettingsPageRenderTest)
+        assertThat(html).contains("id=\"partyCard\"", ">Impreza<", "id=\"qrCard\"", "id=\"settingsMore\"", ">Więcej<",
+                        "data-settings-row=\"hosts\"", "data-settings-row=\"links\"", "data-settings-row=\"limits\"",
+                        "data-settings-row=\"staff\"", "data-settings-row=\"device\"",
+                        "href=\"/dj/settings?party=HARN1#hostListsCard\"", "href=\"/dj/settings?party=HARN1#deviceCard\"")
+                .doesNotContain("id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"linksCard\"", "id=\"hostListsCard\"", "id=\"staffCard\"",
+                        "action=\"/dj/dashboard/limits\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
+                        "action=\"/dj/dashboard/host-lists\"", "id=\"pushToggle\"", "id=\"installApp\"", "Źródło odtwarzania");
+        assertThat(html).as("each row's state")
+                .contains(">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">2 na gościa · 3 min przerwy<", ">Osób: 1<",
+                        "data-on=\"Powiadomienia wł.\"", "data-off=\"Powiadomienia wył.\"");
         assertThat(html).as("the AI's comment a line under the song, no vibe / verdict / energy columns in the waiting queue")
                 .contains("class=\"small text-secondary s2p-queue-comment\"", ">AI: ok<")
                 .doesNotContain("ZAAKCEPTOWANE", "badge-energy", "data-sort=\"energy\"");
@@ -276,26 +300,17 @@ class DashboardPageRenderTest {
         assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
         assertThat(html).as("the AI's comment style (V22): the party's own picked, saved as soon as picked")
-                .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", ">Komentarze AI:<",
+                .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", ">Komentarze AI<",
                         "selected=\"selected\">Klasyczne<", ">Sarkastyczne<")
                 .doesNotContain("data-example", "commentStyleExample", "łagodne", "SARCASTIC_LIGHT");
-        assertThat(html).as("the DJ's tip link (V27): its own form, the saved link in it, a note for a refused one hidden until then")
-                .contains("action=\"/dj/dashboard/tip-link\"", "id=\"tipInput\" name=\"tip\"", "value=\"https://buycoffee.to/djkoko\"",
-                        "Link do napiwków", "Scan2Play ich nie dotyka", "Nie zapisano: to nie jest link do Twojej strony");
-        assertThat(html).as("the DJ's profiles (V24), a note for a refused one hidden until then")
-                .contains("action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"", "id=\"facebookInput\"", "id=\"tiktokInput\"",
-                        "value=\"https://www.instagram.com/dj.koko/\"", "Twoje profile (goście widzą je", "data-form-error hidden");
-        assertThat(html).as("the hosts' lists (V29): both in one form, the hosts' link to copy, a new one asks first")
-                .contains("action=\"/dj/dashboard/host-lists\"", "name=\"blocked\"", ">Hej sokoły</textarea>", ">Lista gospodarzy<",
-                        "value=\"http://localhost:8080/h/AbC_123-xyzAbC_123-xyz\" id=\"hostLinkInput\"", "data-copy-target=\"hostLinkInput\"",
-                        "action=\"/dj/dashboard/host-link\"", ">Nowy link<", "data-confirm=\"Utworzyć nowy link? Stary przestanie działać.\"",
-                        "Wyłącz link");
-        assertThat(html).as("who plays (V17)").contains("action=\"/dj/dashboard/dj-name\"", "id=\"djNameInput\"", "Kto gra (widzą goście)");
-        assertThat(html).contains("action=\"/dj/dashboard/vibe-note\"", "id=\"vibeNoteInput\"", "Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
-        assertThat(html).contains("gość napisał: „ta o Baśce, co ją Wilki grają”");
+        assertThat(html).as("the vibe note (V16) and who plays (V17): one form, one \"Zapisz\"")
+                .contains("action=\"/dj/dashboard/party-words\"", "id=\"vibeNoteInput\"", "id=\"djNameInput\"", ">Opis klimatu<", ">Kto gra<")
+                .doesNotContain("action=\"/dj/dashboard/dj-name\"", "action=\"/dj/dashboard/vibe-note\"", "(widzą goście)");
+        assertThat(html).contains("Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
+        assertThat(html).contains("Gość: „ta o Baśce, co ją Wilki grają”");
         assertThat(html.split(">⚠ Sprawdź<", -1)).as("only the song with none of the guest's words").hasSize(2);
         // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)
-        assertThat(html).contains("id=\"settingsToggle\"", ">Ustawienia, klimat i kod QR<");
+        assertThat(html).contains("id=\"settingsToggle\"", ">Ustawienia<");
         // the class alone, not the button's s2p-settings-toggle
         assertThat(html.split("s2p-settings(?![-\\w])", -1).length - 1).as("the folded parts: the row of the settings' cards and its two columns").isEqualTo(3);
         // "Wyczyść kolejkę": the DJ's own queue (no party code in the form), asks first
@@ -306,24 +321,24 @@ class DashboardPageRenderTest {
         // the request's buttons: "▶ Zagrane" filled and short (one line), "⏭ Pomiń" outlined but readable (the owner, 2026-10-07)
         assertThat(html).containsPattern("class=\"btn btn-sm btn-action text-nowrap s2p-btn-played\"[^>]*>▶ Zagrane<")
                 .containsPattern("class=\"btn btn-sm btn-outline-light text-nowrap s2p-btn-skip\"[^>]*>⏭ Pomiń<")
-                .containsPattern("class=\"btn btn-sm btn-outline-secondary [^\"]*\"[^>]*>Podejrzyj<")   // the second kind, as in the history: red deletes
+                .containsPattern("class=\"btn btn-sm btn-outline-secondary [^\"]*\"[^>]*>Podejrzyj<")   // a button as in the history (the owner, 2026-10-10)
                 .doesNotContain("btn-outline-danger text-danger", "Oznacz jako zagrane", "btn-outline-secondary\" title=\"Nie tę");
         assertThat(html).doesNotContain("Powered by YouTube", "🔍 YOUTUBE", "▶ YOUTUBE", "YouTube API Services");
         // "Cofnij" after "Pomiń": a bar forms.js shows for a few seconds after a skip; hidden until then
         assertThat(html).contains("id=\"undoSkip\"", "Pominięto:", "data-undo-button", ">Cofnij<");
         assertThat(html.substring(html.indexOf("id=\"undoSkip\""), html.indexOf("data-undo-song"))).contains("hidden");
         assertThat(html).as("the staff (V30, V32): how many, and the way to the page \"Obsługa\" — the list and the link are there")
-                .contains("id=\"staffCard\"", ">Obsługa<", "Osób w obsłudze: 1", "id=\"staffManageLink\"", "href=\"/dj/staff?party=HARN1\"",
-                        "id=\"staffMenuLink\"")
-                .doesNotContain("id=\"staffLinkInput\"", "Inv_123-xyz", "id=\"panelBar\"", "id=\"panelNote\"", "id=\"makeOwnPartyBtn\"");
+                .contains("data-settings-row=\"staff\"", ">Obsługa<", ">Osób: 1<", "id=\"staffManageLink\"", "href=\"/dj/staff?party=HARN1\"")
+                .doesNotContain("id=\"staffMenuLink\"", "id=\"staffLinkInput\"", "Inv_123-xyz", "id=\"panelBar\"", "id=\"panelNote\"", "id=\"makeOwnPartyBtn\"");
         assertThat(html).as("every form of the queue names the party it shows (V32: two tabs, two parties)")
                 .contains("id=\"panelAccess\" value=\"owner\"");
         String playForm = html.substring(html.indexOf("action=\"/dj/dashboard/play\""));
         assertThat(playForm.substring(0, playForm.indexOf("</form>"))).contains("name=\"partyCode\" value=\"HARN1\"");
         assertThat(html).as("the owner deletes their account; leaving a staff is not theirs")
                 .contains("action=\"/dj/delete-account\"").doesNotContain("id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"");
-        assertThat(html).as("an invitation link pasted in the app (its browser has a login of its own): on the person's own panel")
-                .contains("id=\"joinStaffForm\"", "action=\"/dj/join\"");
+        assertThat(html).as("the heading in one row: our logo beside \"Zakończ\" (a word on a phone) and \"Konto\"")
+                .containsPattern("s2p-account-bar\">\\s*<div class=\"fs-4 fw-bold text-white me-auto s2p-min-w-0\"><span class=\"s2p-logo\">")
+                .contains(">Zakończ<", "aria-label=\"Zakończ imprezę\"");
         write("dashboard.html", html);
     }
 
@@ -366,22 +381,23 @@ class DashboardPageRenderTest {
         assertThat(html).contains("id=\"panelNote\"", "Dołączono do obsługi: Klub Ola.",
                 "id=\"panelBar\"", ">Klub Ola<", "id=\"panelRole\"", ">Obsługa kolejki<", "id=\"panelCan\"",
                 "data-permission=\"QUEUE\"", "Zagrane, Pomiń, Cofnij, Przywróć", "data-permission=\"CLEAR_QUEUE\"",
-                "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "id=\"pushToggle\"",
+                "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "data-settings-row=\"device\"",
                 "action=\"/dj/end-party\"", "Zakończyć imprezę: Klub Ola?",
                 "id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"", "Opuścić obsługę tej imprezy?",
                 // no party of her own: made on purpose from the menu, never by a click on "Mój panel"
                 "id=\"makeOwnPartyBtn\"", ">Załóż własną imprezę<",
                 "id=\"panelAccess\" value=\"QUEUE,TIPS,CLEAR_QUEUE,OPEN_CLOSE,HISTORY\"");
         assertThat(html).as("one panel only: nothing to switch to").doesNotContain("id=\"panelSwitcher\"", "Mój panel");
-        assertThat(html).as("the staff's button opens the QR code only").contains(">Kod QR<").doesNotContain("Ustawienia, klimat i kod QR");
+        assertThat(html).as("the staff's button opens the QR code only").contains(">Kod QR<").doesNotContain(">Ustawienia<");
         assertThat(html).doesNotContain("action=\"/dj/delete-account\"", "id=\"staffMenuLink\"");
         assertThat(html).as("no \"Wklej link\" on another's party: she has joined already (the owner, 2026-10-10)")
                 .doesNotContain("id=\"joinStaffForm\"", "action=\"/dj/join\"");
         assertThat(html).as("the QR code, its link and its print: the staff's too — it is on the tables anyway (the owner, 2026-10-09)")
-                .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"", "Link dla gości:");
+                .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"", "aria-label=\"Link dla gości\"");
         assertThat(html).as("the owner's: the settings, the limits, the lists, the profiles, the tip link, the staff")
                 .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
-                        "id=\"staffCard\"", "action=\"/dj/dashboard/dj-links\"", "action=\"/dj/dashboard/tip-link\"",
+                        "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", "data-settings-row=\"links\"",
+                        "data-settings-row=\"staff\"", "action=\"/dj/dashboard/dj-links\"", "action=\"/dj/dashboard/tip-link\"",
                         "Inv_123-xyz", "id=\"hostLinkInput\"", "/h/", "data-open-settings");
     }
 
@@ -400,9 +416,9 @@ class DashboardPageRenderTest {
     void theStaffsPanel_coOrganiser_hasTheSettingsButNotTheStaffOrTheMoney() {
         String html = renderStaffPanel(StaffRole.CO_ORGANISER, List.of(new PartyStaffService.Panel(PARTY, "Klub Ola", false)));
 
-        assertThat(html).contains(">Współorganizator<", "Ustawienia, klimat i kod QR", "id=\"partyCard\"", "id=\"limitsCard\"",
-                        "id=\"hostListsCard\"", "data-open-settings")
-                .doesNotContain("id=\"staffCard\"", "id=\"linksCard\"", "action=\"/dj/dashboard/tip-link\"", "id=\"staffMenuLink\"",
+        assertThat(html).contains(">Współorganizator<", ">Ustawienia<", "id=\"partyCard\"", "data-settings-row=\"limits\"",
+                        "data-settings-row=\"hosts\"", "data-settings-row=\"device\"", "data-open-settings")
+                .doesNotContain("data-settings-row=\"staff\"", "data-settings-row=\"links\"", "action=\"/dj/dashboard/tip-link\"", "id=\"staffMenuLink\"",
                         "action=\"/dj/delete-account\"");
     }
 
@@ -424,7 +440,7 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party(), List.of(song(1, "Song One")), Locale.ENGLISH);
 
         assertWhatTheScriptsNeed(html);
-        assertThat(html).contains(">⏭ Skip<", ">▶ Played<", ">Preview<");
+        assertThat(html).contains(">⏭ Skip<", ">▶ Played<", ">Preview<", ">Settings<", ">QR code<");
         write("dashboard-en.html", html);
     }
 

@@ -14,10 +14,10 @@ S2P.scenario({
         const fold = document.getElementById('settingsToggle');
         const shown = function (id) { return document.getElementById(id).getClientRects().length > 0; };
         t.step('on a wide screen the settings and the QR code are folded, the button that unfolds them shows',
-            [shown('vibeSelect'), shown('partyLinkInput'), shown('hostListsCard'), !!fold && fold.getClientRects().length > 0],
+            [shown('vibeSelect'), shown('partyLinkInput'), shown('settingsMore'), !!fold && fold.getClientRects().length > 0],
             [false, false, false, true]);
         fold.click();
-        t.step('the button unfolds them', [shown('vibeSelect'), shown('partyLinkInput'), shown('hostListsCard')], [true, true, true]);
+        t.step('the button unfolds them', [shown('vibeSelect'), shown('partyLinkInput'), shown('settingsMore')], [true, true, true]);
         fold.click();
         t.step('and folds them again', shown('vibeSelect'), false);
 

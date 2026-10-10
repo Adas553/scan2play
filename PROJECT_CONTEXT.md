@@ -69,9 +69,9 @@ a fixed-width UTC `sortKey` for the lists' `data-val`).
 `partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code), `ownerId` (the OAuth2 subject), `active` (accepting requests),
 `globalVibe` (`VibeType`; `ANY` = no genre: the AI judges by the DJ's note alone), `vibeNote` (V16, ≤ 150: the DJ's own words about
 the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en}`, the guests see them above the form;
-`POST /dj/dashboard/vibe-note`, one line, empty clears), `djName` (V17, ≤ 60: who plays, e.g. "DJ Koko" — the guests see
-"🎧 Gra: DJ Koko" under the page's title; `POST /dj/dashboard/dj-name`, one line, empty clears), `instagramUrl` / `facebookUrl` /
-`tiktokUrl` (V24, ≤ 200: the DJ's profiles, set in a card under the dashboard's QR code — the guests see buttons with the sites' icons (Bootstrap Icons' paths inline, MIT) under "🎧 Gra: …" (new tab, `rel="noopener noreferrer
+one line, empty clears), `djName` (V17, ≤ 60: who plays, e.g. "DJ Koko" — the guests see "🎧 Gra: DJ Koko" under the page's title;
+one line, empty clears; both saved by one form, `POST /dj/dashboard/party-words`), `instagramUrl` / `facebookUrl` /
+`tiktokUrl` (V24, ≤ 200: the DJ's profiles, set on the page "Ustawienia imprezy" — the guests see buttons with the sites' icons (Bootstrap Icons' paths inline, MIT) under "🎧 Gra: …" (new tab, `rel="noopener noreferrer
 nofollow"`), the QR print "Instagram @djkoko"; `POST /dj/dashboard/dj-links` takes "@name", a name or a link copied from the app and
 keeps an https address on that site, `util/SocialLinks` — anything else, a look-alike host too, is a 400 and nothing is saved; the
 form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `tipUrl` (V27, ≤ 200: the
@@ -234,14 +234,15 @@ Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google'
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
 leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
-under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra", the guest
-limits and the use of the server limits; the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
-history; "Zakończ / Wznów imprezę" (in words, beside the account's menu) and the menu "Konto" — "Zgłoś uwagę" (feedback), "Wyloguj",
+under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1) and "Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra";
+the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
+history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person: "Zgłoś uwagę" (feedback), "Wyloguj",
 "Usuń konto" (red, the last one) — in place of four icons without words (the design review, 2026-10-09; `.s2p-account-bar` keeps the open
-menu over the sticky tab bar). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
+menu over the sticky tab bar). What a DJ sets before a party is on the page **"Ustawienia imprezy"** (below). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
 
 **Notifications on the DJ's devices** (Web Push; only when the server has the VAPID keys — Section 10): the switch "Powiadomienia
-na tym urządzeniu" in the card "Twój program DJ-a" (`js/dashboard/push.js`), per browser — the permission, the service worker
+o prośbach" in the card "To urządzenie" of the page "Ustawienia imprezy" (`js/dashboard/push.js`; the panel's row "To urządzenie" says
+"Powiadomienia wł. / wył." for this browser, `settings-rows.js`), per browser — the permission, the service worker
 `/sw.js` (scope `/dj/`), the subscription with the server's key → `POST /dj/push/subscribe`; off → `/dj/push/unsubscribe`. A **new**
 song on the list (accepted, or unchecked with the AI down; not a vote on a waiting one) → `PushNotificationService` sends
 "🎵 Nowa prośba — <song>" to each of the DJ's devices, off the guest's thread (a pool of 2, queue 200, TTL 1 h, urgency high); the
@@ -257,19 +258,37 @@ never offered).
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
 
-**The heading** is one row: our logo, small, and the button "Ustawienia, klimat i kod QR" (the staff without a settings card: "Kod QR"); the page's h1 "Panel DJ-a"
-is for screen readers. **The settings fold** under that button on every screen (on a phone first; on a computer too since
-2026-10-09, the owner: there were many of them): cards of one pattern — a heading, one line of help, the fields, one "Zapisz" — "Impreza"
-(the vibe, the AI's comments, the vibe note, "Kto gra"), "Limity gości", "Lista gospodarzy", "Obsługa" on the left; "Kod QR imprezy", "Profile i napiwki" and "To
-urządzenie" (the app, the notifications, on the person's own panel an invitation pasted — the phone's, not the party's; the owner, 2026-10-10: the right
-column had room) on the right — the staff get the right column alone, in the middle (`.s2p-settings`; folded by
-`app.css` alone, `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`). **On a phone**
-(narrower than 768 px) the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); the list scrolls with the page.
+**The heading** (the panel's clean-up, 2026-10-10, https://claude.ai/artifact/9ZzSG3LjggMreBg45UNvde — the owner picked variant B):
+one row with our logo, "Zakończ imprezę" and "Konto" (`dj-nav` in `components.html`; the history page has it too), the tabs, then the
+button "Ustawienia" (the staff without a settings card: "Kod QR"); the page's h1 "Panel DJ-a" is for screen readers — the first request
+of a phone is at 316 px (was 382). **The settings fold** under that button on every screen (`.s2p-settings`; folded by `app.css` alone,
+`settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`) and hold only what the DJ uses during a party
+(they were seven cards, 4900 px of a phone): the card **"Impreza"** (the vibe and the AI's comments saved as soon as picked, the vibe
+note and "Kto gra" under one "Zapisz") and **"Kod QR"** (small, beside the guests' link, "Kopiuj", "Drukuj plakat i karty"), then
+**"Więcej"** (`#settingsMore`): a row per rare setting with its state, 52 px each — "Lista gospodarzy · 🚫 0 · ⭐ 1 · link" (or
+"Nieużywana"), "Profile i napiwki · Instagram · napiwki" (or "Nieustawione"), "Limity gości · 2 na gościa · 3 min przerwy" (from 80 %
+of a server limit its use in yellow, "Impreza 250/300" before "Sieć 26/30" — `polling.js` keeps it current from
+`X-Guest-Limits-Use`), "Obsługa · Osób: 1" (→ `/dj/staff`), "To urządzenie · Powiadomienia wył.". Each row leads to its card on the
+page "Ustawienia imprezy". Each card and row only for whom may change it (V32: hidden, not greyed): a co-organiser sees "Impreza",
+"Lista gospodarzy" and "Limity gości" by their permissions, never the profiles, the money or the staff; the rest of the staff the QR code
+and "To urządzenie". No switches for the hosts' lists and the tips: unused is what nothing typed means, said by the row.
+**The page "Ustawienia imprezy"** (`GET /dj/settings?party=`, `settings.html`, `DjDashboardController.settingsPage`; anyone with
+access to the party — a 403 for another): our logo, "← Panel" (the same party), jumps to its cards (and "Obsługa ›"; wrapped onto a
+second line on a phone — cut at the edge they read as broken; a row of the panel lands right at its card), then the
+cards of 6.7 — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are page loads that come
+back here, at the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
+one line with their windows, "Limity serwera: sieć 4/30 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
+network is: "Jedna sieć to np. Wi-Fi lokalu — wszyscy goście w nim liczą się razem."), **"To urządzenie"** (everyone's:
+the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"). Its forms are sent in the
+background as the panel's (`settings-page.js` loads `forms.js`, `push.js`, `install.js`; the page links the manifest, so a browser
+offers the app there). **On a phone**
+(narrower than 768 px) the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); "Podejrzyj" a grey outlined button as in the history (a link in the guest's line was tried
+on 2026-10-10 — the owner: the button reads better); the list scrolls with the page.
 
 **The active queue** has five columns — ID, the time, the song (under it the guest's words, "AI: …" the AI's comment in one line, ⭐ / ⚠),
 the votes, the buttons (2026-10-09: the vibe, "ZAAKCEPTOWANE" and the AI's energy rating said the same in every row and pushed "Pomiń" and 💸 off a
 1280 px screen). With nothing waiting, the table and its search give way to the next step (`#queueEmpty`, shown by `:has`): "Kolejka
-jest pusta", the QR code, "Wydrukuj na ścianę / stoliki", "Kopiuj link" and, for the owner, "Ustaw klimat" (`data-open-settings`:
+jest pusta", the QR code, "Drukuj plakat i karty", "Kopiuj link" and, for the owner, "Ustaw klimat" (`data-open-settings`:
 `settings-toggle.js` opens the settings at the "Impreza" card). Each request has its place before the title on a wide screen — a CSS counter in `app.css`, so it follows the
 polled list, the sort and the search by itself — and its ID in the first column ("#27", V28 — see "Numbers and tips"). "Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
 sends `POST /dj/dashboard/clear-queue`: the waiting requests go to the history's rejected ones, with `cleared_at` and the AI's
@@ -310,9 +329,11 @@ gets an apostrophe — a guest's text is never a formula).
 
 **The party's staff** (V30, the owner 2026-10-09; roles and permissions V32, 2026-10-10 after the review of the staff's flows,
 https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx): a bartender, a second DJ, the venue's manager works the owner's party with their
-own Google account, **as far as the owner allows**. The owner's page **"Obsługa"** (`/dj/staff`, `staff.html`; from the menu "Konto" →
-"Obsługa imprezy" and the card "Obsługa" in the settings, which only counts the people — the card was 1750 px down a phone and 990 px
-tall with ten people): a card per person — the name, "w obsłudze od 10.10", **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
+own Google account, **as far as the owner allows**. The owner's page **"Obsługa"** (`/dj/staff`, `staff.html`; from the row "Obsługa ·
+Osób: 1" of the settings and the jumps of "Ustawienia imprezy" — not the menu "Konto", which is about the person, 2026-10-10; the card in
+the settings was 1750 px down a phone and 990 px tall with ten people): a card per person, **folded to one line** — the name, the role,
+"w obsłudze od 10.10" (a `<details>`; the owner, 2026-10-10: ten unfolded cards repeated the same picker; the one just saved comes back
+unfolded with "Zapisano"); unfolded, **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
 kolejki", "Współorganizator", "Własne") and, under "Uprawnienia po kolei", a checkbox per `StaffPermission` (`js/staff.js`: a role
 ticks its set, a tick changed picks the role it makes — "Własne" when none; the server decides the same way), "Zapisz" (`POST
 /dj/staff/permissions`, "✓ Zapisano") and "Usuń dostęp" (asks first, `POST /dj/staff/remove`); under the people, **the invitations by
@@ -351,7 +372,7 @@ the invitations by e-mail — `PartyStaffRepositoryIT`, 20 at once make 10), wit
 "Dołączono do obsługi: Klub Ola." A full staff
 or an old link: the invitation page says what happened (409 / 404) — "Obsługa jest pełna (10 osób): …", "Ten link zaproszenia już
 nie działa — organizator mógł utworzyć nowy". A link pasted in the app (an iPhone's Home Screen app has a login of its own; the field
-"Masz zaproszenie do obsługi innej imprezy? Wklej link" in "To urządzenie" — on the person's own panel and "no-panel" only, not on
+"Zaproszenie do obsługi? Wklej link" in "To urządzenie" of "Ustawienia imprezy" — on the person's own party and "no-panel" only, not on
 another's party: she has joined it already, it read as if she still had to (the owner, 2026-10-10) —, `POST /dj/join`) leads to that invitation; a guests' link
 (`…/p/…`) is told apart ("To link dla gości…, nie zaproszenie"). On the landing page, "Masz zaproszenie do obsługi imprezy? Dołącz →"
 (a `<details>`, `POST /join`, public): a party's link goes to Google's login, anything else back to `/?staffLink=invalid` (or
@@ -373,7 +394,7 @@ unfolded, "Co możesz na tej imprezie" (the permissions given) and, with more th
 the guests see it, "DJ Kuba (Twoja impreza)" — "Mój panel" was gone: for a bartender a click made a DJ's party); a note above it once
 ("Dołączono…", "Organizator usunął Twój dostęp do imprezy: …" — `DjSessionHelper.Note`, kept in the session until shown). The page
 shows the buttons of the permissions given (hidden, not greyed; the poll's rows too) and refuses the rest on the server; a
-co-organiser gets the settings' cards they were given (the button says "Ustawienia, klimat i kod QR" then, else "Kod QR"). The QR card
+co-organiser gets the settings' cards and rows they were given (the button says "Ustawienia" then, else "Kod QR"). The QR card
 says "Link dla gości" (it said "Twój link do imprezy" to the staff). "Zakończyć imprezę: Klub Ola?" names the party. The menu
 "Konto": "Opuść obsługę" (`POST /dj/staff/leave`, the party the page shows; another panel opens, or "no-panel") in place of "Usuń
 konto"; "Załóż własną imprezę" for someone without one. **Every poll** says what the person may do (`X-Panel-Access`: "owner" or the
@@ -428,8 +449,11 @@ decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else 
 
 2 and 3 are `GuestRequestLimiter` (Caffeine, in memory); 0 switches a limit off. The guests' 👍 have their own per-network limit
 there (`guest.limit.votes-per-ip-party`, 300 per the same window, `tryAcquireVote`): no AI call, so a vote never uses up a request. The address is `getRemoteAddr()` or the header named
-by `guest.client-ip-header` (`CF-Connecting-IP` — set on Railway). The DJ sees the use of 2 and 3 under the limits form (badges:
-grey, yellow from 80 %, red) and a warning above the queue while the party's limit stops guest songs.
+by `guest.client-ip-header` (`CF-Connecting-IP` — set on Railway). The DJ sees the use of 2 and 3 on "Ustawienia imprezy"
+in one line under the limits form (badges: grey, yellow from 80 %, red; what they are unfolded); the panel says it only near a limit —
+the row "Limity gości" in yellow from 80 % ("Impreza 250/300", "Sieć 26/30"), above the queue "Impreza: 250 z 300 próśb na dobę" from
+80 % of the party's limit and "⚠ Limit 300 próśb na dobę wyczerpany — goście nie mogą teraz wysyłać." while it stops guest songs (both
+follow every poll's headers).
 
 ### 5.3 (Spotify — removed 2026-10-04, migration V18)
 
@@ -498,9 +522,9 @@ files under it); everything else keeps Spring Security's `no-store`,
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
 `qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html`,
-`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `no-panel.html` (no panel at all, V32) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
+`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
 `HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
-tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: the account buttons, the sticky tabs Panel / Kolejka / Historia, the
+tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel / Kolejka / Historia, the
 feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
 dashboard and the guest page; `footer`), `guest-queue.html`. Texts the scripts need travel in `data-*`
 attributes. **No inline script, no `on…=` handler and no `style="…"`** on any page (`NoInlineCodeInTemplatesTest`).
@@ -509,7 +533,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (on a phone: the settings folded), `push.js` (the switch of notifications on this device), `install.js` ("📲 Zainstaluj aplikację"), `polling.js` (the queue every 3 s and its headers; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `polling.js` (the queue every 3 s and its headers — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"); they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes; "Kopiuj" of the invitation link |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
@@ -539,7 +563,16 @@ What every page shares, so a new screen looks like the others:
   colour with a coloured edge and light text — Bootstrap's pale boxes were the brightest things on a dark page.
 - **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
   field, tab and menu item is **at least 44 px high** (browser scenarios `guest-touch-targets`, `dashboard-touch-targets`).
-- **Cards** of the settings: `.s2p-card-title` and one line of `.s2p-card-help`, then the fields, then one "Zapisz".
+- **Cards** of the settings: `.s2p-card-title` and one line of `.s2p-card-help`, then the fields, then one "Zapisz". The help line
+  says once who sees what ("Goście widzą klimat, opis i to, kto gra.") — the labels are short ("Opis klimatu", "Kto gra"), never "(widzą
+  goście)" after each. Nothing explains what the DJ does not set (the server's limits: one line, what they are unfolded).
+- **What goes where** (the panel's clean-up, 2026-10-10): the panel holds what the DJ uses during a party (the queue, the vibe, "Kto gra",
+  the QR code); what is set before it is a row with its state ("Lista gospodarzy · Nieużywana", `.s2p-rows` / `.s2p-row`, 52 px) leading
+  to a page of its own ("Ustawienia imprezy", "Obsługa") — never a card more on the panel. "Konto" is about the person (feedback, logout,
+  the account), not the party. A state that needs attention shows on the panel only when it does (a limit from 80 %, yellow). What a person
+  may not do is hidden, not greyed. A list of alike things with the same fields (the people of "Obsługa") is folded to one line each —
+  what tells them apart (the name, the role) — and unfolds on a tap. Browser scenarios: `settings-more-rows`, `dashboard-heading-one-row`,
+  `settings-page-touch-targets`, `staff-people-folded`.
 - **Emoji** only as markers in a list or a status (⭐ ⚠ 💸 👍 ▶ ⏭, "🎧 Gra: …", 🚫 / ⭐ of the hosts' lists) — not in card titles,
   headings or ordinary buttons. **Words**: "Ty" to everyone, "Wy" only on the hosts' page; "organizator" (the party's owner), "obsługa"
   (bartender, second DJ), "gospodarze", "goście"; no English words ("Zgłoś uwagę", not "Feedback"); "DJ‑a" in a heading with a
@@ -773,7 +806,9 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own skip, not when the same song waits) |
 | POST | `/dj/dashboard/clear-queue` | "Wyczyść kolejkę": every waiting request of the DJ's own party → rejected, `cleared_at`, the AI's comment kept (one `UPDATE`, `SongRequestRepository.rejectWaiting`) |
 | POST | `/dj/dashboard/clear-history` | "Wyczyść historię": the DJ's own party's played and rejected requests deleted, except a skip of the last 2 hours (`SongRequestRepository.deleteHistory`); → `/dj/history-view` |
-| POST | `/dj/dashboard/vibe`, `/vibe-note`, `/dj-name`, `/comment-style`, `/limits` | settings |
+| GET | `/dj/settings` | `party`: the page "Ustawienia imprezy" (2026-10-10) — its cards by the person's permissions; anyone with access to the party, 403 for another |
+| POST | `/dj/dashboard/vibe`, `/comment-style`, `/limits` | settings |
+| POST | `/dj/dashboard/party-words` | `vibeNote`, `djName`: the card "Impreza"'s words under one "Zapisz" (one line each, empty clears; until 2026-10-10 `/vibe-note` and `/dj-name`) |
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |
 | POST | `/dj/dashboard/host-lists` | `blocked`, `wanted`: the hosts' lists (V29, `SongList.tidy`; empty clears) |
 | GET | `/dj/staff` | `party`: the owner's page "Obsługa" (V32; the owner's) |
@@ -785,7 +820,7 @@ GuestQueueService          → DjService
 | POST | `/dj/join` | `link`: an invitation link pasted in the app → that invitation, which asks (V30, V32); else back with a note |
 | POST | `/dj/staff/leave` | `partyCode`: "Opuść obsługę" — the person leaves the staff of the party the page shows (V30; nothing for the owner) |
 | POST | `/dj/panel` | `party` (none = "Załóż własną imprezę", made now): the default panel (V30; 403 for a party the person does not work at) → `?party=` |
-| POST | `/dj/dashboard/host-link` | `link` = `new` (a new secret: the old link dead) / `off` (no link); anything else 400 |
+| POST | `/dj/dashboard/host-link` | `link` = `new` (a new secret: the old link dead) / `off` (no link); anything else 400; → `/dj/settings?party=…#hostListsCard` |
 | POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |

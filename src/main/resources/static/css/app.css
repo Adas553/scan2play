@@ -659,9 +659,9 @@ th[data-sort].sort-desc::after {
 .page-dj .s2p-settings-toggle::after { content: " \25BE"; }
 .page-dj.s2p-settings-open .s2p-settings-toggle::after { content: " \25B4"; }
 .page-dj:not(.s2p-settings-open) .s2p-settings { display: none !important; }
-/* on a wide screen the button is as wide as its words, beside the logo — on a phone the whole width, under it */
+/* on a wide screen the button is as wide as its words, under the heading row — on a phone the whole width */
 @media (max-width: 767.98px) {
-    .page-dj .s2p-settings-toggle { flex: 1 1 100%; }
+    .page-dj .s2p-settings-toggle { width: 100%; }
 }
 @media (max-width: 767.98px) {
 
@@ -810,6 +810,59 @@ th[data-sort].sort-desc::after {
     overflow: hidden;
     max-width: 36rem;
 }
+
+/* --- The panel's settings since 2026-10-10 (the design review: seven cards, 4900 px of a phone): the card "Impreza", the QR code
+       and "Więcej" — one row per rare setting with its state, leading to the page "Ustawienia imprezy" (settings.html). A row is a
+       link the width of the column, 52 px high (a thumb's target), the state muted on the right, yellow when a limit is near. --- */
+.s2p-rows-title {
+    font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--s2p-text-muted); margin: 0 0 0.4rem 0.25rem;
+}
+.s2p-rows { border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); background: var(--s2p-bg-elevated); overflow: hidden; }
+.s2p-row {
+    display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.55rem 0.9rem;
+    color: #f1f3f5; text-decoration: none; border-top: 1px solid var(--s2p-border);
+}
+.s2p-row:first-child { border-top: 0; }
+.s2p-row:hover, .s2p-row:focus-visible { background: #262626; color: #fff; }
+.s2p-row:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; }
+.s2p-row-name { font-weight: 600; white-space: nowrap; }
+.s2p-row-state { margin-left: auto; color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
+.s2p-row-warn { color: #ffca2c; font-weight: 600; }
+.s2p-row::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; }
+/* the QR code small beside the guests' link and the print: the card was 440 px of a phone */
+.s2p-qr-compact { display: flex; gap: 1rem; align-items: center; }
+.s2p-qr-compact-img { width: 120px; height: 120px; flex: none; border-radius: 8px; border: 1px solid #dee2e6; }
+.s2p-min-w-0 { min-width: 0; }
+/* the panel's heading row: our logo beside "Zakończ" and "Konto" — smaller on a narrow phone, so the three fit in one row */
+@media (max-width: 380px) {
+    .s2p-account-bar .s2p-logo { font-size: 1.15rem; }
+}
+/* the page "Ustawienia imprezy": the jumps to its cards, wrapped onto a second line on a phone (cut off at the edge, "Lim…" read as broken) */
+.s2p-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.s2p-chips a {
+    flex: none; display: flex; align-items: center; min-height: 44px; padding: 0.4rem 0.9rem;
+    border: 1px solid var(--s2p-border); border-radius: 999px; color: #e9ecef; text-decoration: none; font-size: 0.9rem;
+}
+.s2p-chips a:hover { border-color: #f8f9fa; color: #fff; }
+#hostListsCard, #linksCard, #limitsCard, #deviceCard { scroll-margin-top: 1rem; }
+/* the server's limits in one line, what they are unfolded */
+.s2p-server-limits > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+@media (max-width: 767.98px), (pointer: coarse) {
+    .s2p-server-limits > summary { min-height: 44px; }
+    .s2p-switch-row { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
+}
+
+/* the owner's page "Obsługa": a person folded to one line (the name, the role, since when), a tap unfolds what they may do */
+.s2p-staff-summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.75rem 1rem;
+}
+.s2p-staff-summary::-webkit-details-marker { display: none; }
+.s2p-staff-summary::after { content: "▾"; color: var(--s2p-text-muted); }
+.s2p-staff-member[open] > .s2p-staff-summary::after { content: "▴"; }
+.s2p-staff-summary:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; border-radius: var(--s2p-radius-card); }
+.s2p-staff-who { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.s2p-staff-body { padding: 0 1rem 1rem; }
 
 /* --- The history's day headings (history.html): a row where a new day starts. Hidden while the list is sorted by a column
        (list-tools.js puts .s2p-sorted on the table): the rows of a day are no longer together then. --- */

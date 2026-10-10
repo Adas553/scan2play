@@ -12,6 +12,8 @@ public final class ViewAttributes {
 
     // --- Redirect Paths ---
     public static final String REDIRECT_DASHBOARD = "redirect:/dj/dashboard";
+    /** The page "Ustawienia imprezy" ({@code /dj/settings}): what the DJ sets before a party, not during it. */
+    public static final String REDIRECT_SETTINGS = "redirect:/dj/settings";
     public static final String REDIRECT_HOME = "redirect:/";
 
     // --- Common Attributes ---
@@ -73,6 +75,9 @@ public final class ViewAttributes {
     public static final String HOST_WANTED = "hostWanted";
     /** The hosts' link to give them, or null when the DJ made none. */
     public static final String HOST_LINK = "hostLink";
+    /** How many entries each list has: the panel's row "Lista gospodarzy · 🚫 2 · ⭐ 1" (the design review, 2026-10-10). */
+    public static final String HOST_BLOCKED_COUNT = "hostBlockedCount";
+    public static final String HOST_WANTED_COUNT = "hostWantedCount";
     /** The hosts' list of wishes as the DJ's queue checks its songs for the ⭐ ({@code util.SongList}). */
     public static final String WANTED_SONGS = "wantedSongs";
     public static final String HOST_TOKEN = "hostToken";

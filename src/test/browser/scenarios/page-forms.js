@@ -51,6 +51,7 @@
     // a ✓ for something not saved; saved again, the note goes.
     S2P.scenario({
         name: 'dj-links-refused-then-saved',
+        page: 'settings',   // the page "Ustawienia imprezy" since 2026-10-10 (the panel before): its forms go in the background too
         title: 'the DJ\'s profiles: a refused one shows the note and ✗ (nothing saved); saved, the note goes and the button shows ✓',
         setup: { djLinksStatus: 400 },
         run: async function (t) {

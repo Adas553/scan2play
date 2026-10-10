@@ -99,28 +99,22 @@ public class DjPartySettingsController {
     }
 
     /**
-     * The DJ's own words about the vibe (V16): one line, at most {@value PartySettingsEntity#VIBE_NOTE_MAX} characters; empty
-     * clears it. The AI is given it with every request, the guests see it on the party page.
+     * The card "Impreza"'s words, under one "Zapisz" (the design review, 2026-10-10: each field had its own): the DJ's own words
+     * about the vibe (V16) — one line, at most {@value PartySettingsEntity#VIBE_NOTE_MAX} characters; the AI is given it with every
+     * request, the guests see it on the party page — and who plays (V17), e.g. "DJ Koko" — at most
+     * {@value PartySettingsEntity#DJ_NAME_MAX}; the guests see "🎧 Gra: DJ Koko". Empty clears either.
      */
-    @PostMapping("/dashboard/vibe-note")
-    public String updateVibeNote(@RequestParam String partyCode, @RequestParam(required = false) String vibeNote,
-                                 OAuth2AuthenticationToken authentication, HttpSession session) {
+    @PostMapping("/dashboard/party-words")
+    public String updatePartyWords(@RequestParam String partyCode, @RequestParam(required = false) String vibeNote,
+                                   @RequestParam(required = false) String djName,
+                                   OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
         String note = Texts.oneLine(vibeNote, PartySettingsEntity.VIBE_NOTE_MAX);
-        partySettingsCommandService.updateSettings(partyCode, s -> s.setVibeNote(note.isEmpty() ? null : note));
-        return REDIRECT_DASHBOARD;
-    }
-
-    /**
-     * Who plays (V17), e.g. "DJ Koko": one line, at most {@value PartySettingsEntity#DJ_NAME_MAX} characters; empty clears it. The
-     * guests see it on the party page ("🎧 Gra: DJ Koko").
-     */
-    @PostMapping("/dashboard/dj-name")
-    public String updateDjName(@RequestParam String partyCode, @RequestParam(required = false) String djName,
-                               OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
         String name = Texts.oneLine(djName, PartySettingsEntity.DJ_NAME_MAX);
-        partySettingsCommandService.updateSettings(partyCode, s -> s.setDjName(name.isEmpty() ? null : name));
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setVibeNote(note.isEmpty() ? null : note);
+            s.setDjName(name.isEmpty() ? null : name);
+        });
         return REDIRECT_DASHBOARD;
     }
 
@@ -205,7 +199,8 @@ public class DjPartySettingsController {
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         };
         partySettingsCommandService.updateSettings(partyCode, s -> s.setHostToken(token));
-        return REDIRECT_DASHBOARD + "?party=" + partyCode;   // a full page load: the same panel again (a co-organiser's too)
+        // a full page load: the page "Ustawienia imprezy" of the same party again (a co-organiser's too), at the card
+        return REDIRECT_SETTINGS + "?party=" + partyCode + "#hostListsCard";
     }
 
     /**

@@ -72,35 +72,32 @@
          the organiser changed it (V32) */-->
     <input type="hidden" id="panelAccess" th:value="${panelAccess}">
 
-    <!--/* The heading: our logo, small, and the button of the settings in one row — the queue right under it (the design review,
-         2026-10-09: the tab "Panel DJ-a", a big logo and a grey "Panel DJ-a" under it took 200 px of a phone). The page's h1 is
-         for screen readers. */-->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 s2p-panel-head">
-        <div class="fs-2 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+    <!--/* The button of the settings, under the heading row (our logo is in it, beside "Zakończ" and "Konto" — components.html); the
+         page's h1 is for screen readers. */-->
+    <div class="mb-3 s2p-panel-head">
         <h1 class="visually-hidden" th:text="#{dashboard.title}">DJ Dashboard</h1>
-        <!--/* The settings, the vibe, the lists, the staff and the QR code (.s2p-settings) fold under this button on every
-             screen, so the queue comes right under the heading (app.css; settings-toggle.js opens and closes them; the owner,
-             2026-10-09: on a computer too, there were many of them). The staff have the QR code and this device only. */-->
+        <!--/* The settings fold under this button on every screen, so the queue comes right under the heading (app.css;
+             settings-toggle.js opens and closes them). The staff without a settings card: "Kod QR". */-->
         <button type="button" id="settingsToggle"
                 class="btn btn-outline-light s2p-settings-toggle" aria-expanded="false"
-                th:text="${access.maySomeSettings()} ? #{dashboard.settings.toggle} : #{dashboard.settings.toggle.staff}">Settings, vibe and QR code</button>
+                th:text="${access.maySomeSettings()} ? #{dashboard.settings.toggle} : #{dashboard.settings.toggle.staff}">Settings</button>
     </div>
 
-    <!--/* The settings: every card the same way — a heading, one line of what it is for, the fields, one "Zapisz" (the design review,
-         2026-10-09: seven cards in seven styles). Left the party's own, right the QR code and what is printed with it. */-->
+    <!--/* The settings (the design review, 2026-10-10: seven cards, 4900 px of a phone): what the DJ uses during a party — the card
+         "Impreza" and the QR code —, then "Więcej": a row with its state for each of the rare things, which are on the page "Ustawienia
+         imprezy" (/dj/settings, the staff on /dj/staff). Each card and row only for whom may change it (V32: hidden, not greyed). */-->
     <div class="row g-4 mb-4 s2p-settings">
-        <!--/* the party's own cards: the owner's, and those a co-organiser was given (V32); the rest of the staff have the right
-             column alone, in the middle */-->
-        <div th:if="${access.maySomeSettings()}" class="col-md-8 d-flex flex-column gap-4 s2p-settings">
+        <div th:if="${access.may('VIBE')}" class="col-md-7 d-flex flex-column gap-4 s2p-settings">
 
-            <!--/* The party: what the guests see and how the AI judges — the vibe and the comment style are saved as soon as picked */-->
-            <section th:if="${access.may('VIBE')}" class="card bg-dark border-secondary p-3" id="partyCard">
+            <!--/* The party: what the guests see and how the AI judges — the vibe and the comment style are saved as soon as picked,
+                 the two lines of words under one "Zapisz" */-->
+            <section class="card bg-dark border-secondary p-3" id="partyCard">
                 <h2 class="s2p-card-title" th:text="#{dashboard.party.title}">Party</h2>
-                <p class="s2p-card-help" th:text="#{dashboard.party.help}">What the guests see and how the AI judges.</p>
+                <p class="s2p-card-help" th:text="#{dashboard.party.help}">Guests see the vibe, the notes and who plays.</p>
                 <div class="row g-3">
-                    <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0 col-sm-6">
+                    <form th:action="@{/dj/dashboard/vibe}" method="POST" class="m-0 col-6">
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
-                        <label for="vibeSelect" class="form-label small text-light mb-1" th:text="#{dashboard.vibe.label}">Event vibe:</label>
+                        <label for="vibeSelect" class="form-label small text-light mb-1" th:text="#{dashboard.vibe.label}">Vibe</label>
                         <select id="vibeSelect" name="newVibe" class="form-select form-select-sm bg-black text-light border-secondary" data-auto-submit>
                             <!--/* "Any": the guests pick no vibe, the AI judges by the DJ's note (if any) */-->
                             <option th:each="vibe : ${T(com.scan2play.model.VibeType).values()}"
@@ -111,11 +108,11 @@
                         </select>
                     </form>
                     <!--/* How the AI words its comment to the guest (V22): saved as soon as the DJ picks */-->
-                    <form th:action="@{/dj/dashboard/comment-style}" method="POST" class="m-0 col-sm-6"
+                    <form th:action="@{/dj/dashboard/comment-style}" method="POST" class="m-0 col-6"
                           th:with="pickedStyle=${commentStyle != null ? commentStyle : T(com.scan2play.model.CommentStyle).CLASSIC}">
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
                         <label for="commentStyleSelect" class="form-label small text-light mb-1"
-                               th:text="#{dashboard.comment.style.label}">AI comments:</label>
+                               th:text="#{dashboard.comment.style.label}">AI comments</label>
                         <select id="commentStyleSelect" name="commentStyle" data-auto-submit
                                 class="form-select form-select-sm bg-black text-light border-secondary">
                             <option th:each="style : ${T(com.scan2play.model.CommentStyle).values()}"
@@ -125,244 +122,94 @@
                             </option>
                         </select>
                     </form>
-                    <!--/* The DJ's own words about the vibe (V16): the AI is given them, the guests see them; empty clears them */-->
-                    <form th:action="@{/dj/dashboard/vibe-note}" method="POST" class="m-0 col-12" id="vibeNoteForm">
+                    <!--/* The DJ's own words about the vibe (V16: the AI is given them, the guests see them) and who plays (V17: "🎧 Gra: DJ
+                         Koko" on the party page); empty clears either */-->
+                    <form th:action="@{/dj/dashboard/party-words}" method="POST" class="m-0 col-12" id="partyWordsForm">
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
-                        <label for="vibeNoteInput" class="form-label small text-light mb-1" th:text="#{dashboard.vibe.note.label}">Your vibe notes</label>
-                        <div class="d-flex gap-2">
-                            <input type="text" id="vibeNoteInput" name="vibeNote" maxlength="150" autocomplete="off"
-                                   class="form-control form-control-sm bg-black text-light border-secondary"
-                                   th:value="${vibeNote}" th:placeholder="#{dashboard.vibe.note.placeholder}">
-                            <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
-                        </div>
-                    </form>
-                    <!--/* Who plays (V17): the guests see "🎧 Gra: DJ Koko" on the party page; empty clears it */-->
-                    <form th:action="@{/dj/dashboard/dj-name}" method="POST" class="m-0 col-12" id="djNameForm">
-                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <label for="vibeNoteInput" class="form-label small text-light mb-1" th:text="#{dashboard.vibe.note.label}">Vibe notes</label>
+                        <input type="text" id="vibeNoteInput" name="vibeNote" maxlength="150" autocomplete="off"
+                               class="form-control form-control-sm bg-black text-light border-secondary mb-3"
+                               th:value="${vibeNote}" th:placeholder="#{dashboard.vibe.note.placeholder}">
                         <label for="djNameInput" class="form-label small text-light mb-1" th:text="#{dashboard.dj.name.label}">Who plays</label>
-                        <div class="d-flex gap-2">
-                            <input type="text" id="djNameInput" name="djName" maxlength="60" autocomplete="off"
-                                   class="form-control form-control-sm bg-black text-light border-secondary"
-                                   th:value="${djName}" th:placeholder="#{dashboard.dj.name.placeholder}">
-                            <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
-                        </div>
+                        <input type="text" id="djNameInput" name="djName" maxlength="60" autocomplete="off"
+                               class="form-control form-control-sm bg-black text-light border-secondary"
+                               th:value="${djName}" th:placeholder="#{dashboard.dj.name.placeholder}">
+                        <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
                     </form>
                 </div>
             </section>
-
-            <!--/* The guests' limits and the use of the server's own */-->
-            <section th:if="${access.may('LIMITS')}" class="card bg-dark border-secondary p-3" id="limitsCard">
-                <h2 class="s2p-card-title" th:text="#{dashboard.limits.title}">Guest limits</h2>
-                <form th:action="@{/dj/dashboard/limits}" method="POST" class="m-0">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-sm-4">
-                            <label for="requestLimit" class="form-label small text-light mb-1" th:text="#{dashboard.ratelimit.limit}">Max requests per user:</label>
-                            <input type="number" id="requestLimit" name="requestLimit" class="form-control form-control-sm bg-black text-light border-secondary" min="1" max="100" step="1" th:value="${requestLimit}" required>
-                        </div>
-                        <div class="col-sm-4">
-                            <label for="cooldownMinutes" class="form-label small text-light mb-1" th:text="#{dashboard.ratelimit.cooldown}">Cooldown (minutes):</label>
-                            <input type="number" id="cooldownMinutes" name="cooldownMinutes" class="form-control form-control-sm bg-black text-light border-secondary" min="1" max="1440" step="1" th:value="${cooldownMinutes}" required>
-                        </div>
-                        <div class="col-sm-4">
-                            <label for="duplicateCheckWindow" class="form-label small text-light mb-1" th:text="#{dashboard.limits.duplicates}">Block duplicates for last X songs:</label>
-                            <input type="number" id="duplicateCheckWindow" name="duplicateCheckWindow" class="form-control form-control-sm bg-black text-light border-secondary" min="0" max="50" step="1" th:value="${duplicateCheckWindow}" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.ratelimit.save}">Save</button>
-                </form>
-                <!--/* The server's own limits (application.properties, not the DJ's to change); their use is rendered here and then kept
-                     current by dashboard.js (applyGuestLimitsUse) from the X-Guest-Limits-Use header of every queue poll */-->
-                <div class="text-secondary small mt-3" id="serverLimitsInfo" th:if="${serverLimitPerNetwork > 0 or serverLimitPerParty > 0}">
-                    <div th:text="#{dashboard.limits.server.title}">Server limits:</div>
-                    <ul class="mb-0 ps-3">
-                        <!--/* The use stands out as a badge: grey, yellow from 80 %, red at the limit */-->
-                        <li th:if="${serverLimitPerNetwork > 0}">
-                            <span th:text="#{dashboard.limits.server.network(${serverLimitPerNetwork}, ${serverLimitWindowMinutes})}">One network: 30 / 10 min — the busiest has used</span>
-                            <span class="badge ms-1" data-limit-use="network" th:attr="data-limit=${serverLimitPerNetwork}"
-                                  th:classappend="${busiestNetworkRequestsUsed >= serverLimitPerNetwork} ? 'text-bg-danger' : (${busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
-                                  th:text="${busiestNetworkRequestsUsed + '/' + serverLimitPerNetwork}">0/30</span>
-                        </li>
-                        <li th:if="${serverLimitPerParty > 0}" class="mt-1">
-                            <span th:text="#{dashboard.limits.server.party(${serverLimitPerParty})}">The whole party: 300 / 24 h — used</span>
-                            <span class="badge ms-1" data-limit-use="party" th:attr="data-limit=${serverLimitPerParty}"
-                                  th:classappend="${partyRequestsUsed >= serverLimitPerParty} ? 'text-bg-danger' : (${partyRequestsUsed * 5 >= serverLimitPerParty * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
-                                  th:text="${partyRequestsUsed + '/' + serverLimitPerParty}">0/300</span>
-                        </li>
-                    </ul>
-                </div>
-            </section>
-
-            <!--/* The hosts' lists (V29): songs not to play (a request for one never reaches the DJ) and songs to play (accepted
-                 whatever the AI says, ⭐ in the queue), one per line. The hosts fill them too, by the link made here (/h/{token},
-                 HostController) — "Nowy link" makes the old one dead: a party code is for every event, a link for one. In the wide
-                 column, the lists side by side: in the narrow one it made the right column taller than the left (the owner, 2026-10-09). */-->
-            <section th:if="${access.may('HOST_LISTS')}" class="card bg-dark border-secondary p-3" id="hostListsCard">
-                <h2 class="s2p-card-title" th:text="#{dashboard.host.title}">The hosts' list</h2>
-                <p class="s2p-card-help" th:text="#{dashboard.host.help}">One song or artist per line.</p>
-                <form th:action="@{/dj/dashboard/host-lists}" method="POST" class="m-0" id="hostListsForm">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label for="hostBlockedInput" class="form-label text-light small mb-1" th:text="#{host.blocked.label}">🚫 Don't play</label>
-                            <textarea id="hostBlockedInput" name="blocked" rows="3" maxlength="16000"
-                                      class="form-control form-control-sm bg-black text-light border-secondary"
-                                      th:text="${hostBlocked}" th:placeholder="#{host.blocked.placeholder}"></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="hostWantedInput" class="form-label text-light small mb-1" th:text="#{host.wanted.label}">⭐ Must play</label>
-                            <textarea id="hostWantedInput" name="wanted" rows="3" maxlength="16000"
-                                      class="form-control form-control-sm bg-black text-light border-secondary"
-                                      th:text="${hostWanted}" th:placeholder="#{host.wanted.placeholder}"></textarea>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{dashboard.vibe.note.save}">Save</button>
-                </form>
-                <div class="mt-3" id="hostLinkBox">
-                    <span class="d-block text-light small mb-1" th:text="#{dashboard.host.link.label}">A link for the hosts</span>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <div th:if="${hostLink != null}" class="input-group input-group-sm flex-grow-1 s2p-host-link">
-                            <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${hostLink}" id="hostLinkInput" readonly>
-                            <button class="btn btn-outline-secondary" type="button" data-copy-target="hostLinkInput" th:text="#{dashboard.qr.copy}"
-                                    th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
-                        </div>
-                        <!--/* a full reload (forms.js leaves /host-link alone): the new link is shown at once. The field is "link", not "action":
-                             an input named "action" hides the form's own form.action from the scripts */-->
-                        <form th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0"
-                              th:attr="data-confirm=${hostLink != null} ? #{dashboard.host.link.renew.confirm} : null">
-                            <input type="hidden" name="partyCode" th:value="${partyCode}">
-                            <input type="hidden" name="link" value="new">
-                            <button type="submit" id="hostLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
-                                    th:text="${hostLink != null} ? #{dashboard.host.link.renew} : #{dashboard.host.link.create}">Make a link</button>
-                        </form>
-                        <form th:if="${hostLink != null}" th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0">
-                            <input type="hidden" name="partyCode" th:value="${partyCode}">
-                            <input type="hidden" name="link" value="off">
-                            <button type="submit" id="hostLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{dashboard.host.link.off}">Turn the link off</button>
-                        </form>
-                    </div>
-                    <p class="small text-secondary mt-2 mb-0" th:text="#{dashboard.host.link.help}">The hosts open it without an account.</p>
-                </div>
-            </section>
-
-            <!--/* The party's staff (V30, V32): who helps, and the way to the page "Obsługa" (/dj/staff), where the owner invites,
-                 picks what each may do and takes the access away — the card grew to 990 px with ten people (the review, 2026-10-10). */-->
-            <section th:if="${isOwner}" class="card bg-dark border-secondary p-3" id="staffCard">
-                <h2 class="s2p-card-title" th:text="#{dashboard.staff.title}">Staff</h2>
-                <p class="s2p-card-help" th:text="#{dashboard.staff.help}">People who help you run the party.</p>
-                <p th:if="${#lists.isEmpty(staff)}" class="small text-secondary mb-2" id="staffEmpty" th:text="#{dashboard.staff.empty}">Nobody yet.</p>
-                <p th:unless="${#lists.isEmpty(staff)}" class="small text-light mb-2" id="staffSummary"
-                   th:text="#{dashboard.staff.count(${#lists.size(staff)})}">On the staff: 2</p>
-                <div>
-                    <a th:href="@{/dj/staff(party=${partyCode})}" id="staffManageLink" class="btn btn-sm btn-outline-light"
-                       th:text="#{dashboard.staff.manage}">Manage the staff</a>
-                </div>
-            </section>
-
         </div>
 
-        <!--/* The QR code: the staff's too (the owner, 2026-10-09) — it is on the tables anyway, and a bartender shows it to a guest or
-             prints a new one; the profiles and the tip link under it are the owner's settings. */-->
-        <div class="d-flex flex-column gap-4 s2p-settings" th:classappend="${access.maySomeSettings()} ? 'col-md-4' : 'col-md-6 mx-auto'">
-            <section class="card bg-dark border-secondary p-3 text-center" id="qrCard">
-                <h2 class="s2p-card-title" th:text="#{dashboard.qr.title}">Your party's QR code</h2>
-                <img th:if="${qrCodeBase64}"
-                     th:src="${'data:image/png;base64,' + qrCodeBase64}"
-                     th:alt="#{dashboard.qr.alt}"
-                     class="img-fluid rounded border border-light mx-auto mt-2 s2p-dashboard-qr" />
-                <p class="text-secondary small mt-3 mb-1" th:text="#{dashboard.qr.link}">Link for the guests:</p>
-                <div class="input-group input-group-sm mb-2">
-                    <input type="text" class="form-control bg-dark text-light border-secondary"
-                           th:value="${permanentLink}" id="partyLinkInput" readonly>
-                    <button class="btn btn-outline-secondary" type="button" id="copyPartyLinkBtn" th:text="#{dashboard.qr.copy}" th:attr="data-copied=#{dashboard.qr.copied}">
-                        Copy
-                    </button>
-                </div>
-                <p class="text-secondary small mb-3" th:text="#{dashboard.qr.help}">Direct guests to scan this code.</p>
-                <!--/* The code to print and put up: an A4 poster or table cards, Polish and English (DjDashboardController.qrPrint) */-->
-                <a th:href="@{/dj/qr-print(party=${partyCode})}" target="_blank" rel="noopener" id="qrPrintLink"
-                   class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.print}">Print</a>
-            </section>
-            <!--/* The DJ's profiles (V24) beside the QR code they are printed with: the guests see them under "Kto gra" and on
-                 the print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks) —
-                 400 when it is not a profile there. Then the DJ's tip link (V27): the guests see "💸 Napiwek dla DJ-a"; the server
-                 keeps it only on a service that takes tips (TipLinks) — 400 otherwise */-->
-            <section th:if="${isOwner}" class="card bg-dark border-secondary p-3" id="linksCard">
-                <h2 class="s2p-card-title" th:text="#{dashboard.links.title}">Profiles and tips</h2>
-                <form th:action="@{/dj/dashboard/dj-links}" method="POST" class="m-0" id="djLinksForm">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <span class="s2p-card-help d-block" th:text="#{dashboard.dj.links.label}">Your profiles</span>
-                    <div class="d-flex flex-column gap-2">
-                        <input type="text" id="instagramInput" name="instagram" maxlength="200" autocomplete="off"
-                               class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Instagram"
-                               th:value="${instagramUrl}" th:placeholder="#{dashboard.dj.links.instagram}">
-                        <input type="text" id="facebookInput" name="facebook" maxlength="200" autocomplete="off"
-                               class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Facebook"
-                               th:value="${facebookUrl}" th:placeholder="#{dashboard.dj.links.facebook}">
-                        <input type="text" id="tiktokInput" name="tiktok" maxlength="200" autocomplete="off"
-                               class="form-control form-control-sm bg-black text-light border-secondary" aria-label="TikTok"
-                               th:value="${tiktokUrl}" th:placeholder="#{dashboard.dj.links.tiktok}">
-                    </div>
-                    <!--/* one "Zapisz" for the three, under them: beside the last one it read as saving TikTok alone */-->
-                    <button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{dashboard.vibe.note.save}">Save</button>
-                    <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.dj.links.invalid}">Not a profile</div>
-                </form>
-                <form th:action="@{/dj/dashboard/tip-link}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="tipLinkForm">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <label for="tipInput" class="form-label d-block text-light small mb-1" th:text="#{dashboard.tip.label}">Tip link</label>
-                    <div class="d-flex gap-2">
-                        <input type="text" id="tipInput" name="tip" maxlength="200" autocomplete="off"
-                               class="form-control form-control-sm bg-black text-light border-secondary"
-                               th:value="${tipUrl}" th:placeholder="#{dashboard.tip.placeholder}">
-                        <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
-                    </div>
-                    <div class="small text-secondary mt-1" th:text="#{dashboard.tip.help}">The money goes straight to you.</div>
-                    <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.tip.invalid}">Not a tip link</div>
-                </form>
-            </section>
-            <!--/* This device: the app and the notifications (each shown by its script only where it helps), and an invitation to
-                 another party pasted here — the owner's and the staff's alike. In the right column, under the QR code and the profiles:
-                 it is the phone's, not the party's, and the column had room (the owner, 2026-10-10) */-->
-            <section class="card bg-dark border-secondary p-3" id="deviceCard">
-                <h2 class="s2p-card-title" th:text="#{dashboard.device.title}">This device</h2>
-                <div class="d-flex flex-column gap-3 mt-2">
-                    <!--/* "Zainstaluj aplikację" (js/dashboard/install.js): shown by the script only where it helps — a browser that offers
-                         to install the app (Chrome, Edge), or an iPhone's Safari (the steps); never in the installed app itself */-->
-                    <div id="installApp" hidden>
-                        <button type="button" class="btn btn-sm btn-outline-light" id="installAppBtn" th:text="#{dashboard.install.button}">Install the app</button>
-                        <span class="text-secondary small ms-2" th:text="#{dashboard.install.help}">Its own icon and window, no browser bar.</span>
-                        <div class="text-warning small mt-2 d-none" data-install-note="ios" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
-                        <div class="text-warning small mt-2 d-none" data-install-note="menu" th:text="#{dashboard.install.menu}">Install from the browser's menu.</div>
-                    </div>
-                    <!--/* Notifications of new requests on this device (Web Push, js/dashboard/push.js) — only when the server has the keys;
-                         shown by the script, with the note of the state it finds (an iPhone outside the Home Screen app, blocked, …) */-->
-                    <div id="pushSettings" hidden
-                         th:if="${pushPublicKey != null}" th:attr="data-public-key=${pushPublicKey}">
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="pushToggle" disabled>
-                            <label class="form-check-label text-light" for="pushToggle" th:text="#{dashboard.push.label}">Notifications on this device</label>
+        <!--/* The QR code (everyone's: it is on the tables anyway) and the rows of the rare settings. Beside "Impreza" for whom may
+             set the vibe, else alone in the middle. */-->
+        <div class="d-flex flex-column gap-4 s2p-settings" th:classappend="${access.may('VIBE')} ? 'col-md-5' : 'col-md-6 mx-auto'">
+            <section class="card bg-dark border-secondary p-3" id="qrCard">
+                <h2 class="s2p-card-title" th:text="#{dashboard.qr.title}">QR code</h2>
+                <div class="s2p-qr-compact mt-2">
+                    <img th:if="${qrCodeBase64}"
+                         th:src="${'data:image/png;base64,' + qrCodeBase64}"
+                         th:alt="#{dashboard.qr.alt}"
+                         class="s2p-qr-compact-img" />
+                    <div class="d-flex flex-column gap-2 flex-grow-1 s2p-min-w-0">
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control bg-dark text-light border-secondary"
+                                   th:value="${permanentLink}" id="partyLinkInput" readonly th:attr="aria-label=#{dashboard.qr.link}">
+                            <button class="btn btn-outline-secondary" type="button" id="copyPartyLinkBtn" th:text="#{dashboard.qr.copy}" th:attr="data-copied=#{dashboard.qr.copied}">
+                                Copy
+                            </button>
                         </div>
-                        <div class="text-warning small mt-1 d-none" data-push-state="ios" th:text="#{dashboard.push.ios}">On an iPhone: add it to the Home Screen first.</div>
-                        <div class="text-warning small mt-1 d-none" data-push-state="denied" th:text="#{dashboard.push.denied}">Notifications are blocked for this site.</div>
-                        <div class="text-warning small mt-1 d-none" data-push-state="unsupported" th:text="#{dashboard.push.unsupported}">This browser does not support notifications.</div>
-                        <div class="text-danger small mt-1 d-none" data-push-state="error" th:text="#{dashboard.push.error}">Could not switch notifications on.</div>
+                        <!--/* The code to print and put up: an A4 poster or table cards, Polish and English (DjDashboardController.qrPrint) */-->
+                        <a th:href="@{/dj/qr-print(party=${partyCode})}" target="_blank" rel="noopener" id="qrPrintLink"
+                           class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.print}">Print poster and cards</a>
                     </div>
-                    <!--/* An invitation to another party's staff pasted here (V30): the app on the Home Screen opens a link from an e-mail in
-                         the browser, which has a login of its own (an iPhone always). POST /dj/join leads to /join/{token}, which asks — a
-                         page load (forms.js leaves /dj/join alone). On the person's own panel only (the owner, 2026-10-10: on another's
-                         party she has joined already — it read as if she still had to); "no-panel" has it too, and an invitation by
-                         e-mail (V34) comes by itself. */-->
-                    <form th:if="${isOwner}" th:action="@{/dj/join}" method="POST" class="m-0" id="joinStaffForm">
-                        <label for="joinLinkInput" class="form-label text-light small mb-1" th:text="#{dashboard.join.label}">Got an invitation link? Paste it</label>
-                        <div class="d-flex gap-2">
-                            <input type="text" id="joinLinkInput" name="link" maxlength="300" autocomplete="off" required
-                                   class="form-control form-control-sm bg-black text-light border-secondary"
-                                   th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
-                            <button type="submit" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{dashboard.join.button}">Join</button>
-                        </div>
-                    </form>
                 </div>
             </section>
+
+            <!--/* "Więcej": the rare settings, one row each with its state, leading to the page "Ustawienia imprezy" at its card (the
+                 staff: their own page). The row of the limits turns yellow from 80 % of a server limit (polling.js keeps it current
+                 from X-Guest-Limits-Use); the device's state is this browser's (settings-rows.js). */-->
+            <nav id="settingsMore" th:attr="aria-label=#{settings.more}"
+                 th:with="settingsUrl=@{/dj/settings(party=${partyCode})}">
+                <p class="s2p-rows-title" th:text="#{settings.more}">More</p>
+                <div class="s2p-rows">
+                    <a th:if="${access.may('HOST_LISTS')}" class="s2p-row" data-settings-row="hosts" th:href="${settingsUrl + '#hostListsCard'}">
+                        <span class="s2p-row-name" th:text="#{dashboard.host.title}">The hosts' list</span>
+                        <span class="s2p-row-state"
+                              th:text="${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
+                                     : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? ' · ' + #{settings.row.hosts.link} : '')">Not used</span>
+                    </a>
+                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="links" th:href="${settingsUrl + '#linksCard'}"
+                       th:with="sites=${ {instagramUrl != null ? 'Instagram' : null, facebookUrl != null ? 'Facebook' : null, tiktokUrl != null ? 'TikTok' : null, tipUrl != null ? #messages.msg('settings.row.links.tips') : null} }">
+                        <span class="s2p-row-name" th:text="#{dashboard.links.title}">Profiles and tips</span>
+                        <span class="s2p-row-state"
+                              th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
+                              th:text="${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named}">Instagram · tips</span>
+                    </a>
+                    <a th:if="${access.may('LIMITS')}" class="s2p-row" data-settings-row="limits" th:href="${settingsUrl + '#limitsCard'}"
+                       th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
+                                networkNear=${serverLimitPerNetwork > 0 and busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4}">
+                        <span class="s2p-row-name" th:text="#{dashboard.limits.title}">Guest limits</span>
+                        <span class="s2p-row-state">
+                            <span data-limit-calm th:hidden="${partyNear or networkNear}"
+                                  th:text="#{settings.row.limits(${requestLimit}, ${cooldownMinutes})}">2 per guest · 3 min break</span>
+                            <span class="s2p-row-warn" data-limit-near="party" th:attr="data-limit=${serverLimitPerParty},data-template=#{settings.row.limits.party('{used}', '{limit}')}"
+                                  th:hidden="${!partyNear}" th:text="#{settings.row.limits.party(${partyRequestsUsed}, ${serverLimitPerParty})}">Party 250/300</span>
+                            <span class="s2p-row-warn" data-limit-near="network" th:attr="data-limit=${serverLimitPerNetwork},data-template=#{settings.row.limits.network('{used}', '{limit}')}"
+                                  th:hidden="${partyNear or !networkNear}" th:text="#{settings.row.limits.network(${busiestNetworkRequestsUsed}, ${serverLimitPerNetwork})}">Network 26/30</span>
+                        </span>
+                    </a>
+                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="staff" th:href="@{/dj/staff(party=${partyCode})}" id="staffManageLink">
+                        <span class="s2p-row-name" th:text="#{dashboard.staff.title}">Staff</span>
+                        <span class="s2p-row-state"
+                              th:text="${#lists.isEmpty(staff)} ? #{settings.row.staff.none} : #{settings.row.staff(${#lists.size(staff)})}">People: 1</span>
+                    </a>
+                    <a class="s2p-row" data-settings-row="device" th:href="${settingsUrl + '#deviceCard'}">
+                        <span class="s2p-row-name" th:text="#{dashboard.device.title}">This device</span>
+                        <span class="s2p-row-state" data-device-state th:if="${pushPublicKey != null}"
+                              th:attr="data-on=#{settings.row.device.on},data-off=#{settings.row.device.off}"></span>
+                    </a>
+                </div>
+            </nav>
         </div>
     </div>
 
@@ -398,6 +245,12 @@
             <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="party-full"
                  th:classappend="${partyLimitReached} ? '' : 'd-none'"
                  th:text="#{dashboard.warning.party_full(${serverLimitPerParty})}">Party limit reached</div>
+            <!--/* near the party's limit (from 80 %, under it): how much is used — the DJ sees it coming (polling.js keeps it current) */-->
+            <div class="alert alert-warning small py-2 mb-2" role="status" data-limit-near="party"
+                 th:if="${serverLimitPerParty > 0}"
+                 th:attr="data-limit=${serverLimitPerParty},data-below=true,data-template=#{dashboard.warning.party_near('{used}', '{limit}')}"
+                 th:hidden="${partyRequestsUsed * 5 < serverLimitPerParty * 4 or partyRequestsUsed >= serverLimitPerParty}"
+                 th:text="#{dashboard.warning.party_near(${partyRequestsUsed}, ${serverLimitPerParty})}">Party: 250 of 300 requests a day</div>
         </div>
         <div class="table-responsive list-scroll">
         <table class="table table-dark table-hover table-sm align-middle">
@@ -437,13 +290,14 @@
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>
                             <span th:unless="${#strings.isEmpty(req.guestText)}" class="small text-secondary fst-italic text-break guest-text"
-                                  th:text="#{dashboard.guest_text(${req.guestText})}">guest wrote: “…”</span>
+                                  th:text="#{dashboard.guest_text(${req.guestText})}">Guest: “…”</span>
                             <!--/* the AI's comment to the guest: one line, the whole of it in the title */-->
                             <span th:unless="${#strings.isEmpty(req.djComment)}" class="small text-secondary s2p-queue-comment"
                                   th:title="${req.djComment}" th:text="#{dashboard.ai_comment(${req.djComment})}">AI: Good pick</span>
                         </span>
-                        <!--/* "🔍 Podejrzyj": the song on YouTube's search results, for the DJ to look at a song they do not know — a page
-                             the DJ's browser opens, no YouTube API. Grey as in the history: red is for what deletes ("Wyczyść") */-->
+                        <!--/* "Podejrzyj": the song on YouTube's search results, for the DJ to look at a song they do not know — a page
+                             the DJ's browser opens, no YouTube API. A button as in the history (the owner, 2026-10-10: a link in the
+                             guest's line read worse) */-->
                         <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
                            class="btn btn-sm btn-outline-secondary flex-shrink-0 text-nowrap"
                            th:text="#{dashboard.queue.preview}">Preview</a>

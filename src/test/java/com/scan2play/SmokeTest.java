@@ -51,6 +51,8 @@ class SmokeTest {
                 // locally the files change under "dev" with every edit: never kept (VersionedAssetCacheFilter)
                 .andExpect(header().string("Cache-Control", containsString("no-store")));
         mockMvc.perform(get("/dev/js/dashboard/main.js")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("import './settings-rows.js';")));
+        mockMvc.perform(get("/dev/js/dashboard/settings-page.js")).andExpect(status().isOk())
                 .andExpect(content().string(containsString("import './push.js';")));
         mockMvc.perform(get("/dev/js/dashboard/push.js")).andExpect(status().isOk());
     }
