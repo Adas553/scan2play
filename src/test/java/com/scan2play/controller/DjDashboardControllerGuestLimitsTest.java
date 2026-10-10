@@ -45,7 +45,7 @@ class DjDashboardControllerGuestLimitsTest {
         sessionHelper = mock(DjSessionHelper.class);
         limiter = mock(GuestRequestLimiter.class);
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
-                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class));
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class));
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getDashboardQueue(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();

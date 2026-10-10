@@ -191,7 +191,7 @@ class HistoryFragmentTest {
                 null, "Pop", "played", "ok", "wilki baska");
         String html = render(List.of(shrek, same, guest(3, "Without words", "played")), false, Locale.ENGLISH);
 
-        assertThat(html).contains("guest wrote: “the one from Shrek”", "guest wrote: “wilki baska”");
+        assertThat(html).contains("Guest: “the one from Shrek”", "Guest: “wilki baska”");
         assertThat(html.split("guest-text", -1)).as("the two rows with words have the line, the one without none").hasSize(3);
     }
 

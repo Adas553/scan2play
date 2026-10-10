@@ -12,9 +12,11 @@
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <!--/* The owner's page "Obsługa" (V32, the review of 2026-10-10: the card in the settings was 1750 px down a phone and 990 px tall
-     with ten people): who helps, what each may do — a role, or permissions ticked one by one —, the invitation link. Full page
-     loads (StaffController); js/staff.js keeps the role and the ticks in step and copies the link. */-->
+     with ten people): who helps, what each may do — a role, or permissions ticked one by one —, the invitations by e-mail waiting
+     (V34), "Zaproś" by the address of a Google account, and the invitation link with its role (V33) as the other way. Full page loads
+     (StaffController); js/staff.js keeps each form's role and ticks in step and copies the link. */-->
 <body class="page-dj">
+
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
@@ -26,41 +28,32 @@
     <h1 class="h3 text-white mb-1" th:text="#{staff.page.heading}">The party's staff</h1>
     <p class="text-secondary mb-4" th:text="#{staff.page.help}">People who help you run the party.</p>
 
-    <!--/* Each person: their name, since when, what they may do. The role is a ready set; "Własne" — or a tick changed — keeps the
-         ticks as they are (StaffRole.of names the set). The organiser alone: the staff, the profiles and the tip link, the history's
-         clearing (never handed over). */-->
-    <p th:if="${#lists.isEmpty(staff)}" id="staffEmpty" class="text-secondary" th:text="#{dashboard.staff.empty}">Nobody has joined yet.</p>
-    <div class="d-flex flex-column gap-3 mb-4" id="staffList" th:unless="${#lists.isEmpty(staff)}">
-        <section th:each="member : ${staff}" class="card bg-dark border-secondary p-3 s2p-staff-member"
+    <!--/* Each person: their name, since when, what they may do. The organiser alone: the staff, the profiles and the tip link, the
+         history's clearing (never handed over). Then the invitations by e-mail still waiting — the same list, "czeka na
+         zalogowanie" until the person logs in and answers. */-->
+    <p th:if="${#lists.isEmpty(staff) and #lists.isEmpty(staffInvitations)}" id="staffEmpty" class="text-secondary"
+       th:text="#{dashboard.staff.empty}">Nobody has joined yet.</p>
+    <div class="d-flex flex-column gap-3 mb-4" id="staffList" th:unless="${#lists.isEmpty(staff) and #lists.isEmpty(staffInvitations)}">
+        <!--/* Folded to one line — the name, the role, since when (the owner, 2026-10-10: ten unfolded cards repeated the same picker);
+             a tap unfolds what the person may do. The one just saved comes back unfolded, with "Zapisano". */-->
+        <details th:each="member : ${staff}" class="card bg-dark border-secondary s2p-staff-member"
                  th:with="who=${member.memberName != null ? member.memberName : #messages.msg('dashboard.staff.no_name')},
                           role=${member.role()}"
+                 th:open="${staffSaved != null and staffSaved == member.id}"
                  th:attr="data-staff-id=${member.id}">
-            <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-2">
-                <h2 class="s2p-card-title mb-0 text-break" th:text="${who}">Bartek Nowak</h2>
-                <span class="small text-secondary"
-                      th:text="#{staff.member.since(${T(com.scan2play.util.Times).day(member.joinedAt)})}">on the staff since 10.10</span>
-            </div>
+            <summary class="s2p-staff-summary">
+                <span class="s2p-staff-who">
+                    <span class="s2p-card-title mb-0 text-break" th:text="${who}">Bartek Nowak</span>
+                    <span class="small text-secondary" data-staff-role th:text="#{__${'staff.role.' + role}__}">Obsługa kolejki</span>
+                </span>
+                <span class="small text-secondary text-nowrap"
+                      th:text="#{staff.member.since(${T(com.scan2play.util.Times).day(member.joinedAt)})}">joined 10.10</span>
+            </summary>
+            <div class="s2p-staff-body">
             <form th:action="@{/dj/staff/permissions}" method="POST" class="m-0" data-staff-form>
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <input type="hidden" name="id" th:value="${member.id}">
-                <label class="form-label small text-light mb-1" th:for="${'role-' + member.id}" th:text="#{staff.member.role}">What they can do</label>
-                <select class="form-select bg-black text-light border-secondary mb-1" name="role" th:id="${'role-' + member.id}" data-role-select>
-                    <option th:each="r : ${staffRoles}" th:value="${r}" th:selected="${r == role}"
-                            th:attr="data-permissions=${r.permissionNames()},data-help=#{__${'staff.role.' + r + '.help'}__}"
-                            th:text="#{__${'staff.role.' + r}__}">Queue</option>
-                </select>
-                <p class="small text-secondary mb-2" data-role-help th:text="#{__${'staff.role.' + role + '.help'}__}">Played, Skip, tips…</p>
-                <details class="mb-2 s2p-staff-perms" th:open="${role.name() == 'CUSTOM'}">
-                    <summary class="small text-light" th:text="#{staff.member.permissions}">Each permission</summary>
-                    <div class="d-flex flex-column gap-1 mt-2">
-                        <div th:each="p : ${staffPermissions}" class="form-check">
-                            <input class="form-check-input" type="checkbox" name="permissions" th:value="${p}"
-                                   th:id="${'perm-' + member.id + '-' + p}" th:checked="${member.permissions.contains(p)}" data-permission-box>
-                            <label class="form-check-label small text-light" th:for="${'perm-' + member.id + '-' + p}"
-                                   th:text="#{__${'staff.permission.' + p}__}">Played, Skip, Undo</label>
-                        </div>
-                    </div>
-                </details>
+                <th:block th:replace="~{fragments/staff-role :: rolePicker(${member.id}, ${role}, ${member.permissions}, #{staff.member.role})}"></th:block>
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{staff.member.save}">Save</button>
                     <span th:if="${staffSaved != null and staffSaved == member.id}" class="small text-light" role="status" data-staff-saved
@@ -73,36 +66,81 @@
                 <input type="hidden" name="id" th:value="${member.id}">
                 <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{dashboard.staff.remove}">Remove access</button>
             </form>
+            </div>
+        </details>
+
+        <section th:each="invitation : ${staffInvitations}" class="card bg-dark border-secondary p-3 s2p-staff-invited"
+                 th:attr="data-invitation-id=${invitation.id}">
+            <h2 class="s2p-card-title mb-1 text-break" th:text="${invitation.email}">ola.kowalska@gmail.com</h2>
+            <p class="small text-light mb-1" data-invitation-status
+               th:text="#{staff.invited.status(${T(com.scan2play.util.Times).day(invitation.invitedAt)})}">invited 10.10 · waiting for them to log in</p>
+            <p class="small text-secondary mb-2" th:with="roleName=#{__${'staff.role.' + invitation.role()}__}"
+               th:text="#{staff.invited.role(${roleName})}">Role: Queue</p>
+            <form th:action="@{/dj/staff/invitation/cancel}" method="POST" class="m-0"
+                  th:attr="data-confirm=#{staff.invited.cancel.confirm(${invitation.email})}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="hidden" name="id" th:value="${invitation.id}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{staff.invited.cancel}">Cancel the invitation</button>
+            </form>
         </section>
     </div>
 
-    <!--/* The invitation link: "Nowy link" makes the old one dead (asks first), "Wyłącz link" takes it away — the people on the list
-         stay either way (the text says so: "Wyłącz link" read as cutting them off). Who opens it is asked "Dołączyć?" and gets the role
-         "Obsługa kolejki" (StaffRole.DEFAULT), changed above. */-->
-    <section class="card bg-dark border-secondary p-3 mb-4" id="staffLinkCard">
+    <!--/* "Zaproś" by e-mail (V34): the address of the person's Google account and the role. Nothing is sent: they see the invitation
+         when they log in with that account. The same address again changes the role and gives it 30 days again. The staff and
+         the invitations waiting take 10 places together. */-->
+    <section class="card bg-dark border-secondary p-3 mb-4" id="staffInviteCard">
         <h2 class="s2p-card-title" th:text="#{staff.link.title}">Invite someone</h2>
+        <p class="s2p-card-help" th:text="#{staff.invite.help}">Type the address of their Google account.</p>
+        <div th:if="${staffInviteResult != null}" id="staffInviteResult" role="status"
+             th:class="${staffInviteResult.problem()} ? 'alert alert-warning py-2' : 'alert alert-success py-2'"
+             th:text="#{__${'staff.invite.' + staffInviteResult.outcome()}__(${staffInviteResult.address()})}">Invited.</div>
+        <p th:if="${staffPlacesLeft == 0}" class="small text-warning mb-2" id="staffFull" th:text="#{staff.invite.full_now}">10 of 10 places taken.</p>
+        <form th:action="@{/dj/staff/invite}" method="POST" class="m-0" id="staffInviteForm" data-staff-form>
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <label class="form-label small text-light mb-1" for="staffInviteEmail" th:text="#{staff.invite.email}">The address of their Google account</label>
+            <input type="email" class="form-control bg-black text-light border-secondary mb-2" id="staffInviteEmail" name="email"
+                   maxlength="254" required autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="email"
+                   placeholder="ola.kowalska@gmail.com"
+                   th:value="${staffInviteResult != null and staffInviteResult.problem()} ? ${staffInviteResult.address()} : ''">
+            <th:block th:replace="~{fragments/staff-role :: rolePicker('invite', ${staffDefaultRole}, ${staffDefaultRole.permissions()}, #{staff.invite.role})}"></th:block>
+            <button type="submit" id="staffInviteBtn" class="btn btn-action w-100" th:text="#{staff.invite.button}">Invite</button>
+        </form>
+    </section>
+
+    <!--/* The invitation link, the other way (a person whose address the organiser does not know): made with the role picked here
+         (V33) — whoever joins by it gets that. A new role is a new link: "Nowy link" makes the old one dead (asks first), so a link
+         sent as "Podgląd" never starts to give more. "Wyłącz link" takes it away; the people on the list stay either way. */-->
+    <section class="card bg-dark border-secondary p-3 mb-4" id="staffLinkCard">
+        <h2 class="s2p-card-title" th:text="#{staff.link.other_way}">Or send a link</h2>
         <p class="s2p-card-help" th:text="#{dashboard.staff.link.help}">Send the link to the person you invite.</p>
-        <div th:if="${staffLink != null}" class="input-group input-group-sm mb-2">
-            <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${staffLink}" id="staffLinkInput" readonly
-                   th:attr="aria-label=#{dashboard.staff.link.label}">
-            <button class="btn btn-outline-secondary" type="button" data-copy-target="staffLinkInput" th:text="#{dashboard.qr.copy}"
-                    th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
-        </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <form th:action="@{/dj/staff/link}" method="POST" class="m-0"
-                  th:attr="data-confirm=${staffLink != null} ? #{dashboard.staff.link.renew.confirm} : null">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <input type="hidden" name="link" value="new">
-                <button type="submit" id="staffLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
-                        th:text="${staffLink != null} ? #{dashboard.host.link.renew} : #{dashboard.staff.link.create}">Make an invitation link</button>
-            </form>
-            <form th:if="${staffLink != null}" th:action="@{/dj/staff/link}" method="POST" class="m-0">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <input type="hidden" name="link" value="off">
-                <button type="submit" id="staffLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap"
-                        th:text="#{staff.link.off}">Turn the link off</button>
-            </form>
-        </div>
+        <th:block th:if="${staffLink != null}">
+            <p class="small text-light mb-1" id="staffLinkRole" th:with="roleName=#{__${'staff.role.' + staffLinkRole}__}"
+               th:text="#{staff.link.role(${roleName})}">This link: Queue</p>
+            <ul th:if="${staffLinkRole.name() == 'CUSTOM'}" class="small text-secondary mb-2" id="staffLinkPermissions">
+                <li th:each="p : ${staffPermissions}" th:if="${staffLinkPermissions.contains(p)}" th:text="#{__${'staff.permission.' + p}__}">Played, Skip</li>
+            </ul>
+            <div class="input-group input-group-sm mb-3">
+                <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${staffLink}" id="staffLinkInput" readonly
+                       th:attr="aria-label=#{dashboard.staff.link.label}">
+                <button class="btn btn-outline-secondary" type="button" data-copy-target="staffLinkInput" th:text="#{dashboard.qr.copy}"
+                        th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
+            </div>
+        </th:block>
+        <form th:action="@{/dj/staff/link}" method="POST" class="m-0" id="staffLinkForm" data-staff-form
+              th:attr="data-confirm=${staffLink != null} ? #{dashboard.staff.link.renew.confirm} : null">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <input type="hidden" name="link" value="new">
+            <th:block th:replace="~{fragments/staff-role :: rolePicker('link', ${staffLinkRole}, ${staffLinkPermissions},
+                      ${staffLink != null} ? #{staff.link.new_role} : #{staff.link.role_label})}"></th:block>
+            <button type="submit" id="staffLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
+                    th:text="${staffLink != null} ? #{dashboard.host.link.renew} : #{dashboard.staff.link.create}">Make an invitation link</button>
+        </form>
+        <form th:if="${staffLink != null}" th:action="@{/dj/staff/link}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <input type="hidden" name="link" value="off">
+            <button type="submit" id="staffLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap"
+                    th:text="#{staff.link.off}">Turn the link off</button>
+        </form>
     </section>
 
     <p class="small text-secondary" th:text="#{staff.page.owner_only}">Only you: the staff, the profiles and the tip link, clearing the history.</p>

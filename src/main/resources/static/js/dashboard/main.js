@@ -8,8 +8,10 @@
  *   tabs.js            Panel / Queue / History, the History tab loaded in place
  *   polling.js         the guest queue every 3 s, the server's guest limits
  *   settings-toggle.js on a phone: the settings folded under one button
- *   install.js         "📲 Install the app" (the dashboard on the phone's Home Screen)
- *   push.js            "🔔 Notifications on this device" (Web Push)
+ *   settings-rows.js   the rows of "Więcej" in the settings: whether this browser gets the notifications
+ *
+ * "Zainstaluj aplikację" (install.js) and the notifications' switch (push.js) are on the page "Ustawienia imprezy" since 2026-10-10
+ * (settings-page.js loads them with forms.js).
  *
  * Dependencies (DOM): <meta name="_csrf">, <meta name="_csrf_header">, <input id="partyCode">, <tbody id="song-list">,
  * <div id="queue-content">, <div id="history-content">.
@@ -19,5 +21,4 @@ import './forms.js';
 import './tabs.js';
 import './polling.js';
 import './settings-toggle.js';
-import './install.js';
-import './push.js';
+import './settings-rows.js';

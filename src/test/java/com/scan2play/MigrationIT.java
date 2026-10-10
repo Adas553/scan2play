@@ -139,6 +139,18 @@ class MigrationIT extends PostgresIntegrationTest {
                 + " AND column_name = 'owner_name' AND is_nullable = 'YES'", Integer.class)).isEqualTo(100);
     }
 
+    /** V33: the invitation link's role; V34: the invitations by e-mail — one per address and party, found by the address. */
+    @Test
+    void theLinksRole_andTheInvitationsByEmail_haveTheirColumnsAndIndexes() {
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'staff_link_permissions' AND is_nullable = 'YES'", Integer.class)).isEqualTo(200);
+        List<String> indexes = jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class);
+        assertThat(indexes).contains("staff_invitation_pkey", "uk_staff_invitation_email", "idx_staff_invitation_email_key");
+        assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns WHERE table_name = 'staff_invitation'"
+                + " AND is_nullable = 'NO' ORDER BY column_name", String.class))
+                .containsExactly("email", "email_key", "id", "invited_at", "party_code", "permissions");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

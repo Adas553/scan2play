@@ -1,5 +1,5 @@
-// NOTIFICATIONS ON THIS DEVICE (js/dashboard/push.js): the switch "🔔 Powiadomienia na tym urządzeniu" on the real dashboard, rendered
-// with a VAPID public key (DashboardPageRenderTest).
+// NOTIFICATIONS ON THIS DEVICE (js/dashboard/push.js): the switch "Powiadomienia o prośbach" on the real page "Ustawienia imprezy"
+// (since 2026-10-10; on the panel before), rendered with a VAPID public key (SettingsPageRenderTest).
 //
 // A headless Chrome has no push service to subscribe to, so for these scenarios the browser's side is a stand-in, put in place by
 // this file before the dashboard's modules run (classic scripts at the end of <body> run before the deferred modules): the
@@ -67,7 +67,8 @@
         Object.defineProperty(Notification, 'requestPermission', { configurable: true,
             value: function () { fake.permissionAsked++; fake.permission = fake.answer; return Promise.resolve(fake.answer); } });
     }
-    if (scenarioName === 'push-already-on-here') {
+    // (on the page "Ustawienia imprezy": the harness opens the panel first and loads that page from it — nothing to do there yet)
+    if (scenarioName === 'push-already-on-here' && document.getElementById('pushSettings')) {
         // This browser switched them on before: the permission is there, and the subscription with the server's key
         // (#pushSettings is above this script: parsed already)
         fake.permission = 'granted';
@@ -94,6 +95,7 @@
 
     S2P.scenario({
         name: 'push-switch-on-and-off',
+        page: 'settings',   // "To urządzenie" moved there from the panel (2026-10-10)
         title: 'notifications: the switch asks for the permission, subscribes with the server\'s key, tells the server; off forgets it',
         run: async function (t) {
             await ready(t);
@@ -124,6 +126,7 @@
 
     S2P.scenario({
         name: 'push-permission-denied',
+        page: 'settings',   // "To urządzenie" moved there from the panel (2026-10-10)
         title: 'notifications: the DJ blocks them — the switch goes back off with the note how to unblock, nothing is sent',
         run: async function (t) {
             fake.answer = 'denied';
@@ -138,6 +141,7 @@
 
     S2P.scenario({
         name: 'push-server-refuses',
+        page: 'settings',   // "To urządzenie" moved there from the panel (2026-10-10)
         title: 'notifications: the server refuses the subscription — the switch goes back off, the browser drops it, an error note',
         setup: { pushStatus: 400 },
         run: async function (t) {
@@ -153,6 +157,7 @@
 
     S2P.scenario({
         name: 'push-iphone-outside-the-home-screen',
+        page: 'settings',   // "To urządzenie" moved there from the panel (2026-10-10)
         title: 'notifications on an iPhone in a Safari tab: no switch to turn on, the note how to add Scan2Play to the Home Screen',
         run: async function (t) {
             await t.waitFor(function () { return !document.getElementById('pushSettings').hidden; }, 'the section', 4000);
@@ -163,6 +168,7 @@
 
     S2P.scenario({
         name: 'push-already-on-here',
+        page: 'settings',   // "To urządzenie" moved there from the panel (2026-10-10)
         title: 'notifications switched on before in this browser: the switch shows on, and the server is told again (it may have forgotten)',
         run: async function (t) {
             await ready(t);

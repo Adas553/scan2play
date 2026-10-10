@@ -42,4 +42,13 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM PartySettingsEntity p WHERE p.partyCode = :partyCode")
     Optional<PartySettingsEntity> lockByPartyCode(@Param("partyCode") String partyCode);
+
+    /**
+     * The party whose invitation link this is, its row locked as {@link #lockByPartyCode} — the first read of a join, so the link's
+     * role is read under the lock: an organiser making a new link at that moment is waited for, and PostgreSQL then checks the token
+     * again — the old link joins nobody, not even with its old role ({@code PartyStaffRepositoryIT}).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM PartySettingsEntity p WHERE p.staffToken = :staffToken")
+    Optional<PartySettingsEntity> lockByStaffToken(@Param("staffToken") String staffToken);
 }
