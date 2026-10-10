@@ -2,10 +2,10 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.CommentStyle;
+import com.scan2play.model.StaffPermission;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
-import com.scan2play.service.PartyStaffService;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.SocialLinks;
 import com.scan2play.util.SongList;
@@ -51,14 +51,14 @@ public class DjPartySettingsController {
     private final PartySettingsCommandService partySettingsCommandService;
     private final AccountDeletionService accountDeletionService;
     private final DjSessionHelper sessionHelper;
-    private final PartyStaffService partyStaffService;
 
     /**
      * Re-activates the party session.
      */
     @PostMapping("/start-party")
-    public String startParty(OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+    public String startParty(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
+                             HttpSession session) {
+        PartySettingsEntity settings = sessionHelper.require(partyCode, StaffPermission.OPEN_CLOSE, authentication, session);
         partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
         return REDIRECT_DASHBOARD;
     }
@@ -67,9 +67,10 @@ public class DjPartySettingsController {
      * Ends the current party session without logging out the DJ.
      */
     @PostMapping("/end-party")
-    public String endParty(OAuth2AuthenticationToken authentication, HttpSession session) {
-        log.info("Ending party for DJ: {}", authentication.getName());
-        PartySettingsEntity settings = sessionHelper.getPartySettings(authentication, session);
+    public String endParty(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
+                           HttpSession session) {
+        PartySettingsEntity settings = sessionHelper.require(partyCode, StaffPermission.OPEN_CLOSE, authentication, session);
+        log.info("Ending party {} by {}", settings.getPartyCode(), authentication.getName());
         partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
         return REDIRECT_DASHBOARD;
     }
@@ -80,7 +81,7 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/vibe")
     public String updateGlobalVibe(@RequestParam String partyCode, @RequestParam VibeType newVibe,
                                    OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setGlobalVibe(newVibe));
         return REDIRECT_DASHBOARD;
     }
@@ -92,7 +93,7 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/comment-style")
     public String updateCommentStyle(@RequestParam String partyCode, @RequestParam CommentStyle commentStyle,
                                      OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setCommentStyle(commentStyle));
         return REDIRECT_DASHBOARD;
     }
@@ -104,7 +105,7 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/vibe-note")
     public String updateVibeNote(@RequestParam String partyCode, @RequestParam(required = false) String vibeNote,
                                  OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
         String note = Texts.oneLine(vibeNote, PartySettingsEntity.VIBE_NOTE_MAX);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setVibeNote(note.isEmpty() ? null : note));
         return REDIRECT_DASHBOARD;
@@ -117,7 +118,7 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/dj-name")
     public String updateDjName(@RequestParam String partyCode, @RequestParam(required = false) String djName,
                                OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
         String name = Texts.oneLine(djName, PartySettingsEntity.DJ_NAME_MAX);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setDjName(name.isEmpty() ? null : name));
         return REDIRECT_DASHBOARD;
@@ -180,7 +181,7 @@ public class DjPartySettingsController {
     public String updateHostLists(@RequestParam String partyCode, @RequestParam(required = false) String blocked,
                                   @RequestParam(required = false) String wanted,
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.require(partyCode, StaffPermission.HOST_LISTS, authentication, session);
         String blockedList = SongList.tidy(blocked);
         String wantedList = SongList.tidy(wanted);
         partySettingsCommandService.updateSettings(partyCode, s -> {
@@ -197,40 +198,14 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/host-link")
     public String updateHostLink(@RequestParam String partyCode, @RequestParam String link,
                                  OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.require(partyCode, StaffPermission.HOST_LISTS, authentication, session);
         String token = switch (link) {
             case "new" -> CodeGenerator.generateSecret();
             case "off" -> null;
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         };
         partySettingsCommandService.updateSettings(partyCode, s -> s.setHostToken(token));
-        return REDIRECT_DASHBOARD;
-    }
-
-    /**
-     * The staff's invitation link (V30, {@code /join/{token}}): {@code link=new} makes one — a new secret, so a link sent before
-     * stops working —, {@code link=off} takes it away. The people already on the staff stay.
-     */
-    @PostMapping("/dashboard/staff-link")
-    public String updateStaffLink(@RequestParam String partyCode, @RequestParam String link,
-                                  OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
-        String token = switch (link) {
-            case "new" -> CodeGenerator.generateSecret();
-            case "off" -> null;
-            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        };
-        partySettingsCommandService.updateSettings(partyCode, s -> s.setStaffToken(token));
-        return REDIRECT_DASHBOARD;
-    }
-
-    /** Takes one person's access away (V30): their next request opens their own panel. Only a person of the owner's own party. */
-    @PostMapping("/dashboard/staff-remove")
-    public String removeStaff(@RequestParam String partyCode, @RequestParam long id,
-                              OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
-        partyStaffService.remove(partyCode, id);
-        return REDIRECT_DASHBOARD;
+        return REDIRECT_DASHBOARD + "?party=" + partyCode;   // a full page load: the same panel again (a co-organiser's too)
     }
 
     /**
@@ -242,7 +217,7 @@ public class DjPartySettingsController {
                                @RequestParam double cooldownMinutes,
                                @RequestParam double duplicateCheckWindow,
                                OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        sessionHelper.require(partyCode, StaffPermission.LIMITS, authentication, session);
 
         // Whole numbers within bounds (review item 5.4): the duplicate window is read from the database and sent to the AI with
         // every guest's request, so it has a ceiling; the guest limit's own ceilings only keep the numbers sensible. All three

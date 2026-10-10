@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-09
+# Session Handoff — 2026-10-10
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
@@ -7,6 +7,24 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-10 — the staff reviewed and rebuilt, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `4a6d2de`), not
+  committed yet.** The review (every path of the organiser and the invited person on the real app, phone and computer):
+  https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx — the owner picked **variant B** (roles + "Własne"), roles by what a person does,
+  not by their job. Done, PROJECT_CONTEXT 5.1 "The party's staff": **V32** `party_staff.permissions` (the people on a staff keep what
+  they could do: "Obsługa kolejki") and `party_settings.owner_name`; `StaffPermission` (9) and `StaffRole` ("Podgląd", "Obsługa
+  kolejki", "Współorganizator", "Własne"); the owner's page **"Obsługa"** `/dj/staff` (a role or ticks per person, the link, removing;
+  "Konto" → "Obsługa imprezy"); **every form names its party** and the server checks the permission there (`require`, `requireOwner`)
+  — fixes the review's critical bug (a tab still showing another party cleared the person's own queue / ended their party);
+  **joining asks** ("Dołącz", a POST — a foreign site could join a logged-in DJ); the poll's 403 / `X-Panel-Access` reload the page
+  (an access taken away or changed is said, not a frozen queue); no DJ's party made behind anyone's back ("no-panel"); the joins
+  counted under the party's lock (20 at once made 11); one line "Klub Ola · Obsługa kolejki ▾" in place of the switcher, the banner
+  and "Mój panel"; texts ("Link dla gości", an old link's own message, a guests' link told apart); the privacy policy PL / EN.
+  Tests: 553 unit (`StaffPermissionEndpointsTest`: every endpoint refused without its permission), 50 database
+  (`StaffPermissionMigrationIT`, `PartyStaffRepositoryIT` 20 joins at once — seen red without the lock), 62 browser
+  (`forms-name-the-party`, `staff-access-taken-away`, `staff-access-changed` seen red on the old scripts; `staff-page-roles`,
+  `staff-access-same`). **Next (the owner's decision, 2026-10-10 — both yes):** (1) the role chosen with the invitation link (whoever
+  joins by it gets that role; editable after, as now); (2) an invitation by e-mail with "zaproszony / dołączył" (the review's item
+  05; the staff's e-mail kept — the privacy policy). Released by a PR to `dev`, then `dev` → `main` (V32 on that deploy).
 - **2026-10-09, night — the design review and all of its fixes, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` =
   `66c0007`), not committed yet.** The review (every screen on a phone 390×844 and a computer 1280×900, the contrast and the touch
   targets measured): https://claude.ai/artifact/NXTvqH6d2TauoH1RSVVJaJ — the owner: "zrób wszystko". Done: one action colour (the

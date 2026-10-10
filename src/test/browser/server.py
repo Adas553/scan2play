@@ -60,6 +60,11 @@ def default_state():
         'guestLimitsUse': '0,0',
         # The X-Party-Active header of every poll answer: false = the DJ ended the party (in any window)
         'partyActive': True,
+        # The poll's own answer (V32): e.g. 403 — the organiser took the person's access away (the page loads itself again)
+        'updatesStatus': None,
+        # The X-Panel-Access header of every poll answer (V32): what the person may do ('owner', or the permissions' names); None = no
+        # header. Another value than the page was made with: the organiser changed it, the page loads itself again
+        'panelAccess': None,
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
@@ -243,9 +248,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/updates':
             with stand.lock:
+                if state['updatesStatus']:
+                    return self._send(state['updatesStatus'])
                 queue = list(state['queue'])
                 limits = {'X-Guest-Limits': state['guestLimits'], 'X-Guest-Limits-Use': state['guestLimitsUse'],
                           'X-Party-Active': 'true' if state['partyActive'] else 'false'}
+                if state['panelAccess'] is not None:
+                    limits['X-Panel-Access'] = state['panelAccess']
             # Like the real server: the ETag is a fingerprint of the guest queue only. X-Guest-Limits(-Use) is on every answer, 304 too.
             etag = '"q-%08x"' % zlib.crc32(json.dumps(queue, sort_keys=True).encode('utf-8'))
             if self.headers.get('If-None-Match') == etag:
@@ -339,9 +348,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/dj-links':           # the DJ's profiles: a redirect when saved, as the real server, or 400
             status = state.get('djLinksStatus', 302)
             return self._send(status, headers={'Location': '/dj/dashboard'}) if status == 302 else self._send(status)
-        if path in ('/dj/dashboard/host-lists', '/dj/dashboard/host-link', '/dj/dashboard/staff-link', '/dj/dashboard/staff-remove',
-                    '/dj/panel'):   # the hosts' lists and link (V29), the staff and the panel switcher (V30): a redirect
+        if path in ('/dj/dashboard/host-lists', '/dj/dashboard/host-link', '/dj/panel'):
+            # the hosts' lists and link (V29), the panel switcher (V30): a redirect
             return self._send(302, headers={'Location': '/dj/dashboard'})
+        if path in ('/dj/staff/link', '/dj/staff/remove', '/dj/staff/permissions'):   # the owner's page "Obsługa" (V32): back to it
+            return self._send(302, headers={'Location': '/dj/staff'})
         if path == '/dj/push/unsubscribe':
             return self._send(204)
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/vibe-note', '/dj/dashboard/dj-name', '/dj/dashboard/comment-style',

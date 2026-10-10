@@ -163,6 +163,8 @@ body {
     .dropdown-item { min-height: 44px; display: flex; align-items: center; }
     /* a line of text one taps: "Masz zaproszenie…? Dołącz →", "Strona główna" on an error page, "Chcesz taką imprezę u siebie?" */
     .s2p-staff-login > summary { padding-block: 0.75rem; }
+    .s2p-panel-bar > summary { min-height: 44px; }
+    .s2p-staff-perms .form-check { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
     .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
 }
 
@@ -583,6 +585,19 @@ th[data-sort].sort-desc::after {
 .s2p-staff-login > summary::-webkit-details-marker { display: none; }
 .s2p-staff-login > summary:hover,
 .s2p-staff-login[open] > summary { text-decoration: underline; }
+/* The panel bar (V32): whose panel this is and the person's role in one line ("Klub Ola · Obsługa kolejki ▾"); unfolded, what they may
+   do and the other panels. A bordered row, the marker at the end — it reads as something to open, not as a heading. */
+.s2p-panel-bar       { border: 1px solid var(--s2p-border); border-radius: 8px; background: var(--s2p-bg-elevated); }
+.s2p-panel-bar > summary {
+    list-style: none; cursor: pointer; padding: 0.5rem 0.75rem;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem;
+}
+.s2p-panel-bar > summary::-webkit-details-marker { display: none; }
+.s2p-panel-bar > summary::after { content: "▾"; margin-left: auto; color: var(--s2p-text-muted); }
+.s2p-panel-bar[open] > summary::after { content: "▴"; }
+.s2p-panel-bar > summary:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 2px; }
+.s2p-panel-bar-body  { padding: 0 0.75rem 0.75rem; }
+.s2p-panel-bar #panelRole::before { content: "· "; }
 /* the guests' list: the song's number and its name side by side; may shrink, so a long name wraps (under the name, not the number) */
 .s2p-song-line,
 .s2p-song-text       { min-width: 0; }

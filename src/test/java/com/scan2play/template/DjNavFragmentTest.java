@@ -77,9 +77,10 @@ class DjNavFragmentTest {
                 .isLessThan(html.indexOf("data-dj-tab=\"queue\""))
                 .isLessThan(html.indexOf("data-dj-tab=\"history\""));
         assertThat(html.indexOf("data-dj-tab=\"queue\"")).isLessThan(html.indexOf("data-dj-tab=\"history\""));
-        assertThat(tabLink(html, "panel")).contains("href=\"/dj/dashboard#top\"");
-        assertThat(tabLink(html, "queue")).contains("href=\"/dj/dashboard#queue-content\"");
-        assertThat(tabLink(html, "history")).contains("href=\"/dj/history-view\"");
+        // the party the page shows (V32): a tab of another party's panel stays on it
+        assertThat(tabLink(html, "panel")).contains("href=\"/dj/dashboard?party=ABC12#top\"");
+        assertThat(tabLink(html, "queue")).contains("href=\"/dj/dashboard?party=ABC12#queue-content\"");
+        assertThat(tabLink(html, "history")).contains("href=\"/dj/history-view?party=ABC12\"");
         assertThat(html).contains(">DJ Panel</a>", ">Queue</a>", ">History</a>");
         assertThat(html).doesNotContain("Queue (Dashboard)", "??", "<html", "<body");
     }

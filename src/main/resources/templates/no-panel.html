@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{nopanel.title}">No party - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* A logged-in person with no panel at all (V32, the review of 2026-10-10): their access was taken away, or an invitation did not
+     work, and they have no party of their own. Before, a DJ's party was made for them without a word. Here: what happened, an
+     invitation to paste, or a party of their own — on purpose. */-->
+<body class="page-dj">
+<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-500">
+    <div class="fs-3 fw-bold text-white mb-3"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+    <div th:if="${panelNote != null}" id="panelNote" class="alert alert-warning py-2" role="status"
+         th:text="${panelNote.arg() != null} ? #{__${panelNote.key()}__(${panelNote.arg()})} : #{__${panelNote.key()}__}">Your access was removed.</div>
+    <h1 class="h4 text-white" th:text="#{nopanel.heading}">You are not on any party's staff now</h1>
+    <p class="text-secondary" th:text="#{nopanel.help}">Got a new invitation? Paste it below.</p>
+
+    <section class="card bg-dark border-secondary p-3 mb-3">
+        <form th:action="@{/dj/join}" method="POST" class="m-0" id="joinStaffForm">
+            <label for="joinLinkInput" class="form-label text-light small mb-1" th:text="#{nopanel.join.label}">Invitation link</label>
+            <div class="d-flex gap-2">
+                <input type="text" id="joinLinkInput" name="link" maxlength="300" autocomplete="off" required
+                       class="form-control bg-black text-light border-secondary"
+                       th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
+                <button type="submit" class="btn btn-outline-light text-nowrap" th:text="#{dashboard.join.button}">Join</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card bg-dark border-secondary p-3 mb-3">
+        <p class="small text-light mb-2" th:text="#{nopanel.own.help}">Are you a DJ? Start your own party.</p>
+        <form th:action="@{/dj/panel}" method="POST" class="m-0">
+            <button type="submit" id="makeOwnPartyBtn" class="btn btn-outline-light" th:text="#{panel.make_own}">Start your own party</button>
+        </form>
+    </section>
+
+    <form th:action="@{/dj/logout}" method="POST" class="m-0">
+        <button type="submit" class="btn btn-link text-secondary px-0" th:text="#{dashboard.button.logout}">Log out</button>
+    </form>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

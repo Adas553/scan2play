@@ -44,6 +44,12 @@ function applyGuestLimitsUse(value) {
     });
 }
 
+/** Whether the poll says other permissions than the page was made with (#panelAccess); a missing header changes nothing. */
+function accessChanged(value) {
+    const shown = document.getElementById('panelAccess');
+    return value !== null && shown !== null && shown.value !== '' && value !== shown.value;
+}
+
 // One chain of polls: the next one is scheduled when one ends; a poll asked for meanwhile (pollNow) comes right after it
 let nextPoll = null;
 let polling = false;
@@ -87,6 +93,13 @@ async function refreshTable() {
         // …and whether the party is open: it may have been ended or resumed in another window
         const partyActive = response.headers.get('X-Party-Active');
         if (partyActive === 'true' || partyActive === 'false') showPartyActive(partyActive === 'true', sentAt);
+
+        // The person's access (V32): taken away (403) or changed by the organiser (X-Panel-Access) — the page loads itself again, and
+        // the panel says what happened; before, the queue stood still and only the console knew
+        if (response.status === 403 || accessChanged(response.headers.get('X-Panel-Access'))) {
+            window.location.reload();
+            return;
+        }
 
         // 304 Not Modified — queue unchanged, skip DOM replacement
         if (response.status === 304) {

@@ -18,6 +18,7 @@
 <nav class="toolbar no-print">
     <strong th:text="#{summary.title}">Evening summary</strong>
     <form th:unless="${#lists.isEmpty(evenings)}" action="/dj/summary" th:action="@{/dj/summary}" method="get" class="pick">
+        <input type="hidden" name="party" th:value="${partyCode}">
         <label for="eveningSelect" th:text="#{summary.evening}">Evening:</label>
         <select id="eveningSelect" name="evening" data-auto-submit>
             <option th:each="e : ${evenings}" th:value="${e.day}" th:selected="${e.day == evening}"
@@ -27,9 +28,9 @@
     </form>
     <th:block th:if="${summary != null}">
         <button type="button" id="printBtn" th:text="#{summary.print}">Print / PDF</button>
-        <a th:href="@{/dj/summary/csv(evening=${evening})}" id="csvLink" th:text="#{summary.csv}">CSV (Excel)</a>
+        <a th:href="@{/dj/summary/csv(evening=${evening},party=${partyCode})}" id="csvLink" th:text="#{summary.csv}">CSV (Excel)</a>
     </th:block>
-    <a href="/dj/dashboard" th:text="#{summary.back}">Back to the dashboard</a>
+    <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" th:text="#{summary.back}">Back to the dashboard</a>
     <p class="hint" th:text="#{summary.hint}">This bar is not printed.</p>
 </nav>
 

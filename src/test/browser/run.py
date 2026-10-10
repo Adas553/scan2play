@@ -9,7 +9,7 @@ What it does, in this order — and it never runs Maven inside the repo (the app
 devtools restarts it whenever that changes; CLAUDE.md):
   1. mirrors the repo, without target/ .git/ .idea/, into a work directory (default: <temp>/scan2play-browser-tests) — a second
      run only copies what changed, so Maven there builds incrementally;
-  2. runs DashboardPageRenderTest (and GuestPageRenderTest, QrPrintPageTest) there with the copy's mvnw — they render the real
+  2. runs DashboardPageRenderTest (and GuestPageRenderTest, QrPrintPageTest, StaffPageRenderTest) there with the copy's mvnw — they render the real
      dashboard.html, the guest page and the QR print page, and write the real Content-Security-Policy, into target/browser-harness/;
   3. starts the stand-in server (server.py) on a free port of 127.0.0.1;
   4. for every scenario opens /dj/dashboard?scenario=NAME in a headless Chrome with a fresh profile; the page runs the scenario and
@@ -77,7 +77,7 @@ def mirror(src, dst):
 def render(work):
     """The render tests in the copy: write target/browser-harness/dashboard*.html, guest.html, qr-print-*.html and csp.txt."""
     wrapper = work / ('mvnw.cmd' if os.name == 'nt' else 'mvnw')
-    command = [str(wrapper), '-B', '-ntp', '-q', 'test', '-Dtest=DashboardPageRenderTest,GuestPageRenderTest,QrPrintPageTest', '-Dsurefire.failIfNoSpecifiedTests=false']
+    command = [str(wrapper), '-B', '-ntp', '-q', 'test', '-Dtest=DashboardPageRenderTest,GuestPageRenderTest,QrPrintPageTest,StaffPageRenderTest', '-Dsurefire.failIfNoSpecifiedTests=false']
     if os.name != 'nt':
         command.insert(0, 'sh')   # mvnw is committed without the executable bit (mode 100644): a checkout on Linux could not run it directly
     print('rendering the dashboard in the copy: ' + ' '.join(command[1 if os.name == 'nt' else 2:]), flush=True)

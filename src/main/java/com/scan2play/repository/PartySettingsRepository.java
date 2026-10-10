@@ -1,7 +1,11 @@
 package com.scan2play.repository;
 
 import com.scan2play.entity.PartySettingsEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -30,4 +34,12 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
 
     /** The party whose staff invitation link (V30, {@code /join/{token}}) has this secret — the unique index of the column. */
     Optional<PartySettingsEntity> findByStaffToken(String staffToken);
+
+    /**
+     * The party, its row locked until the transaction ends ({@code SELECT … FOR UPDATE}): people joining its staff at the same moment
+     * are counted one after another, so the staff never passes its limit ({@code PartyStaffService.join}, {@code StaffJoinIT}).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM PartySettingsEntity p WHERE p.partyCode = :partyCode")
+    Optional<PartySettingsEntity> lockByPartyCode(@Param("partyCode") String partyCode);
 }
