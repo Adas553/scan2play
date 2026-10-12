@@ -23,7 +23,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   (`queue-keys-click`, red before; on a phone a tap only folds — `queue-keys-click-phone`). And the history: a skip and a cleared
   queue are placed (and timed) by when the DJ did them, as a "Zagrane" — `findHistory` orders by `COALESCE(played_at, skipped_at,
   cleared_at, requested_at)` (`SongRequestRepositoryIT`, red on the old query; 62 ITs green on a local PostgreSQL 16; CI has 18).
-  Then Backspace = "Cofnij" while its bar is shown, the request put back chosen again (`queue-keys-undo`, red before). Not done:
+  Then Backspace = "Cofnij" while its bar is shown, the request put back chosen again (`queue-keys-undo`, red before); then
+  Ctrl+Z / ⌘Z the same, Ctrl+C / ⌘C = C with a request chosen and no text selected (`queue-keys-undo-ctrl-z`, `queue-keys`, red before). Not done:
   Shift to choose and copy several songs — a DJ software's search takes one song at a time. In the cloud container `help-window` and `settings-more-rows` fail on the
   code before the change as well (its Chromium, not this change). **Next:** the owner tries it with Serato / VirtualDJ (does their
   search find "Wilki Baśka"?), then a PR to `dev`.
