@@ -20,7 +20,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   the AI down (fixed). Tests: `GuidePageRenderTest` (new; run.py renders `guide-pl.html` / `guide-en.html`), `HtmlLangDeclarationTest`
   (the guide a file per language), `DashboardPageRenderTest` (the menu and the help), browser `help-window`, `guide-page-phone`,
   `history-count-in-heading` (new, seen red on the code before), `account-menu` (four items). The last change of the text (the staff's
-  roles) was not run locally — the owner stopped the runs; CI runs them on the PR. **Next:** the PR's CI, then `dev` → `main`.
+  roles) was not run locally — the owner stopped the runs; CI's browser tests then failed on `help-window`: the window's "×" was 32 px
+  on a phone (Bootstrap's `.btn-close`, in the old feedback window too) — now 44 px (`app.css`). **Next:** the PR's CI, then `dev` → `main`.
 - **2026-10-10, late night — two small fixes after the release, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` =
   `3174e19`; PR #43 → `dev`, PR #44 → `main` = `f6c67ed`).** The owner's screenshots: on a computer the history's "↩ Przywróć" stood
   at different places after "ZAGRANE" and the longer "POMINIĘTE" — every verdict's word now takes the width of the longer of the two
