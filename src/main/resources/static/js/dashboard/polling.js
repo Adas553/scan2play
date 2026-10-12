@@ -11,6 +11,7 @@ import { EVENTS, on } from './events.js';
 import { csrfHeaders, partyCode, showPartyActive } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 import { reopenCards } from './cards.js';
+import { keepChosen } from './queue-keys.js';
 
 let currentETag = null;
 
@@ -165,6 +166,8 @@ async function refreshTable() {
         applyListFilters(document.getElementById('queueList'));
         // …and open again the cards of a phone that were open (cards.js)
         reopenCards(document.getElementById('song-list'));
+        // …and choose again the request the keyboard works on (queue-keys.js)
+        keepChosen();
     } catch (err) {
         console.error('[Polling] Refresh error:', err);
     } finally {
