@@ -53,8 +53,9 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
 
     /**
      * The party's played and/or rejected requests, the most recent event first — for the DJ history
-     * ({@code PlayHistoryService}). The moment of an event is when the request was played, or, for a rejected one or one
-     * that was played before V6 (no {@code played_at}), when it was requested. The read is bounded by the pageable and
+     * ({@code PlayHistoryService}). The moment of an event is the DJ's: when the request was played, skipped ("Pomiń", V20) or
+     * cleared with the queue (V25); for one the AI rejected, or one played before V6 (no {@code played_at}), when it was requested
+     * (the owner, 2026-10-12: a skip stood among the requests of its time, a "Zagrane" at the top). The read is bounded by the pageable and
      * limited to one party and the given decisions; sorting the party's rows on the expression is cheap next to that.
      *
      * @param partyCode The unique code of the party.
@@ -63,7 +64,7 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * @return The most recent requests, newest event first.
      */
     @Query("SELECT s FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN :decisions "
-            + "ORDER BY COALESCE(s.playedAt, s.requestedAt) DESC, s.id DESC")
+            + "ORDER BY COALESCE(s.playedAt, s.skippedAt, s.clearedAt, s.requestedAt) DESC, s.id DESC")
     List<SongRequestEntity> findHistory(@Param("partyCode") String partyCode,
                                         @Param("decisions") Collection<String> decisions,
                                         Pageable pageable);
