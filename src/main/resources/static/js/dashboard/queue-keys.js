@@ -7,6 +7,7 @@
  *   C       copy the chosen song (none chosen: the first one, which is chosen then)
  *   Enter   "Zagrane" of the chosen request      S   "Pomiń" of it      (none chosen: the first one is chosen, nothing is sent)
  *   Esc     none chosen
+ *   ⌫       "Cofnij" of the bar after a "Zagrane" / "Pomiń" (forms.js), while it is shown; the request put back is chosen again
  *
  * On a computer a click on a request chooses it too (its buttons included: "Kopiuj" chooses what it copied); on a phone a tap is the
  * card's fold (cards.js), no frame.
@@ -136,11 +137,25 @@ document.addEventListener('click', function (e) {
     if (e.target.closest('.s2p-btn-copy')) copySong(row);
 });
 
+/** ⌫: the bar's "Cofnij" while it is shown — even when the queue is empty, the last request having just left it. */
+function undo(e) {
+    const bar = document.getElementById('undoSkip');
+    const button = bar && !bar.hidden ? bar.querySelector('[data-undo-button]') : null;
+    if (!button) return;
+    e.preventDefault();
+    chosenId = bar.getAttribute('data-undo-id');
+    button.click();
+}
+
 document.addEventListener('keydown', function (e) {
     if (e.ctrlKey || e.altKey || e.metaKey || e.defaultPrevented || e.isComposing) return;
     if (e.target.closest && e.target.closest(TYPING)) return;
     if (document.querySelector('.modal.show, dialog[open]')) return;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (key === 'Backspace') {
+        undo(e);
+        return;
+    }
     if (['ArrowDown', 'ArrowUp', 'c', 'Enter', 's', 'Escape'].indexOf(key) < 0) return;
     if (key === 'Enter' && e.target.closest && e.target.closest('a, button')) return;
     const rows = shownRows();

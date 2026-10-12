@@ -403,7 +403,7 @@ class DashboardPageRenderTest {
                 "aria-label=\"Szczegóły\"", "s2p-check-song", "s2p-host-wanted", "💸 2", ">Podejrzyj<");
         // "Kopiuj" and the queue's keys (queue-keys.js): "Zagrane" / "Pomiń" by the keyboard only for whom may press them
         assertThat(owner).contains("s2p-btn-copy", ">Kopiuj<", "data-copied=\"Skopiowano\"",
-                "id=\"queueKeys\"", "C kopiuj · Enter zagrane · S pomiń");
+                "id=\"queueKeys\"", "C kopiuj · Enter zagrane · S pomiń · Backspace cofnij");
         write("dashboard-cards.html", owner);
 
         PartyStaffService staff = mock(PartyStaffService.class);

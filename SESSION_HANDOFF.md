@@ -22,7 +22,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   scrolls (never the poll): `queue-keys-scroll`, red on the code before. Then: on a computer a click on a request chooses it
   (`queue-keys-click`, red before; on a phone a tap only folds — `queue-keys-click-phone`). And the history: a skip and a cleared
   queue are placed (and timed) by when the DJ did them, as a "Zagrane" — `findHistory` orders by `COALESCE(played_at, skipped_at,
-  cleared_at, requested_at)` (`SongRequestRepositoryIT`, red on the old query; 62 ITs green on a local PostgreSQL 16; CI has 18). In the cloud container `help-window` and `settings-more-rows` fail on the
+  cleared_at, requested_at)` (`SongRequestRepositoryIT`, red on the old query; 62 ITs green on a local PostgreSQL 16; CI has 18).
+  Then Backspace = "Cofnij" while its bar is shown, the request put back chosen again (`queue-keys-undo`, red before). Not done:
+  Shift to choose and copy several songs — a DJ software's search takes one song at a time. In the cloud container `help-window` and `settings-more-rows` fail on the
   code before the change as well (its Chromium, not this change). **Next:** the owner tries it with Serato / VirtualDJ (does their
   search find "Wilki Baśka"?), then a PR to `dev`.
 - **2026-10-12 — the guide and "Pomoc i kontakt", on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `39891be`;

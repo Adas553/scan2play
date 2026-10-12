@@ -53,7 +53,7 @@
         run: async function (t) {
             const copied = catchClipboard();
             t.step('the keys named under the queue', document.getElementById('queueKeys').textContent.trim(),
-                'Klawiatura: ↑ ↓ wybór · C kopiuj · Enter zagrane · S pomiń · Esc');
+                'Klawiatura: ↑ ↓ wybór · C kopiuj · Enter zagrane · S pomiń · Backspace cofnij · Esc');
             t.step('nothing chosen at first', chosen(), []);
 
             press('Enter');
@@ -148,6 +148,40 @@
         run: async function (t) {
             row(12).querySelector('.song-title').click();
             t.step('unfolded, not chosen', [row(12).classList.contains('s2p-open'), chosen()], [true, []]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'queue-keys-undo',
+        title: 'Backspace is "Cofnij" while its bar is shown — the request put back is chosen again; with no bar, or typing in the search box, it does nothing',
+        setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: '' }, { id: 2, name: 'sanah - Szampan', url: '' }] },
+        run: async function (t) {
+            await t.waitFor(function () { return row(2) && !row(2).querySelector('.s2p-btn-played'); }, 'the queue poll', 8000);
+            t.step('no bar: Backspace does nothing (and leaves the key to the page)', [press('Backspace'),
+                await t.stand.count('POST /dj/dashboard/restore')], [false, 0]);
+
+            // the stand-in's rows have no buttons: "Zagrane" of the first one as the real row's form sends it
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '/dj/dashboard/play';
+            form.innerHTML = '<input type="hidden" name="id" value="1"><button type="submit" class="s2p-btn-played">▶</button>';
+            row(1).lastElementChild.appendChild(form);
+            press('ArrowDown');
+            press('Enter');
+            await t.waitFor(function () { return !document.getElementById('undoSkip').hidden && !row(1); }, '"Cofnij" and the row gone', 8000);
+            t.step('the next request chosen meanwhile', chosen(), ['2']);
+
+            const search = document.querySelector('#queueList [data-list-search]');
+            search.focus();
+            press('Backspace', search);
+            await t.sleep(300);
+            t.step('Backspace in the search box is the box\'s', await t.stand.count('POST /dj/dashboard/restore'), 0);
+            search.blur();
+
+            t.step('Backspace with the bar shown: taken', press('Backspace'), true);
+            await t.waitFor(function () { return row(1); }, 'the request back in the queue', 8000);
+            t.step('"Cofnij" sent for it, the bar gone, the request put back chosen', [await ids(t, 'POST /dj/dashboard/restore'),
+                document.getElementById('undoSkip').hidden, chosen()], [['1'], true, ['1']]);
         }
     });
 
