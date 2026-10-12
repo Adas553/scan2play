@@ -120,6 +120,38 @@
     });
 
     S2P.scenario({
+        name: 'queue-keys-click',
+        title: 'on a computer a click on a request chooses it for the keys (its "Kopiuj" too), and Enter then plays that one',
+        page: 'dashboard-cards',
+        setup: { updatesStatus: 304 },
+        run: async function (t) {
+            catchClipboard();
+            row(12).querySelector('.song-title').click();
+            t.step('a click on the song chooses its request', chosen(), ['12']);
+            row(13).querySelector('.s2p-btn-copy').click();
+            t.step('"Kopiuj" of another chooses that one', chosen(), ['13']);
+            press('ArrowUp');
+            t.step('the keys go on from it', chosen(), ['12']);
+            row(11).querySelector('td').click();
+            press('Enter');
+            await t.waitFor(function () { return !document.getElementById('undoSkip').hidden; }, '"Cofnij"', 3000);
+            t.step('Enter: "Zagrane" of the clicked one', await ids(t, t.PLAY), ['11']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'queue-keys-click-phone',
+        title: 'on a phone a tap on a card unfolds it, and chooses nothing (no frame)',
+        page: 'dashboard-cards',
+        viewport: '390,844',
+        setup: { updatesStatus: 304 },
+        run: async function (t) {
+            row(12).querySelector('.song-title').click();
+            t.step('unfolded, not chosen', [row(12).classList.contains('s2p-open'), chosen()], [true, []]);
+        }
+    });
+
+    S2P.scenario({
         name: 'queue-keys-scroll',
         title: 'a long queue and the keys: the chosen row is never under the sticky header, and the first / the last one takes the list\'s scrollbar to its very end (the owner, 2026-10-12: it stopped short)',
         setup: {

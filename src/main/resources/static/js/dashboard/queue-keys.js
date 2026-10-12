@@ -8,6 +8,9 @@
  *   Enter   "Zagrane" of the chosen request      S   "Pomiń" of it      (none chosen: the first one is chosen, nothing is sent)
  *   Esc     none chosen
  *
+ * On a computer a click on a request chooses it too (its buttons included: "Kopiuj" chooses what it copied); on a phone a tap is the
+ * card's fold (cards.js), no frame.
+ *
  * Only while the Queue's list is shown, never while typing (the search box, a form's field), with Ctrl / Alt / ⌘ (Ctrl+C stays the
  * browser's) or with a window open. Enter on a focused button or link is that control's. A request sent with Enter / S is sent once:
  * a second press before the poll takes it away does nothing. The chosen request is remembered by its id when the poll replaces the
@@ -17,6 +20,7 @@
 const ROWS = '#song-list > tr[data-song-id]';
 const TYPING = 'input, textarea, select, [contenteditable]';
 const COPIED_MS = 1500;
+const WIDE = '(min-width: 768px)';
 
 let chosenId = null;
 let chosenIndex = 0;
@@ -126,9 +130,10 @@ function send(row, buttonClass) {
 }
 
 document.addEventListener('click', function (e) {
-    const button = e.target.closest ? e.target.closest('.s2p-btn-copy') : null;
-    const row = button ? button.closest(ROWS) : null;
-    if (row) copySong(row);
+    const row = e.target.closest ? e.target.closest(ROWS) : null;
+    if (!row) return;
+    if (window.matchMedia(WIDE).matches) choose(row);
+    if (e.target.closest('.s2p-btn-copy')) copySong(row);
 });
 
 document.addEventListener('keydown', function (e) {
