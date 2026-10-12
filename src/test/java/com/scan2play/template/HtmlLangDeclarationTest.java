@@ -111,9 +111,9 @@ class HtmlLangDeclarationTest {
     }
 
     @Test
-    @DisplayName("the legal pages have their text written in, one file per language: no message keys, and the language of the file")
+    @DisplayName("the legal pages and the guide have their text written in, one file per language: no message keys, and the language of the file")
     void shouldDeclareTheLanguageOfTheFile_onTheLegalPages() throws IOException {
-        for (String page : List.of("terms", "privacy")) {
+        for (String page : List.of("terms", "privacy", "guide")) {
             assertThat(source(page)).as(page).doesNotContain("#{");
             assertThat(htmlTag(page)).as(page).contains("lang=\"en\"").doesNotContain("th:lang");
             assertThat(source(page + "_pl")).as(page + "_pl").doesNotContain("#{");

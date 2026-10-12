@@ -71,14 +71,68 @@
                 const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
                 return !(hit === item || item.contains(hit));
             }).map(function (item) { return item.textContent.trim(); });
-            // the owner's three — "Zgłoś uwagę", "Wyloguj", "Usuń konto" —, every one in reach
-            t.step('every item of the menu can be tapped: nothing (the sticky tab bar) lies over one', [items.length, covered], [3, []]);
+            // the owner's four — "Instrukcja", "Pomoc i kontakt" (with the old "Zgłoś uwagę" in it, 2026-10-12), "Wyloguj", "Usuń
+            // konto" —, every one in reach
+            t.step('every item of the menu can be tapped: nothing (the sticky tab bar) lies over one', [items.length, covered], [4, []]);
+            t.step('the guide and the help first', items.slice(0, 2).map(function (item) { return item.textContent.trim(); }),
+                ['Instrukcja', 'Pomoc i kontakt']);
             t.step('every item is at least 44 px high', items.filter(function (i) { return i.getBoundingClientRect().height < 44 - 0.5; }).length, 0);
             const last = items[items.length - 1];
             t.check('the deletion of the account is the last one, in red', last && last.id === 'deleteAccountBtn'
                 && getComputedStyle(last).color === 'rgb(255, 123, 123)');
             // the party's staff is a row of the settings, not the person's menu (2026-10-10)
             t.check('no page of the staff in the menu', !document.getElementById('staffMenuLink'));
+        }
+    });
+
+    // "Pomoc i kontakt" (the owner, 2026-10-12): the address to write to with "Kopiuj", the guide, and the feedback form of the old
+    // "Zgłoś uwagę" — one window, not two "write to us" side by side.
+    S2P.scenario({
+        name: 'help-window',
+        title: 'the menu "Konto" → "Pomoc i kontakt": the address with "Kopiuj" (copied, or selected where the clipboard is refused), the guide, the feedback form; nothing lower than 44 px',
+        viewport: '390,844',
+        run: async function (t) {
+            document.getElementById('accountMenuBtn').click();
+            const help = document.getElementById('helpMenuBtn');
+            await t.waitFor(function () { return shows(help); }, 'the menu to open', 3000);
+            help.click();
+            const modal = document.getElementById('feedbackModal');
+            await t.waitFor(function () { return modal.classList.contains('show') && shows(document.getElementById('helpEmail')); }, 'the window', 3000);
+            t.step('the address, the guide and the form', [document.getElementById('helpEmail').textContent.trim(),
+                document.getElementById('helpGuideLink').getAttribute('href'), shows(document.getElementById('feedbackMessage'))],
+                ['scan2playcontact@gmail.com', '/jak-to-dziala', true]);
+            const copy = document.getElementById('helpEmailCopy');
+            copy.click();
+            await t.sleep(300);
+            t.check('"Kopiuj" copies it, or selects it to copy ("' + copy.textContent.trim() + '")', copy.textContent.trim() === 'Skopiowano'
+                || String(window.getSelection()) === 'scan2playcontact@gmail.com');
+            t.step('nothing to tap is lower than 44 px', tooSmall(modal.querySelector('.modal-content')), []);
+        }
+    });
+
+    // The guide (the owner, 2026-10-12): public, in the order of a party; the app's buttons as pictures, never controls.
+    S2P.scenario({
+        name: 'guide-page-phone',
+        title: 'the guide "Jak działa Scan2Play" on a phone: the jumps whole on the screen and 44 px high, nothing wider than the screen, the pictures of buttons cannot be tapped or focused',
+        page: 'guide-pl',
+        viewport: '390,844',
+        run: async function (t) {
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            const jumps = Array.from(document.querySelectorAll('#guideJump a'));
+            t.step('six jumps, each to its section', jumps.map(function (a) { return !!document.querySelector(a.getAttribute('href')); }),
+                [true, true, true, true, true, true]);
+            t.step('every jump whole on the screen', jumps.filter(function (a) {
+                const box = a.getBoundingClientRect();
+                return box.left < 0 || box.right > window.innerWidth;
+            }).map(function (a) { return a.textContent.trim(); }), []);
+            t.step('the jumps and the way back at least 44 px high', tooSmall(document.getElementById('guideJump'))
+                .concat(tooSmall(document.getElementById('guideBack').parentElement)), []);
+            const pictures = Array.from(document.querySelectorAll('.s2p-guide-row:not(.s2p-guide-text) > :first-child, .s2p-guide-inline'));
+            t.step('the pictures: spans, not focusable, not tappable', pictures.filter(function (el) {
+                return el.tagName !== 'SPAN' || el.tabIndex >= 0 || getComputedStyle(el).pointerEvents !== 'none';
+            }).length, 0);
+            t.check('"↩ Przywróć" inside a sentence: as tall as its line, not a 44 px button',
+                document.querySelector('.s2p-guide-inline').getBoundingClientRect().height < 32);
         }
     });
 

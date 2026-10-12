@@ -39,10 +39,16 @@
          th:with="activeFilter=${historyFilter != null ? historyFilter : 'all'}">
         <!--/* A heading only where the list arrives by itself under the dashboard's other panels (the History tab, model
              attribute historyHeading): the standalone page has its own h1 above. It tells the DJ what has just appeared. */-->
-        <h4 th:if="${historyHeading}" class="text-white mb-2" th:text="#{history.title}">Party history</h4>
+        <!--/* Its count beside it, as the queue's "Kolejka 8" (the owner, 2026-10-12: a small badge in the row of the filters was
+             hard to see); the standalone page keeps it in that row, under its own h1. */-->
+        <h4 th:if="${historyHeading}" class="text-white mb-2">
+            <span th:text="#{history.title}">Party history</span>
+            <span class="badge text-bg-secondary ms-1" data-list-count th:attr="data-suffix=${historyHasMore} ? '+' : ''"
+                  th:text="${#lists.size(history)} + (${historyHasMore} ? '+' : '')">0</span>
+        </h4>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="badge text-bg-secondary" data-list-count
+                <span th:unless="${historyHeading}" class="badge text-bg-secondary" data-list-count
                       th:attr="data-suffix=${historyHasMore} ? '+' : ''"
                       th:text="${#lists.size(history)} + (${historyHasMore} ? '+' : '')">0</span>
                 <!--/* Separate small buttons that wrap (a joined btn-group is wider than a phone) */-->

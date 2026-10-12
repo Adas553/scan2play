@@ -60,11 +60,16 @@
             <button type="button" id="accountMenuBtn" class="btn btn-sm btn-outline-secondary dropdown-toggle"
                     data-bs-toggle="dropdown" aria-expanded="false" th:text="#{dashboard.account}">Account</button>
             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" aria-labelledby="accountMenuBtn">
-                <!--/* the menu is about the person; the party's staff is a row of the settings ("Obsługa", 2026-10-10) */-->
+                <!--/* the menu is about the person and their help; the party's staff is a row of the settings ("Obsługa", 2026-10-10).
+                     "Instrukcja" (the public guide, LegalController.guide) and "Pomoc i kontakt" — the address and the old "Zgłoś uwagę"
+                     in one window (the owner, 2026-10-12: two "write to us" side by side would confuse) */-->
                 <li>
-                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#feedbackModal"
-                            th:attr="data-party-code=${partyCode}" th:title="#{feedback.button.title}"
-                            th:text="#{feedback.button.label}">Send feedback</button>
+                    <a class="dropdown-item" id="guideMenuLink" th:href="#{help.guide.href}" href="/how-it-works"
+                       th:text="#{help.guide.label}">Guide</a>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item" id="helpMenuBtn" data-bs-toggle="modal" data-bs-target="#feedbackModal"
+                            th:attr="data-party-code=${partyCode}" th:text="#{help.button.label}">Help and contact</button>
                 </li>
                 <!--/* someone without a party of their own (on another's staff): makes one here, on purpose — never by a click on
                      "Mój panel" or by an access taken away (the review, 2026-10-10) */-->
@@ -122,7 +127,7 @@
     </nav>
 
     <!-- ================================================================
-         Feedback Modal
+         Help and contact: the address to write to, the guide, and the feedback form (POST /dj/feedback, dj-nav.js)
          ================================================================ -->
     <div class="modal fade" id="feedbackModal" tabindex="-1"
          aria-labelledby="feedbackModalLabel" aria-hidden="true">
@@ -130,12 +135,23 @@
             <div class="modal-content bg-dark border-secondary text-light">
                 <div class="modal-header border-secondary">
                     <h5 class="modal-title" id="feedbackModalLabel"
-                        th:text="#{feedback.modal.title}">💡 Report a Bug / Share an Idea</h5>
+                        th:text="#{help.modal.title}">Help and contact</h5>
                     <button type="button" class="btn-close btn-close-white"
                             data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <textarea id="feedbackMessage" rows="5" maxlength="2000"
+                    <!--/* the address as text one can select, "Kopiuj" beside it: a mailto: link opens no mail in many browsers */-->
+                    <p class="text-secondary mb-1" th:text="#{help.write}">Write to us:</p>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <span id="helpEmail" class="font-monospace user-select-all px-2 py-1 rounded border border-secondary bg-black text-break"
+                              th:text="#{contact.email}">scan2playcontact@gmail.com</span>
+                        <button type="button" id="helpEmailCopy" class="btn btn-sm btn-outline-secondary"
+                                th:attr="data-copy-text=#{contact.email},data-copied=#{help.copied}" th:text="#{help.copy}">Copy</button>
+                    </div>
+                    <p class="mb-3"><a id="helpGuideLink" th:href="#{help.guide.href}" href="/how-it-works" class="link-info"
+                          th:text="#{help.guide.link}">How Scan2Play works →</a></p>
+                    <label for="feedbackMessage" class="form-label fw-semibold" th:text="#{help.feedback.title}">Report a problem or an idea</label>
+                    <textarea id="feedbackMessage" rows="4" maxlength="2000"
                               class="form-control bg-black text-light border-secondary"
                               th:placeholder="#{feedback.modal.placeholder}"></textarea>
                     <div class="d-flex justify-content-between mt-2">
@@ -144,6 +160,7 @@
                             <span id="feedbackCharCount">0</span> / 2000
                         </small>
                     </div>
+                    <p class="small text-secondary mt-2 mb-0" th:text="#{help.feedback.reply}">If you want an answer, write to the address above.</p>
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-outline-secondary"
@@ -171,7 +188,7 @@
         </div>
     </div>
 
-    <!--/* The feedback form and the confirmations of the account buttons above: js/dj-nav.js (no inline script — CSP, review 5.1). */-->
+    <!--/* The feedback form, "Kopiuj" of the address and the confirmations of the account buttons above: js/dj-nav.js (no inline script — CSP, review 5.1). */-->
     <script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 
 </th:block>

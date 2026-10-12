@@ -127,6 +127,28 @@ S2P.scenario({
     }
 });
 
+// The owner (2026-10-12): the history's count was a small badge in the row of the filters; the queue's is in its heading, "Kolejka 8".
+S2P.scenario({
+    name: 'history-count-in-heading',
+    title: 'the History tab: its count in the heading "Historia imprezy", as big as the queue\'s in "Kolejka" — and still the search\'s "n / m"',
+    setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' }] },
+    run: async function (t) {
+        const queueCount = document.querySelector('#queueList [data-list-count]');
+        const size = function (el) { return Math.round(el.getBoundingClientRect().height); };
+        const queueSize = size(queueCount);
+        document.querySelector('[data-dj-tab="history"]').click();
+        await t.waitFor(function () { return document.querySelector('#history-content tr[data-decision]'); }, 'the history', 5000);
+        const count = document.querySelector('#history-content [data-list-count]');
+        t.step('in the heading, the only count of the list', [!!count.closest('h4'), document.querySelectorAll('#history-content [data-list-count]').length],
+            [true, 1]);
+        t.check('as big as the queue\'s (' + size(count) + ' / ' + queueSize + ' px)', Math.abs(size(count) - queueSize) <= 1);
+        const search = document.querySelector('#history-content [data-list-search]');
+        search.value = 'played';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+        t.check('the search still counts in it (' + count.textContent + ')', /^\d+ \/ \d+\+?$/.test(count.textContent.trim()));
+    }
+});
+
 // The design review of 2026-10-10 (variant C, https://claude.ai/artifact/HJ7JdqVoXRpBGdD7h3d2Wv): on a computer the comment's column was
 // the widest and the loudest, the songs broke inside words, "Klimat" said the same in every row, eight colours of text competed.
 S2P.scenario({

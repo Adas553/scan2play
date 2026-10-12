@@ -357,6 +357,9 @@
                 <button th:if="${access.may('VIBE')}" type="button" class="btn btn-outline-light" data-open-settings
                         th:text="#{dashboard.empty.vibe}">Set the vibe</button>
             </div>
+            <!--/* where a new DJ lands first: the guide (public, LegalController.guide; the owner, 2026-10-12) */-->
+            <a th:href="#{help.guide.href}" href="/how-it-works" id="queueEmptyGuide" class="btn btn-link mt-2"
+               th:text="#{dashboard.empty.guide}">First time? See how it works</a>
         </div>
     </div>
     </div>
