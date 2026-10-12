@@ -67,12 +67,14 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("in the dashboard's History tab the list has a heading of its own, so it is clear what has appeared")
+    @DisplayName("in the dashboard's History tab the list has a heading of its own, so it is clear what has appeared — with its count, as the queue's \"Kolejka 8\" (the owner, 2026-10-12)")
     void shouldHaveAHeadingInTheTab() {
         String html = render(List.of(guest(1, "Alpha", "played")), false, true, Locale.ENGLISH);
 
-        assertThat(html).contains("<h4", "Party history</h4>");
-        assertThat(render(List.of(guest(1, "Alpha", "played")), false, true, PL)).contains("Historia imprezy</h4>");
+        String heading = html.substring(html.indexOf("<h4"), html.indexOf("</h4>"));
+        assertThat(heading).contains(">Party history</span>", "data-list-count", ">1</span>");
+        assertThat(html.split("data-list-count", -1)).as("one count").hasSize(2);
+        assertThat(render(List.of(guest(1, "Alpha", "played")), false, true, PL)).contains(">Historia imprezy</span>");
     }
 
     @Test

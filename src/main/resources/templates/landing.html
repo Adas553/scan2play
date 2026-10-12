@@ -37,6 +37,10 @@
                 </a>
             </div>
 
+            <!--/* The guide for DJs, public (the owner, 2026-10-12): read before the first login */-->
+            <a th:href="#{help.guide.href}" href="/how-it-works" id="landingGuide" class="btn btn-link mt-3"
+               th:text="#{landing.guide}">How Scan2Play works →</a>
+
             <!--/* The party's staff (V30, the owner 2026-10-09): a bartender pastes the owner's invitation link here — the installed app
                  starts on this page, and a link from an e-mail would open in the browser, with a login of its own. POST /join: a link of
                  a party goes straight to Google's login (StaffController), anything else comes back with ?staffLink=invalid.

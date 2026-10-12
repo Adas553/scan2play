@@ -7,6 +7,20 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-12 — the guide and "Pomoc i kontakt", on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `39891be`;
+  `main` = `58a8227`).** The mockup with the full text: https://claude.ai/artifact/SdMaijjMmaECKtNjwH2vjc — the owner: "Zgłoś uwagę"
+  merged into the help, the address scan2playcontact@gmail.com, the guide public; then his corrections (the rejected requests are in the
+  history — a DJ wants to check the AI; "osoby, dla których grasz" in place of "para młoda"; the staff "inne osoby", the roles one per
+  row). Done, PROJECT_CONTEXT 5.1 / 6.1 / 6.4 / 6.7 / 8 / 12: the public page **"Jak działa Scan2Play"** (`/jak-to-dziala` =
+  `/how-it-works`, `LegalController.guide`, `guide[_pl].html` — a file per language as the legal pages; sections in the order of a
+  party, the app's buttons as pictures, `.s2p-guide-row`); the menu "Konto": "Instrukcja", "Pomoc i kontakt" (the address with
+  "Kopiuj" — `dj-nav.js` —, the guide, the feedback form), "Wyloguj", "Usuń konto"; "Pierwszy raz? Zobacz, jak to działa" at the empty
+  queue and on the landing page. Also: the History tab's count in its heading, "Historia imprezy 26", as big as the queue's
+  (`history-count-in-heading`). Note: the guide's first text said "PRZEKAZANE albo NIE" — a guest sees "TAK!"; "PRZEKAZANE" only with
+  the AI down (fixed). Tests: `GuidePageRenderTest` (new; run.py renders `guide-pl.html` / `guide-en.html`), `HtmlLangDeclarationTest`
+  (the guide a file per language), `DashboardPageRenderTest` (the menu and the help), browser `help-window`, `guide-page-phone`,
+  `history-count-in-heading` (new, seen red on the code before), `account-menu` (four items). The last change of the text (the staff's
+  roles) was not run locally — the owner stopped the runs; CI runs them on the PR. **Next:** the PR's CI, then `dev` → `main`.
 - **2026-10-10, late night — two small fixes after the release, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` =
   `3174e19`; PR #43 → `dev`, PR #44 → `main` = `f6c67ed`).** The owner's screenshots: on a computer the history's "↩ Przywróć" stood
   at different places after "ZAGRANE" and the longer "POMINIĘTE" — every verdict's word now takes the width of the longer of the two
@@ -23,7 +37,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   quiet word. Measured: an entry 102 → 56 px on average, four → seven in the list's 540 px, the song's column 209 → ~700 px. Tests:
   593 unit (`HistoryFragmentTest`: the vibe in the title, the line under the song; `shouldRenderASong` rewritten), 79 browser —
   `history-wide-calm` seen red on the code before C. Then (the owner: the colours of the dots hard to tell) the dot a 10 px circle of
-  CSS (was the glyph "●", ~7 px). **Next:** a PR to `dev`, then `dev` → `main`.
+  CSS (was the glyph "●", ~7 px). Released (PR #45 → `dev`, PR #46 → `main` = `58a8227`, CI green, Railway started clean).
 - **2026-10-10, night — the folded cards of a phone, on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `016fa29`;
   `main` = `c4f6bc5`, V33 + V34 applied on Railway, CI green), not committed yet.** The review (the cards measured on the real rendered
   page at 390×844, variants A / B / C swipe / D icons as CSS over the real styles): https://claude.ai/artifact/5Znq2bBpZQZB2rzHYkX9v1 —

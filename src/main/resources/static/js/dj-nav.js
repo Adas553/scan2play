@@ -12,6 +12,32 @@ document.addEventListener('submit', function (e) {
     }
 }, true);
 
+// ---- "Kopiuj" in "Pomoc i kontakt": the address to the clipboard, "Skopiowano" on the button for a moment. Where the clipboard is
+// refused, the address (user-select: all) is selected for the person to copy themselves. ----
+document.addEventListener('click', function (e) {
+    var button = e.target.closest ? e.target.closest('button[data-copy-text]') : null;
+    if (!button) return;
+    var label = button.textContent;
+    var done = function () {
+        button.textContent = button.getAttribute('data-copied') || label;
+        setTimeout(function () { button.textContent = label; }, 1500);
+    };
+    var select = function () {
+        var shown = document.getElementById('helpEmail');
+        if (!shown) return;
+        var range = document.createRange();
+        range.selectNodeContents(shown);
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(button.getAttribute('data-copy-text')).then(done, select);
+    } else {
+        select();
+    }
+});
+
 // ---- Feedback: self-contained, no dependency on the dashboard's modules ----
     document.addEventListener('DOMContentLoaded', function () {
         var textarea  = document.getElementById('feedbackMessage');

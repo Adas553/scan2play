@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <title>Jak działa Scan2Play</title>
+    <meta name="description" content="Instrukcja dla DJ-ów: kod QR, kolejka próśb gości, AI, historia, obsługa imprezy.">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* The guide for DJs (the owner, 2026-10-12: the app may not be easy, the new features above all; the text approved on
+     https://claude.ai/artifact/SdMaijjMmaECKtNjwH2vjc). Public (LegalController.guide), one file per language as the legal pages.
+     In the order of a party. The buttons and badges in it are the app's own classes — pictures of them, not controls (spans, no
+     focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too. */-->
+<body class="page-dj">
+<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+        <a th:if="${loggedIn}" href="/dj/dashboard" id="guideBack" class="btn btn-sm btn-outline-light">← Panel</a>
+        <a th:unless="${loggedIn}" href="/" id="guideBack" class="btn btn-sm btn-outline-light">← Strona główna</a>
+    </div>
+
+    <h1 class="h3 text-white mb-2">Jak działa Scan2Play</h1>
+    <p class="s2p-guide-lede">Goście skanują kod QR i proszą o piosenki. AI sprawdza każdą prośbę: czy to piosenka, czy pasuje do klimatu
+        i czy dziś już nie leciała. W kolejce widzisz te, które przeszły, i grasz je ze swojego programu DJ-skiego. Odrzucone przez AI
+        też zobaczysz, w historii, razem z komentarzem AI, więc zawsze możesz sprawdzić, czy AI ocenia dobrze. Scan2Play niczego nie odtwarza.</p>
+
+    <nav class="s2p-chips mb-4" id="guideJump" aria-label="Przejdź do">
+        <a href="#start">Na start</a>
+        <a href="#party">W trakcie imprezy</a>
+        <a href="#phone">Na telefonie</a>
+        <a href="#after">Po imprezie</a>
+        <a href="#staff">Obsługa</a>
+        <a href="#guests">Co widzą goście</a>
+    </nav>
+
+    <section id="start">
+        <h2>Na start</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Zaloguj się kontem Google. Panel i Twoja impreza tworzą się same.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light s2p-settings-toggle" aria-hidden="true">Ustawienia</span>
+            <p><strong>Klimat</strong>, np. „Klasyki weselne”: według niego AI ocenia prośby. Do tego opcjonalnie <strong>opis klimatu</strong>
+                („wesele 40+, bez rapu”) i <strong>Kto gra</strong> (goście zobaczą „🎧 Gra: DJ Adam”). Komentarze AI mogą być klasyczne,
+                zabawne, sarkastyczne albo krótkie.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Drukuj plakat i karty</span>
+            <p>Kod QR jako plakat A4 albo osiem kart na stoły. Link do imprezy możesz też skopiować i wysłać gościom.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Więcej ›</span>
+            <p>Rzadsze ustawienia: <strong>Lista gospodarzy</strong> (🚫 nie grać, ⭐ koniecznie zagrać; osoby, dla których grasz, mogą ją
+                wypełnić same przez swój link), <strong>Profile i napiwki</strong> (Instagram, link do napiwków), <strong>Limity gości</strong>
+                (domyślnie 2 prośby na gościa, potem 3 minuty przerwy), <strong>Obsługa</strong> i <strong>To urządzenie</strong>.</p>
+        </div>
+    </section>
+
+    <section id="party">
+        <h2>W trakcie imprezy</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Nowe prośby pojawiają się w kolejce same. Gdy gość prosi o piosenkę, która już czeka,
+            liczy się to jako głos. Posortuj po „Głosy”, żeby najbardziej chciane były na górze.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-action s2p-btn-played" aria-hidden="true">▶ Zagrane</span>
+            <p>Gdy puścisz piosenkę. Znika z kolejki i trafia do historii, a AI nie przepuści jej drugi raz.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light s2p-btn-skip" aria-hidden="true">⏭ Pomiń</span>
+            <p>Gdy jej nie masz albo nie pasuje teraz. Przez 2 godziny goście nie mogą o nią poprosić ponownie.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-action" aria-hidden="true">Cofnij</span>
+            <p>Pomyłka? Po „Zagrane” i „Pomiń” na dole ekranu przez 8 sekund jest „Cofnij”. Później w historii:
+                <span class="btn btn-sm btn-outline-warning s2p-guide-inline" aria-hidden="true">↩ Przywróć</span> (działa i przy zagranych, i przy pominiętych).</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span aria-hidden="true"><span class="badge text-bg-warning">⚠ Sprawdź</span></span>
+            <p>W nazwie piosenki nie ma żadnego słowa gościa, więc AI mogło zgadnąć inną piosenkę. Porównaj ze słowami gościa pod tytułem.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span aria-hidden="true"><span class="badge text-bg-info">⭐ Życzenie gospodarzy</span></span>
+            <p>Piosenka z listy „koniecznie zagrać”.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Podejrzyj</span>
+            <p>Wyniki YouTube dla piosenki, której nie znasz. Otwierają się w nowej karcie.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-secondary s2p-btn-tip" aria-hidden="true">💸</span>
+            <p>Każda piosenka ma numer, np. #27, a goście mogą wpisać go w tytule wpłaty. Gdy zobaczysz wpłatę w banku, wpisz numer w „Szukaj”
+                i stuknij 💸 przy piosence. Scan2Play nie widzi żadnych płatności.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Wyczyść kolejkę</span>
+            <p>Wszystko, co czeka, trafia do historii jako wyczyszczone.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-warning fw-semibold" aria-hidden="true">Zakończ imprezę</span>
+            <p>Goście nie mogą wysyłać próśb, a kolejka zostaje. „Wznów imprezę” otwiera ją znowu, np. po przerwie.</p>
+        </div>
+    </section>
+
+    <section id="phone">
+        <h2>Na telefonie</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Każda prośba to karta z tytułem, głosami, ⚠ / ⭐ i przyciskami „Zagrane” / „Pomiń”.
+            Stuknij kartę (albo ▾), żeby zobaczyć słowa gościa, komentarz AI, „Podejrzyj” i 💸.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>Powiadomienia o nowych prośbach:</strong> Ustawienia imprezy → To urządzenie.
+            Na iPhonie najpierw dodaj panel do ekranu początkowego (Udostępnij → Do ekranu początkowego), bez tego iPhone ich nie pokaże.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>Zainstaluj aplikację</strong> w tym samym miejscu: panel otwiera się wtedy jak
+            aplikacja, z ikoną na ekranie.</p></div>
+    </section>
+
+    <section id="after">
+        <h2>Po imprezie</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>Historia</strong> pokazuje wszystko, co zagrało, zostało pominięte, odrzucone przez
+            AI (z komentarzem, dlaczego) albo wyczyszczone, dzień po dniu, przez 30 dni.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light" aria-hidden="true">Podsumowanie wieczoru</span>
+            <p>Ile było próśb, co grało, czego goście chcieli, a nie usłyszeli, i najczęściej proszeni wykonawcy. Do druku, jako PDF albo CSV.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Wyczyść historię</span>
+            <p>Usuwa zagrane i odrzucone prośby razem ze słowami gości. Potem AI nie pamięta, co już grało.</p>
+        </div>
+    </section>
+
+    <section id="staff">
+        <h2>Obsługa imprezy</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Przy imprezie mogą Ci pomagać inne osoby, każda swoim kontem Google. Wejdź w Ustawienia
+            imprezy → Obsługa i wpisz adres konta tej osoby albo wyślij jej link. Każdej wybierasz rolę, czyli to, co może zrobić. Obsługa to
+            najwyżej 10 osób.</p></div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Podgląd</span>
+            <p>Widzi kolejkę i historię, niczego nie zmienia.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Obsługa kolejki</span>
+            <p>Zagrane, Pomiń i Cofnij, napiwki 💸, czyszczenie kolejki, zamykanie i wznawianie imprezy.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Współorganizator</span>
+            <p>To samo, a do tego ustawienia imprezy: klimat, listę gospodarzy i limity gości.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Własne</span>
+            <p>Uprawnienia zaznaczasz po kolei.</p>
+        </div>
+        <div class="s2p-guide-row s2p-guide-text"><p>Twoich profili, linku do napiwków, listy obsługi i konta nikt poza Tobą nie zmieni.</p></div>
+    </section>
+
+    <section id="guests">
+        <h2>Co widzą goście</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Skanują kod i wpisują tytuł, wykonawcę albo fragment tekstu. Po chwili widzą odpowiedź:
+            TAK! albo NIE, z komentarzem AI. Gdy AI chwilowo nie odpowiada, prośba trafia do Ciebie niesprawdzona, a gość widzi „PRZEKAZANE”.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>Widzą listę próśb, które czekają, i mogą dać 👍 cudzej piosence. Limity chronią Cię przed
+            zasypaniem prośbami.</p></div>
+    </section>
+
+    <section id="contact">
+        <p class="s2p-guide-lede mb-0">Masz pytanie albo coś nie działa? Napisz: <strong class="text-light user-select-all">scan2playcontact@gmail.com</strong></p>
+    </section>
+</div>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

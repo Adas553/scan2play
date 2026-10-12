@@ -291,7 +291,17 @@ class DashboardPageRenderTest {
                 .contains("class=\"small text-secondary s2p-queue-comment\"", ">AI: ok<")
                 .doesNotContain("ZAAKCEPTOWANE", "badge-energy", "data-sort=\"energy\"");
         assertThat(html).as("the account's buttons under one menu, the party's end in words")
-                .contains("id=\"accountMenuBtn\"", ">Konto<", ">Zgłoś uwagę<", ">Wyloguj<", "id=\"deleteAccountBtn\"", ">Zakończ imprezę<");
+                .contains("id=\"accountMenuBtn\"", ">Konto<", ">Wyloguj<", "id=\"deleteAccountBtn\"", ">Zakończ imprezę<");
+        // the owner, 2026-10-12: the guide and one window of help — the address, the guide, the old "Zgłoś uwagę" form
+        assertThat(html).as("\"Instrukcja\" and \"Pomoc i kontakt\" in the menu, the help window with the address and the form")
+                .contains(">Instrukcja<", "id=\"helpMenuBtn\"", ">Pomoc i kontakt<",
+                        ">scan2playcontact@gmail.com<", "data-copy-text=\"scan2playcontact@gmail.com\"", ">Kopiuj<",
+                        ">Zgłoś problem albo pomysł<", "id=\"feedbackMessage\"")
+                .doesNotContain(">Zgłoś uwagę<");
+        for (String link : List.of("guideMenuLink", "helpGuideLink", "queueEmptyGuide")) {
+            assertThat(html).as(link + " leads to the guide in Polish")
+                    .containsPattern("<a [^>]*(id=\"" + link + "\"[^>]*href=\"/jak-to-dziala\"|href=\"/jak-to-dziala\"[^>]*id=\"" + link + "\")");
+        }
         assertThat(html).as("the time of a request: the clock, the day under it, the full moment in the title")
                 .contains("title=\"29.09.2026 20:00:01\"", ">20:00</span>", ">29.09</span>").doesNotContain(">29.09.2026 20:00:01<");
         assertThat(html).as("our logo above the page's heading").contains(
