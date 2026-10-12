@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import static com.scan2play.service.DjService.DECISION_PLAYED;
 import static com.scan2play.service.DjService.DECISION_REJECTED;
@@ -68,7 +70,9 @@ public class PlayHistoryService {
     }
 
     private static HistoryEntry toEntry(SongRequestEntity song) {
-        Instant at = song.getPlayedAt() != null ? song.getPlayedAt() : song.getRequestedAt();
+        // the moment of the DJ's decision, as the history is ordered (SongRequestRepository.findHistory)
+        Instant at = Stream.of(song.getPlayedAt(), song.getSkippedAt(), song.getClearedAt(), song.getRequestedAt())
+                .filter(Objects::nonNull).findFirst().orElse(null);
         return new HistoryEntry(song.getId(), at, song.getSongName(), song.getTrackUrl(), song.getStyle(), song.getDecision(),
                 song.getDjComment(), song.getGuestText(), song.getVotes(), song.getSkippedAt(),
                 song.getClearedAt(), song.getRequestNumber(), song.getTips());

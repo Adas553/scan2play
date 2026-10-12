@@ -7,6 +7,26 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-12, later — "Kopiuj" and the queue's keys, on the branch `claude/gifted-fermat-u06fkg` (uncommitted, for review).** The
+  owner asked how Scan2Play could work better with Serato / VirtualDJ / rekordbox / Spotify / Tidal. Found: Spotify is in Serato,
+  rekordbox and djay again since 09.2025 (a partnership of theirs; our Web API stays closed); TIDAL's Developer Terms 1.0 allow only
+  non-commercial use — a "requests → the DJ's Tidal playlist" sync is out unless TIDAL agrees in writing. So, what needs nobody's
+  consent: **"Kopiuj"** beside "Podejrzyj" (the song's words without " - " to the clipboard, "Wilki Baśka", for the search of the DJ's
+  software; folded on a phone with "Podejrzyj") and **the queue's keys** on a computer (↑ ↓ choose, C copy, Enter "Zagrane", S "Pomiń",
+  Esc; a line under the queue names them; not while typing, not with Ctrl / Alt / ⌘, not with a window open; Enter / S send once; the
+  chosen request kept after a poll, or the one in its place) — `js/dashboard/queue-keys.js`, `polling.js` (`keepChosen`), the guide PL
+  / EN. Tests: 596 unit (`DashboardPageRenderTest`: the button and the line, the viewer's without Enter / S); browser — new
+  `queue-copy-button`, `queue-keys`, `queue-keys-follow-poll`, `queue-keys-viewer`, each seen red by a mutation (the once-guard, the
+  typing check, the words, `keepChosen`, the modifiers). The owner tried it: with ↑ ↓ the list's scrollbar stopped 29 px short of its
+  ends (the sticky header) — the first / last row now scroll the list to its end, a row is kept below the header, and only a key
+  scrolls (never the poll): `queue-keys-scroll`, red on the code before. Then: on a computer a click on a request chooses it
+  (`queue-keys-click`, red before; on a phone a tap only folds — `queue-keys-click-phone`). And the history: a skip and a cleared
+  queue are placed (and timed) by when the DJ did them, as a "Zagrane" — `findHistory` orders by `COALESCE(played_at, skipped_at,
+  cleared_at, requested_at)` (`SongRequestRepositoryIT`, red on the old query; 62 ITs green on a local PostgreSQL 16; CI has 18).
+  Then Backspace = "Cofnij" while its bar is shown, the request put back chosen again (`queue-keys-undo`, red before). Not done:
+  Shift to choose and copy several songs — a DJ software's search takes one song at a time. In the cloud container `help-window` and `settings-more-rows` fail on the
+  code before the change as well (its Chromium, not this change). **Next:** the owner tries it with Serato / VirtualDJ (does their
+  search find "Wilki Baśka"?), then a PR to `dev`.
 - **2026-10-12 — the guide and "Pomoc i kontakt", on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `39891be`;
   `main` = `58a8227`).** The mockup with the full text: https://claude.ai/artifact/SdMaijjMmaECKtNjwH2vjc — the owner: "Zgłoś uwagę"
   merged into the help, the address scan2playcontact@gmail.com, the guide public; then his corrections (the rejected requests are in the

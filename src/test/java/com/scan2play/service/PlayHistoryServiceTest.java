@@ -74,6 +74,19 @@ class PlayHistoryServiceTest {
     }
 
     @Test
+    @DisplayName("a skipped request, and one cleared with the queue, are placed by when the DJ did it, not when they were requested")
+    void shouldPlaceASkipAndAClearingAtTheDjsMoment() {
+        SongRequestEntity skipped = song(1, "Skipped", "rejected", NOON.minus(60, ChronoUnit.MINUTES), null);
+        skipped.setSkippedAt(NOON);
+        SongRequestEntity cleared = song(2, "Cleared", "rejected", NOON.minus(50, ChronoUnit.MINUTES), null);
+        cleared.setClearedAt(NOON.minus(5, ChronoUnit.MINUTES));
+        givenRequests(PLAYED_AND_REJECTED, 51, skipped, cleared);
+
+        assertThat(service.getHistory(PARTY, 50).entries()).extracting(HistoryEntry::at)
+                .containsExactly(NOON, NOON.minus(5, ChronoUnit.MINUTES));
+    }
+
+    @Test
     @DisplayName("one entry more than asked for is read; it is not shown, but tells there is more")
     void shouldReadOneMoreThanAsked_andSayThereIsMore() {
         givenRequests(PLAYED_AND_REJECTED, 4, IntStream.range(0, 4)

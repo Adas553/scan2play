@@ -710,11 +710,11 @@ th[data-sort].sort-desc::after {
 
     /* Folded (the review of 2026-10-10; cards.js): the song, ⚠ / ⭐, the votes and the row "▶ Zagrane / ⏭ Pomiń" — a card was
        204 px, three and a half on a screen, now 106 px. A tap on the card unfolds the guest's words, the whole AI's comment,
-       "Podejrzyj" and 💸 / "−1". With "⚠ Sprawdź" the guest's words stay: they are why. "💸 2" stays once a tip is counted: a
+       "Kopiuj", "Podejrzyj" and 💸 / "−1". With "⚠ Sprawdź" the guest's words stay: they are why. "💸 2" stays once a tip is counted: a
        state the DJ is to see; the first one is counted unfolded. */
     .page-dj #song-list > tr:not(.s2p-open) .guest-text,
     .page-dj #song-list > tr:not(.s2p-open) .s2p-queue-comment,
-    .page-dj #song-list > tr:not(.s2p-open) .song-cell a.btn { display: none; }
+    .page-dj #song-list > tr:not(.s2p-open) .song-cell :is(a.btn, .s2p-btn-copy) { display: none; }
     .page-dj #song-list > tr:not(.s2p-open):has(.s2p-check-song) .guest-text { display: block; }
     .page-dj #song-list > tr:not(.s2p-open) .s2p-tip-count:not(:has(.s2p-btn-tip.btn-warning)),
     .page-dj #song-list > tr:not(.s2p-open) .s2p-tip-count form:has(.s2p-btn-untip) { display: none !important; }
@@ -882,7 +882,10 @@ th[data-sort].sort-desc::after {
 #queueList .s2p-queue-empty { display: none; }
 #queueList:not(:has(#song-list > tr[data-song-id])) .s2p-queue-empty { display: block; }
 #queueList:not(:has(#song-list > tr[data-song-id])) .table-responsive,
-#queueList:not(:has(#song-list > tr[data-song-id])) [data-list-search] { display: none; }
+#queueList:not(:has(#song-list > tr[data-song-id])) [data-list-search],
+#queueList:not(:has(#song-list > tr[data-song-id])) .s2p-queue-keys { display: none !important; }
+/* the request the keyboard works on (queue-keys.js: ↑ ↓, C, Enter, S) */
+#song-list > tr.s2p-chosen { outline: 2px solid var(--s2p-action); outline-offset: -2px; }
 /* the AI's comment under a song of the queue: one line, the whole of it in the title */
 .s2p-queue-comment {
     display: -webkit-box;

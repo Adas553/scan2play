@@ -298,9 +298,15 @@
                         <!--/* "Podejrzyj": the song on YouTube's search results, for the DJ to look at a song they do not know — a page
                              the DJ's browser opens, no YouTube API. A button as in the history (the owner, 2026-10-10: a link in the
                              guest's line read worse) */-->
-                        <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
-                           class="btn btn-sm btn-outline-secondary flex-shrink-0 text-nowrap"
-                           th:text="#{dashboard.queue.preview}">Preview</a>
+                        <span class="d-flex gap-2 flex-shrink-0">
+                            <!--/* "Kopiuj": the artist and the title for the search box of the DJ's own software (queue-keys.js; the key C) */-->
+                            <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap s2p-btn-copy"
+                                    th:attr="data-copied=#{dashboard.qr.copied}" th:title="#{dashboard.queue.copy.title}"
+                                    th:text="#{dashboard.queue.copy}">Copy</button>
+                            <a th:if="${req.trackUrl != null}" th:href="${req.trackUrl}" target="_blank" rel="noopener noreferrer"
+                               class="btn btn-sm btn-outline-secondary text-nowrap"
+                               th:text="#{dashboard.queue.preview}">Preview</a>
+                        </span>
                     </div>
                 </td>
                 <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
@@ -343,6 +349,9 @@
             </tbody>
         </table>
         </div>
+        <!--/* The queue's keys (queue-keys.js), on a computer only; "Zagrane" / "Pomiń" for whom may press them */-->
+        <p class="d-none d-md-block small text-secondary mt-2 mb-0 s2p-queue-keys" id="queueKeys"
+           th:text="${access == null or access.may('QUEUE')} ? #{dashboard.queue.keys} : #{dashboard.queue.keys.viewer}">Keys</p>
         <!--/* Nothing waits (app.css shows it while the polled list has no request — :has): what to do next, not a table of nine
              headings over "the queue is empty" — the QR code was folded away under the settings (the design review, 2026-10-09) */-->
         <div class="text-center py-4 s2p-queue-empty" id="queueEmpty">
