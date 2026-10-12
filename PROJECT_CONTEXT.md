@@ -316,8 +316,9 @@ queue (the DJ may pause it for a break or a limit).
 Every dashboard window follows the party's state within one poll: the party open or closed (`X-Party-Active` — the "party closed"
 banner and the "end party" button) and the guest limits (`X-Guest-Limits` — the warning `party-full` —, `X-Guest-Limits-Use`).
 
-**The history** (`PlayHistoryService`): the party's requests that played or were rejected, by `COALESCE(played_at, requested_at)`,
-newest first, one bounded query (`limit + 1`). The History tab (in place of the queue) and the standalone page `/dj/history-view`:
+**The history** (`PlayHistoryService`): the party's requests that played or were rejected, by the DJ's moment —
+`COALESCE(played_at, skipped_at, cleared_at, requested_at)`, the time it shows too (a skip was placed by its request time until
+2026-10-12) —, newest first, one bounded query (`limit + 1`). The History tab (in place of the queue) and the standalone page `/dj/history-view`:
 filters All / Played / Rejected applied by the server, "Show more" (50 at a time, ≤ 300); both keep the search text and the sort by a
 column (`captureListState` / `restoreListState` in the tab; on the standalone page, which loads itself again, through
 `sessionStorage` once). A heading row where a new day starts, Polish time (`tr[data-day-heading]`: "dziś — sobota, 03.10",

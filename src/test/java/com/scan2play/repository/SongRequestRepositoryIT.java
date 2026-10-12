@@ -14,8 +14,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The guests' requests on a real PostgreSQL: the history's order by the moment of the event ({@code COALESCE} of the play and
- * the request time), the queue's fingerprint and the batched retention purge.
+ * The guests' requests on a real PostgreSQL: the history's order by the moment of the event ({@code COALESCE} of the play, the
+ * skip, the clearing and the request time), the queue's fingerprint and the batched retention purge.
  */
 class SongRequestRepositoryIT extends PostgresIntegrationTest {
 
@@ -36,6 +36,26 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
                 .extracting(SongRequestEntity::getSongName)
                 .containsExactly("played late", "rejected", "played before V6");
         assertThat(requests.findHistory(party, List.of("played", "rejected"), PageRequest.of(0, 2))).hasSize(2);
+    }
+
+    /**
+     * A skip and a cleared queue are the DJ's events as a "Zagrane" is: by when the DJ did them, not by when the guest asked (the
+     * owner, 2026-10-12: a skip stood among the requests of its time, a "Zagrane" at the top).
+     */
+    @Test
+    void theHistoryPutsASkipAndAClearedQueueAtTheirMoment() {
+        String party = newPartyCode();
+        Instant t = Instant.now().minus(2, ChronoUnit.HOURS);
+        save(party, "asked first, skipped last", "rejected", t, null, t.plus(90, ChronoUnit.MINUTES));
+        save(party, "played", "played", t.plus(10, ChronoUnit.MINUTES), t.plus(60, ChronoUnit.MINUTES));
+        SongRequestEntity cleared = save(party, "cleared with the queue", "rejected", t.plus(20, ChronoUnit.MINUTES), null);
+        cleared.setClearedAt(t.plus(70, ChronoUnit.MINUTES));
+        requests.save(cleared);
+        save(party, "rejected by the AI", "rejected", t.plus(30, ChronoUnit.MINUTES), null);
+
+        assertThat(requests.findHistory(party, List.of("played", "rejected"), PageRequest.of(0, 10)))
+                .extracting(SongRequestEntity::getSongName)
+                .containsExactly("asked first, skipped last", "cleared with the queue", "played", "rejected by the AI");
     }
 
     /** The AI's duplicate rule: the songs that played last, by when they played — not by when a guest asked for them. */

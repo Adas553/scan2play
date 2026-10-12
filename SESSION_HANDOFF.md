@@ -20,7 +20,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   typing check, the words, `keepChosen`, the modifiers). The owner tried it: with ↑ ↓ the list's scrollbar stopped 29 px short of its
   ends (the sticky header) — the first / last row now scroll the list to its end, a row is kept below the header, and only a key
   scrolls (never the poll): `queue-keys-scroll`, red on the code before. Then: on a computer a click on a request chooses it
-  (`queue-keys-click`, red before; on a phone a tap only folds — `queue-keys-click-phone`). In the cloud container `help-window` and `settings-more-rows` fail on the
+  (`queue-keys-click`, red before; on a phone a tap only folds — `queue-keys-click-phone`). And the history: a skip and a cleared
+  queue are placed (and timed) by when the DJ did them, as a "Zagrane" — `findHistory` orders by `COALESCE(played_at, skipped_at,
+  cleared_at, requested_at)` (`SongRequestRepositoryIT`, red on the old query; 62 ITs green on a local PostgreSQL 16; CI has 18). In the cloud container `help-window` and `settings-more-rows` fail on the
   code before the change as well (its Chromium, not this change). **Next:** the owner tries it with Serato / VirtualDJ (does their
   search find "Wilki Baśka"?), then a PR to `dev`.
 - **2026-10-12 — the guide and "Pomoc i kontakt", on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `39891be`;
