@@ -240,7 +240,9 @@ leaves as rejected with `skipped_at`, keeping the AI's comment — the history s
 "POMINIĘTE" — hidden copies in an inline grid, `.s2p-decision-word` —, so the "↩ Przywróć" after them stand in one column; amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
 under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1; "Zagrane" has both too, 2026-10-10) and "Podejrzyj" on every waiting request; the vibe, the vibe note, "Kto gra";
 the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
-history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person: "Zgłoś uwagę" (feedback), "Wyloguj",
+history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
+the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, the address selected where the clipboard is refused —, the guide, and the
+form of the old "Zgłoś uwagę", `POST /dj/feedback`), "Wyloguj",
 "Usuń konto" (red, the last one) — in place of four icons without words (the design review, 2026-10-09; `.s2p-account-bar` keeps the open
 menu over the sticky tab bar). What a DJ sets before a party is on the page **"Ustawienia imprezy"** (below). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
 
@@ -303,7 +305,7 @@ before (no "▾", a click on a row does nothing).
 the votes, the buttons (2026-10-09: the vibe, "ZAAKCEPTOWANE" and the AI's energy rating said the same in every row and pushed "Pomiń" and 💸 off a
 1280 px screen). With nothing waiting, the table and its search give way to the next step (`#queueEmpty`, shown by `:has`): "Kolejka
 jest pusta", the QR code, "Drukuj plakat i karty", "Kopiuj link" and, for the owner, "Ustaw klimat" (`data-open-settings`:
-`settings-toggle.js` opens the settings at the "Impreza" card). Each request has its place before the title on a wide screen — a CSS counter in `app.css`, so it follows the
+`settings-toggle.js` opens the settings at the "Impreza" card), and "Pierwszy raz? Zobacz, jak to działa" (the guide, 2026-10-12). Each request has its place before the title on a wide screen — a CSS counter in `app.css`, so it follows the
 polled list, the sort and the search by itself — and its ID in the first column ("#27", V28 — see "Numbers and tips"). "Wyczyść kolejkę" beside the heading (shown only while a request waits — `:has`) asks first (`data-confirm`) and
 sends `POST /dj/dashboard/clear-queue`: the waiting requests go to the history's rejected ones, with `cleared_at` and the AI's
 comment (V25) — the history says "WYCZYSZCZONE" in place of the verdict ("🧹 Wyczyszczona przez DJ-a …" in its title), amber as a skip. Ending the party does not clear the
@@ -506,7 +508,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
-| `LegalController` | `/privacy`, `/terms` (a file per language) |
+| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page) |
 | `ViewAttributes` | names of the model attributes |
 
 ### 6.2 Services
@@ -545,7 +547,7 @@ files under it); everything else keeps Spring Security's `no-store`,
 ### 6.4 Templates
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
-`qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html`,
+`qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html`, `guide[_pl].html` (the public guide "Jak działa Scan2Play", 2026-10-12: a section per moment of a party, the app's buttons as pictures — `.s2p-guide-row`; keep it true to the app),
 `terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
 `HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
 tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel / Kolejka / Historia, the
@@ -592,7 +594,7 @@ What every page shares, so a new screen looks like the others:
   goście)" after each. Nothing explains what the DJ does not set (the server's limits: one line, what they are unfolded).
 - **What goes where** (the panel's clean-up, 2026-10-10): the panel holds what the DJ uses during a party (the queue, the vibe, "Kto gra",
   the QR code); what is set before it is a row with its state ("Lista gospodarzy · Nieużywana", `.s2p-rows` / `.s2p-row`, 52 px) leading
-  to a page of its own ("Ustawienia imprezy", "Obsługa") — never a card more on the panel. "Konto" is about the person (feedback, logout,
+  to a page of its own ("Ustawienia imprezy", "Obsługa") — never a card more on the panel. "Konto" is about the person and their help (the guide, "Pomoc i kontakt", logout,
   the account), not the party. A state that needs attention shows on the panel only when it does (a limit from 80 %, yellow). What a person
   may not do is hidden, not greyed. A list of alike things with the same fields (the people of "Obsługa") is folded to one line each —
   what tells them apart (the name, the role) — and unfolds on a tap. Browser scenarios: `settings-more-rows`, `dashboard-heading-one-row`,
@@ -657,7 +659,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
 under the deploy's version), `/images/**`, `/webjars/**`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
@@ -823,6 +825,7 @@ GuestQueueService          → DjService
 | POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" |
 | GET | `/privacy`, `/terms` | legal pages |
+| GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |
 

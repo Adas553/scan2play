@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <title>How Scan2Play works</title>
+    <meta name="description" content="A guide for DJs: the QR code, the guests' request queue, the AI, the history, the party's staff.">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* The guide for DJs in English — the same as guide_pl.html (see there); keep the two alike. */-->
+<body class="page-dj">
+<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+        <a th:if="${loggedIn}" href="/dj/dashboard" id="guideBack" class="btn btn-sm btn-outline-light">← Panel</a>
+        <a th:unless="${loggedIn}" href="/" id="guideBack" class="btn btn-sm btn-outline-light">← Home</a>
+    </div>
+
+    <h1 class="h3 text-white mb-2">How Scan2Play works</h1>
+    <p class="s2p-guide-lede">Guests scan a QR code and ask for songs. The AI checks every request: is it a song, does it fit the vibe,
+        has it played tonight already. The queue shows you the ones that passed, and you play them from your own DJ software. The ones
+        the AI turned down are in the history, with the AI's comment, so you can always check that it judges well. Scan2Play plays nothing itself.</p>
+
+    <nav class="s2p-chips mb-4" id="guideJump" aria-label="Go to">
+        <a href="#start">Getting started</a>
+        <a href="#party">During the party</a>
+        <a href="#phone">On a phone</a>
+        <a href="#after">After the party</a>
+        <a href="#staff">Staff</a>
+        <a href="#guests">What guests see</a>
+    </nav>
+
+    <section id="start">
+        <h2>Getting started</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Log in with Google. Your panel and your party are set up by themselves.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light s2p-settings-toggle" aria-hidden="true">Settings</span>
+            <p><strong>The vibe</strong>, e.g. "Wedding Classics": the AI judges the requests by it. Optionally a <strong>vibe notes</strong>
+                ("wedding 40+, no rap") and <strong>Who plays</strong> (guests see "🎧 Playing: DJ Adam"). The AI's comments can be
+                classic, funny, sarcastic or short.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Print poster and cards</span>
+            <p>The QR code as an A4 poster or eight table cards. You can also copy the party's link and send it to the guests.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">More ›</span>
+            <p>The rarer settings: <strong>The hosts' list</strong> (🚫 do not play, ⭐ must play; the people you play for can fill it in
+                themselves through their own link), <strong>Profiles and tips</strong> (Instagram, a tip link), <strong>Guest limits</strong>
+                (2 requests per guest, then a 3-minute wait, by default), <strong>Staff</strong> and <strong>This device</strong>.</p>
+        </div>
+    </section>
+
+    <section id="party">
+        <h2>During the party</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>New requests appear in the queue by themselves. A guest asking for a song that already
+            waits counts as a vote. Sort by "Votes" to have the most wanted on top.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-action s2p-btn-played" aria-hidden="true">▶ Played</span>
+            <p>When you play the song. It leaves the queue for the history, and the AI won't let it through again.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light s2p-btn-skip" aria-hidden="true">⏭ Skip</span>
+            <p>When you don't have it or it doesn't fit now. For 2 hours guests can't ask for it again.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-action" aria-hidden="true">Undo</span>
+            <p>A mistake? After "Played" and "Skip" there's "Undo" at the bottom of the screen for 8 seconds. Later, in the history:
+                <span class="btn btn-sm btn-outline-warning s2p-guide-inline" aria-hidden="true">↩ Restore</span> (for played and skipped songs alike).</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span aria-hidden="true"><span class="badge text-bg-warning">⚠ Check</span></span>
+            <p>None of the guest's words are in the song's name, so the AI may have guessed another song. Compare it with the guest's words under the title.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span aria-hidden="true"><span class="badge text-bg-info">⭐ Hosts’ wish</span></span>
+            <p>A song from the "must play" list.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Preview</span>
+            <p>YouTube's results for a song you don't know. They open in a new tab.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-secondary s2p-btn-tip" aria-hidden="true">💸</span>
+            <p>Every song has a number, e.g. #27, and guests may write it in a payment's title. When you see the payment in your bank, type
+                the number in "Search" and tap 💸 at the song. Scan2Play never sees any payment.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Clear the queue</span>
+            <p>Everything that waits goes to the history as cleared.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-warning fw-semibold" aria-hidden="true">End Party</span>
+            <p>Guests can't send requests, and the queue stays. "Resume the party" opens it again, e.g. after a break.</p>
+        </div>
+    </section>
+
+    <section id="phone">
+        <h2>On a phone</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Each request is a card with its title, votes, ⚠ / ⭐ and the "Played" / "Skip" buttons.
+            Tap the card (or ▾) to see the guest's words, the AI's comment, "Preview" and 💸.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>Notifications of new requests:</strong> Party settings → This device. On an
+            iPhone add the panel to the Home Screen first (Share → Add to Home Screen); without it the iPhone won't show them.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>Install the app</strong> in the same place: the panel then opens like an app,
+            with its icon on the screen.</p></div>
+    </section>
+
+    <section id="after">
+        <h2>After the party</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>The history</strong> shows everything that played, was skipped, turned down by the
+            AI (with its comment, why) or cleared, day by day, for 30 days.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light" aria-hidden="true">Evening summary</span>
+            <p>How many requests, what played, what guests wanted but didn't hear, the most requested artists. To print, as a PDF or a CSV.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Clear the history</span>
+            <p>Deletes the played and rejected requests with the guests' words. The AI then no longer knows what has played.</p>
+        </div>
+    </section>
+
+    <section id="staff">
+        <h2>The party's staff</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Other people can help you at the party, each with their own Google account. Go to Party
+            settings → Staff and type the address of the person's account, or send them a link. For each you pick a role: what they may
+            do. The staff is at most 10 people.</p></div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">View only</span>
+            <p>Sees the queue and the history, changes nothing.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Queue</span>
+            <p>Played, Skip and Undo, tips 💸, clearing the queue, ending and resuming the party.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Co-organiser</span>
+            <p>The same, and the party's settings too: the vibe, the hosts' list and the guest limits.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Custom</span>
+            <p>You tick the permissions one by one.</p>
+        </div>
+        <div class="s2p-guide-row s2p-guide-text"><p>Nobody but you can change your profiles, tip link, staff or account.</p></div>
+    </section>
+
+    <section id="guests">
+        <h2>What guests see</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>They scan the code and type a title, an artist or a line of the lyrics. In a moment they
+            see the answer: YES! or NO, with the AI's comment. When the AI does not answer for a while, the request reaches you unchecked and the guest sees "SENT".</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>They see the list of waiting requests and can give 👍 to someone else's song. The limits
+            keep you from being flooded with requests.</p></div>
+    </section>
+
+    <section id="contact">
+        <p class="s2p-guide-lede mb-0">A question, or something not working? Write to: <strong class="text-light user-select-all">scan2playcontact@gmail.com</strong></p>
+    </section>
+</div>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

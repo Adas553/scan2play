@@ -166,6 +166,8 @@ body {
     .s2p-panel-bar > summary { min-height: 44px; }
     .s2p-staff-perms .form-check { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
     .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
+    /* the "×" of a window ("Pomoc i kontakt") was 32 px: its icon stays 1em, the target grows around it */
+    .btn-close { width: 44px; height: 44px; padding: 0; }
 }
 
 /* --- DJ Navigation tabs --- */
@@ -926,6 +928,24 @@ th[data-sort].sort-desc::after {
 }
 .s2p-chips a:hover { border-color: #f8f9fa; color: #fff; }
 #hostListsCard, #linksCard, #limitsCard, #deviceCard { scroll-margin-top: 1rem; }
+
+/* The guide "Jak działa Scan2Play" (guide.html, 2026-10-12): a section per moment of a party, each line the app's own button or badge
+   beside what it does — pictures of them (spans), not controls; one column on a phone. */
+.s2p-guide-lede { color: #dfe3e7; max-width: 66ch; }
+.s2p-guide section { border-top: 1px solid var(--s2p-border); padding-top: 1rem; margin-top: 1.25rem; scroll-margin-top: 1rem;
+                     display: grid; gap: 0.85rem; }
+.s2p-guide section h2 { font-size: 1.2rem; font-weight: 700; color: #f8f9fa; margin: 0; }
+.s2p-guide-row { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0.35rem 1rem; align-items: start; }
+.s2p-guide-row:not(.s2p-guide-text) > :first-child { justify-self: start; pointer-events: none; }
+.s2p-guide-row p { margin: 0; color: #dfe3e7; max-width: 62ch; }
+.s2p-guide-text { grid-template-columns: minmax(0, 1fr); }
+.s2p-guide-row-name { font-weight: 600; color: #f1f3f5; padding-top: 0.15rem; }
+/* a button named inside a sentence: a picture as tall as the line, not a 44 px target (it is not one) */
+.s2p-guide-inline { pointer-events: none; vertical-align: baseline; display: inline-block !important; min-height: 0 !important;
+                    padding: 0 0.4rem; line-height: 1.5; }
+@media (max-width: 575.98px) {
+    .s2p-guide-row { grid-template-columns: minmax(0, 1fr); }
+}
 /* the server's limits in one line, what they are unfolded */
 .s2p-server-limits > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 @media (max-width: 767.98px), (pointer: coarse) {
