@@ -47,7 +47,22 @@ function choose(row) {
     row.setAttribute('aria-current', 'true');
     chosenId = row.getAttribute('data-song-id');
     chosenIndex = shownRows().indexOf(row);
+}
+
+/**
+ * Scrolls the chosen row into view — below the list's sticky header, which covered a row scrolled to the top, and the first and the
+ * last row to the very end of the list, so the scrollbar reaches its end (the owner, 2026-10-12). Only on a key: the poll never moves
+ * the list the DJ scrolled with the mouse.
+ */
+function reveal(row) {
+    const box = row.closest('.list-scroll');
+    const head = box ? box.querySelector('thead') : null;
+    row.style.scrollMarginTop = head ? head.offsetHeight + 'px' : '';
     row.scrollIntoView({ block: 'nearest' });
+    if (!box) return;
+    const rows = shownRows();
+    if (row === rows[0]) box.scrollTop = 0;
+    else if (row === rows[rows.length - 1]) box.scrollTop = box.scrollHeight;
 }
 
 /** The chosen request's row, or the one now in its place when it has left the list; null when none is chosen. */
@@ -136,14 +151,18 @@ document.addEventListener('keydown', function (e) {
         const at = row ? rows.indexOf(row) : -1;
         const next = at < 0 ? 0 : at + (key === 'ArrowDown' ? 1 : -1);
         choose(rows[Math.min(Math.max(next, 0), rows.length - 1)]);
+        reveal(chosen());
     } else if (!row) {
         choose(rows[0]);
+        reveal(rows[0]);
         if (key === 'c') copySong(rows[0]);
     } else if (key === 'c') {
         choose(row);
+        reveal(row);
         copySong(row);
     } else {
         choose(row);
+        reveal(row);
         send(row, key === 'Enter' ? '.s2p-btn-played' : '.s2p-btn-skip');
     }
 });

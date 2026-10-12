@@ -17,7 +17,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   chosen request kept after a poll, or the one in its place) — `js/dashboard/queue-keys.js`, `polling.js` (`keepChosen`), the guide PL
   / EN. Tests: 596 unit (`DashboardPageRenderTest`: the button and the line, the viewer's without Enter / S); browser — new
   `queue-copy-button`, `queue-keys`, `queue-keys-follow-poll`, `queue-keys-viewer`, each seen red by a mutation (the once-guard, the
-  typing check, the words, `keepChosen`, the modifiers). In the cloud container `help-window` and `settings-more-rows` fail on the
+  typing check, the words, `keepChosen`, the modifiers). The owner tried it: with ↑ ↓ the list's scrollbar stopped 29 px short of its
+  ends (the sticky header) — the first / last row now scroll the list to its end, a row is kept below the header, and only a key
+  scrolls (never the poll): `queue-keys-scroll`, red on the code before. In the cloud container `help-window` and `settings-more-rows` fail on the
   code before the change as well (its Chromium, not this change). **Next:** the owner tries it with Serato / VirtualDJ (does their
   search find "Wilki Baśka"?), then a PR to `dev`.
 - **2026-10-12 — the guide and "Pomoc i kontakt", on the branch `claude/inspiring-einstein-sgh2tz` (on top of `dev` = `39891be`;

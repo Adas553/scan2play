@@ -120,6 +120,31 @@
     });
 
     S2P.scenario({
+        name: 'queue-keys-scroll',
+        title: 'a long queue and the keys: the chosen row is never under the sticky header, and the first / the last one takes the list\'s scrollbar to its very end (the owner, 2026-10-12: it stopped short)',
+        setup: {
+            queue: Array.from({ length: 30 }, function (_, i) {
+                return { id: i + 1, name: 'Artysta ' + (i + 1) + ' - Piosenka', url: '', card: true };
+            })
+        },
+        run: async function (t) {
+            await t.waitFor(function () { return row(30); }, 'the queue poll', 8000);
+            const box = document.querySelector('#queueList .list-scroll');
+            const head = box.querySelector('thead');
+            t.check('the list scrolls in its own box', box.scrollHeight > box.clientHeight + 100);
+            const atEnd = function () { return Math.abs(box.scrollTop + box.clientHeight - box.scrollHeight) <= 1; };
+            const clearOfHead = function (r) { return r.getBoundingClientRect().top >= head.getBoundingClientRect().bottom - 1; };
+
+            for (let i = 0; i < 30; i++) press('ArrowDown');
+            t.step('↓ to the last one: the scrollbar at its end', [chosen(), atEnd()], [['30'], true]);
+            for (let i = 0; i < 15; i++) press('ArrowUp');
+            t.step('↑ in the middle: the chosen row below the header', [chosen(), clearOfHead(row(15))], [['15'], true]);
+            for (let i = 0; i < 15; i++) press('ArrowUp');
+            t.step('↑ to the first one: the scrollbar at the top', [chosen(), box.scrollTop], [['1'], 0]);
+        }
+    });
+
+    S2P.scenario({
         name: 'queue-keys-viewer',
         title: 'the staff\'s "Podgląd" (no buttons): the keys choose and copy, Enter and S send nothing, and the line under the queue names only those',
         page: 'dashboard-cards-viewer',
