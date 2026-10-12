@@ -403,13 +403,13 @@ class DashboardPageRenderTest {
                 "aria-label=\"Szczegóły\"", "s2p-check-song", "s2p-host-wanted", "💸 2", ">Podejrzyj<");
         // "Kopiuj" and the queue's keys (queue-keys.js): "Zagrane" / "Pomiń" by the keyboard only for whom may press them
         assertThat(owner).contains("s2p-btn-copy", ">Kopiuj<", "data-copied=\"Skopiowano\"",
-                "id=\"queueKeys\"", "C kopiuj · Enter zagrane · S pomiń · Backspace cofnij");
+                "id=\"queueKeys\"", "C lub Ctrl+C kopiuj · Enter zagrane · S pomiń · Backspace lub Ctrl+Z cofnij");
         write("dashboard-cards.html", owner);
 
         PartyStaffService staff = mock(PartyStaffService.class);
         String viewer = renderDashboard(party(), queue, PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(), staff,
                 new MockHttpSession(), new PartyStaffService.Access(party(), false, StaffRole.VIEWER.permissions()), null);
-        assertThat(viewer).contains("s2p-card-toggle", ">Kopiuj<", "↑ ↓ wybór · C kopiuj · Esc")
+        assertThat(viewer).contains("s2p-card-toggle", ">Kopiuj<", "↑ ↓ wybór · C lub Ctrl+C kopiuj · Esc")
                 .doesNotContain("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/tip-count\"", "Enter zagrane");
         write("dashboard-cards-viewer.html", viewer);
     }

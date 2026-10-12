@@ -8,12 +8,13 @@
  *   Enter   "Zagrane" of the chosen request      S   "Pomiń" of it      (none chosen: the first one is chosen, nothing is sent)
  *   Esc     none chosen
  *   ⌫       "Cofnij" of the bar after a "Zagrane" / "Pomiń" (forms.js), while it is shown; the request put back is chosen again
+ *   Ctrl+Z / ⌘Z the same as ⌫;  Ctrl+C / ⌘C the same as C, only with a request chosen and no text selected (else the browser's)
  *
  * On a computer a click on a request chooses it too (its buttons included: "Kopiuj" chooses what it copied); on a phone a tap is the
  * card's fold (cards.js), no frame.
  *
- * Only while the Queue's list is shown, never while typing (the search box, a form's field), with Ctrl / Alt / ⌘ (Ctrl+C stays the
- * browser's) or with a window open. Enter on a focused button or link is that control's. A request sent with Enter / S is sent once:
+ * Only while the Queue's list is shown, never while typing (the search box, a form's field), with Alt or with a window open; with
+ * Ctrl / ⌘ only the two above. Enter on a focused button or link is that control's. A request sent with Enter / S is sent once:
  * a second press before the poll takes it away does nothing. The chosen request is remembered by its id when the poll replaces the
  * rows (keepChosen, polling.js); once it has left (played, skipped) the request now in its place is chosen — the next one.
  */
@@ -147,11 +148,30 @@ function undo(e) {
     button.click();
 }
 
+/**
+ * Ctrl+Z / ⌘Z: "Cofnij" as ⌫. Ctrl+C / ⌘C: the chosen song, as C — only with a request chosen and no text selected on the page,
+ * so copying a selected text stays the browser's.
+ */
+function withCtrl(e, key) {
+    if (key === 'z') {
+        undo(e);
+    } else if (key === 'c' && chosenId !== null && window.getSelection().isCollapsed) {
+        const row = chosen();
+        if (!row) return;
+        e.preventDefault();
+        copySong(row);
+    }
+}
+
 document.addEventListener('keydown', function (e) {
-    if (e.ctrlKey || e.altKey || e.metaKey || e.defaultPrevented || e.isComposing) return;
+    if (e.defaultPrevented || e.isComposing || e.altKey) return;
     if (e.target.closest && e.target.closest(TYPING)) return;
     if (document.querySelector('.modal.show, dialog[open]')) return;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (e.ctrlKey || e.metaKey) {
+        if (!e.shiftKey) withCtrl(e, key);
+        return;
+    }
     if (key === 'Backspace') {
         undo(e);
         return;
