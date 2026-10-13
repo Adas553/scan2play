@@ -705,6 +705,12 @@ address, so a phone on the same Wi-Fi can open it), `GUEST_CLIENT_IP_HEADER=CF-C
 notifications are off; a new pair makes every device switch them on again; `VAPID_SUBJECT` optional), and the optional overrides
 below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH_DAILY_BUDGET`. The DJ's login works only on
 `localhost` or a public HTTPS address (Google refuses a LAN IP as a redirect URI); the guest side works through the LAN IP.
+**`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (staged 2026-10-13, live once the owner
+deploys it): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
+on average, 2 GB at the top) — the live data is ~55 MB. Measured on a copy (20 parties × 50 guests polling every 3 s, 1 500
+requests in 2 min): 0 errors, the same speed as the default, ~800 MB at the top instead of 1–1.1 GB. `-Xmx256m` with SerialGC was
+lower (536 MB at one party of 150 guests) but slower under the 20 parties; out of memory the app restarts instead of hanging.
+Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md` (a weekly `pg_dump` by hand).
 
 ### Key application properties
 
