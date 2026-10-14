@@ -42,7 +42,7 @@ class HostControllerTest {
     void setUp() {
         repository = mock(PartySettingsRepository.class);
         settingsService = mock(PartySettingsCommandService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService, com.scan2play.service.Plans.off())).build();
         when(repository.findByHostToken(anyString())).thenReturn(Optional.empty());
         when(repository.findByHostToken(TOKEN)).thenReturn(Optional.of(PartySettingsEntity.builder().partyCode(PARTY)
                 .djName("DJ Koko").hostBlocked("Akcent").hostToken(TOKEN).build()));
@@ -81,5 +81,23 @@ class HostControllerTest {
         updater.getValue().accept(party);
         assertThat(party.getHostBlocked()).isNull();
         assertThat(party.getHostWanted()).isEqualTo("Hej sokoły\nPerfect");
+    }
+
+    /**
+     * An organiser without Pro, the plans enforced (V35): the hosts' link is off as an old one — a 404, nothing saved; the lists stay
+     * for when Pro is back. With Pro, the link works.
+     */
+    @Test
+    void withoutPro_theHostsLink_isNotFound_andNothingIsSaved() throws Exception {
+        MockMvc free = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService,
+                com.scan2play.service.Plans.enforced())).build();
+        free.perform(get("/h/" + TOKEN)).andExpect(status().isNotFound());
+        free.perform(post("/h/" + TOKEN).param("blocked", "Akcent")).andExpect(status().isNotFound());
+        org.mockito.Mockito.verify(settingsService, org.mockito.Mockito.never()).updateSettings(anyString(), any());
+
+        repository.findByHostToken(TOKEN).orElseThrow().setOwnerId("owner");
+        MockMvc pro = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService,
+                com.scan2play.service.Plans.enforced("owner"))).build();
+        pro.perform(get("/h/" + TOKEN)).andExpect(status().isOk());
     }
 }

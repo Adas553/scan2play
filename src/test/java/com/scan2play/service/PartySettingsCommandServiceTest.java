@@ -31,6 +31,9 @@ class PartySettingsCommandServiceTest {
     @Spy
     private CacheManager cacheManager = new ConcurrentMapCacheManager("partySettings");
 
+    @Spy
+    private PlanService planService = Plans.off();
+
     @InjectMocks
     private PartySettingsCommandService service;
 

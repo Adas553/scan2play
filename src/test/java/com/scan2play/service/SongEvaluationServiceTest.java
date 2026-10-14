@@ -60,7 +60,7 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications, partyStaff);
+                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications, partyStaff, Plans.off());
         service.init();
     }
 
@@ -260,11 +260,13 @@ class SongEvaluationServiceTest {
     /** The service with {@link SongEvaluationService#askAi} answered by the test; it keeps the prompts it was asked. */
     private final List<String> prompts = new ArrayList<>();
     private final List<GenerateContentConfig> configs = new ArrayList<>();
+    /** The plans as the test sets them: not enforced unless it says (V35). */
+    private PlanService plans = Plans.off();
 
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, new DefaultResourceLoader(),
-                new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications, partyStaff) {
+                new SongRequestCommandService(songRequestRepository), aiHealth, pushNotifications, partyStaff, plans) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -561,6 +563,40 @@ class SongEvaluationServiceTest {
         assertThat(response.comment()).isEqualTo("Pick another one");
         assertThat(response.requestId()).isNull();
         verify(songRequestRepository, never()).save(any());
+    }
+
+    // ---- The plans (V35): the party as its organiser's plan lets it work ----
+
+    /**
+     * An organiser without Pro, the plans enforced: the hosts' lists are kept but not applied (a blocked song reaches the AI, a wished
+     * one is not taken against it), the comments are the classic ones, the repeats' window is a new party's 15.
+     */
+    @Test
+    void withoutPro_theHostsListsAreNotApplied_theCommentsAreClassic_andTheRepeatsWindowIsTheDefault() {
+        PartySettingsEntity party = aParty(40);
+        party.setOwnerId("owner");
+        party.setHostBlocked("Akcent");
+        party.setHostWanted("Hej sokoły");
+        party.setCommentStyle(CommentStyle.FUNNY);
+        savesWithId();
+        plans = Plans.enforced();
+
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.of("pl"));
+        try {
+            DjResponse blocked = answering("{\"decision\":\"accepted\",\"comment\":\"Hit!\",\"songName\":\"Akcent - Przekorny los\"}")
+                    .evaluateAndSaveSong(PARTY_CODE, "puść coś z Akcent", "ANY");
+            assertThat(blocked.decision()).as("the hosts' 🚫 not applied").isEqualTo(DECISION_ACCEPTED);
+            DjResponse wanted = answering("{\"decision\":\"rejected\",\"comment\":\"Nie ten klimat\",\"songName\":\"Hej sokoły\"}")
+                    .evaluateAndSaveSong(PARTY_CODE, "hej sokoly", "Club");
+            assertThat(wanted.decision()).as("the hosts' ⭐ not applied").isEqualTo("rejected");
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+        assertThat(prompts).hasSize(2);
+        assertThat(prompts.getFirst()).as("the classic comments").doesNotContain("zabawny — żart");
+        verify(songRequestRepository, org.mockito.Mockito.atLeastOnce())
+                .findRecentlyPlayed(eq(PARTY_CODE), eq(org.springframework.data.domain.PageRequest.of(0, 15)));
+        assertThat(party.getHostBlocked()).as("kept for when Pro is back").isEqualTo("Akcent");
     }
 
     // ---- The hosts' lists (V29) ----

@@ -115,9 +115,12 @@
                                th:text="#{dashboard.comment.style.label}">AI comments</label>
                         <select id="commentStyleSelect" name="commentStyle" data-auto-submit
                                 class="form-select form-select-sm bg-black text-light border-secondary">
+                            <!--/* without Pro (V35) only "Klasyczne": the organiser sees the others marked "· Pro", not to pick; the staff do not */-->
                             <option th:each="style : ${T(com.scan2play.model.CommentStyle).values()}"
+                                    th:if="${style.name() == 'CLASSIC' or plan.allows('COMMENT_STYLES') or plan.pro('COMMENT_STYLES')}"
                                     th:value="${style}"
-                                    th:text="#{comment.style.__${style}__}"
+                                    th:text="${style.name() != 'CLASSIC' and plan.pro('COMMENT_STYLES')} ? #{plan.pro.option(#{comment.style.__${style}__})} : #{comment.style.__${style}__}"
+                                    th:disabled="${style.name() != 'CLASSIC' and !plan.allows('COMMENT_STYLES')}"
                                     th:selected="${style == pickedStyle}">
                             </option>
                         </select>
@@ -172,23 +175,26 @@
                  th:with="settingsUrl=@{/dj/settings(party=${partyCode})}">
                 <p class="s2p-rows-title" th:text="#{settings.more}">More</p>
                 <div class="s2p-rows">
-                    <a th:if="${access.may('HOST_LISTS')}" class="s2p-row" data-settings-row="hosts" th:href="${settingsUrl + '#hostListsCard'}">
-                        <span class="s2p-row-name" th:text="#{dashboard.host.title}">The hosts' list</span>
+                    <!--/* a feature of the Pro plan the party has not (V35): the row stays for the organiser, "PRO" and "W planie Pro" */-->
+                    <a th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}" class="s2p-row"
+                       data-settings-row="hosts" th:href="${settingsUrl + '#hostListsCard'}">
+                        <span class="s2p-row-name"><span th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
                         <span class="s2p-row-state"
-                              th:text="${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
-                                     : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? ' · ' + #{settings.row.hosts.link} : '')">Not used</span>
+                              th:text="${plan.pro('HOST_LISTS')} ? #{plan.pro.row} : (${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
+                                     : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? ' · ' + #{settings.row.hosts.link} : ''))">Not used</span>
                     </a>
                     <a th:if="${isOwner}" class="s2p-row" data-settings-row="links" th:href="${settingsUrl + '#linksCard'}"
                        th:with="sites=${ {instagramUrl != null ? 'Instagram' : null, facebookUrl != null ? 'Facebook' : null, tiktokUrl != null ? 'TikTok' : null, tipUrl != null ? #messages.msg('settings.row.links.tips') : null} }">
-                        <span class="s2p-row-name" th:text="#{dashboard.links.title}">Profiles and tips</span>
+                        <span class="s2p-row-name"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
                         <span class="s2p-row-state"
                               th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
-                              th:text="${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named}">Instagram · tips</span>
+                              th:text="${plan.pro('PROFILES')} ? #{plan.pro.row} : (${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named})">Instagram · tips</span>
                     </a>
-                    <a th:if="${access.may('LIMITS')}" class="s2p-row" data-settings-row="limits" th:href="${settingsUrl + '#limitsCard'}"
+                    <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" class="s2p-row"
+                       data-settings-row="limits" th:href="${settingsUrl + '#limitsCard'}"
                        th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
                                 networkNear=${serverLimitPerNetwork > 0 and busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4}">
-                        <span class="s2p-row-name" th:text="#{dashboard.limits.title}">Guest limits</span>
+                        <span class="s2p-row-name"><span th:text="#{dashboard.limits.title}">Guest limits</span><th:block th:if="${plan.pro('GUEST_LIMITS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
                         <span class="s2p-row-state">
                             <span data-limit-calm th:hidden="${partyNear or networkNear}"
                                   th:text="#{settings.row.limits(${requestLimit}, ${cooldownMinutes})}">2 per guest · 3 min break</span>
@@ -334,7 +340,7 @@
                             <button type="submit" class="btn btn-sm btn-outline-light text-nowrap s2p-btn-skip" th:title="#{dashboard.table.button.dismiss.title}"
                                     th:text="#{dashboard.table.button.dismiss}">⏭ Skip</button>
                         </form>
-                        <th:block th:if="${access == null or access.may('TIPS')}">
+                        <th:block th:if="${(access == null or access.may('TIPS')) and (plan == null or plan.allows('TIPS'))}">
                             <span th:replace="~{fragments/components :: tipCount(${req.id}, ${req.requestNumber}, ${req.tips})}"></span>
                         </th:block>
                     </div>

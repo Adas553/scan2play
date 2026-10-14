@@ -39,11 +39,15 @@
     <input type="hidden" id="partyCode" th:value="${partyCode}">
 
     <!--/* A row of jumps to the cards (and the staff's own page) when there is more than one */-->
-    <nav th:if="${access.may('HOST_LISTS') or access.may('LIMITS') or isOwner}" class="s2p-chips mb-4" id="settingsJump"
+    <nav th:if="${(access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS')))
+                  or (access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))) or isOwner}"
+         class="s2p-chips mb-4" id="settingsJump"
          th:attr="aria-label=#{settings.jump}">
-        <a th:if="${access.may('HOST_LISTS')}" href="#hostListsCard" th:text="#{dashboard.host.title}">The hosts' list</a>
-        <a th:if="${isOwner}" href="#linksCard" th:text="#{dashboard.links.title}">Profiles and tips</a>
-        <a th:if="${access.may('LIMITS')}" href="#limitsCard" th:text="#{dashboard.limits.title}">Guest limits</a>
+        <a th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}" href="#hostListsCard"><span
+           th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></a>
+        <a th:if="${isOwner}" href="#linksCard"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></a>
+        <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" href="#limitsCard"><span
+           th:text="#{dashboard.limits.title}">Guest limits</span><th:block th:if="${plan.pro('GUEST_LIMITS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></a>
         <a th:if="${isOwner}" th:href="@{/dj/staff(party=${partyCode})}" th:text="#{dashboard.staff.title} + ' ›'">Staff ›</a>
         <a href="#deviceCard" th:text="#{dashboard.device.title}">This device</a>
     </nav>
@@ -53,9 +57,15 @@
         <!--/* The hosts' lists (V29): songs not to play (a request for one never reaches the DJ) and songs to play (accepted whatever
              the AI says, ⭐ in the queue), one per line. The hosts fill them too, by the link made here (/h/{token}, HostController) —
              "Nowy link" makes the old one dead: a party code is for every event, a link for one. */-->
-        <section th:if="${access.may('HOST_LISTS')}" class="card bg-dark border-secondary p-3" id="hostListsCard">
-            <h2 class="s2p-card-title" th:text="#{dashboard.host.title}">The hosts' list</h2>
+        <!--/* Without the Pro plan (V35, the organiser only): the card says so in place of its form — and that the lists wait, when
+             there are some. The staff of a party without Pro do not see the card. */-->
+        <section th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}"
+                 class="card bg-dark border-secondary p-3" id="hostListsCard">
+            <h2 class="s2p-card-title"><span th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
             <p class="s2p-card-help" th:text="#{dashboard.host.help}">One song or artist per line.</p>
+            <th:block th:if="${plan.pro('HOST_LISTS')}"><div
+                 th:replace="~{fragments/components :: proOffer(${hostBlockedCount + hostWantedCount > 0} ? #{plan.hosts.kept(${hostBlockedCount}, ${hostWantedCount})} : #{plan.hosts.offer})}"></div></th:block>
+            <th:block th:unless="${plan.pro('HOST_LISTS')}">
             <form th:action="@{/dj/dashboard/host-lists}" method="POST" class="m-0" id="hostListsForm">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <div class="row g-2">
@@ -99,14 +109,18 @@
                     </form>
                 </div>
             </div>
+            </th:block>
         </section>
 
         <!--/* The DJ's profiles (V24) and tip link (V27) — the owner's alone (money): the guests see them under "Kto gra" and on the QR
              print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks, TipLinks) —
              400 when it is not one, and the form says why. One "Zapisz" for the profiles, one for the tip link (two endpoints). */-->
         <section th:if="${isOwner}" class="card bg-dark border-secondary p-3" id="linksCard">
-            <h2 class="s2p-card-title" th:text="#{dashboard.links.title}">Profiles and tips</h2>
+            <h2 class="s2p-card-title"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
             <p class="s2p-card-help" th:text="#{dashboard.dj.links.label}">Guests see them on their page and the print.</p>
+            <th:block th:if="${plan.pro('PROFILES')}"><div
+                 th:replace="~{fragments/components :: proOffer(${instagramUrl != null or facebookUrl != null or tiktokUrl != null or tipUrl != null} ? #{plan.links.kept} : #{plan.links.offer})}"></div></th:block>
+            <th:block th:unless="${plan.pro('PROFILES')}">
             <form th:action="@{/dj/dashboard/dj-links}" method="POST" class="m-0" id="djLinksForm">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <div class="d-flex flex-column gap-2">
@@ -135,14 +149,19 @@
                 <div class="small text-secondary mt-1" th:text="#{dashboard.tip.help}">The money goes straight to you.</div>
                 <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.tip.invalid}">Not a tip link</div>
             </form>
+            </th:block>
         </section>
 
         <!--/* The guests' limits, and the use of the server's own in one line with their windows (the design review: three lines
              explained limits the DJ does not set; the owner: the line must say "30 na 10 min", "300 na 24 h") — what a network is,
              unfolded. The badges: grey, yellow from 80 %, red at the limit. */-->
-        <section th:if="${access.may('LIMITS')}" class="card bg-dark border-secondary p-3" id="limitsCard">
-            <h2 class="s2p-card-title" th:text="#{dashboard.limits.title}">Guest limits</h2>
-            <form th:action="@{/dj/dashboard/limits}" method="POST" class="m-0">
+        <section th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}"
+                 class="card bg-dark border-secondary p-3" id="limitsCard">
+            <h2 class="s2p-card-title"><span th:text="#{dashboard.limits.title}">Guest limits</span><th:block th:if="${plan.pro('GUEST_LIMITS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+            <!--/* without Pro (V35) every party has a new party's limits: said in place of the form */-->
+            <th:block th:if="${plan.pro('GUEST_LIMITS')}"><div
+                 th:replace="~{fragments/components :: proOffer(#{plan.limits.free(${requestLimit}, ${cooldownMinutes}, ${duplicateCheckWindow})})}"></div></th:block>
+            <form th:unless="${plan.pro('GUEST_LIMITS')}" th:action="@{/dj/dashboard/limits}" method="POST" class="m-0">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <div class="row g-3 align-items-end">
                     <div class="col-4">

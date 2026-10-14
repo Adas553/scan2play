@@ -9,6 +9,7 @@ import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.PartyStaffService;
+import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.util.SongList;
@@ -60,6 +61,7 @@ public class DjDashboardController {
     private final PushNotificationService pushNotificationService;
     private final PartyStaffService partyStaffService;
     private final StaffInvitationService staffInvitationService;
+    private final PlanService planService;
 
     /**
      * On every answer of the queue poll, 304 too: the limits that stop guest songs now, comma-separated —
@@ -161,7 +163,7 @@ public class DjDashboardController {
 
         // --- Active Queue (Accepted songs only) ---
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
-        model.addAttribute(WANTED_SONGS, SongList.of(settings.getHostWanted()));
+        model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
 
         return "dashboard";
     }
@@ -192,6 +194,10 @@ public class DjDashboardController {
         if (owner) {
             model.addAttribute(STAFF, partyStaffService.staffOf(partyCode));
         }
+        // what the organiser's plan has (V35): the cards of a feature without Pro say so to the organiser, in place of their form;
+        // what the party works with — the comment style, the guests' limits — is the plan's (the saved values wait for Pro)
+        model.addAttribute(PLAN, planService.view(settings, owner));
+        PartySettingsEntity planned = planService.asPlanned(settings);
 
         // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
@@ -201,16 +207,16 @@ public class DjDashboardController {
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
         model.addAttribute(TIP_URL, settings.getTipUrl());
-        model.addAttribute(COMMENT_STYLE, settings.getCommentStyle());
+        model.addAttribute(COMMENT_STYLE, planned.getCommentStyle());
         // --- The hosts' lists (V29) and the link that lets them fill the lists ---
         model.addAttribute(HOST_BLOCKED, settings.getHostBlocked());
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
         model.addAttribute(HOST_BLOCKED_COUNT, entries(settings.getHostBlocked()));
         model.addAttribute(HOST_WANTED_COUNT, entries(settings.getHostWanted()));
         model.addAttribute(HOST_LINK, settings.getHostToken() == null ? null : cleanBaseUrl + "/h/" + settings.getHostToken());
-        model.addAttribute(REQUEST_LIMIT, settings.getRequestLimit());
-        model.addAttribute(COOLDOWN_MINUTES, settings.getCooldownMinutes());
-        model.addAttribute(DUPLICATE_CHECK_WINDOW, settings.getDuplicateCheckWindow());
+        model.addAttribute(REQUEST_LIMIT, planned.getRequestLimit());
+        model.addAttribute(COOLDOWN_MINUTES, planned.getCooldownMinutes());
+        model.addAttribute(DUPLICATE_CHECK_WINDOW, planned.getDuplicateCheckWindow());
 
         // --- The server's guest limits (they are not the DJ's to set) and whether one stops guest songs now ---
         model.addAttribute(SERVER_LIMIT_PER_NETWORK, guestRequestLimiter.perClientLimit());
@@ -260,7 +266,8 @@ public class DjDashboardController {
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, @RequestParam(required = false) String party,
                           Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
         // the staff's too (V30): the code is on the tables anyway, a bartender prints a new one
-        PartySettingsEntity settings = sessionHelper.access(party, authentication, session).party();
+        // the profiles and the tip link as the organiser's plan has them (V35)
+        PartySettingsEntity settings = planService.asPlanned(sessionHelper.access(party, authentication, session).party());
         String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
         model.addAttribute(PARTY_CODE, partyCode);
@@ -297,6 +304,7 @@ public class DjDashboardController {
         model.addAttribute(IS_OWNER, access.owner());
         model.addAttribute(ACCESS, access);
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
+        model.addAttribute(PLAN, planService.view(settings, access.owner()));
         addHistory(model, settings, limit, filter);
 
         return "history";
@@ -319,6 +327,7 @@ public class DjDashboardController {
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_OWNER, access.owner());
         model.addAttribute(ACCESS, access);
+        model.addAttribute(PLAN, planService.view(settings, access.owner()));
         addHistory(model, settings, limit, filter);
         // The fragment lands under the dashboard's other panels: it gets a heading of its own (the standalone page has one)
         model.addAttribute(HISTORY_HEADING, true);
@@ -366,8 +375,12 @@ public class DjDashboardController {
 
         // --- Lightweight fingerprint check (avoids full query + render) ---
         // the hosts' wishes too: a song becomes ⭐ when they add it, with the queue as it was
+        // the hosts' wishes and the tips as the organiser's plan has them (V35): a change of the plan sends the rows again
+        PartySettingsEntity planned = planService.asPlanned(settings);
+        PlanService.View plan = planService.view(settings, access.owner());
         String fingerprint = djService.getQueueFingerprint(partyCode);
-        String wanted = settings.getHostWanted() == null ? "" : "-w" + Integer.toHexString(settings.getHostWanted().hashCode());
+        String wanted = (planned.getHostWanted() == null ? "" : "-w" + Integer.toHexString(planned.getHostWanted().hashCode()))
+                + (plan.allows("TIPS") ? "" : "-f");
         String etag = "\"q-" + fingerprint + wanted + "\"";
 
         String ifNoneMatch = request.getHeader("If-None-Match");
@@ -380,9 +393,10 @@ public class DjDashboardController {
         // --- Full render (queue changed) ---
         response.setHeader("ETag", etag);
         model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
-        model.addAttribute(WANTED_SONGS, SongList.of(settings.getHostWanted()));
+        model.addAttribute(WANTED_SONGS, SongList.of(planned.getHostWanted()));
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
+        model.addAttribute(PLAN, plan);       // and by the organiser's plan (V35): no 💸 without Pro
         return "dashboard :: songTableBody";
     }
 

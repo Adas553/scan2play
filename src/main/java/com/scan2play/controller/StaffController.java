@@ -5,6 +5,7 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartyStaffService;
+import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.util.CodeGenerator;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,6 +62,7 @@ public class StaffController {
     private final PartySettingsCommandService partySettingsCommandService;
     private final DjSessionHelper sessionHelper;
     private final StaffInvitationService staffInvitationService;
+    private final PlanService planService;
 
     // ---------------------------------------------------------------- the invitation
 
@@ -293,7 +295,8 @@ public class StaffController {
         model.addAttribute(STAFF_LINK_ROLE, StaffRole.of(linkGrants));
         model.addAttribute(STAFF_LINK_PERMISSIONS, linkGrants);
         model.addAttribute(STAFF_INVITATIONS, staffInvitationService.waitingAt(partyCode));
-        model.addAttribute(STAFF_PLACES_LEFT, Math.max(0, PartyStaffService.MAX_STAFF - partyStaffService.placesTaken(partyCode)));
+        model.addAttribute(STAFF_PLACES_LEFT, Math.max(0, partyStaffService.placesOf(settings) - partyStaffService.placesTaken(partyCode)));
+        model.addAttribute(PLAN, planService.view(settings, true));
         model.addAttribute(STAFF_ROLES, StaffRole.values());
         model.addAttribute(STAFF_DEFAULT_ROLE, StaffRole.DEFAULT);
         model.addAttribute(STAFF_PERMISSIONS, StaffPermission.values());

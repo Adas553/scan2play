@@ -256,7 +256,7 @@ class GuestPageRenderTest {
 
         context.setVariables(Map.of("joinPartyName", "Klub Ola", "joinProblem", "join.problem.full"));
         String full = engine.process("join", context);
-        assertThat(full).contains(">Nie można dołączyć<", "Obsługa jest pełna (10 osób): Klub Ola.")
+        assertThat(full).contains(">Nie można dołączyć<", "Obsługa jest pełna: Klub Ola.")
                 .doesNotContain("id=\"joinButton\"", "??");
     }
 

@@ -116,6 +116,7 @@ public class SongEvaluationService {
     private final AiHealthMonitor aiHealthMonitor;
     private final PushNotificationService pushNotificationService;
     private final PartyStaffService partyStaffService;
+    private final PlanService planService;
 
     /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt). */
     private Map<String, String> promptTemplates;
@@ -216,7 +217,8 @@ public class SongEvaluationService {
         String songName = forPrompt(guestText);
         log.info("Party [{}]: Evaluating request: '{}' with style: '{}'", partyCode, songName, style);
 
-        PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+        // as the organiser's plan lets it work (V35): without Pro no hosts' lists, the classic comments, the default repeats' window
+        PartySettingsEntity settings = planService.asPlanned(partySettingsQueryService.getSettings(partyCode));
 
         // Capture locale in the main thread (where LocaleContextHolder is available)
         Locale locale = LocaleContextHolder.getLocale();

@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * CSRF token, and a vote without it is refused before anything is counted.
  */
 @WebMvcTest(GuestController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
 class GuestVoteWebTest {
 
     private static final String PARTY = "ABC12";

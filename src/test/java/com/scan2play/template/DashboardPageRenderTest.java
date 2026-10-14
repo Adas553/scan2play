@@ -117,6 +117,14 @@ class DashboardPageRenderTest {
                                           GuestRequestLimiter limiter, OAuth2AuthenticationToken user,
                                           PartyStaffService staff, MockHttpSession session, PartyStaffService.Access access,
                                           DjSessionHelper.Note note) {
+        return renderDashboard(settings, queue, locale, limiter, user, staff, session, access, note, com.scan2play.service.Plans.off());
+    }
+
+    /** The same with the plans as {@code plans} decides them (V35). */
+    private static String renderDashboard(PartySettingsEntity settings, List<SongRequestEntity> queue, Locale locale,
+                                          GuestRequestLimiter limiter, OAuth2AuthenticationToken user,
+                                          PartyStaffService staff, MockHttpSession session, PartyStaffService.Access access,
+                                          DjSessionHelper.Note note, com.scan2play.service.PlanService plans) {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         DjService djService = mock(DjService.class);
         QrCodeService qrCodeService = mock(QrCodeService.class);
@@ -126,7 +134,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class));
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -532,14 +540,20 @@ class DashboardPageRenderTest {
 
     /** The History tab's fragment as {@code DjDashboardController.historyFragment} builds it for what the service answers, rendered in Polish. */
     private static String renderHistory(HistoryFilter filter, int limit, List<HistoryEntry> entries, boolean hasMore) {
+        return renderHistory(filter, limit, entries, hasMore, true, com.scan2play.service.Plans.off());
+    }
+
+    /** The History tab for the owner or ({@code owner} false) a person of the staff with every permission, under {@code plans}. */
+    private static String renderHistory(HistoryFilter filter, int limit, List<HistoryEntry> entries, boolean hasMore, boolean isOwner,
+                                        com.scan2play.service.PlanService plans) {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(PARTY, limit, filter)).thenReturn(new PlayHistoryService.Page(entries, hasMore));
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
-        PartyStaffService.Access owner = new PartyStaffService.Access(party(), true, StaffPermission.all());
+        PartyStaffService.Access owner = new PartyStaffService.Access(party(), isOwner, StaffPermission.all());
         when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans);
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
@@ -587,5 +601,87 @@ class DashboardPageRenderTest {
             write("history-" + filter.param() + ".html", first);
             write("history-" + filter.param() + "-more.html", more);
         }
+    }
+
+    // ---------------------------------------------------------------- the plans (V35)
+
+    /** The plans not enforced (production today): not one mark of Pro anywhere — nothing changes for the DJs. */
+    @Test
+    void withThePlansNotEnforced_nothingSaysPro() {
+        String html = renderDashboard(party(), List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL);
+        assertThat(html).contains("data-settings-row=\"hosts\"", ">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">Zabawne<",
+                        "s2p-btn-tip", "s2p-host-wanted")
+                .doesNotContain("s2p-pro", "data-pro-offer", "· Pro", "W planie Pro", "disabled=\"disabled\" value=\"FUNNY\"");
+    }
+
+    /**
+     * An organiser without Pro, the plans enforced (variant B of the review 2026-10-14): the rows of the Pro features stay with a
+     * quiet "PRO" and "W planie Pro" (the limits' row keeps the limits that hold: 2 / 3), the AI's other comment styles are there but
+     * not to pick, and the queue changes nothing but what the plan has not: no 💸, no ⭐ of the hosts' list (kept, not applied).
+     * {@code dashboard-free.html} for the browser tests.
+     */
+    @Test
+    void aFreeOrganiser_seesProByTheRows_neverInTheQueue() throws IOException {
+        PartySettingsEntity party = party();
+        party.setRequestLimit(5);   // saved while on Pro: kept, but the party works with the defaults
+        PartyStaffService staff = mock(PartyStaffService.class);
+        String html = renderDashboard(party, List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL,
+                new GuestRequestLimiter(30, 10, 300, ""), ownerToken(), staff, new MockHttpSession(),
+                new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced());
+
+        assertWhatTheScriptsNeed(html);
+        assertThat(rowOf(html, "hosts")).contains("class=\"s2p-pro\">PRO<", ">W planie Pro<").doesNotContain("🚫");
+        assertThat(rowOf(html, "links")).contains("class=\"s2p-pro\">PRO<", ">W planie Pro<").doesNotContain("Instagram");
+        assertThat(rowOf(html, "limits")).contains("class=\"s2p-pro\">PRO<", ">2 na gościa · 3 min przerwy<");
+        assertThat(rowOf(html, "staff")).doesNotContain("s2p-pro");
+        assertThat(html).as("the comment styles: \"Klasyczne\" to pick, the others marked and not")
+                .contains(">Klasyczne<", ">Zabawne · Pro<", ">Sarkastyczne · Pro<", ">Krótkie · Pro<")
+                .containsPattern("disabled=\"disabled\"[^>]*value=\"FUNNY\"|value=\"FUNNY\"[^>]*disabled=\"disabled\"");
+        assertThat(html).as("the queue: no 💸 and no ⭐ without Pro — the song's own number and the buttons stay")
+                .contains("Golec uOrkiestra - Hej sokoły", "s2p-btn-played", "s2p-btn-skip")
+                .doesNotContain("s2p-btn-tip", "action=\"/dj/dashboard/tip-count\"", "s2p-host-wanted");
+        write("dashboard-free.html", html);
+    }
+
+    /** The staff of a party without Pro (V35): nothing of Pro, no row of a Pro feature — the staff cannot buy it (6.7: hidden). */
+    @Test
+    void theStaffOfAFreeParty_seeNoPro_andNoRowOfAProFeature() {
+        String html = renderDashboard(party(), List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
+                mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(party(), false, StaffRole.CO_ORGANISER.permissions()), null,
+                com.scan2play.service.Plans.enforced());
+        assertThat(html).contains("id=\"partyCard\"", ">Klasyczne<")
+                .doesNotContain("s2p-pro", "· Pro", "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", ">Zabawne<");
+    }
+
+    /** An organiser with Pro, the plans enforced: the panel as today. */
+    @Test
+    void aProOrganiser_hasThePanelAsToday() {
+        PartySettingsEntity party = party();
+        String html = renderDashboard(party, List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL,
+                new GuestRequestLimiter(30, 10, 300, ""), ownerToken(), mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced("owner"));
+        assertThat(html).contains(">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">Zabawne<", "s2p-btn-tip", "s2p-host-wanted")
+                .doesNotContain("s2p-pro", "· Pro");
+    }
+
+    /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */
+    @Test
+    void theEveningSummary_withoutPro_leadsToWhatProAdds() {
+        List<HistoryEntry> one = List.of(historyEntry(1, "Played Alpha", "played"));
+        assertThat(renderHistory(HistoryFilter.ALL, 50, one, false, true, com.scan2play.service.Plans.off()))
+                .contains("href=\"/dj/summary?party=HARN1\"").doesNotContain("s2p-pro");
+        assertThat(renderHistory(HistoryFilter.ALL, 50, one, false, true, com.scan2play.service.Plans.enforced()))
+                .contains("id=\"summaryLink\"", "href=\"/pro\"", ">Podsumowanie wieczoru<", "class=\"s2p-pro\">PRO<")
+                .doesNotContain("/dj/summary");
+        assertThat(renderHistory(HistoryFilter.ALL, 50, one, false, false, com.scan2play.service.Plans.enforced()))
+                .doesNotContain("id=\"summaryLink\"", "s2p-pro");
+    }
+
+    /** One row of "Więcej", from its tag to its end. */
+    private static String rowOf(String html, String row) {
+        int at = html.indexOf("data-settings-row=\"" + row + "\"");
+        assertThat(at).as("the row " + row).isPositive();
+        return html.substring(at, html.indexOf("</a>", at));
     }
 }

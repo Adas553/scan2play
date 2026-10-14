@@ -91,6 +91,8 @@ public final class ViewAttributes {
     public static final String ACCESS = "access";
     /** What the person may do, as the queue poll's {@code X-Panel-Access} says it: the page reloads when the poll says otherwise. */
     public static final String PANEL_ACCESS = "panelAccess";
+    /** What the organiser's plan has (V35, {@code PlanService.View}): {@code plan.allows('TIPS')}, {@code plan.pro('HOST_LISTS')}. */
+    public static final String PLAN = "plan";
     /** The panel's party as its staff sees it named ("DJ Koko", else the organiser's name, else its code). */
     public static final String PARTY_NAME = "partyName";
     /** The panels the person may switch between ({@code PartyStaffService.Panel}): their own, the parties they work at. */

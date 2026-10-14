@@ -932,6 +932,17 @@ th[data-sort].sort-desc::after {
 .s2p-chips a:hover { border-color: #f8f9fa; color: #fff; }
 #hostListsCard, #linksCard, #limitsCard, #deviceCard { scroll-margin-top: 1rem; }
 
+/* A feature of the Pro plan, to an organiser without it (V35, variant B of the review 2026-10-14,
+   https://claude.ai/artifact/32eMmdwz9pTGLs8pRQzLBv): a quiet "PRO" by its name — an outline, not a colour: it is not a state of the
+   party — and, in place of the card's form, one sentence and the way to /pro. Never in the queue; never to the staff. */
+.s2p-pro {
+    display: inline-flex; align-items: center; margin-left: 0.5rem; padding: 0.05rem 0.45rem; border: 1px solid #6c757d;
+    border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1.4; color: #e9ecef;
+    vertical-align: middle; white-space: nowrap;
+}
+.s2p-pro-box { border: 1px dashed #495057; border-radius: var(--s2p-radius); padding: 0.75rem 0.9rem; color: #dfe3e7; font-size: 0.9rem; }
+.s2p-pro-box p { margin: 0 0 0.6rem 0; }
+
 /* The guide "Jak działa Scan2Play" (guide.html, 2026-10-12): a section per moment of a party, each line the app's own button or badge
    beside what it does — pictures of them (spans), not controls; one column on a phone. */
 .s2p-guide-lede { color: #dfe3e7; max-width: 66ch; }

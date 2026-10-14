@@ -65,9 +65,13 @@
                 </div>
                 <!--/* One evening of the party to print, save as PDF or download as CSV (DjSummaryController) — before the history is
                      cleared, which takes it too */-->
-                <a th:unless="${#lists.isEmpty(history) or (access != null ? !access.may('SUMMARY') : isOwner == false)}"
-                   th:href="${partyCode != null ? '/dj/summary?party=' + partyCode : '/dj/summary'}" href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
-                   class="btn btn-sm btn-outline-light" th:text="#{summary.open}">Evening summary</a>
+                <a th:unless="${#lists.isEmpty(history) or (access != null ? !access.may('SUMMARY') : isOwner == false)
+                                or (plan != null and !plan.allows('SUMMARY') and !plan.pro('SUMMARY'))}"
+                   th:href="${plan != null and plan.pro('SUMMARY')} ? '/pro' : (${partyCode != null} ? ${'/dj/summary?party=' + partyCode} : '/dj/summary')"
+                   href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
+                   class="btn btn-sm btn-outline-light"><span th:text="#{summary.open}">Evening summary</span><th:block
+                   th:if="${plan != null and plan.pro('SUMMARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></a>
+                <!--/* without the Pro plan (V35): the organiser's button leads to what Pro adds, "PRO" by it; the staff's is not there */-->
                 <!--/* The party's played and rejected requests deleted (DjService.clearHistory: not the waiting ones, not a skip that
                      still keeps its song out); asks first (data-confirm, dj-nav.js). In the History tab forms.js sends it in the
                      background and loads the tab again; on the standalone page the server sends it back to itself. */-->

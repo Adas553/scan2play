@@ -26,13 +26,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Uses @WebMvcTest (no DB, no external APIs — fast and reliable).
  */
 @WebMvcTest({HomeController.class, CspReportController.class, LegalController.class})
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
 class SmokeTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     // ---- Public routes ----
+
+    @Test
+    @DisplayName("GET /pro → public, but a 404 while the plans are not enforced (V35): nothing says \"Pro\" yet")
+    void proPage_isNotThere_whileThePlansAreNotEnforced() throws Exception {
+        mockMvc.perform(get("/pro"))
+                .andExpect(status().isNotFound());
+    }
 
     @Test
     @DisplayName("GET / → 200 landing page for unauthenticated user")

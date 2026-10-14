@@ -2,10 +2,12 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.CommentStyle;
+import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PlanService;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.SocialLinks;
 import com.scan2play.util.SongList;
@@ -51,6 +53,7 @@ public class DjPartySettingsController {
     private final PartySettingsCommandService partySettingsCommandService;
     private final AccountDeletionService accountDeletionService;
     private final DjSessionHelper sessionHelper;
+    private final PlanService planService;
 
     /**
      * Re-activates the party session.
@@ -93,7 +96,10 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/comment-style")
     public String updateCommentStyle(@RequestParam String partyCode, @RequestParam CommentStyle commentStyle,
                                      OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
+        PartySettingsEntity party = sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
+        if (commentStyle != CommentStyle.CLASSIC) {
+            planService.require(party, PlanFeature.COMMENT_STYLES);   // "Klasyczne" is everyone's (V35)
+        }
         partySettingsCommandService.updateSettings(partyCode, s -> s.setCommentStyle(commentStyle));
         return REDIRECT_DASHBOARD;
     }
@@ -127,7 +133,7 @@ public class DjPartySettingsController {
     public String updateDjLinks(@RequestParam String partyCode, @RequestParam(required = false) String instagram,
                                 @RequestParam(required = false) String facebook, @RequestParam(required = false) String tiktok,
                                 OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        planService.require(sessionHelper.requireOwner(partyCode, authentication, session), PlanFeature.PROFILES);
         String instagramUrl;
         String facebookUrl;
         String tiktokUrl;
@@ -155,7 +161,7 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/tip-link")
     public String updateTipLink(@RequestParam String partyCode, @RequestParam(required = false) String tip,
                                 OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.validateOwnership(partyCode, authentication, session);
+        planService.require(sessionHelper.requireOwner(partyCode, authentication, session), PlanFeature.TIPS);
         String tipUrl;
         try {
             tipUrl = TipLinks.tipUrl(Texts.oneLine(tip, PartySettingsEntity.LINK_MAX));
@@ -175,7 +181,8 @@ public class DjPartySettingsController {
     public String updateHostLists(@RequestParam String partyCode, @RequestParam(required = false) String blocked,
                                   @RequestParam(required = false) String wanted,
                                   OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.require(partyCode, StaffPermission.HOST_LISTS, authentication, session);
+        planService.require(sessionHelper.require(partyCode, StaffPermission.HOST_LISTS, authentication, session),
+                PlanFeature.HOST_LISTS);
         String blockedList = SongList.tidy(blocked);
         String wantedList = SongList.tidy(wanted);
         partySettingsCommandService.updateSettings(partyCode, s -> {
@@ -192,7 +199,8 @@ public class DjPartySettingsController {
     @PostMapping("/dashboard/host-link")
     public String updateHostLink(@RequestParam String partyCode, @RequestParam String link,
                                  OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.require(partyCode, StaffPermission.HOST_LISTS, authentication, session);
+        planService.require(sessionHelper.require(partyCode, StaffPermission.HOST_LISTS, authentication, session),
+                PlanFeature.HOST_LISTS);
         String token = switch (link) {
             case "new" -> CodeGenerator.generateSecret();
             case "off" -> null;
@@ -212,7 +220,9 @@ public class DjPartySettingsController {
                                @RequestParam double cooldownMinutes,
                                @RequestParam double duplicateCheckWindow,
                                OAuth2AuthenticationToken authentication, HttpSession session) {
-        sessionHelper.require(partyCode, StaffPermission.LIMITS, authentication, session);
+        // without Pro every party has the defaults (V35): the form is not shown, and the server does not take it
+        planService.require(sessionHelper.require(partyCode, StaffPermission.LIMITS, authentication, session),
+                PlanFeature.GUEST_LIMITS);
 
         // Whole numbers within bounds (review item 5.4): the duplicate window is read from the database and sent to the AI with
         // every guest's request, so it has a ceiling; the guest limit's own ceilings only keep the numbers sensible. All three
