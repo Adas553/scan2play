@@ -6,7 +6,7 @@
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
     <title>Jak działa Scan2Play</title>
-    <meta name="description" content="Instrukcja dla DJ-ów: kod QR, kolejka próśb gości, AI, historia, obsługa imprezy.">
+    <th:block th:replace="~{fragments/components :: seo('/jak-to-dziala', 'Jak działa Scan2Play', 'Instrukcja dla DJ-ów: kod QR, kolejka próśb gości, AI, historia, obsługa imprezy.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>

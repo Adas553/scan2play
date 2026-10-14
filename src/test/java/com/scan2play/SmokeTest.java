@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * and the security layer works as expected.
  * Uses @WebMvcTest (no DB, no external APIs — fast and reliable).
  */
-@WebMvcTest({HomeController.class, CspReportController.class, LegalController.class})
+@WebMvcTest({HomeController.class, CspReportController.class, LegalController.class, com.scan2play.controller.SeoController.class})
 @Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
 class SmokeTest {
 
@@ -33,6 +33,83 @@ class SmokeTest {
     private MockMvc mockMvc;
 
     // ---- Public routes ----
+
+    // ---- Search engines and shared links (2026-10-14) ----
+
+    @Test
+    @DisplayName("GET /robots.txt → public, plain text: the DJ's pages and the login not for a crawler, where the sitemap is")
+    void robotsTxt_isPublic_andNamesTheSitemap() throws Exception {
+        mockMvc.perform(get("/robots.txt"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/plain"))
+                .andExpect(content().string(containsString("User-agent: *")))
+                .andExpect(content().string(containsString("Disallow: /dj/")))
+                .andExpect(content().string(containsString("Disallow: /oauth2/")))
+                .andExpect(content().string(containsString("Sitemap: https://www.scan2play.com.pl/sitemap.xml")))
+                .andExpect(content().string(not(containsString("Disallow: /p/"))));   // crawled, to see its noindex
+    }
+
+    @Test
+    @DisplayName("GET /sitemap.xml → public: the public pages, Polish at their own address and English with ?lang=en, each with its alternates; no /pro while the plans are off")
+    void sitemap_listsThePublicPages_inBothLanguages() throws Exception {
+        String xml = mockMvc.perform(get("/sitemap.xml"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("application/xml"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(xml).contains("<loc>https://www.scan2play.com.pl/</loc>", "<loc>https://www.scan2play.com.pl/?lang=en</loc>",
+                "<loc>https://www.scan2play.com.pl/jak-to-dziala</loc>", "<loc>https://www.scan2play.com.pl/privacy</loc>",
+                "<loc>https://www.scan2play.com.pl/terms</loc>",
+                "hreflang=\"pl\" href=\"https://www.scan2play.com.pl/jak-to-dziala\"",
+                "hreflang=\"en\" href=\"https://www.scan2play.com.pl/jak-to-dziala?lang=en\"", "hreflang=\"x-default\"")
+                .doesNotContain("/pro", "/dj/", "/p/");
+    }
+
+    @Test
+    @DisplayName("The landing page with no language from the browser (a search engine's crawler) is Polish, its own address canonical, the English one its alternate")
+    void landingPage_withoutALanguage_isPolish_withItsAddresses() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("lang=\"pl\"")))
+                .andExpect(content().string(containsString("<title>Scan2Play – prośby o piosenki od gości przez kod QR</title>")))
+                .andExpect(content().string(containsString("<meta name=\"description\" content=\"Goście skanują kod QR")))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/\">")))
+                .andExpect(content().string(containsString("<link rel=\"alternate\" hreflang=\"en\" href=\"https://www.scan2play.com.pl/?lang=en\">")))
+                .andExpect(content().string(containsString("<meta property=\"og:image\" content=\"https://www.scan2play.com.pl/images/og-image.png\">")))
+                .andExpect(content().string(containsString("<meta property=\"og:locale\" content=\"pl_PL\">")));
+    }
+
+    @Test
+    @DisplayName("?lang=en names the English page whatever the browser says; without it the browser's language as before")
+    void landingPage_inEnglish_byItsAddress_orByTheBrowser() throws Exception {
+        mockMvc.perform(get("/").param("lang", "en").header("Accept-Language", "pl-PL"))
+                .andExpect(content().string(containsString("lang=\"en\"")))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/?lang=en\">")))
+                .andExpect(content().string(containsString("<meta property=\"og:locale\" content=\"en_US\">")));
+        mockMvc.perform(get("/").header("Accept-Language", "en-US"))
+                .andExpect(content().string(containsString("lang=\"en\"")));
+        mockMvc.perform(get("/").param("lang", "pl").header("Accept-Language", "en-US"))
+                .andExpect(content().string(containsString("lang=\"pl\"")));
+        mockMvc.perform(get("/").param("lang", "xx").header("Accept-Language", "en-US"))
+                .andExpect(content().string(containsString("lang=\"en\"")));
+    }
+
+    @Test
+    @DisplayName("The guide in English at its Polish path with ?lang=en: the same canonical scheme")
+    void guide_hasItsAddresses() throws Exception {
+        mockMvc.perform(get("/jak-to-dziala"))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/jak-to-dziala\">")));
+        mockMvc.perform(get("/how-it-works").param("lang", "en"))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/jak-to-dziala?lang=en\">")))
+                .andExpect(content().string(containsString("<meta name=\"description\" content=\"A guide for DJs: the QR code")));
+        mockMvc.perform(get("/privacy").param("lang", "en"))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/privacy?lang=en\">")));
+    }
+
+    @Test
+    @DisplayName("The picture of a shared link is served without a login")
+    void ogImage_isPublic() throws Exception {
+        mockMvc.perform(get("/images/og-image.png")).andExpect(status().isOk());
+    }
 
     @Test
     @DisplayName("GET /pro → public, but a 404 while the plans are not enforced (V35): nothing says \"Pro\" yet")

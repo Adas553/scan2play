@@ -7,6 +7,19 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-14, evening — search engines and shared links, on the branch `claude/optimistic-mendel-h1ej3z` (again, from `dev` =
+  `6979f9f` after PR #58).** The owner: "scan2play" in Google shows little. Found in the code (production cannot be reached from the
+  cloud container): `/robots.txt` and `/sitemap.xml` answered with the landing page (Spring Security sends an unknown address to `/`),
+  the landing page had no description, a crawler (no `Accept-Language`) got the English page, no `hreflang`, no Open Graph, and the
+  guest pages `/p/…` could be indexed. Done, PROJECT_CONTEXT 2 / 6.1 / 6.3 / 6.5 / 8 / 10 / 12: `SeoController` (robots, a sitemap
+  of the public pages in both languages), `WebConfig` (`?lang=`, then `Accept-Language`, else Polish), `NoIndexFilter`
+  (`X-Robots-Tag` on `/p/`, `/h/`, `/join`, `/dj/`), `fragments/components :: seo` + `SiteUrlAdvice` (`scan2play.site-url`) on the landing
+  page, the guide, `/privacy`, `/terms`, `/pro`; `images/og-image.png`; the landing page's title "Scan2Play – prośby o piosenki od gości
+  przez kod QR" and description (`seo.home.*`) — **the texts wait for the owner's yes**. Tests: 670 unit (`SmokeTest`: robots, sitemap,
+  the languages, the head; `NoIndexFilterTest`), each fix seen red by a mutation (the Polish default, robots' `permitAll`: a 302);
+  browser `guide-page-phone`, `pro-page-*`, `csp-catches-inline-code` green. **Next, the owner:** Google Search Console (the domain by a
+  DNS TXT record on Cloudflare), send the sitemap, ask to index `/`; links from DJ groups and profiles; then more words on the landing
+  page (to decide).
 - **2026-10-14, later — the look of "Pro", on the branch `claude/optimistic-mendel-h1ej3z` (on top of `main` = `b6d73b3`;
   uncommitted, for review).** The owner asked whether the look of Pro is professional and whether "PRO" should be in the logo's cyan.
   The review on the real pages (the plans enforced, an organiser without Pro, the real `app.css`; phone 390×844 and computer 1280×900;
