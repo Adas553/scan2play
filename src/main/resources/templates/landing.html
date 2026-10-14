@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
-    <title th:text="#{landing.hero.title}">Scan2Play - Your Virtual DJ</title>
+    <title th:text="#{seo.home.title}">Scan2Play - song requests from guests by QR code</title>
+    <th:block th:replace="~{fragments/components :: seo('/', #{seo.home.title}, #{seo.home.description})}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>

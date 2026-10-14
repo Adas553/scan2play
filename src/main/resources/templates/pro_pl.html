@@ -6,7 +6,7 @@
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
     <title>Scan2Play Pro</title>
-    <meta name="description" content="Co daje plan Pro w Scan2Play, a co zostaje za darmo.">
+    <th:block th:replace="~{fragments/components :: seo('/pro', 'Scan2Play Pro', 'Co daje plan Pro w Scan2Play, a co zostaje za darmo.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
