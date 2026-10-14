@@ -19,7 +19,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   without "PRO"; "Obsługa": the places said once (`staff.invite.help.short` while the offer shows them); `settings.row.limits` "2 na
   gościa · 3 min" (was "… min przerwy"); `pro[_pl].html` a page of the product — the one action "Napisz, że chcesz Pro" (`mailto:`),
   "Kopiuj adres" (`dj-nav.js`, `data-copy-select`), the plans Free and Pro side by side, each Pro feature with what it gives,
-  "Dobrze wiedzieć"; no price. Tests: 662 unit (new `ProPageRenderTest` — the page had no render test; run.py renders `pro-pl.html` /
+  "Dobrze wiedzieć"; no price. Then (the owner's screenshot: "Zabawne · Pro" in the list read as one more choice) the comment
+  styles without Pro under the list's heading "W planie Pro" (`<optgroup>`, `plan.pro.group`; `plan.pro.option` gone), quieter. Tests: 662 unit (new `ProPageRenderTest` — the page had no render test; run.py renders `pro-pl.html` /
   `pro-en.html`; `DashboardPageRenderTest`, `SettingsPageRenderTest`, `StaffPageRenderTest` for the tidy-up), browser 94 of 96 —
   `pro-free-*` changed and new `pro-page-phone`, `pro-page-wide`, each new step seen red on the code before ("Kopiuj adres" refused:
   red with `data-copy-select` taken out of `dj-nav.js`); `help-window` and `settings-more-rows` fail on `HEAD` as well in the cloud

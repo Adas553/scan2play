@@ -63,9 +63,13 @@
                 const box = row(name).getBoundingClientRect();
                 return box.height < 44 - 0.5 || box.height > 60 || box.right > window.innerWidth;
             }), []);
+            // the list of the comment styles (the owner's screenshot, 2026-10-14: "Zabawne · Pro" read as one more choice): "Klasyczne"
+            // to pick, the others under a heading of the list itself, "W planie Pro", not to pick and in a quieter colour
             const options = Array.from(document.querySelectorAll('#commentStyleSelect option'));
-            t.step('the comment styles: "Klasyczne" to pick, the others marked and not', options.map(function (o) { return [o.textContent.trim(), o.disabled]; }),
-                [['Klasyczne', false], ['Zabawne · Pro', true], ['Sarkastyczne · Pro', true], ['Krótkie · Pro', true]]);
+            t.step('the comment styles: "Klasyczne" to pick, the others under "W planie Pro" and not', options.map(function (o) {
+                return [o.textContent.trim(), o.disabled, o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : null];
+            }), [['Klasyczne', false, null], ['Zabawne', true, 'W planie Pro'], ['Sarkastyczne', true, 'W planie Pro'], ['Krótkie', true, 'W planie Pro']]);
+            t.step('the ones not to pick in a quieter colour than "Klasyczne"', getComputedStyle(options[1]).color !== getComputedStyle(options[0]).color, true);
             t.step('nothing of Pro in the queue', document.querySelectorAll('#queueList .s2p-pro, #queueList [data-pro-offer]').length, 0);
             t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
         }

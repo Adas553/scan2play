@@ -655,7 +655,8 @@ What every page shares, so a new screen looks like the others:
   card's title says it just below); in place of the card's form one sentence — what was saved and waits, or what holds — with "Zobacz,
   co daje Pro" → `/pro` (`components :: proOffer`, `.s2p-pro-box`: a box tinted with the cyan, a solid line — never dashed, that reads
   as an empty place; on a wide screen the sentence and its outline button on one line); a fact is said once (the staff's places: the
-  offer, not the help line again); a choice of a list ("Zabawne · Pro") is there but not to pick; "Podsumowanie wieczoru PRO" leads
+  offer, not the help line again); the other choices of a list are there but not to pick, under the list's own heading (`<optgroup label="W planie Pro">`, quieter —
+  the comment styles "Zabawne", "Sarkastyczne", "Krótkie"; never "· Pro" after each, it read as one more choice); "Podsumowanie wieczoru PRO" leads
   to `/pro`. **The page `/pro`** is a page of the product, not a list: a head with "PRO", the title and the one action ("Napisz, że chcesz
   Pro", `mailto:`; "Kopiuj adres" beside it and the address as text — there is no payment yet), the plans Free and Pro side by side on a
   wide screen (Pro tinted), each Pro feature named with what it gives under it, "Dobrze wiedzieć" (what happens when Pro ends, the

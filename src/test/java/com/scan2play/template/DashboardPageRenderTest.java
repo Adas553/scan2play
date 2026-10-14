@@ -611,7 +611,7 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party(), List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL);
         assertThat(html).contains("data-settings-row=\"hosts\"", ">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">Zabawne<",
                         "s2p-btn-tip", "s2p-host-wanted")
-                .doesNotContain("s2p-pro", "data-pro-offer", "· Pro", "W planie Pro", "disabled=\"disabled\" value=\"FUNNY\"");
+                .doesNotContain("s2p-pro", "data-pro-offer", "· Pro", "W planie Pro", "<optgroup", "disabled=\"disabled\" value=\"FUNNY\"");
     }
 
     /**
@@ -637,8 +637,9 @@ class DashboardPageRenderTest {
                 .doesNotContain("Instagram", "W planie Pro");
         assertThat(rowOf(html, "limits")).contains("class=\"s2p-pro\">PRO<", ">2 na gościa · 3 min<");
         assertThat(rowOf(html, "staff")).doesNotContain("s2p-pro");
-        assertThat(html).as("the comment styles: \"Klasyczne\" to pick, the others marked and not")
-                .contains(">Klasyczne<", ">Zabawne · Pro<", ">Sarkastyczne · Pro<", ">Krótkie · Pro<")
+        assertThat(html).as("the comment styles: \"Klasyczne\" to pick, the others under \"W planie Pro\" and not")
+                .contains(">Klasyczne<", "<optgroup label=\"W planie Pro\">", ">Zabawne<", ">Sarkastyczne<", ">Krótkie<")
+                .doesNotContain("· Pro<")
                 .containsPattern("disabled=\"disabled\"[^>]*value=\"FUNNY\"|value=\"FUNNY\"[^>]*disabled=\"disabled\"");
         assertThat(html).as("the queue: no 💸 and no ⭐ without Pro — the song's own number and the buttons stay")
                 .contains("Golec uOrkiestra - Hej sokoły", "s2p-btn-played", "s2p-btn-skip")
@@ -654,7 +655,7 @@ class DashboardPageRenderTest {
                 new PartyStaffService.Access(party(), false, StaffRole.CO_ORGANISER.permissions()), null,
                 com.scan2play.service.Plans.enforced());
         assertThat(html).contains("id=\"partyCard\"", ">Klasyczne<")
-                .doesNotContain("s2p-pro", "· Pro", "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", ">Zabawne<");
+                .doesNotContain("s2p-pro", "· Pro", "<optgroup", "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", ">Zabawne<");
     }
 
     /** An organiser with Pro, the plans enforced: the panel as today. */
@@ -665,7 +666,7 @@ class DashboardPageRenderTest {
                 new GuestRequestLimiter(30, 10, 300, ""), ownerToken(), mock(PartyStaffService.class), new MockHttpSession(),
                 new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced("owner"));
         assertThat(html).contains(">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">Zabawne<", "s2p-btn-tip", "s2p-host-wanted")
-                .doesNotContain("s2p-pro", "· Pro");
+                .doesNotContain("s2p-pro", "· Pro", "<optgroup");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

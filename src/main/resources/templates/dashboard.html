@@ -115,14 +115,20 @@
                                th:text="#{dashboard.comment.style.label}">AI comments</label>
                         <select id="commentStyleSelect" name="commentStyle" data-auto-submit
                                 class="form-select form-select-sm bg-black text-light border-secondary">
-                            <!--/* without Pro (V35) only "Klasyczne": the organiser sees the others marked "· Pro", not to pick; the staff do not */-->
                             <option th:each="style : ${T(com.scan2play.model.CommentStyle).values()}"
-                                    th:if="${style.name() == 'CLASSIC' or plan.allows('COMMENT_STYLES') or plan.pro('COMMENT_STYLES')}"
-                                    th:value="${style}"
-                                    th:text="${style.name() != 'CLASSIC' and plan.pro('COMMENT_STYLES')} ? #{plan.pro.option(#{comment.style.__${style}__})} : #{comment.style.__${style}__}"
-                                    th:disabled="${style.name() != 'CLASSIC' and !plan.allows('COMMENT_STYLES')}"
+                                    th:if="${style.name() == 'CLASSIC' or plan.allows('COMMENT_STYLES')}"
+                                    th:value="${style}" th:text="#{comment.style.__${style}__}"
                                     th:selected="${style == pickedStyle}">
                             </option>
+                            <!--/* without Pro (V35) only "Klasyczne": the organiser sees the others under the list's own heading "W planie Pro",
+                                 not to pick and quieter (app.css) — a heading, not "· Pro" after each, which read as one more choice (the
+                                 owner's screenshot, 2026-10-14); the staff see none of them */-->
+                            <optgroup th:if="${plan.pro('COMMENT_STYLES')}" th:label="#{plan.pro.group}">
+                                <option th:each="style : ${T(com.scan2play.model.CommentStyle).values()}" th:unless="${style.name() == 'CLASSIC'}"
+                                        th:value="${style}" th:text="#{comment.style.__${style}__}" th:disabled="${true}"
+                                        th:selected="${style == pickedStyle}">
+                                </option>
+                            </optgroup>
                         </select>
                     </form>
                     <!--/* The DJ's own words about the vibe (V16: the AI is given them, the guests see them) and who plays (V17: "🎧 Gra: DJ

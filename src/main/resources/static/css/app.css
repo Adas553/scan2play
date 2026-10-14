@@ -949,6 +949,10 @@ th[data-sort].sort-desc::after {
     padding: 0.75rem 0.9rem; color: #dfe3e7; font-size: 0.9rem;
 }
 .s2p-pro-box p { margin: 0 0 0.6rem 0; }
+/* the comment styles without Pro: the others under the list's heading "W planie Pro" (optgroup), not to pick — quieter than the one
+   to pick (#a3acb6 on the black of the list, 9 : 1); the list is the system's own, a tag cannot be drawn inside it */
+.form-select optgroup { color: var(--s2p-text-muted); font-style: normal; }
+.form-select option:disabled { color: var(--s2p-text-muted); }
 @media (min-width: 768px) {
     .s2p-pro-box { display: flex; align-items: center; gap: 1rem; }
     .s2p-pro-box p { margin: 0; flex: 1 1 auto; min-width: 0; }
