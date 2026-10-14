@@ -933,15 +933,58 @@ th[data-sort].sort-desc::after {
 #hostListsCard, #linksCard, #limitsCard, #deviceCard { scroll-margin-top: 1rem; }
 
 /* A feature of the Pro plan, to an organiser without it (V35, variant B of the review 2026-10-14,
-   https://claude.ai/artifact/32eMmdwz9pTGLs8pRQzLBv): a quiet "PRO" by its name — an outline, not a colour: it is not a state of the
-   party — and, in place of the card's form, one sentence and the way to /pro. Never in the queue; never to the staff. */
+   https://claude.ai/artifact/32eMmdwz9pTGLs8pRQzLBv; the look of the review of the same day, https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN):
+   "PRO" by its name — a tag in the logo's cyan on a tint of it (6.2–7.5 : 1), a 4 px radius: neither a pill (the jumps) nor a
+   button (8 px, never tinted), so it does not read as a control nor compete with the one action of the screen — and, in place of the
+   card's form, one sentence and the way to /pro in a tinted box: on a wide screen a banner (the sentence, its button beside it).
+   Never in the queue; never to the staff. */
 .s2p-pro {
-    display: inline-flex; align-items: center; margin-left: 0.5rem; padding: 0.05rem 0.45rem; border: 1px solid #6c757d;
-    border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1.4; color: #e9ecef;
+    display: inline-flex; align-items: center; margin-left: 0.5rem; padding: 0.05rem 0.45rem;
+    border: 1px solid rgba(13, 202, 240, 0.45); background: rgba(13, 202, 240, 0.12); color: var(--s2p-action);
+    border-radius: 4px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1.4;
     vertical-align: middle; white-space: nowrap;
 }
-.s2p-pro-box { border: 1px dashed #495057; border-radius: var(--s2p-radius); padding: 0.75rem 0.9rem; color: #dfe3e7; font-size: 0.9rem; }
+.s2p-pro-box {
+    border: 1px solid rgba(13, 202, 240, 0.28); background: rgba(13, 202, 240, 0.06); border-radius: var(--s2p-radius);
+    padding: 0.75rem 0.9rem; color: #dfe3e7; font-size: 0.9rem;
+}
 .s2p-pro-box p { margin: 0 0 0.6rem 0; }
+@media (min-width: 768px) {
+    .s2p-pro-box { display: flex; align-items: center; gap: 1rem; }
+    .s2p-pro-box p { margin: 0; flex: 1 1 auto; min-width: 0; }
+    .s2p-pro-box .btn { flex: none; }
+}
+
+/* The page /pro (pro[_pl].html, the review of 2026-10-14): a page of the product — a head with the one action (write to us), the
+   plans Free and Pro side by side on a wide screen (Pro marked by the cyan's tint), each Pro feature named with what it gives under
+   it, the questions one asks before buying. No price: there is no payment yet. */
+.s2p-mw-960 { max-width: 960px !important; }
+.s2p-product-hero { padding: 0.5rem 0 1.75rem; border-bottom: 1px solid var(--s2p-border); }
+.s2p-product-hero .s2p-pro { margin-left: 0; }
+.s2p-product-hero h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 800; color: #fff; margin: 0.6rem 0; letter-spacing: -0.01em; }
+.s2p-product-lede { color: #dfe3e7; font-size: 1.1rem; max-width: 56ch; margin-bottom: 1.25rem; }
+.s2p-product-note { color: var(--s2p-text-muted); font-size: 0.875rem; margin: 0.75rem 0 0; }
+.s2p-product-cta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.s2p-plans { display: grid; gap: 1rem; margin-top: 1.75rem; }
+@media (min-width: 768px) { .s2p-plans { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); } }
+.s2p-plan { border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); padding: 1.25rem; background: var(--s2p-bg-card); min-width: 0; }
+.s2p-plan-pro {
+    border-color: rgba(13, 202, 240, 0.45);
+    background: linear-gradient(180deg, rgba(13, 202, 240, 0.07), rgba(13, 202, 240, 0) 60%), var(--s2p-bg-card);
+}
+.s2p-plan h2 { font-size: 1.25rem; font-weight: 700; color: #f8f9fa; margin: 0; }
+.s2p-plan-sub { color: var(--s2p-text-muted); font-size: 0.9rem; margin: 0.25rem 0 1rem; }
+.s2p-plan ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
+.s2p-plan li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.4rem; color: #e9ecef; }
+.s2p-plan li::before { content: "\2713"; color: var(--s2p-text-muted); font-weight: 700; }
+.s2p-plan-pro li::before { color: var(--s2p-action); }
+.s2p-plan li b { display: block; color: #fff; font-weight: 600; }
+.s2p-plan li span { color: var(--s2p-text-muted); font-size: 0.9rem; }
+.s2p-faq-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--s2p-text-muted); font-weight: 700; margin: 2.25rem 0 0; }
+.s2p-faq { margin-top: 1.25rem; display: grid; gap: 1.25rem; }
+@media (min-width: 768px) { .s2p-faq { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.s2p-faq h3 { font-size: 1rem; font-weight: 700; color: #f8f9fa; margin: 0 0 0.35rem; }
+.s2p-faq p { color: var(--s2p-text-muted); margin: 0; font-size: 0.925rem; }
 
 /* The guide "Jak działa Scan2Play" (guide.html, 2026-10-12): a section per moment of a party, each line the app's own button or badge
    beside what it does — pictures of them (spans), not controls; one column on a phone. */

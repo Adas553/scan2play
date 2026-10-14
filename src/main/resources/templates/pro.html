@@ -12,7 +12,7 @@
 </head>
 <!--/* "Scan2Play Pro" (V35): the English twin of pro_pl.html — keep the two alike. */-->
 <body class="page-dj">
-<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
+<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-960">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
@@ -20,41 +20,58 @@
         <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light">← Home</a>
     </div>
 
-    <h1 class="h3 text-white mb-2">Scan2Play Pro</h1>
-    <p class="s2p-guide-lede">Everything a party needs stays free. Pro adds more for those who play often.</p>
+    <header class="s2p-product-hero" data-pro-hero>
+        <span class="s2p-pro">PRO</span>
+        <h1>Scan2Play Pro</h1>
+        <p class="s2p-product-lede">Everything a party needs is free. Pro is for DJs who play often: lists from the hosts, your profiles
+            and tips, the evening summary.</p>
+        <div class="s2p-product-cta">
+            <a class="btn btn-action btn-lg px-4" href="mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro">Tell us you want Pro</a>
+            <button type="button" class="btn btn-outline-light btn-lg" data-copy-text="scan2playcontact@gmail.com"
+                    data-copied="Copied" data-copy-select="proAddress">Copy address</button>
+        </div>
+        <p class="s2p-product-note">There is no payment in the app yet — we switch Pro on after your message to
+            <span class="text-light user-select-all" id="proAddress" data-pro-address>scan2playcontact@gmail.com</span>.</p>
+    </header>
 
-    <section id="free">
-        <h2>Free, always</h2>
-        <ul class="text-light">
-            <li>The QR code, a poster and table cards</li>
-            <li>Guests' requests checked by the AI: is it a song, does it fit the vibe, has it played tonight</li>
-            <li>The queue: Played, Skip, Undo, Copy, keyboard keys</li>
-            <li>Votes and the guests' 👍, song numbers</li>
-            <li>The vibe, its description and “Who plays”</li>
-            <li>30 days of history</li>
-            <li>Notifications on your phone</li>
-            <li>Staff: 1 person</li>
-            <li>Guest limits: 2 requests per guest, then a 3-minute break, no repeats of the last 15</li>
-        </ul>
-    </section>
+    <div class="s2p-plans">
+        <section class="s2p-plan" data-plan="free">
+            <h2>Free</h2>
+            <p class="s2p-plan-sub">Free, always</p>
+            <ul>
+                <li><div>The QR code, a poster and table cards</div></li>
+                <li><div>Requests checked by the AI: is it a song, does it fit the vibe, has it played tonight</div></li>
+                <li><div>The queue: Played, Skip, Undo, Copy, keys</div></li>
+                <li><div>The guests' votes and 👍, the vibe, its note and "Who's playing"</div></li>
+                <li><div>History of 30 days, notifications on your phone</div></li>
+                <li><div>Staff: 1 person</div></li>
+                <li><div>Guest limits: 2 requests per guest, then a 3 minute break, no repeats of the last 15</div></li>
+            </ul>
+        </section>
+        <section class="s2p-plan s2p-plan-pro" data-plan="pro">
+            <h2>Pro</h2>
+            <p class="s2p-plan-sub">Everything in Free, plus:</p>
+            <ul>
+                <li><div><b>The hosts’ list</b><span>🚫 what not to play, ⭐ what to play for sure — the hosts fill it in themselves by a link</span></div></li>
+                <li><div><b>Your profiles and tips</b><span>Instagram, Facebook, TikTok and "Tip the DJ" for the guests and on the print, the 💸 count in the queue</span></div></li>
+                <li><div><b>The evening summary</b><span>to print, as a PDF and a CSV</span></div></li>
+                <li><div><b>AI comments with character</b><span>funny, sarcastic or short</span></div></li>
+                <li><div><b>Your own guest limits</b><span>how many requests per guest, how long a break, how many songs without repeats</span></div></li>
+                <li><div><b>Staff of up to 10</b><span>a second DJ, a bartender, the organiser — each with the permissions you give them</span></div></li>
+            </ul>
+        </section>
+    </div>
 
-    <section id="pro">
-        <h2>In the Pro plan</h2>
-        <ul class="text-light">
-            <li>The hosts' list (🚫 do not play, ⭐ must play) and a link to let them fill it in</li>
-            <li>Your profiles (Instagram, Facebook, TikTok) and “Tip the DJ” for the guests and on the print, 💸 counted in the queue</li>
-            <li>The evening summary to print, and CSV</li>
-            <li>AI comment styles: funny, sarcastic, short</li>
-            <li>Your own guest limits</li>
-            <li>Staff of up to 10 people</li>
-        </ul>
-    </section>
-
-    <section id="contact">
-        <p class="s2p-guide-lede mb-0">Want Pro? Write to us: <strong class="text-light user-select-all">scan2playcontact@gmail.com</strong></p>
-    </section>
+    <p class="s2p-faq-title">Good to know</p>
+    <div class="s2p-faq" data-pro-faq>
+        <div><h3>What if Pro ends?</h3><p>Nothing is lost. The lists, the profiles and the settings wait and come back with Pro; the staff keep their access.</p></div>
+        <div><h3>Do the staff need Pro?</h3><p>No. The staff work on the plan of the party's organiser.</p></div>
+        <div><h3>And the guests?</h3><p>The guests pay nothing and install nothing: they scan the code and ask for a song.</p></div>
+    </div>
 </div>
 
 <div th:replace="~{fragments/components :: footer}"></div>
+<!--/* "Copy address": js/dj-nav.js (no inline script — CSP, review 5.1) */-->
+<script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 </body>
 </html>

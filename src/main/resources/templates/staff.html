@@ -96,7 +96,8 @@
          the invitations waiting take 10 places together. */-->
     <section class="card bg-dark border-secondary p-3 mb-4" id="staffInviteCard">
         <h2 class="s2p-card-title" th:text="#{staff.link.title}">Invite someone</h2>
-        <p class="s2p-card-help" th:text="#{staff.invite.help(${plan.staffPlaces()})}">Type the address of their Google account.</p>
+        <!--/* the places in the help line — or, without Pro, in the offer below: said once (the review of the look, 2026-10-14) */-->
+        <p class="s2p-card-help" th:text="${plan.proStaff()} ? #{staff.invite.help.short} : #{staff.invite.help(${plan.staffPlaces()})}">Type the address of their Google account.</p>
         <!--/* without the Pro plan (V35): one place; leaving Pro takes nobody's access away, only no one new joins */-->
         <!--/* no T(…) here: Thymeleaf forbids a static class in a fragment's parameter (the page failed, 2026-10-14) */-->
         <th:block th:if="${plan.proStaff()}"><div

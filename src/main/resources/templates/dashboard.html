@@ -175,12 +175,13 @@
                  th:with="settingsUrl=@{/dj/settings(party=${partyCode})}">
                 <p class="s2p-rows-title" th:text="#{settings.more}">More</p>
                 <div class="s2p-rows">
-                    <!--/* a feature of the Pro plan the party has not (V35): the row stays for the organiser, "PRO" and "W planie Pro" */-->
+                    <!--/* a feature of the Pro plan the party has not (V35): the row stays for the organiser with "PRO" by its name, said once — no
+                         state beside it (the review of the look, 2026-10-14); the limits' row keeps the limits that hold */-->
                     <a th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}" class="s2p-row"
                        data-settings-row="hosts" th:href="${settingsUrl + '#hostListsCard'}">
                         <span class="s2p-row-name"><span th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
                         <span class="s2p-row-state"
-                              th:text="${plan.pro('HOST_LISTS')} ? #{plan.pro.row} : (${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
+                              th:text="${plan.pro('HOST_LISTS')} ? '' : (${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
                                      : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? ' · ' + #{settings.row.hosts.link} : ''))">Not used</span>
                     </a>
                     <a th:if="${isOwner}" class="s2p-row" data-settings-row="links" th:href="${settingsUrl + '#linksCard'}"
@@ -188,7 +189,7 @@
                         <span class="s2p-row-name"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
                         <span class="s2p-row-state"
                               th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
-                              th:text="${plan.pro('PROFILES')} ? #{plan.pro.row} : (${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named})">Instagram · tips</span>
+                              th:text="${plan.pro('PROFILES')} ? '' : (${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named})">Instagram · tips</span>
                     </a>
                     <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" class="s2p-row"
                        data-settings-row="limits" th:href="${settingsUrl + '#limitsCard'}"

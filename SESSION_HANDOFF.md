@@ -7,8 +7,28 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
-- **2026-10-14 — the plans Free / Pro, the foundation only, on the branch `claude/scan2play-subscription-prep-uq2vun` (on top of
-  `main` = `dev` = `c989b6d`, CI green, Railway started clean; uncommitted, for review).** The review with the features, the model,
+- **2026-10-14, later — the look of "Pro", on the branch `claude/optimistic-mendel-h1ej3z` (on top of `main` = `b6d73b3`;
+  uncommitted, for review).** The owner asked whether the look of Pro is professional and whether "PRO" should be in the logo's cyan.
+  The review on the real pages (the plans enforced, an organiser without Pro, the real `app.css`; phone 390×844 and computer 1280×900;
+  grey A / cyan tag B / filled cyan C, the tidy-up, the page `/pro`): https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN — found: the
+  dashed box read as an empty place, three alike boxes as a template, the grey pill the same shape as the jumps and the outline buttons,
+  "PRO" + "W planie Pro" said twice, the staff's places three times, the limits' row broke in two lines on a phone, `/pro` two bullet
+  lists. The owner: **B, all of a–e, the new `/pro`**. Done, PROJECT_CONTEXT 6.4 / 6.5 / 6.7 / 12: `.s2p-pro` a cyan tag (a 12 % tint,
+  4 px radius — not a pill, not a button; 6.2–7.5 : 1), `.s2p-pro-box` tinted, a solid line, on a wide screen the sentence and its
+  button on one line; the rows of the Pro features without "W planie Pro" (`plan.pro.row` gone); the jumps of "Ustawienia imprezy"
+  without "PRO"; "Obsługa": the places said once (`staff.invite.help.short` while the offer shows them); `settings.row.limits` "2 na
+  gościa · 3 min" (was "… min przerwy"); `pro[_pl].html` a page of the product — the one action "Napisz, że chcesz Pro" (`mailto:`),
+  "Kopiuj adres" (`dj-nav.js`, `data-copy-select`), the plans Free and Pro side by side, each Pro feature with what it gives,
+  "Dobrze wiedzieć"; no price. Tests: 662 unit (new `ProPageRenderTest` — the page had no render test; run.py renders `pro-pl.html` /
+  `pro-en.html`; `DashboardPageRenderTest`, `SettingsPageRenderTest`, `StaffPageRenderTest` for the tidy-up), browser 94 of 96 —
+  `pro-free-*` changed and new `pro-page-phone`, `pro-page-wide`, each new step seen red on the code before ("Kopiuj adres" refused:
+  red with `data-copy-select` taken out of `dj-nav.js`); `help-window` and `settings-more-rows` fail on `HEAD` as well in the cloud
+  container (the same steps; CI was green on `main`). Found on the way: a
+  headless Chrome's window is never narrower than 500 px, so the "390" scenarios lay the page out 500 wide (README of the browser
+  tests; the step "on one line" narrows the page itself). **Next:** the owner looks at the diff, a PR to `dev`, then `dev` → `main`.
+- **2026-10-14 — the plans Free / Pro, the foundation only (branch `claude/scan2play-subscription-prep-uq2vun`; released: PR #55 →
+  `dev`, PR #57 → `main` = `b6d73b3` — PR #56 was empty, merged before #55; on Railway 10:57 UTC "Successfully applied 1 migration …
+  v35", "Plans not enforced", started in 6 s; again clean at 11:30, a new container).** The review with the features, the model,
   the mockups of three looks on the real styles: https://claude.ai/artifact/32eMmdwz9pTGLs8pRQzLBv — the owner: **variant B**; the
   guests' limits fixed at 2 / 3 / 15 without Pro; the profiles and the tips Pro too; the staff 1 place without Pro (who is on it stays);
   a page `/pro`. Done, PROJECT_CONTEXT 4.1 "Plans" / 4.2 / 6.1–6.7 / 8 / 9 / 10 / 12 / 13: **V35** `dj_plan` (empty: no row is Free),
@@ -23,8 +43,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   their staff), 65 database on a local PostgreSQL 16 (`MigrationIT` V35, `DjPlanIT` — red without the row deleted with the account),
   94 browser — new `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide` (red without the styles); six mutations of the
   code each caught by the unit tests. In the cloud container `help-window` and `settings-more-rows` fail on `HEAD` as well (its
-  Chromium). **Next:** the owner looks at the diff, a PR to `dev`; switching the plans on is later and is one variable — decide first
-  what the DJs of that day get, and the payment provider, the terms, the privacy policy, invoices / VAT (the review's list).
+  Chromium). **Next:** switching the plans on is later and is one variable — decide first what the DJs of that day get, and the
+  payment provider, the terms, the privacy policy, invoices / VAT (the review's list).
 - **2026-10-12, later — "Kopiuj" and the queue's keys, on the branch `claude/gifted-fermat-u06fkg` (uncommitted, for review).** The
   owner asked how Scan2Play could work better with Serato / VirtualDJ / rekordbox / Spotify / Tidal. Found: Spotify is in Serato,
   rekordbox and djay again since 09.2025 (a partnership of theirs; our Web API stays closed); TIDAL's Developer Terms 1.0 allow only

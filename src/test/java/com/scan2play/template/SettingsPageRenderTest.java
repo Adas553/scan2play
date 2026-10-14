@@ -270,9 +270,11 @@ class SettingsPageRenderTest {
         String html = render(new PartyStaffService.Access(saved, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
                 PL, com.scan2play.service.Plans.enforced());
 
-        assertThat(html).as("the jumps keep the cards, marked")
+        assertThat(html).as("the jumps keep the cards, without \"PRO\": the card's title says it just below")
                 .contains("id=\"settingsJump\"", "href=\"#hostListsCard\"", "href=\"#linksCard\"", "href=\"#limitsCard\"",
                         "class=\"s2p-pro\">PRO<");
+        String jumps = html.substring(html.indexOf("id=\"settingsJump\""), html.indexOf("</nav>", html.indexOf("id=\"settingsJump\"")));
+        assertThat(jumps).doesNotContain("s2p-pro");
         assertThat(html).as("the hosts' lists: kept (⭐ 1), not editable here, the link not shown")
                 .contains("id=\"hostListsCard\"", "Twoje listy są zachowane: 🚫 0 · ⭐ 1. Wrócą, gdy włączysz Pro",
                         "href=\"/pro\"", ">Zobacz, co daje Pro<")

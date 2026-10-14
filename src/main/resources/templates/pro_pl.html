@@ -11,10 +11,12 @@
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <!--/* "Scan2Play Pro" (V35, the owner 2026-10-14): what the Pro plan adds and what stays everyone's — where "Zobacz, co daje Pro"
-     leads. Public (LegalController.pro), one file per language as the guide; a 404 while the plans are not enforced. No payment
-     yet: the way to Pro is to write to us. Keep it true to PlanFeature. */-->
+     leads. Public (LegalController.pro), one file per language as the guide; a 404 while the plans are not enforced. A page of the
+     product (the review of the look, https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN): one action — write to us, as there is no
+     payment yet —, the plans side by side, each Pro feature with what it gives, the questions one asks before buying. No price.
+     Keep it true to PlanFeature and to PROJECT_CONTEXT 4.1; pro.html is its English twin. */-->
 <body class="page-dj">
-<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
+<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-960">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
@@ -22,42 +24,58 @@
         <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light">← Strona główna</a>
     </div>
 
-    <h1 class="h3 text-white mb-2">Scan2Play Pro</h1>
-    <p class="s2p-guide-lede">Wszystko, czego potrzeba, żeby przeprowadzić imprezę, zostaje za darmo. Pro dodaje więcej dla tych,
-        którzy grają często.</p>
+    <header class="s2p-product-hero" data-pro-hero>
+        <span class="s2p-pro">PRO</span>
+        <h1>Scan2Play Pro</h1>
+        <p class="s2p-product-lede">Za darmo masz wszystko, czego potrzeba na imprezę. Pro jest dla DJ-ów, którzy grają często: listy od
+            gospodarzy, Twoje profile i napiwki, podsumowanie wieczoru.</p>
+        <div class="s2p-product-cta">
+            <a class="btn btn-action btn-lg px-4" href="mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro">Napisz, że chcesz Pro</a>
+            <button type="button" class="btn btn-outline-light btn-lg" data-copy-text="scan2playcontact@gmail.com"
+                    data-copied="Skopiowano" data-copy-select="proAddress">Kopiuj adres</button>
+        </div>
+        <p class="s2p-product-note">Płatności w aplikacji jeszcze nie ma — Pro włączamy po Twojej wiadomości na
+            <span class="text-light user-select-all" id="proAddress" data-pro-address>scan2playcontact@gmail.com</span>.</p>
+    </header>
 
-    <section id="free">
-        <h2>Za darmo, zawsze</h2>
-        <ul class="text-light">
-            <li>Kod QR, plakat i karty na stoły</li>
-            <li>Prośby gości sprawdzane przez AI: czy to piosenka, czy pasuje do klimatu, czy dziś już nie leciała</li>
-            <li>Kolejka: Zagrane, Pomiń, Cofnij, Kopiuj, klawisze</li>
-            <li>Głosy i 👍 gości, numery piosenek</li>
-            <li>Klimat, opis klimatu i „Kto gra”</li>
-            <li>Historia z 30 dni</li>
-            <li>Powiadomienia na telefon</li>
-            <li>Obsługa: 1 osoba</li>
-            <li>Limity gości: 2 prośby na gościa, potem 3 minuty przerwy, bez powtórek z ostatnich 15</li>
-        </ul>
-    </section>
+    <div class="s2p-plans">
+        <section class="s2p-plan" data-plan="free">
+            <h2>Free</h2>
+            <p class="s2p-plan-sub">Za darmo, zawsze</p>
+            <ul>
+                <li><div>Kod QR, plakat i karty na stoły</div></li>
+                <li><div>Prośby sprawdzane przez AI: czy to piosenka, czy pasuje do klimatu, czy dziś już nie leciała</div></li>
+                <li><div>Kolejka: Zagrane, Pomiń, Cofnij, Kopiuj, klawisze</div></li>
+                <li><div>Głosy i 👍 gości, klimat, jego opis i „Kto gra”</div></li>
+                <li><div>Historia z 30 dni, powiadomienia na telefon</div></li>
+                <li><div>Obsługa: 1 osoba</div></li>
+                <li><div>Limity gości: 2 prośby na gościa, potem 3 minuty przerwy, bez powtórek z ostatnich 15</div></li>
+            </ul>
+        </section>
+        <section class="s2p-plan s2p-plan-pro" data-plan="pro">
+            <h2>Pro</h2>
+            <p class="s2p-plan-sub">Wszystko z Free, a do tego:</p>
+            <ul>
+                <li><div><b>Lista gospodarzy</b><span>🚫 czego nie grać, ⭐ co koniecznie zagrać — gospodarze wypełnią ją sami przez link</span></div></li>
+                <li><div><b>Twoje profile i napiwki</b><span>Instagram, Facebook, TikTok i „Napiwek dla DJ-a” u gości i na wydruku, licznik 💸 w kolejce</span></div></li>
+                <li><div><b>Podsumowanie wieczoru</b><span>do druku, PDF i CSV</span></div></li>
+                <li><div><b>Komentarze AI z charakterem</b><span>zabawne, sarkastyczne albo krótkie</span></div></li>
+                <li><div><b>Własne limity gości</b><span>ile próśb na gościa, jaka przerwa, ile piosenek bez powtórek</span></div></li>
+                <li><div><b>Obsługa do 10 osób</b><span>drugi DJ, barman, organizator — każdy z uprawnieniami, które mu dasz</span></div></li>
+            </ul>
+        </section>
+    </div>
 
-    <section id="pro">
-        <h2>W planie Pro</h2>
-        <ul class="text-light">
-            <li>Lista gospodarzy (🚫 nie grać, ⭐ koniecznie zagrać) i link, przez który wypełnią ją sami</li>
-            <li>Twoje profile (Instagram, Facebook, TikTok) i „Napiwek dla DJ-a” u gości i na wydruku, licznik 💸 w kolejce</li>
-            <li>Podsumowanie wieczoru do druku i CSV</li>
-            <li>Style komentarzy AI: zabawne, sarkastyczne, krótkie</li>
-            <li>Własne limity gości</li>
-            <li>Obsługa do 10 osób</li>
-        </ul>
-    </section>
-
-    <section id="contact">
-        <p class="s2p-guide-lede mb-0">Chcesz Pro? Napisz: <strong class="text-light user-select-all">scan2playcontact@gmail.com</strong></p>
-    </section>
+    <p class="s2p-faq-title">Dobrze wiedzieć</p>
+    <div class="s2p-faq" data-pro-faq>
+        <div><h3>Co, gdy Pro się skończy?</h3><p>Nic nie znika. Listy, profile i ustawienia czekają i wrócą razem z Pro; obsługa zachowuje dostęp.</p></div>
+        <div><h3>Czy obsługa potrzebuje Pro?</h3><p>Nie. Obsługa pracuje na planie organizatora imprezy.</p></div>
+        <div><h3>A goście?</h3><p>Goście nic nie płacą i niczego nie instalują: skanują kod i proszą o piosenkę.</p></div>
+    </div>
 </div>
 
 <div th:replace="~{fragments/components :: footer}"></div>
+<!--/* "Kopiuj adres": js/dj-nav.js (no inline script — CSP, review 5.1) */-->
+<script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 </body>
 </html>

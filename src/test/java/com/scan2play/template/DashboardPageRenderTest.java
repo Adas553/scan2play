@@ -162,7 +162,7 @@ class DashboardPageRenderTest {
     void nearAServerLimit_theRowOfTheLimitsAndTheQueueSayIt() {
         GuestRequestLimiter limiter = new GuestRequestLimiter(30, 10, 300, "");
         String calm = renderDashboard(party(), List.of(), PL, limiter);
-        assertThat(element(calm, "data-limit-calm")).doesNotContain("hidden").endsWith(">2 na gościa · 3 min przerwy");
+        assertThat(element(calm, "data-limit-calm")).doesNotContain("hidden").endsWith(">2 na gościa · 3 min");
         assertThat(element(calm, "data-limit-near=\"network\"")).contains("hidden");
         assertThat(element(calm, "data-limit-near=\"party\" data-limit")).contains("hidden=\"hidden\"");
 
@@ -293,7 +293,7 @@ class DashboardPageRenderTest {
                         "action=\"/dj/dashboard/limits\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
                         "action=\"/dj/dashboard/host-lists\"", "id=\"pushToggle\"", "id=\"installApp\"", "Źródło odtwarzania");
         assertThat(html).as("each row's state")
-                .contains(">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">2 na gościa · 3 min przerwy<", ">Osób: 1<",
+                .contains(">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">2 na gościa · 3 min<", ">Osób: 1<",
                         "data-on=\"Powiadomienia wł.\"", "data-off=\"Powiadomienia wył.\"");
         assertThat(html).as("the AI's comment a line under the song, no vibe / verdict / energy columns in the waiting queue")
                 .contains("class=\"small text-secondary s2p-queue-comment\"", ">AI: ok<")
@@ -616,7 +616,8 @@ class DashboardPageRenderTest {
 
     /**
      * An organiser without Pro, the plans enforced (variant B of the review 2026-10-14): the rows of the Pro features stay with a
-     * quiet "PRO" and "W planie Pro" (the limits' row keeps the limits that hold: 2 / 3), the AI's other comment styles are there but
+     * "PRO" by the name, said once — no "W planie Pro" beside it (the limits' row keeps the limits that hold: 2 / 3, short enough for
+     * one line on a phone; the review of the look, 2026-10-14) —, the AI's other comment styles are there but
      * not to pick, and the queue changes nothing but what the plan has not: no 💸, no ⭐ of the hosts' list (kept, not applied).
      * {@code dashboard-free.html} for the browser tests.
      */
@@ -630,9 +631,11 @@ class DashboardPageRenderTest {
                 new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced());
 
         assertWhatTheScriptsNeed(html);
-        assertThat(rowOf(html, "hosts")).contains("class=\"s2p-pro\">PRO<", ">W planie Pro<").doesNotContain("🚫");
-        assertThat(rowOf(html, "links")).contains("class=\"s2p-pro\">PRO<", ">W planie Pro<").doesNotContain("Instagram");
-        assertThat(rowOf(html, "limits")).contains("class=\"s2p-pro\">PRO<", ">2 na gościa · 3 min przerwy<");
+        assertThat(rowOf(html, "hosts")).contains("class=\"s2p-pro\">PRO<", "class=\"s2p-row-state\"></span>")
+                .doesNotContain("🚫", "W planie Pro");
+        assertThat(rowOf(html, "links")).contains("class=\"s2p-pro\">PRO<", "class=\"s2p-row-state\"></span>")
+                .doesNotContain("Instagram", "W planie Pro");
+        assertThat(rowOf(html, "limits")).contains("class=\"s2p-pro\">PRO<", ">2 na gościa · 3 min<");
         assertThat(rowOf(html, "staff")).doesNotContain("s2p-pro");
         assertThat(html).as("the comment styles: \"Klasyczne\" to pick, the others marked and not")
                 .contains(">Klasyczne<", ">Zabawne · Pro<", ">Sarkastyczne · Pro<", ">Krótkie · Pro<")
