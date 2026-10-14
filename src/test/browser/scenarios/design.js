@@ -175,7 +175,7 @@
                 return parts.map(function (p) { return p.textContent.replace(/\s+/g, ' ').trim(); }).join(' ');
             };
             t.step('each says its state', rows.slice(0, 4).map(stateOf),
-                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', '2 na gościa · 3 min przerwy', 'Osób: 1']);
+                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', '2 na gościa · 3 min', 'Osób: 1']);
             t.step('each a thumb\'s target', rows.filter(function (row) { return row.getBoundingClientRect().height < 44; }).length, 0);
             t.check('the queue starts in the first screen with them unfolded', document.getElementById('queueList').getBoundingClientRect().top < window.innerHeight);
         }

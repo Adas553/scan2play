@@ -38,16 +38,17 @@
     <!--/* the party's code for the scripts (forms.js sends it with every form, V32) */-->
     <input type="hidden" id="partyCode" th:value="${partyCode}">
 
-    <!--/* A row of jumps to the cards (and the staff's own page) when there is more than one */-->
+    <!--/* A row of jumps to the cards (and the staff's own page) when there is more than one; no "PRO" in them — the card's title says
+         it just below (the review of the look, 2026-10-14) */-->
     <nav th:if="${(access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS')))
                   or (access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))) or isOwner}"
          class="s2p-chips mb-4" id="settingsJump"
          th:attr="aria-label=#{settings.jump}">
         <a th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}" href="#hostListsCard"><span
-           th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></a>
-        <a th:if="${isOwner}" href="#linksCard"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></a>
+           th:text="#{dashboard.host.title}">The hosts' list</span></a>
+        <a th:if="${isOwner}" href="#linksCard"><span th:text="#{dashboard.links.title}">Profiles and tips</span></a>
         <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" href="#limitsCard"><span
-           th:text="#{dashboard.limits.title}">Guest limits</span><th:block th:if="${plan.pro('GUEST_LIMITS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></a>
+           th:text="#{dashboard.limits.title}">Guest limits</span></a>
         <a th:if="${isOwner}" th:href="@{/dj/staff(party=${partyCode})}" th:text="#{dashboard.staff.title} + ' ›'">Staff ›</a>
         <a href="#deviceCard" th:text="#{dashboard.device.title}">This device</a>
     </nav>

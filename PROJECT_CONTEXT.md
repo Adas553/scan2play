@@ -585,7 +585,7 @@ files under it); everything else keeps Spring Security's `no-store`,
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
 `qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html`, `guide[_pl].html` (the public guide "Jak działa Scan2Play", 2026-10-12: a section per moment of a party, the app's buttons as pictures — `.s2p-guide-row`; keep it true to the app),
-`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32), `pro[_pl].html` ("Scan2Play Pro", V35: what stays free, what Pro adds — keep it true to `PlanFeature`) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
+`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32), `pro[_pl].html` ("Scan2Play Pro", V35: a page of the product — the one action, the plans Free and Pro, what Pro gives, "Dobrze wiedzieć"; keep it true to `PlanFeature`; `ProPageRenderTest`) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
 `HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
 tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel / Kolejka / Historia, the
 feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
@@ -597,7 +597,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | File | Purpose |
 |------|---------|
 | `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place), `polling.js` (the queue every 3 s and its headers — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"); they talk only through the `s2p:*` events of `events.js`, never through `window` |
-| `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`) and the feedback form |
+| `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`), the feedback form, "Kopiuj" of an address (`button[data-copy-text]`: "Pomoc i kontakt", "Kopiuj adres" of `/pro`; the address shown — `data-copy-select` — selected where the clipboard is refused) |
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes; "Kopiuj" of the invitation link |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
@@ -646,15 +646,24 @@ What every page shares, so a new screen looks like the others:
   secondary words (the guest's, the AI's comment) in one muted line under it, the whole in the title; what is the same in every row is
   not a column; colour marks a state only where it tells something apart (a dot at the decision, ⚠, votes above 1) — the words stay
   quiet (the history, 2026-10-10; `history-wide-calm`).
-- **A feature of the Pro plan** (V35, variant B of the review 2026-10-14) to an organiser without it, while the plans are enforced:
-  **visible, marked** — the row, the jump and the card keep their place with a quiet "PRO" by the name (`components :: proMark`,
-  `.s2p-pro`: an outline pill, not a colour — it is not a state of the party), the row says "W planie Pro" (the limits' row the limits
-  that hold), and in place of the card's form one sentence — what was saved and waits, or what holds — with "Zobacz, co daje Pro" →
-  `/pro` (`components :: proOffer`, `.s2p-pro-box`, dashed); a choice of a list ("Zabawne · Pro") is there but not to pick; "Podsumowanie
-  wieczoru PRO" leads to `/pro`. **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
+- **A feature of the Pro plan** (V35, variant B of the review 2026-10-14; the look: the review of the same day,
+  https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN — the owner: the cyan tag, the tidy-up, the page of the product) to an organiser
+  without it, while the plans are enforced: **visible, marked** — the row and the card keep their place with "PRO" by the name, **said
+  once** (`components :: proMark`, `.s2p-pro`: a **tag** in the logo's cyan on a 12 % tint of it, 4 px radius — neither a pill like the
+  jumps nor a button, never filled: it is not a control and does not compete with the screen's one action; 6.2–7.5 : 1). No state
+  beside it in the row (the limits' row the limits that hold, "2 na gościa · 3 min", one line on a phone), no "PRO" in the jumps (the
+  card's title says it just below); in place of the card's form one sentence — what was saved and waits, or what holds — with "Zobacz,
+  co daje Pro" → `/pro` (`components :: proOffer`, `.s2p-pro-box`: a box tinted with the cyan, a solid line — never dashed, that reads
+  as an empty place; on a wide screen the sentence and its outline button on one line); a fact is said once (the staff's places: the
+  offer, not the help line again); the other choices of a list are there but not to pick, under the list's own heading (`<optgroup label="W planie Pro">`, quieter —
+  the comment styles "Zabawne", "Sarkastyczne", "Krótkie"; never "· Pro" after each, it read as one more choice); "Podsumowanie wieczoru PRO" leads
+  to `/pro`. **The page `/pro`** is a page of the product, not a list: a head with "PRO", the title and the one action ("Napisz, że chcesz
+  Pro", `mailto:`; "Kopiuj adres" beside it and the address as text — there is no payment yet), the plans Free and Pro side by side on a
+  wide screen (Pro tinted), each Pro feature named with what it gives under it, "Dobrze wiedzieć" (what happens when Pro ends, the
+  staff, the guests); no price (`.s2p-product-*`, `.s2p-plan*`, `.s2p-faq`). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
   permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
   see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
-  `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`.
+  `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`, `pro-page-phone`, `pro-page-wide`.
 - **Emoji** only as markers in a list or a status (⭐ ⚠ 💸 👍 ▶ ⏭, "🎧 Gra: …", 🚫 / ⭐ of the hosts' lists) — not in card titles,
   headings or ordinary buttons. **Words**: "Ty" to everyone, "Wy" only on the hosts' page; "organizator" (the party's owner), "obsługa"
   (bartender, second DJ), "gospodarze", "goście"; no English words ("Zgłoś uwagę", not "Feedback"); "DJ‑a" in a heading with a
@@ -886,7 +895,7 @@ GuestQueueService          → DjService
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" |
 | GET | `/privacy`, `/terms` | legal pages |
 | GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
-| GET | `/pro` | "Scan2Play Pro" (V35): what stays free, what Pro adds, where to write; a 404 while the plans are not enforced |
+| GET | `/pro` | "Scan2Play Pro" (V35): what stays free, what Pro adds, "Napisz, że chcesz Pro" (`mailto:`), the questions; a 404 while the plans are not enforced |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |
 
