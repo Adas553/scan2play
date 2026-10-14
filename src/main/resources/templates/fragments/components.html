@@ -258,6 +258,31 @@
     <a href="/pro" class="btn btn-sm btn-outline-light" th:text="#{plan.pro.more}">See what Pro adds</a>
 </div>
 
+<!--/* The head of a public page for search engines and shared links (2026-10-14): what the page is (description), its one address in
+     its language (canonical: Polish at the page's own path, English with ?lang=en — WebConfig), the other language's (hreflang), and
+     the card of a link shared on Messenger / WhatsApp / Facebook (Open Graph: title, description, the picture images/og-image.png).
+     siteUrl comes from SiteUrlAdvice (scan2play.site-url); without it (a render test that gives none) only the description. */-->
+<th:block th:fragment="seo(path, title, description)" th:with="english=${#messages.msg('html.lang') == 'en'}">
+    <meta name="description" th:content="${description}">
+    <th:block th:if="${siteUrl != null}" th:with="here=${siteUrl + path}, canonical=${siteUrl + path + (english ? '?lang=en' : '')}">
+    <link rel="canonical" th:href="${canonical}">
+    <link rel="alternate" hreflang="pl" th:href="${here}">
+    <link rel="alternate" hreflang="en" th:href="${here + '?lang=en'}">
+    <link rel="alternate" hreflang="x-default" th:href="${here}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Scan2Play">
+    <meta property="og:title" th:content="${title}">
+    <meta property="og:description" th:content="${description}">
+    <meta property="og:url" th:content="${canonical}">
+    <meta property="og:image" th:content="${siteUrl + '/images/og-image.png'}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" th:content="#{seo.image.alt}">
+    <meta property="og:locale" th:content="${english} ? 'en_US' : 'pl_PL'">
+    <meta name="twitter:card" content="summary_large_image">
+    </th:block>
+</th:block>
+
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
 <!-- ======================================================================

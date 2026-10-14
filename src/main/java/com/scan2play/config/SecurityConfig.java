@@ -75,6 +75,8 @@ public class SecurityConfig {
                         // Legal pages (Privacy Policy, Terms of Service) and the guide "Jak działa Scan2Play" (public: a DJ reads it before
                         // the first login, a person of the staff before joining — the owner, 2026-10-12)
                         .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro").permitAll()
+                        // what a search engine reads first (SeoController); before, both led to the login page, "/"
+                        .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // DJ dashboard is protected

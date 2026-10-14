@@ -33,7 +33,7 @@ personal use) — migrations V18 and V19.
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
 | AI               | Google Gemini (`google-genai` 1.38.0), model `gemini-3.5-flash` (thinking level low) |
 | Other            | ZXing 3.5.3 (QR codes), Caffeine (caches), Maven; the guests' song suggestions come from Apple's iTunes Search API, asked by the browser |
-| i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes |
+| i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes; the language: `?lang=pl` / `?lang=en` (that one request), else the browser's `Accept-Language`, with none Polish (`WebConfig`, 2026-10-14 — a crawler sends none) |
 
 ---
 
@@ -544,6 +544,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
+| `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
 | `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), "Scan2Play Pro" `/pro` (V35: what Pro adds, a file per language; a 404 while the plans are not enforced) |
 | `ViewAttributes` | names of the model attributes |
 
@@ -579,7 +580,12 @@ in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a
 browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
 deploy's version always gives the same file (an old version is a 404). Only for a commit's version, never `dev` (devtools changes the
 files under it); everything else keeps Spring Security's `no-store`,
-`GeminiConfig` (the Gemini client, 15 s timeout; the `ObjectMapper` bean).
+`GeminiConfig` (the Gemini client, 15 s timeout; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
+`Accept-Language`, then Polish), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
+link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `SiteUrlAdvice` (`siteUrl` —
+`scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages:
+`fragments/components :: seo(path, title, description)` writes the description, the canonical address in the page's language,
+the `hreflang` alternates and Open Graph with `images/og-image.png`; on the landing page, the guide, `/privacy`, `/terms`, `/pro`).
 
 ### 6.4 Templates
 
@@ -605,6 +611,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles — the look of Section 6.7 |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them, a tap opens the dashboard; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
+| `images/og-image.png` | the picture of a shared link (Open Graph, 1200×630: the mark, "Scan2Play", "Prośby o piosenki od gości przez kod QR"; 2026-10-14) |
 | `images/logo.svg`, `favicon.ico` | our mark: three QR finder corners and a cyan play triangle on the dark tile (2026-10-04); on the landing page, the dashboard, the guest page, the QR poster and cards; the favicon is the same mark at 16 / 32 / 48 px |
 
 ### 6.6 Resources
@@ -714,7 +721,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
 under the deploy's version), `/images/**`, `/webjars/**`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
@@ -755,7 +762,8 @@ The DJ's party code is cached in the `HttpSession`. Account deletion evicts the 
 
 `GOOGLE_CLIENT_ID` / `_SECRET`, `GOOGLE_AI_API_KEY`, the database (`PGHOST`, `PGPORT`, `PGDATABASE`, and **`PGUSER` / `PGPASSWORD`
 required** — no defaults since review 5.5; Railway sets all five), `SCAN2PLAY_GUEST_URL` (the base URL in the QR code; locally the LAN
-address, so a phone on the same Wi-Fi can open it), `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` (Railway), **`VAPID_PUBLIC_KEY` /
+address, so a phone on the same Wi-Fi can open it), `SCAN2PLAY_SITE_URL` (optional; the site's address for search engines and shared links,
+default the production domain — not set on Railway), `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` (Railway), **`VAPID_PUBLIC_KEY` /
 `VAPID_PRIVATE_KEY`** (the notifications' key pair, made once by `VapidKeyGenerator` in `src/test/java` — secrets; without them the
 notifications are off; a new pair makes every device switch them on again; `VAPID_SUBJECT` optional), and the optional overrides
 below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH_DAILY_BUDGET`. The DJ's login works only on
@@ -895,6 +903,7 @@ GuestQueueService          → DjService
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" |
 | GET | `/privacy`, `/terms` | legal pages |
 | GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
+| GET | `/robots.txt`, `/sitemap.xml` | for search engines (`SeoController`, 2026-10-14) |
 | GET | `/pro` | "Scan2Play Pro" (V35): what stays free, what Pro adds, "Napisz, że chcesz Pro" (`mailto:`), the questions; a 404 while the plans are not enforced |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |
