@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <title>Scan2Play Pro</title>
+    <meta name="description" content="What the Pro plan of Scan2Play adds, and what stays free.">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* "Scan2Play Pro" (V35): the English twin of pro_pl.html — keep the two alike. */-->
+<body class="page-dj">
+<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+        <a th:if="${loggedIn}" href="/dj/dashboard" id="proBack" class="btn btn-sm btn-outline-light">← Panel</a>
+        <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light">← Home</a>
+    </div>
+
+    <h1 class="h3 text-white mb-2">Scan2Play Pro</h1>
+    <p class="s2p-guide-lede">For a DJ who plays weddings and events every week. Everything a party needs stays free.</p>
+
+    <section id="free">
+        <h2>Free, always</h2>
+        <ul class="text-light">
+            <li>The QR code, a poster and table cards</li>
+            <li>Guests' requests checked by the AI: is it a song, does it fit the vibe, has it played tonight</li>
+            <li>The queue: Played, Skip, Undo, Copy, keyboard keys</li>
+            <li>Votes and the guests' 👍, song numbers</li>
+            <li>The vibe, its description and “Who plays”</li>
+            <li>30 days of history</li>
+            <li>Notifications on your phone</li>
+            <li>Staff: 1 person</li>
+            <li>Guest limits: 2 requests per guest, then a 3-minute break, no repeats of the last 15</li>
+        </ul>
+    </section>
+
+    <section id="pro">
+        <h2>In the Pro plan</h2>
+        <ul class="text-light">
+            <li>The hosts' list (🚫 do not play, ⭐ must play) and a link to let them fill it in</li>
+            <li>Your profiles (Instagram, Facebook, TikTok) and “Tip the DJ” for the guests and on the print, 💸 counted in the queue</li>
+            <li>The evening summary to print, and CSV</li>
+            <li>AI comment styles: funny, sarcastic, short</li>
+            <li>Your own guest limits</li>
+            <li>Staff of up to 10 people</li>
+        </ul>
+    </section>
+
+    <section id="contact">
+        <p class="s2p-guide-lede mb-0">Want Pro? Write to us: <strong class="text-light user-select-all">scan2playcontact@gmail.com</strong></p>
+    </section>
+</div>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

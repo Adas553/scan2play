@@ -31,13 +31,14 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PartyStaffService {
 
-    /** The most people on one party's staff. */
+    /** The most people on one party's staff — with the Pro plan, or while the plans are not enforced ({@code Plan.staffPlaces}). */
     public static final int MAX_STAFF = 10;
 
     private final PartyStaffRepository staffRepository;
     private final StaffInvitationRepository invitationRepository;
     private final PartySettingsRepository partySettingsRepository;
     private final PartySettingsQueryService partySettingsQueryService;
+    private final PlanService planService;
 
     /** What came of an invitation link. */
     public enum JoinOutcome { JOINED, ALREADY, OWNER, FULL, UNKNOWN_LINK }
@@ -131,8 +132,8 @@ public class PartyStaffService {
 
     /**
      * Adds the person to the party's staff with these permissions — the caller holds the party row's lock, in its transaction. Not the
-     * owner, not twice; and the staff with the invitations waiting by e-mail (V34) take at most {@value #MAX_STAFF} places — an
-     * invitation being answered ({@code answeringAnInvitation}) is one of them already.
+     * owner, not twice; and the staff with the invitations waiting by e-mail (V34) take at most the places of the organiser's plan
+     * ({@link #placesOf}) — an invitation being answered ({@code answeringAnInvitation}) is one of them already.
      */
     JoinOutcome addToStaff(PartySettingsEntity party, String userId, String name, Set<StaffPermission> permissions,
                            boolean answeringAnInvitation) {
@@ -142,7 +143,7 @@ public class PartyStaffService {
         if (staffRepository.existsByPartyCodeAndMemberId(party.getPartyCode(), userId)) {
             return JoinOutcome.ALREADY;
         }
-        if (placesTaken(party.getPartyCode()) - (answeringAnInvitation ? 1 : 0) >= MAX_STAFF) {
+        if (placesTaken(party.getPartyCode()) - (answeringAnInvitation ? 1 : 0) >= placesOf(party)) {
             return JoinOutcome.FULL;
         }
         String kept = Texts.oneLine(name, PartyStaffEntity.NAME_MAX);
@@ -153,7 +154,15 @@ public class PartyStaffService {
         return JoinOutcome.JOINED;
     }
 
-    /** The party's places taken: its staff and the invitations by e-mail still waiting (V34) — together at most {@value #MAX_STAFF}. */
+    /**
+     * The party's places: {@value #MAX_STAFF} with the Pro plan, 1 without (V35). Leaving Pro takes nobody's access away — only no one
+     * new joins while the places are taken.
+     */
+    public int placesOf(PartySettingsEntity party) {
+        return planService.staffPlaces(party);
+    }
+
+    /** The party's places taken: its staff and the invitations by e-mail still waiting (V34) — together at most {@link #placesOf}. */
     public long placesTaken(String partyCode) {
         return staffRepository.countByPartyCode(partyCode)
                 + invitationRepository.countByPartyCodeAndInvitedAtAfter(partyCode, StaffInvitationService.waitingSince());

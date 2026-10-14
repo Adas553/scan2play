@@ -48,7 +48,7 @@ class PartyStaffServiceTest {
         parties = mock(PartySettingsRepository.class);
         query = mock(PartySettingsQueryService.class);
         invitations = mock(StaffInvitationRepository.class);
-        service = new PartyStaffService(staff, invitations, parties, query);
+        service = new PartyStaffService(staff, invitations, parties, query, Plans.off());
         party = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("DJ Koko").staffToken(TOKEN).build();
         when(parties.findByStaffToken(TOKEN)).thenReturn(Optional.of(party));
         when(parties.lockByStaffToken(TOKEN)).thenReturn(Optional.of(party));
@@ -219,5 +219,23 @@ class PartyStaffServiceTest {
 
         assertThat(service.remove(PARTY, 7L)).isTrue();
         assertThat(service.remove(PARTY, 8L)).as("a row of another party: not deleted").isFalse();
+    }
+
+    /**
+     * An organiser without Pro, the plans enforced (V35): one place — the second person is refused; with Pro, ten. Leaving Pro takes
+     * nobody's access away (no row is touched): only no one new joins.
+     */
+    @Test
+    void withoutPro_theStaffHasOnePlace_withProTen() {
+        when(staff.countByPartyCode(PARTY)).thenReturn(1L);
+        PartyStaffService free = new PartyStaffService(staff, invitations, parties, query, Plans.enforced());
+        assertThat(free.placesOf(party)).isEqualTo(1);
+        assertThat(free.join(TOKEN, "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.FULL);
+        verify(staff, never()).save(any());
+        verify(staff, never()).deleteFromParty(org.mockito.ArgumentMatchers.anyLong(), any());
+
+        PartyStaffService pro = new PartyStaffService(staff, invitations, parties, query, Plans.enforced("owner"));
+        assertThat(pro.placesOf(party)).isEqualTo(PartyStaffService.MAX_STAFF);
+        assertThat(pro.join(TOKEN, "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.JOINED);
     }
 }

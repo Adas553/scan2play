@@ -107,7 +107,7 @@ class SummaryPageTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any()))
                 .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages);
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages, com.scan2play.service.Plans.off());
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.summary(evening, null, model, null, new MockHttpSession());
@@ -204,7 +204,7 @@ class SummaryPageTest {
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(wedding());
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages);
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages, com.scan2play.service.Plans.off());
 
         ResponseEntity<byte[]> csv = controller.csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
 

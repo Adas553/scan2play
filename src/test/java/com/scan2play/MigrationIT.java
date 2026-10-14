@@ -151,6 +151,24 @@ class MigrationIT extends PostgresIntegrationTest {
                 .containsExactly("email", "email_key", "id", "invited_at", "party_code", "permissions");
     }
 
+    /** V35: a DJ's plan — one row per organiser, a known plan and source only, an end or none. */
+    @Test
+    void aDjsPlan_hasItsTable_oneRowPerOrganiser_andOnlyKnownValues() {
+        assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns WHERE table_name = 'dj_plan'"
+                + " AND is_nullable = 'NO' ORDER BY column_name", String.class))
+                .containsExactly("owner_id", "plan", "source", "updated_at");
+        jdbc.update("INSERT INTO dj_plan (owner_id, plan, source) VALUES ('mig-plan-a', 'PRO', 'GIFT')");
+        assertThat(jdbc.queryForObject("SELECT valid_until IS NULL AND updated_at IS NOT NULL FROM dj_plan WHERE owner_id = 'mig-plan-a'",
+                Boolean.class)).isTrue();
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO dj_plan (owner_id, plan, source) VALUES ('mig-plan-a', 'FREE', 'PAID')"))
+                .as("one row per organiser").hasMessageContaining("dj_plan_pkey");
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO dj_plan (owner_id, plan, source) VALUES ('mig-plan-b', 'GOLD', 'PAID')"))
+                .hasMessageContaining("dj_plan_plan_check");
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO dj_plan (owner_id, plan, source) VALUES ('mig-plan-b', 'PRO', 'COUPON')"))
+                .hasMessageContaining("dj_plan_source_check");
+        jdbc.update("DELETE FROM dj_plan WHERE owner_id LIKE 'mig-plan-%'");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

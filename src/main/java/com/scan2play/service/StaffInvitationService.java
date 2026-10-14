@@ -25,7 +25,7 @@ import java.util.Set;
  * address and the role; nothing is sent — whoever logs in with a Google account of that (verified) address is asked "Dołącz" /
  * "Nie, dziękuję" when the panel opens. The invitation link stays as the other way. An invitation waits
  * {@value StaffInvitationEntity#MAX_AGE_DAYS} days; the staff and the invitations waiting take at most
- * {@value PartyStaffService#MAX_STAFF} places together, counted under the party row's lock.
+ * places of the organiser's plan together ({@code PartyStaffService.placesOf}, V35), counted under the party row's lock.
  */
 @Slf4j
 @Service
@@ -69,10 +69,10 @@ public class StaffInvitationService {
         }
         String key = EmailAddresses.key(address.get());
         Set<StaffPermission> granted = permissions.isEmpty() ? EnumSet.noneOf(StaffPermission.class) : EnumSet.copyOf(permissions);
-        partySettingsRepository.lockByPartyCode(partyCode);
+        Optional<PartySettingsEntity> party = partySettingsRepository.lockByPartyCode(partyCode);
         Optional<StaffInvitationEntity> earlier = invitationRepository.findByPartyCodeAndEmailKey(partyCode, key);
         boolean waiting = earlier.isPresent() && earlier.get().getInvitedAt().isAfter(waitingSince());
-        if (!waiting && partyStaffService.placesTaken(partyCode) >= PartyStaffService.MAX_STAFF) {
+        if (!waiting && (party.isEmpty() || partyStaffService.placesTaken(partyCode) >= partyStaffService.placesOf(party.get()))) {
             return InviteOutcome.FULL;
         }
         StaffInvitationEntity invitation = earlier.orElseGet(() -> StaffInvitationEntity.builder().partyCode(partyCode).emailKey(key).build());

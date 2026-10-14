@@ -100,11 +100,12 @@ class StaffPageRenderTest {
                         .joinedAt(Instant.parse("2026-10-09T18:00:00Z"))
                         .permissions(EnumSet.of(StaffPermission.QUEUE, StaffPermission.SUMMARY)).build()));
         when(staff.placesTaken(PARTY)).thenReturn(3L);
+        when(staff.placesOf(any())).thenReturn(PartyStaffService.MAX_STAFF);   // the plans not enforced: 10 places (V35)
         StaffInvitationService invitations = mock(StaffInvitationService.class);
         when(invitations.waitingAt(PARTY)).thenReturn(List.of(StaffInvitationEntity.builder().id(3L).partyCode(PARTY)
                 .email("ola.kowalska@gmail.com").emailKey("olakowalska@gmail.com").permissions(StaffRole.CO_ORGANISER.permissions())
                 .invitedAt(Instant.parse("2026-10-10T08:00:00Z")).build()));
-        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper, invitations);
+        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper, invitations, com.scan2play.service.Plans.off());
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("staffSaved", 7L);
         MockHttpServletRequest panelRequest = new MockHttpServletRequest();
@@ -167,8 +168,9 @@ class StaffPageRenderTest {
         when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
         PartyStaffService staff = mock(PartyStaffService.class);
         when(staff.placesTaken(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF);
+        when(staff.placesOf(any())).thenReturn(PartyStaffService.MAX_STAFF);
         StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper,
-                mock(StaffInvitationService.class));
+                mock(StaffInvitationService.class), com.scan2play.service.Plans.off());
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("staffInvited", new StaffController.InviteResult("INVALID_ADDRESS", "ola@gmail", true));
 

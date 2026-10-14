@@ -207,8 +207,39 @@ same address again changes the role and gives it 30 days again —, index by `em
 `StaffInvitationEntity.MAX_AGE_DAYS` = 30 days: an older one counts for nothing (every read takes `invited_at` after now − 30 days) and
 `StaffInvitationService.purgeOldInvitations` deletes it at 04:50. Gone when answered ("Dołącz": it becomes a row of `party_staff`,
 without the address; "Nie, dziękuję"), cancelled by the organiser, or with the party.
+**`DjPlanEntity` → `dj_plan`** (V35, the owner 2026-10-14) — a DJ's plan, one row per organiser: `ownerId` (the primary key, the Google
+subject as `party_settings.owner_id`), `plan` (`Plan`: FREE / PRO), `source` (`PlanSource`: TRIAL / PAID / GIFT), `validUntil` (null = no
+end; after it the row reads as FREE, `planAt`), `updatedAt`. **Empty at first: no row is Free.** Deleted with the account. Read only by
+`PlanService` and only while the plans are enforced (below).
 **`spring_session`, `spring_session_attributes`** (V11, Spring Session's own schema, no entity) — the HTTP sessions; expired ones are
 deleted every minute.
+
+**Plans — Free and Pro** (V35, the owner 2026-10-14; the review and its mockups: https://claude.ai/artifact/32eMmdwz9pTGLs8pRQzLBv —
+the owner picked variant B). The app stays free; the foundation is there to make some features paid one day, **without payments yet**.
+**`scan2play.plans.enforce=false`** (env `PLANS_ENFORCE`, the start): every party has every feature, no plan is read, no page says
+"Pro" — nothing changed for anyone. `true`: a party works as **its organiser's plan** allows (`PlanService`, the one place that
+decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Google subjects of `scan2play.plans.pro-owners` (env
+`SCAN2PLAY_PLANS_PRO_OWNERS` — the owner and testers, no SQL on production), else the row of `dj_plan` while valid, else Free.
+- **Pro features** (`PlanFeature`): the hosts' lists and their link (`HOST_LISTS`), the profiles (`PROFILES`), the tip link and 💸
+  (`TIPS`), the AI's comment styles but "Klasyczne" (`COMMENT_STYLES`), the guests' limits set by the DJ (`GUEST_LIMITS` — without Pro
+  every party has a new party's 2 requests / 3 min / no repeats of the last 15, `PartySettingsEntity.DEFAULT_*`), "Podsumowanie
+  wieczoru" and its CSV (`SUMMARY`); and the staff's places (`Plan.staffPlaces`): 10 with Pro, 1 without (the invitations by e-mail
+  waiting count, as before). **Everyone's**: the QR code and prints, the AI, the queue and its keys, the votes and 👍, the vibe, its
+  note and "Kto gra", the history, the notifications, 1 person of staff.
+- **The staff work the organiser's party with the organiser's plan** (the party's `ownerId` decides, never the person's); on their
+  own party, their own plan.
+- **Leaving Pro deletes nothing**: the lists, the profiles, the tip link, the comment style and the limits stay saved and stop working
+  (`PlanService.asPlanned` — the party as its plan lets it work, a copy for the guests, the AI, the queue's ⭐ / 💸, the print; never
+  saved); the hosts' link is a 404 as an old one; the people already on the staff keep their access — only no one new joins while the
+  places are taken. The card says "Twoje listy są zachowane: 🚫 3 · ⭐ 5. Wrócą, gdy włączysz Pro".
+- **A trial**: `scan2play.plans.trial-days` (env `PLANS_TRIAL_DAYS`, 0) days of Pro written for a new DJ when their party is made —
+  only while enforced, once per DJ (`PlanService.startTrial`). When the plans are switched on, the DJs of that day get Pro for a while
+  by one data migration (to decide then).
+- The server refuses a Pro feature's endpoint (`PlanService.require` → `PlanRequiredException`, a 403) — `PlanFeatureEndpointsTest`
+  walks them all; the pages show it as 6.7 says ("PRO"). No payment, no prices: "Zobacz, co daje Pro" leads to `/pro`, which says to
+  write to scan2playcontact@gmail.com (a 404 while not enforced). Later, before the first payment: a payment provider (Stripe Billing /
+  Przelewy24 / Tpay) writing `dj_plan` (PAID, `validUntil`), the terms (a paid service, renewal, the consumer's withdrawal), the
+  privacy policy (the payment provider, the billing data), invoices and VAT (KSeF, OSS) — the review's list.
 
 ### 4.2 Enums
 
@@ -217,6 +248,8 @@ party), HISTORY, VIBE (the card "Impreza"), LIMITS, HOST_LISTS (the lists and th
 `StaffRole` (V32, ready sets by what the person does, not by their job) VIEWER "Podgląd" (HISTORY), QUEUE "Obsługa kolejki" (QUEUE,
 TIPS, CLEAR_QUEUE, OPEN_CLOSE, HISTORY — what every person of the staff could do before V32; `DEFAULT`: the role picked first for a new link and for "Zaproś", and what a link made before V33 gives), CO_ORGANISER
 "Współorganizator" (all of them), CUSTOM "Własne" (ticked one by one) ·
+`Plan` (V35) FREE (1 place of staff) / PRO (every `PlanFeature`, 10 places) · `PlanFeature` HOST_LISTS, PROFILES, TIPS, COMMENT_STYLES,
+GUEST_LIMITS, SUMMARY · `PlanSource` TRIAL / PAID / GIFT ·
 `HistoryFilter` all / played / rejected (an old link's "guest" / "background" reads as all) · `VibeType` ANY and 16 genres (V16:
 Polish hits, 2000s/2010s, R&B & soul, folk / biesiada, kids added; bachata, salsa and reggaeton merged into LATINO — the rows moved
 by the migration).
@@ -511,7 +544,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `FeedbackController` | `POST /dj/feedback` (JSON) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
-| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page) |
+| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), "Scan2Play Pro" `/pro` (V35: what Pro adds, a file per language; a 404 while the plans are not enforced) |
 | `ViewAttributes` | names of the model attributes |
 
 ### 6.2 Services
@@ -534,6 +567,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `SongRequestRetentionService` | the nightly purge of song requests (Section 4.1) |
 | `PushSubscriptionService` / `PushNotificationService` | the DJ's devices of the notifications (checked addresses, ≤ 10 per DJ) / sending a new request to them (Web Push, `zerodep-web-push-java`, off the request thread) |
 | `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …" |
+| `PlanService` | the plans (V35, Section 4.1 "Plans"): the organiser's `Plan` (the switch `scan2play.plans.enforce`, `pro-owners`, the row of `dj_plan`, cached), `require(party, PlanFeature)` (a 403), `asPlanned` (the party as its plan lets it work: for the guests, the AI, the queue's marks, the print — never saved), `view` (what the pages show: `plan.allows(…)`, `plan.pro(…)`), the staff's places, the trial |
 
 ### 6.3 Configuration
 
@@ -551,7 +585,7 @@ files under it); everything else keeps Spring Security's `no-store`,
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
 `qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html`, `guide[_pl].html` (the public guide "Jak działa Scan2Play", 2026-10-12: a section per moment of a party, the app's buttons as pictures — `.s2p-guide-row`; keep it true to the app),
-`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
+`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32), `pro[_pl].html` ("Scan2Play Pro", V35: what stays free, what Pro adds — keep it true to `PlanFeature`) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
 `HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
 tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel / Kolejka / Historia, the
 feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
@@ -576,7 +610,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V31`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V35`.
 
 ### 6.7 The look (`app.css`, the design review of 2026-10-09)
 
@@ -612,6 +646,15 @@ What every page shares, so a new screen looks like the others:
   secondary words (the guest's, the AI's comment) in one muted line under it, the whole in the title; what is the same in every row is
   not a column; colour marks a state only where it tells something apart (a dot at the decision, ⚠, votes above 1) — the words stay
   quiet (the history, 2026-10-10; `history-wide-calm`).
+- **A feature of the Pro plan** (V35, variant B of the review 2026-10-14) to an organiser without it, while the plans are enforced:
+  **visible, marked** — the row, the jump and the card keep their place with a quiet "PRO" by the name (`components :: proMark`,
+  `.s2p-pro`: an outline pill, not a colour — it is not a state of the party), the row says "W planie Pro" (the limits' row the limits
+  that hold), and in place of the card's form one sentence — what was saved and waits, or what holds — with "Zobacz, co daje Pro" →
+  `/pro` (`components :: proOffer`, `.s2p-pro-box`, dashed); a choice of a list ("Zabawne · Pro") is there but not to pick; "Podsumowanie
+  wieczoru PRO" leads to `/pro`. **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
+  permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
+  see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
+  `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`.
 - **Emoji** only as markers in a list or a status (⭐ ⚠ 💸 👍 ▶ ⏭, "🎧 Gra: …", 🚫 / ⭐ of the hosts' lists) — not in card titles,
   headings or ordinary buttons. **Words**: "Ty" to everyone, "Wy" only on the hosts' page; "organizator" (the party's owner), "obsługa"
   (bartender, second DJ), "gospodarze", "goście"; no English words ("Zgłoś uwagę", not "Feedback"); "DJ‑a" in a heading with a
@@ -662,12 +705,14 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
 under the deploy's version), `/images/**`, `/webjars/**`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
 `requireOwner` for what is never handed over (the staff, the profiles, the tip link, clearing the history, the account), `access` for
-what every person of the staff sees (the queue's poll, the QR print). `POST /join/{token}` joins only logged in, with CSRF; an
+what every person of the staff sees (the queue's poll, the QR print); and then, for a feature of the Pro plan, `PlanService.require`
+(V35: the party's organiser's plan; a 403 without it while the plans are enforced — `PlanFeatureEndpointsTest`; the hosts' page
+`/h/{token}` is a 404 then). `POST /join/{token}` joins only logged in, with CSRF; an
 invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.
 
@@ -689,6 +734,7 @@ real use leaves the log quiet. The browser tests run the dashboard, the guest pa
 | `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; `updateSettings` evicts after its commit |
 | `qr-codes` | text + size | 24 h / 1000 | `QrCodeService` |
 | `dashboardQueue` | partyCode | 3 s / 200 | `DjService.getDashboardQueue`; evicted when a song is played, skipped or the queue cleared |
+| `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted when a trial is written, `forget`, and with the account |
 
 The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit.
 
@@ -705,6 +751,9 @@ address, so a phone on the same Wi-Fi can open it), `GUEST_CLIENT_IP_HEADER=CF-C
 notifications are off; a new pair makes every device switch them on again; `VAPID_SUBJECT` optional), and the optional overrides
 below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH_DAILY_BUDGET`. The DJ's login works only on
 `localhost` or a public HTTPS address (Google refuses a LAN IP as a redirect URI); the guest side works through the LAN IP.
+**The plans** (V35, Section 4.1 "Plans"): `PLANS_ENFORCE` (default `false`: everything for everyone — not set on Railway),
+`SCAN2PLAY_PLANS_PRO_OWNERS` (Google subjects, comma-separated: Pro for ever — the owner's own `party_settings.owner_id`, testers),
+`PLANS_TRIAL_DAYS` (default 0). Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
 **`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (staged 2026-10-13, live once the owner
 deploys it): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
 on average, 2 GB at the top) — the live data is ~55 MB. Measured on a copy (20 parties × 50 guests polling every 3 s, 1 500
@@ -727,6 +776,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 | `guest.limit.*` | 30 per 10 min per address + party, 300 per 24 h per party (env `GUEST_LIMIT_*`) |
 | `guest.client-ip-header` | empty (env `GUEST_CLIENT_IP_HEADER`) |
 | `security.csp.enforce` | `false` = report only (env `CSP_ENFORCE`) |
+| `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` | `false` / empty / 0 (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`; V35) |
 | `spring.session.jdbc.initialize-schema` | `never` (the tables are Flyway's, `V11`); a session lives 30 min without a request |
 
 **The profile `local`** (`application-local.properties`): the developer's defaults `PGUSER=postgres`, `PGPASSWORD=1111`. IntelliJ's run
@@ -773,6 +823,7 @@ schema behind Flyway's back.
 | V32 | `party_staff.permissions` varchar(200) NOT NULL (no default: the app always writes it) — the people on a staff get the role "Obsługa kolejki" (`QUEUE,TIPS,CLEAR_QUEUE,OPEN_CLOSE,HISTORY`, what they could do before; `StaffPermissionMigrationIT`); `party_settings.owner_name` varchar(100), nullable: the organiser's Google name |
 | V33 | `party_settings.staff_link_permissions` varchar(200), nullable (null = no link): the invitation link's role; a link made before gets "Obsługa kolejki" (`StaffLinkMigrationIT`) |
 | V34 | table `staff_invitation` (id, `party_code` FK ON DELETE CASCADE, `email`, `email_key` varchar(254), `permissions` varchar(200), `invited_at`; UNIQUE `uk_staff_invitation_email` (party, email_key), index `idx_staff_invitation_email_key`): invitations to the staff by e-mail |
+| V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
 rows of the old kind (`VibeMigrationIT`, `SpotifyRemovalMigrationIT`, `YouTubeRemovalMigrationIT`).
@@ -835,10 +886,11 @@ GuestQueueService          → DjService
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" |
 | GET | `/privacy`, `/terms` | legal pages |
 | GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
+| GET | `/pro` | "Scan2Play Pro" (V35): what stays free, what Pro adds, where to write; a 404 while the plans are not enforced |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |
 
-### DJ (logged in; every endpoint works on the party the page names — `partyCode` / `party`, none: the default panel — and checks the person's permission there, V32)
+### DJ (logged in; every endpoint works on the party the page names — `partyCode` / `party`, none: the default panel — and checks the person's permission there, V32; an endpoint of a Pro feature — the hosts' lists and link, the profiles, the tip link and 💸, a comment style but "Klasyczne", the limits, the summary and its CSV — also the organiser's plan, V35)
 
 | Method | Path | Notes |
 |--------|------|-------|
@@ -899,21 +951,21 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 363. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 657. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest` with the real
   security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 30 `*IT` on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 65 tests in the `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT`, `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
   `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played; a song the DJ skipped, and put back), `FirstLoginIT` (a
   first login in eight tabs at once — one party); with a database of their own, migrated to the version before and given rows the old
   way: `TimestampMigrationIT` (V12 — the same moments; red when the old values are read as UTC), `VibeMigrationIT` (V16),
   `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT` (V19: the YouTube parties go with their data, a requests-only party
-  stays). New SQL that locks or counts gets a test there.
+  stays), `DjPlanIT` (V35: a plan's row as written, gone with the account). New SQL that locks or counts gets a test there.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
-  Chrome, with a Python stand-in server that the scenarios configure; 41 scenarios. The stand-in sends the real CSP **enforced** and
+  Chrome, with a Python stand-in server that the scenarios configure; 94 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed

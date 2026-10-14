@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -54,6 +55,7 @@ class StaffInvitationServiceTest {
         query = mock(PartySettingsQueryService.class);
         service = new StaffInvitationService(invitations, parties, staff, query);
         when(parties.lockByPartyCode(PARTY)).thenReturn(Optional.of(pub));
+        lenient().when(staff.placesOf(pub)).thenReturn(PartyStaffService.MAX_STAFF);   // the places of the organiser's plan (V35)
         when(query.getSettings(PARTY)).thenReturn(pub);
         when(invitations.findByPartyCodeAndEmailKey(anyString(), anyString())).thenReturn(Optional.empty());
     }

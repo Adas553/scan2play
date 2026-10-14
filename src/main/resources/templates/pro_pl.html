@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <title>Scan2Play Pro</title>
+    <meta name="description" content="Co daje plan Pro w Scan2Play, a co zostaje za darmo.">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* "Scan2Play Pro" (V35, the owner 2026-10-14): what the Pro plan adds and what stays everyone's — where "Zobacz, co daje Pro"
+     leads. Public (LegalController.pro), one file per language as the guide; a 404 while the plans are not enforced. No payment
+     yet: the way to Pro is to write to us. Keep it true to PlanFeature. */-->
+<body class="page-dj">
+<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+        <a th:if="${loggedIn}" href="/dj/dashboard" id="proBack" class="btn btn-sm btn-outline-light">← Panel</a>
+        <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light">← Strona główna</a>
+    </div>
+
+    <h1 class="h3 text-white mb-2">Scan2Play Pro</h1>
+    <p class="s2p-guide-lede">Dla DJ-a, który gra wesela i eventy co tydzień. Wszystko, czego potrzeba, żeby przeprowadzić imprezę,
+        zostaje za darmo.</p>
+
+    <section id="free">
+        <h2>Za darmo, zawsze</h2>
+        <ul class="text-light">
+            <li>Kod QR, plakat i karty na stoły</li>
+            <li>Prośby gości sprawdzane przez AI: czy to piosenka, czy pasuje do klimatu, czy dziś już nie leciała</li>
+            <li>Kolejka: Zagrane, Pomiń, Cofnij, Kopiuj, klawisze</li>
+            <li>Głosy i 👍 gości, numery piosenek</li>
+            <li>Klimat, opis klimatu i „Kto gra”</li>
+            <li>Historia z 30 dni</li>
+            <li>Powiadomienia na telefon</li>
+            <li>Obsługa: 1 osoba</li>
+            <li>Limity gości: 2 prośby na gościa, potem 3 minuty przerwy, bez powtórek z ostatnich 15</li>
+        </ul>
+    </section>
+
+    <section id="pro">
+        <h2>W planie Pro</h2>
+        <ul class="text-light">
+            <li>Lista gospodarzy (🚫 nie grać, ⭐ koniecznie zagrać) i link, przez który wypełnią ją sami</li>
+            <li>Twoje profile (Instagram, Facebook, TikTok) i „Napiwek dla DJ-a” u gości i na wydruku, licznik 💸 w kolejce</li>
+            <li>Podsumowanie wieczoru do druku i CSV</li>
+            <li>Style komentarzy AI: zabawne, sarkastyczne, krótkie</li>
+            <li>Własne limity gości</li>
+            <li>Obsługa do 10 osób</li>
+        </ul>
+    </section>
+
+    <section id="contact">
+        <p class="s2p-guide-lede mb-0">Chcesz Pro? Napisz: <strong class="text-light user-select-all">scan2playcontact@gmail.com</strong></p>
+    </section>
+</div>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

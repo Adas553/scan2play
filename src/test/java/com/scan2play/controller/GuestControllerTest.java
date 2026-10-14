@@ -4,6 +4,8 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
+import com.scan2play.service.PlanService;
+import com.scan2play.service.Plans;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestRequestLimiter.Refusal;
 import com.scan2play.service.GuestRequestLimiter.Scope;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -58,6 +61,10 @@ class GuestControllerTest {
     private GuestVoteService guestVoteService;
     @Mock
     private MessageSource messageSource;
+
+    /** The plans not enforced (as in production today): the party as it is (V35). */
+    @Spy
+    private PlanService planService = Plans.off();
 
     @InjectMocks
     private GuestController controller;
@@ -449,5 +456,32 @@ class GuestControllerTest {
 
         assertThat(model).containsEntry(ViewAttributes.VOTE_NOTE, "ended").doesNotContainKey(ViewAttributes.GUEST_QUEUE);
         verify(guestVoteService, never()).vote(any(), anyString(), org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    /**
+     * An organiser without Pro, the plans enforced (V35): the guests get no profiles and no tip button, and the guest's own limit is a
+     * new party's (2 requests, 3 min) whatever was saved while on Pro.
+     */
+    @Test
+    void withoutPro_theGuestsSeeNoProfilesOrTips_andTheLimitIsTheDefault() throws Exception {
+        settings.setOwnerId("owner");
+        settings.setRequestLimit(5);
+        settings.setCooldownMinutes(30);
+        settings.setInstagramUrl("https://www.instagram.com/dj/");
+        settings.setTipUrl("https://buycoffee.to/dj");
+        GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
+                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced());
+
+        ExtendedModelMap model = new ExtendedModelMap();
+        assertThat(free.partyIndex(PARTY, model, session)).isEqualTo("index");
+        assertThat(model.get("instagramUrl")).isNull();
+        assertThat(model.get("tipUrl")).isNull();
+
+        org.mockito.ArgumentCaptor<PartySettingsEntity> asPlanned = org.mockito.ArgumentCaptor.forClass(PartySettingsEntity.class);
+        when(guestSessionService.tryAcquire(eq(session), eq(PARTY), asPlanned.capture())).thenReturn(Optional.of(42L));
+        free.requestSong(PARTY, "Song", new ExtendedModelMap(), session, request, redirectAttributes).call();
+        assertThat(asPlanned.getValue().getRequestLimit()).isEqualTo(2);
+        assertThat(asPlanned.getValue().getCooldownMinutes()).isEqualTo(3);
+        assertThat(settings.getRequestLimit()).as("the party's own value kept").isEqualTo(5);
     }
 }

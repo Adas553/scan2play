@@ -22,6 +22,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -47,6 +48,8 @@ class AccountDeletionServiceTest {
     @Mock
     private com.scan2play.repository.StaffInvitationRepository staffInvitationRepository;
     @Mock
+    private com.scan2play.repository.DjPlanRepository djPlanRepository;
+    @Mock
     private CacheManager cacheManager;
     @Mock
     private Cache cache;
@@ -68,6 +71,7 @@ class AccountDeletionServiceTest {
         order.verify(feedbackRepository).deleteByOwnerId(OWNER);
         verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
         verify(partyStaffRepository).deleteByMember(OWNER);   // wherever they worked (V30)
+        verify(djPlanRepository).deleteById(OWNER);           // the DJ's plan (V35)
         verify(staffInvitationRepository).deleteByParty(PARTY);   // the party's invitations by e-mail (V34)
     }
 
@@ -94,6 +98,9 @@ class AccountDeletionServiceTest {
         verify(feedbackRepository).deleteByOwnerId(OWNER);
         verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
         verify(partyStaffRepository).deleteByMember(OWNER);   // wherever they worked (V30)
-        verifyNoInteractions(songRequestRepository, cacheManager);
+        verify(djPlanRepository).deleteById(OWNER);           // the DJ's plan (V35) — and only its cache
+        verify(cacheManager).getCache(PlanService.CACHE);
+        verifyNoMoreInteractions(cacheManager);
+        verifyNoInteractions(songRequestRepository);
     }
 }

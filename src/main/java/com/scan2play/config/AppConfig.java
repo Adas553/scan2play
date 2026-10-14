@@ -3,6 +3,7 @@ package com.scan2play.config;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PlanService;
 import com.scan2play.service.QrCodeService;
 import org.springframework.boot.web.server.MimeMappings;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
@@ -30,6 +31,7 @@ public class AppConfig {
      *         evicted after every committed change ({@code PartySettingsCommandService.updateSettings})</li>
      *     <li>{@code qr-codes} — long-lived</li>
      *     <li>{@code dashboardQueue} — 3s TTL, auto-expires to keep polling data fresh (the guest page reads it too)</li>
+     *     <li>{@code accountPlan} — the organisers' plans (V35), 10 min; read only while the plans are enforced</li>
      * </ul>
      */
     @Bean
@@ -38,7 +40,8 @@ public class AppConfig {
         cacheManager.setCaches(List.of(
                 buildCache(PartySettingsQueryService.CACHE, Duration.ofHours(24), 500),
                 buildCache(QrCodeService.QR_CODE_CACHE, Duration.ofHours(24), 1000),
-                buildCache(DjService.QUEUE_CACHE, Duration.ofSeconds(3), 200)
+                buildCache(DjService.QUEUE_CACHE, Duration.ofSeconds(3), 200),
+                buildCache(PlanService.CACHE, PlanService.CACHE_TTL, 2000)
         ));
         return cacheManager;
     }
