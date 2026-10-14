@@ -17,7 +17,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   (`PLANS_ENFORCE`, **false**: everything for everyone, no plan read, nothing says "Pro" — nothing changed for the DJs),
   `SCAN2PLAY_PLANS_PRO_OWNERS` (Pro for ever), `PLANS_TRIAL_DAYS` (0); the cards and rows of B (`.s2p-pro`, `components :: proMark /
   proOffer`), "Podsumowanie wieczoru PRO" → `/pro`, `pro[_pl].html`; the staff's places in the texts follow the plan ("Zajęte {0} z {0}
-  miejsc"; "Obsługa jest pełna: …" without "10 osób"). Tests: 657 unit (`PlanServiceTest`, `PlanFeatureEndpointsTest` — every Pro
+  miejsc"; "Obsługa jest pełna: …" without "10 osób"). Tests: 658 unit (`PlanServiceTest`, `PlanFeatureEndpointsTest` — every Pro
   endpoint refused for a Free organiser, let through off / Pro / for the staff of a Pro organiser; the guest page, the AI, the hosts'
   page, the staff's places, the render of the panel and the settings with the plans off — no "PRO" — and for a Free organiser and
   their staff), 65 database on a local PostgreSQL 16 (`MigrationIT` V35, `DjPlanIT` — red without the row deleted with the account),

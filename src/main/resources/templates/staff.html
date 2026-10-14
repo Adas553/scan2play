@@ -98,8 +98,9 @@
         <h2 class="s2p-card-title" th:text="#{staff.link.title}">Invite someone</h2>
         <p class="s2p-card-help" th:text="#{staff.invite.help(${plan.staffPlaces()})}">Type the address of their Google account.</p>
         <!--/* without the Pro plan (V35): one place; leaving Pro takes nobody's access away, only no one new joins */-->
-        <th:block th:if="${plan.offered() and plan.staffPlaces() < T(com.scan2play.service.PartyStaffService).MAX_STAFF}"><div
-             th:replace="~{fragments/components :: proOffer(#{plan.staff.free(${T(com.scan2play.service.PartyStaffService).MAX_STAFF})})}"></div></th:block>
+        <!--/* no T(…) here: Thymeleaf forbids a static class in a fragment's parameter (the page failed, 2026-10-14) */-->
+        <th:block th:if="${plan.proStaff()}"><div
+             th:replace="~{fragments/components :: proOffer(#{plan.staff.free(${plan.proStaffPlaces()})})}"></div></th:block>
         <div th:if="${staffInviteResult != null}" id="staffInviteResult" role="status"
              th:class="${staffInviteResult.problem()} ? 'alert alert-warning py-2' : 'alert alert-success py-2'"
              th:text="#{__${'staff.invite.' + staffInviteResult.outcome()}__(${staffInviteResult.address()}, ${plan.staffPlaces()})}">Invited.</div>

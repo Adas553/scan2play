@@ -77,6 +77,16 @@ public class PlanService {
         public int staffPlaces() {
             return plan.staffPlaces();
         }
+
+        /** The places of the Pro plan: what the organiser without it is told of ("Do 10 osób w planie Pro"). */
+        public int proStaffPlaces() {
+            return Plan.PRO.staffPlaces();
+        }
+
+        /** The staff's places shown as "PRO" to the organiser: their plan has fewer than Pro. */
+        public boolean proStaff() {
+            return offered && plan.staffPlaces() < Plan.PRO.staffPlaces();
+        }
     }
 
     public boolean isEnforced() {
