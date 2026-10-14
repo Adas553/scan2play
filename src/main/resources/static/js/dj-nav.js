@@ -12,8 +12,9 @@ document.addEventListener('submit', function (e) {
     }
 }, true);
 
-// ---- "Kopiuj" in "Pomoc i kontakt": the address to the clipboard, "Skopiowano" on the button for a moment. Where the clipboard is
-// refused, the address (user-select: all) is selected for the person to copy themselves. ----
+// ---- "Kopiuj" in "Pomoc i kontakt" (and "Kopiuj adres" on the page /pro): the address to the clipboard, "Skopiowano" on the button
+// for a moment. Where the clipboard is refused, the address shown (user-select: all; the element data-copy-select names, else
+// #helpEmail) is selected for the person to copy themselves. ----
 document.addEventListener('click', function (e) {
     var button = e.target.closest ? e.target.closest('button[data-copy-text]') : null;
     if (!button) return;
@@ -23,7 +24,7 @@ document.addEventListener('click', function (e) {
         setTimeout(function () { button.textContent = label; }, 1500);
     };
     var select = function () {
-        var shown = document.getElementById('helpEmail');
+        var shown = document.getElementById(button.getAttribute('data-copy-select') || 'helpEmail');
         if (!shown) return;
         var range = document.createRange();
         range.selectNodeContents(shown);

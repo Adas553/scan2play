@@ -217,8 +217,10 @@ class StaffPageRenderTest {
         assertThat(controller.staffPage(PARTY, model, null, new MockHttpSession(), new MockHttpServletRequest())).isEqualTo("staff");
         String html = render("staff", model.asMap(), PL);
 
-        assertThat(html).doesNotContain("??").contains("Miejsca w obsłudze, razem z zaproszeniami: 1.", "id=\"staffFull\"",
+        assertThat(html).doesNotContain("??").contains("id=\"staffFull\"",
                 "Zajęte 1 z 1 miejsc", "data-pro-offer", "Bez Pro: 1 osoba w obsłudze, razem z zaproszeniami. Do 10 osób w planie Pro.",
-                "href=\"/pro\"");
+                "href=\"/pro\"", "Czeka 30 dni.</p>");
+        assertThat(html).as("the places said once: the offer says them, the help line not again (the review of the look, 2026-10-14)")
+                .doesNotContain("Miejsca w obsłudze");
     }
 }

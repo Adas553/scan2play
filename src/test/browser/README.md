@@ -96,6 +96,10 @@ S2P.scenario({
 * Two things that differ between machines and made an assertion wrong once: the **language of the browser** (in a Polish Chrome `ż`
   sorts after `z`, in an English one it does not — a sort test must not name the exact neighbour) and **timing** (the poll is every
   3 s: wait for the state with `waitFor`, do not sleep for it).
+* **A phone's width:** a headless Chrome's window is never narrower than 500 px (measured in the cloud container, 2026-10-14:
+  `--window-size=390,844` gives `innerWidth` 500), so a `viewport: '390,…'` scenario lays the page out 500 px wide — still a phone
+  for the CSS (under 768 px), but a line that breaks only at 390 px stays whole. A step about that narrows the page itself for its
+  measure (`document.documentElement.style.width = '390px'`, then back; `pro-free-panel`, "the limits that hold on one line").
 
 ## In CI
 

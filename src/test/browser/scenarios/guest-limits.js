@@ -65,7 +65,7 @@
                 const visible = Array.from(row.querySelectorAll('.s2p-row-state > span')).filter(shows);
                 return [shows(near) ? near.textContent.trim() : null, visible.map(function (s) { return s.textContent.trim(); })];
             };
-            t.step('as the page was loaded: no warning, the row says the guests\' own limit', state(), [null, ['2 na gościa · 3 min przerwy']]);
+            t.step('as the page was loaded: no warning, the row says the guests\' own limit', state(), [null, ['2 na gościa · 3 min']]);
 
             await t.stand.config({ guestLimitsUse: '0,250' });
             await afterPolls(t);
@@ -84,7 +84,7 @@
 
             await t.stand.config({ guestLimitsUse: '2,5' });
             await afterPolls(t);
-            t.step('both windows over: back to the guests\' own limit', state(), [null, ['2 na gościa · 3 min przerwy']]);
+            t.step('both windows over: back to the guests\' own limit', state(), [null, ['2 na gościa · 3 min']]);
         }
     });
 
