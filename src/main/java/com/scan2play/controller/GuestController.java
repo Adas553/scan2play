@@ -8,6 +8,7 @@ import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PlanService;
 import com.scan2play.service.SongEvaluationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,11 +45,13 @@ public class GuestController {
     private final GuestVoteService guestVoteService;
     private final GuestRequestLimiter guestRequestLimiter;
     private final MessageSource messageSource;
+    private final PlanService planService;
 
     @GetMapping("/{partyCode}")
     public String partyIndex(@PathVariable String partyCode, Model model, HttpSession session) {
         try {
-            PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+            // as the organiser's plan lets it work (V35): without Pro no profiles and no tip button
+            PartySettingsEntity settings = planService.asPlanned(partySettingsQueryService.getSettings(partyCode));
 
             if (!settings.isActive()) {
                 model.addAttribute(PARTY_CODE, partyCode);   // "check again" opens the party's link
@@ -177,7 +180,8 @@ public class GuestController {
         Locale locale = LocaleContextHolder.getLocale();
         return () -> {
             try {
-                PartySettingsEntity settings = partySettingsQueryService.getSettings(partyCode);
+                // the guest's limit and the tip button as the organiser's plan has them (V35)
+                PartySettingsEntity settings = planService.asPlanned(partySettingsQueryService.getSettings(partyCode));
 
                 if (!settings.isActive()) {
                     model.addAttribute(PARTY_CODE, partyCode);

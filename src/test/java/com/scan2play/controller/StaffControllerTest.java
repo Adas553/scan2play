@@ -70,7 +70,7 @@ class StaffControllerTest {
         sessionHelper = mock(DjSessionHelper.class);
         invitations = mock(StaffInvitationService.class);
         // views under a prefix of their own: the view "staff" of /dj/staff is not the handler's own address again
-        mockMvc = MockMvcBuilders.standaloneSetup(new StaffController(staff, settings, sessionHelper, invitations))
+        mockMvc = MockMvcBuilders.standaloneSetup(new StaffController(staff, settings, sessionHelper, invitations, com.scan2play.service.Plans.off()))
                 .setViewResolvers(new org.springframework.web.servlet.view.InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
         when(staff.partyOfLink(anyString())).thenReturn(Optional.empty());
         when(staff.partyOfLink(TOKEN)).thenReturn(Optional.of(pub));

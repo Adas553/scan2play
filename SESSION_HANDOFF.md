@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-10
+# Session Handoff — 2026-10-14
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
@@ -7,6 +7,24 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
 
 ## Start here
 
+- **2026-10-14 — the plans Free / Pro, the foundation only, on the branch `claude/scan2play-subscription-prep-uq2vun` (on top of
+  `main` = `dev` = `c989b6d`, CI green, Railway started clean; uncommitted, for review).** The review with the features, the model,
+  the mockups of three looks on the real styles: https://claude.ai/artifact/32eMmdwz9pTGLs8pRQzLBv — the owner: **variant B**; the
+  guests' limits fixed at 2 / 3 / 15 without Pro; the profiles and the tips Pro too; the staff 1 place without Pro (who is on it stays);
+  a page `/pro`. Done, PROJECT_CONTEXT 4.1 "Plans" / 4.2 / 6.1–6.7 / 8 / 9 / 10 / 12 / 13: **V35** `dj_plan` (empty: no row is Free),
+  `Plan` / `PlanFeature` / `PlanSource`, **`PlanService`** — the one place (`require` → 403 `PlanRequiredException`, `asPlanned` for the
+  guests, the AI, the queue's ⭐ / 💸 and the print, `view` for the pages, the staff's places, the trial), `scan2play.plans.enforce`
+  (`PLANS_ENFORCE`, **false**: everything for everyone, no plan read, nothing says "Pro" — nothing changed for the DJs),
+  `SCAN2PLAY_PLANS_PRO_OWNERS` (Pro for ever), `PLANS_TRIAL_DAYS` (0); the cards and rows of B (`.s2p-pro`, `components :: proMark /
+  proOffer`), "Podsumowanie wieczoru PRO" → `/pro`, `pro[_pl].html`; the staff's places in the texts follow the plan ("Zajęte {0} z {0}
+  miejsc"; "Obsługa jest pełna: …" without "10 osób"). Tests: 658 unit (`PlanServiceTest`, `PlanFeatureEndpointsTest` — every Pro
+  endpoint refused for a Free organiser, let through off / Pro / for the staff of a Pro organiser; the guest page, the AI, the hosts'
+  page, the staff's places, the render of the panel and the settings with the plans off — no "PRO" — and for a Free organiser and
+  their staff), 65 database on a local PostgreSQL 16 (`MigrationIT` V35, `DjPlanIT` — red without the row deleted with the account),
+  94 browser — new `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide` (red without the styles); six mutations of the
+  code each caught by the unit tests. In the cloud container `help-window` and `settings-more-rows` fail on `HEAD` as well (its
+  Chromium). **Next:** the owner looks at the diff, a PR to `dev`; switching the plans on is later and is one variable — decide first
+  what the DJs of that day get, and the payment provider, the terms, the privacy policy, invoices / VAT (the review's list).
 - **2026-10-12, later — "Kopiuj" and the queue's keys, on the branch `claude/gifted-fermat-u06fkg` (uncommitted, for review).** The
   owner asked how Scan2Play could work better with Serato / VirtualDJ / rekordbox / Spotify / Tidal. Found: Spotify is in Serato,
   rekordbox and djay again since 09.2025 (a partnership of theirs; our Web API stays closed); TIDAL's Developer Terms 1.0 allow only

@@ -40,7 +40,7 @@ class DjPartySettingsControllerLinksTest {
         settingsService = mock(PartySettingsCommandService.class);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
-                settingsService, mock(AccountDeletionService.class), sessionHelper)).build();
+                settingsService, mock(AccountDeletionService.class), sessionHelper, com.scan2play.service.Plans.off())).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
@@ -53,7 +53,7 @@ class DjPartySettingsControllerLinksTest {
                         .param("instagram", " @dj.koko ").param("facebook", "https://m.facebook.com/djkoko?ref=share").param("tiktok", ""))
                 .andExpect(status().is3xxRedirection());
 
-        verify(sessionHelper).validateOwnership(eq(PARTY), any(), any());
+        verify(sessionHelper).requireOwner(eq(PARTY), any(), any());
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());
         PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).tiktokUrl("https://www.tiktok.com/@old").build();
@@ -74,7 +74,7 @@ class DjPartySettingsControllerLinksTest {
                         .param("tip", ""))
                 .andExpect(status().is3xxRedirection());
 
-        verify(sessionHelper, org.mockito.Mockito.times(2)).validateOwnership(eq(PARTY), any(), any());
+        verify(sessionHelper, org.mockito.Mockito.times(2)).requireOwner(eq(PARTY), any(), any());
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(settingsService, org.mockito.Mockito.times(2)).updateSettings(eq(PARTY), updater.capture());
         PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).build();

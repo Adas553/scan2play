@@ -65,7 +65,7 @@ class GuidePageRenderTest {
     private static String render(Locale locale, org.springframework.security.core.Authentication visitor) {
         LocaleContextHolder.setLocale(locale);
         ConcurrentModel model = new ConcurrentModel();
-        String view = new LegalController().guide(visitor, model);
+        String view = new LegalController(com.scan2play.service.Plans.off()).guide(visitor, model);
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);

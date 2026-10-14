@@ -248,6 +248,16 @@
     </form>
 </span>
 
+<!--/* A feature of the Pro plan, to an organiser without it (V35, variant B of the review 2026-10-14): a quiet "PRO" by its name,
+     never in the queue. Only while the plans are enforced and only to the organiser (PlanService.View.pro) — the staff do not see it. */-->
+<span th:fragment="proMark" class="s2p-pro" th:text="#{plan.pro.badge}">PRO</span>
+
+<!--/* In place of a Pro feature's form: one sentence (what it does, or that the DJ's own data waits) and the way to the Pro page */-->
+<div th:fragment="proOffer(text)" class="s2p-pro-box" data-pro-offer>
+    <p th:text="${text}">Available in the Pro plan.</p>
+    <a href="/pro" class="btn btn-sm btn-outline-light" th:text="#{plan.pro.more}">See what Pro adds</a>
+</div>
+
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
 <!-- ======================================================================

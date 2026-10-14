@@ -100,11 +100,12 @@ class StaffPageRenderTest {
                         .joinedAt(Instant.parse("2026-10-09T18:00:00Z"))
                         .permissions(EnumSet.of(StaffPermission.QUEUE, StaffPermission.SUMMARY)).build()));
         when(staff.placesTaken(PARTY)).thenReturn(3L);
+        when(staff.placesOf(any())).thenReturn(PartyStaffService.MAX_STAFF);   // the plans not enforced: 10 places (V35)
         StaffInvitationService invitations = mock(StaffInvitationService.class);
         when(invitations.waitingAt(PARTY)).thenReturn(List.of(StaffInvitationEntity.builder().id(3L).partyCode(PARTY)
                 .email("ola.kowalska@gmail.com").emailKey("olakowalska@gmail.com").permissions(StaffRole.CO_ORGANISER.permissions())
                 .invitedAt(Instant.parse("2026-10-10T08:00:00Z")).build()));
-        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper, invitations);
+        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper, invitations, com.scan2play.service.Plans.off());
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("staffSaved", 7L);
         MockHttpServletRequest panelRequest = new MockHttpServletRequest();
@@ -167,8 +168,9 @@ class StaffPageRenderTest {
         when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
         PartyStaffService staff = mock(PartyStaffService.class);
         when(staff.placesTaken(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF);
+        when(staff.placesOf(any())).thenReturn(PartyStaffService.MAX_STAFF);
         StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper,
-                mock(StaffInvitationService.class));
+                mock(StaffInvitationService.class), com.scan2play.service.Plans.off());
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("staffInvited", new StaffController.InviteResult("INVALID_ADDRESS", "ola@gmail", true));
 
@@ -194,5 +196,29 @@ class StaffPageRenderTest {
         assertThat(html).doesNotContain("??");
         assertThat(html).contains("Organizator usunął Twój dostęp do imprezy: Klub Ola.", "Nie obsługujesz teraz żadnej imprezy",
                 "action=\"/dj/join\"", "action=\"/dj/panel\"", ">Załóż własną imprezę<", "action=\"/dj/logout\"");
+    }
+
+    /**
+     * An organiser without Pro, the plans enforced (V35): one place, said with the way to what Pro adds; the page renders (the owner,
+     * 2026-10-14: it failed — a static class in a fragment's parameter is forbidden in Thymeleaf, and only this test enforces the plans).
+     */
+    @Test
+    void aFreeOrganiser_hasOnePlace_andIsToldOfTen() throws IOException {
+        PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("Klub Ola").build();
+        DjSessionHelper helper = mock(DjSessionHelper.class);
+        when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
+        PartyStaffService staff = mock(PartyStaffService.class);
+        when(staff.placesTaken(PARTY)).thenReturn(1L);
+        when(staff.placesOf(any())).thenReturn(1);
+        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper,
+                mock(StaffInvitationService.class), com.scan2play.service.Plans.enforced());
+
+        ConcurrentModel model = new ConcurrentModel();
+        assertThat(controller.staffPage(PARTY, model, null, new MockHttpSession(), new MockHttpServletRequest())).isEqualTo("staff");
+        String html = render("staff", model.asMap(), PL);
+
+        assertThat(html).doesNotContain("??").contains("Miejsca w obsłudze, razem z zaproszeniami: 1.", "id=\"staffFull\"",
+                "Zajęte 1 z 1 miejsc", "data-pro-offer", "Bez Pro: 1 osoba w obsłudze, razem z zaproszeniami. Do 10 osób w planie Pro.",
+                "href=\"/pro\"");
     }
 }

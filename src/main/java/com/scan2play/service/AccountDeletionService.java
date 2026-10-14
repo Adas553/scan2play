@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.repository.DjPlanRepository;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.PartyStaffRepository;
@@ -40,11 +41,12 @@ public class AccountDeletionService {
     private final PushSubscriptionRepository pushSubscriptionRepository;
     private final PartyStaffRepository partyStaffRepository;
     private final StaffInvitationRepository staffInvitationRepository;
+    private final DjPlanRepository djPlanRepository;
     private final CacheManager cacheManager;
 
     /**
      * Deletes all data associated with the given DJ (owner).
-     * This includes: song requests, feedback, party settings and the devices that took notifications.
+     * This includes: song requests, feedback, party settings, the devices that took notifications and the DJ's plan (V35).
      *
      * @param ownerId The OAuth2 owner ID (the Google subject).
      */
@@ -82,6 +84,15 @@ public class AccountDeletionService {
         // 6. Wherever the person worked on another party's staff (V30)
         partyStaffRepository.deleteByMember(ownerId);
 
+        // 7. The DJ's plan (V35) — and its copy in memory
+        djPlanRepository.deleteById(ownerId);
+        afterCommit(() -> {
+            var plans = cacheManager.getCache(PlanService.CACHE);
+            if (plans != null) {
+                plans.evict(ownerId);
+            }
+        });
+
         log.info("Account deletion completed for ownerId={}", ownerId);
     }
 
@@ -90,10 +101,13 @@ public class AccountDeletionService {
      * it back into the cache. Without a transaction (a unit test) the caches are evicted at once.
      */
     private void evictPartyCachesAfterCommit(String partyCode) {
-        Runnable evict = () -> PARTY_CACHES.stream()
+        afterCommit(() -> PARTY_CACHES.stream()
                 .map(cacheManager::getCache)
                 .filter(Objects::nonNull)
-                .forEach(cache -> cache.evict(partyCode));
+                .forEach(cache -> cache.evict(partyCode)));
+    }
+
+    private static void afterCommit(Runnable evict) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

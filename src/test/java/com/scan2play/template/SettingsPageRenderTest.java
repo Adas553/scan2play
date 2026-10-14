@@ -110,6 +110,12 @@ class SettingsPageRenderTest {
 
     /** What the controller does for {@code access} with {@code limiter}, rendered like the view resolver would. */
     private static String render(PartyStaffService.Access access, GuestRequestLimiter limiter, Locale locale) {
+        return render(access, limiter, locale, com.scan2play.service.Plans.off());
+    }
+
+    /** The same with the plans as {@code plans} decides them (V35). */
+    private static String render(PartyStaffService.Access access, GuestRequestLimiter limiter, Locale locale,
+                                 com.scan2play.service.PlanService plans) {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.access(any(), any(), any())).thenReturn(access);
         PartyStaffService staff = mock(PartyStaffService.class);
@@ -119,7 +125,7 @@ class SettingsPageRenderTest {
         when(push.publicKey()).thenReturn(PUBLIC_KEY);
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), limiter, push, staff,
-                mock(StaffInvitationService.class));
+                mock(StaffInvitationService.class), plans);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -242,5 +248,63 @@ class SettingsPageRenderTest {
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), Locale.ENGLISH);
         assertThat(html).contains("<html lang=\"en\">", ">Party settings<", ">Request notifications<", ">Requests per guest<",
                 ">per 10 min<", ">per 24 h<", "One network is e.g. the venue’s Wi-Fi");
+    }
+
+    // ---------------------------------------------------------------- the plans (V35)
+
+    @Test
+    void withThePlansNotEnforced_nothingSaysPro() {
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .doesNotContain("s2p-pro", "data-pro-offer", "W planie Pro", "Zobacz, co daje Pro");
+    }
+
+    /**
+     * An organiser without Pro, the plans enforced (variant B): each card of a Pro feature keeps its title with "PRO" and says, in
+     * place of its form, that what was saved waits (the lists, the profiles) or what holds (the limits: 2 / 3 / 15), with the way to
+     * /pro; no form of it is on the page. {@code settings-free.html} for the browser tests.
+     */
+    @Test
+    void aFreeOrganiser_seesEachProCard_withWhatWaits_andNoForm() throws IOException {
+        PartySettingsEntity saved = party();
+        saved.setRequestLimit(5);
+        String html = render(new PartyStaffService.Access(saved, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
+                PL, com.scan2play.service.Plans.enforced());
+
+        assertThat(html).as("the jumps keep the cards, marked")
+                .contains("id=\"settingsJump\"", "href=\"#hostListsCard\"", "href=\"#linksCard\"", "href=\"#limitsCard\"",
+                        "class=\"s2p-pro\">PRO<");
+        assertThat(html).as("the hosts' lists: kept (⭐ 1), not editable here, the link not shown")
+                .contains("id=\"hostListsCard\"", "Twoje listy są zachowane: 🚫 0 · ⭐ 1. Wrócą, gdy włączysz Pro",
+                        "href=\"/pro\"", ">Zobacz, co daje Pro<")
+                .doesNotContain("id=\"hostListsForm\"", "action=\"/dj/dashboard/host-lists\"", "id=\"hostLinkInput\"",
+                        "action=\"/dj/dashboard/host-link\"", ">Hej sokoły</textarea>");
+        assertThat(html).as("the profiles and the tip link: kept, not editable")
+                .contains("id=\"linksCard\"", "Twoje profile i link do napiwków są zachowane. Wrócą, gdy włączysz Pro.")
+                .doesNotContain("id=\"djLinksForm\"", "id=\"tipLinkForm\"", "dj.koko", "buycoffee.to/djkoko");
+        assertThat(html).as("the limits: what holds without Pro, the server's use still there")
+                .contains("id=\"limitsCard\"", "Każda impreza bez Pro: 2 prośby na gościa, potem 3 min przerwy, bez powtórek z ostatnich 15.",
+                        "id=\"serverLimitsInfo\"")
+                .doesNotContain("action=\"/dj/dashboard/limits\"", "id=\"requestLimit\"");
+        assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"");
+        write("settings-free.html", html);
+    }
+
+    /** A new organiser without Pro and nothing saved: "Dostępne w planie Pro." and what the card would do. */
+    @Test
+    void aFreeOrganiserWithNothingSaved_isToldWhatTheCardsDo() {
+        PartySettingsEntity fresh = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY).build();
+        String html = render(new PartyStaffService.Access(fresh, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
+                PL, com.scan2play.service.Plans.enforced());
+        assertThat(html).contains(">Dostępne w planie Pro.<", "Przyciski Twoich profili i „Napiwek dla DJ-a” u gości i na wydruku — w planie Pro.")
+                .doesNotContain("zachowane");
+    }
+
+    /** A co-organiser of a party without Pro: no card of a Pro feature at all (hidden: not hers to buy). */
+    @Test
+    void aCoOrganiserOfAFreeParty_seesNoProCard() {
+        String html = render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL,
+                com.scan2play.service.Plans.enforced());
+        assertThat(html).contains("id=\"deviceCard\"")
+                .doesNotContain("id=\"hostListsCard\"", "id=\"limitsCard\"", "s2p-pro", "id=\"settingsJump\"");
     }
 }

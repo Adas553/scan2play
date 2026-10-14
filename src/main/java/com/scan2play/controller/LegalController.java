@@ -1,11 +1,15 @@
 package com.scan2play.controller;
 
+import com.scan2play.service.PlanService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Serves the legal pages (privacy policy, terms), required for Google OAuth verification, and the guide "Jak działa Scan2Play"
@@ -15,7 +19,10 @@ import org.springframework.web.bind.annotation.GetMapping;
  * for static legal content that rarely changes.
  */
 @Controller
+@RequiredArgsConstructor
 public class LegalController {
+
+    private final PlanService planService;
 
     @GetMapping("/privacy")
     public String privacyPolicy() {
@@ -36,6 +43,20 @@ public class LegalController {
         model.addAttribute("loggedIn", authentication != null && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken));
         return resolveTemplate("guide");
+    }
+
+    /**
+     * "Scan2Play Pro" (V35): what the Pro plan adds and what stays everyone's — where "Zobacz, co daje Pro" leads. Only while the
+     * plans are enforced: before that nothing says "Pro", and the page is a 404.
+     */
+    @GetMapping("/pro")
+    public String pro(Authentication authentication, Model model) {
+        if (!planService.isEnforced()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        model.addAttribute("loggedIn", authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken));
+        return resolveTemplate("pro");
     }
 
     /**

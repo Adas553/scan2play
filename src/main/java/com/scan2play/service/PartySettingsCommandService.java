@@ -22,6 +22,7 @@ public class PartySettingsCommandService {
 
     private final PartySettingsRepository partySettingsRepository;
     private final CacheManager cacheManager;
+    private final PlanService planService;
 
     /**
      * Retrieves the existing party for the given DJ (ownerId) or creates a new one if it doesn't exist.
@@ -50,7 +51,9 @@ public class PartySettingsCommandService {
                 .build();
 
         log.info("Creating new party for owner: {} with code: {}", ownerId, party.getPartyCode());
-        return partySettingsRepository.save(party);
+        PartySettingsEntity saved = partySettingsRepository.save(party);
+        planService.startTrial(ownerId);   // only while the plans are enforced (V35); in this transaction, as the party
+        return saved;
     }
 
     /**

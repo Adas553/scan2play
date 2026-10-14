@@ -74,7 +74,7 @@ public class SecurityConfig {
                         .requestMatchers("/join", "/join/*").permitAll()   // POST /join: the link pasted on the landing page
                         // Legal pages (Privacy Policy, Terms of Service) and the guide "Jak działa Scan2Play" (public: a DJ reads it before
                         // the first login, a person of the staff before joining — the owner, 2026-10-12)
-                        .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works").permitAll()
+                        .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // DJ dashboard is protected

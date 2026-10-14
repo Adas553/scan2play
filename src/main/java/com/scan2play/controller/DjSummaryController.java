@@ -1,8 +1,10 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.EveningSummaryService;
+import com.scan2play.service.PlanService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
@@ -41,12 +43,14 @@ public class DjSummaryController {
     private final EveningSummaryService eveningSummaryService;
     private final DjSessionHelper sessionHelper;
     private final MessageSource messageSource;
+    private final PlanService planService;
 
     /** The evening {@code evening} ("2026-10-03"); none, or one that is not a date, is the latest evening with requests. */
     @GetMapping
     public String summary(@RequestParam(required = false) String evening, @RequestParam(required = false) String party,
                           Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.require(party, StaffPermission.SUMMARY, authentication, session);
+        PartySettingsEntity settings = planService.require(sessionHelper.require(party, StaffPermission.SUMMARY, authentication,
+                session), PlanFeature.SUMMARY);
         List<EveningSummaryService.Evening> evenings = eveningSummaryService.evenings(settings.getPartyCode());
         LocalDate shown = pick(evening, evenings);
         model.addAttribute(PARTY_CODE, settings.getPartyCode());
@@ -61,7 +65,8 @@ public class DjSummaryController {
     @GetMapping("/csv")
     public ResponseEntity<byte[]> csv(@RequestParam(required = false) String evening, @RequestParam(required = false) String party,
                                       Locale locale, OAuth2AuthenticationToken authentication, HttpSession session) {
-        PartySettingsEntity settings = sessionHelper.require(party, StaffPermission.SUMMARY, authentication, session);
+        PartySettingsEntity settings = planService.require(sessionHelper.require(party, StaffPermission.SUMMARY, authentication,
+                session), PlanFeature.SUMMARY);
         LocalDate shown = pick(evening, eveningSummaryService.evenings(settings.getPartyCode()));
         if (shown == null) {
             return ResponseEntity.notFound().build();

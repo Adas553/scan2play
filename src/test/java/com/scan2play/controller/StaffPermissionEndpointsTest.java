@@ -73,16 +73,16 @@ class StaffPermissionEndpointsTest {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class));
+                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off());
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new DjSongController(mock(DjService.class), helper),
-                        new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), helper),
+                        new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off()),
+                        new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), helper, com.scan2play.service.Plans.off()),
                         dashboard,
-                        new DjSummaryController(mock(EveningSummaryService.class), helper, new StaticMessageSource()),
+                        new DjSummaryController(mock(EveningSummaryService.class), helper, new StaticMessageSource(), com.scan2play.service.Plans.off()),
                         new StaffController(staff, mock(PartySettingsCommandService.class), helper,
-                                mock(com.scan2play.service.StaffInvitationService.class)))
+                                mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 

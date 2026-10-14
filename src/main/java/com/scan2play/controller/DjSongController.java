@@ -1,7 +1,9 @@
 package com.scan2play.controller;
 
+import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.DjService;
+import com.scan2play.service.PlanService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -33,6 +35,7 @@ public class DjSongController {
 
     private final DjService djService;
     private final DjSessionHelper sessionHelper;
+    private final PlanService planService;
 
     /**
      * Marks a specific song request as "played".
@@ -90,7 +93,8 @@ public class DjSongController {
     public String countTip(@RequestParam Long id, @RequestParam(defaultValue = "true") boolean add,
                            @RequestParam(required = false) String partyCode,
                            OAuth2AuthenticationToken authentication, HttpSession session) {
-        String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.TIPS, authentication, session).getPartyCode();
+        String ownerPartyCode = planService.require(sessionHelper.require(partyCode, StaffPermission.TIPS, authentication, session),
+                PlanFeature.TIPS).getPartyCode();
         djService.countTip(id, ownerPartyCode, add);
         return REDIRECT_DASHBOARD;
     }

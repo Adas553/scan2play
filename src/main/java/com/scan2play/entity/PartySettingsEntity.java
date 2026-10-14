@@ -41,6 +41,11 @@ public class PartySettingsEntity {
     /** The longest address of a DJ's profile (V24). */
     public static final int LINK_MAX = 200;
 
+    /** A new party's guests' limits — and every party's without the Pro plan (V35, {@code PlanService.asPlanned}). */
+    public static final int DEFAULT_REQUEST_LIMIT = 2;
+    public static final int DEFAULT_COOLDOWN_MINUTES = 3;
+    public static final int DEFAULT_DUPLICATE_CHECK_WINDOW = 15;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -138,16 +143,16 @@ public class PartySettingsEntity {
     // --- Rate Limiting ---
     @Builder.Default
     @Column(nullable = false)
-    private int requestLimit = 2;
+    private int requestLimit = DEFAULT_REQUEST_LIMIT;
 
     @Builder.Default
     @Column(nullable = false)
-    private int cooldownMinutes = 3;
+    private int cooldownMinutes = DEFAULT_COOLDOWN_MINUTES;
 
     // --- Duplicate Filtering ---
     @Builder.Default
     @Column(nullable = false)
-    private int duplicateCheckWindow = 15;
+    private int duplicateCheckWindow = DEFAULT_DUPLICATE_CHECK_WINDOW;
 
     /** What the invitation link gives (a copy): its permissions, or the role "Obsługa kolejki" for a link of a version before V33. */
     public Set<StaffPermission> staffLinkGrants() {

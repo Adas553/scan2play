@@ -2,7 +2,9 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.model.PlanFeature;
 import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PlanService;
 import com.scan2play.util.SongList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ public class HostController {
 
     private final PartySettingsRepository partySettingsRepository;
     private final PartySettingsCommandService partySettingsCommandService;
+    private final PlanService planService;
 
     @GetMapping("/{token}")
     public String hostLists(@PathVariable String token, Model model) {
@@ -62,7 +65,8 @@ public class HostController {
         if (token == null || token.length() > 32) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return partySettingsRepository.findByHostToken(token)
+        // without the Pro plan (V35) the link is off, as an old one: the lists stay saved for when Pro is back
+        return partySettingsRepository.findByHostToken(token).filter(party -> planService.allows(party, PlanFeature.HOST_LISTS))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 }
