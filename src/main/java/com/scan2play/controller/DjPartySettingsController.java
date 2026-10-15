@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+
 import static com.scan2play.controller.ViewAttributes.*;
 
 /**
@@ -206,7 +208,11 @@ public class DjPartySettingsController {
             case "off" -> null;
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         };
-        partySettingsCommandService.updateSettings(partyCode, s -> s.setHostToken(token));
+        Instant madeAt = token == null ? null : Instant.now();
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setHostToken(token);
+            s.setHostTokenMadeAt(madeAt);   // it works 30 days (V37)
+        });
         // a full page load: the page "Ustawienia imprezy" of the same party again (a co-organiser's too), at the card
         return REDIRECT_SETTINGS + "?party=" + partyCode + "#hostListsCard";
     }

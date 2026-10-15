@@ -156,6 +156,19 @@ class HtmlLangDeclarationTest {
         assertThat(engine.process("error", error)).contains("href=\"/dj/dashboard\"");
     }
 
+    @Test
+    @DisplayName("\"Spróbuj ponownie\" never leads to another site: //host and /\\host are the home page (review 2026-10-14)")
+    void theErrorPagesRetry_staysOnTheSite() {
+        WebContext error = webContext(PL);
+        error.setVariable("status", 400);
+        // what Tomcat gives the error page for GET //evil.example/x and GET /\evil.example/x (checked with curl, 2026-10-15)
+        for (String path : List.of("//evil.example/x", "/\\evil.example/x", "evil.example")) {
+            error.setVariable("path", path);
+            assertThat(engine.process("error", error)).as(path).containsPattern("href=\"/\"\\s+id=\"retryBtn\"")
+                    .doesNotContain("evil.example");
+        }
+    }
+
     /** A web request's context: the pages link their styles and scripts with "@{/css/...}", which needs one. */
     private static WebContext webContext(Locale locale) {
         MockServletContext servletContext = new MockServletContext();

@@ -8,6 +8,15 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, evening — the small items, group 2 "Bezpieczeństwo", on the branch `claude/security-small` on top of
+  `claude/gemini-3-6` (#77); a PR to `dev`.** The error page's "Spróbuj ponownie" was an open redirect (`//evil.example/x` and
+  `/\evil.example/x` → `href="//evil.example/x"`, checked with curl on the running app) — now `/`. `Referrer-Policy: same-origin`,
+  `Permissions-Policy`. `/<version>/js/**` instead of `/*/js/**` (it let `/dj/js/…` past the login). `/csp-report` logs ≤ 100 an hour,
+  `/dj/feedback` 10 an hour per account (429). A 404 / 500 under the deploy's version is not cached for a year. The owner: "zrób jak
+  uważasz" for the links — V37: the hosts' and the invitation link work 30 days (as an invitation by e-mail); the settings and
+  "Obsługa" say "Działa do …". Guests' texts stay in the INFO log (the privacy policy says so). CSP_ENFORCE: no violation in Railway's
+  log — the plan is in PROJECT_CONTEXT 8. Tests: 706 unit, 81 database, 108 browser. **The owner:** `CSP_ENFORCE=true` on Railway by the
+  plan. The text "Działa do {0}." — the owner asked for my proposal.
 - **2026-10-15, evening — the review of 2026-10-14, the small items, group 1 "Gemini": `gemini-3.6-flash`, on the branch
   `claude/gemini-3-6` from `origin/dev` = `1afca1a`; a PR to `dev`.** Google retired `gemini-3.5-flash` on 2026-10-08 (its calls
   go to 3.6). `GeminiComparison` run with the key from IntelliJ's run configuration (the owner's yes; read by a script, never

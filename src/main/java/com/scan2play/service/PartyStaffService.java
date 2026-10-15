@@ -94,12 +94,12 @@ public class PartyStaffService {
         return userId != null && userId.equals(party.getOwnerId());
     }
 
-    /** The party an invitation link opens, if the link is the party's current one. */
+    /** The party an invitation link opens, if the link is the party's current one and was made less than 30 days ago (V37). */
     public Optional<PartySettingsEntity> partyOfLink(String token) {
         if (token == null || token.isEmpty() || token.length() > 32) {
             return Optional.empty();
         }
-        return partySettingsRepository.findByStaffToken(token);
+        return partySettingsRepository.findByStaffToken(token).filter(party -> party.staffLinkWorks(Instant.now()));
     }
 
     /**
@@ -115,7 +115,7 @@ public class PartyStaffService {
             return new Joined(JoinOutcome.UNKNOWN_LINK, null);
         }
         Optional<PartySettingsEntity> found = partySettingsRepository.lockByStaffToken(token);
-        if (found.isEmpty()) {
+        if (found.isEmpty() || !found.get().staffLinkWorks(Instant.now())) {   // made more than 30 days ago (V37): as an old link
             return new Joined(JoinOutcome.UNKNOWN_LINK, null);
         }
         PartySettingsEntity party = found.get();

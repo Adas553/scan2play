@@ -224,6 +224,16 @@ class SmokeTest {
     }
 
     @Test
+    @DisplayName("No address of ours goes to another site (the hosts' secret link /h/…), no camera, microphone or location (review 2026-10-14)")
+    void pages_shouldCarryTheReferrerAndPermissionsPolicies() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(header().string("Referrer-Policy", "same-origin"))
+                .andExpect(header().string("Permissions-Policy", containsString("camera=()")))
+                .andExpect(header().string("Permissions-Policy", containsString("microphone=()")))
+                .andExpect(header().string("Permissions-Policy", containsString("geolocation=()")));
+    }
+
+    @Test
     @DisplayName("A browser's CSP report is taken without a login or a CSRF token")
     void cspReport_isTakenWithoutLoginOrCsrf() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/csp-report")
@@ -266,6 +276,14 @@ class SmokeTest {
     void dashboard_shouldRedirectUnauthenticated() throws Exception {
         mockMvc.perform(get("/dj/dashboard"))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @DisplayName("/dj/js/… and /dj/css/… are the DJ's pages, not the deploy's scripts: a login first (review 2026-10-14)")
+    void theDjsAddresses_areNotTakenForTheVersionedScripts() throws Exception {
+        mockMvc.perform(get("/dj/js/anything")).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/dj/css/anything")).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/other/js/dashboard/main.js")).andExpect(status().is3xxRedirection());
     }
 
     @Test

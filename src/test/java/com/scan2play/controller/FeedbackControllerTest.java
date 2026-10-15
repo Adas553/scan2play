@@ -64,6 +64,21 @@ class FeedbackControllerTest {
     }
 
     @Test
+    void anAccountSendsAtMostTheHoursShare_theNextIsRefused429_andNotStored() {
+        for (int i = 0; i < FeedbackController.MAX_PER_HOUR; i++) {
+            assertThat(controller.submitFeedback("ABC12", "idea " + i, dj, session).getStatusCode().value()).isEqualTo(200);
+        }
+
+        assertThat(controller.submitFeedback("ABC12", "one more", dj, session).getStatusCode().value()).isEqualTo(429);
+        verify(repository, org.mockito.Mockito.times(FeedbackController.MAX_PER_HOUR)).save(any());
+
+        OAuth2AuthenticationToken other = mock(OAuth2AuthenticationToken.class);
+        when(other.getName()).thenReturn("owner-2");
+        assertThat(controller.submitFeedback("XYZ99", "mine", other, session).getStatusCode().value())
+                .as("another account has its own share").isEqualTo(200);
+    }
+
+    @Test
     void someoneElsesParty_isRefused_beforeAnythingIsStored() {
         doThrow(new AccessDeniedException("You do not own party: ZZZ99"))
                 .when(sessionHelper).access(eq("ZZZ99"), any(), any());

@@ -1,16 +1,21 @@
 package com.scan2play.controller;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.scan2play.entity.FeedbackEntity;
 import com.scan2play.repository.FeedbackRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * REST endpoint for collecting DJ feedback (bug reports / feature ideas).
@@ -21,6 +26,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class FeedbackController {
+
+    /**
+     * How many messages one account may send an hour (review 2026-10-14): a person writes one or two; a script would fill the table.
+     * Counted in this instance's memory, by the account — as the guests' limits (one instance, PROJECT_CONTEXT 12).
+     */
+    static final int MAX_PER_HOUR = 10;
+
+    private final Cache<String, AtomicInteger> sentThisHour = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofHours(1)).maximumSize(10_000).build();
 
     private final FeedbackRepository feedbackRepository;
     private final DjSessionHelper sessionHelper;
@@ -50,6 +64,10 @@ public class FeedbackController {
         }
 
         String ownerId = authentication.getName();   // /dj/** needs the login; validateAccess has used it already
+        if (sentThisHour.get(ownerId, id -> new AtomicInteger()).incrementAndGet() > MAX_PER_HOUR) {
+            log.warn("Feedback refused: more than {} an hour from ownerId={}", MAX_PER_HOUR, ownerId);
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("error", "Too many messages — try again later"));
+        }
 
         FeedbackEntity feedback = FeedbackEntity.builder()
                 .partyCode(partyCode)

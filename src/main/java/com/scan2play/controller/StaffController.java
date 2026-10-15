@@ -8,6 +8,7 @@ import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.util.CodeGenerator;
+import com.scan2play.util.Times;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -290,9 +292,12 @@ public class StaffController {
         // the address the owner opened the panel at, not the guests' one: the invitation leads through Google's login, which works
         // only where the panel does — locally the guests' address is the computer's in the local network, and Google refuses a
         // login there ("device_id and device_name are required for private IP", 2026-10-09)
-        model.addAttribute(STAFF_LINK, settings.getStaffToken() == null ? null
+        // a link made more than 30 days ago (V37) is shown as none: it joins nobody, and "Utwórz link" makes a new one
+        boolean linkWorks = settings.staffLinkWorks(Instant.now());
+        model.addAttribute(STAFF_LINK, !linkWorks ? null
                 : ServletUriComponentsBuilder.fromContextPath(request).path("/join/{token}").buildAndExpand(settings.getStaffToken()).toUriString());
-        Set<StaffPermission> linkGrants = settings.getStaffToken() == null ? StaffRole.DEFAULT.permissions() : settings.staffLinkGrants();
+        model.addAttribute(STAFF_LINK_UNTIL, linkWorks ? Times.day(PartySettingsEntity.linkWorksUntil(settings.getStaffTokenMadeAt())) : null);
+        Set<StaffPermission> linkGrants = !linkWorks ? StaffRole.DEFAULT.permissions() : settings.staffLinkGrants();
         model.addAttribute(STAFF_LINK_ROLE, StaffRole.of(linkGrants));
         model.addAttribute(STAFF_LINK_PERMISSIONS, linkGrants);
         model.addAttribute(STAFF_INVITATIONS, staffInvitationService.waitingAt(partyCode));
@@ -392,6 +397,7 @@ public class StaffController {
         Set<StaffPermission> grants = make ? granted(role, permissions) : null;
         partySettingsCommandService.updateSettings(partyCode, s -> {
             s.setStaffToken(token);
+            s.setStaffTokenMadeAt(make ? Instant.now() : null);   // it works 30 days (V37)
             s.setStaffLinkPermissions(grants);
         });
         return backToStaffPage(partyCode);

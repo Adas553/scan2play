@@ -49,7 +49,8 @@ class PartyStaffServiceTest {
         query = mock(PartySettingsQueryService.class);
         invitations = mock(StaffInvitationRepository.class);
         service = new PartyStaffService(staff, invitations, parties, query, Plans.off());
-        party = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("DJ Koko").staffToken(TOKEN).build();
+        party = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("DJ Koko").staffToken(TOKEN)
+                .staffTokenMadeAt(java.time.Instant.now()).build();
         when(parties.findByStaffToken(TOKEN)).thenReturn(Optional.of(party));
         when(parties.lockByStaffToken(TOKEN)).thenReturn(Optional.of(party));
     }
@@ -74,6 +75,19 @@ class PartyStaffServiceTest {
         assertThat(saved.getValue().getJoinedAt()).isNotNull();
         assertThat(saved.getValue().getPermissions()).as("a link made before V33: what the staff could do before V32")
                 .isEqualTo(StaffRole.QUEUE.permissions());
+    }
+
+    /** A link works 30 days from when it was made (V37, the review of 2026-10-14): then it joins nobody, as an old one. */
+    @Test
+    void aLinkMadeMoreThan30DaysAgo_joinsNobody() {
+        party.setStaffTokenMadeAt(java.time.Instant.now().minus(java.time.Duration.ofDays(30)).minusSeconds(60));
+
+        assertThat(service.partyOfLink(TOKEN)).isEmpty();
+        assertThat(service.join(TOKEN, "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.UNKNOWN_LINK);
+        verify(staff, never()).save(any());
+
+        party.setStaffTokenMadeAt(java.time.Instant.now().minus(java.time.Duration.ofDays(29)));
+        assertThat(service.join(TOKEN, "kasia", "Kasia").outcome()).as("29 days: still works").isEqualTo(JoinOutcome.JOINED);
     }
 
     /** The link gives the role it was made with (V33): "Podgląd", or permissions ticked one by one — none ticked too. */

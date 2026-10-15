@@ -96,6 +96,7 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
     void theInvitationLink_joinsOnce_andTheStaffIsListedInTheOrderTheyJoined() {
         PartySettingsEntity pub = party("pub");
         pub.setStaffToken("it-token-" + System.nanoTime());
+        pub.setStaffTokenMadeAt(java.time.Instant.now());
         parties.saveAndFlush(pub);
 
         String kasia = "kasia-" + System.nanoTime();   // the other tests' rows stay in the class's database
@@ -113,6 +114,7 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
         PartySettingsEntity pub = party("pub");
         PartySettingsEntity other = party("other");
         pub.setStaffToken("it-perm-" + System.nanoTime());
+        pub.setStaffTokenMadeAt(java.time.Instant.now());
         parties.saveAndFlush(pub);
         String kasia = "kasia-" + System.nanoTime();
         service.join(pub.getStaffToken(), kasia, "Kasia");
@@ -134,6 +136,7 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
     void theLink_givesTheRoleItWasMadeWith() {
         PartySettingsEntity pub = party("pub");
         pub.setStaffToken("it-role-" + System.nanoTime());
+        pub.setStaffTokenMadeAt(java.time.Instant.now());
         pub.setStaffLinkPermissions(StaffRole.VIEWER.permissions());
         parties.saveAndFlush(pub);
         assertThat(jdbc.queryForObject("SELECT staff_link_permissions FROM party_settings WHERE party_code = ?", String.class,
@@ -154,6 +157,7 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
         PartySettingsEntity pub = party("pub");
         String oldToken = "it-old-" + System.nanoTime();
         pub.setStaffToken(oldToken);
+        pub.setStaffTokenMadeAt(java.time.Instant.now());
         pub.setStaffLinkPermissions(StaffRole.CO_ORGANISER.permissions());
         parties.saveAndFlush(pub);
         String kasia = "kasia-" + System.nanoTime();
@@ -196,6 +200,7 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
     void peopleJoiningAtOnce_neverPassTheLimit() throws Exception {
         PartySettingsEntity pub = party("pub");
         pub.setStaffToken("it-rush-" + System.nanoTime());
+        pub.setStaffTokenMadeAt(java.time.Instant.now());
         parties.saveAndFlush(pub);
         String prefix = "rush-" + System.nanoTime() + "-";
 

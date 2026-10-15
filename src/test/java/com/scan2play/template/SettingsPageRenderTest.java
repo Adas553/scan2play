@@ -100,7 +100,8 @@ class SettingsPageRenderTest {
     private static PartySettingsEntity party() {
         return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
                 .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko")
-                .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz").build();
+                .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz")
+                .hostTokenMadeAt(java.time.Instant.now()).build();
     }
 
     private static OAuth2AuthenticationToken user(String sub) {
@@ -176,7 +177,10 @@ class SettingsPageRenderTest {
                         ">Hej sokoły</textarea>", ">Lista gospodarzy<", "Jeden utwór lub wykonawca w linii.",
                         "value=\"http://localhost:8080/h/AbC_123-xyzAbC_123-xyz\" id=\"hostLinkInput\"", "data-copy-target=\"hostLinkInput\"",
                         "action=\"/dj/dashboard/host-link\"", ">Nowy link<", "data-confirm=\"Utworzyć nowy link? Stary przestanie działać.\"",
-                        "id=\"hostLinkOffBtn\"", ">Wyłącz<", "Link dla gospodarzy — wypełnią listy bez konta")
+                        "id=\"hostLinkOffBtn\"", ">Wyłącz<", "Link dla gospodarzy — wypełnią listy bez konta",
+                        // it works 30 days (V37)
+                        "id=\"hostLinkUntil\"", ">Działa do " + com.scan2play.util.Times.day(java.time.Instant.now().plus(java.time.Duration.ofDays(30)))
+                                + ".<")
                 .doesNotContain("para młoda, solenizant", "Na następną imprezę");
         assertThat(html).as("the DJ's profiles (V24) and tip link (V27), each form with its note for a refused one hidden until then")
                 .contains("id=\"linksCard\"", "id=\"djLinksForm\"", "action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"",

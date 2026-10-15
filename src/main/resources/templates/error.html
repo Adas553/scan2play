@@ -39,11 +39,14 @@
             <p class="error-code mt-2">
                 <span th:text="#{error.code.label}">Error</span> <span th:text="${status}">???</span>
             </p>
-            <!--/* A guest's page (/p/CODE/…) goes back to the party's own link; any other page is opened again. The landing page is
-                 for DJs (a Google login) — only a small link to it. */-->
+            <!--/* A guest's page (/p/CODE/…) goes back to the party's own link; any other page of this site is opened again. The
+                 landing page is for DJs (a Google login) — only a small link to it. A path that is not one of ours ("//evil.example/x",
+                 "/\evil.example" — a browser reads both as another site) is the home page: no open redirect (review 2026-10-14). */-->
             <div class="mt-4">
                 <a th:href="${path != null and #strings.startsWith(path, '/p/') and #arrays.length(#strings.arraySplit(path, '/')) > 1}
-                            ? ${'/p/' + #strings.arraySplit(path, '/')[1]} : (${path != null} ? ${path} : '/')"
+                            ? ${'/p/' + #strings.arraySplit(path, '/')[1]}
+                            : (${path != null and #strings.startsWith(path, '/') and !#strings.startsWith(path, '//')
+                                 and !#strings.contains(path, '\')} ? ${path} : '/')"
                    id="retryBtn" class="btn btn-action px-4" th:text="#{error.btn.retry}">↻ Try again</a>
             </div>
             <p class="mt-4 mb-0 small">

@@ -51,6 +51,18 @@ class CspReportControllerTest {
     }
 
     @Test
+    void aFloodOfDifferentReports_logsAtMostTheHoursShare(CapturedOutput output) {
+        for (int i = 0; i < 1_000; i++) {
+            controller.report(report("{\"csp-report\":{\"document-uri\":\"https://a/b\",\"violated-directive\":\"img-src\","
+                    + "\"blocked-uri\":\"https://evil.example/" + i + "\"}}"));
+        }
+
+        assertThat(output.getOut().split("CSP violation:", -1)).as("public: anyone can post here (review 2026-10-14)")
+                .hasSize(CspReportController.MAX_LOGGED_PER_HOUR + 1);
+        assertThat(output.getOut().split("CSP reports: more than", -1)).as("said once").hasSize(2);
+    }
+
+    @Test
     void longFields_areCutShort(CapturedOutput output) {
         controller.report(report("{\"csp-report\":{\"document-uri\":\"https://a/b\",\"violated-directive\":\"img-src\","
                 + "\"blocked-uri\":\"https://evil.example/" + "y".repeat(1000) + "\"}}"));
