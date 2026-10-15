@@ -401,4 +401,108 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
                 + " FROM song_requests WHERE id = ?", id))
                 .containsEntry("decision", "played").containsEntry("played", true).containsEntry("not_skipped", true);
     }
+
+    /**
+     * Two writers held behind the party's lock of the guests' requests ("S2PR") and let go in this order: each of them takes the lock
+     * itself, so they run one after the other whatever the timing.
+     */
+    private void inTurnBehindTheRequestsLock(String party, Runnable first, Runnable second) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        List<Future<?>> writers = new ArrayList<>();
+        try {
+            new TransactionTemplate(transactions).executeWithoutResult(status -> {
+                requests.lockRequests(SongRequestCommandService.lockKey(party));
+                writers.add(pool.submit(first));
+                awaitLockWaiters(jdbc, 1);
+                writers.add(pool.submit(second));
+                awaitLockWaiters(jdbc, 2);
+            });
+            for (Future<?> writer : writers) {
+                writer.get(30, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    /** "↩ Przywróć" of a skipped song and a guest asking for it again at the same moment: one waiting row, not two. */
+    @Test
+    void aRestoreAndTheSameSongAskedAgain_atOnce_makeOneWaitingRow() throws Exception {
+        String party = newParty();
+        Long wilki = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
+        dj.dismissSong(wilki, party);
+        jdbc.update("UPDATE song_requests SET skipped_at = now() - interval '3 hours' WHERE id = ?", wilki);   // its 2 hours over
+
+        inTurnBehindTheRequestsLock(party, () -> dj.restoreSong(wilki, party),
+                () -> commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()));
+
+        assertThat(rows(party)).extracting(row -> row.get("decision") + " " + row.get("votes")).containsExactly("accepted 2");
+    }
+
+    /**
+     * "Wyczyść historię" (the numbers start again from the highest one left) and a new song at the same moment: the numbers stay
+     * distinct and the party's counter is the highest of them — the next song gets the next one.
+     */
+    @Test
+    void clearingTheHistory_andANewSong_atOnce_keepTheNumbersDistinct() throws Exception {
+        String party = newParty();
+        commands.saveOrVote(request(party, "Waiting - One", "accepted", LINK), Set.of());
+        Long two = commands.saveOrVote(request(party, "Played - Two", "accepted", LINK), Set.of()).request().getId();
+        Long three = commands.saveOrVote(request(party, "Played - Three", "accepted", LINK), Set.of()).request().getId();
+        dj.markSongAsPlayed(two, party);
+        dj.markSongAsPlayed(three, party);
+
+        inTurnBehindTheRequestsLock(party, () -> dj.clearHistory(party),
+                () -> commands.saveOrVote(request(party, "New - Four", "accepted", LINK), Set.of()));
+
+        assertThat(jdbc.queryForList("SELECT request_number FROM song_requests WHERE party_code = ? ORDER BY id", Integer.class, party))
+                .containsExactly(1, 2);
+        assertThat(jdbc.queryForObject("SELECT request_counter FROM party_settings WHERE party_code = ?", Integer.class, party))
+                .isEqualTo(2);
+    }
+
+    /**
+     * "Wyczyść kolejkę" and "Zagrane" / "Pomiń" of one of its songs at the same moment, in either order: the song is one thing —
+     * played, or skipped, or cleared — never played and cleared at once. The writers queue behind the song's row.
+     */
+    @Test
+    void clearingTheQueue_andZagraneOrPomin_atOnce_leaveTheSongOneThing() throws Exception {
+        for (boolean clearFirst : new boolean[]{true, false}) {
+            for (boolean play : new boolean[]{true, false}) {
+                String party = newParty();
+                Long id = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
+                Runnable clear = () -> dj.clearQueue(party);
+                Runnable click = play ? () -> dj.markSongAsPlayed(id, party) : () -> dj.dismissSong(id, party);
+                ExecutorService pool = Executors.newFixedThreadPool(2);
+                List<Future<?>> writers = new ArrayList<>();
+                try {
+                    new TransactionTemplate(transactions).executeWithoutResult(status -> {
+                        jdbc.queryForObject("SELECT id FROM song_requests WHERE id = ? FOR UPDATE", Long.class, id);
+                        writers.add(pool.submit(clearFirst ? clear : click));
+                        awaitLockWaiters(jdbc, 1);
+                        writers.add(pool.submit(clearFirst ? click : clear));
+                        awaitLockWaiters(jdbc, 2);
+                    });
+                    for (Future<?> writer : writers) {
+                        writer.get(30, TimeUnit.SECONDS);
+                    }
+                } finally {
+                    pool.shutdownNow();
+                }
+
+                Map<String, Object> song = jdbc.queryForMap("SELECT decision, played_at IS NOT NULL AS played,"
+                        + " skipped_at IS NOT NULL AS skipped, cleared_at IS NOT NULL AS cleared FROM song_requests WHERE id = ?", id);
+                String what = (clearFirst ? "cleared, then " : "first ") + (play ? "Zagrane" : "Pomiń");
+                if (clearFirst) {
+                    assertThat(song).as(what).containsEntry("decision", "rejected").containsEntry("cleared", true)
+                            .containsEntry("played", false).containsEntry("skipped", false);
+                } else if (play) {
+                    assertThat(song).as(what).containsEntry("decision", "played").containsEntry("cleared", false);
+                } else {
+                    assertThat(song).as(what).containsEntry("decision", "rejected").containsEntry("skipped", true)
+                            .containsEntry("cleared", false);
+                }
+            }
+        }
+    }
 }

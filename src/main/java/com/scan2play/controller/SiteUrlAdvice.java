@@ -14,7 +14,7 @@ public class SiteUrlAdvice {
     private final String siteUrl;
 
     public SiteUrlAdvice(@Value("${scan2play.site-url}") String siteUrl) {
-        this.siteUrl = siteUrl.endsWith("/") ? siteUrl.substring(0, siteUrl.length() - 1) : siteUrl;
+        this.siteUrl = com.scan2play.util.Texts.withoutTrailingSlash(siteUrl);
     }
 
     @ModelAttribute("siteUrl")

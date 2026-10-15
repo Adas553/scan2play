@@ -24,7 +24,8 @@
 
             await t.stand.config({ queue: [{ id: 9, name: 'Sent while hidden', url: 'https://www.youtube.com/results?search_query=x' }] });
             setHidden(false);
-            await t.sleep(1000);
+            await t.waitFor(function () { return document.querySelector('#song-list tr[data-song-id="9"]'); }, 'the request', 1000)
+                .catch(function () { /* the check says it */ });
             t.check('shown again: the request sent meanwhile is on the list within a second',
                 document.querySelector('#song-list tr[data-song-id="9"]') !== null);
         }

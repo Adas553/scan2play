@@ -33,6 +33,32 @@ export function showPartyActive(active, pollSentAt) {
     if (endForm) endForm.classList.toggle('d-none', !active);
 }
 
+/**
+ * The page's notice that something the DJ asked for did not happen (fragments/components :: formRefused), in one of its two texts:
+ * 'save' — a form the server refused or that never reached it (forms.js): not saved, copy what you typed and reload; 'load' — a list
+ * that did not come (the History tab, its filter, a poll refused for good): reload. The page is not reloaded by itself.
+ */
+export function showRefused(kind) {
+    const notice = document.querySelector('[data-form-refused]');
+    if (!notice) return;
+    const shown = kind || 'save';
+    notice.querySelectorAll('[data-refused-text]').forEach(function (text) {
+        text.hidden = text.dataset.refusedText !== shown;
+    });
+    notice.hidden = false;
+}
+
+/** Hides the notice; with a kind ('load': the list came after all), only when it says that one. */
+export function hideRefused(kind) {
+    const notice = document.querySelector('[data-form-refused]');
+    if (!notice) return;
+    if (typeof kind === 'string') {
+        const text = notice.querySelector('[data-refused-text="' + kind + '"]');
+        if (!text || text.hidden) return;
+    }
+    notice.hidden = true;
+}
+
 /** An iPhone or an iPad (an iPad says "Macintosh", but has a touch screen). */
 export function isIos() {
     return /iPhone|iPad|iPod/.test(navigator.userAgent)

@@ -16,8 +16,8 @@
 - **The app runs from IntelliJ** against `target/classes` with `spring-boot-devtools`, which restarts it whenever
   that directory changes. Do not run `mvnw` inside the repo while it is running: copy the repo without
   `target/`, `.git` and `.idea` to a scratch directory and build/test there
-  (`.\mvnw.cmd -B -ntp test "-Dtest=!Scan2playApplicationTests,!*IT"`; that excluded test needs a full environment and a DB, and
-  `-Dtest` replaces surefire's own name patterns, so the `*IT` database tests must be excluded by name — without it they are
+  (`.\mvnw.cmd -B -ntp test "-Dtest=!*IT"`; `-Dtest` replaces surefire's own name patterns, so the `*IT` database tests must be
+  excluded by name — without it they are
   skipped anyway, outside failsafe, and counted as skipped).
 - **Never touch the developer's own database `scan2play`** (read-only inspection is fine). For anything that writes,
   create a throwaway `s2p_*` database in the local PostgreSQL (user `postgres`, password `1111` — the

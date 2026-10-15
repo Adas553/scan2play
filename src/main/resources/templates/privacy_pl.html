@@ -28,7 +28,7 @@
             <li>Plan konta (Free albo Pro), skąd pochodzi (np. okres próbny) i do kiedy obowiązuje</li>
             <li>Gdy DJ je poda: adresy jego profili na Instagramie, Facebooku i TikToku — publicznie widoczne dla gości na stronie imprezy i na wydruku kodu QR</li>
             <li>Gdy DJ go poda: link do jego strony napiwków (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — publicznie widoczny dla gości na stronie imprezy, pod przyjętą prośbą i na wydruku kodu QR</li>
-            <li>Wiadomości feedback przesłane przez panel DJ-a</li>
+            <li>Zgłoszenia (problemy i pomysły) przesłane przez panel DJ-a</li>
             <li>Gdy DJ włączy powiadomienia na urządzeniu: subskrypcja powiadomień tej przeglądarki (adres przeglądarki w usłudze powiadomień i jej klucze szyfrowania) oraz język panelu</li>
             <li>Gdy ktoś dołączy do obsługi imprezy (barman, drugi DJ) przez link zaproszenia albo zaproszenie właściciela: identyfikator jego konta Google, imię z tego konta i to, co właściciel pozwolił mu robić — imię widzi właściciel imprezy na liście obsługi</li>
             <li>Gdy właściciel zaprosi kogoś do obsługi po adresie e-mail jego konta Google: ten adres i to, co ta osoba będzie mogła robić — adres widzi właściciel na liście obsługi, dopóki osoba nie odpowie. Na ten adres nic nie wysyłamy: osoba zobaczy zaproszenie, gdy zaloguje się tym kontem, bo porównujemy go z adresem, który Google potwierdza przy logowaniu</li>
@@ -52,8 +52,8 @@
         <h3>4. Linki do innych serwisów</h3>
         <p>Scan2Play nie odtwarza muzyki i nie korzysta z żadnego API YouTube. Przycisk DJ-a „🔍 Podejrzyj” tylko otwiera w jego
             przeglądarce wyniki wyszukiwania piosenki na YouTube — to, co dzieje się tam, regulują
-            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">Warunki korzystania z YouTube</a> i
-            <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Polityka Prywatności Google</a>.
+            <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" class="text-warning">Warunki korzystania z YouTube</a> i
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="text-warning">Polityka Prywatności Google</a>.
         </p>
         <p>Przyciski Instagram, Facebook i TikTok na stronie imprezy prowadzą do profili DJ-a w tych serwisach. Scan2Play nie osadza
             ich treści ani skryptów — dopiero po kliknięciu otwiera się strona serwisu, a tam obowiązują jego zasady prywatności.
@@ -73,7 +73,8 @@
             <li>Przynależność do obsługi imprezy: do usunięcia dostępu przez właściciela, usunięcia konta osoby z obsługi albo konta właściciela</li>
             <li>Zaproszenie do obsługi po adresie e-mail, razem z adresem: do dołączenia lub odmowy, cofnięcia zaproszenia albo usunięcia konta przez właściciela — najdłużej 30 dni</li>
             <li>Logi serwera (w nich tekst próśb gości z kodem imprezy): przechowywane przez dostawcę hostingu przez 7 dni, potem usuwane</li>
-            <li>Feedback i plan konta: do usunięcia konta przez DJ-a</li>
+            <li>Zgłoszenia i plan konta: do usunięcia konta przez DJ-a</li>
+            <li>Gdy konto miało okres próbny planu Pro: skrót (SHA-256) identyfikatora konta Google — bez imienia, adresu e-mail i danych imprezy — zostaje także po usunięciu konta, bezterminowo, żeby to samo konto nie dostało drugiego okresu próbnego</li>
         </ul>
 
         <h3>6. Udostępnianie danych</h3>
@@ -88,8 +89,9 @@
 
         <h3>7. Twoje prawa — Usuwanie danych</h3>
         <p>Możesz usunąć wszystkie swoje dane w dowolnym momencie, klikając <strong>„Usuń konto"</strong> w Panelu DJ-a.
-            Spowoduje to trwałe usunięcie ustawień imprezy, historii piosenek, feedbacku, planu konta, obsługi Twojej imprezy i zaproszeń do niej.
-            Możesz również cofnąć dostęp Scan2Play w <a href="https://myaccount.google.com/permissions" target="_blank" class="text-warning">ustawieniach konta Google</a>.
+            Spowoduje to trwałe usunięcie ustawień imprezy, historii piosenek, zgłoszeń, planu konta, obsługi Twojej imprezy i zaproszeń do niej.
+            Zostaje tylko skrót identyfikatora konta, które miało okres próbny planu Pro (pkt 5).
+            Możesz również cofnąć dostęp Scan2Play w <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" class="text-warning">ustawieniach konta Google</a>.
         </p>
 
         <h3>8. Kontakt</h3>

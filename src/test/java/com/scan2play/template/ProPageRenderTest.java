@@ -74,6 +74,7 @@ class ProPageRenderTest {
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
         context.setVariables(model.asMap());
+        context.setVariable("siteUrl", "https://www.scan2play.com.pl");   // SiteUrlAdvice: the head of a public page needs it whole
         return engine.process(view, context);
     }
 
@@ -105,6 +106,9 @@ class ProPageRenderTest {
                 "Płatności w aplikacji jeszcze nie ma", "src=\"/js/dj-nav.js\"")
                 .doesNotContain("??");
         assertThat(count(html, "btn-action")).as("one action on the page").isEqualTo(1);
+        assertThat(html).as("the head for search engines and shared links").contains(
+                "<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/pro\">",
+                "hreflang=\"en\" href=\"https://www.scan2play.com.pl/pro?lang=en\"", "property=\"og:title\"");
         assertThat(html).as("the address also as text, to copy by hand").contains("data-pro-address");
         assertThat(html.indexOf("data-plan=\"free\"")).as("Free first, then Pro").isLessThan(html.indexOf("data-plan=\"pro\""));
         assertThat(html).as("no price: there is no payment yet").doesNotContain("zł", "PLN", "/ mies");

@@ -279,7 +279,7 @@ class StaffControllerTest {
         mockMvc.perform(post("/dj/invitation/accept").param("id", "5").principal(user("kasia", "kasia@gmail.com", true))
                         .session(new MockHttpSession()))
                 .andExpect(status().isConflict())
-                .andExpect(model().attribute("joinProblem", "join.problem.full"));
+                .andExpect(model().attribute("joinProblem", "join.problem.full.invitation"));
     }
 
     /** "Nie, dziękuję": the invitation goes; the panel says so (and makes no DJ's party for someone who came to help). */
@@ -414,14 +414,15 @@ class StaffControllerTest {
     /** "Zaproś": the owner's; the address and the role go to the service; the page says what came of it (the address kept). */
     @Test
     void zapros_invitesAnAddress_withTheRole_andThePageSaysWhatCameOfIt() throws Exception {
-        when(invitations.invite(eq(PUB), any(), any())).thenReturn(StaffInvitationService.InviteOutcome.INVITED);
-        when(invitations.invite(PUB, "ola", StaffRole.VIEWER.permissions())).thenReturn(StaffInvitationService.InviteOutcome.INVALID_ADDRESS);
+        when(invitations.invite(eq(PUB), any(), any(), any())).thenReturn(StaffInvitationService.InviteOutcome.INVITED);
+        when(invitations.invite(PUB, "ola", StaffRole.VIEWER.permissions(), null)).thenReturn(StaffInvitationService.InviteOutcome.INVALID_ADDRESS);
+        when(invitations.invite(PUB, "me@gmail.com", StaffRole.VIEWER.permissions(), null)).thenReturn(StaffInvitationService.InviteOutcome.OWN_ADDRESS);
 
         MockHttpSession session = new MockHttpSession();
         mockMvc.perform(post("/dj/staff/invite").param("partyCode", PUB).param("email", " Ola@Gmail.com ").param("role", "CUSTOM")
                         .param("permissions", "HISTORY", "SUMMARY").principal(user("pub-owner")).session(session))
                 .andExpect(redirectedUrl("/dj/staff?party=PUB01"));
-        verify(invitations).invite(PUB, " Ola@Gmail.com ", EnumSet.of(StaffPermission.HISTORY, StaffPermission.SUMMARY));
+        verify(invitations).invite(PUB, " Ola@Gmail.com ", EnumSet.of(StaffPermission.HISTORY, StaffPermission.SUMMARY), null);
         assertThat(session.getAttribute(StaffController.SESSION_STAFF_INVITED))
                 .isEqualTo(new StaffController.InviteResult("INVITED", "Ola@Gmail.com", false));
 
@@ -429,6 +430,12 @@ class StaffControllerTest {
                 .principal(user("pub-owner")).session(session));
         assertThat(session.getAttribute(StaffController.SESSION_STAFF_INVITED))
                 .as("a wrong address stays in the field").isEqualTo(new StaffController.InviteResult("INVALID_ADDRESS", "ola", true));
+        mockMvc.perform(post("/dj/staff/invite").param("partyCode", PUB).param("email", "me@gmail.com").param("role", "VIEWER")
+                .principal(user("pub-owner")).session(session));
+        assertThat(session.getAttribute(StaffController.SESSION_STAFF_INVITED))
+                .as("the organiser's own address: a problem too").isEqualTo(new StaffController.InviteResult("OWN_ADDRESS", "me@gmail.com", true));
+        mockMvc.perform(post("/dj/staff/invite").param("partyCode", PUB).param("email", "ola").param("role", "VIEWER")
+                .principal(user("pub-owner")).session(session));
 
         // the page shows it once
         when(sessionHelper.requireOwner(eq(PUB), any(), any())).thenReturn(pub);
@@ -439,7 +446,7 @@ class StaffControllerTest {
         doThrow(new AccessDeniedException("staff")).when(sessionHelper).requireOwner(eq("OTHER"), any(), any());
         assertThatThrownBy(() -> mockMvc.perform(post("/dj/staff/invite").param("partyCode", "OTHER").param("email", "x@y.pl")
                 .principal(user("kasia")).session(new MockHttpSession()))).hasRootCauseInstanceOf(AccessDeniedException.class);
-        verify(invitations, never()).invite(eq("OTHER"), any(), any());
+        verify(invitations, never()).invite(eq("OTHER"), any(), any(), any());
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.scan2play.service;
 
+import com.scan2play.util.AfterCommit;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongNames;
@@ -10,8 +11,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.List;
@@ -239,19 +238,9 @@ public class DjService {
      * transaction the cache is evicted at once.
      */
     private void evictDashboardQueueAfterCommit(String partyCode) {
-        Runnable evict = () -> {
+        AfterCommit.run(() -> {
             Cache cache = cacheManager.getCache(QUEUE_CACHE);
             if (cache != null) cache.evict(partyCode);
-        };
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    evict.run();
-                }
-            });
-        } else {
-            evict.run();
-        }
+        });
     }
 }

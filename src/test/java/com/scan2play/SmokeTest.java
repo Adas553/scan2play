@@ -124,6 +124,17 @@ class SmokeTest {
     }
 
     @Test
+    @DisplayName("The terms in both languages: the head for search engines (canonical, alternates, description) — it vanished unnoticed before")
+    void terms_haveTheirHead() throws Exception {
+        mockMvc.perform(get("/terms"))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/terms\">")))
+                .andExpect(content().string(containsString("<meta name=\"description\" content=\"Zasady korzystania ze Scan2Play")));
+        mockMvc.perform(get("/terms").param("lang", "en"))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/terms?lang=en\">")))
+                .andExpect(content().string(containsString("<meta name=\"description\" content=\"The rules for using Scan2Play")));
+    }
+
+    @Test
     @DisplayName("The picture of a shared link is served without a login")
     void ogImage_isPublic() throws Exception {
         mockMvc.perform(get("/images/og-image.png")).andExpect(status().isOk());

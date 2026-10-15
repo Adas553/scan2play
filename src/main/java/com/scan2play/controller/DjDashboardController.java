@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -101,9 +102,7 @@ public class DjDashboardController {
      */
     @PostConstruct
     public void init() {
-        this.cleanBaseUrl = rawBaseUrl.endsWith("/")
-                ? rawBaseUrl.substring(0, rawBaseUrl.length() - 1)
-                : rawBaseUrl;
+        this.cleanBaseUrl = com.scan2play.util.Texts.withoutTrailingSlash(rawBaseUrl);
     }
 
     /**
@@ -152,8 +151,9 @@ public class DjDashboardController {
         model.addAttribute(ACCESS, access);
         model.addAttribute(PANEL_ACCESS, accessValue(access));
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
-        model.addAttribute(PANELS, partyStaffService.panelsOf(authentication.getName()));
-        model.addAttribute(HAS_OWN_PARTY, owner || partyStaffService.hasOwnParty(authentication.getName()));
+        List<PartyStaffService.Panel> panels = partyStaffService.panelsOf(authentication.getName());
+        model.addAttribute(PANELS, panels);
+        model.addAttribute(HAS_OWN_PARTY, owner || panels.stream().anyMatch(PartyStaffService.Panel::own));
         addSettings(model, settings, owner);
 
         // --- QR Code ---

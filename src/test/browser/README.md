@@ -56,7 +56,8 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest,�
   check comes before the network), "↻", "Print" — so their requests meet the policy too.
 * **The stand-in** knows nothing about music. `POST /__config` merges a JSON object into its state (`server.py`, `default_state()`,
   lists the keys: `delays`, `queue`, `guestLimits`, `guestLimitsUse`, `partyActive`, `historyStatus`, `updatesStatus`,
-  `postStatus` — the status a POST path answers instead of its usual answer, e.g. a 403 for a session that ran out); a config is **merged**, so a key
+  `postStatus` — the status a POST path answers instead of its usual answer, e.g. a 403 for a session that ran out —, `updatesBody` — the
+  poll's body instead of the queue, e.g. a Wi-Fi login page —, `guestQueueStatus` — what the guest's "↻ Odśwież" gets instead of the list); a config is **merged**, so a key
   is set back to its default value, not left out (`delays: {'/path': 0}`, not `delays: {}`). What the poll of the queue answers is a
   `<tbody>` of the rows the scenario names plus the real "nothing matches" row (taken from the rendered page: it is part of the polled
   fragment); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use` and `X-Party-Active` from the state.
