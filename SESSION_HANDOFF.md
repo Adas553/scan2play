@@ -8,6 +8,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, evening — the review of 2026-10-14, the small items, group 1 "Gemini": `gemini-3.6-flash`, on the branch
+  `claude/gemini-3-6` from `origin/dev` = `1afca1a`; a PR to `dev`.** Google retired `gemini-3.5-flash` on 2026-10-08 (its calls
+  go to 3.6). `GeminiComparison` run with the key from IntelliJ's run configuration (the owner's yes; read by a script, never
+  printed or written): 3.6 Flash low 64 / 2 (the made-up "fiołkowy blask", wrong for every model), 1.6 s, ~$2.1 per 1000; 3.8 Flash
+  61 / 5; 2.5 Flash 57 / 9. Tests: 697 unit (`GeminiConfigTest.theDefaultModel_isGemini36Flash` red on `origin/dev`). **Next:** the
+  groups 2–5 of the small items, one PR each.
 - **2026-10-15, later — the review of 2026-10-14, group 7's leftover: `google-genai` 1.38.0 → 1.74.0, on the branch
   `claude/google-genai-1-74` from `origin/dev` = `03ad83a`; a PR to `dev`.** The latest release at least two weeks old (1.75.0 was
   13.5 days). No API we use changed (changelog 1.39–1.74: the only breaking change removed the unused Interactions module); no code

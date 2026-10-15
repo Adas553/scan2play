@@ -216,10 +216,10 @@ class SongEvaluationServiceTest {
     void aGemini2Model_thinksByABudget_aLaterOneByALevel() {
         assertThat(SongEvaluationService.thinkingConfig("gemini-2.5-flash", 1024, "low").thinkingBudget()).contains(1024);
         assertThat(SongEvaluationService.thinkingConfig("gemini-2.5-flash", 1024, "low").thinkingLevel()).isEmpty();
-        var level = SongEvaluationService.thinkingConfig("gemini-3.5-flash", 1024, " Medium ");
+        var level = SongEvaluationService.thinkingConfig("gemini-3.6-flash", 1024, " Medium ");
         assertThat(level.thinkingBudget()).isEmpty();
         assertThat(level.thinkingLevel().map(Object::toString)).contains("MEDIUM");
-        assertThatThrownBy(() -> SongEvaluationService.thinkingConfig("gemini-3.5-flash", 0, "lots"))
+        assertThatThrownBy(() -> SongEvaluationService.thinkingConfig("gemini-3.6-flash", 0, "lots"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

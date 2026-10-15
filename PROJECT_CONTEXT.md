@@ -32,7 +32,7 @@ personal use) — migrations V18 and V19.
 | Framework        | Spring Boot 4.0.8 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat raised to 11.0.26 by `tomcat.version` in `pom.xml` (security fixes after the parent's 11.0.24 — review 2026-10-14 W15; drop it once the parent manages 11.0.26 or later) |
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
-| AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.5-flash` (thinking level low) |
+| AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.6-flash` (thinking level low) |
 | Other            | ZXing 3.5.4 (QR codes; `javase` without its command line and image decoders), the Maven wrapper with the sha256 of Maven 3.9.12, Caffeine (caches), Maven; the guests' song suggestions come from Apple's iTunes Search API, asked by the browser |
 | i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes; the language: `?lang=pl` / `?lang=en` (that one request), else the browser's `Accept-Language`, with none Polish (`WebConfig`, 2026-10-14 — a crawler sends none) |
 
@@ -718,12 +718,14 @@ What every page shares, so a new screen looks like the others:
 
 ### 7.1 Google Gemini
 
-- Evaluates guests' requests. Model `gemini-3.5-flash` (pinned; env `GOOGLE_AI_MODEL`), thinking level `low`
+- Evaluates guests' requests. Model `gemini-3.6-flash` (pinned; env `GOOGLE_AI_MODEL`), thinking level `low`
   (`google.ai.thinking-level`, env `GOOGLE_AI_THINKING_LEVEL`; a `gemini-2.x` model takes `google.ai.thinking-budget` tokens
   instead — `SongEvaluationService.thinkingConfig`). Timeout 15 s per call. Chosen 2026-10-07 by `GeminiComparison` (`src/test`,
   run from IntelliJ with the key; writes `target/gemini-comparison.md`): 30 hard requests × 2 per variant — 3.5 Flash had every
   checkable song right in 2.7–3.1 s on average (≤ 8.3 s), ~$2.5 per 1000 requests; 2.5 Flash named another song for a line of the
-  lyrics on each try; 3.5 Flash-Lite made up artists.
+  lyrics on each try; 3.5 Flash-Lite made up artists. 2026-10-15: Google retired 3.5 Flash (its calls go to 3.6 since 10-08) — the
+  same comparison, 35 requests × 2: 3.6 Flash (low) 64 right, 2 wrong (a made-up song every variant got wrong), 1.6 s on average
+  (≤ 3.7 s), ~$2.1 per 1000 requests at the 2027 prices; 3.8 Flash 61 / 5, 2.8 s; 3.6 at medium no better, 3.5× the price.
 - **The prompt** (rewritten 2026-10-07, measured by the same comparison): three steps — work out the song (`songName`,
   `requestKind`), judge it (`decision`), write the comment —, and `ANSWER_SCHEMA` orders the answer the same way
   (the verdict first let the model judge a song it had not named yet). A plain tone (no "ruthless DJ", no capitals); the DJ's note
@@ -818,7 +820,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 
 | Property | Value |
 |----------|-------|
-| `google.ai.model-name` / `google.ai.thinking-level` (`thinking-budget` for gemini-2.x) | `gemini-3.5-flash` / low (1024) |
+| `google.ai.model-name` / `google.ai.thinking-level` (`thinking-budget` for gemini-2.x) | `gemini-3.6-flash` / low (1024) |
 | `spring.jpa.hibernate.ddl-auto` | `validate` (Flyway owns the schema) |
 | `server.forward-headers-strategy` | `FRAMEWORK` |
 | `server.compression.*` | gzip for HTML / CSS / JS / JSON from 2 KB |
