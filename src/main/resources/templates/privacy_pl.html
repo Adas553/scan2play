@@ -25,6 +25,7 @@
         <ul>
             <li>Informacje z profilu Google (imię, email, zdjęcie profilowe) przez OAuth 2.0</li>
             <li>Ustawienia imprezy i preferencje konfiguracji</li>
+            <li>Plan konta (Free albo Pro), skąd pochodzi (np. okres próbny) i do kiedy obowiązuje</li>
             <li>Gdy DJ je poda: adresy jego profili na Instagramie, Facebooku i TikToku — publicznie widoczne dla gości na stronie imprezy i na wydruku kodu QR</li>
             <li>Gdy DJ go poda: link do jego strony napiwków (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — publicznie widoczny dla gości na stronie imprezy, pod przyjętą prośbą i na wydruku kodu QR</li>
             <li>Wiadomości feedback przesłane przez panel DJ-a</li>
@@ -35,9 +36,9 @@
         </ul>
         <p><strong>Dla gości (anonimowi użytkownicy):</strong></p>
         <ul>
-            <li>Tekst zamówienia piosenki (tytuł, wykonawca albo fragment tekstu) — zapisywany tak, jak go wpisano (do 150 znaków), i widoczny dla DJ-a tej imprezy obok piosenki wybranej przez AI; nie wpisuj w nim danych osobowych</li>
+            <li>Tekst zamówienia piosenki (tytuł, wykonawca albo fragment tekstu) — zapisywany tak, jak go wpisano (do 150 znaków), i widoczny dla DJ-a tej imprezy obok piosenki wybranej przez AI; trafia też do logów serwera (z kodem imprezy, bez adresu IP); nie wpisuj w nim danych osobowych</li>
             <li>Identyfikator sesji (ciasteczko) — do limitu próśb i do rozpoznania Twoich wcześniejszych próśb i 👍 na tej imprezie (oznaczenie „Twoja”, głos liczony raz); bez danych osobowych</li>
-            <li>Adres IP — tylko w pamięci serwera, do limitów próśb i 👍 z jednej sieci na imprezie (ochrona przed nadużyciami); nie jest zapisywany w bazie danych ani w logach aplikacji</li>
+            <li>Adres IP — widzą go Cloudflare i dostawca hostingu (pkt 6), przez których przechodzi każde połączenie ze stroną. Sama aplikacja trzyma go tylko w pamięci serwera, do limitów próśb i 👍 z jednej sieci na imprezie (ochrona przed nadużyciami); nie zapisuje go w bazie danych ani w swoich logach</li>
         </ul>
 
         <h3>3. Jak wykorzystujemy Twoje dane</h3>
@@ -71,14 +72,23 @@
             <li>Subskrypcja powiadomień urządzenia: do wyłączenia powiadomień na nim przez DJ-a, porzucenia jej przez przeglądarkę albo usunięcia konta</li>
             <li>Przynależność do obsługi imprezy: do usunięcia dostępu przez właściciela, usunięcia konta osoby z obsługi albo konta właściciela</li>
             <li>Zaproszenie do obsługi po adresie e-mail, razem z adresem: do dołączenia lub odmowy, cofnięcia zaproszenia albo usunięcia konta przez właściciela — najdłużej 30 dni</li>
+            <li>Logi serwera (w nich tekst próśb gości z kodem imprezy): przechowywane przez dostawcę hostingu przez 7 dni, potem usuwane</li>
+            <li>Feedback i plan konta: do usunięcia konta przez DJ-a</li>
         </ul>
 
         <h3>6. Udostępnianie danych</h3>
-        <p>Nie sprzedajemy ani nie udostępniamy Twoich danych osobowych podmiotom trzecim. Dane są przekazywane wyłącznie do Google (logowanie OAuth) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa) w zakresie niezbędnym do działania serwisu. Gdy gość pisze, jego przeglądarka pyta Apple iTunes Search API o podpowiedzi piosenek (trafia tam tylko wpisany tekst). Gdy DJ włączy powiadomienia na urządzeniu, nowa prośba trafia na nie jako wiadomość zaszyfrowana od końca do końca (nazwa piosenki) przez usługę powiadomień przeglądarki DJ-a (Google, Apple, Mozilla albo Microsoft), która ją dostarcza, ale nie może jej odczytać.</p>
+        <p>Nie sprzedajemy Twoich danych osobowych. Przekazujemy je tylko tym usługodawcom i tylko w zakresie potrzebnym do działania serwisu:</p>
+        <ul>
+            <li><strong>Railway</strong> (Railway Corporation, USA) — hosting aplikacji i bazy danych: wszystkie dane opisane wyżej są przechowywane na serwerach w regionie us-east4 (Wirginia, USA), czyli poza Europejskim Obszarem Gospodarczym.</li>
+            <li><strong>Cloudflare</strong> (Cloudflare, Inc., USA) — przez Cloudflare przechodzi każde połączenie ze stroną (szyfrowanie, ochrona przed atakami, przyspieszenie); widzi adres IP i adres odwiedzanej strony. Strona korzysta też z Cloudflare Web Analytics — statystyk odwiedzin bez ciasteczek i bez identyfikowania osób.</li>
+            <li><strong>Google</strong> — logowanie DJ-a (OAuth) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa, bez danych o gościu).</li>
+            <li><strong>Apple iTunes Search API</strong> — gdy gość pisze, jego przeglądarka pyta o podpowiedzi piosenek (trafia tam tylko wpisany tekst).</li>
+            <li><strong>Usługa powiadomień przeglądarki DJ-a</strong> (Google, Apple, Mozilla albo Microsoft) — gdy DJ włączy powiadomienia na urządzeniu, nowa prośba trafia na nie jako wiadomość zaszyfrowana od końca do końca (nazwa piosenki); usługa ją dostarcza, ale nie może jej odczytać.</li>
+        </ul>
 
         <h3>7. Twoje prawa — Usuwanie danych</h3>
         <p>Możesz usunąć wszystkie swoje dane w dowolnym momencie, klikając <strong>„Usuń konto"</strong> w Panelu DJ-a.
-            Spowoduje to trwałe usunięcie ustawień imprezy, historii piosenek i feedbacku.
+            Spowoduje to trwałe usunięcie ustawień imprezy, historii piosenek, feedbacku, planu konta, obsługi Twojej imprezy i zaproszeń do niej.
             Możesz również cofnąć dostęp Scan2Play w <a href="https://myaccount.google.com/permissions" target="_blank" class="text-warning">ustawieniach konta Google</a>.
         </p>
 
