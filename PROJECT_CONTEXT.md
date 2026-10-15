@@ -29,7 +29,7 @@ personal use) — migrations V18 and V19.
 | Layer            | Technology |
 |------------------|------------|
 | Language         | Java 21 |
-| Framework        | Spring Boot 4.0.3 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA) |
+| Framework        | Spring Boot 4.0.8 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat raised to 11.0.26 by `tomcat.version` in `pom.xml` (security fixes after the parent's 11.0.24 — review 2026-10-14 W15; drop it once the parent manages 11.0.26 or later) |
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
 | AI               | Google Gemini (`google-genai` 1.38.0), model `gemini-3.5-flash` (thinking level low) |
@@ -883,6 +883,7 @@ HostController             → PartySettingsRepository, PartySettingsCommandServ
 DjSongController           → DjService, DjSessionHelper
 DjSummaryController        → EveningSummaryService, DjSessionHelper, MessageSource
 SongEvaluationService      → Gemini Client, SongRequestRepository, SongRequestCommandService, PartySettingsQueryService, PushNotificationService, PartyStaffService
+SongRequestCommandService  → SongRequestRepository, DjService (evicts the queue's cache after a new request or a vote)
 PushController             → PushSubscriptionService
 GuestQueueService          → DjService
 ```
