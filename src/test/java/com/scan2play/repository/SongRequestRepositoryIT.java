@@ -207,6 +207,34 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
     }
 
     /**
+     * The review of 2026-10-14, W10: the night clears from the queue what has waited more than a day — as "Wyczyść kolejkę": rejected
+     * with {@code cleared_at}, so the history shows it cleared. Only waiting requests older than the cutoff, of every party; a played
+     * one, a skipped one, a fresh one and one without a time stay as they were.
+     */
+    @Test
+    void theNightClearsOnlyWhatHasWaitedMoreThanADay() {
+        String party = newPartyCode();
+        String other = newPartyCode();
+        Instant lastWeek = Instant.now().minus(7, ChronoUnit.DAYS);
+        save(party, "waited a week", "accepted", lastWeek, null);
+        save(other, "another party's, a week", "accepted", lastWeek, null);
+        save(party, "played a week ago", "played", lastWeek, lastWeek);
+        save(party, "skipped a week ago", "rejected", lastWeek, null, lastWeek);
+        save(party, "tonight", "accepted", Instant.now().minus(3, ChronoUnit.HOURS), null);
+        save(party, "no time", "accepted", null, null);
+        Instant now = Instant.now();
+
+        assertThat(requests.clearWaitingRequestedBefore(now.minus(24, ChronoUnit.HOURS), now)).isGreaterThanOrEqualTo(2);
+
+        assertThat(jdbc.queryForList("SELECT song_name || ' ' || decision || ' ' || (cleared_at IS NOT NULL) FROM song_requests"
+                + " WHERE party_code IN (?, ?) ORDER BY id", String.class, party, other))
+                .containsExactly("waited a week rejected true", "another party's, a week rejected true", "played a week ago played false",
+                        "skipped a week ago rejected false", "tonight accepted false", "no time accepted false");
+        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
+                .extracting(SongRequestEntity::getSongName).containsExactlyInAnyOrder("tonight", "no time");
+    }
+
+    /**
      * A guest's 👍 (GuestVoteService): only on a song of that party that still waits — the id comes from the guest —, and taking it
      * back never goes below the first guest's own vote.
      */
