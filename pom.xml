@@ -56,7 +56,7 @@
 		<dependency>
 			<groupId>com.google.genai</groupId>
 			<artifactId>google-genai</artifactId>
-			<version>1.38.0</version>
+			<version>1.74.0</version>
 		</dependency>
 		<!-- Web Push to the DJ's devices (VAPID, aes128gcm): no dependencies of its own; sends with the JDK's HttpClient -->
 		<dependency>
