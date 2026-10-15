@@ -37,7 +37,15 @@
                     visible(tipped, '.s2p-btn-tip'), tipped.querySelector('.s2p-btn-tip').textContent.trim(), visible(tipped, '.s2p-btn-untip'),
                     visible(check, '.s2p-btn-tip')],
                 [true, true, '💸 2', false, false]);
-            t.check('a plain card is low (' + height(wanted) + ' px; it was 204)', height(tipped) <= 120 && height(wanted) <= 140);
+            // at a real 390 px (run.py) a long title may take two lines — in a wider font (Linux's DejaVu Sans in CI) it does: the
+            // card is measured without the title's further lines, which no folding takes away
+            const folded = function (row) {
+                const title = row.querySelector('.song-title');
+                const line = parseFloat(getComputedStyle(title).lineHeight) || 24;
+                return height(row) - Math.max(0, Math.round(title.getBoundingClientRect().height - line));
+            };
+            t.check('a plain card is low (' + folded(wanted) + ' px without its title\'s further lines; it was 204)',
+                folded(tipped) <= 120 && folded(wanted) <= 140);
             // a phone's screen is 844 px (headless Chrome takes its own bars off the window, so innerHeight is less)
             t.check('the three cards are in a phone\'s first screen (the last ends at ' + Math.round(wanted.getBoundingClientRect().bottom)
                 + ' of 844 px; they were 204 px each, two in it)', wanted.getBoundingClientRect().bottom <= 844);
