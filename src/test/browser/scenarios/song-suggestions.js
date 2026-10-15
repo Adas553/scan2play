@@ -12,10 +12,11 @@
             return new Promise(function (resolve) {
                 pending.push({
                     term: url.searchParams.get('term'),
+                    url: url,
                     answer: function (names) {
                         resolve(new Response(JSON.stringify({ results: names.map(function (n) {
-                            const parts = n.split(' - ');
-                            return { artistName: parts[0], trackName: parts[1] };
+                            const at = n.indexOf(' - ');   // the artist, then the title (which may hold " - " too)
+                            return { artistName: n.slice(0, at), trackName: n.slice(at + 3) };
                         }) }), { headers: { 'Content-Type': 'application/json' } }));
                     }
                 });
@@ -93,6 +94,62 @@
             input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
             t.step('Esc: closed, nothing chosen', [input.getAttribute('aria-expanded'), input.hasAttribute('aria-activedescendant')],
                 ['false', false]);
+        }
+    });
+
+    const shown = function () {
+        return Array.prototype.map.call(document.querySelectorAll('.song-autocomplete-item'), function (i) { return i.dataset.label; });
+    };
+    const answered = function (pending, term, names) {
+        pending.filter(function (p) { return p.term === term && !p.done; }).forEach(function (p) { p.done = true; p.answer(names); });
+    };
+
+    S2P.scenario({
+        name: 'song-suggestions-word-begun',
+        title: 'a word begun is enough: "shakira da" suggests "Dai Dai" — iTunes knows only whole words, so the songs of "shakira" are asked too and kept where a word starts with "da"; the next letters of that word ask nothing more for it',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'shakira da');
+            await t.waitFor(function () { return pending.length === 2; }, 'both queries asked at once', 3000);
+            t.step('"shakira da" and "shakira" (more of it), from the Polish store', pending.map(function (p) {
+                return [p.term, p.url.searchParams.get('country')];
+            }).sort(), [['shakira da', 'PL'], ['shakira', 'PL']]);   // as JS sorts the pairs' text
+            answered(pending, 'shakira da', ['Shakira - Tú', 'Shakira - Me Enamoré']);
+            answered(pending, 'shakira', ['Shakira - Waka Waka', 'Shakira & David Guetta - Worry', 'Shakira & Burna Boy - Dai Dai',
+                'Shakira - Hips Don\'t Lie']);
+            await t.waitFor(open, 'the suggestions', 3000);
+            t.step('"Dai Dai" first (its title starts with "da"), then "David" (the artist), then iTunes\'s own', shown(),
+                ['Shakira & Burna Boy – Dai Dai', 'Shakira & David Guetta – Worry', 'Shakira – Tú', 'Shakira – Me Enamoré']);
+
+            type(input, 'shakira dai');
+            await t.waitFor(function () { return pending.length === 3; }, '"shakira dai" asked', 3000);
+            await t.sleep(200);
+            t.step('…"shakira" from memory: only the new whole query asked', pending.map(function (p) { return p.term; }).sort(),
+                ['shakira', 'shakira da', 'shakira dai']);
+            answered(pending, 'shakira dai', ['Shakira & Burna Boy - Dai Dai']);
+            await t.waitFor(function () { return shown().length === 1; }, 'the suggestions for "shakira dai"', 3000);
+            t.step('the same song once, not twice', shown(), ['Shakira & Burna Boy – Dai Dai']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-once-each',
+        title: 'a song iTunes gives several times (albums, singles) is suggested once',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'dai dai');
+            await t.waitFor(function () { return pending.length === 2; }, 'iTunes asked', 3000);
+            answered(pending, 'dai dai', ['Shakira & Burna Boy - Dai Dai', 'Music Flow Vibes - Dai Dai - Shakira (Afro Latin House Mix)',
+                'Shakira & Burna Boy - Dai Dai', 'Shakira & Burna Boy - Dai  Dai']);
+            answered(pending, 'dai', []);
+            await t.waitFor(open, 'the suggestions', 3000);
+            t.step('each song once', shown(), ['Shakira & Burna Boy – Dai Dai', 'Music Flow Vibes – Dai Dai - Shakira (Afro Latin House Mix)']);
         }
     });
 })();
