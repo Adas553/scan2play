@@ -22,6 +22,14 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   and names no clauses. Both languages: the plan, the guests' texts in the logs, who sees the IP, the providers' list (Railway us-east4,
   Cloudflare + Web Analytics, Google, Apple, the push services), what "Usuń konto" removes. Tests: 677 unit (`SmokeTest`). **The owner:**
   sign Railway's DPA, check Web Analytics is on for the site. **Next:** group 6 "Przed włączeniem planów".
+- **2026-10-15, later — the review of 2026-10-14, the leftovers of "Formularze mówią prawdę", on the branch
+  `claude/quiet-failures-speak` from `origin/dev` = `be516ad`; a PR to `dev` (next to "Spójność zapisów", #68 — no file of the
+  code shared; both append to this file and the review's status).** PROJECT_CONTEXT 5.1 / 5.2 / 13. The History tab, its filter and
+  "Pokaż więcej" that do not load: the page's notice with its second text "Nie udało się wczytać…" (`showRefused('load')`, now in
+  `common.js`). A guest's 👍 or "↻ Odśwież" that does not go through: the floating note `guest.queue.failed`, the button works again.
+  M14: a poll answered without `#song-list` counts as failed (the queue stays); a poll that wants the page loaded again loads it once
+  in a run (`sessionStorage`), then the notice. Tests: 676 unit, 108 browser (new `scenarios/quiet-failures.js`, 5, each red before
+  the fix; the stand-in's `updatesBody`, `guestQueueStatus`). **Next:** the owner reviews the PR.
 - **2026-10-15, later — the review of 2026-10-14, "Spójność zapisów" (W8, W9, "Pomiń" vs "Zagrane", the batch deletes), on the branch
   `claude/consistent-writes` from `origin/dev` = `be516ad` (#62–#67 merged); a PR to `dev`.** PROJECT_CONTEXT 4.1 / 9 / 13, the review's
   status of fixes. W8: `updateSettings` reads the party's row under its lock — two writes take turns; the hosts' page asks its token again

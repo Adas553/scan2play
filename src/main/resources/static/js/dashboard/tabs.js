@@ -9,7 +9,7 @@
  * load this module: its tabs are plain links.
  */
 import { EVENTS, on } from './events.js';
-import { csrfHeaders, partyCode } from './common.js';
+import { csrfHeaders, hideRefused, partyCode, showRefused } from './common.js';
 import { captureListState, initSortableHeaders, restoreListState, setHistoryReloader } from './list-tools.js';
 import { reopenCards } from './cards.js';
 
@@ -121,9 +121,11 @@ import { reopenCards } from './cards.js';
             reopenCards(historyContent);
             const newBox = historyContent.querySelector('.list-scroll');
             if (newBox) newBox.scrollTop = scrollTop;
+            hideRefused('load');
             return true;
         }).catch(function(err) {
             console.error('[Tabs] History reload error:', err);
+            showRefused('load');   // the list stays as it was: say that the new one did not come
             return false;
         });
     }
@@ -175,7 +177,11 @@ import { reopenCards } from './cards.js';
             initSortableHeaders(historyContent);
             reopenCards(historyContent);
             revealContent(historyContent);
+            hideRefused('load');
         })
-        .catch(function(err) { console.error('[Tabs] History load error:', err); });
+        .catch(function(err) {
+            console.error('[Tabs] History load error:', err);
+            showRefused('load');   // the queue stays: the tab would otherwise do nothing at all (review 2026-10-14)
+        });
     });
 })();
