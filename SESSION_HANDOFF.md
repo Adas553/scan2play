@@ -8,6 +8,11 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, late night — the deferred small items, PR 2 "a phone's real width in the browser tests", on the branch
+  `claude/browser-narrow-widths` on top of `claude/guest-session-clock` (#85); a PR to `dev`.** A headless window is never narrower
+  than ~500 px (measured: Chrome and Edge, both headless modes, any scale factor), so `run.py` sets a phone's size through the
+  DevTools protocol before it opens the scenario (a small stdlib WebSocket client): the `max-width: 400px` / `380px` rules of
+  `app.css` are tested now (`phone-width-390`, `phone-width-360`, red before, and red when the rules go). Tests: 119 browser.
 - **2026-10-15, late night — the deferred small items, PR 1 "the guest's limit on a clock", on the branch `claude/guest-session-clock`
   from `origin/dev` = `1e16a91`; a PR to `dev`.** Checked first: `main` = `dev` in content (#83, #84 merged, deployed 19:11);
   production enforces the CSP (`Content-Security-Policy`, not `-Report-Only`), sends `Referrer-Policy: same-origin` and

@@ -102,10 +102,13 @@ S2P.scenario({
 * **A page that loads itself again** (the standalone history page's filter and "Pokaż więcej"): a scenario that let it go would end
   with the page. Catch where it would go and stay, with the Navigation API — `navigation.addEventListener('navigate', e => {
   record(e.destination.url); e.preventDefault(); })` (`history-page-keeps-the-party`).
-* **A phone's width:** a headless Chrome's window is never narrower than 500 px (measured in the cloud container, 2026-10-14:
-  `--window-size=390,844` gives `innerWidth` 500), so a `viewport: '390,…'` scenario lays the page out 500 px wide — still a phone
-  for the CSS (under 768 px), but a line that breaks only at 390 px stays whole. A step about that narrows the page itself for its
-  measure (`document.documentElement.style.width = '390px'`, then back; `pro-free-panel`, "the limits that hold on one line").
+* **A phone's width:** a headless browser's window is never narrower than about 500 px (`--window-size=390,844` gives `innerWidth`
+  496 … 504, in the old headless mode and the new, with any `--force-device-scale-factor`). So for a `viewport` under 768 px wide
+  `run.py` opens the browser on `about:blank` with `--remote-debugging-port=0`, sets the size through the DevTools protocol
+  (`Emulation.setDeviceMetricsOverride`, `mobile: true`: no scroll bar takes a part of the width, the page's viewport meta counts)
+  and only then opens the scenario — the page is laid out at the phone's own 390 or 360 px, so the rules of `app.css` for a narrow
+  phone (`max-width: 400px`, `380px`) apply (`phone-width-390`, `phone-width-360`). The DevTools connection stays open while the
+  scenario runs: closing it ends the emulation. Standard library only (a small WebSocket client in `run.py`).
 
 ## In CI
 

@@ -166,3 +166,37 @@ S2P.scenario({
         t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
     }
 });
+
+// A phone's real width (review 2026-10-14): a headless browser's window is never narrower than about 500 px, so run.py sets the
+// page's width through the DevTools protocol — at 390 the rules of app.css for a narrow phone (max-width: 400px, 380px) must apply.
+S2P.scenario({
+    name: 'phone-width-390',
+    title: 'at a phone\'s 390 px the page is 390 px wide: the tabs narrow (max-width: 400px), the logo keeps its size (above 380)',
+    viewport: '390,844',
+    run: async function (t) {
+        t.step('the page is laid out 390 px wide', [window.innerWidth, document.documentElement.clientWidth], [390, 390]);
+        t.step('the three tabs narrow (max-width: 400px)',
+            getComputedStyle(document.querySelector('.dj-tabbar .nav-link')).paddingLeft, '9.6px');
+        const logo = document.querySelector('.s2p-account-bar .s2p-logo');
+        t.step('the logo is not made smaller above 380 px', getComputedStyle(logo).fontSize === '18.4px', false);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+    }
+});
+
+S2P.scenario({
+    name: 'phone-width-360',
+    title: 'at 360 px (a small Android) the logo is smaller (max-width: 380px): it, "Zakończ" and "Konto" fit in one row',
+    viewport: '360,780',
+    run: async function (t) {
+        t.step('the page is laid out 360 px wide', window.innerWidth, 360);
+        const bar = document.querySelector('.s2p-account-bar');
+        t.step('the logo is smaller (max-width: 380px)', getComputedStyle(bar.querySelector('.s2p-logo')).fontSize, '18.4px');
+        // one row: their middles at one height (align-items: center); a second row would be a whole button's height lower
+        const middles = Array.from(bar.children).filter(shows).map(function (el) {
+            const box = el.getBoundingClientRect();
+            return box.top + box.height / 2;
+        });
+        t.step('the logo, "Zakończ" and "Konto" in one row', [middles.length, Math.max.apply(null, middles) - Math.min.apply(null, middles) < 4], [3, true]);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+    }
+});
