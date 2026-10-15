@@ -12,6 +12,11 @@
  *   Enter                — confirm highlighted item
  *   Escape               — close dropdown
  *
+ * iTunes matches whole words only ("shakira da" finds no "Dai Dai", "zenek prz" nothing): a word being typed is completed here.
+ * With it, the words before it are asked too (more of them, kept in memory while the word grows) and the songs with a word that
+ * starts so come first; both asks go at once, so the list comes as fast as before. The Polish store (it has the Polish songs the
+ * American one lacks, and the international ones too). A song iTunes gives several times (albums, singles) is shown once.
+ *
  * Only the answer for what the field says now is shown: one that comes after the guest typed on (or cleared the field) is
  * dropped. The field is an ARIA combobox: aria-expanded, aria-controls, aria-activedescendant on the chosen suggestion.
  */
@@ -24,7 +29,10 @@
     // -------------------------------------------------------------------------
     const ITUNES_API    = 'https://itunes.apple.com/search';
     const DEBOUNCE_MS   = 300;
-    const MAX_RESULTS   = 8;
+    const MAX_RESULTS   = 8;    // suggestions shown
+    const WHOLE_LIMIT   = 15;   // asked for the whole query: room for the duplicates that go
+    const STEM_LIMIT    = 50;   // asked for the words before the one being typed (~10 KB gzipped, as fast as 8)
+    const STORE         = 'PL';
     const MIN_CHARS     = 2;
     const CACHE_MAX_SIZE = 50;  // evict oldest entries beyond this limit
 
@@ -34,6 +42,35 @@
     // second one gets the cached answer instantly without a network round-trip.
     // -------------------------------------------------------------------------
     const resultCache = new Map();
+
+    /** Lower case, without accents ("Żółta" → "zolta"; ł has none to take away): what a guest types without Polish letters. */
+    function plain(text) {
+        return String(text || '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/ł/g, 'l');
+    }
+
+    function words(text) {
+        return plain(text).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    }
+
+    /** The word being typed and the words before it ("shakira da" → "shakira", "da"); null when the last word is finished. */
+    function wordBegun(typed) {
+        if (/\s$/.test(typed)) return null;
+        const parts = typed.trim().split(/\s+/);
+        const fragment = words(parts[parts.length - 1]).join('');
+        const stem = parts.slice(0, -1).join(' ');
+        return parts.length > 1 && fragment && stem.length >= MIN_CHARS ? { stem: stem, fragment: fragment } : null;
+    }
+
+    /** Each song once: the same artist and title, whatever the album, the accents or the spaces. */
+    function onceEach(tracks) {
+        const seen = new Set();
+        return tracks.filter(function (track) {
+            const key = words(track.artistName).join(' ') + '|' + words(track.trackName).join(' ');
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
 
     function cacheSet(key, value) {
         if (resultCache.size >= CACHE_MAX_SIZE) {
@@ -87,36 +124,51 @@
             input.parentElement.appendChild(dropdown);
         }
 
-        // --- Fetch from iTunes (with cache) ---
-        async function fetchSuggestions(query) {
-            // a query asked before is not wanted any more, whatever answers this one
-            if (currentController) currentController.abort();
-            currentController = null;
+        // --- One ask of iTunes (with cache): its songs, [] on an error, null when cancelled ---
+        async function ask(term, limit, signal) {
+            const key = limit + '|' + term;
             // Serve from cache when available — avoids redundant API calls
-            if (resultCache.has(query)) {
-                return resultCache.get(query);
+            if (resultCache.has(key)) {
+                return resultCache.get(key);
             }
-
-            currentController = new AbortController();
-
             const url = new URL(ITUNES_API);
-            url.searchParams.set('term',   query);
-            url.searchParams.set('media',  'music');
-            url.searchParams.set('entity', 'song');
-            url.searchParams.set('limit',  String(MAX_RESULTS));
-
+            url.searchParams.set('term',    term);
+            url.searchParams.set('media',   'music');
+            url.searchParams.set('entity',  'song');
+            url.searchParams.set('country', STORE);
+            url.searchParams.set('limit',   String(limit));
             try {
-                const response = await fetch(url, { signal: currentController.signal });
+                const response = await fetch(url, { signal: signal });
                 if (!response.ok) return [];
                 const data = await response.json();
                 const results = data.results || [];
-                cacheSet(query, results);
+                cacheSet(key, results);
                 return results;
             } catch (err) {
                 if (err.name === 'AbortError') return null; // cancelled — ignore
                 console.warn('[Autocomplete] iTunes API error:', err);
                 return [];
             }
+        }
+
+        // --- The suggestions for what was typed: the songs of the word begun first, then iTunes's own, each once ---
+        async function fetchSuggestions(typed) {
+            // a query asked before is not wanted any more, whatever answers this one
+            if (currentController) currentController.abort();
+            currentController = new AbortController();
+            const signal = currentController.signal;
+            const query = typed.trim();
+            const begun = wordBegun(typed);
+            // both at once: the list waits for the slower of two parallel asks, not for one after the other
+            const answers = await Promise.all([ask(query, WHOLE_LIMIT, signal), begun ? ask(begun.stem, STEM_LIMIT, signal) : []]);
+            if (answers[0] === null || answers[1] === null) return null;
+            // the songs whose title has a word starting so, then those whose artist has ("da" → "Dai Dai", then "David Guetta")
+            const starts = function (text) {
+                return words(text).some(function (w) { return w.indexOf(begun.fragment) === 0; });
+            };
+            const byTitle = begun ? answers[1].filter(function (track) { return starts(track.trackName); }) : [];
+            const byArtist = begun ? answers[1].filter(function (track) { return !starts(track.trackName) && starts(track.artistName); }) : [];
+            return onceEach(byTitle.concat(byArtist, answers[0])).slice(0, MAX_RESULTS);
         }
 
         // --- Render results ---
@@ -230,7 +282,7 @@
                 closeDropdown();
                 return;
             }
-            const results = await fetchSuggestions(query);
+            const results = await fetchSuggestions(input.value);
             if (results === null) return; // aborted request — keep current dropdown
             if (input.value.trim() !== query) return;   // the guest typed on meanwhile: an answer to an old question
             renderDropdown(results);
