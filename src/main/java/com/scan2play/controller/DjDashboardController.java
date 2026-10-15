@@ -391,8 +391,10 @@ public class DjDashboardController {
         }
 
         // --- Full render (queue changed) ---
+        // The list read now, not the 3 s cache the guests' page fills: a request committed after the cache was filled would get
+        // the new ETag over the old list, and every later poll a 304 — the request never shown (review 2026-10-14 K1)
         response.setHeader("ETag", etag);
-        model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
+        model.addAttribute(HISTORY, djService.getWaiting(partyCode));
         model.addAttribute(WANTED_SONGS, SongList.of(planned.getHostWanted()));
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)

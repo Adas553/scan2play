@@ -303,11 +303,48 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
     }
 
     /**
-     * The DJ marks a song played (DjService: read the row, change it, save it) while a guest's vote on it commits in between: the
-     * DJ's save writes only what it changed, so the vote stays — it once wrote the whole row back, votes as read before the vote.
+     * "Zagrane" from a window with an old list (review 2026-10-14 W5): only a waiting request becomes played — one the DJ skipped
+     * meanwhile stays skipped (its two hours out of the queue kept), one cleared with the queue or rejected by the AI stays
+     * rejected, another party's is not touched. A second "Zagrane" keeps the first moment it played.
      */
     @Test
-    void aVoteThatCommitsWhileTheDjMarksTheSongPlayed_isKept() throws Exception {
+    void zagrane_playsOnlyAWaitingRequest() {
+        String party = newPartyCode();
+        Long skipped = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
+        Long cleared = commands.saveOrVote(request(party, "sanah - Szampan", "accepted", LINK), Set.of()).request().getId();
+        dj.dismissSong(skipped, party);
+        dj.clearQueue(party);
+        Long byTheAi = commands.saveOrVote(request(party, "Kult - Arahja", "rejected", null), Set.of()).request().getId();
+        Long waiting = commands.saveOrVote(request(party, "Dawid Podsiadło - Małomiasteczkowy", "accepted", LINK), Set.of())
+                .request().getId();
+
+        dj.markSongAsPlayed(skipped, party);
+        dj.markSongAsPlayed(cleared, party);
+        dj.markSongAsPlayed(byTheAi, party);
+        dj.markSongAsPlayed(waiting, newPartyCode());
+        assertThat(rows(party)).extracting(row -> row.get("song_name") + " " + row.get("decision"))
+                .containsExactly("Wilki - Baśka rejected", "sanah - Szampan rejected", "Kult - Arahja rejected",
+                        "Dawid Podsiadło - Małomiasteczkowy accepted");
+        assertThat(jdbc.queryForObject("SELECT skipped_at IS NOT NULL FROM song_requests WHERE id = ?", Boolean.class, skipped))
+                .as("the skip is remembered").isTrue();
+
+        dj.markSongAsPlayed(waiting, party);
+        jdbc.update("UPDATE song_requests SET played_at = now() - interval '5 minutes' WHERE id = ?", waiting);
+        Instant first = jdbc.queryForObject("SELECT played_at FROM song_requests WHERE id = ?", java.sql.Timestamp.class, waiting)
+                .toInstant();
+        dj.markSongAsPlayed(waiting, party);
+        assertThat(played(party)).containsExactly("Dawid Podsiadło - Małomiasteczkowy");
+        assertThat(jdbc.queryForObject("SELECT played_at FROM song_requests WHERE id = ?", java.sql.Timestamp.class, waiting)
+                .toInstant()).as("a second confirmation keeps the first moment").isEqualTo(first);
+    }
+
+    /**
+     * The DJ skips a song (DjService.dismissSong: read the row, change it, save it — "Zagrane" did the same until review 2026-10-14
+     * W5) while a guest's vote on it commits in between: the DJ's save writes only what it changed, so the vote stays — it once
+     * wrote the whole row back, votes as read before the vote.
+     */
+    @Test
+    void aVoteThatCommitsWhileTheDjSkipsTheSong_isKept() throws Exception {
         String party = newPartyCode();
         Long id = commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).request().getId();
         ExecutorService guest = Executors.newSingleThreadExecutor();
@@ -322,13 +359,14 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
                 } catch (Exception e) {
                     throw new IllegalStateException(e);
                 }
-                DjService.markPlayed(song, Instant.now());
+                song.setDecision(DjService.DECISION_REJECTED);
+                song.setSkippedAt(Instant.now());
                 requests.save(song);
             });
         } finally {
             guest.shutdownNow();
         }
 
-        assertThat(rows(party)).extracting(row -> row.get("decision") + " " + row.get("votes")).containsExactly("played 2");
+        assertThat(rows(party)).extracting(row -> row.get("decision") + " " + row.get("votes")).containsExactly("rejected 2");
     }
 }

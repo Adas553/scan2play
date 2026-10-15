@@ -79,22 +79,62 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
     @Test
     void theFingerprintFollowsTheQueue() {
         String party = newPartyCode();
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("0-0-0-0");
+        String empty = requests.computeFingerprint(party, List.of("accepted"));
+        assertThat(empty).startsWith("0-0-").isEqualTo(requests.computeFingerprint(newPartyCode(), List.of("accepted")));
 
         SongRequestEntity first = save(party, "one", "accepted", Instant.now(), null);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("1-" + first.getId() + "-1-0");
+        String one = requests.computeFingerprint(party, List.of("accepted"));
+        assertThat(one).startsWith("1-" + first.getId() + "-").isNotEqualTo(empty);
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).as("the same queue, the same fingerprint").isEqualTo(one);
 
         SongRequestEntity second = save(party, "two", "accepted", Instant.now(), null);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-2-0");
+        String two = requests.computeFingerprint(party, List.of("accepted"));
+        assertThat(two).startsWith("2-" + second.getId() + "-");
         // a vote changes no row count and no id — the fingerprint still moves, so the DJ's page fetches the queue again
         assertThat(requests.addVote(first.getId())).isEqualTo(1);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-3-0");
+        String voted = requests.computeFingerprint(party, List.of("accepted"));
+        assertThat(voted).startsWith("2-" + second.getId() + "-").isNotEqualTo(two);
         // a tip the DJ counted (V28) moves it too: every window of the DJ shows the new count
         jdbc.update("UPDATE song_requests SET request_number = 1 WHERE id = ?", first.getId());
         assertThat(requests.addTip(first.getId(), party)).isEqualTo(1);
-        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isEqualTo("2-" + second.getId() + "-3-1");
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isNotEqualTo(voted);
         assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
                 .extracting(SongRequestEntity::getSongName).containsExactly("one", "two");
+    }
+
+    /**
+     * Changes that cancel out in the counts and the sums (review 2026-10-14 W6): between two polls one song played and an older one
+     * put back with the same votes, or a 👍 taken back from one song and given to another, or a 💸 moved. The fingerprint moved with
+     * none of them, so the DJ's other windows (304) kept the old list.
+     */
+    @Test
+    void theFingerprintMoves_whenChangesCancelOutInTheCounts() {
+        String party = newPartyCode();
+        SongRequestEntity older = save(party, "older", "played", Instant.now().minusSeconds(60), Instant.now());
+        SongRequestEntity first = save(party, "first", "accepted", Instant.now(), null);
+        SongRequestEntity last = save(party, "last", "accepted", Instant.now(), null);
+        String before = requests.computeFingerprint(party, List.of("accepted"));
+
+        // "Zagrane" on one, "↩ Przywróć" on an older one, both with one vote: as many waiting, the same newest id
+        jdbc.update("UPDATE song_requests SET decision = 'played' WHERE id = ?", first.getId());
+        jdbc.update("UPDATE song_requests SET decision = 'accepted' WHERE id = ?", older.getId());
+        String swapped = requests.computeFingerprint(party, List.of("accepted"));
+        assertThat(swapped).isNotEqualTo(before);
+
+        // a 👍 taken back from one song and given to another
+        jdbc.update("UPDATE song_requests SET votes = 2 WHERE id = ?", older.getId());
+        String voted = requests.computeFingerprint(party, List.of("accepted"));
+        jdbc.update("UPDATE song_requests SET votes = 1 WHERE id = ?", older.getId());
+        jdbc.update("UPDATE song_requests SET votes = 2 WHERE id = ?", last.getId());
+        String moved = requests.computeFingerprint(party, List.of("accepted"));
+        assertThat(moved).isNotEqualTo(voted);
+
+        // a tip counted on the wrong song and moved to the right one
+        jdbc.update("UPDATE song_requests SET tips = 1 WHERE id = ?", older.getId());
+        String tipped = requests.computeFingerprint(party, List.of("accepted"));
+        jdbc.update("UPDATE song_requests SET tips = 0 WHERE id = ?", older.getId());
+        jdbc.update("UPDATE song_requests SET tips = 1 WHERE id = ?", last.getId());
+        assertThat(requests.computeFingerprint(party, List.of("accepted"))).isNotEqualTo(tipped);
     }
 
     @Test

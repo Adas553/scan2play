@@ -1,7 +1,8 @@
 # Scan2Play — Project Context
 
-> The application as it is on branch `dev` (2026-10-04). Read it before an architectural change; `AGENTS.md` says how to work,
-> `SESSION_HANDOFF.md` what is going on now; the review of 2026-09-30 and what was fixed: `docs/history/review-2026-09-30.md`.
+> The application as it is on branch `dev` (2026-10-15). Read it before an architectural change; `AGENTS.md` says how to work,
+> `SESSION_HANDOFF.md` what is going on now; the reviews and what was fixed: `docs/history/review-2026-09-30.md`,
+> `docs/history/review-2026-10-14.md`.
 > **History** — the decisions, the owner's reports, what was tried and measured, how every stage was verified — is in
 > `docs/history/project-context-2026-10-01.md` (this file word for word before it was cut down, review 7.1; it still describes the
 > YouTube player, Auto-Pilot and the background playlist) and `docs/history/session-handoff-2026-09.md`. The full application with
@@ -135,7 +136,12 @@ Przywróć" at the request in the history, at any time; `POST /dj/dashboard/rest
 the request waits again in its old place with its votes, the guest's words and its tips, `skipped_at` / `played_at` cleared — a
 played one no longer counts as played, so the AI's duplicate rule lets it through again (the owner, 2026-10-10: "Zagrane" by mistake
 had no way back, and the AI then refused the song as played) — unless the same song waits already. Never a request the AI rejected
-or one cleared with the queue. The queue's ETag counts the votes too (`computeFingerprint`: count-maxId-votes). The DJ's queue and
+or one cleared with the queue. "Zagrane" itself is one conditional `UPDATE` (`SongRequestRepository.markPlayed`): only a request of
+the party that waits or has played already — a window with an old list cannot play a request skipped, cleared or rejected meanwhile
+(review 2026-10-14 W5). The queue's ETag follows every waiting row (`computeFingerprint`: count-maxId-md5 of each row's id, votes and
+tips, so a 👍 or 💸 moved from one song to another, or a "Zagrane" and a restore at once, changes it — review W6), and when it changed the
+poll renders the queue read now, not the 3 s cache (`DjService.getWaiting` — review K1: the cache the guests' page fills gave the old
+list under the new ETag, and every later poll was a 304 over it). The DJ's queue and
 history have a "Głosy" column (sorted most-first on the first click, `data-sort-first="desc"`; the history sorted by it is the
 party's ranking); the guest page's list is sorted by them (below) and the result page says "Ktoś już o to prosił — dodaliśmy
 Twój głos! Głosów: N".
@@ -553,12 +559,12 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | Class | Purpose |
 |-------|---------|
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`, the prompt per language) → the "Podejrzyj" link → save or vote |
-| `DjService` | the guest queue (`dashboardQueue` cache), its fingerprint (ETag), mark played, skip (`dismissSong`), clear the queue |
+| `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
 | `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1) |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes) |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
-| `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock) |
+| `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); evicts `dashboardQueue` after the commit |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `QrCodeService` | QR codes (ZXing, cached) |
@@ -749,7 +755,7 @@ real use leaves the log quiet. The browser tests run the dashboard, the guest pa
 |-------|-----|------------|-------|
 | `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; `updateSettings` evicts after its commit |
 | `qr-codes` | text + size | 24 h / 1000 | `QrCodeService` |
-| `dashboardQueue` | partyCode | 3 s / 200 | `DjService.getDashboardQueue`; evicted when a song is played, skipped or the queue cleared |
+| `dashboardQueue` | partyCode | 3 s / 200 | `DjService.getDashboardQueue` — the guest page and the dashboard's first render; evicted after the commit of a new request, a vote, a 👍, a song played, skipped or restored, a tip, the queue cleared. The poll does **not** read it: a changed fingerprint renders `getWaiting` (review 2026-10-14 K1) |
 | `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted when a trial is written, `forget`, and with the account |
 
 The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit.
@@ -969,21 +975,25 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 658. Pure Mockito, plus template rendering with
-  the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests) and `SmokeTest` (`@WebMvcTest` with the real
-  security chain). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 667. Pure Mockito, plus template rendering with
+  the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
+  security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 65 tests in the `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
-  `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT`, `ApplicationSetupIT`,
+- **Database tests** (`mvnw verify -Pit`): 67 tests in 19 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+  `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT` (the history's order, the
+  queue's fingerprint — also changes that cancel out in counts —, the retention), `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
-  `SongRequestVotesIT` (votes under the lock; a vote while the DJ marks the song played; a song the DJ skipped, and put back), `FirstLoginIT` (a
-  first login in eight tabs at once — one party); with a database of their own, migrated to the version before and given rows the old
-  way: `TimestampMigrationIT` (V12 — the same moments; red when the old values are read as UTC), `VibeMigrationIT` (V16),
-  `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT` (V19: the YouTube parties go with their data, a requests-only party
-  stays), `DjPlanIT` (V35: a plan's row as written, gone with the account). New SQL that locks or counts gets a test there.
+  `SongRequestVotesIT` (votes under the lock; a vote while the DJ skips the song; "Zagrane" plays only a waiting request; a song the
+  DJ skipped, and put back), `FirstLoginIT` (a first login in eight tabs at once — one party), `PartyStaffRepositoryIT`,
+  `StaffInvitationIT`, `PushSubscriptionRepositoryIT`, `DjPlanIT` (V35: a plan's row as written, gone with the account); with a
+  database of their own, migrated to the version before and given rows the old way: `TimestampMigrationIT` (V12 — the same moments;
+  red when the old values are read as UTC), `VibeMigrationIT` (V16), `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT`
+  (V19: the YouTube parties go with their data, a requests-only party stays), `SkipCommentMigrationIT`, `CommentStyleMigrationIT`,
+  `RequestNumberMigrationIT` (V28), `StaffLinkMigrationIT`, `StaffPermissionMigrationIT` (V32). New SQL that locks or counts gets a
+  test there.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
-  Chrome, with a Python stand-in server that the scenarios configure; 94 scenarios. The stand-in sends the real CSP **enforced** and
+  Chrome, with a Python stand-in server that the scenarios configure; 96 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed

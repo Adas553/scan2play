@@ -12,7 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,32 +57,26 @@ class DjServiceTest {
         assertThat(result).isEqualTo("0-0-0");
     }
 
-    // ---- markSongAsPlayed ----
+    // ---- markSongAsPlayed: one conditional UPDATE (review 2026-10-14 W5) ----
 
     @Test
-    void markSongAsPlayed_shouldUpdateDecisionToPlayed() {
-        SongRequestEntity song = SongRequestEntity.builder()
-                .id(1L)
-                .partyCode(PARTY_CODE)
-                .songName("Test Song")
-                .decision(DECISION_ACCEPTED)
-                .build();
-
-        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+    void markSongAsPlayed_playsTheRequestOfThePartyNow() {
+        Instant before = Instant.now();
+        when(songRequestRepository.markPlayed(eq(1L), eq(PARTY_CODE), any(Instant.class))).thenReturn(1);
 
         djService.markSongAsPlayed(1L, PARTY_CODE);
 
-        assertThat(song.getDecision()).isEqualTo(DECISION_PLAYED);
-        verify(songRequestRepository).save(song);
+        ArgumentCaptor<Instant> now = ArgumentCaptor.forClass(Instant.class);
+        verify(songRequestRepository).markPlayed(eq(1L), eq(PARTY_CODE), now.capture());
+        assertThat(now.getValue()).isBetween(before, Instant.now());
+        verify(songRequestRepository, never()).save(any());
     }
 
     /** The dashboard reads the queue through a 3 s cache — a song that played leaves it at once. */
     @Test
     void markSongAsPlayed_evictsTheCachedDashboardQueueOfTheParty() {
-        SongRequestEntity song = SongRequestEntity.builder()
-                .id(1L).partyCode(PARTY_CODE).songName("Test Song").decision(DECISION_ACCEPTED).build();
         Cache dashboardQueue = mock(Cache.class);
-        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
+        when(songRequestRepository.markPlayed(eq(1L), eq(PARTY_CODE), any(Instant.class))).thenReturn(1);
         when(cacheManager.getCache("dashboardQueue")).thenReturn(dashboardQueue);
 
         djService.markSongAsPlayed(1L, PARTY_CODE);
@@ -91,83 +84,15 @@ class DjServiceTest {
         verify(dashboardQueue).evict(PARTY_CODE);
     }
 
+    /** Another party's request, one that is gone, or one no longer waiting (skipped, cleared, rejected): nothing changed. */
     @Test
-    void markSongAsPlayed_shouldDoNothing_whenSongNotFound() {
-        when(songRequestRepository.findById(999L)).thenReturn(Optional.empty());
+    void markSongAsPlayed_changesNothingElse_whenTheUpdateFindsNoWaitingRequestOfTheParty() {
+        when(songRequestRepository.markPlayed(eq(1L), eq(PARTY_CODE), any(Instant.class))).thenReturn(0);
 
-        djService.markSongAsPlayed(999L, PARTY_CODE);
+        djService.markSongAsPlayed(1L, PARTY_CODE);
 
+        verify(cacheManager, never()).getCache(any());
         verify(songRequestRepository, never()).save(any());
-    }
-
-    @Test
-    void markSongAsPlayed_shouldBlock_whenPartyCodeDoesNotMatch() {
-        SongRequestEntity song = SongRequestEntity.builder()
-                .id(1L)
-                .partyCode("OTHER")
-                .songName("Test Song")
-                .decision(DECISION_ACCEPTED)
-                .build();
-
-        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
-
-        djService.markSongAsPlayed(1L, PARTY_CODE);
-
-        assertThat(song.getDecision()).isEqualTo(DECISION_ACCEPTED); // unchanged
-        verify(songRequestRepository, never()).save(any());
-    }
-
-    // ---- the moment a request was played (V6): the history and "previous track" order by it ----
-
-    @Test
-    void markSongAsPlayed_shouldRecordWhenTheSongWasPlayed() {
-        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
-                .decision(DECISION_ACCEPTED).build();
-        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
-        Instant before = Instant.now();
-
-        djService.markSongAsPlayed(1L, PARTY_CODE);
-
-        assertThat(song.getPlayedAt()).isBetween(before, Instant.now());
-    }
-
-    @Test
-    void markSongAsPlayed_shouldKeepTheFirstPlayTime_whenConfirmedAgain() {
-        // a second "Mark as played" (another window, a double tap) must not move the first play time
-        Instant first = java.time.LocalDateTime.of(2026, 9, 29, 20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
-        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode(PARTY_CODE).songName("Test Song")
-                .decision(DECISION_PLAYED).playedAt(first).build();
-        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
-
-        djService.markSongAsPlayed(1L, PARTY_CODE);
-
-        assertThat(song.getPlayedAt()).isEqualTo(first);
-    }
-
-    @Test
-    void markSongAsPlayed_shouldNotSetAPlayTime_whenThePartyDoesNotMatch() {
-        SongRequestEntity song = SongRequestEntity.builder().id(1L).partyCode("OTHER").songName("Test Song")
-                .decision(DECISION_ACCEPTED).build();
-        when(songRequestRepository.findById(1L)).thenReturn(Optional.of(song));
-
-        djService.markSongAsPlayed(1L, PARTY_CODE);
-
-        assertThat(song.getPlayedAt()).isNull();
-    }
-
-    @Test
-    void markPlayed_shouldSetTheDecisionAndTheMoment_andKeepAMomentThatIsAlreadySet() {
-        Instant now = java.time.LocalDateTime.of(2026, 9, 29, 21, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
-        SongRequestEntity fresh = SongRequestEntity.builder().decision(DECISION_ACCEPTED).build();
-        SongRequestEntity replayed = SongRequestEntity.builder().decision(DECISION_PLAYED)
-                .playedAt(now.minus(1, ChronoUnit.HOURS)).build();
-
-        DjService.markPlayed(fresh, now);
-        DjService.markPlayed(replayed, now);
-
-        assertThat(fresh.getDecision()).isEqualTo(DECISION_PLAYED);
-        assertThat(fresh.getPlayedAt()).isEqualTo(now);
-        assertThat(replayed.getPlayedAt()).isEqualTo(now.minus(1, ChronoUnit.HOURS));
     }
 
     // ---- dismissSong: the DJ skips a waiting request (a requests-only party) ----
