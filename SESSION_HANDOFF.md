@@ -8,6 +8,13 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, night — the guests' song suggestions, on the branch `claude/song-suggestions` from `origin/dev` = `7c742ac`; a PR to
+  `dev`.** The owner: "shakira da" did not suggest "Dai Dai" (it did for "shakira dai"). Checked on iTunes: it matches whole words only
+  ("zenek prz" gives nothing), the American store lacks Polish songs ("Akcent – Przekorny Los" only in PL), and it gives a song several
+  times. `song-autocomplete.js`: the word being typed completed from the words before it (asked in parallel, 50 songs ≈ 10 KB gzipped,
+  as fast as 8, kept in memory while the word grows), title matches before artist ones, `country=PL`, each song once. The owner's
+  condition: the list no slower — the asks go at once. Tests: 117 browser (new `song-suggestions-word-begun`, `-once-each`, red
+  before). **Next:** the owner merges this PR and #82.
 - **2026-10-15, evening — the small items, group 5 "Poprawność i front-end", on the branch `claude/correctness-frontend` on top of
   `claude/db-performance`; a PR to `dev`.** A 👍 taken back on a played song stays the guest's (after "↩ Przywróć" it was given
   twice); `eveningOf` six hours on the clock (the nights the clocks change); Enter on a `<summary>` is not "Zagrane"; a guest's request
