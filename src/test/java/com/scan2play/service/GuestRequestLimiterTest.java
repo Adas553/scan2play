@@ -115,6 +115,32 @@ class GuestRequestLimiterTest {
         assertThat(limiter.tryAcquire("198.51.100.99", PARTY)).isEmpty();
     }
 
+    /**
+     * The organiser's "Odblokuj prośby gości" (review 2026-10-14 W4): one guest with a script spent the party's 300 for the day and
+     * the others were refused until the next day — the party's window starts again. The addresses keep theirs: the one that spent it
+     * is still held by its own limit.
+     */
+    @Test
+    void thePartysDailyLimit_canBeStartedAgain_theAddressesKeepTheirs() {
+        GuestRequestLimiter limiter = limiter();
+        for (int i = 0; i < 3; i++) {
+            limiter.tryAcquire(IP, PARTY);
+        }
+        limiter.tryAcquire("198.51.100.1", PARTY);
+        limiter.tryAcquire("198.51.100.2", PARTY);
+        assertThat(limiter.isPartyLimitReached(PARTY)).isTrue();
+        limiter.tryAcquire("198.51.100.3", "OTHER");
+
+        limiter.resetParty(PARTY);
+
+        assertThat(limiter.isPartyLimitReached(PARTY)).isFalse();
+        assertThat(limiter.partyRequestsUsed(PARTY)).isZero();
+        assertThat(limiter.tryAcquire("198.51.100.4", PARTY)).isEmpty();
+        assertThat(limiter.tryAcquire(IP, PARTY)).as("the address that spent it: still its own limit").map(Refusal::scope)
+                .contains(Scope.CLIENT);
+        assertThat(limiter.partyRequestsUsed("OTHER")).as("another party untouched").isEqualTo(1);
+    }
+
     @Test
     void aRequestRefusedByItsAddress_doesNotCountAgainstTheParty() {
         GuestRequestLimiter limiter = limiter();

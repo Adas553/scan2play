@@ -25,6 +25,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -400,6 +401,19 @@ public class DjDashboardController {
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
         model.addAttribute(PLAN, plan);       // and by the organiser's plan (V35): no 💸 without Pro
         return "dashboard :: songTableBody";
+    }
+
+    /**
+     * "Odblokuj prośby gości" in the warning above the queue (review 2026-10-14 W4): the party's 24-hour limit of guest requests starts
+     * again — one guest with a script could spend it and leave every other guest refused until the next day. For whom may set the
+     * guests' limits (the organiser, a person of the staff with LIMITS); not a feature of a plan — it is the server's limit, the same
+     * for every party. The next poll of every window says the limit is no longer reached (X-Guest-Limits).
+     */
+    @PostMapping("/dashboard/guest-limit-reset")
+    public String resetGuestLimit(@RequestParam String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.require(partyCode, StaffPermission.LIMITS, authentication, session);
+        guestRequestLimiter.resetParty(partyCode);
+        return REDIRECT_DASHBOARD + "?party=" + partyCode;
     }
 
     /** The value of {@link #GUEST_LIMITS_HEADER}. */

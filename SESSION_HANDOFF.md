@@ -8,6 +8,14 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, "Limity gości i sesje" (W2, W3, W4), on the branch
+  `claude/guest-limits-and-sessions` on top of `claude/forms-tell-the-truth` (#65); a PR to `dev`.** PROJECT_CONTEXT 5.2 / 12 / 13,
+  the review's status of fixes. W2: a request refused by the network's or the party's limit gives the guest's own place back. W3:
+  `/p/{code}` and its lists read the session only when there is one — an unknown code and an ended party make none (an open party's
+  page still does: the form's CSRF token); the log line of an unknown code is DEBUG. W4: "Odblokuj prośby gości" in the warning of a
+  spent party day (`POST /dj/dashboard/guest-limit-reset`, `LIMITS`). Tests: 674 unit (new `GuestNoSessionWebTest`), 103 browser (new
+  `guest-limit-unblock`; `guest-limit-warnings` reads the warning's text alone now). **Next:** the owner merges #64, #65 and this PR in that order; then W10 (decided by me, the owner: "zrób jak
+  uważasz"), the rest of the review in a new session.
 - **2026-10-15, later — the review of 2026-10-14, "Formularze mówią prawdę" (W1, W11, W12, W7, a refused "Cofnij"), on the branch
   `claude/forms-tell-the-truth` on top of `claude/spring-boot-4-0-8` (#64, W15); a PR to `dev`.** PROJECT_CONTEXT 5.1 / 13, the review's status of fixes.
   A form the server refuses (403: the session ran out, the plan, the access) or that never reaches it: ✗ and why — its own note or the
@@ -539,7 +547,7 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
-6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15, W1, W7, W11, W12 done (Start here); the rest by its order of PRs.
+6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15, W1, W7, W11, W12, W2, W3, W4 done (Start here); the rest by its order of PRs.
    The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
    the history, the needless `hibernate.dialect` gone). The prompt (2026-10-08): "not knowing a song is no reason to make one up"
    — the owner tries it on production.

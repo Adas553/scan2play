@@ -257,6 +257,8 @@ class DashboardPageRenderTest {
                 "id=\"history-content\"", "data-poll-offline", "data-form-refused", "data-form-refused-reload", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
         // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
         assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"party-full\"", "data-limit-near=\"party\"");
+        // the organiser's way out when the party's day is spent (review 2026-10-14 W4): in the warning, for whom may set the limits
+        assertThat(html).contains("action=\"/dj/dashboard/guest-limit-reset\"");
         // the scripts are ES modules (review 3.3): main.js imports the dashboard's parts
         assertThat(html).contains("<script type=\"module\" src=\"/js/dashboard/main.js\">");
         // no player: the DJ's own software plays (the YouTube player, Auto-Pilot, the background playlist and the DJ pick are gone)
@@ -412,13 +414,15 @@ class DashboardPageRenderTest {
         // "Kopiuj" and the queue's keys (queue-keys.js): "Zagrane" / "Pomiń" by the keyboard only for whom may press them
         assertThat(owner).contains("s2p-btn-copy", ">Kopiuj<", "data-copied=\"Skopiowano\"",
                 "id=\"queueKeys\"", "C lub Ctrl+C kopiuj · Enter zagrane · S pomiń · Backspace lub Ctrl+Z cofnij");
+        assertThat(owner).as("the way out of a spent day (W4)").contains(">Odblokuj prośby gości<");
         write("dashboard-cards.html", owner);
 
         PartyStaffService staff = mock(PartyStaffService.class);
         String viewer = renderDashboard(party(), queue, PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(), staff,
                 new MockHttpSession(), new PartyStaffService.Access(party(), false, StaffRole.VIEWER.permissions()), null);
         assertThat(viewer).contains("s2p-card-toggle", ">Kopiuj<", "↑ ↓ wybór · C lub Ctrl+C kopiuj · Esc")
-                .doesNotContain("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/tip-count\"", "Enter zagrane");
+                .doesNotContain("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/tip-count\"", "Enter zagrane",
+                        "action=\"/dj/dashboard/guest-limit-reset\"");
         write("dashboard-cards-viewer.html", viewer);
     }
 

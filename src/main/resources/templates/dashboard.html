@@ -260,8 +260,18 @@
              th:text="#{dashboard.poll.offline}">No connection: the list may be out of date.</div>
         <div id="guestLimitWarnings">
             <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="party-full"
-                 th:classappend="${partyLimitReached} ? '' : 'd-none'"
-                 th:text="#{dashboard.warning.party_full(${serverLimitPerParty})}">Party limit reached</div>
+                 th:classappend="${partyLimitReached} ? '' : 'd-none'">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="me-auto" th:text="#{dashboard.warning.party_full(${serverLimitPerParty})}">Party limit reached</span>
+                    <!--/* the way out when one guest spent the party's day (review 2026-10-14 W4): it starts again — for whom may set
+                         the guests' limits (DjDashboardController.resetGuestLimit) */-->
+                    <form th:if="${access == null or access.may('LIMITS')}" th:action="@{/dj/dashboard/guest-limit-reset}"
+                          method="POST" class="m-0">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <button type="submit" class="btn btn-sm btn-dark" th:text="#{dashboard.warning.party_full.unblock}">Unblock guest requests</button>
+                    </form>
+                </div>
+            </div>
             <!--/* near the party's limit (from 80 %, under it): how much is used — the DJ sees it coming (polling.js keeps it current) */-->
             <div class="alert alert-warning small py-2 mb-2" role="status" data-limit-near="party"
                  th:if="${serverLimitPerParty > 0}"

@@ -354,6 +354,11 @@ class Handler(BaseHTTPRequestHandler):
             with stand.lock:
                 state['queue'] = []
             return self._json({})
+        if path == '/dj/dashboard/guest-limit-reset':  # the organiser starts the party's day again (W4): no limit reached now
+            with stand.lock:
+                state['guestLimits'] = 'none'
+                state['guestLimitsUse'] = '0,0'
+            return self._send(302, headers={'Location': '/dj/dashboard'})
         if path == '/dj/dashboard/clear-history':     # the history cleared (the History tab fetches it again)
             return self._json({})
         if path == '/dj/push/subscribe':               # the browser's subscription to notifications (push.js)
