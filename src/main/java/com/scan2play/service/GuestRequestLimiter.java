@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -47,6 +46,10 @@ public class GuestRequestLimiter {
     public enum Scope { CLIENT, PARTY }
 
     private static final Duration PARTY_WINDOW = Duration.ofHours(24);
+    /** Parties with open windows at once (only known parties count requests: GuestController reads the party first). */
+    private static final int MAX_PARTIES = 10_000;
+    /** Address windows of one party at once: a venue has hundreds; a flood beyond it drops that party's own oldest. */
+    private static final int MAX_ADDRESSES_PER_PARTY = 20_000;
 
     private record Window(Instant start, int count) {
     }
@@ -58,7 +61,12 @@ public class GuestRequestLimiter {
     private final String clientIpHeader;
     private final Clock clock;
 
-    private final Cache<String, Window> clientWindows;
+    /**
+     * The address windows by party, then by address: a party's dashboard reads only its own (every poll, every 3 s), and a flood of
+     * made-up addresses at one party fills only that party's map — it cannot push another party's windows out (review 2026-10-14:
+     * one map of 100 000 for every party). A party's map goes a window after its last request.
+     */
+    private final Cache<String, Cache<String, Window>> clientWindowsByParty;
     private final Cache<String, Window> voteWindows;
     private final Cache<String, Window> partyWindows;
 
@@ -90,7 +98,7 @@ public class GuestRequestLimiter {
         this.clock = clock;
         // Bounded, so a flood of fake addresses cannot grow the maps without end; an entry is dropped one window after its last
         // request at the latest (the window's own start decides whether it is still open).
-        this.clientWindows = Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(100_000).build();
+        this.clientWindowsByParty = Caffeine.newBuilder().expireAfterAccess(clientWindow).maximumSize(MAX_PARTIES).build();
         this.voteWindows = Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(100_000).build();
         this.partyWindows = Caffeine.newBuilder().expireAfterWrite(PARTY_WINDOW).maximumSize(10_000).build();
     }
@@ -116,7 +124,7 @@ public class GuestRequestLimiter {
      * @return empty if the request may go on (it has been counted), otherwise the limit that refused it
      */
     public Optional<Refusal> tryAcquire(String clientIp, String partyCode) {
-        Optional<Long> clientWait = acquire(clientWindows, clientIp + "|" + partyCode, perClientLimit, clientWindow);
+        Optional<Long> clientWait = acquire(clientWindowsOf(partyCode), clientIp, perClientLimit, clientWindow);
         if (clientWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, clientWait.get()));
         }
@@ -171,21 +179,28 @@ public class GuestRequestLimiter {
 
     /**
      * The most requests one client address has used of its open window at this party — the network closest to its limit (at a
-     * party that is usually the venue's Wi-Fi, which all its guests share). 0 when no window is open. Scans the address windows of
-     * every party — one per address that asked in the last window, a few hundred at a busy time, at most the cache's bound — on
-     * every queue poll of a dashboard (every 3 s).
+     * party that is usually the venue's Wi-Fi, which all its guests share). 0 when no window is open. Reads the party's own address
+     * windows — one per address that asked there in the last window, a few dozen at a busy party — on every queue poll of a
+     * dashboard (every 3 s).
      */
     public int busiestClientRequestsUsed(String partyCode) {
-        String suffix = "|" + partyCode;
+        Cache<String, Window> windows = clientWindowsByParty.getIfPresent(partyCode);
+        if (windows == null) {
+            return 0;
+        }
         Instant now = clock.instant();
         int busiest = 0;
-        for (Map.Entry<String, Window> entry : clientWindows.asMap().entrySet()) {
-            Window window = entry.getValue();
-            if (entry.getKey().endsWith(suffix) && now.isBefore(window.start().plus(clientWindow))) {
+        for (Window window : windows.asMap().values()) {
+            if (now.isBefore(window.start().plus(clientWindow))) {
                 busiest = Math.max(busiest, window.count());
             }
         }
         return perClientLimit > 0 ? Math.min(busiest, perClientLimit) : busiest;
+    }
+
+    private Cache<String, Window> clientWindowsOf(String partyCode) {
+        return clientWindowsByParty.get(partyCode, code ->
+                Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(MAX_ADDRESSES_PER_PARTY).build());
     }
 
     /** Whether the party's 24-hour limit is spent: its guests are refused until the window ends. */

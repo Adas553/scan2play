@@ -27,6 +27,11 @@ public class PartySettingsQueryService {
      * Every caller gets its <em>own copy</em>: the cached entity is never handed out, so a {@code setX(...)} on the result
      * cannot change what every other request sees without anything being saved. Changes go through
      * {@link PartySettingsCommandService#updateSettings}, which empties the cache entry after its commit.
+     * <p>
+     * The database is read inside the cache's own load of the key ({@code Cache.get(key, loader)}, atomic per key in Caffeine): an
+     * eviction that comes while a read is on its way waits for it and then removes what it loaded. Read and put apart, a read that
+     * took the row just before a change committed put the old copy back after the change's eviction — for 24 hours (review
+     * 2026-10-14).
      *
      * @param partyCode The 5-character party code.
      * @return A copy of the party's settings.
@@ -34,13 +39,19 @@ public class PartySettingsQueryService {
      */
     public PartySettingsEntity getSettings(String partyCode) {
         Cache cache = Objects.requireNonNull(cacheManager.getCache(CACHE), CACHE);
-        PartySettingsEntity cached = cache.get(partyCode, PartySettingsEntity.class);
-        if (cached == null) {
-            log.debug("Fetching party settings for code: {}", partyCode);
-            cached = partySettingsRepository.findByPartyCode(partyCode)
-                    .orElseThrow(() -> new IllegalArgumentException("Party not found: " + partyCode));
-            cache.put(partyCode, cached);
+        PartySettingsEntity cached;
+        try {
+            cached = cache.get(partyCode, () -> {
+                log.debug("Fetching party settings for code: {}", partyCode);
+                return partySettingsRepository.findByPartyCode(partyCode)
+                        .orElseThrow(() -> new IllegalArgumentException("Party not found: " + partyCode));
+            });
+        } catch (Cache.ValueRetrievalException e) {
+            if (e.getCause() instanceof IllegalArgumentException unknown) {
+                throw unknown;   // nothing cached for an unknown party
+            }
+            throw e;
         }
-        return cached.toBuilder().build();
+        return Objects.requireNonNull(cached).toBuilder().build();
     }
 }

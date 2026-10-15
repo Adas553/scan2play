@@ -8,6 +8,13 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, evening — the small items, group 4 "Baza i wydajność", on the branch `claude/db-performance` on top of
+  `claude/language`; a PR to `dev`.** EXPLAIN on a throw-away `s2p_explain_*` (dropped): one party of 9000 rows among 99 000, its rows
+  scattered — `findRecentlyPlayed` 5.3 ms, `findSkippedByTheDj` 2.2 ms, `findHistory` 10.3 ms (index `idx_party_decision_time`, a
+  top-N sort): no new index. `busiestClientRequestsUsed`: the address windows by party (a flood at one party pushed another party's
+  windows out — red test). The `partySettings` cache: read inside `Cache.get(key, loader)` — a read on its way left the old copy for
+  24 h (red test, Caffeine). The lock key: the party code packed, not its 32-bit hash ("AOXXX" and "B0XXX" shared one). Hikari 15 vs
+  async 32 and the session's UPDATE per poll (0.3 ms): explained in `application.properties`, unchanged. Tests: 714 unit, 81 database.
 - **2026-10-15, evening — the small items, group 3 "Język", on the branch `claude/language` on top of `claude/security-small`; a PR to
   `dev`.** `?lang=EN`, `?lang=en-US` are English (only "en" was — production gave Polish); the language picked by `?lang` stays in the
   cookie `lang` for a year (the pages' links do not carry `?lang`); an empty `Accept-Language` or `*` is Polish, not the JVM's (on

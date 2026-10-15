@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.SongNames;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -135,8 +136,21 @@ public class SongRequestCommandService {
                 .findFirst();
     }
 
-    /** The advisory-lock key of a party's guest requests (a hash of the code: a rare collision only makes two parties take turns). */
+    /**
+     * The advisory-lock key of a party's guest requests: "S2PR" and the code itself — each of its five characters by its place in
+     * {@link CodeGenerator#CHARACTERS} (1–36, six bits: 30 bits in all), so two parties never share a key. The code's 32-bit hash
+     * gave "AOXXX" and "B0XXX" one key, and two parties took turns for nothing (review 2026-10-14). A code of another shape (none
+     * is made) gets its hash, with the top bit of the half set: apart from every packed code.
+     */
     static long lockKey(String partyCode) {
-        return REQUESTS_LOCK_SPACE | (Objects.hashCode(partyCode) & 0xFFFF_FFFFL);
+        long packed = 0;
+        boolean madeByTheApp = partyCode != null && !partyCode.isEmpty() && partyCode.length() <= CodeGenerator.CODE_LENGTH;
+        for (int i = 0; madeByTheApp && i < partyCode.length(); i++) {
+            int place = CodeGenerator.CHARACTERS.indexOf(partyCode.charAt(i));
+            madeByTheApp = place >= 0;
+            packed = (packed << 6) | (place + 1);
+        }
+        long half = madeByTheApp ? packed : 0x8000_0000L | (Objects.hashCode(partyCode) & 0x7FFF_FFFFL);
+        return REQUESTS_LOCK_SPACE | half;
     }
 }
