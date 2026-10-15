@@ -81,7 +81,7 @@ class PartySettingsCommandServiceTest {
                 .requestLimit(2)
                 .build();
 
-        when(partySettingsRepository.findByPartyCode("XYZ99")).thenReturn(Optional.of(existing));
+        when(partySettingsRepository.lockByPartyCode("XYZ99")).thenReturn(Optional.of(existing));
         when(partySettingsRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         PartySettingsEntity result = service.updateSettings("XYZ99", s -> {
@@ -98,7 +98,7 @@ class PartySettingsCommandServiceTest {
     void updateSettings_shouldDropTheCachedSettingsOfThatPartyOnly() {
         cacheManager.getCache("partySettings").put("XYZ99", PartySettingsEntity.builder().partyCode("XYZ99").build());
         cacheManager.getCache("partySettings").put("OTHER", PartySettingsEntity.builder().partyCode("OTHER").build());
-        when(partySettingsRepository.findByPartyCode("XYZ99"))
+        when(partySettingsRepository.lockByPartyCode("XYZ99"))
                 .thenReturn(Optional.of(PartySettingsEntity.builder().partyCode("XYZ99").build()));
         when(partySettingsRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -110,7 +110,7 @@ class PartySettingsCommandServiceTest {
 
     @Test
     void updateSettings_shouldThrow_whenPartyNotFound() {
-        when(partySettingsRepository.findByPartyCode("NOPE1")).thenReturn(Optional.empty());
+        when(partySettingsRepository.lockByPartyCode("NOPE1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.updateSettings("NOPE1", s -> {}))
                 .isInstanceOf(IllegalArgumentException.class)

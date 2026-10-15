@@ -107,28 +107,22 @@ public class DjService {
     /**
      * The DJ skips a waiting request (a song they do not have, or do not want to play now): it leaves the queue as rejected, with
      * {@code skippedAt} set and the AI's comment kept, and shows in the history's rejected requests as skipped by the DJ. Only a waiting (accepted) request;
-     * one that played stays played. Validates that the song belongs to the given party (IDOR protection).
+     * one that played stays played. One conditional {@code UPDATE} ({@link SongRequestRepository#skip}), as "Zagrane": only the given
+     * party's request (IDOR protection), only while it waits — read and saved, a "Zagrane" in another window that committed in between
+     * was turned into a skip (review 2026-10-14, {@code SongRequestVotesIT.pominRightAfterZagrane_leavesTheSongPlayed}).
      *
      * @param id             The ID of the song request.
      * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
      */
     @Transactional
     public void dismissSong(Long id, String ownerPartyCode) {
-        songRequestRepository.findById(id).ifPresent(song -> {
-            if (!song.getPartyCode().equals(ownerPartyCode)) {
-                log.warn("IDOR blocked: DJ party {} tried to skip song {} (belongs to party {})",
-                        ownerPartyCode, id, song.getPartyCode());
-                return;
-            }
-            if (!DECISION_ACCEPTED.equals(song.getDecision())) {
-                return;
-            }
-            song.setDecision(DECISION_REJECTED);
-            song.setSkippedAt(Instant.now());   // the AI's comment stays: a restore gives the request back with it
-            songRequestRepository.save(song);
-            evictDashboardQueueAfterCommit(song.getPartyCode());
-            log.info("Song ID={} skipped by the DJ of party {}", id, song.getPartyCode());
-        });
+        // the AI's comment stays: a restore gives the request back with it
+        if (songRequestRepository.skip(id, ownerPartyCode, Instant.now()) > 0) {
+            evictDashboardQueueAfterCommit(ownerPartyCode);
+            log.info("Song ID={} skipped by the DJ of party {}", id, ownerPartyCode);
+        } else {
+            log.warn("Not skipped: DJ party {} asked for song {} (not theirs, gone, or no longer waiting)", ownerPartyCode, id);
+        }
     }
 
     /**

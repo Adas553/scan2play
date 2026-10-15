@@ -16,6 +16,15 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   M14: a poll answered without `#song-list` counts as failed (the queue stays); a poll that wants the page loaded again loads it once
   in a run (`sessionStorage`), then the notice. Tests: 676 unit, 108 browser (new `scenarios/quiet-failures.js`, 5, each red before
   the fix; the stand-in's `updatesBody`, `guestQueueStatus`). **Next:** the owner reviews the PR.
+- **2026-10-15, later — the review of 2026-10-14, "Spójność zapisów" (W8, W9, "Pomiń" vs "Zagrane", the batch deletes), on the branch
+  `claude/consistent-writes` from `origin/dev` = `be516ad` (#62–#67 merged); a PR to `dev`.** PROJECT_CONTEXT 4.1 / 9 / 13, the review's
+  status of fixes. W8: `updateSettings` reads the party's row under its lock — two writes take turns; the hosts' page asks its token again
+  under the lock (an old link writes nothing). W9: the account's deletion takes "S2PR", then the party's row, before it deletes anything
+  (a "Dołącz" at that moment waits instead of deadlocking); `saveOrVote` saves nothing for a party that is gone. "Pomiń" is a conditional
+  `UPDATE` (`SongRequestRepository.skip`), as "Zagrane". The requests and the feedback of a deleted account go in one `DELETE` each.
+  Tests: 676 unit, 75 database (new `PartySettingsWritesIT`, `AccountDeletionIT`, one more in `SongRequestVotesIT` — each red on
+  `be516ad`; the writers queue behind a held row, `PostgresIntegrationTest.awaitLockWaiters`). **Next:** the owner reviews the PR; then
+  W14 (the privacy policy — its text waits for the owner's yes), the leftovers of group 3, groups 6–7 (the owner picks).
 - **2026-10-15, later — the review of 2026-10-14, W10 (the owner: "zrób jak uważasz"), on the branch
   `claude/old-waiting-requests-cleared` on top of `claude/guest-limits-and-sessions` (#66); a PR to `dev`.** Decided: the night clears
   from every queue what has waited more than 24 h (04:40, `SongRequestRetentionService.clearOldWaitingRequests`; rejected with
