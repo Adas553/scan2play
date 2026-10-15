@@ -255,7 +255,9 @@
      DJ typed can still be copied (the review of 2026-10-14, W1: the button said ✓ and the hosts' lists were lost). A later form that
      goes through hides it. */-->
 <div th:fragment="formRefused" class="s2p-undo-toast s2p-refused-toast" role="alert" data-form-refused hidden>
-    <span th:text="#{dashboard.form.refused}">Not saved: copy what you typed, then reload the page.</span>
+    <!--/* one of the two texts shows (common.js showRefused): a form not saved, or a list that did not load */-->
+    <span data-refused-text="save" th:text="#{dashboard.form.refused}">Not saved: copy what you typed, then reload the page.</span>
+    <span data-refused-text="load" hidden th:text="#{dashboard.load.refused}">It did not load: reload the page.</span>
     <button type="button" class="btn btn-sm btn-light flex-shrink-0" data-form-refused-reload
             th:text="#{dashboard.form.refused.reload}">Reload the page</button>
     <button type="button" class="btn-close btn-close-white flex-shrink-0" data-form-refused-close

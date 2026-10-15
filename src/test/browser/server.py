@@ -63,6 +63,8 @@ def default_state():
         'partyActive': True,
         # The poll's own answer (V32): e.g. 403 — the organiser took the person's access away (the page loads itself again)
         'updatesStatus': None,
+        # The poll's body instead of the queue, answered 200 without an ETag: e.g. a Wi-Fi login page that took the request over
+        'updatesBody': None,
         # The X-Panel-Access header of every poll answer (V32): what the person may do ('owner', or the permissions' names); None = no
         # header. Another value than the page was made with: the organiser changed it, the page loads itself again
         'panelAccess': None,
@@ -72,6 +74,8 @@ def default_state():
         # The status a POST path answers with instead of its usual answer, e.g. {'/dj/dashboard/host-lists': 403}: the server
         # refused it (the session ran out — CSRF —, the plan, the access); null = the usual answer again
         'postStatus': {},
+        # What GET /p/ABC12/queue ("↻ Odśwież" of the guest page) answers instead of the list (the vote's answer file), e.g. 500
+        'guestQueueStatus': None,
         'voteAnswer': 'guest-vote-answer',   # what POST /p/ABC12/vote answers ('guest-vote-gone': the song was played meanwhile)
         'requests': [],
     }
@@ -250,10 +254,17 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/p/') and path.endswith('/queue'):   # the guest's list fetched again: as the real server renders it
+            if state['guestQueueStatus']:
+                return self._send(state['guestQueueStatus'])
+            with open(os.path.join(stand.rendered, 'guest-vote-answer.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/updates':
             with stand.lock:
                 if state['updatesStatus']:
                     return self._send(state['updatesStatus'])
+                if state['updatesBody'] is not None:
+                    return self._send(200, state['updatesBody'], 'text/html; charset=utf-8')
                 queue = list(state['queue'])
                 limits = {'X-Guest-Limits': state['guestLimits'], 'X-Guest-Limits-Use': state['guestLimitsUse'],
                           'X-Party-Active': 'true' if state['partyActive'] else 'false'}

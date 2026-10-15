@@ -8,6 +8,14 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, the leftovers of "Formularze mówią prawdę", on the branch
+  `claude/quiet-failures-speak` from `origin/dev` = `be516ad`; a PR to `dev` (next to "Spójność zapisów", #68 — no file of the
+  code shared; both append to this file and the review's status).** PROJECT_CONTEXT 5.1 / 5.2 / 13. The History tab, its filter and
+  "Pokaż więcej" that do not load: the page's notice with its second text "Nie udało się wczytać…" (`showRefused('load')`, now in
+  `common.js`). A guest's 👍 or "↻ Odśwież" that does not go through: the floating note `guest.queue.failed`, the button works again.
+  M14: a poll answered without `#song-list` counts as failed (the queue stays); a poll that wants the page loaded again loads it once
+  in a run (`sessionStorage`), then the notice. Tests: 676 unit, 108 browser (new `scenarios/quiet-failures.js`, 5, each red before
+  the fix; the stand-in's `updatesBody`, `guestQueueStatus`). **Next:** the owner reviews the PR.
 - **2026-10-15, later — the review of 2026-10-14, W10 (the owner: "zrób jak uważasz"), on the branch
   `claude/old-waiting-requests-cleared` on top of `claude/guest-limits-and-sessions` (#66); a PR to `dev`.** Decided: the night clears
   from every queue what has waited more than 24 h (04:40, `SongRequestRetentionService.clearOldWaitingRequests`; rejected with
