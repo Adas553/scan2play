@@ -53,6 +53,11 @@ public class HostController {
         String blockedList = SongList.tidy(blocked);
         String wantedList = SongList.tidy(wanted);
         partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> {
+            // asked again under the row's lock: the DJ may have made a new link since partyOf read it — the old one writes nothing
+            // (written, it put its own token back over the new one; review 2026-10-14 W8)
+            if (!token.equals(s.getHostToken())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
             s.setHostBlocked(blockedList);
             s.setHostWanted(wantedList);
         });

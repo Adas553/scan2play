@@ -62,11 +62,16 @@ class AccountDeletionServiceTest {
     void shouldDeleteAllPartyData() {
         PartySettingsEntity party = PartySettingsEntity.builder().ownerId(OWNER).partyCode(PARTY).build();
         when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.of(party));
+        when(partySettingsRepository.lockByPartyCode(PARTY)).thenReturn(Optional.of(party));
 
         service.deleteAllUserData(OWNER);
 
-        InOrder order = inOrder(songRequestRepository, partySettingsRepository, feedbackRepository);
+        InOrder order = inOrder(songRequestRepository, partySettingsRepository, staffInvitationRepository, feedbackRepository);
+        // the locks first, in the order of the guests' requests (AccountDeletionIT): "S2PR", then the party's row
+        order.verify(songRequestRepository).lockRequests(SongRequestCommandService.lockKey(PARTY));
+        order.verify(partySettingsRepository).lockByPartyCode(PARTY);
         order.verify(songRequestRepository).deleteByPartyCode(PARTY);
+        order.verify(staffInvitationRepository).deleteByParty(PARTY);
         order.verify(partySettingsRepository).delete(party);
         order.verify(feedbackRepository).deleteByOwnerId(OWNER);
         verify(pushSubscriptionRepository).deleteByOwnerId(OWNER);
@@ -80,6 +85,7 @@ class AccountDeletionServiceTest {
     void shouldEvictThePartyFromTheCaches() {
         PartySettingsEntity party = PartySettingsEntity.builder().ownerId(OWNER).partyCode(PARTY).build();
         when(partySettingsRepository.findByOwnerId(OWNER)).thenReturn(Optional.of(party));
+        when(partySettingsRepository.lockByPartyCode(PARTY)).thenReturn(Optional.of(party));
         AccountDeletionService.PARTY_CACHES.forEach(name -> when(cacheManager.getCache(name)).thenReturn(cache));
 
         service.deleteAllUserData(OWNER);

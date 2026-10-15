@@ -130,8 +130,11 @@ back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests
 20 rounds × 16 guests — red without the lock). A request the AI rejected this time for a song that waits is a vote too, and the
 guest hears the verdict the song was taken with (the AI does not judge a song the same way every time — 2026-10-04, a song accepted
 once, then rejected four times while it waited); any other rejected request is its own row. The AI's duplicate rule lists only
-PLAYED songs, the latest to play first (`findRecentlyPlayed`; a waiting one is a vote). `SongRequestEntity` is `@DynamicUpdate`: the
-DJ's "played" / "skip" writes only the columns it changed, so a vote that commits meanwhile is kept (`SongRequestVotesIT`). **A song
+PLAYED songs, the latest to play first (`findRecentlyPlayed`; a waiting one is a vote). The DJ's "Zagrane" and "Pomiń" are conditional
+`UPDATE`s (`markPlayed`, `skip`): only a waiting request, so a "Pomiń" right after a "Zagrane" in another window leaves the song played
+(`SongRequestVotesIT`); `SongRequestEntity` is `@DynamicUpdate`, so the entity writes ("↩ Przywróć") touch only the columns they change
+and a vote that commits meanwhile is kept. A request for a party deleted while the AI judged it is not saved: `saveOrVote` asks whether
+the party is there under the lock the account's deletion holds (`AccountDeletionIT`). **A song
 the DJ skipped** ("Pomiń" — usually "I do not have it") is not saved again for 2 hours from the skip (`skipped_at`, V20; the owner:
 12 h was too long): the next guest who asks for it hears `guest.skipped_by_dj` ("Tej piosenki DJ teraz nie zagra — wybierz inną"),
 nothing reaches the queue (`Outcome.SKIPPED_BY_DJ`, `findSkippedByTheDj`). A song only cleared with the whole queue may be asked for
@@ -573,7 +576,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | Class | Purpose |
 |-------|---------|
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`, the prompt per language) → the "Podejrzyj" link → save or vote |
-| `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`), clear the queue |
+| `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
 | `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1) |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes) |
@@ -582,7 +585,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `QrCodeService` | QR codes (ZXing, cached) |
-| `AccountDeletionService` | deletes all of a DJ's data (their party's staff and invitations by e-mail, their places on other staffs too) and evicts the caches after the commit |
+| `AccountDeletionService` | deletes all of a DJ's data (their party's staff and invitations by e-mail, their places on other staffs too) and evicts the caches after the commit; first the party's locks in the app's order — "S2PR", then the party's row (a guest's request and "Dołącz" wait or find nothing, no deadlock) —; the requests and the feedback in one `DELETE` each |
 | `PartyStaffService` | the party's staff (V30, V32): what a person may do at a party (`Access`), joining by the invitation link with its role (under the party's lock, V33), the places shared with the invitations (`placesTaken`), the owner's list, permissions, taking access away, the panels, the party's name |
 | `StaffInvitationService` | invitations by e-mail (V34): "Zaproś" (an address, a role, the places under the party's lock), the login's match, "Dołącz" / "Nie, dziękuję", cancelling, the nightly cleanup after 30 days |
 | `SongRequestRetentionService` | the nightly clearing of requests waiting more than a day, and the purge of song requests (Section 4.1) |
@@ -767,7 +770,7 @@ real use leaves the log quiet. The browser tests run the dashboard, the guest pa
 
 | Cache | Key | TTL / size | Usage |
 |-------|-----|------------|-------|
-| `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; `updateSettings` evicts after its commit |
+| `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; `updateSettings` reads the row under its lock (`lockByPartyCode`: two writes take turns, `PartySettingsWritesIT`) and evicts after its commit |
 | `qr-codes` | text + size | 24 h / 1000 | `QrCodeService` |
 | `dashboardQueue` | partyCode | 3 s / 200 | `DjService.getDashboardQueue` — the guest page and the dashboard's first render; evicted after the commit of a new request, a vote, a 👍, a song played, skipped or restored, a tip, the queue cleared. The poll does **not** read it: a changed fingerprint renders `getWaiting` (review 2026-10-14 K1) |
 | `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted when a trial is written, `forget`, and with the account |
@@ -995,12 +998,14 @@ GuestQueueService          → DjService
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
   security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 68 tests in 19 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 75 tests in 21 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT` (the history's order, the
   queue's fingerprint — also changes that cancel out in counts —, the night's clearing of the queues, the retention), `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
-  `SongRequestVotesIT` (votes under the lock; a vote while the DJ skips the song; "Zagrane" plays only a waiting request; a song the
-  DJ skipped, and put back), `FirstLoginIT` (a first login in eight tabs at once — one party), `PartyStaffRepositoryIT`,
+  `SongRequestVotesIT` (votes under the lock; a vote while the DJ skips the song; "Zagrane" plays only a waiting request; "Pomiń" right
+  after "Zagrane"; a song the DJ skipped, and put back), `PartySettingsWritesIT` (two settings' writes at once keep both; the hosts' old
+  link writes nothing), `AccountDeletionIT` ("Dołącz" during the deletion waits, no deadlock; a request in flight is not saved; the
+  requests in one statement), `FirstLoginIT` (a first login in eight tabs at once — one party), `PartyStaffRepositoryIT`,
   `StaffInvitationIT`, `PushSubscriptionRepositoryIT`, `DjPlanIT` (V35: a plan's row as written, gone with the account); with a
   database of their own, migrated to the version before and given rows the old way: `TimestampMigrationIT` (V12 — the same moments;
   red when the old values are read as UTC), `VibeMigrationIT` (V16), `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT`
