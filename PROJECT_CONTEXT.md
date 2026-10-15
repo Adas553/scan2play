@@ -129,7 +129,8 @@ party's own limit is 300, so no "more than 300" note is needed.
 same name by `util/SongNames.comparable` — case, accents, punctuation ignored) is not a row of its own: the waiting song gets
 `votes + 1` (a conditional `UPDATE … WHERE decision = 'accepted'`; when the DJ played it meanwhile, the request is a new row) and
 keeps its name, link and first guest's words. The guest's own waiting song asked for again changes nothing and gives the guest's limit
-back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests asking at once make one row (`SongRequestVotesIT`,
+back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR" in the key's upper half, the code packed in the lower — six bits
+a character, so two parties never share a key: `lockKey`, `RequestsLockKeyTest`), so guests asking at once make one row (`SongRequestVotesIT`,
 20 rounds × 16 guests — red without the lock). A request the AI rejected this time for a song that waits is a vote too, and the
 guest hears the verdict the song was taken with (the AI does not judge a song the same way every time — 2026-10-04, a song accepted
 once, then rejected four times while it waited); any other rejected request is its own row. The AI's duplicate rule lists only
@@ -547,7 +548,8 @@ feature) — `POST /dj/dashboard/guest-limit-reset`, `GuestRequestLimiter.resetP
 their windows (W4). A stricter limit per address was not added: a venue's Wi-Fi is one address for all its guests; a scripted flood is
 for a rate-limit rule in Cloudflare (the owner's setting).
 
-2 and 3 are `GuestRequestLimiter` (Caffeine, in memory); 0 switches a limit off. The guests' 👍 have their own per-network limit
+2 and 3 are `GuestRequestLimiter` (Caffeine, in memory; the address windows by party, so a dashboard's poll reads only its own
+party's and a flood of made-up addresses at one party cannot push another's out — review 2026-10-14); 0 switches a limit off. The guests' 👍 have their own per-network limit
 there (`guest.limit.votes-per-ip-party`, 300 per the same window, `tryAcquireVote`): no AI call, so a vote never uses up a request. The address is `getRemoteAddr()` or the header named
 by `guest.client-ip-header` (`CF-Connecting-IP` — set on Railway). The DJ sees the use of 2 and 3 on "Ustawienia imprezy"
 in one line under the limits form (badges: grey, yellow from 80 %, red; what they are unfolded); the panel says it only near a limit —
@@ -798,7 +800,7 @@ delete the variable (a restart, no deploy). The browser tests run the dashboard,
 
 | Cache | Key | TTL / size | Usage |
 |-------|-----|------------|-------|
-| `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; `updateSettings` reads the row under its lock (`lockByPartyCode`: two writes take turns, `PartySettingsWritesIT`) and evicts after its commit |
+| `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; the row is read inside the cache's load of the key (`Cache.get(key, loader)`), so an eviction waits for a read on its way and the old copy never stays (review 2026-10-14); `updateSettings` reads the row under its lock (`lockByPartyCode`: two writes take turns, `PartySettingsWritesIT`) and evicts after its commit |
 | `qr-codes` | text + size | 24 h / 1000 | `QrCodeService` |
 | `dashboardQueue` | partyCode | 3 s / 200 | `DjService.getDashboardQueue` — the guest page and the dashboard's first render; evicted after the commit of a new request, a vote, a 👍, a song played, skipped or restored, a tip, the queue cleared. The poll does **not** read it: a changed fingerprint renders `getWaiting` (review 2026-10-14 K1) |
 | `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted after the commit of a trial (`util/AfterCommit`) and with the account; the value is the row's plan with its end (`PlanService.Read`), so a plan ends on time |
