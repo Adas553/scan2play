@@ -8,6 +8,11 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, late night — the deferred small items, PR 4 "the window `sw.js` picks, tested", on the branch `claude/sw-window-test`
+  on top of `claude/guest-refresh-focus` (#87); a PR to `dev`.** A headless browser runs no `notificationclick`, so the choice is
+  `openThePanel(windows, url, openWindow)` in `sw.js` (no change in behaviour); the scenario `notification-opens-the-partys-panel`
+  loads the real `/sw.js` into a page and gives it windows that record what is done (red before; the old "any /dj/ window" red on 5
+  steps). Tests: 122 browser.
 - **2026-10-15, late night — the deferred small items, PR 3 "the focus after the guest's ↻ Odśwież", on the branch
   `claude/guest-refresh-focus` on top of `claude/browser-narrow-widths` (#86); a PR to `dev`.** `guest-party.js` `focusPlace()`: the
   list put in whole in place of the old one keeps the keyboard's focus ("↻ Odśwież", the search, the same song's 👍; in the unfolded
