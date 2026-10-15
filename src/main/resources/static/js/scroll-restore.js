@@ -8,9 +8,14 @@ document.documentElement.style.visibility = 'hidden';
 // Safety net: reveal page even if DOMContentLoaded never fires
 setTimeout(function() { document.documentElement.style.visibility = ''; }, 2000);
 
+// A browser may refuse the session storage (a private window, storage blocked): the page shows at once, without its scroll memory —
+// it stayed hidden for the 2 s of the safety net, with an error (review 2026-10-14).
 document.addEventListener("DOMContentLoaded", function () {
     var scrollKey = "scroll_" + window.location.pathname;
-    var savedScroll = sessionStorage.getItem(scrollKey);
+    var savedScroll = null;
+    try {
+        savedScroll = sessionStorage.getItem(scrollKey);
+    } catch (e) { /* storage blocked: no memory */ }
 
     // A link with an anchor (…/dj/dashboard#queue-content, #top) says where to go: the browser scrolls there.
     if (savedScroll !== null && !window.location.hash) {
@@ -20,6 +25,8 @@ document.addEventListener("DOMContentLoaded", function () {
     document.documentElement.style.visibility = '';
 
     window.addEventListener("beforeunload", function () {
-        sessionStorage.setItem(scrollKey, window.scrollY);
+        try {
+            sessionStorage.setItem(scrollKey, window.scrollY);
+        } catch (e) { /* storage blocked: nothing remembered */ }
     });
 });

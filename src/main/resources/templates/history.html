@@ -57,13 +57,13 @@
                 <!--/* Separate small buttons that wrap (a joined btn-group is wider than a phone) */-->
                 <div class="d-flex flex-wrap gap-1" role="group">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="all"
-                            th:classappend="${activeFilter == 'all'} ? 'active'"
+                            th:classappend="${activeFilter == 'all'} ? 'active'" th:attr="aria-pressed=${activeFilter == 'all'}"
                             th:text="#{history.filter.all}">All</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="played"
-                            th:classappend="${activeFilter == 'played'} ? 'active'"
+                            th:classappend="${activeFilter == 'played'} ? 'active'" th:attr="aria-pressed=${activeFilter == 'played'}"
                             th:text="#{history.filter.played}">Played</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-list-filter="rejected"
-                            th:classappend="${activeFilter == 'rejected'} ? 'active'"
+                            th:classappend="${activeFilter == 'rejected'} ? 'active'" th:attr="aria-pressed=${activeFilter == 'rejected'}"
                             th:text="#{history.filter.rejected}">Rejected</button>
                 </div>
                 <!--/* One evening of the party to print, save as PDF or download as CSV (DjSummaryController) — before the history is

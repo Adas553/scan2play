@@ -109,9 +109,12 @@ public class EveningSummaryService {
                 .toList();
     }
 
-    /** The evening a moment belongs to: its day in Polish time, the day before when it is earlier than {@link #EVENING_STARTS}. */
+    /**
+     * The evening a moment belongs to: its day in Polish time, the day before when it is earlier than {@link #EVENING_STARTS} on the
+     * clock — as {@code findEvenings} counts it in SQL, also the nights the clocks change (six hours of time moved it by the hour).
+     */
     public static LocalDate eveningOf(Instant moment) {
-        return moment.atZone(Times.DISPLAY_ZONE).minusHours(EVENING_STARTS.getHour()).toLocalDate();
+        return moment.atZone(Times.DISPLAY_ZONE).toLocalDateTime().minusHours(EVENING_STARTS.getHour()).toLocalDate();
     }
 
     /** The party's requests of one evening, the first asked first, at most {@value #MAX_REQUESTS}. */

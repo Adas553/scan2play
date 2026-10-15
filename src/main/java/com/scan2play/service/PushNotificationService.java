@@ -18,6 +18,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -223,7 +224,8 @@ public class PushNotificationService {
         message.put("titleMany", messageSource.getMessage("push.new_requests.title", null, locale));
         message.put("body", songName);
         message.put("tag", "s2p-" + partyCode);
-        message.put("url", DASHBOARD_URL);
+        // the panel of this party: one of two staffs (or an organiser at another party too) is not the default one (review 2026-10-14)
+        message.put("url", DASHBOARD_URL + "?party=" + URLEncoder.encode(partyCode, StandardCharsets.UTF_8));
         try {
             return objectMapper.writeValueAsString(message);
         } catch (JsonProcessingException e) {

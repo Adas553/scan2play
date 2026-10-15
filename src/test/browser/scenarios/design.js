@@ -30,6 +30,23 @@
     });
 
     S2P.scenario({
+        name: 'guest-send-after-back',
+        title: 'the guest sent a request, then came back with "Wstecz" (the page from the browser\'s back-forward cache): "Wyślij prośbę" works again, without the spinner (review 2026-10-14)',
+        page: 'guest',
+        run: async function (t) {
+            const form = document.getElementById('requestForm');
+            const submit = document.getElementById('submitBtn');
+            const label = document.getElementById('submitBtnText').textContent.trim();
+            document.getElementById('songInput').value = 'Wilki - Baśka';
+            form.dispatchEvent(new Event('submit', { cancelable: true }));   // the handler runs; a made-up event sends nothing
+            t.step('sending: the button waits', submit.disabled, true);
+            window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+            t.step('back from the cache: the button as it was', [submit.disabled, document.getElementById('submitBtnText').textContent.trim(),
+                !!submit.querySelector('.spinner-border')], [false, label, false]);
+        }
+    });
+
+    S2P.scenario({
         name: 'guest-touch-targets',
         title: 'the guest page on a phone: every button and field (the 👍 too, "Odśwież", "Pokaż pozostałe") is at least 44 px high',
         page: 'guest-many',

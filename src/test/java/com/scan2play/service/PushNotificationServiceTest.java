@@ -164,7 +164,9 @@ class PushNotificationServiceTest {
         assertThat(pl.path("titleMany").asText()).as("the service worker puts the count in").isEqualTo("🎵 Nowe prośby: {0}");
         assertThat(pl.path("body").asText()).isEqualTo("Wilki - Baśka");
         assertThat(pl.path("tag").asText()).isEqualTo("s2p-" + PARTY);
-        assertThat(pl.path("url").asText()).isEqualTo("/dj/dashboard");
+        // the party's own panel: a person of two staffs (or an organiser who works at another party too) lands on this one, not on
+        // the default panel (review 2026-10-14)
+        assertThat(pl.path("url").asText()).isEqualTo("/dj/dashboard?party=" + PARTY);
         assertThat(en.path("title").asText()).isEqualTo("🎵 New request");
         assertThat(none.path("title").asText()).isEqualTo("🎵 Nowa prośba");
     }
