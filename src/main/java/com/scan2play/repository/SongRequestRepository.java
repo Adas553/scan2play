@@ -90,17 +90,36 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                                  @Param("to") Instant to, Pageable pageable);
 
     /**
-     * Computes a lightweight fingerprint of the queue state (count + maxId + the votes and the DJ's tips, which change no row
-     * count). Used for ETag-based 304 Not Modified responses during AJAX polling.
+     * A fingerprint of the queue state: how many wait, the newest id, and an md5 of every waiting row's id, votes and tips (the
+     * DJ's tips change no row count). Used for ETag-based 304 Not Modified responses during AJAX polling. The hash, not sums of
+     * them (review 2026-10-14 W6): a "Zagrane" and a restore of an older request with as many votes, or a 👍 moved from one song
+     * to another, left the sums as they were and the DJ's other windows on the old list. One pass over the same ≤ 300 rows the
+     * sums read; {@code idx_party_decision_time} finds them.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include.
-     * @return A string like "12-487-15-2" (count-maxId-votes-tips), or "0-0-0-0" if empty.
+     * @return A string like "12-487-9e107d9d372bb6826bd81d3542a419d6" (count-maxId-md5); "0-0-" and the md5 of nothing if empty.
      */
-    @Query("SELECT CONCAT(COUNT(s), '-', COALESCE(MAX(s.id), 0), '-', COALESCE(SUM(s.votes), 0), '-', COALESCE(SUM(s.tips), 0)) " +
-           "FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN :decisions")
+    @Query(value = "SELECT CONCAT_WS('-', COUNT(*), COALESCE(MAX(id), 0),"
+            + " md5(COALESCE(string_agg(CONCAT_WS(':', id, votes, tips), ',' ORDER BY id), '')))"
+            + " FROM song_requests WHERE party_code = :partyCode AND decision IN (:decisions)", nativeQuery = true)
     String computeFingerprint(@Param("partyCode") String partyCode,
                               @Param("decisions") Collection<String> decisions);
+
+    /**
+     * The DJ's "Zagrane": one atomic {@code UPDATE}, only a request of this party that waits — or has played already (a second
+     * confirmation, its first moment kept). A window with an old list cannot turn a request the DJ skipped meanwhile (its two hours
+     * out of the queue would be lost), cleared with the queue or rejected by the AI into a played one (review 2026-10-14 W5); the
+     * DJ's action read the row and saved it before, whatever its decision. No lock needed, as {@link #addVote}: a "Zagrane" that
+     * meets a skip either finds the request waiting or finds it skipped.
+     *
+     * @return 1 when the request is played now, 0 when it is not this party's, is gone or no longer waits
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.decision = 'played', s.playedAt = COALESCE(s.playedAt, :now) "
+            + "WHERE s.id = :id AND s.partyCode = :partyCode AND s.decision IN ('accepted', 'played')")
+    int markPlayed(@Param("id") Long id, @Param("partyCode") String partyCode, @Param("now") Instant now);
 
     /**
      * Takes a transaction-scoped PostgreSQL advisory lock on the party's guest requests: saving a request and adding a vote to a

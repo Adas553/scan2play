@@ -1,11 +1,27 @@
-# Session Handoff — 2026-10-14
+# Session Handoff — 2026-10-15
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
 (2026-10-02 … 04: the phone dashboard, votes, the vibe note, "Kto gra", the removal of Spotify and YouTube, package by package).
 Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. The review of 2026-09-30: `docs/history/review-2026-09-30.md` (done; 2.3, one instance, left open).
+The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the order of PRs, "Status poprawek").
 
 ## Start here
+
+- **2026-10-15 — the review of 2026-10-14, PR 1 "Kolejka widzi każdą prośbę" (K1, W5, W6), on the branch
+  `claude/queue-sees-every-request` from `origin/dev` = `88644cf`; a PR to `dev`.** The report (artifact):
+  https://claude.ai/artifact/1qY6PtRPEP2qkZ982QeSNc; its short version and the status of fixes: `docs/history/review-2026-10-14.md`
+  (the raw reports' directory removed). Done, PROJECT_CONTEXT 4.1 / 6.2 / 9 / 13: **K1** the DJ's poll renders the queue read now
+  (`DjService.getWaiting`) when the fingerprint changed — the 3 s cache the guests' page fills gave the old list under the new ETag,
+  and every later poll was a 304 over it (a new request never shown); `saveOrVote` evicts `dashboardQueue` after the commit of a new
+  request and a vote. **W5** "Zagrane" is one conditional `UPDATE` (`SongRequestRepository.markPlayed`): only a request that waits or
+  has played. **W6** the fingerprint is count-maxId-md5 of the rows' id, votes, tips. Tests: 667 unit (new
+  `DjDashboardControllerQueueCacheTest` with the real Caffeine cache — red on `88644cf`; the guests' list part red by a mutation),
+  67 database on a local PostgreSQL 18 (`SongRequestVotesIT.zagrane_playsOnlyAWaitingRequest`,
+  `SongRequestRepositoryIT.theFingerprintMoves_whenChangesCancelOutInTheCounts`, both red on `88644cf`), 96 browser green (no script changed). **Next:** the
+  owner reviews the PR; after a green CI and the owner's yes, `dev` → `main` ("Release: …"). Then the next group of the review
+  (its order: W15 Spring Boot, "Formularze mówią prawdę" W1/W11/W12/W7, "Limity gości i sesje" W2/W3/W4, "Spójność zapisów"
+  W8/W9) — each a PR of its own.
 
 - **2026-10-14, evening — search engines and shared links, on the branch `claude/optimistic-mendel-h1ej3z` (again, from `dev` =
   `6979f9f` after PR #58).** The owner: "scan2play" in Google shows little. Found in the code (production cannot be reached from the
@@ -21,7 +37,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   DNS TXT record on Cloudflare), send the sitemap, ask to index `/`; links from DJ groups and profiles; then more words on the landing
   page (to decide).
 - **2026-10-14, later — the look of "Pro", on the branch `claude/optimistic-mendel-h1ej3z` (on top of `main` = `b6d73b3`;
-  uncommitted, for review).** The owner asked whether the look of Pro is professional and whether "PRO" should be in the logo's cyan.
+  released: PR #58 → `dev`, in `main` with PR #61).** The owner asked whether the look of Pro is professional and whether "PRO" should be in the logo's cyan.
   The review on the real pages (the plans enforced, an organiser without Pro, the real `app.css`; phone 390×844 and computer 1280×900;
   grey A / cyan tag B / filled cyan C, the tidy-up, the page `/pro`): https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN — found: the
   dashed box read as an empty place, three alike boxes as a template, the grey pill the same shape as the jumps and the outline buttons,
@@ -507,7 +523,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
-6. The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
+6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6 done (Start here); the rest by its order of PRs.
+   The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
    the history, the needless `hibernate.dialect` gone). The prompt (2026-10-08): "not knowing a song is no reason to make one up"
    — the owner tries it on production.
 
@@ -521,7 +538,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. T
   run configuration (Railway: done 2026-10-06).
 - **Spotify:** the Spotify app in the Developer Dashboard and the variables `SPOTIFY_*` and `SPOTIFY_TOKEN_KEY` in IntelliJ are no
   longer used — delete them (Railway: done 2026-10-06).
-- **Dependabot** alerts and security updates: switch them on in GitHub (Next, item 4).
+- **Dependabot** alerts and security updates: switch them on in GitHub (Next, item 4; the review of 2026-10-14 W15: no security PR
+  ever came, so they are probably off).
+- **Railway "Wait for CI"** (the review of 2026-10-14 W13): the service `scan2play` deploys `main` without waiting for the checks
+  (`checkSuites: false`) — switch it on in the service's settings (Source).
+- **A rate-limit rule in Cloudflare** for `/p/*` (the review of 2026-10-14 W3 / W4): every anonymous `GET /p/…` writes a session row.
 - **A budget alert** for the Gemini key's project in Google Cloud Billing (each request is paid now).
 - **The OAuth client "Klient internetowy 1"** shows a warning in Google Cloud Console (2026-10-03): probably the disabled secret
   `****IgiS` — delete it (`****pfTe` is the one in use).
