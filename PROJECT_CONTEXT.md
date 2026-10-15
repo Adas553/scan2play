@@ -32,7 +32,7 @@ personal use) — migrations V18 and V19.
 | Framework        | Spring Boot 4.0.8 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat raised to 11.0.26 by `tomcat.version` in `pom.xml` (security fixes after the parent's 11.0.24 — review 2026-10-14 W15; drop it once the parent manages 11.0.26 or later) |
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
-| AI               | Google Gemini (`google-genai` 1.38.0), model `gemini-3.5-flash` (thinking level low) |
+| AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.5-flash` (thinking level low) |
 | Other            | ZXing 3.5.3 (QR codes), Caffeine (caches), Maven; the guests' song suggestions come from Apple's iTunes Search API, asked by the browser |
 | i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes; the language: `?lang=pl` / `?lang=en` (that one request), else the browser's `Accept-Language`, with none Polish (`WebConfig`, 2026-10-14 — a crawler sends none) |
 
@@ -603,7 +603,8 @@ in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a
 browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
 deploy's version always gives the same file (an old version is a 404). Only for a commit's version, never `dev` (devtools changes the
 files under it); everything else keeps Spring Security's `no-store`,
-`GeminiConfig` (the Gemini client, 15 s timeout; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
+`GeminiConfig` (the Gemini client, 15 s timeout, one try — `GeminiConfigTest` checks both through the real SDK against a Gemini
+stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
 `Accept-Language`, then Polish), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
 link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `SiteUrlAdvice` (`siteUrl` —
 `scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages:

@@ -8,6 +8,13 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, group 7's leftover: `google-genai` 1.38.0 → 1.74.0, on the branch
+  `claude/google-genai-1-74` from `origin/dev` = `03ad83a`; a PR to `dev`.** The latest release at least two weeks old (1.75.0 was
+  13.5 days). No API we use changed (changelog 1.39–1.74: the only breaking change removed the unused Interactions module); no code
+  change. `GeminiConfigTest` now drives the real SDK against a Gemini stub on the loopback: a 503 is asked once, a hanging call ends at
+  the timeout once, the thinking level reaches the request, `text()` reads the answer. Tests: 680 unit, 75 database. **The owner:**
+  one real request from IntelliJ (no API key in the environment here). The PR may conflict with #72 in this file and the review's status
+  (both append) — keep both entries.
 - **2026-10-15, later — the review of 2026-10-14, W14 the privacy policy, on the branch `claude/privacy-policy-hosting` from
   `origin/dev` = `b131071`; a PR to `dev`.** The owner's answers: Railway Hobby (logs 7 days), Cloudflare Web Analytics "probably on",
   Railway's DPA "probably accepted" — it needs a signature of its own (DocuSign), so the policy says plainly that the data is in the USA
