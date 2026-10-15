@@ -5,8 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,10 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link GuestSessionService} rate limiting logic: the per-guest limit the DJ sets ({@code requestLimit} per
- * {@code cooldownMinutes}), checked and counted in one step before the evaluation.
+ * {@code cooldownMinutes}), checked and counted in one step before the evaluation. The time is a clock the test moves, so a wait
+ * is checked to the second, not within a few seconds of the machine's own clock.
  */
 class GuestSessionServiceTest {
 
+    private TestClock clock;
     private GuestSessionService service;
     private MockHttpSession session;
     private PartySettingsEntity settings;
@@ -31,7 +33,8 @@ class GuestSessionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new GuestSessionService();
+        clock = new TestClock();
+        service = new GuestSessionService(clock);
         session = new MockHttpSession();
         settings = PartySettingsEntity.builder()
                 .partyCode(PARTY_CODE)
@@ -44,8 +47,13 @@ class GuestSessionServiceTest {
         return service.countedRequests(session.getId(), PARTY_CODE);
     }
 
-    private void givenEarlierRequests(Instant... times) {
-        service.countEarlierRequests(session.getId(), PARTY_CODE, List.of(times));
+    /** Earlier requests of the guest, that many seconds ago. */
+    private void givenEarlierRequests(long... secondsAgo) {
+        List<Instant> times = new ArrayList<>();
+        for (long seconds : secondsAgo) {
+            times.add(clock.instant().minusSeconds(seconds));
+        }
+        service.countEarlierRequests(session.getId(), PARTY_CODE, times);
     }
 
     @Test
@@ -62,24 +70,20 @@ class GuestSessionServiceTest {
 
         Optional<Long> third = service.tryAcquire(session, PARTY_CODE, settings);
 
-        assertThat(third).isPresent();
-        assertThat(third.get()).isPositive().isLessThanOrEqualTo(180);
+        assertThat(third).as("the whole cooldown from the second one").contains(180L);
         assertThat(recorded()).as("a refused request is not counted").hasSize(2);
     }
 
     @Test
     void tryAcquire_refuses_whenTheLimitIsReachedWithinTheCooldown() {
-        givenEarlierRequests(Instant.now().minus(1, ChronoUnit.MINUTES), Instant.now().minus(30, ChronoUnit.SECONDS));
+        givenEarlierRequests(60, 30);
 
-        Optional<Long> result = service.tryAcquire(session, PARTY_CODE, settings);
-
-        assertThat(result).isPresent();
-        assertThat(result.get()).isPositive();
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).contains(150L);
     }
 
     @Test
     void tryAcquire_forgetsRequestsOlderThanTheCooldown() {
-        givenEarlierRequests(Instant.now().minus(10, ChronoUnit.MINUTES), Instant.now().minus(5, ChronoUnit.MINUTES));
+        givenEarlierRequests(600, 300);
 
         assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
 
@@ -88,31 +92,46 @@ class GuestSessionServiceTest {
 
     /**
      * The wait runs from the guest's LAST request (the owner, 2026-10-01): two songs at 0:00 and 1:00, a third tried at 1:03 waits
-     * until 4:00 — about 177 s — not until 3:00, when the first one would leave a sliding window (117 s, what the guest was told).
+     * until 4:00 — 177 s — not until 3:00, when the first one would leave a sliding window (117 s, what the guest was told).
      */
     @Test
     void tryAcquire_theWaitRunsFromTheLastRequest() {
-        givenEarlierRequests(Instant.now().minusSeconds(63), Instant.now().minusSeconds(3));
+        givenEarlierRequests(63, 3);
 
-        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).hasValueSatisfying(wait -> assertThat(wait).isBetween(175L, 180L));
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).contains(177L);
     }
 
     /** …so 100 s after the last request the guest still waits, even when the first one is older than the cooldown. */
     @Test
     void tryAcquire_aRequestBeforeTheCooldownAfterTheLastOne_stillWaits() {
-        givenEarlierRequests(Instant.now().minusSeconds(200), Instant.now().minusSeconds(100));
+        givenEarlierRequests(200, 100);
 
-        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).hasValueSatisfying(wait -> assertThat(wait).isBetween(78L, 80L));
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).contains(80L);
     }
 
     /** Once the cooldown after the last request has passed, the whole limit is there again. */
     @Test
     void tryAcquire_afterTheCooldownFromTheLastRequest_theWholeLimitIsBack() {
-        givenEarlierRequests(Instant.now().minusSeconds(400), Instant.now().minusSeconds(181));
+        givenEarlierRequests(400, 181);
 
         assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
         assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
         assertThat(service.tryAcquire(session, PARTY_CODE, settings)).as("the third of the new round").isPresent();
+    }
+
+    /** The guest who waits the time they were told gets in: one second short they wait that second, then the limit is back. */
+    @Test
+    void tryAcquire_theToldWaitIsExactlyEnough() {
+        service.tryAcquire(session, PARTY_CODE, settings);
+        service.tryAcquire(session, PARTY_CODE, settings);
+        long wait = service.tryAcquire(session, PARTY_CODE, settings).orElseThrow();
+
+        clock.advance(Duration.ofSeconds(wait - 1));
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).contains(1L);
+
+        clock.advance(Duration.ofSeconds(1));
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).isEmpty();
+        assertThat(recorded()).as("a new round: only this request").containsExactly(clock.instant());
     }
 
     /** A request that came to nothing (a mood sent back to the form, the AI not answering) gives its place back. */

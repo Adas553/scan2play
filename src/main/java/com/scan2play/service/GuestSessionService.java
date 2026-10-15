@@ -4,8 +4,10 @@ import com.scan2play.entity.PartySettingsEntity;
 import jakarta.servlet.http.HttpSession;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -38,6 +40,18 @@ public class GuestSessionService {
             .maximumSize(100_000)
             .build();
 
+    private final Clock clock;
+
+    @Autowired
+    public GuestSessionService() {
+        this(Clock.systemUTC());
+    }
+
+    /** With a clock of the test's own. */
+    GuestSessionService(Clock clock) {
+        this.clock = clock;
+    }
+
     /**
      * Counts one song request against the guest's limit, if it is under it: up to {@code requestLimit} requests, then a wait of
      * {@code cooldownMinutes} from the last of them, after which the whole limit is there again (what the dashboard's fields say:
@@ -53,7 +67,7 @@ public class GuestSessionService {
      * @return empty if the request may go on (it has been counted), otherwise the wait time in seconds
      */
     public Optional<Long> tryAcquire(HttpSession session, String partyCode, PartySettingsEntity settings) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         Long[] wait = {null};
         requestTimes.asMap().compute(key(session.getId(), partyCode), (key, times) -> {
             List<Instant> kept = times == null ? new ArrayList<>() : new ArrayList<>(times);
