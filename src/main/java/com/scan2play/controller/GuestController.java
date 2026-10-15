@@ -47,8 +47,14 @@ public class GuestController {
     private final MessageSource messageSource;
     private final PlanService planService;
 
+    /**
+     * The party page. It takes no {@code HttpSession} of its own (review 2026-10-14 W3): a parameter of that type made a session — a
+     * row in PostgreSQL for 30 minutes — for every {@code GET /p/{anything}}, a code that is no party too. The guest's session is read
+     * only when they have one; an open party's page makes one anyway (its form carries the CSRF token), a code that is no party and
+     * a party that has ended make none.
+     */
     @GetMapping("/{partyCode}")
-    public String partyIndex(@PathVariable String partyCode, Model model, HttpSession session) {
+    public String partyIndex(@PathVariable String partyCode, Model model, HttpServletRequest request) {
         try {
             // as the organiser's plan lets it work (V35): without Pro no profiles and no tip button
             PartySettingsEntity settings = planService.asPlanned(partySettingsQueryService.getSettings(partyCode));
@@ -65,11 +71,12 @@ public class GuestController {
             model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
             model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
             model.addAttribute(TIP_URL, settings.getTipUrl());
-            model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, session));
+            model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, request.getSession(false)));
             model.addAttribute(PARTY_CODE, partyCode);
             return "index";
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid party code access attempt: {}", partyCode);
+            // DEBUG, not WARN: anyone can ask for any code, and a line for each filled the log (review 2026-10-14, M-2)
+            log.debug("Invalid party code access attempt: {}", partyCode);
             return REDIRECT_HOME;
         }
     }
@@ -80,10 +87,10 @@ public class GuestController {
      * looks. Empty when the party has ended or there is nothing to show.
      */
     @GetMapping("/{partyCode}/queue")
-    public String partyQueue(@PathVariable String partyCode, Model model, HttpSession session) {
+    public String partyQueue(@PathVariable String partyCode, Model model, HttpServletRequest request) {
         try {
             if (partySettingsQueryService.getSettings(partyCode).isActive()) {
-                model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, session));
+                model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, request.getSession(false)));
                 model.addAttribute(PARTY_CODE, partyCode);
             }
         } catch (IllegalArgumentException e) {
@@ -97,10 +104,10 @@ public class GuestController {
      * waiting, the list every guest's phone fetches again stays the first five. Empty when the party has ended.
      */
     @GetMapping("/{partyCode}/queue/more")
-    public String partyQueueMore(@PathVariable String partyCode, Model model, HttpSession session) {
+    public String partyQueueMore(@PathVariable String partyCode, Model model, HttpServletRequest request) {
         try {
             if (partySettingsQueryService.getSettings(partyCode).isActive()) {
-                model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, session));
+                model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, request.getSession(false)));
                 model.addAttribute(PARTY_CODE, partyCode);
             }
         } catch (IllegalArgumentException e) {
@@ -158,8 +165,11 @@ public class GuestController {
         return "fragments/guest-queue :: voteAnswer";
     }
 
-    /** What the guest sees of the requests: their own marked, their 👍 shown. */
+    /** What the guest sees of the requests: their own marked, their 👍 shown — none without a session yet. */
     private GuestQueueService.GuestQueue guestQueue(String partyCode, HttpSession session) {
+        if (session == null) {
+            return guestQueueService.view(partyCode, Set.of(), Set.of());
+        }
         return guestQueueService.view(partyCode, guestSessionService.myRequestIds(session, partyCode),
                 guestVoteService.myVotes(session, partyCode));
     }
@@ -202,6 +212,9 @@ public class GuestController {
                 }
                 Optional<GuestRequestLimiter.Refusal> refusal = guestRequestLimiter.tryAcquire(clientIp, partyCode);
                 if (refusal.isPresent()) {
+                    // the network's or the party's limit refused it, not the guest: their own limit is given back — it was used
+                    // up for a request never sent (review 2026-10-14 W2)
+                    guestSessionService.giveBack(session, partyCode);
                     return switch (refusal.get().scope()) {
                         case CLIENT -> refuse(redirectAttributes, partyCode, "guest.error.too_many_requests",
                                 waitText(refusal.get().waitSeconds()));

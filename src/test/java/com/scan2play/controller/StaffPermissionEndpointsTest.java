@@ -111,6 +111,7 @@ class StaffPermissionEndpointsTest {
                         .param("djName", "x")),
                 Arguments.of(StaffPermission.LIMITS, post("/dj/dashboard/limits").param("partyCode", PUB).param("requestLimit", "2")
                         .param("cooldownMinutes", "3").param("duplicateCheckWindow", "5")),
+                Arguments.of(StaffPermission.LIMITS, post("/dj/dashboard/guest-limit-reset").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.HOST_LISTS, post("/dj/dashboard/host-lists").param("partyCode", PUB).param("blocked", "x")),
                 Arguments.of(StaffPermission.HOST_LISTS, post("/dj/dashboard/host-link").param("partyCode", PUB).param("link", "off")),
                 Arguments.of(StaffPermission.SUMMARY, get("/dj/summary").param("party", PUB)),

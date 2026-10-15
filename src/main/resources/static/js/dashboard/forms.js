@@ -70,8 +70,9 @@ import { csrfHeaders, partyCode, showPartyActive } from './common.js';
                 emit(EVENTS.HISTORY_CHANGED);
                 return;   // the history is fetched again: no button left to flash
             }
+            // The party's day of guest requests started again (W4): the poll says so at once (X-Guest-Limits) — the warning goes
             // The hosts' lists saved (V29): the queue is fetched again — a song on the wish list gets its ⭐
-            if (action.includes('/dashboard/host-lists')) {
+            if (action.includes('/dashboard/host-lists') || action.includes('/dashboard/guest-limit-reset')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
             // A tip counted or taken back (V28): the queue is fetched again with the new count

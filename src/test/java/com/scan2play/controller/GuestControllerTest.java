@@ -79,6 +79,7 @@ class GuestControllerTest {
         settings = PartySettingsEntity.builder().partyCode(PARTY).active(true).requestLimit(2).build();
         session = new MockHttpSession();
         request = new MockHttpServletRequest();
+        request.setSession(session);   // the guest's cookie: the party page reads their requests from it
         redirectAttributes = new RedirectAttributesModelMap();
         org.mockito.Mockito.lenient().when(guestRequestLimiter.clientIp(request)).thenReturn(IP); // not read by the party page
         org.mockito.Mockito.lenient().when(partySettingsQueryService.getSettings(PARTY)).thenReturn(settings); // not read by styleOf
@@ -113,7 +114,7 @@ class GuestControllerTest {
         when(guestQueueService.view(PARTY, java.util.Set.of(), java.util.Set.of())).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
 
-        assertThat(controller.partyQueue(PARTY, model, session)).isEqualTo("fragments/guest-queue :: guestQueue");
+        assertThat(controller.partyQueue(PARTY, model, request)).isEqualTo("fragments/guest-queue :: guestQueue");
         assertThat(model.getAttribute(ViewAttributes.GUEST_QUEUE)).isSameAs(queue);
     }
 
@@ -122,7 +123,7 @@ class GuestControllerTest {
         settings.setActive(false);
         ExtendedModelMap model = new ExtendedModelMap();
 
-        assertThat(controller.partyQueue(PARTY, model, session)).isEqualTo("fragments/guest-queue :: guestQueue");
+        assertThat(controller.partyQueue(PARTY, model, request)).isEqualTo("fragments/guest-queue :: guestQueue");
         assertThat(model.getAttribute(ViewAttributes.GUEST_QUEUE)).isNull();
     }
 
@@ -133,7 +134,7 @@ class GuestControllerTest {
         when(guestQueueService.view(PARTY, java.util.Set.of(42L), java.util.Set.of())).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
 
-        assertThat(controller.partyIndex(PARTY, model, session)).isEqualTo("index");
+        assertThat(controller.partyIndex(PARTY, model, request)).isEqualTo("index");
         assertThat(model.getAttribute(ViewAttributes.GUEST_QUEUE)).isSameAs(queue);
     }
 
@@ -220,6 +221,8 @@ class GuestControllerTest {
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("too many");
         verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
+        // the network's limit refused it, not the guest: their own limit is given back (review 2026-10-14 W2)
+        verify(guestSessionService).giveBack(session, PARTY);
     }
 
     @Test
@@ -231,6 +234,7 @@ class GuestControllerTest {
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("daily");
         verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any());
+        verify(guestSessionService).giveBack(session, PARTY);
     }
 
     @Test
@@ -382,7 +386,7 @@ class GuestControllerTest {
         when(guestQueueService.view(PARTY, java.util.Set.of(), java.util.Set.of())).thenReturn(queue);
         ExtendedModelMap model = new ExtendedModelMap();
 
-        assertThat(controller.partyQueueMore(PARTY, model, session)).isEqualTo("fragments/guest-queue :: moreList");
+        assertThat(controller.partyQueueMore(PARTY, model, request)).isEqualTo("fragments/guest-queue :: moreList");
         assertThat(model).containsEntry(ViewAttributes.GUEST_QUEUE, queue);
     }
 
@@ -473,7 +477,7 @@ class GuestControllerTest {
                 guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced());
 
         ExtendedModelMap model = new ExtendedModelMap();
-        assertThat(free.partyIndex(PARTY, model, session)).isEqualTo("index");
+        assertThat(free.partyIndex(PARTY, model, request)).isEqualTo("index");
         assertThat(model.get("instagramUrl")).isNull();
         assertThat(model.get("tipUrl")).isNull();
 

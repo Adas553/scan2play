@@ -38,7 +38,9 @@
             await t.stand.config({ guestLimits: 'party-full' });
             await afterPolls(t);
             t.step('the party limit is reached: its warning shows (the poll answered 304)', shown(), ['party-full']);
-            t.step('…in a few words', warning('party-full').textContent.trim(), '⚠ Limit 300 próśb na dobę wyczerpany — goście nie mogą teraz wysyłać.');
+            t.step('…in a few words (and the way out beside them, W4)', [warning('party-full').querySelector('span').textContent.trim(),
+                warning('party-full').querySelector('button').textContent.trim()],
+                ['⚠ Limit 300 próśb na dobę wyczerpany — goście nie mogą teraz wysyłać.', 'Odblokuj prośby gości']);
 
             await t.stand.config({ guestLimits: 'search-spent,party-full' });
             await afterPolls(t);
@@ -85,6 +87,28 @@
             await t.stand.config({ guestLimitsUse: '2,5' });
             await afterPolls(t);
             t.step('both windows over: back to the guests\' own limit', state(), [null, ['2 na gościa · 3 min']]);
+        }
+    });
+
+    // The review of 2026-10-14, W4: one guest with a script spent the party's 300 for the day, and every other guest was refused until
+    // the next day — the organiser had no way out. "Odblokuj prośby gości" in the warning starts the party's day again.
+    S2P.scenario({
+        name: 'guest-limit-unblock',
+        title: 'the party\'s day spent: "Odblokuj prośby gości" in the warning starts it again, and the warning goes with the next poll',
+        setup: { guestLimits: 'party-full', guestLimitsUse: '0,300' },
+        run: async function (t) {
+            const warning = document.querySelector('#guestLimitWarnings [data-guest-limit="party-full"]');
+            await afterPolls(t);
+            t.step('the warning shows', !warning.classList.contains('d-none'), true);
+            const button = warning.querySelector('form[action="/dj/dashboard/guest-limit-reset"] button');
+            t.check('it has the button "Odblokuj prośby gości"', !!button && button.textContent.trim() === 'Odblokuj prośby gości');
+            if (!button) return;
+            button.click();
+            await t.waitFor(function () { return warning.classList.contains('d-none'); }, 'the warning gone', 8000).catch(function () {});
+            t.step('sent once, with the party', (await t.stand.requests('POST /dj/dashboard/guest-limit-reset')).map(function (r) {
+                return !!r.q.partyCode;
+            }), [true]);
+            t.step('the warning is gone', warning.classList.contains('d-none'), true);
         }
     });
 

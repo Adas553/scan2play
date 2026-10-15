@@ -222,6 +222,21 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int rejectWaiting(@Param("partyCode") String partyCode, @Param("clearedAt") Instant clearedAt);
 
     /**
+     * The night's clearing of the queues (review 2026-10-14 W10): every party's requests that have waited since before
+     * {@code cutoff} leave the queue as {@link #rejectWaiting} takes them — rejected, with {@code cleared_at}, shown in the history as
+     * cleared. The queue is the 300 oldest waiting requests and a DJ keeps one code for every event, so last week's requests hid
+     * tonight's. A plain conditional {@code UPDATE}, once a night: the waiting rows are few, and the retention keeps the table to 30
+     * days of requests.
+     *
+     * @return how many were cleared
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.decision = 'rejected', s.clearedAt = :clearedAt "
+            + "WHERE s.decision = 'accepted' AND s.requestedAt < :cutoff")
+    int clearWaitingRequestedBefore(@Param("cutoff") Instant cutoff, @Param("clearedAt") Instant clearedAt);
+
+    /**
      * The DJ clears the history: the party's requests that played or were rejected are deleted, guests' words with them. Never a
      * waiting one, and never one the DJ skipped after {@code skippedAfter}: it keeps its song out of the queue
      * ({@link #findSkippedByTheDj}) and stays in the history until that ends. One statement over one party's rows — at most what

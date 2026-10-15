@@ -103,6 +103,34 @@ class SongRequestRetentionServiceTest {
         assertThat((long) BATCH_SIZE * MAX_BATCHES).isBetween(50_000L, 1_000_000L);
     }
 
+    /**
+     * The review of 2026-10-14, W10: the queue is the party's 300 oldest waiting requests, and a DJ keeps one party code for every
+     * event — without "Wyczyść kolejkę" last Saturday's requests hid tonight's. A request waiting more than a day is no longer the
+     * evening's: the night clears it from the queue, as "Wyczyść kolejkę" would (it stays in the history, cleared).
+     */
+    @Test
+    @DisplayName("the nightly run clears from the queue what has waited more than 24 hours")
+    void shouldClearRequestsWaitingMoreThanADay() {
+        Instant before = Instant.now();
+
+        service.clearOldWaitingRequests();
+
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<Instant> clearedAt = ArgumentCaptor.forClass(Instant.class);
+        verify(repository).clearWaitingRequestedBefore(cutoff.capture(), clearedAt.capture());
+        assertThat(Duration.between(cutoff.getValue(), before.minus(24, ChronoUnit.HOURS)).abs()).isLessThan(Duration.ofMinutes(1));
+        assertThat(Duration.between(clearedAt.getValue(), before).abs()).isLessThan(Duration.ofMinutes(1));
+    }
+
+    @Test
+    @DisplayName("the clearing is a scheduled job of its own — every day at 04:40, before the purge")
+    void shouldClearTheOldWaitingEveryNight() throws Exception {
+        Scheduled scheduled = SongRequestRetentionService.class.getMethod("clearOldWaitingRequests").getAnnotation(Scheduled.class);
+
+        assertThat(scheduled).isNotNull();
+        assertThat(scheduled.cron()).isEqualTo("0 40 4 * * *");
+    }
+
     @Test
     @DisplayName("it is a scheduled job — every day at 04:45")
     void shouldBeScheduledEveryNight() throws Exception {
