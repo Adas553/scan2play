@@ -72,6 +72,36 @@ class GuestNoSessionWebTest {
         noSession(mockMvc.perform(get("/p/X7Q2Z/queue/more")).andExpect(status().isNotFound()).andReturn());
     }
 
+    /**
+     * The guest's page was open longer than the session lives (30 minutes): the form's CSRF token is gone with it. The request comes
+     * back to the party's page with what the guest typed and a note, not to the error page "403" with the song lost (review
+     * 2026-10-14).
+     */
+    @Test
+    void aRequestFromAPageOpenTooLong_comesBackToTheParty_withItsText() throws Exception {
+        MvcResult result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/p/ABC12/request")
+                        .param("songName", "Wilki - Baśka").param("_csrf", "a-token-of-an-old-session")
+                        .header("Accept-Language", "pl-PL"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/p/ABC12"))
+                .andReturn();
+
+        // what the party's page gets on its next load (the flash of the new session)
+        @SuppressWarnings("unchecked")
+        java.util.List<org.springframework.web.servlet.FlashMap> flashes = (java.util.List<org.springframework.web.servlet.FlashMap>)
+                result.getRequest().getSession().getAttribute(
+                        org.springframework.web.servlet.support.SessionFlashMapManager.class.getName() + ".FLASH_MAPS");
+        assertThat(flashes).singleElement().satisfies(flash -> {
+            assertThat(flash.getTargetRequestPath()).isEqualTo("/p/ABC12");
+            assertThat(flash.get("lastRequest")).isEqualTo("Wilki - Baśka");
+            assertThat((String) flash.get("errorMessage")).contains("wyślij prośbę jeszcze raz");
+        });
+
+        // anything else without its token is refused as before
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/p/ABC12/vote")
+                .param("id", "7")).andExpect(status().isForbidden());
+    }
+
     @Test
     void aPartyThatHasEnded_saysSo_withoutASession() throws Exception {
         noSession(mockMvc.perform(get("/p/ENDED")).andExpect(status().isOk()).andReturn());

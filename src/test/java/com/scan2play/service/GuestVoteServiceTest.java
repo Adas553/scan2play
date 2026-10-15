@@ -82,6 +82,27 @@ class GuestVoteServiceTest {
         assertThat(service.myVotes(session, PARTY)).isEmpty();
     }
 
+    /**
+     * The guest takes their 👍 back after the DJ played the song: the vote stays on the song (only a waiting one changes) — so it stays
+     * the guest's too. "↩ Przywróć" puts the song back with that vote: the guest sees their 👍 and can take it back, instead of
+     * giving a second one (review 2026-10-14: the 👍 was forgotten and counted twice).
+     */
+    @Test
+    void aVoteTakenBackOnAPlayedSong_staysTheGuests_forWhenTheSongIsRestored() {
+        service.vote(session, PARTY, 7L);
+        when(repository.removeGuestVote(7L, PARTY)).thenReturn(0);   // played
+
+        assertThat(service.takeBack(session, PARTY, 7L)).isEqualTo(GuestVoteService.Result.GONE);
+        assertThat(service.myVotes(session, PARTY)).containsExactly(7L);
+
+        // "↩ Przywróć": it waits again, with the guest's vote on it
+        when(repository.removeGuestVote(7L, PARTY)).thenReturn(1);
+        service.vote(session, PARTY, 7L);
+        verify(repository, times(1)).addGuestVote(7L, PARTY);
+        assertThat(service.takeBack(session, PARTY, 7L)).isEqualTo(GuestVoteService.Result.TAKEN_BACK);
+        assertThat(service.myVotes(session, PARTY)).isEmpty();
+    }
+
     @Test
     void noVoteToTakeBack_changesNothing() {
         service.takeBack(session, PARTY, 7L);

@@ -3,11 +3,13 @@ package com.scan2play.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.web.servlet.LocaleResolver;
 
 /**
  * Main security configuration for Scan2Play.
@@ -58,7 +60,7 @@ public class SecurityConfig {
     private String assetVersion;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, MessageSource messageSource, LocaleResolver localeResolver) throws Exception {
         http
                 .headers(headers -> headers.contentSecurityPolicy(csp -> {
                             csp.policyDirectives(CONTENT_SECURITY_POLICY);
@@ -72,6 +74,8 @@ public class SecurityConfig {
                         .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY)))
                 // A browser sends its CSP report without a CSRF token
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report"))
+                // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
+                .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver)))
                 .authorizeHttpRequests(auth -> auth
                         // Public resources, landing page, and guest party views
                         .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()

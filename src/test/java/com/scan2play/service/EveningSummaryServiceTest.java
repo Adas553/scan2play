@@ -55,6 +55,23 @@ class EveningSummaryServiceTest {
                 .isEqualTo(EVENING.plusDays(1));
     }
 
+    /**
+     * The nights the clocks change: six hours back on the clock, as {@code findEvenings} counts in SQL ({@code AT TIME ZONE … -
+     * INTERVAL '6 hours'}) and as {@link EveningSummaryService#requests} reads (from 06:00 on the clock) — not six hours of time,
+     * which moved a request by the hour that night (review 2026-10-14).
+     */
+    @Test
+    void anEveningRunsFromSixToSix_onTheClock_alsoTheNightsTheClocksChange() {
+        java.time.LocalDate spring = java.time.LocalDate.of(2026, 3, 29);   // 02:00 → 03:00
+        java.time.LocalDate autumn = java.time.LocalDate.of(2026, 10, 25);  // 03:00 → 02:00
+        assertThat(EveningSummaryService.eveningOf(spring.atTime(6, 30).atZone(Times.DISPLAY_ZONE).toInstant())).isEqualTo(spring);
+        assertThat(EveningSummaryService.eveningOf(spring.atTime(5, 59).atZone(Times.DISPLAY_ZONE).toInstant()))
+                .isEqualTo(spring.minusDays(1));
+        assertThat(EveningSummaryService.eveningOf(autumn.atTime(5, 59).atZone(Times.DISPLAY_ZONE).toInstant()))
+                .isEqualTo(autumn.minusDays(1));
+        assertThat(EveningSummaryService.eveningOf(autumn.atTime(6, 0).atZone(Times.DISPLAY_ZONE).toInstant())).isEqualTo(autumn);
+    }
+
     @Test
     void theRequestsOfAnEvening_areReadFromSixToSix_bounded() {
         SongRequestRepository repository = mock(SongRequestRepository.class);

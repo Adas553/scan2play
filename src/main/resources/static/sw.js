@@ -43,13 +43,27 @@ self.addEventListener('push', function (event) {
     }));
 });
 
+// A tap leads to the panel of the notification's party (the server's url: /dj/dashboard?party=CODE): a window that shows it already is
+// brought forward; else a window of the DJ's pages goes there; else a new one opens. Before, any /dj/ window was brought forward —
+// for a person of two staffs often another party's panel (review 2026-10-14).
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
-    const url = (event.notification.data && event.notification.data.url) || '/dj/dashboard';
+    const url = new URL((event.notification.data && event.notification.data.url) || '/dj/dashboard', self.location.origin);
+    const party = url.searchParams.get('party');
     event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windows) {
-        const dashboard = windows.find(function (client) {
+        const ours = windows.filter(function (client) {
             return new URL(client.url).pathname.indexOf('/dj/') === 0 && 'focus' in client;
         });
-        return dashboard ? dashboard.focus() : self.clients.openWindow(url);
+        const there = ours.find(function (client) {
+            const at = new URL(client.url);
+            return at.pathname === url.pathname && (!party || at.searchParams.get('party') === party);
+        });
+        if (there) return there.focus();
+        const other = ours.find(function (client) { return 'navigate' in client; });
+        if (other) {
+            return other.navigate(url.href).then(function (moved) { return (moved || other).focus(); })
+                .catch(function () { return self.clients.openWindow(url.href); });
+        }
+        return self.clients.openWindow(url.href);
     }));
 });

@@ -88,7 +88,12 @@ public class GuestVoteService {
         return result[0];
     }
 
-    /** The guest takes their 👍 on {@code requestId} back. Nothing to take back (no 👍 of theirs) changes nothing. */
+    /**
+     * The guest takes their 👍 on {@code requestId} back. Nothing to take back (no 👍 of theirs) changes nothing. A song the DJ played
+     * or skipped meanwhile keeps the vote ({@code removeGuestVote} changes only a waiting one), so the guest keeps it too: "↩ Przywróć"
+     * puts the song back with it, and the guest's 👍 shows and can be taken back — forgotten, it was given a second time (review
+     * 2026-10-14).
+     */
     public Result takeBack(HttpSession session, String partyCode, long requestId) {
         Result[] result = {Result.TAKEN_BACK};
         boolean[] removed = {false};
@@ -97,17 +102,17 @@ public class GuestVoteService {
             if (!ids.remove(requestId)) {
                 return ids;
             }
-            removed[0] = true;
             if (songRequestRepository.removeGuestVote(requestId, partyCode) == 0) {
-                result[0] = Result.GONE;   // played or skipped meanwhile: the 👍 is forgotten with it
+                result[0] = Result.GONE;   // played or skipped meanwhile: the vote stays on the song, and the guest's
+                ids.add(requestId);
+                return ids;
             }
+            removed[0] = true;
             return ids;
         });
         if (removed[0]) {
             remember(session, partyCode, after);
-            if (result[0] == Result.TAKEN_BACK) {
-                djService.refreshQueue(partyCode);
-            }
+            djService.refreshQueue(partyCode);
         }
         return result[0];
     }

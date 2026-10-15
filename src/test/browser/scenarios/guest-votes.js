@@ -138,6 +138,7 @@
             t.step('"Recent 4": the 👍 not given yet, with its count', [before.getAttribute('aria-pressed'), before.textContent.trim()],
                 ['false', '👍 1']);
             const where = layout();
+            before.focus();   // as a keyboard or a screen reader has it
             before.click();
             before.click();   // a double tap while the answer is on its way
             await t.waitFor(function () { return rowOf('Recent 4').querySelector('.s2p-vote-btn') !== before; }, 'the 👍 comes back', 5000);
@@ -147,6 +148,7 @@
                 sent.map(function (r) { return [r.q.id, r.q.on, r.q['X-Requested-With']]; }), [['4', 'true', 'fetch']]);
             const after = rowOf('Recent 4').querySelector('.s2p-vote-btn');
             t.step('the 👍 given, the new count', [after.getAttribute('aria-pressed'), after.textContent.trim()], ['true', '👍 2']);
+            t.step('the focus on the new 👍, not on the page\'s top (review 2026-10-14)', document.activeElement === after, true);
             t.step('nothing moved: every song where it was, the page scrolled as it was', layout(), where);
             t.step('the rest still unfolded', document.getElementById('moreRequests').open, true);
             t.check('the page stayed (no navigation)', location.pathname === '/dj/dashboard');

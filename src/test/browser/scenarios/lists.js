@@ -192,4 +192,39 @@
             t.step('a second click: the fewest first, the most wanted last', titles().slice(-2), ['Guest Foxtrot', 'Guest Charlie']);
         }
     });
+
+    S2P.scenario({
+        name: 'list-states-for-screen-readers',
+        title: 'a screen reader hears the list\'s state: the sorted column (aria-sort), the filter on (aria-pressed); a column header sorts from the keyboard too, and its Enter is not "Zagrane" (review 2026-10-14)',
+        setup: {},
+        run: async function (t) {
+            const box = document.getElementById('history-content');
+            const list = function () { return box.querySelector('[data-list]'); };
+            const pressed = function () {
+                return Array.prototype.map.call(list().querySelectorAll('[data-list-filter]'), function (b) { return b.getAttribute('aria-pressed'); });
+            };
+            document.querySelector('[data-dj-tab="history"]').click();
+            await t.waitFor(function () { return list(); }, 'the history', 5000);
+            t.step('"All" pressed, the others not', pressed(), ['true', 'false', 'false']);
+
+            const votes = list().querySelector('th[data-sort="votes"]');
+            const song = list().querySelector('th[data-sort="song"]');
+            t.step('the headers sort from the keyboard', [votes.tabIndex, song.tabIndex], [0, 0]);
+            votes.focus();
+            const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+            votes.dispatchEvent(enter);
+            t.step('Enter on "Votes": sorted by it, descending; the other columns say nothing',
+                [votes.getAttribute('aria-sort'), song.getAttribute('aria-sort'), votes.classList.contains('sort-desc')], ['descending', null, true]);
+            await t.sleep(300);
+            t.step('…and nothing played', await t.stand.count(t.PLAY), 0);
+            votes.click();
+            t.step('a second time: ascending', votes.getAttribute('aria-sort'), 'ascending');
+            votes.click();
+            t.step('a third: the server\'s order, no column sorted', votes.getAttribute('aria-sort'), null);
+
+            list().querySelector('[data-list-filter="played"]').click();
+            await t.waitFor(function () { return list() && pressed()[1] === 'true'; }, '"Zagrane" pressed', 5000);
+            t.step('"Zagrane" pressed, the others not', pressed(), ['false', 'true', 'false']);
+        }
+    });
 })();

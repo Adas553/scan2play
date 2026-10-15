@@ -8,6 +8,14 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, evening — the small items, group 5 "Poprawność i front-end", on the branch `claude/correctness-frontend` on top of
+  `claude/db-performance`; a PR to `dev`.** A 👍 taken back on a played song stays the guest's (after "↩ Przywróć" it was given
+  twice); `eveningOf` six hours on the clock (the nights the clocks change); Enter on a `<summary>` is not "Zagrane"; a guest's request
+  from a page open over 30 minutes comes back with the song typed and a note (not a 403); "Wyślij prośbę" works after "Wstecz"
+  (bfcache); a late iTunes answer is dropped; the song field is a combobox; `aria-sort`, `aria-pressed`, the column headers by keyboard;
+  the focus stays on its button after a poll and after a 👍; `scroll-restore.js` without storage; a tap on a notification opens that
+  party's panel. Tests: 717 unit, 81 database (no SQL changed here), 115 browser. The owner chose the shorter note (`guest.form.expired`).
+- **Next:** the owner merges #77 and the PRs of groups 2–5 in order (each on the one before).
 - **2026-10-15, evening — the small items, group 4 "Baza i wydajność", on the branch `claude/db-performance` on top of
   `claude/language`; a PR to `dev`.** EXPLAIN on a throw-away `s2p_explain_*` (dropped): one party of 9000 rows among 99 000, its rows
   scattered — `findRecentlyPlayed` 5.3 ms, `findSkippedByTheDj` 2.2 ms, `findHistory` 10.3 ms (index `idx_party_decision_time`, a
