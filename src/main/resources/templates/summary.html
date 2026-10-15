@@ -20,7 +20,7 @@
     <form th:unless="${#lists.isEmpty(evenings)}" action="/dj/summary" th:action="@{/dj/summary}" method="get" class="pick">
         <input type="hidden" name="party" th:value="${partyCode}">
         <label for="eveningSelect" th:text="#{summary.evening}">Evening:</label>
-        <select id="eveningSelect" name="evening" data-auto-submit>
+        <select id="eveningSelect" name="evening">
             <option th:each="e : ${evenings}" th:value="${e.day}" th:selected="${e.day == evening}"
                     th:text="${#temporals.format(e.day, 'EEEE, dd.MM', #locale) + ' (' + e.requests + ')'}">sobota, 03.10 (42)</option>
         </select>

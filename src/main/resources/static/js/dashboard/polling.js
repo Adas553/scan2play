@@ -8,7 +8,7 @@
  * sees the list, and it is fetched at once when the window is shown again.
  */
 import { EVENTS, on } from './events.js';
-import { csrfHeaders, partyCode, showPartyActive } from './common.js';
+import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 import { reopenCards } from './cards.js';
 import { keepChosen } from './queue-keys.js';
@@ -91,6 +91,44 @@ function pollAnswered(ok) {
     failedPolls = ok ? 0 : failedPolls + 1;
     const bar = document.querySelector('[data-poll-offline]');
     if (bar) bar.hidden = failedPolls < OFFLINE_AFTER;
+    if (ok) {
+        forgetReload();
+        hideRefused('load');
+    }
+}
+
+const RELOADED = 's2p-poll-reloaded';
+
+/**
+ * The page loads itself again when the poll says it must (the access taken away or changed, the session gone) — once in a run of
+ * such answers: a page that comes back to the same refusal (a 403 the new page cannot cure) loaded itself again every 3 s for as long
+ * as it was open (the review of 2026-10-14, M14). The second time the notice says the list did not load, with its "reload" button,
+ * and the poll counts as failed; a good answer starts over. Remembered in the tab's sessionStorage, which a reload keeps.
+ *
+ * @return whether the page is being loaded again
+ */
+function reloadOnce() {
+    let reloadedAlready = false;
+    try {
+        reloadedAlready = sessionStorage.getItem(RELOADED) === '1';
+        if (!reloadedAlready) sessionStorage.setItem(RELOADED, '1');
+    } catch (e) {
+        // no storage (a private window may refuse it): loaded again as before
+    }
+    if (reloadedAlready) {
+        showRefused('load');
+        return false;
+    }
+    window.location.reload();
+    return true;
+}
+
+function forgetReload() {
+    try {
+        sessionStorage.removeItem(RELOADED);
+    } catch (e) {
+        // no storage: nothing remembered
+    }
 }
 
 // One chain of polls: the next one is scheduled when one ends; a poll asked for meanwhile (pollNow) comes right after it
@@ -140,7 +178,7 @@ async function refreshTable() {
         // The person's access (V32): taken away (403) or changed by the organiser (X-Panel-Access) — the page loads itself again, and
         // the panel says what happened; before, the queue stood still and only the console knew
         if (response.status === 403 || accessChanged(response.headers.get('X-Panel-Access'))) {
-            window.location.reload();
+            if (!reloadOnce()) pollAnswered(false);
             return;
         }
 
@@ -150,18 +188,11 @@ async function refreshTable() {
             return;
         }
 
-        if (response.redirected) {
-            window.location.reload();
+        if (response.redirected) {   // the login page: the session is gone
+            if (!reloadOnce()) pollAnswered(false);
             return;
         }
         if (!response.ok) throw new Error('HTTP ' + response.status);
-        pollAnswered(true);
-
-        // Store new ETag for next poll
-        const newETag = response.headers.get('ETag');
-        if (newETag) {
-            currentETag = newETag;
-        }
 
         const html = await response.text();
 
@@ -169,11 +200,17 @@ async function refreshTable() {
         const tempTable = document.createElement('table');
         tempTable.innerHTML = html;
         const newTbody = tempTable.querySelector('#song-list');
-        if (newTbody) {
-            document.getElementById('song-list').replaceWith(newTbody);
-        } else {
-            document.getElementById('song-list').innerHTML = html;
+        // An answer without the queue is not the server's (a Wi-Fi login page that took the request over): the queue stays as it
+        // was, and the poll counts as failed — it once put that page into the table (review 2026-10-14, M14)
+        if (!newTbody) throw new Error('an answer without the queue');
+        pollAnswered(true);
+
+        // Store new ETag for next poll
+        const newETag = response.headers.get('ETag');
+        if (newETag) {
+            currentETag = newETag;
         }
+        document.getElementById('song-list').replaceWith(newTbody);
 
         // Re-apply user's sort preference after table refresh
         reapplySort();

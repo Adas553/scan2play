@@ -82,6 +82,18 @@
         noteTimer = setTimeout(function () { note.remove(); }, 4000);
     }
     /**
+     * A 👍 or "↻ Odśwież" that did not go through (no network, the session ran out — the form's token with it): the note says so,
+     * as the server's own notes do (review 2026-10-14: nothing happened, and the guest could not tell).
+     */
+    function showFailed() {
+        const note = document.createElement('div');
+        note.id = 'voteNote';
+        note.className = 'alert alert-warning text-center py-2 mb-0 shadow s2p-vote-note';
+        note.setAttribute('role', 'status');
+        note.textContent = box.dataset.textFailed || '';
+        showNote(note);
+    }
+    /**
      * The answer to a 👍 (GuestController.vote): that song's row as it is now. Only its votes are put in place — the songs keep their
      * places; the new order comes with the next fetch of the list. A song no longer waiting (played or skipped meanwhile) stays,
      * dimmed, its 👍 off.
@@ -102,15 +114,20 @@
         const note = answer.querySelector('#voteNote');
         if (note) showNote(note);
     }
+    /** Fetches the list again; true when it came. Asked by the guest ({@code force}: "↻ Odśwież"), or on coming back to the page. */
     async function refreshQueue(force) {
-        if (!force && Date.now() - lastRefresh < 5000) return; // a quick switch back and forth asks once
+        if (!force && Date.now() - lastRefresh < 5000) return true; // a quick switch back and forth asks once
         lastRefresh = Date.now();
         try {
             const response = await fetch(box.dataset.url, { headers: { 'Accept': 'text/html' } });
-            if (response.ok && !response.redirected) replaceQueue(await response.text());
+            if (response.ok && !response.redirected) {
+                replaceQueue(await response.text());
+                return true;
+            }
         } catch (e) {
             // offline for a moment: the list stays as it was
         }
+        return false;
     }
     // A 👍 (or taking it back) goes in the background (GuestController.vote). The button waits meanwhile, so a double tap sends one.
     box.addEventListener('submit', async function (e) {
@@ -134,6 +151,7 @@
             // offline for a moment: nothing was counted, the button can be tapped again
         }
         button.disabled = false;
+        showFailed();
     });
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') refreshQueue(false);
@@ -143,7 +161,13 @@
         const button = e.target.closest('[data-guest-queue-refresh]');
         if (!button) return;
         button.disabled = true;
-        refreshQueue(true);
+        refreshQueue(true).then(function (came) {
+            // came: the list (and its button) is new; else this one works again, and the note says it did not go through
+            if (!came) {
+                button.disabled = false;
+                showFailed();
+            }
+        });
     });
 })();
 

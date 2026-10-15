@@ -24,6 +24,28 @@ class DjPlanIT extends PostgresIntegrationTest {
     @Autowired DjPlanRepository plans;
     @Autowired PlanService planService;
     @Autowired AccountDeletionService accountDeletion;
+    @Autowired org.springframework.cache.CacheManager caches;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    /**
+     * "Usuń konto" and back with the same Google account: no second trial of Pro (the owner, 2026-10-15). What is left of the account
+     * is its key in {@code trial_used} — a SHA-256 of the Google subject, the same in Java and in PostgreSQL (V36 fills it in SQL).
+     */
+    @Test
+    void aDeletedAccount_getsNoSecondTrial() {
+        String owner = "trial-it-" + System.nanoTime();
+        PlanService enforced = new PlanService(plans, caches, true, "", 14);
+        enforced.startTrial(owner);
+        assertThat(plans.existsById(owner)).isTrue();
+
+        accountDeletion.deleteAllUserData(owner);
+        assertThat(plans.existsById(owner)).isFalse();
+        enforced.startTrial(owner);
+
+        assertThat(plans.existsById(owner)).as("the same Google account again: no second trial").isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM trial_used WHERE owner_hash = encode(sha256(convert_to(?, 'UTF8')), 'hex')",
+                Integer.class, owner)).as("the key, as PostgreSQL computes it").isOne();
+    }
 
     @Test
     void aPlan_isKeptAsWritten_andGoesWithTheAccount() {

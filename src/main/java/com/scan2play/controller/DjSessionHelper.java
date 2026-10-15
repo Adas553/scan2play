@@ -220,14 +220,4 @@ public class DjSessionHelper {
             }
         }
     }
-
-    /** The owner alone, at the party the page names (see {@link #requireOwner}). */
-    public void validateOwnership(String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
-        requireOwner(partyCode, authentication, session);
-    }
-
-    /** The owner or anyone on the party's staff, at the party the page names (see {@link #access}). */
-    public void validateAccess(String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
-        access(partyCode, authentication, session);
-    }
 }

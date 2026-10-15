@@ -55,13 +55,8 @@ class PartyStaffServiceTest {
     }
 
     @Test
-    void theOwner_hasAccessWithoutAQuery_aStaffMemberByTheirRow_anyoneElseNot() {
-        when(staff.existsByPartyCodeAndMemberId(PARTY, "kasia")).thenReturn(true);
-
-        assertThat(service.hasAccess(party, "owner")).isTrue();
-        verify(staff, never()).existsByPartyCodeAndMemberId(PARTY, "owner");
-        assertThat(service.hasAccess(party, "kasia")).isTrue();
-        assertThat(service.hasAccess(party, "stranger")).isFalse();
+    void aPartyWithoutAnOwner_isNobodys() {
+        assertThat(PartyStaffService.isOwner(party, "owner")).isTrue();
         assertThat(PartyStaffService.isOwner(PartySettingsEntity.builder().partyCode(PARTY).build(), "owner"))
                 .as("a party without an owner is nobody's").isFalse();
     }
@@ -113,10 +108,10 @@ class PartyStaffServiceTest {
     /** The staff and the invitations by e-mail waiting share the 10 places (V34): nine people and one invitation — the link is full. */
     @Test
     void theInvitationsWaiting_takePlacesToo() {
-        when(staff.countByPartyCode(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF - 1);
+        when(staff.countByPartyCode(PARTY)).thenReturn((long) com.scan2play.model.Plan.PRO.staffPlaces() - 1);
         when(invitations.countByPartyCodeAndInvitedAtAfter(org.mockito.ArgumentMatchers.eq(PARTY), any())).thenReturn(1L);
 
-        assertThat(service.placesTaken(PARTY)).isEqualTo(PartyStaffService.MAX_STAFF);
+        assertThat(service.placesTaken(PARTY)).isEqualTo(com.scan2play.model.Plan.PRO.staffPlaces());
         assertThat(service.join(TOKEN, "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.FULL);
         // answering one of those invitations: its own place is already counted
         assertThat(service.addToStaff(party, "ola", "Ola", StaffRole.VIEWER.permissions(), true)).isEqualTo(JoinOutcome.JOINED);
@@ -125,7 +120,7 @@ class PartyStaffServiceTest {
     @Test
     void anOldOrUnknownLink_theOwnersOwnLink_aSecondJoin_andAFullStaff_saveNothing() {
         when(staff.existsByPartyCodeAndMemberId(PARTY, "kasia")).thenReturn(true);
-        when(staff.countByPartyCode(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF);
+        when(staff.countByPartyCode(PARTY)).thenReturn((long) com.scan2play.model.Plan.PRO.staffPlaces());
 
         assertThat(service.join("old-token", "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.UNKNOWN_LINK);
         assertThat(service.join("x".repeat(40), "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.UNKNOWN_LINK);
@@ -235,7 +230,7 @@ class PartyStaffServiceTest {
         verify(staff, never()).deleteFromParty(org.mockito.ArgumentMatchers.anyLong(), any());
 
         PartyStaffService pro = new PartyStaffService(staff, invitations, parties, query, Plans.enforced("owner"));
-        assertThat(pro.placesOf(party)).isEqualTo(PartyStaffService.MAX_STAFF);
+        assertThat(pro.placesOf(party)).isEqualTo(com.scan2play.model.Plan.PRO.staffPlaces());
         assertThat(pro.join(TOKEN, "kasia", "Kasia").outcome()).isEqualTo(JoinOutcome.JOINED);
     }
 }

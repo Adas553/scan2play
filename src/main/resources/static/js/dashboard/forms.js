@@ -2,7 +2,7 @@
  * The forms of the DJ panel: the POST forms submitted by AJAX, and the "copy" button of the party link.
  */
 import { EVENTS, emit } from './events.js';
-import { csrfHeaders, partyCode, showPartyActive } from './common.js';
+import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
 
 // ==========================================================================
 // AJAX FORM INTERCEPTOR
@@ -135,16 +135,6 @@ function refused(form, btn) {
         showRefused();
     }
     flash(btn, false);
-}
-
-function showRefused() {
-    const notice = document.querySelector('[data-form-refused]');
-    if (notice) notice.hidden = false;
-}
-
-function hideRefused() {
-    const notice = document.querySelector('[data-form-refused]');
-    if (notice) notice.hidden = true;
 }
 
 document.querySelectorAll('[data-form-refused-reload]').forEach(function (button) {

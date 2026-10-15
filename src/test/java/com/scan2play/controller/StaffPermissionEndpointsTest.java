@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -80,9 +81,10 @@ class StaffPermissionEndpointsTest {
                         new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off()),
                         new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), helper, com.scan2play.service.Plans.off()),
                         dashboard,
-                        new DjSummaryController(mock(EveningSummaryService.class), helper, new StaticMessageSource(), com.scan2play.service.Plans.off()),
+                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), com.scan2play.service.Plans.off()),
                         new StaffController(staff, mock(PartySettingsCommandService.class), helper,
-                                mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off()))
+                                mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off()),
+                        new FeedbackController(mock(com.scan2play.repository.FeedbackRepository.class), helper))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -90,8 +92,9 @@ class StaffPermissionEndpointsTest {
         when(staff.accessOf(pub, "kasia")).thenReturn(Optional.of(new PartyStaffService.Access(pub, false, permissions)));
     }
 
-    private void perform(MockHttpServletRequestBuilder request) throws Exception {
-        mockMvc.perform(request.principal(kasia).session(new MockHttpSession()));
+    /** The answer's status — a request let through is answered (below 400), not only "nothing thrown" (the review of 2026-10-14). */
+    private int perform(MockHttpServletRequestBuilder request) throws Exception {
+        return mockMvc.perform(request.principal(kasia).session(new MockHttpSession())).andReturn().getResponse().getStatus();
     }
 
     static Stream<Arguments> delegated() {
@@ -120,14 +123,37 @@ class StaffPermissionEndpointsTest {
 
     @ParameterizedTest(name = "{1}: {0}")
     @MethodSource("delegated")
-    void anEndpoint_isRefusedWithoutItsPermission_andLetThroughWithIt(StaffPermission needed, MockHttpServletRequestBuilder request) {
+    void anEndpoint_isRefusedWithoutItsPermission_andLetThroughWithIt(StaffPermission needed, MockHttpServletRequestBuilder request) throws Exception {
         EnumSet<StaffPermission> allBut = EnumSet.allOf(StaffPermission.class);
         allBut.remove(needed);
         kasiaMay(allBut);
         assertThatThrownBy(() -> perform(request)).hasRootCauseInstanceOf(AccessDeniedException.class);
 
         kasiaMay(EnumSet.of(needed));
-        assertThatCode(() -> perform(request)).doesNotThrowAnyException();
+        assertThat(perform(request)).as("let through, and answered").isLessThan(400);
+    }
+
+    /**
+     * What is anyone's of the staff, with no permission at all — the QR code to print (the code is on the tables anyway), the queue's
+     * poll (the warnings, the access), "Opinia", "Opuść obsługę", the switch of panels — and never another party's.
+     */
+    static Stream<Arguments> anyoneOfTheStaff() {
+        return Stream.of(
+                Arguments.of(get("/dj/qr-print").param("party", PUB)),
+                Arguments.of(get("/dj/dashboard/updates").param("partyCode", PUB)),
+                Arguments.of(post("/dj/feedback").param("partyCode", PUB).param("message", "Super")),
+                Arguments.of(post("/dj/staff/leave").param("partyCode", PUB)),
+                Arguments.of(post("/dj/panel").param("party", PUB)));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("anyoneOfTheStaff")
+    void anEndpointOfTheWholeStaff_needsNoPermission_butRefusesAnotherParty(MockHttpServletRequestBuilder request) throws Exception {
+        kasiaMay(EnumSet.noneOf(StaffPermission.class));
+        assertThat(perform(request)).as("let through, and answered").isLessThan(400);
+
+        when(staff.accessOf(pub, "kasia")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> perform(request)).hasRootCauseInstanceOf(AccessDeniedException.class);
     }
 
     static Stream<Arguments> neverHandedOver() {
@@ -158,7 +184,7 @@ class StaffPermissionEndpointsTest {
     @org.junit.jupiter.api.Test
     void theSettingsPage_opensForTheStaff_withoutAPermission_andNeverForAnotherParty() {
         kasiaMay(EnumSet.noneOf(StaffPermission.class));
-        assertThatCode(() -> perform(get("/dj/settings").param("party", PUB))).doesNotThrowAnyException();
+        assertThatCode(() -> assertThat(perform(get("/dj/settings").param("party", PUB))).isLessThan(400)).doesNotThrowAnyException();
 
         when(staff.accessOf(pub, "kasia")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> perform(get("/dj/settings").param("party", PUB))).hasRootCauseInstanceOf(AccessDeniedException.class);
@@ -171,5 +197,19 @@ class StaffPermissionEndpointsTest {
         kasiaMay(StaffPermission.all());
         when(staff.accessOf(pub, "kasia")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> perform(request)).hasRootCauseInstanceOf(AccessDeniedException.class);
+    }
+
+    /** A party with one evening of requests: the summary and its CSV answer 200, not the 404 of a party without any. */
+    private static EveningSummaryService oneEvening() {
+        EveningSummaryService summaries = mock(EveningSummaryService.class);
+        when(summaries.evenings(PUB)).thenReturn(List.of(new EveningSummaryService.Evening(java.time.LocalDate.of(2026, 10, 10), 3)));
+        return summaries;
+    }
+
+    /** The CSV's header and its words: any text will do here. */
+    private static StaticMessageSource codesAsTexts() {
+        StaticMessageSource messages = new StaticMessageSource();
+        messages.setUseCodeAsDefaultMessage(true);
+        return messages;
     }
 }

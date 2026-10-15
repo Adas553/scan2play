@@ -167,13 +167,13 @@ class DjSessionHelperTest {
         assertThatThrownBy(() -> helper.require(PUB, StaffPermission.QUEUE, user("kasia"), session)).isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> helper.require(PUB, StaffPermission.CLEAR_QUEUE, user("kasia"), session)).isInstanceOf(AccessDeniedException.class);
         assertThat(helper.require(PUB, StaffPermission.HISTORY, user("kasia"), session)).isSameAs(pub);
-        helper.validateAccess(PUB, user("kasia"), session);   // the queue to look at: no exception
+        helper.access(PUB, user("kasia"), session);   // the queue to look at: no exception
 
         kasiaWorksAtThePubAs(StaffRole.CO_ORGANISER.permissions());
         assertThat(helper.require(PUB, StaffPermission.VIBE, user("kasia"), session)).isSameAs(pub);
         assertThatThrownBy(() -> helper.requireOwner(PUB, user("kasia"), session)).as("the staff, the profiles, the tip link: never handed over")
                 .isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> helper.validateOwnership(PUB, user("kasia"), session)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> helper.requireOwner(PUB, user("kasia"), session)).isInstanceOf(AccessDeniedException.class);
 
         assertThat(helper.requireOwner(PUB, user("pub-owner"), new MockHttpSession())).isSameAs(pub);
         assertThat(helper.require(PUB, StaffPermission.SUMMARY, user("pub-owner"), new MockHttpSession())).isSameAs(pub);

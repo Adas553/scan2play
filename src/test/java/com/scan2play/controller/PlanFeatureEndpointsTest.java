@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -95,12 +95,13 @@ class PlanFeatureEndpointsTest {
                         new DjSongController(mock(DjService.class), helper, plans),
                         new DjPartySettingsController(settings, mock(AccountDeletionService.class), helper, plans),
                         dashboard,
-                        new DjSummaryController(mock(EveningSummaryService.class), helper, new StaticMessageSource(), plans))
+                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
-    private static void perform(MockMvc mvc, String who, MockHttpServletRequestBuilder request) throws Exception {
-        mvc.perform(request.principal(user(who)).session(new MockHttpSession()));
+    /** The answer's status: a request let through is answered (below 400), not only "nothing thrown" (the review of 2026-10-14). */
+    private static int perform(MockMvc mvc, String who, MockHttpServletRequestBuilder request) throws Exception {
+        return mvc.perform(request.principal(user(who)).session(new MockHttpSession())).andReturn().getResponse().getStatus();
     }
 
     static Stream<Arguments> proFeatures() {
@@ -129,19 +130,19 @@ class PlanFeatureEndpointsTest {
     @ParameterizedTest(name = "{0}: {2}")
     @MethodSource("proFeatures")
     void aProFeature_isLetThrough_whileThePlansAreNotEnforced_andForAnOrganiserWithPro(PlanFeature feature, boolean delegated,
-                                                                                      MockHttpServletRequestBuilder request) {
-        assertThatCode(() -> perform(mvc(Plans.off()), ORGANISER, request)).doesNotThrowAnyException();
-        assertThatCode(() -> perform(mvc(Plans.enforced(ORGANISER)), ORGANISER, request)).doesNotThrowAnyException();
+                                                                                      MockHttpServletRequestBuilder request) throws Exception {
+        assertThat(perform(mvc(Plans.off()), ORGANISER, request)).isLessThan(400);
+        assertThat(perform(mvc(Plans.enforced(ORGANISER)), ORGANISER, request)).isLessThan(400);
     }
 
     /** The staff work the organiser's party with the organiser's plan: let through under Pro, refused without it. */
     @ParameterizedTest(name = "{0}: {2}")
     @MethodSource("proFeatures")
-    void theStaff_haveTheOrganisersPlan(PlanFeature feature, boolean delegated, MockHttpServletRequestBuilder request) {
+    void theStaff_haveTheOrganisersPlan(PlanFeature feature, boolean delegated, MockHttpServletRequestBuilder request) throws Exception {
         if (!delegated) {
             return;   // the profiles and the tip link are the organiser's alone (StaffPermissionEndpointsTest)
         }
-        assertThatCode(() -> perform(mvc(Plans.enforced(ORGANISER)), "kasia", request)).doesNotThrowAnyException();
+        assertThat(perform(mvc(Plans.enforced(ORGANISER)), "kasia", request)).isLessThan(400);
         assertThatThrownBy(() -> perform(mvc(Plans.enforced("kasia")), "kasia", request))
                 .hasRootCauseInstanceOf(PlanRequiredException.class);
     }
@@ -157,13 +158,28 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(post("/dj/dashboard/clear-queue").param("partyCode", PUB)),
                 Arguments.of(post("/dj/end-party").param("partyCode", PUB)),
                 Arguments.of(get("/dj/history-view/fragment").param("partyCode", PUB)),
+                Arguments.of(get("/dj/history-view").param("party", PUB)),
                 Arguments.of(get("/dj/settings").param("party", PUB)),
                 Arguments.of(get("/dj/qr-print").param("party", PUB)));
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("everyones")
-    void theCoreOfAParty_isEveryones(MockHttpServletRequestBuilder request) {
-        assertThatCode(() -> perform(mvc(Plans.enforced()), ORGANISER, request)).doesNotThrowAnyException();
+    void theCoreOfAParty_isEveryones(MockHttpServletRequestBuilder request) throws Exception {
+        assertThat(perform(mvc(Plans.enforced()), ORGANISER, request)).isLessThan(400);
+    }
+
+    /** A party with one evening of requests: the summary and its CSV answer 200, not the 404 of a party without any. */
+    private static EveningSummaryService oneEvening() {
+        EveningSummaryService summaries = mock(EveningSummaryService.class);
+        when(summaries.evenings(PUB)).thenReturn(List.of(new EveningSummaryService.Evening(java.time.LocalDate.of(2026, 10, 10), 3)));
+        return summaries;
+    }
+
+    /** The CSV's header and its words: any text will do here. */
+    private static StaticMessageSource codesAsTexts() {
+        StaticMessageSource messages = new StaticMessageSource();
+        messages.setUseCodeAsDefaultMessage(true);
+        return messages;
     }
 }

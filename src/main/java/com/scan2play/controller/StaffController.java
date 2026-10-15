@@ -226,8 +226,9 @@ public class StaffController {
                 yield REDIRECT_DASHBOARD + "?party=" + answer.party().getPartyCode();
             }
             case FULL -> {
+                // the invitation is gone with it (StaffInvitationService.accept): only a new one can bring the person in
                 model.addAttribute(JOIN_PARTY_NAME, PartyStaffService.nameOf(answer.party()));
-                yield joinProblem(model, response, "join.problem.full", HttpStatus.CONFLICT);
+                yield joinProblem(model, response, "join.problem.full.invitation", HttpStatus.CONFLICT);
             }
             case GONE -> {
                 sessionHelper.note(session, new DjSessionHelper.Note("dashboard.invitation.gone", null, true));
@@ -329,8 +330,10 @@ public class StaffController {
                          @RequestParam(required = false) StaffRole role, @RequestParam(required = false) List<StaffPermission> permissions,
                          OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.requireOwner(partyCode, authentication, session);
-        StaffInvitationService.InviteOutcome outcome = staffInvitationService.invite(partyCode, email, granted(role, permissions));
-        boolean problem = outcome == StaffInvitationService.InviteOutcome.INVALID_ADDRESS || outcome == StaffInvitationService.InviteOutcome.FULL;
+        StaffInvitationService.InviteOutcome outcome = staffInvitationService.invite(partyCode, email, granted(role, permissions),
+                verifiedAddress(authentication));
+        boolean problem = outcome == StaffInvitationService.InviteOutcome.INVALID_ADDRESS || outcome == StaffInvitationService.InviteOutcome.FULL
+                || outcome == StaffInvitationService.InviteOutcome.OWN_ADDRESS;
         String typed = email == null ? "" : email.strip();
         session.setAttribute(SESSION_STAFF_INVITED, new InviteResult(outcome.name(),
                 typed.length() > 254 ? typed.substring(0, 254) : typed, problem));
