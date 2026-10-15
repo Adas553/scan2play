@@ -8,6 +8,13 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, late night — the deferred small items, PR 1 "the guest's limit on a clock", on the branch `claude/guest-session-clock`
+  from `origin/dev` = `1e16a91`; a PR to `dev`.** Checked first: `main` = `dev` in content (#83, #84 merged, deployed 19:11);
+  production enforces the CSP (`Content-Security-Policy`, not `-Report-Only`), sends `Referrer-Policy: same-origin` and
+  `Permissions-Policy`; Railway's log (read only) has no "CSP violation" since. `GuestSessionService` takes a `Clock`; its test waits
+  to the second on a clock it moves (a new one: the wait the guest is told is exactly enough). Tests: 718 unit. **Next:** the order
+  agreed with the owner — PR 2 the browser harness at a real 390 / 380 px, PR 3 the focus after the guest's "↻ Odśwież", PR 4 the
+  window `sw.js` picks, tested, PR 5 the front-end refactors; one PR each to `dev`, each on the one before.
 - **2026-10-15, night — the guests' song suggestions, on the branch `claude/song-suggestions` from `origin/dev` = `7c742ac`; a PR to
   `dev`.** The owner: "shakira da" did not suggest "Dai Dai" (it did for "shakira dai"). Checked on iTunes: it matches whole words only
   ("zenek prz" gives nothing), the American store lacks Polish songs ("Akcent – Przekorny Los" only in PL), and it gives a song several
