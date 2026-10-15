@@ -177,7 +177,8 @@ document.addEventListener('keydown', function (e) {
         return;
     }
     if (['ArrowDown', 'ArrowUp', 'c', 'Enter', 's', 'Escape'].indexOf(key) < 0) return;
-    if (key === 'Enter' && e.target.closest && e.target.closest('a, button')) return;
+    // Enter on what Enter works itself — a link, a button, a <summary> that unfolds (review 2026-10-14: it sent "Zagrane")
+    if (key === 'Enter' && e.target.closest && e.target.closest('a, button, summary, [role="button"]')) return;
     const rows = shownRows();
     if (rows.length === 0) return;
 

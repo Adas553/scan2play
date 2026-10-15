@@ -156,14 +156,19 @@ class PushNotificationServiceTest {
         ObjectMapper json = new ObjectMapper();
 
         JsonNode pl = json.readTree(push.payload(device("https://fcm.googleapis.com/x", "pl"), PARTY, "Wilki - Baśka"));
-        JsonNode en = json.readTree(push.payload(device("https://fcm.googleapis.com/y", null), PARTY, "Wilki - Baśka"));
+        JsonNode en = json.readTree(push.payload(device("https://fcm.googleapis.com/y", "en-US"), PARTY, "Wilki - Baśka"));
+        // a device subscribed before its language was kept: Polish, as a page with no language (WebConfig) — not English
+        JsonNode none = json.readTree(push.payload(device("https://fcm.googleapis.com/z", null), PARTY, "Wilki - Baśka"));
 
         assertThat(pl.path("title").asText()).isEqualTo("🎵 Nowa prośba");
         assertThat(pl.path("titleMany").asText()).as("the service worker puts the count in").isEqualTo("🎵 Nowe prośby: {0}");
         assertThat(pl.path("body").asText()).isEqualTo("Wilki - Baśka");
         assertThat(pl.path("tag").asText()).isEqualTo("s2p-" + PARTY);
-        assertThat(pl.path("url").asText()).isEqualTo("/dj/dashboard");
+        // the party's own panel: a person of two staffs (or an organiser who works at another party too) lands on this one, not on
+        // the default panel (review 2026-10-14)
+        assertThat(pl.path("url").asText()).isEqualTo("/dj/dashboard?party=" + PARTY);
         assertThat(en.path("title").asText()).isEqualTo("🎵 New request");
+        assertThat(none.path("title").asText()).isEqualTo("🎵 Nowa prośba");
     }
 
     @Test

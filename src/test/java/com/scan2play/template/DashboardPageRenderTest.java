@@ -221,7 +221,8 @@ class DashboardPageRenderTest {
     private static PartySettingsEntity party() {
         return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
                 .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko")
-                .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz").staffToken("Inv_123-xyzInv_123-xyz").build();
+                .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz").hostTokenMadeAt(java.time.Instant.now())
+                .staffToken("Inv_123-xyzInv_123-xyz").staffTokenMadeAt(java.time.Instant.now()).build();
     }
 
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */

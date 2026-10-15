@@ -75,6 +75,8 @@ public final class ViewAttributes {
     public static final String HOST_WANTED = "hostWanted";
     /** The hosts' link to give them, or null when the DJ made none. */
     public static final String HOST_LINK = "hostLink";
+    /** The day the hosts' link stops working ("14.11", V37). */
+    public static final String HOST_LINK_UNTIL = "hostLinkUntil";
     /** How many entries each list has: the panel's row "Lista gospodarzy · 🚫 2 · ⭐ 1" (the design review, 2026-10-10). */
     public static final String HOST_BLOCKED_COUNT = "hostBlockedCount";
     public static final String HOST_WANTED_COUNT = "hostWantedCount";
@@ -103,6 +105,8 @@ public final class ViewAttributes {
     public static final String STAFF = "staff";
     /** The staff's invitation link, or null when the owner made none. */
     public static final String STAFF_LINK = "staffLink";
+    /** The day the invitation link stops working ("14.11", V37). */
+    public static final String STAFF_LINK_UNTIL = "staffLinkUntil";
     /** The roles and the permissions, in the order of the owner's list and checkboxes. */
     public static final String STAFF_ROLES = "staffRoles";
     public static final String STAFF_PERMISSIONS = "staffPermissions";

@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -30,6 +32,12 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder(toBuilder = true)   // toBuilder: PartySettingsQueryService hands out copies of the cached settings
 public class PartySettingsEntity {
+
+    /**
+     * How long the hosts' link and the staff's invitation link work from when they were made (V37): as an invitation by address
+     * ({@code StaffInvitationEntity.MAX_AGE_DAYS}) — a link given for one event does not stay open for good.
+     */
+    public static final int LINK_DAYS = 30;
 
     /** The longest organiser's name kept (the column, V32). */
     public static final int OWNER_NAME_MAX = 100;
@@ -114,10 +122,18 @@ public class PartySettingsEntity {
     @ToString.Exclude
     private String hostToken;
 
+    /** When the DJ made the hosts' link (V37): it works {@value #LINK_DAYS} days ({@link #hostLinkWorks}). */
+    @ToString.Exclude
+    private Instant hostTokenMadeAt;
+
     /** The secret of the staff's invitation link ({@code /join/{token}}, V30): a bartender joins with it; null = no link. */
     @Column(length = 32, unique = true)
     @ToString.Exclude
     private String staffToken;
+
+    /** When the organiser made the invitation link (V37): it works {@value #LINK_DAYS} days ({@link #staffLinkWorks}). */
+    @ToString.Exclude
+    private Instant staffTokenMadeAt;
 
     /**
      * What whoever joins by the invitation link may do (V33): the organiser's pick when making the link — a role's set or ticked one
@@ -153,6 +169,25 @@ public class PartySettingsEntity {
     @Builder.Default
     @Column(nullable = false)
     private int duplicateCheckWindow = DEFAULT_DUPLICATE_CHECK_WINDOW;
+
+    /** The hosts' link opens their lists: there is one, and it was made less than {@value #LINK_DAYS} days ago. */
+    public boolean hostLinkWorks(Instant now) {
+        return hostToken != null && linkWorks(hostTokenMadeAt, now);
+    }
+
+    /** The invitation link lets someone join: there is one, and it was made less than {@value #LINK_DAYS} days ago. */
+    public boolean staffLinkWorks(Instant now) {
+        return staffToken != null && linkWorks(staffTokenMadeAt, now);
+    }
+
+    /** Until when a link made at {@code madeAt} works. */
+    public static Instant linkWorksUntil(Instant madeAt) {
+        return madeAt.plus(Duration.ofDays(LINK_DAYS));
+    }
+
+    private static boolean linkWorks(Instant madeAt, Instant now) {
+        return madeAt != null && now.isBefore(linkWorksUntil(madeAt));
+    }
 
     /** What the invitation link gives (a copy): its permissions, or the role "Obsługa kolejki" for a link of a version before V33. */
     public Set<StaffPermission> staffLinkGrants() {

@@ -107,6 +107,41 @@
     });
 
     S2P.scenario({
+        name: 'queue-keys-enter-on-summary',
+        title: 'Enter on a focused <summary> (the panel\'s bar, a folded part of the page) unfolds it — it is not "Zagrane" of the chosen request (review 2026-10-14)',
+        page: 'dashboard-cards',
+        setup: { updatesStatus: 304 },
+        run: async function (t) {
+            const details = document.createElement('details');
+            details.innerHTML = '<summary>Klub Ola</summary><p>…</p>';
+            document.querySelector('main, body').prepend(details);
+            press('ArrowDown');
+            t.step('a request chosen', chosen(), ['11']);
+            const summary = details.querySelector('summary');
+            summary.focus();
+            t.step('Enter on the <summary> is left to it', press('Enter', summary), false);
+            await t.sleep(400);
+            t.step('nothing sent', await t.stand.count(t.PLAY), 0);
+        }
+    });
+
+    S2P.scenario({
+        name: 'poll-keeps-the-focus',
+        title: 'a poll that replaces the rows keeps the keyboard\'s focus where it was — the same button of the same request — not on the page\'s top (review 2026-10-14)',
+        page: 'dashboard-cards',
+        setup: { updatesStatus: 304 },
+        run: async function (t) {
+            const old = document.getElementById('song-list');
+            row(12).querySelector('.s2p-btn-copy').focus();
+            t.step('"Kopiuj" of #12 focused', document.activeElement === row(12).querySelector('.s2p-btn-copy'), true);
+            await t.stand.config({ updatesStatus: null, updatesBody: old.outerHTML });   // the same rows, new elements
+            await t.waitFor(function () { return !old.isConnected; }, 'the poll that replaces the rows', 8000);
+            t.step('the focus on "Kopiuj" of #12 in the new rows', [document.activeElement === row(12).querySelector('.s2p-btn-copy'),
+                document.activeElement.tagName], [true, 'BUTTON']);
+        }
+    });
+
+    S2P.scenario({
         name: 'queue-keys-follow-poll',
         title: 'the chosen request stays chosen when the poll replaces and reorders the rows; once it has left the queue (played on the phone), the request in its place is chosen',
         setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: '' }, { id: 2, name: 'sanah - Szampan', url: '' }, { id: 3, name: 'Dawid Podsiadło - Małomiasteczkowy', url: '' }] },

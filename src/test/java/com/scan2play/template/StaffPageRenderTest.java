@@ -89,7 +89,7 @@ class StaffPageRenderTest {
     @Test
     void theStaffPage_listsWhatEachMayDo_theInvitations_andTheLink() throws IOException {
         PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("Klub Ola")
-                .staffToken("Inv_123-xyzInv_123-xyz").staffLinkPermissions(StaffRole.VIEWER.permissions()).build();
+                .staffToken("Inv_123-xyzInv_123-xyz").staffTokenMadeAt(java.time.Instant.now()).staffLinkPermissions(StaffRole.VIEWER.permissions()).build();
         DjSessionHelper helper = mock(DjSessionHelper.class);
         when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
         PartyStaffService staff = mock(PartyStaffService.class);
@@ -131,6 +131,8 @@ class StaffPageRenderTest {
                 "action=\"/dj/staff/remove\"", "data-confirm=\"Usunąć dostęp: Kasia?\"",
                 // the invitation follows the panel's address (Google's login works only there)
                 "value=\"http://127.0.0.1:8080/join/Inv_123-xyzInv_123-xyz\"", "data-copy-target=\"staffLinkInput\"",
+                // it works 30 days (V37)
+                "id=\"staffLinkUntil\"", ">Działa do " + com.scan2play.util.Times.day(Instant.now().plus(java.time.Duration.ofDays(30))) + ".<",
                 "action=\"/dj/staff/link\"", ">Wyłącz link (osoby z listy zostają)<",
                 "href=\"/dj/dashboard?party=HARN1\"", "/js/staff.js", "/js/dj-nav.js",
                 // the invitation by e-mail waiting: the address, since when, the role, "Cofnij zaproszenie" (asks first)

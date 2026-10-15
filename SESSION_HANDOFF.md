@@ -8,6 +8,42 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, evening — the small items, group 5 "Poprawność i front-end", on the branch `claude/correctness-frontend` on top of
+  `claude/db-performance`; a PR to `dev`.** A 👍 taken back on a played song stays the guest's (after "↩ Przywróć" it was given
+  twice); `eveningOf` six hours on the clock (the nights the clocks change); Enter on a `<summary>` is not "Zagrane"; a guest's request
+  from a page open over 30 minutes comes back with the song typed and a note (not a 403); "Wyślij prośbę" works after "Wstecz"
+  (bfcache); a late iTunes answer is dropped; the song field is a combobox; `aria-sort`, `aria-pressed`, the column headers by keyboard;
+  the focus stays on its button after a poll and after a 👍; `scroll-restore.js` without storage; a tap on a notification opens that
+  party's panel. Tests: 717 unit, 81 database (no SQL changed here), 115 browser. The owner chose the shorter note (`guest.form.expired`).
+- **Next:** the owner merges #77 and the PRs of groups 2–5 in order (each on the one before).
+- **2026-10-15, evening — the small items, group 4 "Baza i wydajność", on the branch `claude/db-performance` on top of
+  `claude/language`; a PR to `dev`.** EXPLAIN on a throw-away `s2p_explain_*` (dropped): one party of 9000 rows among 99 000, its rows
+  scattered — `findRecentlyPlayed` 5.3 ms, `findSkippedByTheDj` 2.2 ms, `findHistory` 10.3 ms (index `idx_party_decision_time`, a
+  top-N sort): no new index. `busiestClientRequestsUsed`: the address windows by party (a flood at one party pushed another party's
+  windows out — red test). The `partySettings` cache: read inside `Cache.get(key, loader)` — a read on its way left the old copy for
+  24 h (red test, Caffeine). The lock key: the party code packed, not its 32-bit hash ("AOXXX" and "B0XXX" shared one). Hikari 15 vs
+  async 32 and the session's UPDATE per poll (0.3 ms): explained in `application.properties`, unchanged. Tests: 714 unit, 81 database.
+- **2026-10-15, evening — the small items, group 3 "Język", on the branch `claude/language` on top of `claude/security-small`; a PR to
+  `dev`.** `?lang=EN`, `?lang=en-US` are English (only "en" was — production gave Polish); the language picked by `?lang` stays in the
+  cookie `lang` for a year (the pages' links do not carry `?lang`); an empty `Accept-Language` or `*` is Polish, not the JVM's (on
+  production Cloudflare seems to drop an empty header — the fix is defensive); a push device without a language gets Polish. The
+  privacy policy names the cookie (both languages). Tests: 709 unit (`SmokeTest`'s language checks now read `<html lang="…">`: a
+  bare `lang="en"` matched `hreflang="en"` on a Polish page). **The owner:** the privacy policy's sentence about the cookie.
+- **2026-10-15, evening — the small items, group 2 "Bezpieczeństwo", on the branch `claude/security-small` on top of
+  `claude/gemini-3-6` (#77); a PR to `dev`.** The error page's "Spróbuj ponownie" was an open redirect (`//evil.example/x` and
+  `/\evil.example/x` → `href="//evil.example/x"`, checked with curl on the running app) — now `/`. `Referrer-Policy: same-origin`,
+  `Permissions-Policy`. `/<version>/js/**` instead of `/*/js/**` (it let `/dj/js/…` past the login). `/csp-report` logs ≤ 100 an hour,
+  `/dj/feedback` 10 an hour per account (429). A 404 / 500 under the deploy's version is not cached for a year. The owner: "zrób jak
+  uważasz" for the links — V37: the hosts' and the invitation link work 30 days (as an invitation by e-mail); the settings and
+  "Obsługa" say "Działa do …". Guests' texts stay in the INFO log (the privacy policy says so). CSP_ENFORCE: no violation in Railway's
+  log — the plan is in PROJECT_CONTEXT 8. Tests: 706 unit, 81 database, 108 browser. **The owner:** `CSP_ENFORCE=true` on Railway by the
+  plan. The text "Działa do {0}." — the owner asked for my proposal.
+- **2026-10-15, evening — the review of 2026-10-14, the small items, group 1 "Gemini": `gemini-3.6-flash`, on the branch
+  `claude/gemini-3-6` from `origin/dev` = `1afca1a`; a PR to `dev`.** Google retired `gemini-3.5-flash` on 2026-10-08 (its calls
+  go to 3.6). `GeminiComparison` run with the key from IntelliJ's run configuration (the owner's yes; read by a script, never
+  printed or written): 3.6 Flash low 64 / 2 (the made-up "fiołkowy blask", wrong for every model), 1.6 s, ~$2.1 per 1000; 3.8 Flash
+  61 / 5; 2.5 Flash 57 / 9. Tests: 697 unit (`GeminiConfigTest.theDefaultModel_isGemini36Flash` red on `origin/dev`). **Next:** the
+  groups 2–5 of the small items, one PR each.
 - **2026-10-15, later — the review of 2026-10-14, group 7's leftover: `google-genai` 1.38.0 → 1.74.0, on the branch
   `claude/google-genai-1-74` from `origin/dev` = `03ad83a`; a PR to `dev`.** The latest release at least two weeks old (1.75.0 was
   13.5 days). No API we use changed (changelog 1.39–1.74: the only breaking change removed the unused Interactions module); no code

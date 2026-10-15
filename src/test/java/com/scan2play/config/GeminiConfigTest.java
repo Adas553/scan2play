@@ -51,12 +51,26 @@ class GeminiConfigTest {
         assertThat(options.retryOptions().flatMap(retry -> retry.attempts())).contains(1);
     }
 
+    /**
+     * The model asked by default is one Google still serves: gemini-3.5-flash was retired on 2026-10-08 (its calls go to 3.6), and the
+     * comparison of 2026-10-15 chose gemini-3.6-flash ({@code GeminiComparison}). Another model is GOOGLE_AI_MODEL, not this line.
+     */
+    @Test
+    void theDefaultModel_isGemini36Flash() throws IOException {
+        java.util.Properties properties = new java.util.Properties();
+        try (var in = getClass().getResourceAsStream("/application.properties")) {
+            properties.load(in);
+        }
+
+        assertThat(properties.getProperty("google.ai.model-name")).isEqualTo("${GOOGLE_AI_MODEL:gemini-3.6-flash}");
+    }
+
     /** The SDK retries a 503 by default: with the config's options it asks once. */
     @Test
     void anOverloadedGemini_isAskedOnce() {
         answer(503, "{\"error\":{\"code\":503,\"message\":\"overloaded\",\"status\":\"UNAVAILABLE\"}}");
 
-        assertThatThrownBy(() -> client(GeminiConfig.httpOptions()).models.generateContent("gemini-3.5-flash", "hi", null))
+        assertThatThrownBy(() -> client(GeminiConfig.httpOptions()).models.generateContent("gemini-3.6-flash", "hi", null))
                 .isInstanceOf(RuntimeException.class);
         assertThat(calls).hasValue(1);
     }
@@ -76,7 +90,7 @@ class GeminiConfigTest {
         HttpOptions shortened = GeminiConfig.httpOptions().toBuilder().timeout(500).build();
 
         long start = System.nanoTime();
-        assertThatThrownBy(() -> client(shortened).models.generateContent("gemini-3.5-flash", "hi", null))
+        assertThatThrownBy(() -> client(shortened).models.generateContent("gemini-3.6-flash", "hi", null))
                 .isInstanceOf(RuntimeException.class);
         long tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
@@ -95,7 +109,7 @@ class GeminiConfigTest {
                 .thinkingConfig(ThinkingConfig.builder().thinkingLevel(new ThinkingLevel(ThinkingLevel.Known.LOW)).build())
                 .build();
 
-        String text = client(GeminiConfig.httpOptions()).models.generateContent("gemini-3.5-flash", "hi", config).text();
+        String text = client(GeminiConfig.httpOptions()).models.generateContent("gemini-3.6-flash", "hi", config).text();
 
         assertThat(text).isEqualTo("{\"decision\":\"ACCEPTED\"}");
         assertThat(lastBody.get()).contains("\"responseMimeType\":\"application/json\"").contains("\"thinkingLevel\":\"LOW\"");

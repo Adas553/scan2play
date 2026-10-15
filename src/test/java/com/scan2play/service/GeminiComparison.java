@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
- * The Gemini comparison (2026-10-07: chose gemini-3.5-flash, thinking low): the same guests' requests through the real prompt of
+ * The Gemini comparison (2026-10-07: chose gemini-3.5-flash, thinking low; 2026-10-15: gemini-3.6-flash): the same guests' requests through the real prompt of
  * {@code src/main/resources/prompts} — or a rewrite of it put in {@code src/test/resources/gemini-comparison/proposed} (a variant
  * with the prompt "proposed") — on several models and thinking settings; the answers, the time of each call and its price side by
  * side. Not a test: run {@link #main} from IntelliJ (the green arrow) with
@@ -130,16 +130,19 @@ public final class GeminiComparison {
             new Case("the one from titanic", null, CommentStyle.CLASSIC, Locale.ENGLISH, "My Heart Will Go On", true));
 
     static final List<Variant> VARIANTS = List.of(
-            new Variant("gemini-3.5-flash", "low", "current"),              // production since 2026-10-07
-            new Variant("gemini-3.5-flash", "medium", "current"),
-            new Variant("gemini-2.5-flash", "budget:1024", "current"),
-            new Variant("gemini-3.5-flash-lite", "low", "current"));
+            new Variant("gemini-3.6-flash", "low", "current"),              // production since 2026-10-15 (3.5 goes to it since 10-08)
+            new Variant("gemini-3.6-flash", "medium", "current"),
+            new Variant("gemini-3.8-flash", "low", "current"),
+            new Variant("gemini-2.5-flash", "budget:1024", "current"));
 
-    /** Paid tier, $ per 1M tokens: input, output (thinking is output). ai.google.dev/gemini-api/docs/pricing, 2026-10-07. */
+    /**
+     * Paid tier, $ per 1M tokens: input, output (thinking is output). ai.google.dev/gemini-api/docs/pricing, 2026-10-15: 3.6 and
+     * 3.8 Flash cost half of this until 2026-12-31 — the prices here are from 2027 on.
+     */
     static double[] price(String model) {
         return switch (model) {
             case "gemini-2.5-flash", "gemini-3.5-flash-lite" -> new double[]{0.30, 2.50};
-            case "gemini-3.5-flash" -> new double[]{1.50, 9.00};
+            case "gemini-3.6-flash", "gemini-3.8-flash" -> new double[]{1.50, 7.50};
             default -> new double[]{0, 0};
         };
     }

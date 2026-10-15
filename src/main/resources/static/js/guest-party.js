@@ -98,14 +98,18 @@
      * places; the new order comes with the next fetch of the list. A song no longer waiting (played or skipped meanwhile) stays,
      * dimmed, its 👍 off.
      */
-    function applyVote(html, songId) {
+    function applyVote(html, songId, hadFocus) {
         const answer = document.createElement('div');
         answer.innerHTML = html;
         const now = answer.querySelector('li[data-song-id="' + songId + '"] .s2p-vote-control');
         box.querySelectorAll('li[data-song-id="' + songId + '"]').forEach(function (row) {
             const control = row.querySelector('.s2p-vote-control');
             if (now && control) {
-                control.replaceWith(now.cloneNode(true));
+                const fresh = now.cloneNode(true);
+                control.replaceWith(fresh);
+                // the keyboard's focus on the new 👍, not on the page's top (review 2026-10-14)
+                const button = hadFocus && fresh.querySelector('button');
+                if (button) button.focus({ preventScroll: true });
             } else if (!now) {
                 row.classList.add('s2p-song-gone');
                 row.querySelectorAll('button').forEach(function (button) { button.disabled = true; });
@@ -136,6 +140,8 @@
         e.preventDefault();
         const button = form.querySelector('button');
         if (button.disabled) return;
+        // a disabled button loses the keyboard's focus: it goes back to the 👍 when the answer is in (review 2026-10-14)
+        const hadFocus = document.activeElement === button;
         button.disabled = true;
         try {
             const response = await fetch(form.action, {
@@ -144,13 +150,14 @@
                 headers: { 'Accept': 'text/html', 'X-Requested-With': 'fetch' }
             });
             if (response.ok && !response.redirected) {
-                applyVote(await response.text(), form.elements.id.value);
+                applyVote(await response.text(), form.elements.id.value, hadFocus);
                 return;
             }
         } catch (err) {
             // offline for a moment: nothing was counted, the button can be tapped again
         }
         button.disabled = false;
+        if (hadFocus) button.focus({ preventScroll: true });
         showFailed();
     });
     document.addEventListener('visibilitychange', function () {
@@ -171,13 +178,20 @@
     });
 })();
 
-// Sending: the button is disabled (no double request) and shows a spinner with "sending…" while the AI decides (2–4 s)
+// Sending: the button is disabled (no double request) and shows a spinner with "sending…" while the AI decides (2–4 s). Back on
+// the page with "Wstecz", the browser may show it from its back-forward cache as it was left — sending: the button as it was then.
 (function () {
     const form = document.getElementById('requestForm');
     if (!form) return;
+    const btn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('submitBtnText');
+    const label = btnText.textContent;
+    window.addEventListener('pageshow', function (e) {
+        if (!e.persisted) return;
+        btn.disabled = false;
+        btnText.replaceChildren(document.createTextNode(label));
+    });
     form.addEventListener('submit', function () {
-        const btn = document.getElementById('submitBtn');
-        const btnText = document.getElementById('submitBtnText');
 
         // Basic check for HTML5 validation
         if (form.checkValidity()) {

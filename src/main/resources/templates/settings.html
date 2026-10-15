@@ -109,6 +109,8 @@
                         <button type="submit" id="hostLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{dashboard.host.link.off}">Turn off</button>
                     </form>
                 </div>
+                <p th:if="${hostLinkUntil != null}" class="small text-secondary mt-1 mb-0" id="hostLinkUntil"
+                   th:text="#{link.works_until(${hostLinkUntil})}">Works until 14.11.</p>
             </div>
             </th:block>
         </section>

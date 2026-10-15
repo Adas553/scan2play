@@ -32,9 +32,9 @@ personal use) — migrations V18 and V19.
 | Framework        | Spring Boot 4.0.8 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat raised to 11.0.26 by `tomcat.version` in `pom.xml` (security fixes after the parent's 11.0.24 — review 2026-10-14 W15; drop it once the parent manages 11.0.26 or later) |
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
-| AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.5-flash` (thinking level low) |
+| AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.6-flash` (thinking level low) |
 | Other            | ZXing 3.5.4 (QR codes; `javase` without its command line and image decoders), the Maven wrapper with the sha256 of Maven 3.9.12, Caffeine (caches), Maven; the guests' song suggestions come from Apple's iTunes Search API, asked by the browser |
-| i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes; the language: `?lang=pl` / `?lang=en` (that one request), else the browser's `Accept-Language`, with none Polish (`WebConfig`, 2026-10-14 — a crawler sends none) |
+| i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes; the language: `?lang=pl` / `?lang=en` (any case, `en-US` too; kept in the cookie `lang` for a year — the pages' links do not carry it), else that cookie, else the browser's `Accept-Language`, with none — or an empty one, or `*` — Polish (`WebConfig`, 2026-10-14 / 15 — a crawler sends none) |
 
 ---
 
@@ -84,6 +84,9 @@ in its texts' column "Napiwek / Tip: revolut.me/djkoko"; the money never passes 
 `hostBlocked` / `hostWanted` (V29, ≤ 16000: the hosts' lists, one song or artist per line — see "The hosts' lists" below),
 `hostToken` (V29, ≤ 32, UNIQUE, null = no link: the secret of the hosts' link `/h/{token}`, `CodeGenerator.generateSecret` — 128
 random bits, base64url), `staffToken` (V30, the same kind: the staff's invitation link `/join/{token}` — see `PartyStaffEntity`),
+`hostTokenMadeAt` / `staffTokenMadeAt` (V37: when the link was made — each works `LINK_DAYS` = 30 days, as an invitation by
+e-mail; `hostLinkWorks` / `staffLinkWorks`; an older one is a 404 / "Ten link zaproszenia już nie działa", and the settings and
+"Obsługa" show it as no link; a working one says "Działa do 14.11."),
 `staffLinkPermissions` (V33, ≤ 200, null = no link: what whoever joins by the link may do — the organiser's pick when making it,
 stored as `party_staff.permissions`; a link of a version before V33 gives "Obsługa kolejki", `staffLinkGrants()`),
 `ownerName` (V32, ≤ 100: the organiser's name from their Google account, written when they open the panel and it changed — the
@@ -126,7 +129,8 @@ party's own limit is 300, so no "more than 300" note is needed.
 same name by `util/SongNames.comparable` — case, accents, punctuation ignored) is not a row of its own: the waiting song gets
 `votes + 1` (a conditional `UPDATE … WHERE decision = 'accepted'`; when the DJ played it meanwhile, the request is a new row) and
 keeps its name, link and first guest's words. The guest's own waiting song asked for again changes nothing and gives the guest's limit
-back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR"), so guests asking at once make one row (`SongRequestVotesIT`,
+back (`DjResponse.ownSong`). Under a per-party advisory lock ("S2PR" in the key's upper half, the code packed in the lower — six bits
+a character, so two parties never share a key: `lockKey`, `RequestsLockKeyTest`), so guests asking at once make one row (`SongRequestVotesIT`,
 20 rounds × 16 guests — red without the lock). A request the AI rejected this time for a song that waits is a vote too, and the
 guest hears the verdict the song was taken with (the AI does not judge a song the same way every time — 2026-10-04, a song accepted
 once, then rejected four times while it waited); any other rejected request is its own row. The AI's duplicate rule lists only
@@ -202,7 +206,7 @@ election; `guest.limit.votes-per-ip-party` (300 per the per-network window) boun
 **`PushSubscriptionEntity` → `push_subscription`** (V21) — one of the DJ's browsers that takes notifications of new requests:
 `ownerId`, `endpoint` (≤ 1000, UNIQUE: the push service's address of that browser — only Google FCM, Apple, Mozilla or Microsoft
 WNS hosts are taken, `PushSubscriptionService.isPushServiceEndpoint`), `p256dh` / `auth` (its encryption keys), `locale` (the
-notification's language), `createdAt`. At most 10 per DJ (the oldest goes); gone when switched off, on a 404 / 410 of the push
+notification's language; a device without one — subscribed before it was kept — gets Polish, as a page without a language), `createdAt`. At most 10 per DJ (the oldest goes); gone when switched off, on a 404 / 410 of the push
 service, or with the account.
 
 **`PartyStaffEntity` → `party_staff`** (V30, the owner 2026-10-09: a pub's bartender) — one person on a party's staff: `partyCode`
@@ -544,7 +548,8 @@ feature) — `POST /dj/dashboard/guest-limit-reset`, `GuestRequestLimiter.resetP
 their windows (W4). A stricter limit per address was not added: a venue's Wi-Fi is one address for all its guests; a scripted flood is
 for a rate-limit rule in Cloudflare (the owner's setting).
 
-2 and 3 are `GuestRequestLimiter` (Caffeine, in memory); 0 switches a limit off. The guests' 👍 have their own per-network limit
+2 and 3 are `GuestRequestLimiter` (Caffeine, in memory; the address windows by party, so a dashboard's poll reads only its own
+party's and a flood of made-up addresses at one party cannot push another's out — review 2026-10-14); 0 switches a limit off. The guests' 👍 have their own per-network limit
 there (`guest.limit.votes-per-ip-party`, 300 per the same window, `tryAcquireVote`): no AI call, so a vote never uses up a request. The address is `getRemoteAddr()` or the header named
 by `guest.client-ip-header` (`CF-Connecting-IP` — set on Railway). The DJ sees the use of 2 and 3 on "Ustawienia imprezy"
 in one line under the limits form (badges: grey, yellow from 80 %, red; what they are unfolded); the panel says it only near a limit —
@@ -576,9 +581,9 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
-| `FeedbackController` | `POST /dj/feedback` (JSON) |
+| `FeedbackController` | `POST /dj/feedback` (JSON; 10 an hour per account, then 429) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
-| `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
+| `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation, at most 100 an hour |
 | `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
 | `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), "Scan2Play Pro" `/pro` (V35: what Pro adds, a file per language; a 404 while the plans are not enforced) |
 | `ViewAttributes` | names of the model attributes |
@@ -613,11 +618,12 @@ the `webmanifest` MIME type), **versioned static addresses** (`spring.web.resour
 script's and style's address and no cache on the way keeps an old one; the dashboard's modules import each other relatively and stay
 in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy). `VersionedAssetCacheFilter` lets the
 browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
-deploy's version always gives the same file (an old version is a 404). Only for a commit's version, never `dev` (devtools changes the
+deploy's version always gives the same file (an old version is a 404). An answer that is not the file (a 404, a 500) is
+set back to `no-store` — a missing file must not be kept for a year. Only for a commit's version, never `dev` (devtools changes the
 files under it); everything else keeps Spring Security's `no-store`,
 `GeminiConfig` (the Gemini client, 15 s timeout, one try — `GeminiConfigTest` checks both through the real SDK against a Gemini
 stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
-`Accept-Language`, then Polish), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
+the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an empty header), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
 link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
 `scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages:
 `fragments/components :: seo(path, title, description)` writes the description, the canonical address in the page's language,
@@ -638,22 +644,22 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place), `polling.js` (the queue every 3 s and its headers — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"); they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place; Enter on a link, a button or a `<summary>` is theirs, never "Zagrane"), `polling.js` (the queue every 3 s and its headers — the keyboard's focus kept on the same button of the same request when the rows are replaced, `common.js` `focusSpot` — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"); they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`), the feedback form, "Kopiuj" of an address (`button[data-copy-text]`: "Pomoc i kontakt", "Kopiuj adres" of `/pro`; the address shown — `data-copy-select` — selected where the clipboard is refused) |
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes; "Kopiuj" of the invitation link |
-| `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`) |
+| `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`; a browser that refuses the session storage gets the page at once, without the memory) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
-| `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side) |
+| `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side; an answer for what the field no longer says is dropped; an ARIA combobox — `aria-expanded`, `aria-controls`, `aria-activedescendant`) |
 | `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles — the look of Section 6.7 |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
-| `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them, a tap opens the dashboard; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
+| `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
 | `images/og-image.png` | the picture of a shared link (Open Graph, 1200×630: the mark, "Scan2Play", "Prośby o piosenki od gości przez kod QR"; 2026-10-14) |
 | `images/logo.svg`, `favicon.ico` | our mark: three QR finder corners and a cyan play triangle on the dark tile (2026-10-04); on the landing page, the dashboard, the guest page, the QR poster and cards; the favicon is the same mark at 16 / 32 / 48 px |
 
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V36`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V37`.
 
 ### 6.7 The look (`app.css`, the design review of 2026-10-09)
 
@@ -718,12 +724,14 @@ What every page shares, so a new screen looks like the others:
 
 ### 7.1 Google Gemini
 
-- Evaluates guests' requests. Model `gemini-3.5-flash` (pinned; env `GOOGLE_AI_MODEL`), thinking level `low`
+- Evaluates guests' requests. Model `gemini-3.6-flash` (pinned; env `GOOGLE_AI_MODEL`), thinking level `low`
   (`google.ai.thinking-level`, env `GOOGLE_AI_THINKING_LEVEL`; a `gemini-2.x` model takes `google.ai.thinking-budget` tokens
   instead — `SongEvaluationService.thinkingConfig`). Timeout 15 s per call. Chosen 2026-10-07 by `GeminiComparison` (`src/test`,
   run from IntelliJ with the key; writes `target/gemini-comparison.md`): 30 hard requests × 2 per variant — 3.5 Flash had every
   checkable song right in 2.7–3.1 s on average (≤ 8.3 s), ~$2.5 per 1000 requests; 2.5 Flash named another song for a line of the
-  lyrics on each try; 3.5 Flash-Lite made up artists.
+  lyrics on each try; 3.5 Flash-Lite made up artists. 2026-10-15: Google retired 3.5 Flash (its calls go to 3.6 since 10-08) — the
+  same comparison, 35 requests × 2: 3.6 Flash (low) 64 right, 2 wrong (a made-up song every variant got wrong), 1.6 s on average
+  (≤ 3.7 s), ~$2.1 per 1000 requests at the 2027 prices; 3.8 Flash 61 / 5, 2.8 s; 3.6 at medium no better, 3.5× the price.
 - **The prompt** (rewritten 2026-10-07, measured by the same comparison): three steps — work out the song (`songName`,
   `requestKind`), judge it (`decision`), write the comment —, and `ANSWER_SCHEMA` orders the answer the same way
   (the verdict first let the model judge a song it had not named yet). A plain tone (no "ruthless DJ", no capitals); the DJ's note
@@ -757,16 +765,22 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
-under the deploy's version), `/images/**`, `/webjars/**`, `/favicon.ico`,
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
+under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/webjars/**`, `/favicon.ico`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
 `requireOwner` for what is never handed over (the staff, the profiles, the tip link, clearing the history, the account), `access` for
 what every person of the staff sees (the queue's poll, the QR print); and then, for a feature of the Pro plan, `PlanService.require`
 (V35: the party's organiser's plan; a 403 without it while the plans are enforced — `PlanFeatureEndpointsTest`; the hosts' page
 `/h/{token}` is a 404 then). `POST /join/{token}` joins only logged in, with CSRF; an
-invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). Logout `POST
+invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). A guest's request whose token went with the session (the page open over 30 minutes) goes back to `/p/{code}` with the typed song and "Strona była otwarta za długo — wyślij prośbę jeszcze raz." (`GuestFormExpiredHandler`), not to the error page "403". Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.
+`Referrer-Policy: same-origin` (the secrets in `/h/…` and `/join/…` never leave in a `Referer`) and `Permissions-Policy` (no camera,
+microphone, location, payment, devices — `SecurityConfig.PERMISSIONS_POLICY`) on every answer. The error page's "Spróbuj ponownie"
+reopens only a path of ours: `//host…` and `/\host…` (Tomcat gives `/\` as `//`) lead to `/` — no open redirect (checked with curl,
+2026-10-15). Limits on the two endpoints a script could fill: `/csp-report` logs at most 100 distinct reports an hour (then one
+line), `POST /dj/feedback` takes 10 messages an hour per account (then 429). The guests' request texts stay in the INFO log (with
+the party's code, without the IP — the privacy policy says so, W14), newlines removed (`Texts.oneLine`).
 
 **Content-Security-Policy** (`SecurityConfig.CONTENT_SECURITY_POLICY`): `script-src 'self'`, styles and fonts from the app only —
 **no `'unsafe-inline'` at all**: no inline script, no `on…=` handler, no `style="…"` (the templates use `s2p-…` classes of `app.css`;
@@ -774,7 +788,10 @@ scripts change styles through `element.style`, which the policy allows), checked
 `NoInlineCodeInTemplatesTest`; images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; no frames;
 `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only**
 while `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. Switch it on once
-real use leaves the log quiet. The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
+real use leaves the log quiet — the plan (2026-10-15): the Railway log has no `CSP violation` since the Web Analytics beacon went;
+the owner sets `CSP_ENFORCE=true` on Railway, opens the landing page, a guest's page, the panel, "Ustawienia", "Obsługa", the history,
+the summary and the QR print in a browser with the console open, and watches the log for `CSP violation` for a week; back:
+delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
 (Section 13); the standalone history page is not covered by them.
 
 ---
@@ -783,7 +800,7 @@ real use leaves the log quiet. The browser tests run the dashboard, the guest pa
 
 | Cache | Key | TTL / size | Usage |
 |-------|-----|------------|-------|
-| `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; `updateSettings` reads the row under its lock (`lockByPartyCode`: two writes take turns, `PartySettingsWritesIT`) and evicts after its commit |
+| `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; the row is read inside the cache's load of the key (`Cache.get(key, loader)`), so an eviction waits for a read on its way and the old copy never stays (review 2026-10-14); `updateSettings` reads the row under its lock (`lockByPartyCode`: two writes take turns, `PartySettingsWritesIT`) and evicts after its commit |
 | `qr-codes` | text + size | 24 h / 1000 | `QrCodeService` |
 | `dashboardQueue` | partyCode | 3 s / 200 | `DjService.getDashboardQueue` — the guest page and the dashboard's first render; evicted after the commit of a new request, a vote, a 👍, a song played, skipped or restored, a tip, the queue cleared. The poll does **not** read it: a changed fingerprint renders `getWaiting` (review 2026-10-14 K1) |
 | `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted after the commit of a trial (`util/AfterCommit`) and with the account; the value is the row's plan with its end (`PlanService.Read`), so a plan ends on time |
@@ -818,7 +835,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 
 | Property | Value |
 |----------|-------|
-| `google.ai.model-name` / `google.ai.thinking-level` (`thinking-budget` for gemini-2.x) | `gemini-3.5-flash` / low (1024) |
+| `google.ai.model-name` / `google.ai.thinking-level` (`thinking-budget` for gemini-2.x) | `gemini-3.6-flash` / low (1024) |
 | `spring.jpa.hibernate.ddl-auto` | `validate` (Flyway owns the schema) |
 | `server.forward-headers-strategy` | `FRAMEWORK` |
 | `server.compression.*` | gzip for HTML / CSS / JS / JSON from 2 KB |
@@ -879,6 +896,7 @@ schema behind Flyway's back.
 | V33 | `party_settings.staff_link_permissions` varchar(200), nullable (null = no link): the invitation link's role; a link made before gets "Obsługa kolejki" (`StaffLinkMigrationIT`) |
 | V34 | table `staff_invitation` (id, `party_code` FK ON DELETE CASCADE, `email`, `email_key` varchar(254), `permissions` varchar(200), `invited_at`; UNIQUE `uk_staff_invitation_email` (party, email_key), index `idx_staff_invitation_email_key`): invitations to the staff by e-mail |
 | V36 | table `trial_used` (`owner_hash` varchar(64) PK, `used_at` timestamptz NOT NULL DEFAULT now()), filled with the keys of the `dj_plan` rows of source TRIAL: the Google accounts that had a trial, kept after "Usuń konto" (`TrialUsedMigrationIT`, `DjPlanIT`) |
+| V37 | `party_settings.host_token_made_at`, `staff_token_made_at` timestamptz (nullable): when the hosts' and the invitation link were made — each works 30 days; a link there at the migration counts from it |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -939,7 +957,7 @@ GuestQueueService          → DjService
 | GET | `/p/{partyCode}/queue/more` | the rest of the guest's list, fetched when "Pokaż pozostałe prośby" is unfolded |
 | POST | `/p/{partyCode}/request` | a request: `songName` |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
-| GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one |
+| GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one, or one made more than 30 days ago (V37) |
 | POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid` |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
 | POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |

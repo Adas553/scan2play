@@ -18,6 +18,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -215,14 +216,16 @@ public class PushNotificationService {
 
     /** What the service worker shows: the texts in the device's language, the song, how to fold and where a tap leads. */
     String payload(PushSubscriptionEntity device, String partyCode, String songName) {
-        Locale locale = device.getLocale() == null ? Locale.ENGLISH : Locale.forLanguageTag(device.getLocale());
+        // a device subscribed before its language was kept: Polish, as a page with no language (WebConfig; review 2026-10-14)
+        Locale locale = device.getLocale() == null ? Locale.forLanguageTag("pl") : Locale.forLanguageTag(device.getLocale());
         Map<String, String> message = new LinkedHashMap<>();
         message.put("title", messageSource.getMessage("push.new_request.title", null, locale));
         // "{0}" stays in the text: the service worker puts the count in (no arguments → no MessageFormat here)
         message.put("titleMany", messageSource.getMessage("push.new_requests.title", null, locale));
         message.put("body", songName);
         message.put("tag", "s2p-" + partyCode);
-        message.put("url", DASHBOARD_URL);
+        // the panel of this party: one of two staffs (or an organiser at another party too) is not the default one (review 2026-10-14)
+        message.put("url", DASHBOARD_URL + "?party=" + URLEncoder.encode(partyCode, StandardCharsets.UTF_8));
         try {
             return objectMapper.writeValueAsString(message);
         } catch (JsonProcessingException e) {

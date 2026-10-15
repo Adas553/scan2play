@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Instant;
+
 import static com.scan2play.controller.ViewAttributes.*;
 
 /**
@@ -70,8 +72,10 @@ public class HostController {
         if (token == null || token.length() > 32) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        // without the Pro plan (V35) the link is off, as an old one: the lists stay saved for when Pro is back
-        return partySettingsRepository.findByHostToken(token).filter(party -> planService.allows(party, PlanFeature.HOST_LISTS))
+        // without the Pro plan (V35) the link is off, as an old one: the lists stay saved for when Pro is back; so is a link made
+        // more than 30 days ago (V37)
+        return partySettingsRepository.findByHostToken(token).filter(party -> party.hostLinkWorks(Instant.now()))
+                .filter(party -> planService.allows(party, PlanFeature.HOST_LISTS))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 }

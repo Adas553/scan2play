@@ -3,10 +3,13 @@ package com.scan2play.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.web.servlet.LocaleResolver;
 
 /**
  * Main security configuration for Scan2Play.
@@ -45,17 +48,34 @@ public class SecurityConfig {
     @Value("${security.csp.enforce:false}")
     private boolean enforceCsp;
 
+    /**
+     * What a browser may use on our pages: nothing of this — no page asks for a camera, a microphone, the location, a payment or a
+     * device (review 2026-10-14). The notifications are not a feature of this header (the browser asks the person).
+     */
+    static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), "
+            + "browsing-topics=()";
+
+    /** The deploy's version the scripts and styles are linked under ({@code /<version>/js/...}, application.properties). */
+    @Value("${spring.web.resources.chain.strategy.fixed.version:dev}")
+    private String assetVersion;
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, MessageSource messageSource, LocaleResolver localeResolver) throws Exception {
         http
                 .headers(headers -> headers.contentSecurityPolicy(csp -> {
-                    csp.policyDirectives(CONTENT_SECURITY_POLICY);
-                    if (!enforceCsp) {
-                        csp.reportOnly();
-                    }
-                }))
+                            csp.policyDirectives(CONTENT_SECURITY_POLICY);
+                            if (!enforceCsp) {
+                                csp.reportOnly();
+                            }
+                        })
+                        // only our own pages learn which page a click came from: the hosts' (/h/…) and the invitation's (/join/…)
+                        // addresses are their secrets, and a page linked from them (the legal pages' links out) must not get them
+                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN))
+                        .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY)))
                 // A browser sends its CSP report without a CSRF token
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report"))
+                // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
+                .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver)))
                 .authorizeHttpRequests(auth -> auth
                         // Public resources, landing page, and guest party views
                         .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()
@@ -65,7 +85,8 @@ public class SecurityConfig {
                         // the login cookie (the manifest), or before any page asks (an update of the worker)
                         .requestMatchers("/manifest.webmanifest", "/sw.js").permitAll()
                         // The scripts and styles under the deploy's version (/<version>/js/..., spring.web.resources.chain.strategy.fixed)
-                        .requestMatchers("/*/js/**", "/*/css/**").permitAll()
+                        // — that version only: "/*/js/**" let /dj/js/… past the login too (review 2026-10-14)
+                        .requestMatchers("/" + assetVersion + "/js/**", "/" + assetVersion + "/css/**").permitAll()
                         // The browsers' reports of the Content-Security-Policy
                         .requestMatchers("/csp-report").permitAll()
                         // The hosts' lists (V29): a page opened by its secret link, without an account (HostController)

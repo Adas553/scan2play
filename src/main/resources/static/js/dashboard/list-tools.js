@@ -83,14 +83,27 @@ function restoreServerOrder(tbody) {
     }
 }
 
-/** Updates the visual state of <th> sort indicators within a <thead>. */
+/**
+ * Updates the state of the <th> sort indicators within a <thead>: the arrow (sort-asc / sort-desc) and, for a screen reader,
+ * aria-sort on the sorted column only (review 2026-10-14).
+ */
 function updateHeaderIndicators(thead, activeCol, activeDir) {
     const ths = thead.querySelectorAll('th[data-sort]');
     for (let i = 0; i < ths.length; i++) {
         ths[i].classList.remove('sort-asc', 'sort-desc');
+        ths[i].removeAttribute('aria-sort');
         if (ths[i].getAttribute('data-sort') === activeCol && activeDir) {
             ths[i].classList.add('sort-' + activeDir);
+            ths[i].setAttribute('aria-sort', activeDir === 'asc' ? 'ascending' : 'descending');
         }
+    }
+}
+
+/** The filter buttons of a list: the one on lit and pressed (aria-pressed), the others not. */
+function pressFilter(buttons, on) {
+    for (let i = 0; i < buttons.length; i++) {
+        buttons[i].classList.toggle('active', buttons[i] === on);
+        buttons[i].setAttribute('aria-pressed', String(buttons[i] === on));
     }
 }
 
@@ -105,6 +118,14 @@ export function initSortableHeaders(container) {
         // Skip if already initialized
         if (ths[i].hasAttribute('data-sort-init')) continue;
         ths[i].setAttribute('data-sort-init', '1');
+        // a header sorts from the keyboard too: focusable, Enter or Space as a click — taken here, so the queue's Enter
+        // ("Zagrane", queue-keys.js) does not get it
+        ths[i].tabIndex = 0;
+        ths[i].addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            this.click();
+        });
 
         ths[i].addEventListener('click', function() {
             const colKey = this.getAttribute('data-sort');
@@ -248,9 +269,9 @@ export function restoreListState(list, state) {
     const searchInput = list.querySelector('[data-list-search]');
     if (searchInput) searchInput.value = state.search || '';
     const buttons = list.querySelectorAll('[data-list-filter]');
-    for (let i = 0; i < buttons.length; i++) {
-        buttons[i].classList.toggle('active', buttons[i].getAttribute('data-list-filter') === (state.filter || 'all'));
-    }
+    pressFilter(buttons, Array.prototype.find.call(buttons, function (b) {
+        return b.getAttribute('data-list-filter') === (state.filter || 'all');
+    }));
     const table = list.querySelector('table');
     if (table && state.sortCol && state.sortDir) {
         const thead = table.querySelector('thead');
@@ -334,16 +355,12 @@ document.addEventListener('click', function(e) {
         if (historyReloader) {
             const before = list.querySelector('[data-list-filter].active');
             const buttons = list.querySelectorAll('[data-list-filter]');
-            for (let i = 0; i < buttons.length; i++) {
-                buttons[i].classList.toggle('active', buttons[i] === filter);
-            }
+            pressFilter(buttons, filter);
             historyReloader(null, value).then(function(replaced) {
                 // The request failed (null: a newer one took over, and its answer decides): if the old list is still
                 // the one on the screen, its button lights again
                 if (replaced === false && list.isConnected && before) {
-                    for (let i = 0; i < buttons.length; i++) {
-                        buttons[i].classList.toggle('active', buttons[i] === before);
-                    }
+                    pressFilter(buttons, before);
                 }
             });
         } else {

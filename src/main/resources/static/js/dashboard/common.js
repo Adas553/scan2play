@@ -69,3 +69,24 @@ export function isIos() {
 export function isInstalledApp() {
     return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 }
+
+const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]';
+
+/**
+ * Where the keyboard's focus is inside {@code container}, so that it can be put back after the container's rows are replaced (a
+ * poll's new rows): the request's row (data-song-id) and the place of the focused element among that row's focusable ones. Returns a
+ * function that focuses the same place in what is there then — or does nothing when the focus was elsewhere, or the request has left
+ * (review 2026-10-14: the focus fell to the page's top every 3 s).
+ */
+export function focusSpot(container) {
+    const focused = document.activeElement;
+    const row = container && focused && container.contains(focused) ? focused.closest('[data-song-id]') : null;
+    if (!row) return function () {};
+    const id = row.getAttribute('data-song-id');
+    const at = Array.prototype.indexOf.call(row.querySelectorAll(FOCUSABLE), focused);
+    return function (now) {
+        const again = now && now.querySelector('[data-song-id="' + CSS.escape(id) + '"]');
+        const target = again && again.querySelectorAll(FOCUSABLE)[at];
+        if (target) target.focus({ preventScroll: true });
+    };
+}

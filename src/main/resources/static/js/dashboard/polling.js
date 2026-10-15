@@ -8,7 +8,7 @@
  * sees the list, and it is fetched at once when the window is shown again.
  */
 import { EVENTS, on } from './events.js';
-import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
+import { csrfHeaders, focusSpot, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 import { reopenCards } from './cards.js';
 import { keepChosen } from './queue-keys.js';
@@ -210,7 +210,9 @@ async function refreshTable() {
         if (newETag) {
             currentETag = newETag;
         }
+        const focusBack = focusSpot(document.getElementById('song-list'));
         document.getElementById('song-list').replaceWith(newTbody);
+        focusBack(newTbody);   // the keyboard's focus where it was, not on the page's top
 
         // Re-apply user's sort preference after table refresh
         reapplySort();

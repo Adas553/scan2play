@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 
 /**
  * Where browsers report what the Content-Security-Policy would block ({@code report-uri}, see {@code SecurityConfig}; review item
@@ -20,19 +21,25 @@ import java.time.Duration;
  * <p>
  * Public, without CSRF (a browser sends the report on its own) — so anyone can post here: the body is read up to
  * {@value #MAX_BODY} bytes, each distinct violation is logged once per {@link #REPEAT} (a page with a blocked script reports it on
- * every load), the logged fields are cut short, and the address of the page loses its query.
+ * every load), at most {@value #MAX_LOGGED_PER_HOUR} distinct ones an hour are logged (then one line says the rest is not — a
+ * flood of made-up reports cannot fill the log; review 2026-10-14), the logged fields are cut short, and the address of the page
+ * loses its query.
  */
 @RestController
 @Slf4j
 public class CspReportController {
 
     static final int MAX_BODY = 8 * 1024;
+    static final int MAX_LOGGED_PER_HOUR = 100;
     private static final Duration REPEAT = Duration.ofHours(1);
     private static final int MAX_FIELD = 200;
 
     /** Only reads a tree: no configuration of the app's mapper is needed. */
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Cache<String, Boolean> logged = Caffeine.newBuilder().expireAfterWrite(REPEAT).maximumSize(1_000).build();
+    /** The hour {@link #loggedThisHour} counts in. */
+    private Instant hourStarted = Instant.EPOCH;
+    private int loggedThisHour;
 
     @PostMapping("/csp-report")
     public ResponseEntity<Void> report(HttpServletRequest request) {
@@ -44,7 +51,7 @@ public class CspReportController {
                 String blocked = field(report, "blocked-uri", "?");
                 String page = withoutQuery(field(report, "document-uri", "?"));
                 String source = field(report, "source-file", "") + ":" + report.path("line-number").asText("");
-                if (logged.asMap().putIfAbsent(directive + ' ' + blocked + ' ' + page, Boolean.TRUE) == null) {
+                if (logged.asMap().putIfAbsent(directive + ' ' + blocked + ' ' + page, Boolean.TRUE) == null && mayLog()) {
                     log.warn("CSP violation: {} blocked '{}' on {} (from {})", directive, blocked, page, source);
                 }
             }
@@ -52,6 +59,23 @@ public class CspReportController {
             log.debug("Unreadable CSP report: {}", e.getMessage());
         }
         return ResponseEntity.noContent().build();
+    }
+
+    /** One more line in this hour's share; past it, one line that says so and nothing more until the next hour. */
+    private synchronized boolean mayLog() {
+        Instant now = Instant.now();
+        if (!now.isBefore(hourStarted.plus(REPEAT))) {
+            hourStarted = now;
+            loggedThisHour = 0;
+        }
+        if (loggedThisHour < MAX_LOGGED_PER_HOUR) {
+            loggedThisHour++;
+            return true;
+        }
+        if (loggedThisHour++ == MAX_LOGGED_PER_HOUR) {
+            log.warn("CSP reports: more than {} different ones this hour — the rest of the hour is not logged", MAX_LOGGED_PER_HOUR);
+        }
+        return false;
     }
 
     private static String field(JsonNode report, String name, String otherwise) {

@@ -6,8 +6,9 @@ import java.util.Random;
 
 public final class CodeGenerator {
 
-    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final int CODE_LENGTH = 5;
+    /** The characters of a party code (36 — one fits in 6 bits: {@code SongRequestCommandService.lockKey} packs a code so). */
+    public static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    public static final int CODE_LENGTH = 5;
     private static final Random RANDOM = new SecureRandom();
 
     private CodeGenerator() {

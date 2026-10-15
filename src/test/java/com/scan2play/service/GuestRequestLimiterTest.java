@@ -194,6 +194,26 @@ class GuestRequestLimiterTest {
         assertThat(limiter.busiestClientRequestsUsed(PARTY)).as("the windows have ended").isZero();
     }
 
+    /**
+     * A flood of made-up addresses at one party (each a new window) neither pushes another party's windows out — its guest would
+     * get a fresh limit — nor makes that party's dashboard read them on every poll (review 2026-10-14: all the windows of every
+     * party, up to 100 000, were read every 3 s).
+     */
+    @Test
+    void aFloodAtOneParty_leavesTheOtherPartysWindowsAlone() {
+        GuestRequestLimiter limiter = new GuestRequestLimiter(3, 10, 0, "", clock);
+        for (int i = 0; i < 3; i++) {
+            limiter.tryAcquire(IP, PARTY);
+        }
+
+        for (int i = 0; i < 120_000; i++) {
+            limiter.tryAcquire("10." + (i >> 16) + "." + ((i >> 8) & 255) + "." + (i & 255), "FLOOD");
+        }
+
+        assertThat(limiter.tryAcquire(IP, PARTY)).as("still held by its own window").isPresent();
+        assertThat(limiter.busiestClientRequestsUsed(PARTY)).isEqualTo(3);
+    }
+
     @Test
     void aLimitOfZero_isOff() {
         GuestRequestLimiter limiter = new GuestRequestLimiter(0, 10, 0, "", clock);

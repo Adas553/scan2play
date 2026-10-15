@@ -116,4 +116,27 @@
             t.step('after a good poll, a new refusal may load the page again', reloads, 2);
         }
     });
+
+    S2P.scenario({
+        name: 'scroll-memory-without-storage',
+        title: 'a browser that refuses its session storage (a private window, storage blocked): the page shows at once, no error — not hidden for 2 s (review 2026-10-14)',
+        run: async function (t) {
+            const src = document.querySelector('script[src*="scroll-restore"]').src;
+            Object.defineProperty(window, 'sessionStorage', {
+                configurable: true,
+                get: function () { throw new DOMException('The operation is insecure.', 'SecurityError'); }
+            });
+            const errors = [];
+            window.addEventListener('error', function (e) { errors.push(e.message); });
+            const again = document.createElement('script');   // scroll-restore.js once more, as on a page load
+            again.src = src;
+            await new Promise(function (resolve) { again.onload = resolve; document.head.appendChild(again); });
+            document.dispatchEvent(new Event('DOMContentLoaded'));
+            await t.sleep(100);
+            t.step('the page shown, no error', [document.documentElement.style.visibility, errors], ['', []]);
+            window.dispatchEvent(new Event('beforeunload'));
+            await t.sleep(50);
+            t.step('leaving the page: no error either', errors, []);
+        }
+    });
 })();

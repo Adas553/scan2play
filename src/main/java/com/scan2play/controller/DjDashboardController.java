@@ -14,6 +14,7 @@ import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.util.SongList;
 import com.scan2play.util.Texts;
+import com.scan2play.util.Times;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -214,7 +216,10 @@ public class DjDashboardController {
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
         model.addAttribute(HOST_BLOCKED_COUNT, entries(settings.getHostBlocked()));
         model.addAttribute(HOST_WANTED_COUNT, entries(settings.getHostWanted()));
-        model.addAttribute(HOST_LINK, settings.getHostToken() == null ? null : cleanBaseUrl + "/h/" + settings.getHostToken());
+        // a link made more than 30 days ago (V37) is shown as none: it opens nothing, and "Utwórz link" makes a new one
+        boolean hostLinkWorks = settings.hostLinkWorks(Instant.now());
+        model.addAttribute(HOST_LINK, hostLinkWorks ? cleanBaseUrl + "/h/" + settings.getHostToken() : null);
+        model.addAttribute(HOST_LINK_UNTIL, hostLinkWorks ? Times.day(PartySettingsEntity.linkWorksUntil(settings.getHostTokenMadeAt())) : null);
         model.addAttribute(REQUEST_LIMIT, planned.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, planned.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, planned.getDuplicateCheckWindow());

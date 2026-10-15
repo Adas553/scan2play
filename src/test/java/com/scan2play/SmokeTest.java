@@ -82,15 +82,61 @@ class SmokeTest {
     @DisplayName("?lang=en names the English page whatever the browser says; without it the browser's language as before")
     void landingPage_inEnglish_byItsAddress_orByTheBrowser() throws Exception {
         mockMvc.perform(get("/").param("lang", "en").header("Accept-Language", "pl-PL"))
-                .andExpect(content().string(containsString("lang=\"en\"")))
+                .andExpect(content().string(containsString("<html lang=\"en\"")))
                 .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/?lang=en\">")))
                 .andExpect(content().string(containsString("<meta property=\"og:locale\" content=\"en_US\">")));
         mockMvc.perform(get("/").header("Accept-Language", "en-US"))
-                .andExpect(content().string(containsString("lang=\"en\"")));
+                .andExpect(content().string(containsString("<html lang=\"en\"")));
         mockMvc.perform(get("/").param("lang", "pl").header("Accept-Language", "en-US"))
-                .andExpect(content().string(containsString("lang=\"pl\"")));
+                .andExpect(content().string(containsString("<html lang=\"pl\"")));
         mockMvc.perform(get("/").param("lang", "xx").header("Accept-Language", "en-US"))
-                .andExpect(content().string(containsString("lang=\"en\"")));
+                .andExpect(content().string(containsString("<html lang=\"en\"")));
+    }
+
+    @Test
+    @DisplayName("?lang=EN and ?lang=en-US are English too (the review of 2026-10-14: only \"en\" was)")
+    void theLanguagesName_inAnyCase() throws Exception {
+        mockMvc.perform(get("/").param("lang", "EN").header("Accept-Language", "pl-PL"))
+                .andExpect(content().string(containsString("<html lang=\"en\"")));
+        mockMvc.perform(get("/").param("lang", "en-US").header("Accept-Language", "pl-PL"))
+                .andExpect(content().string(containsString("<html lang=\"en\"")));
+        mockMvc.perform(get("/").param("lang", "PL").header("Accept-Language", "en-US"))
+                .andExpect(content().string(containsString("<html lang=\"pl\"")));
+    }
+
+    @Test
+    @DisplayName("The language a person picked by ?lang stays for their next pages (a cookie); a page without it as the browser says")
+    void thePickedLanguage_staysForTheNextPages() throws Exception {
+        mockMvc.perform(get("/").param("lang", "en").header("Accept-Language", "pl-PL"))
+                .andExpect(cookie().value("lang", "en"))
+                .andExpect(cookie().maxAge("lang", 365 * 24 * 3600))
+                .andExpect(cookie().httpOnly("lang", true));
+        mockMvc.perform(get("/privacy").cookie(new jakarta.servlet.http.Cookie("lang", "en")).header("Accept-Language", "pl-PL"))
+                .andExpect(content().string(containsString("<html lang=\"en\"")));
+        mockMvc.perform(get("/").param("lang", "pl").cookie(new jakarta.servlet.http.Cookie("lang", "en")))
+                .andExpect(content().string(containsString("<html lang=\"pl\"")))
+                .andExpect(cookie().value("lang", "pl"));
+        mockMvc.perform(get("/").header("Accept-Language", "en-US"))
+                .andExpect(cookie().doesNotExist("lang"));
+        mockMvc.perform(get("/").param("lang", "xx")).andExpect(cookie().doesNotExist("lang"));
+        // a cookie of no language of ours is ignored
+        mockMvc.perform(get("/").cookie(new jakarta.servlet.http.Cookie("lang", "de")).header("Accept-Language", "en-US"))
+                .andExpect(content().string(containsString("<html lang=\"en\"")));
+    }
+
+    @Test
+    @DisplayName("An empty Accept-Language is no language: Polish, not the server's own (English on Railway)")
+    void anEmptyAcceptLanguage_isPolish() throws Exception {
+        Locale server = Locale.getDefault();
+        Locale.setDefault(Locale.ENGLISH);   // as on Railway
+        try {
+            mockMvc.perform(get("/").header("Accept-Language", ""))
+                    .andExpect(content().string(containsString("<html lang=\"pl\"")));
+            mockMvc.perform(get("/").header("Accept-Language", "*"))
+                    .andExpect(content().string(containsString("<html lang=\"pl\"")));
+        } finally {
+            Locale.setDefault(server);
+        }
     }
 
     @Test
@@ -123,7 +169,9 @@ class SmokeTest {
                     .andExpect(content().string(containsString(lang.equals("pl") ? "przez 7 dni" : "for 7 days")))
                     // Railway's DPA is signed (2026-10-15): the transfer to the USA rests on the standard contractual clauses
                     .andExpect(content().string(containsString(lang.equals("pl") ? "standardowych klauzulach umownych" : "standard contractual clauses")))
-                    .andExpect(content().string(not(containsString(lang.equals("pl") ? "wyłącznie do Google" : "only sent to Google"))));
+                    .andExpect(content().string(not(containsString(lang.equals("pl") ? "wyłącznie do Google" : "only sent to Google"))))
+                    // the cookie of the language picked by ?lang (WebConfig, the review of 2026-10-14)
+                    .andExpect(content().string(containsString(lang.equals("pl") ? "ciasteczko <code>lang</code>" : "the cookie <code>lang</code>")));
         }
     }
 
@@ -224,6 +272,16 @@ class SmokeTest {
     }
 
     @Test
+    @DisplayName("No address of ours goes to another site (the hosts' secret link /h/…), no camera, microphone or location (review 2026-10-14)")
+    void pages_shouldCarryTheReferrerAndPermissionsPolicies() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(header().string("Referrer-Policy", "same-origin"))
+                .andExpect(header().string("Permissions-Policy", containsString("camera=()")))
+                .andExpect(header().string("Permissions-Policy", containsString("microphone=()")))
+                .andExpect(header().string("Permissions-Policy", containsString("geolocation=()")));
+    }
+
+    @Test
     @DisplayName("A browser's CSP report is taken without a login or a CSRF token")
     void cspReport_isTakenWithoutLoginOrCsrf() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/csp-report")
@@ -266,6 +324,14 @@ class SmokeTest {
     void dashboard_shouldRedirectUnauthenticated() throws Exception {
         mockMvc.perform(get("/dj/dashboard"))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @DisplayName("/dj/js/… and /dj/css/… are the DJ's pages, not the deploy's scripts: a login first (review 2026-10-14)")
+    void theDjsAddresses_areNotTakenForTheVersionedScripts() throws Exception {
+        mockMvc.perform(get("/dj/js/anything")).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/dj/css/anything")).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/other/js/dashboard/main.js")).andExpect(status().is3xxRedirection());
     }
 
     @Test

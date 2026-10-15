@@ -11,6 +11,9 @@
  *   ArrowDown / ArrowUp  — navigate items
  *   Enter                — confirm highlighted item
  *   Escape               — close dropdown
+ *
+ * Only the answer for what the field says now is shown: one that comes after the guest typed on (or cleared the field) is
+ * dropped. The field is an ARIA combobox: aria-expanded, aria-controls, aria-activedescendant on the chosen suggestion.
  */
 
 (function () {
@@ -86,12 +89,14 @@
 
         // --- Fetch from iTunes (with cache) ---
         async function fetchSuggestions(query) {
+            // a query asked before is not wanted any more, whatever answers this one
+            if (currentController) currentController.abort();
+            currentController = null;
             // Serve from cache when available — avoids redundant API calls
             if (resultCache.has(query)) {
                 return resultCache.get(query);
             }
 
-            if (currentController) currentController.abort();
             currentController = new AbortController();
 
             const url = new URL(ITUNES_API);
@@ -124,14 +129,16 @@
                 return;
             }
 
-            results.forEach((track) => {
+            results.forEach((track, index) => {
                 const artist = track.artistName || '';
                 const title  = track.trackName  || '';
                 const label  = artist && title ? `${artist} \u2013 ${title}` : (title || artist);
 
                 const item = document.createElement('div');
                 item.className = 'song-autocomplete-item';
+                item.id = dropdownId + '-' + index;
                 item.setAttribute('role',       'option');
+                item.setAttribute('aria-selected', 'false');
                 item.setAttribute('data-label', label);
 
                 item.innerHTML =
@@ -154,6 +161,7 @@
             });
 
             dropdown.classList.add('is-open');
+            input.setAttribute('aria-expanded', 'true');
         }
 
         // --- Select item ---
@@ -170,6 +178,8 @@
                 dropdown.innerHTML = '';
             }
             activeIndex = -1;
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
         }
 
         // --- Keyboard navigation ---
@@ -202,16 +212,27 @@
         }
 
         function updateActiveItem(items) {
-            items.forEach((item, idx) => item.classList.toggle('is-active', idx === activeIndex));
-            if (activeIndex >= 0) items[activeIndex].scrollIntoView({ block: 'nearest' });
+            items.forEach((item, idx) => {
+                item.classList.toggle('is-active', idx === activeIndex);
+                item.setAttribute('aria-selected', String(idx === activeIndex));
+            });
+            if (activeIndex >= 0) {
+                input.setAttribute('aria-activedescendant', items[activeIndex].id);
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
         }
 
         // --- Debounced input handler ---
         const onInput = debounce(async function () {
             const query = input.value.trim();
-            if (query.length < MIN_CHARS) { closeDropdown(); return; }
+            if (query.length < MIN_CHARS) {
+                if (currentController) currentController.abort();   // its answer is for a field that says something else now
+                closeDropdown();
+                return;
+            }
             const results = await fetchSuggestions(query);
             if (results === null) return; // aborted request — keep current dropdown
+            if (input.value.trim() !== query) return;   // the guest typed on meanwhile: an answer to an old question
             renderDropdown(results);
         }, DEBOUNCE_MS);
 
@@ -244,9 +265,11 @@
         dropdown.addEventListener('touchcancel',() => { touchingDropdown = false; }, { passive: true });
 
         input.setAttribute('autocomplete',      'off');
+        input.setAttribute('role',              'combobox');
         input.setAttribute('aria-autocomplete', 'list');
         input.setAttribute('aria-haspopup',     'listbox');
-        input.setAttribute('aria-owns',         dropdownId);
+        input.setAttribute('aria-controls',     dropdownId);
+        input.setAttribute('aria-expanded',     'false');
 
         input.addEventListener('input',   onInput);
         input.addEventListener('keydown', handleKeydown);
