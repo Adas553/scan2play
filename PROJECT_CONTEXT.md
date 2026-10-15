@@ -84,6 +84,9 @@ in its texts' column "Napiwek / Tip: revolut.me/djkoko"; the money never passes 
 `hostBlocked` / `hostWanted` (V29, ≤ 16000: the hosts' lists, one song or artist per line — see "The hosts' lists" below),
 `hostToken` (V29, ≤ 32, UNIQUE, null = no link: the secret of the hosts' link `/h/{token}`, `CodeGenerator.generateSecret` — 128
 random bits, base64url), `staffToken` (V30, the same kind: the staff's invitation link `/join/{token}` — see `PartyStaffEntity`),
+`hostTokenMadeAt` / `staffTokenMadeAt` (V37: when the link was made — each works `LINK_DAYS` = 30 days, as an invitation by
+e-mail; `hostLinkWorks` / `staffLinkWorks`; an older one is a 404 / "Ten link zaproszenia już nie działa", and the settings and
+"Obsługa" show it as no link; a working one says "Działa do 14.11."),
 `staffLinkPermissions` (V33, ≤ 200, null = no link: what whoever joins by the link may do — the organiser's pick when making it,
 stored as `party_staff.permissions`; a link of a version before V33 gives "Obsługa kolejki", `staffLinkGrants()`),
 `ownerName` (V32, ≤ 100: the organiser's name from their Google account, written when they open the panel and it changed — the
@@ -576,9 +579,9 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
-| `FeedbackController` | `POST /dj/feedback` (JSON) |
+| `FeedbackController` | `POST /dj/feedback` (JSON; 10 an hour per account, then 429) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
-| `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation |
+| `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation, at most 100 an hour |
 | `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
 | `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), "Scan2Play Pro" `/pro` (V35: what Pro adds, a file per language; a 404 while the plans are not enforced) |
 | `ViewAttributes` | names of the model attributes |
@@ -613,7 +616,8 @@ the `webmanifest` MIME type), **versioned static addresses** (`spring.web.resour
 script's and style's address and no cache on the way keeps an old one; the dashboard's modules import each other relatively and stay
 in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy). `VersionedAssetCacheFilter` lets the
 browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
-deploy's version always gives the same file (an old version is a 404). Only for a commit's version, never `dev` (devtools changes the
+deploy's version always gives the same file (an old version is a 404). An answer that is not the file (a 404, a 500) is
+set back to `no-store` — a missing file must not be kept for a year. Only for a commit's version, never `dev` (devtools changes the
 files under it); everything else keeps Spring Security's `no-store`,
 `GeminiConfig` (the Gemini client, 15 s timeout, one try — `GeminiConfigTest` checks both through the real SDK against a Gemini
 stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
@@ -653,7 +657,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V36`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V37`.
 
 ### 6.7 The look (`app.css`, the design review of 2026-10-09)
 
@@ -759,8 +763,8 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/*/css/**`, `/*/js/**`:
-under the deploy's version), `/images/**`, `/webjars/**`, `/favicon.ico`,
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
+under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/webjars/**`, `/favicon.ico`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
 `requireOwner` for what is never handed over (the staff, the profiles, the tip link, clearing the history, the account), `access` for
@@ -769,6 +773,12 @@ what every person of the staff sees (the queue's poll, the QR print); and then, 
 `/h/{token}` is a 404 then). `POST /join/{token}` joins only logged in, with CSRF; an
 invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.
+`Referrer-Policy: same-origin` (the secrets in `/h/…` and `/join/…` never leave in a `Referer`) and `Permissions-Policy` (no camera,
+microphone, location, payment, devices — `SecurityConfig.PERMISSIONS_POLICY`) on every answer. The error page's "Spróbuj ponownie"
+reopens only a path of ours: `//host…` and `/\host…` (Tomcat gives `/\` as `//`) lead to `/` — no open redirect (checked with curl,
+2026-10-15). Limits on the two endpoints a script could fill: `/csp-report` logs at most 100 distinct reports an hour (then one
+line), `POST /dj/feedback` takes 10 messages an hour per account (then 429). The guests' request texts stay in the INFO log (with
+the party's code, without the IP — the privacy policy says so, W14), newlines removed (`Texts.oneLine`).
 
 **Content-Security-Policy** (`SecurityConfig.CONTENT_SECURITY_POLICY`): `script-src 'self'`, styles and fonts from the app only —
 **no `'unsafe-inline'` at all**: no inline script, no `on…=` handler, no `style="…"` (the templates use `s2p-…` classes of `app.css`;
@@ -776,7 +786,10 @@ scripts change styles through `element.style`, which the policy allows), checked
 `NoInlineCodeInTemplatesTest`; images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; no frames;
 `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only**
 while `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. Switch it on once
-real use leaves the log quiet. The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
+real use leaves the log quiet — the plan (2026-10-15): the Railway log has no `CSP violation` since the Web Analytics beacon went;
+the owner sets `CSP_ENFORCE=true` on Railway, opens the landing page, a guest's page, the panel, "Ustawienia", "Obsługa", the history,
+the summary and the QR print in a browser with the console open, and watches the log for `CSP violation` for a week; back:
+delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
 (Section 13); the standalone history page is not covered by them.
 
 ---
@@ -881,6 +894,7 @@ schema behind Flyway's back.
 | V33 | `party_settings.staff_link_permissions` varchar(200), nullable (null = no link): the invitation link's role; a link made before gets "Obsługa kolejki" (`StaffLinkMigrationIT`) |
 | V34 | table `staff_invitation` (id, `party_code` FK ON DELETE CASCADE, `email`, `email_key` varchar(254), `permissions` varchar(200), `invited_at`; UNIQUE `uk_staff_invitation_email` (party, email_key), index `idx_staff_invitation_email_key`): invitations to the staff by e-mail |
 | V36 | table `trial_used` (`owner_hash` varchar(64) PK, `used_at` timestamptz NOT NULL DEFAULT now()), filled with the keys of the `dj_plan` rows of source TRIAL: the Google accounts that had a trial, kept after "Usuń konto" (`TrialUsedMigrationIT`, `DjPlanIT`) |
+| V37 | `party_settings.host_token_made_at`, `staff_token_made_at` timestamptz (nullable): when the hosts' and the invitation link were made — each works 30 days; a link there at the migration counts from it |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -941,7 +955,7 @@ GuestQueueService          → DjService
 | GET | `/p/{partyCode}/queue/more` | the rest of the guest's list, fetched when "Pokaż pozostałe prośby" is unfolded |
 | POST | `/p/{partyCode}/request` | a request: `songName` |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
-| GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one |
+| GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one, or one made more than 30 days ago (V37) |
 | POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid` |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
 | POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |

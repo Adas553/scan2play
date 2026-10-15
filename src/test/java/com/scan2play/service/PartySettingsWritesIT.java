@@ -89,7 +89,10 @@ class PartySettingsWritesIT extends PostgresIntegrationTest {
     void theHostsSavingWhileTheDjEndsTheParty_doNotOpenItAgain() throws Exception {
         String party = party();
         String token = "it-host-" + System.nanoTime();
-        settings.updateSettings(party, s -> s.setHostToken(token));
+        settings.updateSettings(party, s -> {
+            s.setHostToken(token);
+            s.setHostTokenMadeAt(java.time.Instant.now());
+        });
         ExecutorService pool = Executors.newFixedThreadPool(2);
         List<Future<?>> writes = new ArrayList<>();
         try {
@@ -120,7 +123,10 @@ class PartySettingsWritesIT extends PostgresIntegrationTest {
         String party = party();
         String old = "it-old-" + System.nanoTime();
         String renewed = "it-new-" + System.nanoTime();
-        settings.updateSettings(party, s -> s.setHostToken(old));
+        settings.updateSettings(party, s -> {
+            s.setHostToken(old);
+            s.setHostTokenMadeAt(java.time.Instant.now());
+        });
         ExecutorService pool = Executors.newSingleThreadExecutor();
         List<Future<?>> save = new ArrayList<>();
         try {

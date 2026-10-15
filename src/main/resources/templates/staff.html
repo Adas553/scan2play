@@ -136,6 +136,7 @@
                 <button class="btn btn-outline-secondary" type="button" data-copy-target="staffLinkInput" th:text="#{dashboard.qr.copy}"
                         th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
             </div>
+            <p class="small text-secondary mt-n2 mb-3" id="staffLinkUntil" th:text="#{link.works_until(${staffLinkUntil})}">Works until 14.11.</p>
         </th:block>
         <form th:action="@{/dj/staff/link}" method="POST" class="m-0" id="staffLinkForm" data-staff-form
               th:attr="data-confirm=${staffLink != null} ? #{dashboard.staff.link.renew.confirm} : null">

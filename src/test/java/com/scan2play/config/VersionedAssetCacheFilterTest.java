@@ -50,6 +50,25 @@ class VersionedAssetCacheFilterTest {
     }
 
     @Test
+    @DisplayName("a missing file under the version is not kept for a year: a 404 cached by Cloudflare would outlive the fix (review 2026-10-14)")
+    void aMissingFile_isNotKept() throws Exception {
+        mockMvc.perform(get("/0123abcd/js/dashboard/no-such-file.js")).andExpect(status().isNotFound())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
+    }
+
+    @Test
+    @DisplayName("a failure while the file is served is not kept either")
+    void aFailure_isNotKept() throws Exception {
+        VersionedAssetCacheFilter filter = new VersionedAssetCacheFilter("0123abcd");
+        org.springframework.mock.web.MockHttpServletResponse response = new org.springframework.mock.web.MockHttpServletResponse();
+
+        filter.doFilter(new org.springframework.mock.web.MockHttpServletRequest("GET", "/0123abcd/css/app.css"), response,
+                (request, failed) -> ((jakarta.servlet.http.HttpServletResponse) failed).setStatus(500));
+
+        assertThat(response.getHeader(HttpHeaders.CACHE_CONTROL)).contains("no-store");
+    }
+
+    @Test
     @DisplayName("locally (version \"dev\") nothing is kept: the files change under it with every edit")
     void theLocalVersionIsNeverKept() {
         VersionedAssetCacheFilter local = new VersionedAssetCacheFilter("dev");

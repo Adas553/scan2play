@@ -45,7 +45,7 @@ class HostControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService, com.scan2play.service.Plans.off())).build();
         when(repository.findByHostToken(anyString())).thenReturn(Optional.empty());
         when(repository.findByHostToken(TOKEN)).thenReturn(Optional.of(PartySettingsEntity.builder().partyCode(PARTY)
-                .djName("DJ Koko").hostBlocked("Akcent").hostToken(TOKEN).build()));
+                .djName("DJ Koko").hostBlocked("Akcent").hostToken(TOKEN).hostTokenMadeAt(java.time.Instant.now()).build()));
     }
 
     @Test
@@ -64,6 +64,17 @@ class HostControllerTest {
         mockMvc.perform(post("/h/old-link").param("blocked", "Akcent")).andExpect(status().isNotFound());
         mockMvc.perform(get("/h/" + "x".repeat(40))).andExpect(status().isNotFound());
 
+        verify(settingsService, never()).updateSettings(any(), any());
+    }
+
+    /** The link works 30 days from when the DJ made it (V37, the review of 2026-10-14): then it is a 404, as an old one. */
+    @Test
+    void aLinkMadeMoreThan30DaysAgo_isNotFound_andNothingIsSaved() throws Exception {
+        when(repository.findByHostToken(TOKEN)).thenReturn(Optional.of(PartySettingsEntity.builder().partyCode(PARTY)
+                .hostToken(TOKEN).hostTokenMadeAt(java.time.Instant.now().minus(java.time.Duration.ofDays(31))).build()));
+
+        mockMvc.perform(get("/h/" + TOKEN)).andExpect(status().isNotFound());
+        mockMvc.perform(post("/h/" + TOKEN).param("blocked", "Akcent")).andExpect(status().isNotFound());
         verify(settingsService, never()).updateSettings(any(), any());
     }
 

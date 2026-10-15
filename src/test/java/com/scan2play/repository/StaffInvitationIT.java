@@ -110,6 +110,7 @@ class StaffInvitationIT extends PostgresIntegrationTest {
     void invitationsAndJoinsAtOnce_neverPassTheTenPlaces() throws Exception {
         PartySettingsEntity pub = party("pub");
         pub.setStaffToken("it-places-" + System.nanoTime());
+        pub.setStaffTokenMadeAt(java.time.Instant.now());
         parties.saveAndFlush(pub);
         String prefix = "places-" + System.nanoTime() + "-";
         for (int i = 0; i < 8; i++) {
