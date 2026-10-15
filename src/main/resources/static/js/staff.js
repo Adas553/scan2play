@@ -1,5 +1,5 @@
 // The owner's page "Obsługa" (staff.html, V32): a role picked ticks its permissions; a tick changed picks the role it makes ("Własne"
-// when none) — the server decides the same way (StaffRole.of). And "Kopiuj" of the invitation link. A file of its own for the CSP.
+// when none) — the server decides the same way (StaffRole.of). A file of its own for the CSP ("Kopiuj" of the link: dj-nav.js).
 (function () {
     document.querySelectorAll('form[data-staff-form]').forEach(function (form) {
         var select = form.querySelector('[data-role-select]');
@@ -36,21 +36,4 @@
         });
     });
 
-    document.querySelectorAll('button[data-copy-target]').forEach(function (button) {
-        button.addEventListener('click', function () {
-            var input = document.getElementById(button.getAttribute('data-copy-target'));
-            var original = button.textContent;
-            function copied() {
-                button.textContent = button.getAttribute('data-copied') || original;
-                setTimeout(function () { button.textContent = original; }, 2000);
-            }
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(input.value).then(copied, function () { input.select(); document.execCommand('copy'); copied(); });
-            } else {
-                input.select();
-                document.execCommand('copy');
-                copied();
-            }
-        });
-    });
 })();

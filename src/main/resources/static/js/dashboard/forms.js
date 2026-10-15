@@ -1,5 +1,5 @@
 /**
- * The forms of the DJ panel: the POST forms submitted by AJAX, and the "copy" button of the party link.
+ * The forms of the DJ panel: the POST forms submitted by AJAX. ("Kopiuj" of the party link: dj-nav.js, as on every DJ page.)
  */
 import { EVENTS, emit } from './events.js';
 import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
@@ -222,28 +222,4 @@ if (undoButton) {
 // above (fetch) — data-auto-submit instead of an inline onchange (CSP, review 5.1).
 document.querySelectorAll('select[data-auto-submit]').forEach(function (select) {
     select.addEventListener('change', function () { select.form.requestSubmit(); });
-});
-// ==========================================================================
-// COPY THE PARTY LINK (and the hosts' link, V29: data-copy-target names its input)
-// ==========================================================================
-
-function copyPartyLink(button, inputId) {
-    const input = document.getElementById(inputId);
-    navigator.clipboard.writeText(input.value).then(function() {
-        const original = button.innerText;
-        const copied = button.getAttribute('data-copied') || 'Copied!';
-        button.innerText = copied;
-        setTimeout(function() { button.innerText = original; }, 2000);
-    }).catch(function() {
-        // Fallback for non-HTTPS or denied permissions
-        input.select();
-        input.setSelectionRange(0, 99999);
-        document.execCommand('copy');
-    });
-}
-
-const copyButton = document.getElementById('copyPartyLinkBtn');
-if (copyButton) copyButton.addEventListener('click', function () { copyPartyLink(copyButton, 'partyLinkInput'); });
-document.querySelectorAll('button[data-copy-target]').forEach(function (button) {
-    button.addEventListener('click', function () { copyPartyLink(button, button.getAttribute('data-copy-target')); });
 });
