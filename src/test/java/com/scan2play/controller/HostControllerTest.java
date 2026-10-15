@@ -77,7 +77,7 @@ class HostControllerTest {
 
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());
-        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).hostBlocked("Akcent").build();
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).hostToken(TOKEN).hostBlocked("Akcent").build();
         updater.getValue().accept(party);
         assertThat(party.getHostBlocked()).isNull();
         assertThat(party.getHostWanted()).isEqualTo("Hej sokoły\nPerfect");

@@ -4,6 +4,7 @@ import com.scan2play.config.AppConfig;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.StaffPermission;
+import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
@@ -71,7 +72,9 @@ class DjDashboardControllerQueueCacheTest {
 
         @Bean
         SongRequestCommandService songRequestCommandService(SongRequestRepository songRequestRepository, DjService djService) {
-            return new SongRequestCommandService(songRequestRepository, djService);
+            PartySettingsRepository parties = mock(PartySettingsRepository.class);
+            when(parties.existsByPartyCode(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+            return new SongRequestCommandService(songRequestRepository, parties, djService);
         }
     }
 

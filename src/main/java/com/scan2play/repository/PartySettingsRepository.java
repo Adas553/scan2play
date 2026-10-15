@@ -21,6 +21,9 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
      */
     Optional<PartySettingsEntity> findByPartyCode(String partyCode);
 
+    /** Whether the party is there (its unique index): a guest's request is saved only while it is ({@code SongRequestCommandService}). */
+    boolean existsByPartyCode(String partyCode);
+
     /**
      * Finds party settings by the owner's unique ID (OAuth2 ID).
      *
@@ -37,7 +40,9 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
 
     /**
      * The party, its row locked until the transaction ends ({@code SELECT … FOR UPDATE}): people joining its staff at the same moment
-     * are counted one after another, so the staff never passes its limit ({@code PartyStaffService.join}, {@code StaffJoinIT}).
+     * are counted one after another, so the staff never passes its limit ({@code PartyStaffService.join}, {@code StaffJoinIT}); two
+     * writes of the settings take turns ({@code PartySettingsCommandService.updateSettings}); the account's deletion waits for them
+     * ({@code AccountDeletionService}).
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM PartySettingsEntity p WHERE p.partyCode = :partyCode")

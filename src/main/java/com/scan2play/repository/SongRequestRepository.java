@@ -122,6 +122,18 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int markPlayed(@Param("id") Long id, @Param("partyCode") String partyCode, @Param("now") Instant now);
 
     /**
+     * "Pomiń": the party's request leaves the queue as rejected, skipped {@code now} — only while it waits. A request played,
+     * cleared or skipped meanwhile in another window is left as it is (PostgreSQL asks the condition again of the row that
+     * committed first).
+     *
+     * @return 1 when it was skipped, 0 when it is not the party's or no longer waits
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.decision = 'rejected', s.skippedAt = :now "
+            + "WHERE s.id = :id AND s.partyCode = :partyCode AND s.decision = 'accepted'")
+    int skip(@Param("id") Long id, @Param("partyCode") String partyCode, @Param("now") Instant now);
+
+    /**
      * Takes a transaction-scoped PostgreSQL advisory lock on the party's guest requests: saving a request and adding a vote to a
      * waiting one take turns, so two guests who ask for the same song at the same moment make one row with two votes, not two
      * rows. Released when the transaction ends.
@@ -263,11 +275,15 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
 
     /**
      * Deletes all song requests associated with a specific party.
-     * Used during account deletion to comply with GDPR / Google API data deletion requirements.
+     * Used during account deletion to comply with GDPR / Google API data deletion requirements. One {@code DELETE}: as a derived
+     * query it read every row and deleted each on its own (a busy party: hundreds of statements; review 2026-10-14).
      *
      * @param partyCode The unique code of the party.
+     * @return the number of requests deleted
      */
-    void deleteByPartyCode(String partyCode);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM SongRequestEntity s WHERE s.partyCode = :partyCode")
+    int deleteByPartyCode(@Param("partyCode") String partyCode);
 
     /**
      * Deletes at most {@code batchSize} song requests that were requested before {@code cutoff} — the retention purge

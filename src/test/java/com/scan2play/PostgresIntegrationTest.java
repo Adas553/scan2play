@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -86,6 +87,32 @@ public abstract class PostgresIntegrationTest {
             code.append(letters.charAt(ThreadLocalRandom.current().nextInt(letters.length())));
         }
         return code.toString();
+    }
+
+    /**
+     * Waits until {@code count} sessions of this database wait for a lock (a row's, a tuple's or an advisory one) — the way a test
+     * puts two writers in a known order behind a row it holds. The statistics' snapshot is cleared first: inside a transaction
+     * {@code pg_stat_activity} would answer the same every time.
+     */
+    protected static void awaitLockWaiters(JdbcTemplate jdbc, int count) {
+        long until = System.nanoTime() + 10_000_000_000L;
+        while (true) {
+            jdbc.execute("SELECT pg_stat_clear_snapshot()");
+            Integer waiting = jdbc.queryForObject("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()"
+                    + " AND wait_event_type = 'Lock'", Integer.class);
+            if (waiting != null && waiting >= count) {
+                return;
+            }
+            if (System.nanoTime() > until) {
+                throw new IllegalStateException(count + " session(s) never waited for a lock (" + waiting + " did)");
+            }
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        }
     }
 
     /** Skips the class unless failsafe runs it (the property {@code scan2play.it} of the profile {@code it}). */

@@ -98,21 +98,17 @@ class DjServiceTest {
     // ---- dismissSong: the DJ skips a waiting request (a requests-only party) ----
 
     @Test
-    void dismissSong_takesAWaitingRequestOutOfTheQueue_asRejected_keepingTheAisComment() {
-        SongRequestEntity song = SongRequestEntity.builder().id(5L).partyCode(PARTY_CODE).songName("Unknown Song")
-                .decision(DECISION_ACCEPTED).djComment("The AI liked it").build();
-        when(songRequestRepository.findById(5L)).thenReturn(Optional.of(song));
+    void dismissSong_skipsTheWaitingRequestOfTheParty_now_andRefreshesTheQueue() {
+        ArgumentCaptor<Instant> skippedAt = ArgumentCaptor.forClass(Instant.class);
+        when(songRequestRepository.skip(eq(5L), eq(PARTY_CODE), skippedAt.capture())).thenReturn(1);
         Cache queue = mock(Cache.class);
         when(cacheManager.getCache("dashboardQueue")).thenReturn(queue);
 
         djService.dismissSong(5L, PARTY_CODE);
 
-        assertThat(song.getDecision()).isEqualTo(DECISION_REJECTED);
-        assertThat(song.getDjComment()).as("a restore gives it back with it").isEqualTo("The AI liked it");
-        assertThat(song.getSkippedAt()).as("when it was skipped: the song stays out of the queue for a while from then")
-                .isCloseTo(java.time.Instant.now(), org.assertj.core.api.Assertions.within(5, java.time.temporal.ChronoUnit.SECONDS));
-        assertThat(song.getPlayedAt()).isNull();
-        verify(songRequestRepository).save(song);
+        assertThat(skippedAt.getValue()).as("when it was skipped: the song stays out of the queue for a while from then")
+                .isCloseTo(Instant.now(), org.assertj.core.api.Assertions.within(5, java.time.temporal.ChronoUnit.SECONDS));
+        verify(songRequestRepository, never()).save(any());   // one conditional UPDATE (SongRequestVotesIT): the AI's comment stays
         verify(queue).evict(PARTY_CODE);
     }
 
@@ -211,18 +207,14 @@ class DjServiceTest {
     }
 
     @Test
-    void dismissSong_leavesAnotherPartysSong_andASongThatPlayed_asTheyAre() {
-        SongRequestEntity foreign = SongRequestEntity.builder().id(6L).partyCode("OTHER").decision(DECISION_ACCEPTED).build();
-        SongRequestEntity played = SongRequestEntity.builder().id(8L).partyCode(PARTY_CODE).decision(DECISION_PLAYED).build();
-        when(songRequestRepository.findById(6L)).thenReturn(Optional.of(foreign));
-        when(songRequestRepository.findById(8L)).thenReturn(Optional.of(played));
+    void dismissSong_thatSkipsNothing_leavesTheQueueAlone() {
+        // another party's song, one that played, one skipped already: the UPDATE's condition matches no row (SongRequestVotesIT)
+        when(songRequestRepository.skip(eq(6L), eq(PARTY_CODE), any())).thenReturn(0);
 
         djService.dismissSong(6L, PARTY_CODE);
-        djService.dismissSong(8L, PARTY_CODE);
 
-        assertThat(foreign.getDecision()).isEqualTo(DECISION_ACCEPTED);
-        assertThat(played.getDecision()).isEqualTo(DECISION_PLAYED);
         verify(songRequestRepository, never()).save(any());
+        verifyNoInteractions(cacheManager);
     }
 
     // ---- countTip (V28) ----
