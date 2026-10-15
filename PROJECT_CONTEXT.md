@@ -626,7 +626,7 @@ the `hreflang` alternates and Open Graph with `images/og-image.png`; on the land
 ### 6.4 Templates
 
 `landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
-`qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html` (every provider the data passes through — Railway us-east4, Cloudflare and its Web Analytics, Google, Apple's iTunes search, the push services —, the server's logs with the guests' texts kept 7 days by Railway Hobby, the plan; `SmokeTest` checks both languages; keep it true when a provider, the region or the plan changes), `guide[_pl].html` (the public guide "Jak działa Scan2Play", 2026-10-12: a section per moment of a party, the app's buttons as pictures — `.s2p-guide-row`; keep it true to the app),
+`qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html` (every provider the data passes through — Railway us-east4, Cloudflare (its Web Analytics is off: the owner, 2026-10-15), Google, Apple's iTunes search, the push services —, the server's logs with the guests' texts kept 7 days by Railway Hobby, the plan; `SmokeTest` checks both languages; keep it true when a provider, the region or the plan changes), `guide[_pl].html` (the public guide "Jak działa Scan2Play", 2026-10-12: a section per moment of a party, the app's buttons as pictures — `.s2p-guide-row`; keep it true to the app),
 `terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32), `pro[_pl].html` ("Scan2Play Pro", V35: a page of the product — the one action, the plans Free and Pro, what Pro gives, "Dobrze wiedzieć"; keep it true to `PlanFeature`; `ProPageRenderTest`) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
 `HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
 tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel / Kolejka / Historia, the
@@ -1002,8 +1002,9 @@ GuestQueueService          → DjService
 
 ### Security
 - The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
-  Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`, injected by Cloudflare into the HTML) — switch that off in
-  Cloudflare, or allow it in the CSP, before enforcing.
+  Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`, injected by Cloudflare into the HTML) — switched off since
+  (2026-10-15: "Disabled" for the site, no beacon in the page). Switched on again, it needs its host in the CSP and a sentence in
+  the privacy policy.
 - The review of 2026-09-30 (`docs/history/review-2026-09-30.md`) is done; the one point left open is 2.3 (single instance, above).
 
 ### Front end
