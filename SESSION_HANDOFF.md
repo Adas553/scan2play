@@ -8,6 +8,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, W10 (the owner: "zrób jak uważasz"), on the branch
+  `claude/old-waiting-requests-cleared` on top of `claude/guest-limits-and-sessions` (#66); a PR to `dev`.** Decided: the night clears
+  from every queue what has waited more than 24 h (04:40, `SongRequestRetentionService.clearOldWaitingRequests`; rejected with
+  `cleared_at`, as "Wyczyść kolejkę"), no "more than 300" note. PROJECT_CONTEXT 4.1 / 6.2 / 13. Tests: 676 unit, 68 database. **Next:**
+  the owner merges #64 → #65 → #66 → this PR, then `dev` → `main`; the rest of the review (W8, W9, W14, groups 6–7, the leftovers)
+  in a new session — `docs/history/review-2026-10-14.md`, "Status poprawek".
 - **2026-10-15, later — the review of 2026-10-14, "Limity gości i sesje" (W2, W3, W4), on the branch
   `claude/guest-limits-and-sessions` on top of `claude/forms-tell-the-truth` (#65); a PR to `dev`.** PROJECT_CONTEXT 5.2 / 12 / 13,
   the review's status of fixes. W2: a request refused by the network's or the party's limit gives the guest's own place back. W3:
@@ -547,7 +553,7 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
-6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15, W1, W7, W11, W12, W2, W3, W4 done (Start here); the rest by its order of PRs.
+6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15, W1, W7, W11, W12, W2, W3, W4, W10 done (Start here); the rest by its order of PRs.
    The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
    the history, the needless `hibernate.dialect` gone). The prompt (2026-10-08): "not knowing a song is no reason to make one up"
    — the owner tries it on production.
