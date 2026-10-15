@@ -29,14 +29,50 @@
         const none = document.getElementById('requestSearchNone');
         if (none) none.classList.toggle('d-none', words.length === 0 || shown > 0);
     }
+    /**
+     * Where the keyboard's focus is in the list, as a function that focuses the same place in the list put there later: "↻ Odśwież",
+     * the search, or the same control of the same song (review 2026-10-14: the list is put in whole in place of the old one, and the
+     * focus fell to the page's top — a screen reader started over). It answers whether it found the place; it does nothing (and
+     * answers true) when the focus was not in the list.
+     */
+    function focusPlace() {
+        const focused = document.activeElement;
+        if (!focused || !box.contains(focused)) return function () { return true; };
+        let find;
+        const row = focused.closest('li[data-song-id]');
+        if (focused.matches('[data-guest-queue-refresh]')) {
+            find = function () { return box.querySelector('[data-guest-queue-refresh]'); };
+        } else if (focused.id === 'requestSearch') {
+            find = function () { return document.getElementById('requestSearch'); };
+        } else if (row) {
+            const id = row.dataset.songId;
+            const at = Array.prototype.indexOf.call(row.querySelectorAll('button, a[href], input'), focused);
+            find = function () {
+                const again = box.querySelector('li[data-song-id="' + CSS.escape(id) + '"]');
+                return again && again.querySelectorAll('button, a[href], input')[at];
+            };
+        } else {
+            return function () { return true; };
+        }
+        return function () {
+            const target = find();
+            if (target) target.focus({ preventScroll: true });
+            return !!target;
+        };
+    }
+    /** A focus to give back once the rest of the list, fetched again, is in (its songs come after the list itself). */
+    let focusAfterMore = null;
     /** The folded rest of the list, fetched when it is unfolded (with 300 waiting, every refresh carrying them all is too much). */
     async function loadMore(details) {
         const place = details.querySelector('.s2p-more-list');
+        const focusBack = focusAfterMore;
+        focusAfterMore = null;
         try {
             const response = await fetch(details.dataset.url, { headers: { 'Accept': 'text/html' } });
             if (response.ok && !response.redirected && details.isConnected) {
                 place.innerHTML = await response.text();
                 filter();
+                if (focusBack) focusBack();
             }
         } catch (e) {
             // offline for a moment: unfolded, but empty — folding and unfolding it asks again
@@ -59,16 +95,21 @@
         if (e.target.id === 'requestSearch') filter();
     });
 
-    /** The list from the server in place of this one; unfolded, it is unfolded again (its rest fetched again), the search kept. */
-    function replaceQueue(html) {
+    /**
+     * The list from the server in place of this one; unfolded, it is unfolded again (its rest fetched again), the search kept, and
+     * the focus where it was ({@code focusBack}, from focusPlace) — in the rest, once the rest is in.
+     */
+    function replaceQueue(html, focusBack) {
         const more = document.getElementById('moreRequests');
         const wasOpen = !!(more && more.open);
         const search = document.getElementById('requestSearch');
         const text = search ? search.value : '';
         box.innerHTML = html;
         const again = document.getElementById('moreRequests');
+        const found = focusBack();
         if (again && wasOpen) {
             document.getElementById('requestSearch').value = text;
+            if (!found) focusAfterMore = focusBack;
             again.open = true;   // "toggle" fetches its rest
         }
     }
@@ -118,14 +159,18 @@
         const note = answer.querySelector('#voteNote');
         if (note) showNote(note);
     }
-    /** Fetches the list again; true when it came. Asked by the guest ({@code force}: "↻ Odśwież"), or on coming back to the page. */
-    async function refreshQueue(force) {
+    /**
+     * Fetches the list again; true when it came. Asked by the guest ({@code force}: "↻ Odśwież", whose button lost the focus when it
+     * was disabled — {@code focusBack} says where it was), or on coming back to the page.
+     */
+    async function refreshQueue(force, focusBack) {
         if (!force && Date.now() - lastRefresh < 5000) return true; // a quick switch back and forth asks once
         lastRefresh = Date.now();
         try {
             const response = await fetch(box.dataset.url, { headers: { 'Accept': 'text/html' } });
             if (response.ok && !response.redirected) {
-                replaceQueue(await response.text());
+                const html = await response.text();
+                replaceQueue(html, focusBack || focusPlace());
                 return true;
             }
         } catch (e) {
@@ -167,11 +212,13 @@
     box.addEventListener('click', function (e) {
         const button = e.target.closest('[data-guest-queue-refresh]');
         if (!button) return;
+        const focusBack = focusPlace();   // before the button is disabled: that takes the focus away
         button.disabled = true;
-        refreshQueue(true).then(function (came) {
+        refreshQueue(true, focusBack).then(function (came) {
             // came: the list (and its button) is new; else this one works again, and the note says it did not go through
             if (!came) {
                 button.disabled = false;
+                focusBack();
                 showFailed();
             }
         });

@@ -516,7 +516,8 @@ one request; the guest's requests are remembered in the session). The DJ's profi
 page has the logo and "🎧 Gra: …" at the top (`djName`), the verdict sized to the screen (`.s2p-verdict`: "PRZEKAZANE" broke into
 "PRZEKAZAN / E") and "Zaproponuj kolejną" as its one main button.
 Until 2026-10-08 there were "🔥 Najwięcej głosów" and "Ostatnio wysłane" as well — one song showed up to three times (the owner:
-too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer. A 👍 or a "↻ Odśwież" that does not go
+too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer; the keyboard's focus stays on its
+place in the new list ("↻ Odśwież", the search, the same song's 👍 — in the unfolded rest once it is in). A 👍 or a "↻ Odśwież" that does not go
 through (no network, the session ran out) shows the floating note "Nie udało się. Sprawdź połączenie albo odśwież stronę."
 (`guest.queue.failed`, `guest-party.js`); the button works again. In the installed app (the dashboard on
 the Home Screen) the guest page, the result page and the "party ended" page have "← Twój panel DJ-a" (`components.html`,

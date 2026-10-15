@@ -14,6 +14,7 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
   POST /__config  {json}             merged into the state (see default_state for the keys)
   GET  /dj/history-view/fragment     the REAL history fragment (rendered by DashboardPageRenderTest: history-<filter>.html, and
                                      history-<filter>-more.html when the request has a limit — "Show more")
+  GET  /p/ABC12/queue                the REAL list of the guest page alone (guest-queue.html, GuestPageRenderTest: the list of guest-many)
   GET  /p/ABC12/queue/more           the REAL folded rest of the guest's list (guest-queue-more.html, GuestPageRenderTest)
   POST /p/ABC12/vote                 a guest's 👍 (guest-party.js): the REAL answer, that song's row (state 'voteAnswer':
                                      guest-vote-answer.html, or guest-vote-gone.html — GuestPageRenderTest); the X-Requested-With
@@ -257,7 +258,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/p/') and path.endswith('/queue'):   # the guest's list fetched again: as the real server renders it
             if state['guestQueueStatus']:
                 return self._send(state['guestQueueStatus'])
-            with open(os.path.join(stand.rendered, 'guest-vote-answer.html'), encoding='utf-8') as f:
+            with open(os.path.join(stand.rendered, 'guest-queue.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/updates':
             with stand.lock:

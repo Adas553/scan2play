@@ -179,4 +179,47 @@
             t.check('the note went by itself', true);
         }
     });
+
+    // Review 2026-10-14: the list is put in whole in place of the old one ("↻ Odśwież", coming back to the page), and the keyboard's
+    // focus fell to the page's top with it — a screen reader started over. It goes to the same place in the new list.
+    S2P.scenario({
+        name: 'guest-refresh-keeps-the-focus',
+        title: 'the guest page: after "↻ Odśwież" the focus is on the new "↻ Odśwież", not on the top of the page',
+        page: 'guest-many',
+        viewport: '390,844',
+        setup: { delays: { '/p/ABC12/queue': 0.3 } },
+        run: async function (t) {
+            const before = document.querySelector('[data-guest-queue-refresh]');
+            before.focus();   // as a keyboard or a screen reader has it
+            before.click();
+            await t.waitFor(function () { return document.querySelector('[data-guest-queue-refresh]') !== before; }, 'the list again', 5000);
+            const after = document.querySelector('[data-guest-queue-refresh]');
+            t.step('the focus on the new "↻ Odśwież"', document.activeElement === after, true);
+            t.check('the page stayed (no navigation)', location.pathname === '/dj/dashboard');
+        }
+    });
+
+    S2P.scenario({
+        name: 'guest-back-keeps-the-focus',
+        title: 'the guest page: the list fetched again on coming back to the page keeps the focus on the same 👍 — in the list and in its unfolded rest',
+        page: 'guest-many',
+        viewport: '390,844',
+        run: async function (t) {
+            const comeBack = async function (button, what) {
+                await t.sleep(5100);   // a quick switch back and forth asks once in 5 s
+                button.focus();
+                document.dispatchEvent(new Event('visibilitychange'));
+                await t.waitFor(function () { return !document.contains(button); }, 'the list again (' + what + ')', 5000);
+            };
+            await comeBack(rowOf('Recent 2').querySelector('.s2p-vote-btn'), 'the list');
+            t.step('the focus on the 👍 of the same song', document.activeElement === rowOf('Recent 2').querySelector('.s2p-vote-btn'), true);
+
+            await unfold(t);
+            await comeBack(rowOf('Older 5').querySelector('.s2p-vote-btn'), 'the rest');
+            await t.waitFor(function () { return rowOf('Older 5'); }, 'the rest again', 5000);
+            t.step('in the rest, fetched again: the focus on the 👍 of the same song',
+                document.activeElement === rowOf('Older 5').querySelector('.s2p-vote-btn'), true);
+            t.step('the rest still unfolded', document.getElementById('moreRequests').open, true);
+        }
+    });
 })();

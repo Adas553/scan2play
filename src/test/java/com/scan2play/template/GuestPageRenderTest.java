@@ -453,6 +453,12 @@ class GuestPageRenderTest {
         assertThat(rest).contains("Older 5", "Wilki - Baśka", "data-song-id=\"6\"").doesNotContain("Top song", "Recent 1", "<html", "??");
         assertThat(rest.split("s2p-vote-btn", -1)).as("a 👍 for each of the two").hasSize(3);
         writeForTheBrowserTests("guest-queue-more.html", rest);
+
+        // what GET /p/{code}/queue answers ("↻ Odśwież", the guest coming back to the page): the same list, alone
+        String again = fragment("guestQueue", Map.of("guestQueue", queue));
+        assertThat(again).contains("data-guest-queue-refresh", "Top song", "Recent 4", "id=\"moreRequests\"")
+                .doesNotContain("Older 5", "<html", "??");
+        writeForTheBrowserTests("guest-queue.html", again);
     }
 
     /**

@@ -8,6 +8,11 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, late night — the deferred small items, PR 3 "the focus after the guest's ↻ Odśwież", on the branch
+  `claude/guest-refresh-focus` on top of `claude/browser-narrow-widths` (#86); a PR to `dev`.** `guest-party.js` `focusPlace()`: the
+  list put in whole in place of the old one keeps the keyboard's focus ("↻ Odśwież", the search, the same song's 👍; in the unfolded
+  rest once it is in). The stand-in's `GET /p/ABC12/queue` answers the real `guestQueue` fragment now (`guest-queue.html`). Tests:
+  718 unit, 121 browser (`guest-refresh-keeps-the-focus`, `guest-back-keeps-the-focus`, red before).
 - **2026-10-15, late night — the deferred small items, PR 2 "a phone's real width in the browser tests", on the branch
   `claude/browser-narrow-widths` on top of `claude/guest-session-clock` (#85); a PR to `dev`.** A headless window is never narrower
   than ~500 px (measured: Chrome and Edge, both headless modes, any scale factor), so `run.py` sets a phone's size through the
