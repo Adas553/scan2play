@@ -26,7 +26,7 @@ public class SeoController {
     private final PlanService planService;
 
     public SeoController(@Value("${scan2play.site-url}") String siteUrl, PlanService planService) {
-        this.siteUrl = siteUrl.endsWith("/") ? siteUrl.substring(0, siteUrl.length() - 1) : siteUrl;
+        this.siteUrl = com.scan2play.util.Texts.withoutTrailingSlash(siteUrl);
         this.planService = planService;
     }
 

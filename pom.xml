@@ -120,12 +120,23 @@
 		<dependency>
 			<groupId>com.google.zxing</groupId>
 			<artifactId>core</artifactId>
-			<version>3.5.3</version>
+			<version>3.5.4</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.zxing</groupId>
 			<artifactId>javase</artifactId>
-			<version>3.5.3</version>
+			<version>3.5.4</version>
+			<!-- MatrixToImageWriter only: its command line (jcommander) and the image decoders (jai-imageio) are never used -->
+			<exclusions>
+				<exclusion>
+					<groupId>com.beust</groupId>
+					<artifactId>jcommander</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.github.jai-imageio</groupId>
+					<artifactId>jai-imageio-core</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 	</dependencies>
 

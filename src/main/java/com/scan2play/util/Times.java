@@ -19,6 +19,12 @@ public final class Times {
     /** The zone the DJ and the guests read the times in. */
     public static final ZoneId DISPLAY_ZONE = ZoneId.of("Europe/Warsaw");
 
+    /**
+     * The zone of the night's jobs ({@code @Scheduled(zone = …)}): the hours of their crons are Polish time. Without it they ran by the
+     * JVM's zone — UTC on Railway, so "04:40" was 06:40 in Poland, after many a party had ended (the review of 2026-10-14).
+     */
+    public static final String SCHEDULE_ZONE = "Europe/Warsaw";
+
     private static final DateTimeFormatter DISPLAY = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").withZone(DISPLAY_ZONE);
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm").withZone(DISPLAY_ZONE);
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd.MM").withZone(DISPLAY_ZONE);

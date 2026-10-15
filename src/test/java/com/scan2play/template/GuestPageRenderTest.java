@@ -418,7 +418,7 @@ class GuestPageRenderTest {
                 "btn-outline-warning", "aria-pressed=\"false\"", "title=\"Zagłosuj na tę piosenkę\"", ">👍 1<");
         assertThat(row.apply("Voted")).contains("name=\"on\" value=\"false\"", "btn-warning", "aria-pressed=\"true\"",
                 "title=\"Twój głos — dotknij, aby go cofnąć\"", ">👍 3<").doesNotContain("btn-outline-warning");
-        assertThat(html).contains("👍 Oddaj głos na piosenkę — DJ widzi, czego chcecie najbardziej").doesNotContain("??", "id=\"moreRequests\"");
+        assertThat(html).contains("👍 Oddaj głos na piosenkę — DJ widzi, czego goście chcą najbardziej").doesNotContain("??", "id=\"moreRequests\"");
     }
 
     /** A fragment of guest-queue.html alone, as the server renders it for the page's script. */

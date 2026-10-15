@@ -168,10 +168,10 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
                 renewed.countDown();
                 try {
                     joinStarted.await(5, TimeUnit.SECONDS);
-                    Thread.sleep(700);   // the join is waiting for this row by now
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
+                awaitLockWaiters(jdbc, 1);   // the join waits for this row (was a sleep of 0.7 s: the review of 2026-10-14)
             }));
             renewed.await(5, TimeUnit.SECONDS);
             Future<PartyStaffService.JoinOutcome> joining = pool.submit(() -> {
@@ -218,8 +218,8 @@ class PartyStaffRepositoryIT extends PostgresIntegrationTest {
                 results.add(outcome.get());
             }
 
-            assertThat(staff.countByPartyCode(pub.getPartyCode())).isEqualTo(PartyStaffService.MAX_STAFF);
-            assertThat(results).filteredOn(r -> r == PartyStaffService.JoinOutcome.JOINED).hasSize(PartyStaffService.MAX_STAFF);
+            assertThat(staff.countByPartyCode(pub.getPartyCode())).isEqualTo(com.scan2play.model.Plan.PRO.staffPlaces());
+            assertThat(results).filteredOn(r -> r == PartyStaffService.JoinOutcome.JOINED).hasSize(com.scan2play.model.Plan.PRO.staffPlaces());
             assertThat(results).doesNotContainNull()
                     .allMatch(r -> r == PartyStaffService.JoinOutcome.JOINED || r == PartyStaffService.JoinOutcome.FULL
                             || r == PartyStaffService.JoinOutcome.ALREADY);

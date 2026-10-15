@@ -129,6 +129,7 @@ class SongRequestRetentionServiceTest {
 
         assertThat(scheduled).isNotNull();
         assertThat(scheduled.cron()).isEqualTo("0 40 4 * * *");
+        assertThat(scheduled.zone()).as("Polish time, not the server's UTC").isEqualTo("Europe/Warsaw");
     }
 
     @Test
@@ -138,5 +139,6 @@ class SongRequestRetentionServiceTest {
 
         assertThat(scheduled).isNotNull();
         assertThat(scheduled.cron()).isEqualTo("0 45 4 * * *");
+        assertThat(scheduled.zone()).isEqualTo("Europe/Warsaw");
     }
 }

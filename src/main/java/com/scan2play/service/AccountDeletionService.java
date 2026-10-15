@@ -8,13 +8,12 @@ import com.scan2play.repository.PartyStaffRepository;
 import com.scan2play.repository.PushSubscriptionRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.repository.StaffInvitationRepository;
+import com.scan2play.util.AfterCommit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Objects;
@@ -94,7 +93,7 @@ public class AccountDeletionService {
 
         // 7. The DJ's plan (V35) — and its copy in memory
         djPlanRepository.deleteById(ownerId);
-        afterCommit(() -> {
+        AfterCommit.run(() -> {
             var plans = cacheManager.getCache(PlanService.CACHE);
             if (plans != null) {
                 plans.evict(ownerId);
@@ -109,23 +108,10 @@ public class AccountDeletionService {
      * it back into the cache. Without a transaction (a unit test) the caches are evicted at once.
      */
     private void evictPartyCachesAfterCommit(String partyCode) {
-        afterCommit(() -> PARTY_CACHES.stream()
+        AfterCommit.run(() -> PARTY_CACHES.stream()
                 .map(cacheManager::getCache)
                 .filter(Objects::nonNull)
                 .forEach(cache -> cache.evict(partyCode)));
-    }
-
-    private static void afterCommit(Runnable evict) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    evict.run();
-                }
-            });
-        } else {
-            evict.run();
-        }
     }
 }
 

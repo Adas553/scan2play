@@ -55,7 +55,7 @@ class StaffInvitationServiceTest {
         query = mock(PartySettingsQueryService.class);
         service = new StaffInvitationService(invitations, parties, staff, query);
         when(parties.lockByPartyCode(PARTY)).thenReturn(Optional.of(pub));
-        lenient().when(staff.placesOf(pub)).thenReturn(PartyStaffService.MAX_STAFF);   // the places of the organiser's plan (V35)
+        lenient().when(staff.placesOf(pub)).thenReturn(com.scan2play.model.Plan.PRO.staffPlaces());   // the places of the organiser's plan (V35)
         when(query.getSettings(PARTY)).thenReturn(pub);
         when(invitations.findByPartyCodeAndEmailKey(anyString(), anyString())).thenReturn(Optional.empty());
     }
@@ -90,7 +90,7 @@ class StaffInvitationServiceTest {
 
     @Test
     void zapros_aTypo_andNoPlaceLeft_saveNothing() {
-        when(staff.placesTaken(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF);
+        when(staff.placesTaken(PARTY)).thenReturn((long) com.scan2play.model.Plan.PRO.staffPlaces());
 
         assertThat(service.invite(PARTY, "ola@gmail", StaffRole.QUEUE.permissions())).isEqualTo(InviteOutcome.INVALID_ADDRESS);
         assertThat(service.invite(PARTY, "ola@gmail.com", StaffRole.QUEUE.permissions())).isEqualTo(InviteOutcome.FULL);
@@ -115,7 +115,7 @@ class StaffInvitationServiceTest {
     void zapros_theSameAddressAgain_changesItsInvitation() {
         StaffInvitationEntity earlier = invitation(3L, "olakowalska@gmail.com", Instant.now().minus(5, ChronoUnit.DAYS));
         when(invitations.findByPartyCodeAndEmailKey(PARTY, "olakowalska@gmail.com")).thenReturn(Optional.of(earlier));
-        when(staff.placesTaken(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF);
+        when(staff.placesTaken(PARTY)).thenReturn((long) com.scan2play.model.Plan.PRO.staffPlaces());
 
         assertThat(service.invite(PARTY, "ola.kowalska@gmail.com", StaffRole.CO_ORGANISER.permissions())).isEqualTo(InviteOutcome.RENEWED);
         verify(invitations).save(earlier);

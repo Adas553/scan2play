@@ -100,7 +100,7 @@ class StaffPageRenderTest {
                         .joinedAt(Instant.parse("2026-10-09T18:00:00Z"))
                         .permissions(EnumSet.of(StaffPermission.QUEUE, StaffPermission.SUMMARY)).build()));
         when(staff.placesTaken(PARTY)).thenReturn(3L);
-        when(staff.placesOf(any())).thenReturn(PartyStaffService.MAX_STAFF);   // the plans not enforced: 10 places (V35)
+        when(staff.placesOf(any())).thenReturn(com.scan2play.model.Plan.PRO.staffPlaces());   // the plans not enforced: 10 places (V35)
         StaffInvitationService invitations = mock(StaffInvitationService.class);
         when(invitations.waitingAt(PARTY)).thenReturn(List.of(StaffInvitationEntity.builder().id(3L).partyCode(PARTY)
                 .email("ola.kowalska@gmail.com").emailKey("olakowalska@gmail.com").permissions(StaffRole.CO_ORGANISER.permissions())
@@ -167,8 +167,8 @@ class StaffPageRenderTest {
         DjSessionHelper helper = mock(DjSessionHelper.class);
         when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
         PartyStaffService staff = mock(PartyStaffService.class);
-        when(staff.placesTaken(PARTY)).thenReturn((long) PartyStaffService.MAX_STAFF);
-        when(staff.placesOf(any())).thenReturn(PartyStaffService.MAX_STAFF);
+        when(staff.placesTaken(PARTY)).thenReturn((long) com.scan2play.model.Plan.PRO.staffPlaces());
+        when(staff.placesOf(any())).thenReturn(com.scan2play.model.Plan.PRO.staffPlaces());
         StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper,
                 mock(StaffInvitationService.class), com.scan2play.service.Plans.off());
         MockHttpSession session = new MockHttpSession();

@@ -8,6 +8,13 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, group 7 "Porządki", on the branch `claude/tidy-up` on top of #71 with #69 merged
+  in; a PR to `dev`.** The review's status lists it all. Code: one `util/AfterCommit`, the unused and test-only methods gone
+  (`PlanService.forget`, `MAX_STAFF`, `hasAccess`, `hasOwnParty`, `GuestQueue.total`, `validateOwnership/Access`). Config: the night's
+  jobs in Polish time (`Times.SCHEDULE_ZONE`), `baseline-on-migrate=false`, ZXing 3.5.4, the wrapper's sha256, the CI actions pinned
+  by SHA. Texts: "Kod imprezy:", "zgłoszenia" for "feedback", no "Wy". Tests: `Scan2playApplicationTests` gone — the command is
+  `"-Dtest=!*IT"` (CLAUDE.md, AGENTS.md); no sleeps; three more ITs of the queue's SQL; 693 unit, 80 database, 108 browser. **Next:**
+  the owner merges #69, #71, then this PR; left: `google-genai` 1.77 (its own PR), the terms, the front-end refactors listed there.
 - **2026-10-15, later — the review of 2026-10-14, group 6 "Przed włączeniem planów", on the branch `claude/before-the-plans` on
   top of `claude/privacy-policy-hosting` (#70); a PR to `dev`.** PROJECT_CONTEXT 4.1 / 9 / 10 / 13, the review's status. The owner
   chose: no second trial after "Usuń konto" — V36 `trial_used` keeps the SHA-256 of the Google subject (`PlanService.trialKey`), the

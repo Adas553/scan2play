@@ -59,7 +59,6 @@ class GuestQueueServiceTest {
         assertThat(queue.shown()).extracting(SongRequestEntity::getId).as("3 votes (the newer first), 2, then the newest of one vote")
                 .containsExactly(15L, 11L, 13L, 16L, 14L);
         assertThat(queue.more()).extracting(SongRequestEntity::getId).containsExactly(12L, 10L);
-        assertThat(queue.total()).isEqualTo(7);
         assertThat(queue.myVotes()).containsExactly(11L);
     }
 

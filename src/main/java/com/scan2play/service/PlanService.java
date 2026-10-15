@@ -7,13 +7,12 @@ import com.scan2play.model.Plan;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.PlanSource;
 import com.scan2play.repository.DjPlanRepository;
+import com.scan2play.util.AfterCommit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -42,7 +41,7 @@ import java.util.stream.Collectors;
 public class PlanService {
 
     /**
-     * The organisers' plans by their Google subject (AppConfig): read once per {@code CACHE_TTL}, emptied when a plan is written. What
+     * The organisers' plans by their Google subject (AppConfig): read once per {@code CACHE_TTL}, emptied after a plan is written. What
      * is kept is the row's plan with its end ({@link Read}), so a plan ends when its row says, not up to {@code CACHE_TTL} later.
      */
     public static final String CACHE = "accountPlan";
@@ -215,7 +214,7 @@ public class PlanService {
         planRepository.save(DjPlanEntity.builder().ownerId(ownerId).plan(Plan.PRO).source(PlanSource.TRIAL)
                 .validUntil(now.plus(Duration.ofDays(trialDays))).updatedAt(now).build());
         planRepository.markTrialUsed(key);
-        afterCommit(() -> cache().evict(ownerId));
+        AfterCommit.run(() -> cache().evict(ownerId));
         log.info("DJ {}: a trial of Pro for {} days", ownerId, trialDays);
     }
 
@@ -231,24 +230,6 @@ public class PlanService {
         }
     }
 
-    /** After the commit of the caller's transaction; at once without one (a unit test). */
-    private static void afterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
-    }
-
-    /** The organiser's plan read again on the next request (their row changed). */
-    public void forget(String ownerId) {
-        cache().evict(ownerId);
-    }
 
     private Cache cache() {
         return Objects.requireNonNull(cacheManager.getCache(CACHE), CACHE);

@@ -7,6 +7,7 @@ import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.StaffInvitationRepository;
 import com.scan2play.service.PartyStaffService.JoinOutcome;
 import com.scan2play.util.EmailAddresses;
+import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -185,7 +186,7 @@ public class StaffInvitationService {
     }
 
     /** Runs daily at 04:50: the invitations no one answered in {@value StaffInvitationEntity#MAX_AGE_DAYS} days go. */
-    @Scheduled(cron = "0 50 4 * * *")
+    @Scheduled(cron = "0 50 4 * * *", zone = Times.SCHEDULE_ZONE)
     public void purgeOldInvitations() {
         int deleted = invitationRepository.deleteMadeBefore(waitingSince());
         if (deleted > 0) {

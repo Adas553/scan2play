@@ -2,6 +2,7 @@ package com.scan2play.service;
 
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -45,7 +46,7 @@ public class SongRequestRetentionService {
      * asked for again among the hidden ones became a second row). A day is longer than any evening and shorter than the gap to the
      * next one. Runs daily at 04:40, before the purge.
      */
-    @Scheduled(cron = "0 40 4 * * *")
+    @Scheduled(cron = "0 40 4 * * *", zone = Times.SCHEDULE_ZONE)
     public void clearOldWaitingRequests() {
         Instant now = Instant.now();
         int cleared = songRequestRepository.clearWaitingRequestedBefore(now.minus(WAITING_KEPT), now);
@@ -55,7 +56,7 @@ public class SongRequestRetentionService {
     }
 
     /** Runs daily at 04:45. */
-    @Scheduled(cron = "0 45 4 * * *")
+    @Scheduled(cron = "0 45 4 * * *", zone = Times.SCHEDULE_ZONE)
     public void purgeStaleRequests() {
         purgeRequestedBefore(Instant.now().minus(SongRequestEntity.MAX_AGE_DAYS, ChronoUnit.DAYS));
     }

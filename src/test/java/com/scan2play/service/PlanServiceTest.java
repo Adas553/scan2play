@@ -93,17 +93,13 @@ class PlanServiceTest {
     }
 
     @Test
-    void enforced_thePlanIsReadOnce_thenFromTheCache_untilForgotten() {
+    void enforced_thePlanIsReadOnce_thenFromTheCache() {
         when(rows.findById("owner")).thenReturn(Optional.empty());
         PlanService plans = plans(true, "", 0);
 
         plans.planOf("owner");
         plans.planOf("owner");
         verify(rows, times(1)).findById("owner");
-
-        plans.forget("owner");
-        plans.planOf("owner");
-        verify(rows, times(2)).findById("owner");
     }
 
     /** Leaving Pro deletes nothing: the copy for the guests and the AI has none of it, the party itself keeps all of it. */

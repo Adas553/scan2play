@@ -136,9 +136,9 @@ class StaffInvitationIT extends PostgresIntegrationTest {
                 task.get();
             }
 
-            assertThat(staff.placesTaken(pub.getPartyCode())).isEqualTo(PartyStaffService.MAX_STAFF);
+            assertThat(staff.placesTaken(pub.getPartyCode())).isEqualTo(com.scan2play.model.Plan.PRO.staffPlaces());
             assertThat(staffRows.countByPartyCode(pub.getPartyCode()) + invitations.waitingAt(pub.getPartyCode()).size())
-                    .isEqualTo(PartyStaffService.MAX_STAFF);
+                    .isEqualTo(com.scan2play.model.Plan.PRO.staffPlaces());
             assertThat(invitations.invite(pub.getPartyCode(), address("one-more"), StaffRole.QUEUE.permissions()))
                     .isEqualTo(InviteOutcome.FULL);
         } finally {
