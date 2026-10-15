@@ -121,6 +121,8 @@ class SmokeTest {
                     // Cloudflare Web Analytics is off for the site (the owner checked, 2026-10-15): the policy must not say it is used
                     .andExpect(content().string(not(containsString("Web Analytics"))))
                     .andExpect(content().string(containsString(lang.equals("pl") ? "przez 7 dni" : "for 7 days")))
+                    // Railway's DPA is signed (2026-10-15): the transfer to the USA rests on the standard contractual clauses
+                    .andExpect(content().string(containsString(lang.equals("pl") ? "standardowych klauzulach umownych" : "standard contractual clauses")))
                     .andExpect(content().string(not(containsString(lang.equals("pl") ? "wyłącznie do Google" : "only sent to Google"))));
         }
     }
