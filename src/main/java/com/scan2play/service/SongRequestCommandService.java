@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongNames;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class SongRequestCommandService {
     private static final int SKIPS_READ = 100;
 
     private final SongRequestRepository songRequestRepository;
+    private final PartySettingsRepository partySettingsRepository;
     private final DjService djService;
 
     /**
@@ -71,11 +73,20 @@ public class SongRequestCommandService {
      * such a decision about one song, so a cleared song may be asked for again.
      *
      * @param request     the request as the AI judged it, not saved yet
+     * <p>
+     * Nothing is saved for a party that is not there any more: the AI judges a request outside any transaction, and the organiser
+     * may delete the account meanwhile — the guest's words would stay 30 days after "Usuń konto". The deletion holds this lock until
+     * it commits (review 2026-10-14 W9, {@code AccountDeletionIT}), so the question asked under it has the final answer.
+     *
      * @param guestsOwnIds the guest's earlier requests at this party (their session), to tell their own song
+     * @throws IllegalArgumentException when the party is gone (as {@code PartySettingsQueryService.getSettings} for an unknown code)
      */
     @Transactional
     public Saved saveOrVote(SongRequestEntity request, Set<Long> guestsOwnIds) {
         songRequestRepository.lockRequests(lockKey(request.getPartyCode()));
+        if (!partySettingsRepository.existsByPartyCode(request.getPartyCode())) {
+            throw new IllegalArgumentException("Party not found: " + request.getPartyCode());
+        }
         Optional<SongRequestEntity> waiting = sameSongWaiting(request);
         if (waiting.isPresent()) {
             SongRequestEntity song = waiting.get();

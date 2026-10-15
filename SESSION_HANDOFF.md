@@ -8,8 +8,83 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, group 7's leftover: `google-genai` 1.38.0 → 1.74.0, on the branch
+  `claude/google-genai-1-74` from `origin/dev` = `03ad83a`; a PR to `dev`.** The latest release at least two weeks old (1.75.0 was
+  13.5 days). No API we use changed (changelog 1.39–1.74: the only breaking change removed the unused Interactions module); no code
+  change. `GeminiConfigTest` now drives the real SDK against a Gemini stub on the loopback: a 503 is asked once, a hanging call ends at
+  the timeout once, the thinking level reaches the request, `text()` reads the answer. Tests: 680 unit, 75 database. **The owner:**
+  one real request from IntelliJ (no API key in the environment here). The PR may conflict with #72 in this file and the review's status
+  (both append) — keep both entries.
+- **2026-10-15, later — the review of 2026-10-14, group 7 "Porządki", on the branch `claude/tidy-up` on top of #71 with #69 merged
+  in; a PR to `dev`.** The review's status lists it all. Code: one `util/AfterCommit`, the unused and test-only methods gone
+  (`PlanService.forget`, `MAX_STAFF`, `hasAccess`, `hasOwnParty`, `GuestQueue.total`, `validateOwnership/Access`). Config: the night's
+  jobs in Polish time (`Times.SCHEDULE_ZONE`), `baseline-on-migrate=false`, ZXing 3.5.4, the wrapper's sha256, the CI actions pinned
+  by SHA. Texts: "Kod imprezy:", "zgłoszenia" for "feedback", no "Wy". Tests: `Scan2playApplicationTests` gone — the command is
+  `"-Dtest=!*IT"` (CLAUDE.md, AGENTS.md); no sleeps; three more ITs of the queue's SQL; 693 unit, 80 database, 108 browser. **Next:**
+  the owner merges #69, #71, then this PR; left: `google-genai` 1.77 (its own PR), the terms, the front-end refactors listed there.
+- **2026-10-15, later — the review of 2026-10-14, group 6 "Przed włączeniem planów", on the branch `claude/before-the-plans` on
+  top of `claude/privacy-policy-hosting` (#70); a PR to `dev`.** PROJECT_CONTEXT 4.1 / 9 / 10 / 13, the review's status. The owner
+  chose: no second trial after "Usuń konto" — V36 `trial_used` keeps the SHA-256 of the Google subject (`PlanService.trialKey`), the
+  privacy policy says so. The trial evicts the cached plan after its commit; the cache keeps the plan's end. "Dołącz" on a full staff
+  deletes the invitation (no 409 loop); "Zaproś" refuses the organiser's own address (`OWN_ADDRESS`). The endpoint tests check the
+  status (the summary's CSV was a 404 nobody saw), the staff-wide endpoints, `/dj/history-view`, the ETag Free↔Pro, `/pro` in the
+  sitemap. Tests: 691 unit, 77 database. **Next:** the owner merges #70, then this PR; the terms (staff, hosts' link, Pro) before
+  `PLANS_ENFORCE` are the owner's text; group 7 "Porządki" when the owner wants it.
+- **2026-10-15, later — the review of 2026-10-14, W14 the privacy policy, on the branch `claude/privacy-policy-hosting` from
+  `origin/dev` = `b131071`; a PR to `dev`.** The owner's answers: Railway Hobby (logs 7 days), Cloudflare Web Analytics "probably on",
+  Railway's DPA "probably accepted" — it needs a signature of its own (DocuSign), so the policy says plainly that the data is in the USA
+  and names no clauses. Both languages: the plan, the guests' texts in the logs, who sees the IP, the providers' list (Railway us-east4,
+  Cloudflare + Web Analytics, Google, Apple, the push services), what "Usuń konto" removes. Tests: 677 unit (`SmokeTest`). **The owner:**
+  sign Railway's DPA, check Web Analytics is on for the site. **Next:** group 6 "Przed włączeniem planów".
+- **2026-10-15, later — the review of 2026-10-14, the leftovers of "Formularze mówią prawdę", on the branch
+  `claude/quiet-failures-speak` from `origin/dev` = `be516ad`; a PR to `dev` (next to "Spójność zapisów", #68 — no file of the
+  code shared; both append to this file and the review's status).** PROJECT_CONTEXT 5.1 / 5.2 / 13. The History tab, its filter and
+  "Pokaż więcej" that do not load: the page's notice with its second text "Nie udało się wczytać…" (`showRefused('load')`, now in
+  `common.js`). A guest's 👍 or "↻ Odśwież" that does not go through: the floating note `guest.queue.failed`, the button works again.
+  M14: a poll answered without `#song-list` counts as failed (the queue stays); a poll that wants the page loaded again loads it once
+  in a run (`sessionStorage`), then the notice. Tests: 676 unit, 108 browser (new `scenarios/quiet-failures.js`, 5, each red before
+  the fix; the stand-in's `updatesBody`, `guestQueueStatus`). **Next:** the owner reviews the PR.
+- **2026-10-15, later — the review of 2026-10-14, "Spójność zapisów" (W8, W9, "Pomiń" vs "Zagrane", the batch deletes), on the branch
+  `claude/consistent-writes` from `origin/dev` = `be516ad` (#62–#67 merged); a PR to `dev`.** PROJECT_CONTEXT 4.1 / 9 / 13, the review's
+  status of fixes. W8: `updateSettings` reads the party's row under its lock — two writes take turns; the hosts' page asks its token again
+  under the lock (an old link writes nothing). W9: the account's deletion takes "S2PR", then the party's row, before it deletes anything
+  (a "Dołącz" at that moment waits instead of deadlocking); `saveOrVote` saves nothing for a party that is gone. "Pomiń" is a conditional
+  `UPDATE` (`SongRequestRepository.skip`), as "Zagrane". The requests and the feedback of a deleted account go in one `DELETE` each.
+  Tests: 676 unit, 75 database (new `PartySettingsWritesIT`, `AccountDeletionIT`, one more in `SongRequestVotesIT` — each red on
+  `be516ad`; the writers queue behind a held row, `PostgresIntegrationTest.awaitLockWaiters`). **Next:** the owner reviews the PR; then
+  W14 (the privacy policy — its text waits for the owner's yes), the leftovers of group 3, groups 6–7 (the owner picks).
+- **2026-10-15, later — the review of 2026-10-14, W10 (the owner: "zrób jak uważasz"), on the branch
+  `claude/old-waiting-requests-cleared` on top of `claude/guest-limits-and-sessions` (#66); a PR to `dev`.** Decided: the night clears
+  from every queue what has waited more than 24 h (04:40, `SongRequestRetentionService.clearOldWaitingRequests`; rejected with
+  `cleared_at`, as "Wyczyść kolejkę"), no "more than 300" note. PROJECT_CONTEXT 4.1 / 6.2 / 13. Tests: 676 unit, 68 database. **Next:**
+  the owner merges #64 → #65 → #66 → this PR, then `dev` → `main`; the rest of the review (W8, W9, W14, groups 6–7, the leftovers)
+  in a new session — `docs/history/review-2026-10-14.md`, "Status poprawek".
+- **2026-10-15, later — the review of 2026-10-14, "Limity gości i sesje" (W2, W3, W4), on the branch
+  `claude/guest-limits-and-sessions` on top of `claude/forms-tell-the-truth` (#65); a PR to `dev`.** PROJECT_CONTEXT 5.2 / 12 / 13,
+  the review's status of fixes. W2: a request refused by the network's or the party's limit gives the guest's own place back. W3:
+  `/p/{code}` and its lists read the session only when there is one — an unknown code and an ended party make none (an open party's
+  page still does: the form's CSRF token); the log line of an unknown code is DEBUG. W4: "Odblokuj prośby gości" in the warning of a
+  spent party day (`POST /dj/dashboard/guest-limit-reset`, `LIMITS`). Tests: 674 unit (new `GuestNoSessionWebTest`), 103 browser (new
+  `guest-limit-unblock`; `guest-limit-warnings` reads the warning's text alone now). **Next:** the owner merges #64, #65 and this PR in that order; then W10 (decided by me, the owner: "zrób jak
+  uważasz"), the rest of the review in a new session.
+- **2026-10-15, later — the review of 2026-10-14, "Formularze mówią prawdę" (W1, W11, W12, W7, a refused "Cofnij"), on the branch
+  `claude/forms-tell-the-truth` on top of `claude/spring-boot-4-0-8` (#64, W15); a PR to `dev`.** PROJECT_CONTEXT 5.1 / 13, the review's status of fixes.
+  A form the server refuses (403: the session ran out, the plan, the access) or that never reaches it: ✗ and why — its own note or the
+  page's notice `components :: formRefused` ("Nie zapisano…", "Odśwież stronę"), never ✓, no reload by itself; "Zakończ imprezę" refused
+  leaves the panel open; the button that sent a form waits for the answer (one tip for a double tap on 💸); three failed polls in a row
+  → "Brak połączenia z serwerem: lista może być nieaktualna." above the queue; the standalone history page keeps `?party=` for its
+  filter and "Pokaż więcej". Tests: 668 unit (`DashboardPageRenderTest` renders `history-page.html`), 102 browser — new
+  `scenarios/truthful-forms.js` (six scenarios, each red before the fix or on a mutation); the stand-in's `postStatus`. **Next:** the
+  owner merges #64 (W15) and this PR; then "Limity gości i sesje" (W2, W3, W4).
+- **2026-10-15, later — the review of 2026-10-14, W15 "Aktualizacja Spring Boot", on the branch `claude/spring-boot-4-0-8` from
+  `origin/dev` = `72b6401`; PR #64 → `dev`.** Spring Boot 4.0.3 → 4.0.8, and `tomcat.version` 11.0.26 in `pom.xml` (the parent manages
+  11.0.24; 11.0.25 / 11.0.26 fix more CVEs — checked on tomcat.apache.org/security-11.html, most need HTTP/2, WebSocket, AJP or
+  CLIENT-CERT, none of which we use). PROJECT_CONTEXT 2 / 11. Tests: 667 unit, 67 database, 96 browser; no test starts the real
+  Tomcat, so the jar was run on a throw-away database `s2p_boot_check` (dropped): Tomcat 11.0.26, 35 migrations, the public pages 200,
+  the DJ's and guests' pages redirect, a POST without CSRF 403. **Next:** the PR's CI, the owner's merge, then `dev` → `main`; then the
+  group "Formularze mówią prawdę" (W1, W11, W12, W7).
 - **2026-10-15 — the review of 2026-10-14, PR 1 "Kolejka widzi każdą prośbę" (K1, W5, W6), on the branch
-  `claude/queue-sees-every-request` from `origin/dev` = `88644cf`; a PR to `dev`.** The report (artifact):
+  `claude/queue-sees-every-request` from `origin/dev` = `88644cf`; PR #62 → `dev` = `72b6401`, PR #63 `dev` → `main`.** The report (artifact):
   https://claude.ai/artifact/1qY6PtRPEP2qkZ982QeSNc; its short version and the status of fixes: `docs/history/review-2026-10-14.md`
   (the raw reports' directory removed). Done, PROJECT_CONTEXT 4.1 / 6.2 / 9 / 13: **K1** the DJ's poll renders the queue read now
   (`DjService.getWaiting`) when the fingerprint changed — the 3 s cache the guests' page fills gave the old list under the new ETag,
@@ -523,7 +598,7 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
-6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6 done (Start here); the rest by its order of PRs.
+6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15, W1, W7, W11, W12, W2, W3, W4, W10 done (Start here); the rest by its order of PRs.
    The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
    the history, the needless `hibernate.dialect` gone). The prompt (2026-10-08): "not knowing a song is no reason to make one up"
    — the owner tries it on production.

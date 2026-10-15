@@ -133,6 +133,17 @@ public class GuestRequestLimiter {
         return acquire(voteWindows, clientIp + "|" + partyCode, perClientVoteLimit, clientWindow);
     }
 
+    /**
+     * The organiser's "Odblokuj prośby gości" (review 2026-10-14 W4): the party's 24-hour window starts again. One guest with a
+     * script could spend the party's whole day (30 per 10 min from one address reach 300 in under two hours) and every other guest
+     * was refused until the next day, with nothing the DJ could do. The addresses keep their windows, so the one that spent it is
+     * still held by its own limit.
+     */
+    public void resetParty(String partyCode) {
+        partyWindows.invalidate(partyCode);
+        log.info("Party [{}]: the guests' daily request limit started again by the organiser", partyCode);
+    }
+
     // ---- What the DJ's dashboard shows (reads only) ----
 
     /** Requests per client address and party per window; 0 or less = off. */

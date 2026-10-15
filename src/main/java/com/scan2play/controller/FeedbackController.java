@@ -40,7 +40,7 @@ public class FeedbackController {
             OAuth2AuthenticationToken authentication,
             HttpSession session) {
 
-        sessionHelper.validateAccess(partyCode, authentication, session);   // the owner or the staff (V30)
+        sessionHelper.access(partyCode, authentication, session);   // the owner or the staff (V30)
 
         if (message == null || message.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Message cannot be empty"));

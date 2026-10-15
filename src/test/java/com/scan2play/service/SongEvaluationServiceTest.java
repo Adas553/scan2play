@@ -5,6 +5,7 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
+import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.repository.SongRequestRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,8 +61,15 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository, org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off());
+                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off());
         service.init();
+    }
+
+    /** The party is there: a request is saved ({@code SongRequestCommandService} asks under its lock). */
+    private static PartySettingsRepository partyThere() {
+        PartySettingsRepository parties = org.mockito.Mockito.mock(PartySettingsRepository.class);
+        org.mockito.Mockito.lenient().when(parties.existsByPartyCode(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+        return parties;
     }
 
     // ---- buildPrompt ----
@@ -266,7 +274,7 @@ class SongEvaluationServiceTest {
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, new DefaultResourceLoader(),
-                new SongRequestCommandService(songRequestRepository, org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans) {
+                new SongRequestCommandService(songRequestRepository, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);

@@ -105,6 +105,39 @@ class SmokeTest {
                 .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/privacy?lang=en\">")));
     }
 
+    /**
+     * The privacy policy names every provider the data passes through (review 2026-10-14 W14: it said the data went "only" to
+     * Google): the hosting in the USA and Cloudflare, and how long the logs with the guests' texts are kept — in both languages.
+     */
+    @Test
+    @DisplayName("The privacy policy names the hosting (Railway, us-east4), Cloudflare and the logs' 7 days, in Polish and in English; no Web Analytics (off)")
+    void privacy_namesTheHostingAndCloudflare() throws Exception {
+        for (String lang : new String[]{"pl", "en"}) {
+            mockMvc.perform(get("/privacy").param("lang", lang))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("Railway")))
+                    .andExpect(content().string(containsString("us-east4")))
+                    .andExpect(content().string(containsString("Cloudflare")))
+                    // Cloudflare Web Analytics is off for the site (the owner checked, 2026-10-15): the policy must not say it is used
+                    .andExpect(content().string(not(containsString("Web Analytics"))))
+                    .andExpect(content().string(containsString(lang.equals("pl") ? "przez 7 dni" : "for 7 days")))
+                    // Railway's DPA is signed (2026-10-15): the transfer to the USA rests on the standard contractual clauses
+                    .andExpect(content().string(containsString(lang.equals("pl") ? "standardowych klauzulach umownych" : "standard contractual clauses")))
+                    .andExpect(content().string(not(containsString(lang.equals("pl") ? "wyłącznie do Google" : "only sent to Google"))));
+        }
+    }
+
+    @Test
+    @DisplayName("The terms in both languages: the head for search engines (canonical, alternates, description) — it vanished unnoticed before")
+    void terms_haveTheirHead() throws Exception {
+        mockMvc.perform(get("/terms"))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/terms\">")))
+                .andExpect(content().string(containsString("<meta name=\"description\" content=\"Zasady korzystania ze Scan2Play")));
+        mockMvc.perform(get("/terms").param("lang", "en"))
+                .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/terms?lang=en\">")))
+                .andExpect(content().string(containsString("<meta name=\"description\" content=\"The rules for using Scan2Play")));
+    }
+
     @Test
     @DisplayName("The picture of a shared link is served without a login")
     void ogImage_isPublic() throws Exception {

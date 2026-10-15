@@ -64,7 +64,7 @@
     <!--/* The requests as a guest sees them (GuestQueueService): whether the guest's own song waits, the most wanted songs and the
          requests sent lately — the guest's own marked. */-->
     <div id="guestQueueBox" class="w-100 s2p-mw-500"
-         th:attr="data-url=@{/p/{code}/queue(code=${partyCode})}">
+         th:attr="data-url=@{/p/{code}/queue(code=${partyCode})},data-text-failed=#{guest.queue.failed}">
         <div th:replace="~{fragments/guest-queue :: guestQueue}"></div>
     </div>
 

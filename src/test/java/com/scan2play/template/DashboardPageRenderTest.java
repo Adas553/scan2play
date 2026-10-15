@@ -254,9 +254,11 @@ class DashboardPageRenderTest {
         assertThat(html).contains("id=\"song-list\"");
         // the lists and the tabs (dashboard.js): the queue's search box, count and "nothing matches" row, the tab bar, the two panels
         assertThat(html).contains("id=\"queueList\"", "data-list-search", "data-list-count", "data-nomatch", "id=\"queue-content\"",
-                "id=\"history-content\"", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
+                "id=\"history-content\"", "data-poll-offline", "data-form-refused", "data-form-refused-reload", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
         // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
         assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"party-full\"", "data-limit-near=\"party\"");
+        // the organiser's way out when the party's day is spent (review 2026-10-14 W4): in the warning, for whom may set the limits
+        assertThat(html).contains("action=\"/dj/dashboard/guest-limit-reset\"");
         // the scripts are ES modules (review 3.3): main.js imports the dashboard's parts
         assertThat(html).contains("<script type=\"module\" src=\"/js/dashboard/main.js\">");
         // no player: the DJ's own software plays (the YouTube player, Auto-Pilot, the background playlist and the DJ pick are gone)
@@ -412,13 +414,15 @@ class DashboardPageRenderTest {
         // "Kopiuj" and the queue's keys (queue-keys.js): "Zagrane" / "Pomiń" by the keyboard only for whom may press them
         assertThat(owner).contains("s2p-btn-copy", ">Kopiuj<", "data-copied=\"Skopiowano\"",
                 "id=\"queueKeys\"", "C lub Ctrl+C kopiuj · Enter zagrane · S pomiń · Backspace lub Ctrl+Z cofnij");
+        assertThat(owner).as("the way out of a spent day (W4)").contains(">Odblokuj prośby gości<");
         write("dashboard-cards.html", owner);
 
         PartyStaffService staff = mock(PartyStaffService.class);
         String viewer = renderDashboard(party(), queue, PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(), staff,
                 new MockHttpSession(), new PartyStaffService.Access(party(), false, StaffRole.VIEWER.permissions()), null);
         assertThat(viewer).contains("s2p-card-toggle", ">Kopiuj<", "↑ ↓ wybór · C lub Ctrl+C kopiuj · Esc")
-                .doesNotContain("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/tip-count\"", "Enter zagrane");
+                .doesNotContain("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/tip-count\"", "Enter zagrane",
+                        "action=\"/dj/dashboard/guest-limit-reset\"");
         write("dashboard-cards-viewer.html", viewer);
     }
 
@@ -601,6 +605,41 @@ class DashboardPageRenderTest {
             write("history-" + filter.param() + ".html", first);
             write("history-" + filter.param() + "-more.html", more);
         }
+    }
+
+    /**
+     * The standalone history page ({@code /dj/history-view?party=}) as {@code DjDashboardController.historyView} builds it: a first
+     * page with older entries to show — written to {@code history-page.html} for the browser scenario that checks its filter and
+     * "Pokaż więcej" ask for the same party (review 2026-10-14 W7). The page names its party for the scripts.
+     */
+    @Test
+    void shouldRenderTheStandaloneHistoryPageForTheBrowserTests() throws IOException {
+        PlayHistoryService history = mock(PlayHistoryService.class);
+        when(history.getHistory(PARTY, 50, HistoryFilter.ALL)).thenReturn(new PlayHistoryService.Page(List.of(
+                historyEntry(1, "Played Alpha", "played"), historyEntry(2, "Rejected Beat", "rejected")), true));
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        PartyStaffService.Access owner = new PartyStaffService.Access(party(), true, StaffPermission.all());
+        when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
+        DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class),
+                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off());
+
+        ConcurrentModel model = new ConcurrentModel();
+        assertThat(controller.historyView(50, null, PARTY, model, ownerToken(), new MockHttpSession())).isEqualTo("history");
+
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(
+                JakartaServletWebApplication.buildApplication(servletContext)
+                        .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String html = engine.process("history", context);
+
+        assertThat(html).contains("id=\"partyCode\"", "value=\"" + PARTY + "\"", "data-history-more", "data-list-filter=\"played\"")
+                .doesNotContain("??");
+        assertNothingInline(html);
+        write("history-page.html", html);
     }
 
     // ---------------------------------------------------------------- the plans (V35)

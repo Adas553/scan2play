@@ -230,7 +230,7 @@
 
     <!--/* The active queue: a heading with the number of songs and a search box, and a list of fixed height with its own
          scrollbar (.list-scroll) and a header that stays in view — with many songs the DJ no longer scrolls the whole
-         page. dashboard.js (initListTools) does the searching; the polled <tbody> below is replaced every 3 s, so
+         page. list-tools.js (applyListFilters) does the searching; the polled <tbody> below is replaced every 3 s, so
          the list keeps its scroll position and the filter is applied again after each refresh. */-->
     <div class="mb-4" id="queueList" data-list>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
@@ -253,11 +253,25 @@
                    th:placeholder="#{dashboard.list.search}" autocomplete="off">
         </div>
         <!--/* A server limit that stops guest songs now: shown from the page's model, then shown / hidden by
-             dashboard.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
+             polling.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
+        <!--/* Polls that keep failing (the DJ's Wi-Fi gone): the list on the screen may be old — polling.js shows this after a few
+             failures in a row and hides it with the next answer (the review of 2026-10-14, W12) */-->
+        <div class="alert alert-danger small py-2 mb-2" role="status" data-poll-offline hidden
+             th:text="#{dashboard.poll.offline}">No connection: the list may be out of date.</div>
         <div id="guestLimitWarnings">
             <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="party-full"
-                 th:classappend="${partyLimitReached} ? '' : 'd-none'"
-                 th:text="#{dashboard.warning.party_full(${serverLimitPerParty})}">Party limit reached</div>
+                 th:classappend="${partyLimitReached} ? '' : 'd-none'">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="me-auto" th:text="#{dashboard.warning.party_full(${serverLimitPerParty})}">Party limit reached</span>
+                    <!--/* the way out when one guest spent the party's day (review 2026-10-14 W4): it starts again — for whom may set
+                         the guests' limits (DjDashboardController.resetGuestLimit) */-->
+                    <form th:if="${access == null or access.may('LIMITS')}" th:action="@{/dj/dashboard/guest-limit-reset}"
+                          method="POST" class="m-0">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <button type="submit" class="btn btn-sm btn-dark" th:text="#{dashboard.warning.party_full.unblock}">Unblock guest requests</button>
+                    </form>
+                </div>
+            </div>
             <!--/* near the party's limit (from 80 %, under it): how much is used — the DJ sees it coming (polling.js keeps it current) */-->
             <div class="alert alert-warning small py-2 mb-2" role="status" data-limit-near="party"
                  th:if="${serverLimitPerParty > 0}"
@@ -399,6 +413,7 @@
         <button type="button" class="btn btn-action flex-shrink-0 ms-auto" data-undo-button
                 th:text="#{dashboard.undo.button}">Undo</button>
     </div>
+    <div th:replace="~{fragments/components :: formRefused}"></div>
 </div>
 
 <!-- Dashboard core JS (polling, AJAX forms, tabs, lists) — ES modules, js/dashboard/main.js imports the rest -->

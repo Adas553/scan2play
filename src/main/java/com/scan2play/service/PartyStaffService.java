@@ -31,9 +31,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PartyStaffService {
 
-    /** The most people on one party's staff — with the Pro plan, or while the plans are not enforced ({@code Plan.staffPlaces}). */
-    public static final int MAX_STAFF = 10;
-
     private final PartyStaffRepository staffRepository;
     private final StaffInvitationRepository invitationRepository;
     private final PartySettingsRepository partySettingsRepository;
@@ -93,11 +90,6 @@ public class PartyStaffService {
         return permissions == null || permissions.isEmpty() ? EnumSet.noneOf(StaffPermission.class) : permissions;
     }
 
-    /** Whether the person owns the party or is on its staff. */
-    public boolean hasAccess(PartySettingsEntity party, String userId) {
-        return isOwner(party, userId) || staffRepository.existsByPartyCodeAndMemberId(party.getPartyCode(), userId);
-    }
-
     public static boolean isOwner(PartySettingsEntity party, String userId) {
         return userId != null && userId.equals(party.getOwnerId());
     }
@@ -155,7 +147,7 @@ public class PartyStaffService {
     }
 
     /**
-     * The party's places: {@value #MAX_STAFF} with the Pro plan, 1 without (V35). Leaving Pro takes nobody's access away — only no one
+     * The party's places: {@code Plan.PRO.staffPlaces()} (10) with the Pro plan, 1 without (V35). Leaving Pro takes nobody's access away — only no one
      * new joins while the places are taken.
      */
     public int placesOf(PartySettingsEntity party) {
@@ -235,11 +227,6 @@ public class PartyStaffService {
             panels.add(new Panel(party.getPartyCode(), nameOf(party), false));
         }
         return panels;
-    }
-
-    /** Whether the person has a party of their own (else the menu offers to make one). */
-    public boolean hasOwnParty(String userId) {
-        return partySettingsRepository.findByOwnerId(userId).isPresent();
     }
 
     /** How a party is named to its staff and in the panel switcher: who plays, else the organiser's name, else its code. */

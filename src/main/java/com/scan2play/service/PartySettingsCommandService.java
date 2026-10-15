@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.util.AfterCommit;
 import com.scan2play.util.CodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,8 +11,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.function.Consumer;
 
@@ -60,6 +59,12 @@ public class PartySettingsCommandService {
      * Updates party settings. The cached settings of the party are dropped once the change is committed, so the next
      * {@link PartySettingsQueryService#getSettings} reads the new state (dropped before the commit, a concurrent read could
      * put the old one back).
+     * <p>
+     * The row is read under its lock ({@link PartySettingsRepository#lockByPartyCode}) and written whole: two writes at once — the
+     * DJ's panel, the staff's, the hosts' page — take turns, and the second reads what the first wrote. Read without the lock, the
+     * second wrote every column back as it had read it, and the first one's change was gone (review 2026-10-14 W8,
+     * {@code PartySettingsWritesIT}). An {@code updater} that finds the row no longer fits (the hosts' old link) throws, and nothing
+     * is written.
      *
      * @param partyCode The unique code of the party to update.
      * @param updater   A {@link Consumer} that applies the desired changes to the entity.
@@ -67,7 +72,7 @@ public class PartySettingsCommandService {
      */
     @Transactional
     public PartySettingsEntity updateSettings(String partyCode, Consumer<PartySettingsEntity> updater) {
-        PartySettingsEntity settings = partySettingsRepository.findByPartyCode(partyCode)
+        PartySettingsEntity settings = partySettingsRepository.lockByPartyCode(partyCode)
                 .orElseThrow(() -> new IllegalArgumentException("Party not found for update: " + partyCode));
 
         updater.accept(settings);
@@ -77,21 +82,11 @@ public class PartySettingsCommandService {
     }
 
     private void evictAfterCommit(String partyCode) {
-        Runnable evict = () -> {
+        AfterCommit.run(() -> {
             Cache cache = cacheManager.getCache(PartySettingsQueryService.CACHE);
             if (cache != null) {
                 cache.evict(partyCode);
             }
-        };
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    evict.run();
-                }
-            });
-        } else {
-            evict.run();   // no transaction (a unit test)
-        }
+        });
     }
 }

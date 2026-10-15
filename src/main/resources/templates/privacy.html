@@ -25,6 +25,7 @@
         <ul>
             <li>Google account profile information (name, email, profile picture) via OAuth 2.0</li>
             <li>Party settings and configuration preferences</li>
+            <li>The account’s plan (Free or Pro), where it comes from (e.g. a trial) and until when it lasts</li>
             <li>If the DJ gives them: the addresses of the DJ’s Instagram, Facebook and TikTok profiles — shown publicly to the guests on the party page and on the QR print</li>
             <li>If the DJ gives it: the link to the DJ’s tip page (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — shown publicly to the guests on the party page, under an accepted request and on the QR print</li>
             <li>Feedback messages submitted through the dashboard</li>
@@ -35,9 +36,9 @@
         </ul>
         <p><strong>For Guests (anonymous users):</strong></p>
         <ul>
-            <li>Song request text (a title, an artist or a line of the lyrics) — kept as typed (up to 150 characters) and shown to the party's DJ beside the song the AI picked; please do not type personal data into it</li>
+            <li>Song request text (a title, an artist or a line of the lyrics) — kept as typed (up to 150 characters) and shown to the party's DJ beside the song the AI picked; it also goes into the server’s logs (with the party’s code, without the IP address); please do not type personal data into it</li>
             <li>A session identifier (a cookie) — for the request limit and to recognise your earlier requests and your 👍 at the party (marked “Yours”, a vote counted once); no personal data</li>
-            <li>IP address — in the server's memory only, for the limits of requests and of 👍 from one network at a party (against abuse); never stored in the database or in the application's logs</li>
+            <li>IP address — Cloudflare and the hosting provider (section 6), which every connection to the site passes through, see it. The application itself keeps it in the server’s memory only, for the limits of requests and of 👍 from one network at a party (against abuse); it never stores it in the database or in its own logs</li>
         </ul>
 
         <h3>3. How We Use Your Data</h3>
@@ -51,8 +52,8 @@
         <h3>4. Links to Other Sites</h3>
         <p>Scan2Play plays no music and uses no YouTube API. The DJ’s “🔍 Preview” button only opens YouTube’s search results for
             a song in the DJ’s own browser — what YouTube does there is governed by the
-            <a href="https://www.youtube.com/t/terms" target="_blank" class="text-warning">YouTube Terms of Service</a> and the
-            <a href="https://policies.google.com/privacy" target="_blank" class="text-warning">Google Privacy Policy</a>.
+            <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" class="text-warning">YouTube Terms of Service</a> and the
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="text-warning">Google Privacy Policy</a>.
         </p>
         <p>The Instagram, Facebook and TikTok buttons on the party page lead to the DJ’s profiles there. Scan2Play embeds none of
             their content or scripts — the site opens only when a guest clicks, and its own privacy rules apply there.
@@ -71,15 +72,26 @@
             <li>A device’s notification subscription: until the DJ switches the notifications off on it, the browser drops it, or the DJ deletes their account</li>
             <li>A place on a party’s staff: until the owner takes the access away, or the staff member or the owner deletes their account</li>
             <li>An invitation to a party’s staff by e-mail, with its address: until the person joins or declines, the owner cancels it or deletes their account, and at most 30 days</li>
+            <li>Server logs (holding the guests’ request texts with the party’s code): kept by the hosting provider for 7 days, then deleted</li>
+            <li>Feedback and the account’s plan: until the DJ deletes their account</li>
+            <li>When the account had a trial of the Pro plan: a hash (SHA-256) of the Google account’s identifier — no name, no e-mail address, nothing of a party — stays after the account is deleted too, with no end, so that the same account gets no second trial</li>
         </ul>
 
         <h3>6. Data Sharing</h3>
-        <p>We do not sell or share your personal data with third parties. Data is only sent to Google (OAuth login) and Google Gemini (AI song evaluation — it receives the guest’s request text) as required for the service to function. While a guest types, their browser asks Apple’s iTunes Search API for song suggestions (it receives the typed text, nothing else). When a DJ has switched on notifications on a device, a new request is sent to it as an end-to-end encrypted message (the song’s name) through the push service of the DJ’s browser (Google, Apple, Mozilla or Microsoft), which delivers it but cannot read it.</p>
+        <p>We do not sell your personal data. We pass it only to these providers, and only as far as the service needs:</p>
+        <ul>
+            <li><strong>Railway</strong> (Railway Corporation, USA) — hosting of the application and the database: all the data described above is stored on servers in the us-east4 region (Virginia, USA), outside the European Economic Area. Railway processes it under a data processing agreement, and its transfer to the USA relies on the European Commission’s standard contractual clauses.</li>
+            <li><strong>Cloudflare</strong> (Cloudflare, Inc., USA) — every connection to the site passes through Cloudflare (encryption, protection against attacks, speed); it sees the IP address and the address of the page.</li>
+            <li><strong>Google</strong> — the DJ’s login (OAuth) and Google Gemini (AI song evaluation — it receives the guest’s request text, nothing about the guest).</li>
+            <li><strong>Apple iTunes Search API</strong> — while a guest types, their browser asks it for song suggestions (it receives the typed text, nothing else).</li>
+            <li><strong>The push service of the DJ’s browser</strong> (Google, Apple, Mozilla or Microsoft) — when a DJ has switched on notifications on a device, a new request reaches it as an end-to-end encrypted message (the song’s name); the service delivers it but cannot read it.</li>
+        </ul>
 
         <h3>7. Your Rights — Data Deletion</h3>
         <p>You can delete all your data at any time by clicking <strong>&quot;Delete Account&quot;</strong> in your DJ Dashboard.
-            This permanently removes your party settings, song request history, and feedback.
-            You may also revoke Scan2Play's access from your <a href="https://myaccount.google.com/permissions" target="_blank" class="text-warning">Google Account settings</a>.
+            This permanently removes your party settings, song request history, feedback, your account’s plan, your party’s staff and its invitations.
+            Only the hash of the identifier of an account that had a trial of the Pro plan stays (section 5).
+            You may also revoke Scan2Play's access from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" class="text-warning">Google Account settings</a>.
         </p>
 
         <h3>8. Contact</h3>

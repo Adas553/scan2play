@@ -22,10 +22,13 @@
     <!-- Navigation and Alert Fragment -->
     <div th:replace="~{fragments/components :: dj-nav(activeTab='history', isActive=${isActive}, partyCode=${partyCode})}"></div>
 
+    <!--/* the party the page shows, for list-tools.js: its filters and "Pokaż więcej" load the page again for the same party (the
+         review of 2026-10-14, W7: without it the server showed the person's default party under this one's heading) */-->
+    <input type="hidden" id="partyCode" th:value="${partyCode}">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0" th:text="#{history.title}">Party history</h1>
         <div class="text-secondary small">
-            Party Code: <span class="text-white fw-bold" th:text="${partyCode}">CODE</span>
+            <span th:text="#{history.party_code}">Party code:</span> <span class="text-white fw-bold" th:text="${partyCode}">CODE</span>
         </div>
     </div>
 
@@ -33,7 +36,7 @@
          its bounded queries, and the button of the model attribute historyFilter is the lit one) and a search box (which
          works on the rows that are there) above a list of fixed height with its own
          scrollbar (.list-scroll), and a "Show more" button when older requests exist. Used by the standalone page
-         and, as an AJAX fragment, by the dashboard's History tab. dashboard.js (initListTools) does the filtering
+         and, as an AJAX fragment, by the dashboard's History tab. list-tools.js does the filtering
          and "Show more"; the count carries the "+" that says there are older requests in data-suffix. */-->
     <div th:fragment="historyTableContent" class="mb-4" data-list
          th:with="activeFilter=${historyFilter != null ? historyFilter : 'all'}">

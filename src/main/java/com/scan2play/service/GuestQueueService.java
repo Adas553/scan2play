@@ -37,11 +37,6 @@ public class GuestQueueService {
     public record GuestQueue(List<SongRequestEntity> shown, List<SongRequestEntity> more, Set<Long> myIds, String mySong,
                              int myWaiting, Set<Long> myVotes) {
 
-        /** How many requests wait (the shown and the folded ones). */
-        public int total() {
-            return shown.size() + more.size();
-        }
-
         /** The waiting request {@code id}, if it still waits. */
         public Optional<SongRequestEntity> song(long id) {
             return java.util.stream.Stream.concat(shown.stream(), more.stream()).filter(song -> song.getId() == id).findFirst();

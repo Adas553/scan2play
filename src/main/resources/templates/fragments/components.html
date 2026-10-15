@@ -103,7 +103,7 @@
 
     <!--/* The tab bar: three tabs that stay in view (position: sticky, .dj-tabbar in app.css) so that from anywhere on a long
          page the DJ can jump to the top (Panel: the settings, the QR code), to the queue or to the history.
-         dashboard.js (initTabs) scrolls and swaps the lists without leaving the page (the DJ keeps their place) and lights the
+         tabs.js scrolls and swaps the lists without leaving the page (the DJ keeps their place) and lights the
          tab of the part of the page in view; the hrefs are what works without it — and on the standalone history page, where
          History is a page of its own. data-dj-tab is how the script finds the tabs. */-->
     <nav id="djTabBar" class="dj-tabbar border-bottom border-secondary mb-4">
@@ -250,6 +250,20 @@
 
 <!--/* A feature of the Pro plan, to an organiser without it (V35, variant B of the review 2026-10-14): a quiet "PRO" by its name,
      never in the queue. Only while the plans are enforced and only to the organiser (PlanService.View.pro) — the staff do not see it. */-->
+<!--/* A form sent in the background (forms.js) that the server refused or that never reached it — the session ran out (CSRF, 403),
+     the plan, the access, the network: the button says ✗ and this says why and what to do, without reloading by itself, so what the
+     DJ typed can still be copied (the review of 2026-10-14, W1: the button said ✓ and the hosts' lists were lost). A later form that
+     goes through hides it. */-->
+<div th:fragment="formRefused" class="s2p-undo-toast s2p-refused-toast" role="alert" data-form-refused hidden>
+    <!--/* one of the two texts shows (common.js showRefused): a form not saved, or a list that did not load */-->
+    <span data-refused-text="save" th:text="#{dashboard.form.refused}">Not saved: copy what you typed, then reload the page.</span>
+    <span data-refused-text="load" hidden th:text="#{dashboard.load.refused}">It did not load: reload the page.</span>
+    <button type="button" class="btn btn-sm btn-light flex-shrink-0" data-form-refused-reload
+            th:text="#{dashboard.form.refused.reload}">Reload the page</button>
+    <button type="button" class="btn-close btn-close-white flex-shrink-0" data-form-refused-close
+            th:attr="aria-label=#{dashboard.form.refused.close}"></button>
+</div>
+
 <span th:fragment="proMark" class="s2p-pro" th:text="#{plan.pro.badge}">PRO</span>
 
 <!--/* In place of a Pro feature's form: one sentence (what it does, or that the DJ's own data waits) and the way to the Pro page */-->
