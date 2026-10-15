@@ -8,8 +8,17 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, "Formularze mówią prawdę" (W1, W11, W12, W7, a refused "Cofnij"), on the branch
+  `claude/forms-tell-the-truth` on top of `claude/spring-boot-4-0-8` (#64, W15); a PR to `dev`.** PROJECT_CONTEXT 5.1 / 13, the review's status of fixes.
+  A form the server refuses (403: the session ran out, the plan, the access) or that never reaches it: ✗ and why — its own note or the
+  page's notice `components :: formRefused` ("Nie zapisano…", "Odśwież stronę"), never ✓, no reload by itself; "Zakończ imprezę" refused
+  leaves the panel open; the button that sent a form waits for the answer (one tip for a double tap on 💸); three failed polls in a row
+  → "Brak połączenia z serwerem: lista może być nieaktualna." above the queue; the standalone history page keeps `?party=` for its
+  filter and "Pokaż więcej". Tests: 668 unit (`DashboardPageRenderTest` renders `history-page.html`), 102 browser — new
+  `scenarios/truthful-forms.js` (six scenarios, each red before the fix or on a mutation); the stand-in's `postStatus`. **Next:** the
+  owner merges #64 (W15) and this PR; then "Limity gości i sesje" (W2, W3, W4).
 - **2026-10-15, later — the review of 2026-10-14, W15 "Aktualizacja Spring Boot", on the branch `claude/spring-boot-4-0-8` from
-  `origin/dev` = `72b6401`; a PR to `dev`.** Spring Boot 4.0.3 → 4.0.8, and `tomcat.version` 11.0.26 in `pom.xml` (the parent manages
+  `origin/dev` = `72b6401`; PR #64 → `dev`.** Spring Boot 4.0.3 → 4.0.8, and `tomcat.version` 11.0.26 in `pom.xml` (the parent manages
   11.0.24; 11.0.25 / 11.0.26 fix more CVEs — checked on tomcat.apache.org/security-11.html, most need HTTP/2, WebSocket, AJP or
   CLIENT-CERT, none of which we use). PROJECT_CONTEXT 2 / 11. Tests: 667 unit, 67 database, 96 browser; no test starts the real
   Tomcat, so the jar was run on a throw-away database `s2p_boot_check` (dropped): Tomcat 11.0.26, 35 migrations, the public pages 200,
@@ -530,7 +539,7 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
-6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15 done (Start here); the rest by its order of PRs.
+6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15, W1, W7, W11, W12 done (Start here); the rest by its order of PRs.
    The review (`docs/history/review-2026-09-30.md`): only 2.3 (one instance) is left; 7.x done 2026-10-08 (the review moved to
    the history, the needless `hibernate.dialect` gone). The prompt (2026-10-08): "not knowing a song is no reason to make one up"
    — the owner tries it on production.

@@ -25,6 +25,8 @@
  * no row left under it; a sort by a column hides them all (the table gets .s2p-sorted), undoing it brings them back in place.
  */
 
+import { partyCode } from './common.js';
+
 // Sort state for the main queue table (survives polling refreshes)
 let queueSortColumn = null;   // e.g. "time", "song", "votes"
 let queueSortDir    = null;   // "asc" or "desc"
@@ -302,9 +304,14 @@ function chosenFilter(list) {
     return active ? active.getAttribute('data-list-filter') : 'all';
 }
 
-/** The standalone history page: the same list, asked for again with a longer limit and/or another filter. */
+/**
+ * The standalone history page: the same list, asked for again with a longer limit and/or another filter — of the same party (the
+ * page's #partyCode; review 2026-10-14 W7: without it the server showed the person's default party under this one's heading).
+ */
 function historyPageUrl(limit, filter) {
     let url = '/dj/history-view?';
+    const party = partyCode();
+    if (party) url += 'party=' + encodeURIComponent(party) + '&';
     if (limit) url += 'limit=' + encodeURIComponent(limit) + '&';
     if (filter && filter !== 'all') url += 'filter=' + encodeURIComponent(filter) + '&';
     return url.replace(/[?&]$/, '');

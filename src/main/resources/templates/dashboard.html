@@ -254,6 +254,10 @@
         </div>
         <!--/* A server limit that stops guest songs now: shown from the page's model, then shown / hidden by
              dashboard.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
+        <!--/* Polls that keep failing (the DJ's Wi-Fi gone): the list on the screen may be old — polling.js shows this after a few
+             failures in a row and hides it with the next answer (the review of 2026-10-14, W12) */-->
+        <div class="alert alert-danger small py-2 mb-2" role="status" data-poll-offline hidden
+             th:text="#{dashboard.poll.offline}">No connection: the list may be out of date.</div>
         <div id="guestLimitWarnings">
             <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="party-full"
                  th:classappend="${partyLimitReached} ? '' : 'd-none'"
@@ -399,6 +403,7 @@
         <button type="button" class="btn btn-action flex-shrink-0 ms-auto" data-undo-button
                 th:text="#{dashboard.undo.button}">Undo</button>
     </div>
+    <div th:replace="~{fragments/components :: formRefused}"></div>
 </div>
 
 <!-- Dashboard core JS (polling, AJAX forms, tabs, lists) — ES modules, js/dashboard/main.js imports the rest -->

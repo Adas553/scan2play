@@ -250,6 +250,18 @@
 
 <!--/* A feature of the Pro plan, to an organiser without it (V35, variant B of the review 2026-10-14): a quiet "PRO" by its name,
      never in the queue. Only while the plans are enforced and only to the organiser (PlanService.View.pro) — the staff do not see it. */-->
+<!--/* A form sent in the background (forms.js) that the server refused or that never reached it — the session ran out (CSRF, 403),
+     the plan, the access, the network: the button says ✗ and this says why and what to do, without reloading by itself, so what the
+     DJ typed can still be copied (the review of 2026-10-14, W1: the button said ✓ and the hosts' lists were lost). A later form that
+     goes through hides it. */-->
+<div th:fragment="formRefused" class="s2p-undo-toast s2p-refused-toast" role="alert" data-form-refused hidden>
+    <span th:text="#{dashboard.form.refused}">Not saved: copy what you typed, then reload the page.</span>
+    <button type="button" class="btn btn-sm btn-light flex-shrink-0" data-form-refused-reload
+            th:text="#{dashboard.form.refused.reload}">Reload the page</button>
+    <button type="button" class="btn-close btn-close-white flex-shrink-0" data-form-refused-close
+            th:attr="aria-label=#{dashboard.form.refused.close}"></button>
+</div>
+
 <span th:fragment="proMark" class="s2p-pro" th:text="#{plan.pro.badge}">PRO</span>
 
 <!--/* In place of a Pro feature's form: one sentence (what it does, or that the DJ's own data waits) and the way to the Pro page */-->

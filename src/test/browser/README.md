@@ -41,7 +41,8 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest,�
   writes `dashboard.html` (Polish, two requests waiting), `dashboard-en.html` (the same party in English) and
   `history-<filter>.html` / `history-<filter>-more.html` (the History tab's fragment for each of the five filters — the first page, and
   the longer list that "Show more" asks for — built by the real `DjDashboardController.historyFragment` from ten sample entries, with the
-  real `HistoryFilter` deciding which of them a filter includes). It fails when the page loses something the scripts need.
+  real `HistoryFilter` deciding which of them a filter includes) and `history-page.html` (the standalone history page of a party,
+  `/dj/history-view?party=`, through the real `historyView`). It fails when the page loses something the scripts need.
 * **The Content-Security-Policy:** `DashboardPageRenderTest` writes the real server's policy (`SecurityConfig.CONTENT_SECURITY_POLICY`)
   to `csp.txt`, and the stand-in sends it with every page — **enforced**, although the real server only reports until
   `CSP_ENFORCE=true`. `harness.js` listens for `securitypolicyviolation` and ends every scenario with the step `no CSP violation`, so a
@@ -54,7 +55,8 @@ run.py ── copy of the repo ── mvnw test -Dtest=DashboardPageRenderTest,�
   (`scenarios/csp.js`) use what the page's scripts do — the mode switch, the iTunes suggestions (the host is blocked in Chrome: the CSP
   check comes before the network), "↻", "Print" — so their requests meet the policy too.
 * **The stand-in** knows nothing about music. `POST /__config` merges a JSON object into its state (`server.py`, `default_state()`,
-  lists the keys: `delays`, `queue`, `guestLimits`, `guestLimitsUse`, `partyActive`, `historyStatus`); a config is **merged**, so a key
+  lists the keys: `delays`, `queue`, `guestLimits`, `guestLimitsUse`, `partyActive`, `historyStatus`, `updatesStatus`,
+  `postStatus` — the status a POST path answers instead of its usual answer, e.g. a 403 for a session that ran out); a config is **merged**, so a key
   is set back to its default value, not left out (`delays: {'/path': 0}`, not `delays: {}`). What the poll of the queue answers is a
   `<tbody>` of the rows the scenario names plus the real "nothing matches" row (taken from the rendered page: it is part of the polled
   fragment); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use` and `X-Party-Active` from the state.
@@ -96,6 +98,9 @@ S2P.scenario({
 * Two things that differ between machines and made an assertion wrong once: the **language of the browser** (in a Polish Chrome `ż`
   sorts after `z`, in an English one it does not — a sort test must not name the exact neighbour) and **timing** (the poll is every
   3 s: wait for the state with `waitFor`, do not sleep for it).
+* **A page that loads itself again** (the standalone history page's filter and "Pokaż więcej"): a scenario that let it go would end
+  with the page. Catch where it would go and stay, with the Navigation API — `navigation.addEventListener('navigate', e => {
+  record(e.destination.url); e.preventDefault(); })` (`history-page-keeps-the-party`).
 * **A phone's width:** a headless Chrome's window is never narrower than 500 px (measured in the cloud container, 2026-10-14:
   `--window-size=390,844` gives `innerWidth` 500), so a `viewport: '390,…'` scenario lays the page out 500 px wide — still a phone
   for the CSS (under 768 px), but a line that breaks only at 390 px stays whole. A step about that narrows the page itself for its

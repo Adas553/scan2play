@@ -8,7 +8,7 @@ export function csrfHeaders() {
     return csrfToken && csrfHeader ? { [csrfHeader.getAttribute('content')]: csrfToken.getAttribute('content') } : {};
 }
 
-/** The party code of the page, or null (the standalone history page has none). */
+/** The party code of the page (the dashboard, the settings, the standalone history page), or null. */
 export function partyCode() {
     const input = document.getElementById('partyCode');
     return input ? input.value : null;

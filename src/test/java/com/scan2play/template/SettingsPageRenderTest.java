@@ -185,6 +185,9 @@ class SettingsPageRenderTest {
                         "id=\"tipInput\" name=\"tip\"", "value=\"https://buycoffee.to/djkoko\"", ">Link do napiwków<",
                         "pieniądze idą prosto do Ciebie", "Nie zapisano: to nie jest link do Twojej strony", "data-form-error hidden")
                 .doesNotContain("Scan2Play ich nie dotyka", "(goście widzą");
+        assertThat(html).as("a form refused by the server (the session ran out) says so, hidden until then (review 2026-10-14 W1)")
+                .contains("data-form-refused hidden", "Nie zapisano. Sesja mogła wygasnąć albo zerwało się połączenie",
+                        "data-form-refused-reload", ">Odśwież stronę<", "aria-label=\"Zamknij\"");
         assertThat(html).as("the guests' limits and the server's in one line, what they are unfolded")
                 .contains("id=\"limitsCard\"", "action=\"/dj/dashboard/limits\"", "id=\"requestLimit\"", ">Prośby na gościa<",
                         ">Potem przerwa (min)<", ">Bez powtórek z ostatnich<", "id=\"serverLimitsInfo\"", ">Limity serwera:<",

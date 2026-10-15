@@ -69,6 +69,9 @@ def default_state():
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
+        # The status a POST path answers with instead of its usual answer, e.g. {'/dj/dashboard/host-lists': 403}: the server
+        # refused it (the session ran out — CSRF —, the plan, the access); null = the usual answer again
+        'postStatus': {},
         'voteAnswer': 'guest-vote-answer',   # what POST /p/ABC12/vote answers ('guest-vote-gone': the song was played meanwhile)
         'requests': [],
     }
@@ -322,6 +325,9 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         self._note('POST', path, fields)
         state = stand.state
+        refused = state['postStatus'].get(path)
+        if refused:
+            return self._send(refused)
         if path.startswith('/p/') and path.endswith('/vote'):   # a guest's 👍: the list as the real server renders it after the vote
             with open(os.path.join(stand.rendered, state['voteAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')

@@ -1060,3 +1060,5 @@ th[data-sort].sort-desc::after {
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
 }
 .s2p-undo-toast[hidden] { display: none; }
+/* a form not saved (forms.js, components :: formRefused): the same toast, red-edged, above the "Cofnij" one when both show */
+.s2p-refused-toast { border-color: var(--bs-danger); bottom: 5rem; }
