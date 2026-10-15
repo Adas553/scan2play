@@ -8,6 +8,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, evening — the small items, group 3 "Język", on the branch `claude/language` on top of `claude/security-small`; a PR to
+  `dev`.** `?lang=EN`, `?lang=en-US` are English (only "en" was — production gave Polish); the language picked by `?lang` stays in the
+  cookie `lang` for a year (the pages' links do not carry `?lang`); an empty `Accept-Language` or `*` is Polish, not the JVM's (on
+  production Cloudflare seems to drop an empty header — the fix is defensive); a push device without a language gets Polish. The
+  privacy policy names the cookie (both languages). Tests: 709 unit (`SmokeTest`'s language checks now read `<html lang="…">`: a
+  bare `lang="en"` matched `hreflang="en"` on a Polish page). **The owner:** the privacy policy's sentence about the cookie.
 - **2026-10-15, evening — the small items, group 2 "Bezpieczeństwo", on the branch `claude/security-small` on top of
   `claude/gemini-3-6` (#77); a PR to `dev`.** The error page's "Spróbuj ponownie" was an open redirect (`//evil.example/x` and
   `/\evil.example/x` → `href="//evil.example/x"`, checked with curl on the running app) — now `/`. `Referrer-Policy: same-origin`,
