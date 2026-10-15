@@ -45,6 +45,58 @@
     --s2p-radius:        8px;       /* buttons and fields */
     --s2p-radius-card:   12px;      /* cards */
     --s2p-font:          'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* Every other colour of this file, by what it is for (review 2026-10-14: 111 colours were written where they are used). The
+       values are the ones that were written there — the look did not change; tones close to each other (the five near-whites,
+       the panels' backgrounds) are kept apart, to be merged as a decision of the look. --s2p-<colour>-<n>: that colour at an
+       alpha of n %. */
+    --s2p-white:          #fff;                      /* white: the headings, a hover's text, the table head, links in a message */
+    --s2p-light:          #f8f9fa;                   /* Bootstrap's "light": cards' titles, second headings, the picked outline */
+    --s2p-text-row:       #f1f3f5;                   /* the name of a row (.s2p-row, the guide's rows) */
+    --s2p-text-soft:      #e9ecef;                   /* a message's text, the jumps, the plans' lines */
+    --s2p-text-lede:      #dfe3e7;                   /* the ledes of the guide and the product page, the Pro box */
+    --s2p-text-dim:       #cfcfcf;                   /* the error page's description, .text-secondary-bright */
+    --s2p-outline-text:   #ced4da;                   /* the text of an outline-secondary button */
+    --s2p-grey-light:     #adb5bd;                   /* a hint, the hover edge of an outline-secondary button */
+    --s2p-grey:           #6c757d;                   /* the edge of an outline-secondary button and of "Pomiń" */
+    --s2p-ink:            #212529;                   /* dark text on the light picked button */
+    --s2p-action-active:  #3dd5f3;                   /* the action button pressed */
+    --s2p-bg-landing:     #121212;                   /* the landing page */
+    --s2p-bg-panel:       #1a1a1a;                   /* the guide's steps, the provider cards, the song suggestions */
+    --s2p-bg-day:         #1b1b1b;                   /* a day's heading in the history */
+    --s2p-bg-row:         #232323;                   /* a row of the queue and the history, the active tab */
+    --s2p-bg-hover:       #262626;                   /* a row under the pointer, the "Cofnij" bar, the guide's step number */
+    --s2p-bg-thead:       #1a1a2e;                   /* the head of the DJ's tables */
+    --s2p-bg-warning:     #2b2000;                   /* the "party closed" message */
+    --s2p-bg-note:        #2e2810;                   /* the floating note of a 👍 */
+    --s2p-border-strong:  #555;                      /* a card under the pointer, the "Cofnij" bar */
+    --s2p-border-mid:     #444;                      /* under a day's heading in the history */
+    --s2p-border-alert:   #495057;                   /* the edge of a grey message */
+    --s2p-border-light:   #dee2e6;                   /* the edge of the small QR code */
+    --s2p-black:          #000;                      /* the shadow of the 👍 count's text */
+    --s2p-warning:        #ffc107;                   /* a skip (the history's ⏭), "Pomiń" under the pointer */
+    --s2p-warning-text:   #ffca2c;                   /* a warning's words */
+    --s2p-action-45:      rgba(13, 202, 240, 0.45);
+    --s2p-action-28:      rgba(13, 202, 240, 0.28);
+    --s2p-action-12:      rgba(13, 202, 240, 0.12);
+    --s2p-action-07:      rgba(13, 202, 240, 0.07);
+    --s2p-action-06:      rgba(13, 202, 240, 0.06);
+    --s2p-action-00:      rgba(13, 202, 240, 0);
+    --s2p-warning-50:     rgba(255, 193, 7, 0.5);
+    --s2p-warning-15:     rgba(255, 193, 7, 0.15);
+    --s2p-warning-12:     rgba(255, 193, 7, 0.12);
+    --s2p-danger-55:      rgba(255, 123, 123, 0.55);
+    --s2p-danger-20:      rgba(255, 123, 123, 0.2);
+    --s2p-danger-12:      rgba(255, 123, 123, 0.12);
+    --s2p-green-50:       rgba(29, 185, 84, 0.5);
+    --s2p-green-12:       rgba(29, 185, 84, 0.12);
+    --s2p-white-18:       rgba(255, 255, 255, 0.18);
+    --s2p-white-12:       rgba(255, 255, 255, 0.12);
+    --s2p-white-08:       rgba(255, 255, 255, 0.08);
+    --s2p-white-05:       rgba(255, 255, 255, 0.05);
+    --s2p-black-70:       rgba(0, 0, 0, 0.7);
+    --s2p-black-60:       rgba(0, 0, 0, 0.6);
+    --s2p-black-55:       rgba(0, 0, 0, 0.55);
+    --s2p-black-50:       rgba(0, 0, 0, 0.5);
 }
 
 /* ==========================================================================
@@ -76,8 +128,8 @@ body {
     --bs-btn-hover-bg: var(--s2p-action-hover);
     --bs-btn-hover-border-color: var(--s2p-action-hover);
     --bs-btn-active-color: var(--s2p-action-ink);
-    --bs-btn-active-bg: #3dd5f3;
-    --bs-btn-active-border-color: #3dd5f3;
+    --bs-btn-active-bg: var(--s2p-action-active);
+    --bs-btn-active-border-color: var(--s2p-action-active);
     --bs-btn-disabled-color: var(--s2p-action-ink);
     --bs-btn-disabled-bg: var(--s2p-action);
     --bs-btn-disabled-border-color: var(--s2p-action);
@@ -100,23 +152,23 @@ body {
 }
 /* the second kind, grey: readable light text (Bootstrap's grey text was 3.3 : 1), the picked one of a group filled light */
 .btn-outline-secondary {
-    --bs-btn-color: #ced4da;
-    --bs-btn-border-color: #6c757d;
-    --bs-btn-hover-color: #fff;
-    --bs-btn-hover-bg: rgba(255, 255, 255, 0.08);
-    --bs-btn-hover-border-color: #adb5bd;
-    --bs-btn-active-color: #212529;
-    --bs-btn-active-bg: #f8f9fa;
-    --bs-btn-active-border-color: #f8f9fa;
+    --bs-btn-color: var(--s2p-outline-text);
+    --bs-btn-border-color: var(--s2p-grey);
+    --bs-btn-hover-color: var(--s2p-white);
+    --bs-btn-hover-bg: var(--s2p-white-08);
+    --bs-btn-hover-border-color: var(--s2p-grey-light);
+    --bs-btn-active-color: var(--s2p-ink);
+    --bs-btn-active-bg: var(--s2p-light);
+    --bs-btn-active-border-color: var(--s2p-light);
 }
 .btn-outline-danger {
     --bs-btn-color: var(--s2p-danger-text);
     --bs-btn-border-color: var(--s2p-danger-text);
     --bs-btn-hover-color: var(--s2p-danger-text);
-    --bs-btn-hover-bg: rgba(255, 123, 123, 0.12);
+    --bs-btn-hover-bg: var(--s2p-danger-12);
     --bs-btn-hover-border-color: var(--s2p-danger-text);
     --bs-btn-active-color: var(--s2p-danger-text);
-    --bs-btn-active-bg: rgba(255, 123, 123, 0.2);
+    --bs-btn-active-bg: var(--s2p-danger-20);
     --bs-btn-active-border-color: var(--s2p-danger-text);
 }
 .text-secondary,
@@ -133,17 +185,17 @@ body {
 .alert-warning,
 .alert-danger,
 .alert-secondary {
-    --bs-alert-color: #e9ecef;
-    --bs-alert-link-color: #fff;
+    --bs-alert-color: var(--s2p-text-soft);
+    --bs-alert-link-color: var(--s2p-white);
 }
-.alert-info      { --bs-alert-bg: rgba(13, 202, 240, 0.12);  --bs-alert-border-color: rgba(13, 202, 240, 0.45); }
-.alert-success   { --bs-alert-bg: rgba(29, 185, 84, 0.12);   --bs-alert-border-color: rgba(29, 185, 84, 0.5); }
-.alert-warning   { --bs-alert-bg: rgba(255, 193, 7, 0.12);   --bs-alert-border-color: rgba(255, 193, 7, 0.5); }
-.alert-danger    { --bs-alert-bg: rgba(255, 123, 123, 0.12); --bs-alert-border-color: rgba(255, 123, 123, 0.55); }
-.alert-secondary { --bs-alert-bg: rgba(255, 255, 255, 0.05); --bs-alert-border-color: #495057; }
+.alert-info      { --bs-alert-bg: var(--s2p-action-12);  --bs-alert-border-color: var(--s2p-action-45); }
+.alert-success   { --bs-alert-bg: var(--s2p-green-12);   --bs-alert-border-color: var(--s2p-green-50); }
+.alert-warning   { --bs-alert-bg: var(--s2p-warning-12);   --bs-alert-border-color: var(--s2p-warning-50); }
+.alert-danger    { --bs-alert-bg: var(--s2p-danger-12); --bs-alert-border-color: var(--s2p-danger-55); }
+.alert-secondary { --bs-alert-bg: var(--s2p-white-05); --bs-alert-border-color: var(--s2p-border-alert); }
 
 /* A card's heading and its one line of help: every card of the dashboard's settings the same way */
-.s2p-card-title { font-size: 1.05rem; font-weight: 700; color: #f8f9fa; margin-bottom: 0.25rem; }
+.s2p-card-title { font-size: 1.05rem; font-weight: 700; color: var(--s2p-light); margin-bottom: 0.25rem; }
 .s2p-card-help  { font-size: 0.875rem; color: var(--s2p-text-muted); margin-bottom: 0.75rem; }
 
 /* Something to tap on a phone is at least 44 px high (WCAG's target size; the buttons and fields were 31 px, the 👍 too) */
@@ -171,10 +223,10 @@ body {
 
 /* --- DJ Navigation tabs --- */
 .nav-link        { color: var(--s2p-text-muted); font-weight: 600; }
-.nav-link:hover  { color: #fff; }
+.nav-link:hover  { color: var(--s2p-white); }
 .nav-link.active {
     color: var(--s2p-green) !important;
-    background-color: #232323 !important;
+    background-color: var(--s2p-bg-row) !important;
     border-bottom: 2px solid var(--s2p-green);
     border-radius: 8px 8px 0 0;
 }
@@ -203,9 +255,9 @@ body {
 
 /* --- Table header — distinct background so it doesn't blend with rows (especially on mobile) --- */
 .page-dj .table-dark thead th {
-    background-color: #1a1a2e;
+    background-color: var(--s2p-bg-thead);
     border-bottom: 2px solid var(--s2p-green);
-    color: #fff;
+    color: var(--s2p-white);
     font-weight: 700;
     font-size: 0.85rem;
     text-transform: uppercase;
@@ -262,10 +314,10 @@ th[data-sort].sort-desc::after {
 .page-dj > .container {
     background: var(--s2p-bg-card);
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 30px var(--s2p-black-50);
 }
 .page-dj h1 {
-    color: #fff;
+    color: var(--s2p-white);
     font-weight: 700;
     font-size: 1.8rem;
 }
@@ -335,7 +387,7 @@ th[data-sort].sort-desc::after {
  * 6. LANDING PAGE
  *    Body class: .page-landing
  * ========================================================================== */
-.page-landing { background-color: #121212; color: #fff; }
+.page-landing { background-color: var(--s2p-bg-landing); color: var(--s2p-white); }
 .page-landing h1 { text-wrap: balance; }
 /* Vertical padding only: the element is also a Bootstrap .container, whose side padding the row inside it (negative margins)
    relies on — a `padding: 100px 0` took it away and the page was 12 px wider than a phone, so it could be nudged sideways. */
@@ -351,13 +403,13 @@ th[data-sort].sort-desc::after {
 .s2p-logo-mark,
 .s2p-hero-mark {
     border-radius: 22%;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 0 1px var(--s2p-white-18);
 }
 /* the name's own baseline is the logo's: an inline-flex takes its first item's, and the mark's bottom raised "Scan2Play" by ~3 px
    above the words beside it ("Scan2Play · 🎧 Gra: DJ Adam" of the result page, the owner's phone, 2026-10-10) */
 .s2p-logo > span { align-self: baseline; }
 .s2p-logo-mark { width: 1.15em; height: 1.15em; }
-.s2p-logo-two  { color: #0dcaf0; }
+.s2p-logo-two  { color: var(--s2p-cyan); }
 .s2p-hero-mark { width: 96px; height: 96px; }
 
 
@@ -371,12 +423,12 @@ th[data-sort].sort-desc::after {
     padding: 2rem 2.5rem;
     border-radius: 16px;
     border: 2px solid var(--s2p-border);
-    background: #1a1a1a;
+    background: var(--s2p-bg-panel);
     transition: transform 0.2s, border-color 0.2s;
     text-decoration: none;
     min-width: 220px;
 }
-.provider-card:hover { transform: translateY(-4px); border-color: #555; }
+.provider-card:hover { transform: translateY(-4px); border-color: var(--s2p-border-strong); }
 .provider-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
 /* The landing page's one tile: a quiet card around its one action (the colour is the button's, not a glowing frame) */
@@ -389,7 +441,7 @@ th[data-sort].sort-desc::after {
     padding-block: 60px 80px;   /* vertical only, like .hero-section above */
 }
 .guide-section h2 {
-    color: #fff;
+    color: var(--s2p-white);
     font-size: 1.8rem;
 }
 .guide-steps {
@@ -401,14 +453,14 @@ th[data-sort].sort-desc::after {
     display: flex;
     align-items: flex-start;
     gap: 1.25rem;
-    background: #1a1a1a;
+    background: var(--s2p-bg-panel);
     border: 1px solid var(--s2p-border);
     border-radius: 14px;
     padding: 1.25rem 1.5rem;
     transition: border-color 0.2s;
 }
 .guide-step:hover {
-    border-color: #555;
+    border-color: var(--s2p-border-strong);
 }
 .guide-step-number {
     flex-shrink: 0;
@@ -418,14 +470,14 @@ th[data-sort].sort-desc::after {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: #262626;
-    border: 1px solid #555;
+    background: var(--s2p-bg-hover);
+    border: 1px solid var(--s2p-border-strong);
     color: var(--s2p-action);
     font-weight: 800;
     font-size: 1.1rem;
 }
 .guide-step-body h5 {
-    color: #fff;
+    color: var(--s2p-white);
     margin-bottom: 0.35rem;
 }
 .guide-step-body p {
@@ -448,10 +500,10 @@ th[data-sort].sort-desc::after {
     left: 0;
     right: 0;
     z-index: 1050;
-    background: #1a1a1a;
+    background: var(--s2p-bg-panel);
     border: 1px solid var(--s2p-border);
     border-radius: 10px;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 8px 28px var(--s2p-black-55);
     overflow: hidden;
     max-height: 320px;
     overflow-y: auto;
@@ -474,7 +526,7 @@ th[data-sort].sort-desc::after {
     padding: 10px 14px;
     cursor: pointer;
     font-size: 0.9rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--s2p-white-05);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -486,8 +538,8 @@ th[data-sort].sort-desc::after {
 }
 .song-autocomplete-item:hover,
 .song-autocomplete-item.is-active {
-    background: rgba(29, 185, 84, 0.12);  /* subtle green tint */
-    color: #fff;
+    background: var(--s2p-green-12);  /* subtle green tint */
+    color: var(--s2p-white);
 }
 .song-autocomplete-item .ac-artist {
     color: var(--s2p-text-muted);
@@ -499,7 +551,7 @@ th[data-sort].sort-desc::after {
 }
 .song-autocomplete-item .ac-title {
     font-weight: 600;
-    color: #fff;
+    color: var(--s2p-white);
 }
 .song-autocomplete-item:hover .ac-artist,
 .song-autocomplete-item.is-active .ac-artist {
@@ -560,22 +612,22 @@ th[data-sort].sort-desc::after {
 .page-error .card {
     background-color: var(--s2p-bg-elevated);
     border: 1px solid var(--s2p-border);
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 0 30px var(--s2p-black-70);
     border-radius: 20px;
 }
-.page-error h2       { color: #fff; }
-.page-error .desc    { color: #cfcfcf; }
+.page-error h2       { color: var(--s2p-white); }
+.page-error .desc    { color: var(--s2p-text-dim); }
 .error-code          { color: var(--s2p-text-muted); font-size: 0.85rem; }
 
 /* --- Party ended page --- */
 .page-ended .card {
     background-color: var(--s2p-bg-elevated);
     border: 1px solid var(--s2p-border);
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 0 30px var(--s2p-black-70);
     border-radius: 20px;
 }
-.text-light-custom     { color: #f8f9fa !important; }
-.text-secondary-bright { color: #cfcfcf !important; }
+.text-light-custom     { color: var(--s2p-light) !important; }
+.text-secondary-bright { color: var(--s2p-text-dim) !important; }
 
 /* --- Classes instead of style="…" in the templates (the CSP allows no inline style). !important: they stand for inline styles,
        which win over Bootstrap's rules. --- */
@@ -611,10 +663,10 @@ th[data-sort].sort-desc::after {
 .s2p-list-search     { max-width: 16rem !important; }
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
-.s2p-empty-row       { background: #232323 !important; }
-.s2p-hint            { color: #adb5bd !important; }
+.s2p-empty-row       { background: var(--s2p-bg-row) !important; }
+.s2p-hint            { color: var(--s2p-grey-light) !important; }
 .s2p-hint-note       { font-size: 0.8rem !important; max-width: 260px !important; margin-inline: auto !important; }
-.s2p-alert-closed    { background-color: #2b2000 !important; color: #ffca2c !important; }
+.s2p-alert-closed    { background-color: var(--s2p-bg-warning) !important; color: var(--s2p-warning-text) !important; }
 .s2p-footer          { color: var(--s2p-text-muted) !important; font-size: 0.85rem !important; }
 /* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
    played or skipped it) stays in its place, dimmed, until the list is fetched again; the note of a 👍 that did not count floats over
@@ -628,12 +680,12 @@ th[data-sort].sort-desc::after {
 .s2p-vote-pill       { min-width: 4.25rem; }
 /* filled: a 👍 on the yellow (or green) pill vanished on a computer (Windows' emoji has no outline, a phone's has) — a thin dark edge */
 .s2p-vote-btn.btn-warning,
-.s2p-vote-mine       { text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px rgba(0, 0, 0, 0.6); }
+.s2p-vote-mine       { text-shadow: 0 0 1px var(--s2p-black), 0 0 1px var(--s2p-black), 0 0 2px var(--s2p-black-60); }
 /* the guest's own request: their vote already, nothing to tap */
 .s2p-vote-mine       { cursor: default; pointer-events: none; }
 .s2p-song-gone       { opacity: 0.45; }
 .s2p-vote-note {
-    --bs-alert-bg: #2e2810;   /* floats over the list: solid, not a see-through tint */
+    --bs-alert-bg: var(--s2p-bg-note);   /* floats over the list: solid, not a see-through tint */
     position: fixed;
     left: 50%;
     bottom: 1rem;
@@ -652,11 +704,11 @@ th[data-sort].sort-desc::after {
    tap elsewhere; the keyboard's focus ring stays */
 .s2p-settings-toggle {
     --bs-btn-hover-bg: transparent;
-    --bs-btn-hover-color: #f8f9fa;
-    --bs-btn-hover-border-color: #f8f9fa;
-    --bs-btn-active-bg: rgba(255, 255, 255, 0.12);
-    --bs-btn-active-color: #f8f9fa;
-    --bs-btn-active-border-color: #f8f9fa;
+    --bs-btn-hover-color: var(--s2p-light);
+    --bs-btn-hover-border-color: var(--s2p-light);
+    --bs-btn-active-bg: var(--s2p-white-12);
+    --bs-btn-active-color: var(--s2p-light);
+    --bs-btn-active-border-color: var(--s2p-light);
 }
 .page-dj .s2p-settings-toggle::after { content: " \25BE"; }
 .page-dj.s2p-settings-open .s2p-settings-toggle::after { content: " \25B4"; }
@@ -679,7 +731,7 @@ th[data-sort].sort-desc::after {
         gap: 0.5rem 0.6rem;
         padding: 0.6rem 0.75rem;
         margin-bottom: 0.5rem;
-        background: #232323;
+        background: var(--s2p-bg-row);
         border: 1px solid var(--s2p-border);
         border-radius: 12px;
         cursor: pointer;
@@ -737,14 +789,14 @@ th[data-sort].sort-desc::after {
        readable — the grey outline looked switched off — and amber under the pointer, as "↩ Przywróć" (the owner, 2026-10-07) --- */
 .s2p-btn-played { font-weight: 600; }
 .s2p-btn-skip {
-    --bs-btn-color: #e0e0e0;
-    --bs-btn-border-color: #6c757d;
+    --bs-btn-color: var(--s2p-text);
+    --bs-btn-border-color: var(--s2p-grey);
     --bs-btn-hover-bg: transparent;
-    --bs-btn-hover-color: #ffc107;
-    --bs-btn-hover-border-color: #ffc107;
-    --bs-btn-active-bg: rgba(255, 193, 7, 0.15);
-    --bs-btn-active-color: #ffc107;
-    --bs-btn-active-border-color: #ffc107;
+    --bs-btn-hover-color: var(--s2p-warning);
+    --bs-btn-hover-border-color: var(--s2p-warning);
+    --bs-btn-active-bg: var(--s2p-warning-15);
+    --bs-btn-active-color: var(--s2p-warning);
+    --bs-btn-active-border-color: var(--s2p-warning);
 }
 
 /* --- The history on a phone (history.html, the History tab and the standalone page): a card per request, as the queue — the song
@@ -752,7 +804,7 @@ th[data-sort].sort-desc::after {
        table below a wide screen). A table's narrow columns broke a title into a word per line and pushed the skip off the screen
        (the owner, 2026-10-07). The column sort stays as a row of buttons; the list scrolls with the page. --- */
 /* a request the DJ skipped, in place of the AI's verdict: the colour of its "↩ Przywróć" (Bootstrap's warning), not the red of a rejection */
-.status-skipped { color: #ffc107 !important; font-weight: bold; white-space: nowrap; }
+.status-skipped { color: var(--s2p-warning) !important; font-weight: bold; white-space: nowrap; }
 /* one word in capitals, as "ZAGRANE" / "ODRZUCONE" (the owner, 2026-10-08) */
 .s2p-skipped-label { text-transform: uppercase; }
 /* the decision's word on a wide screen: its hidden copies of "ZAGRANE" and "POMINIĘTE" share its cell of the grid, so every word is
@@ -778,7 +830,7 @@ th[data-sort].sort-desc::after {
     }
     .s2p-history-table td.status-played .s2p-decision-word::before   { color: var(--s2p-cyan); }
     .s2p-history-table td.status-rejected .s2p-decision-word::before { color: var(--s2p-red); }
-    .s2p-history-table td.status-skipped .s2p-decision-word::before  { color: #ffc107; }
+    .s2p-history-table td.status-skipped .s2p-decision-word::before  { color: var(--s2p-warning); }
 }
 @media (max-width: 767.98px) {
     .page-dj .s2p-history-table { display: block; }
@@ -795,7 +847,7 @@ th[data-sort].sort-desc::after {
         gap: 0.5rem 0.75rem;
         padding: 0.75rem;
         margin: 0.5rem 0;
-        background: #232323;
+        background: var(--s2p-bg-row);
         border: 1px solid var(--s2p-border);
         border-radius: 12px;
     }
@@ -843,7 +895,7 @@ th[data-sort].sort-desc::after {
 .s2p-card-toggle {
     --bs-btn-color: var(--s2p-text-muted);
     --bs-btn-border-color: transparent;
-    --bs-btn-hover-color: #f8f9fa;
+    --bs-btn-hover-color: var(--s2p-light);
     --bs-btn-hover-border-color: transparent;
     --bs-btn-active-border-color: transparent;
     width: 2.25rem;
@@ -903,18 +955,18 @@ th[data-sort].sort-desc::after {
 .s2p-rows { border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); background: var(--s2p-bg-elevated); overflow: hidden; }
 .s2p-row {
     display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.55rem 0.9rem;
-    color: #f1f3f5; text-decoration: none; border-top: 1px solid var(--s2p-border);
+    color: var(--s2p-text-row); text-decoration: none; border-top: 1px solid var(--s2p-border);
 }
 .s2p-row:first-child { border-top: 0; }
-.s2p-row:hover, .s2p-row:focus-visible { background: #262626; color: #fff; }
+.s2p-row:hover, .s2p-row:focus-visible { background: var(--s2p-bg-hover); color: var(--s2p-white); }
 .s2p-row:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; }
 .s2p-row-name { font-weight: 600; white-space: nowrap; }
 .s2p-row-state { margin-left: auto; color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
-.s2p-row-warn { color: #ffca2c; font-weight: 600; }
+.s2p-row-warn { color: var(--s2p-warning-text); font-weight: 600; }
 .s2p-row::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; }
 /* the QR code small beside the guests' link and the print: the card was 440 px of a phone */
 .s2p-qr-compact { display: flex; gap: 1rem; align-items: center; }
-.s2p-qr-compact-img { width: 120px; height: 120px; flex: none; border-radius: 8px; border: 1px solid #dee2e6; }
+.s2p-qr-compact-img { width: 120px; height: 120px; flex: none; border-radius: 8px; border: 1px solid var(--s2p-border-light); }
 .s2p-min-w-0 { min-width: 0; }
 /* the panel's heading row: our logo beside "Zakończ" and "Konto" — smaller on a narrow phone, so the three fit in one row */
 @media (max-width: 380px) {
@@ -924,9 +976,9 @@ th[data-sort].sort-desc::after {
 .s2p-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .s2p-chips a {
     flex: none; display: flex; align-items: center; min-height: 44px; padding: 0.4rem 0.9rem;
-    border: 1px solid var(--s2p-border); border-radius: 999px; color: #e9ecef; text-decoration: none; font-size: 0.9rem;
+    border: 1px solid var(--s2p-border); border-radius: 999px; color: var(--s2p-text-soft); text-decoration: none; font-size: 0.9rem;
 }
-.s2p-chips a:hover { border-color: #f8f9fa; color: #fff; }
+.s2p-chips a:hover { border-color: var(--s2p-light); color: var(--s2p-white); }
 #hostListsCard, #linksCard, #limitsCard, #deviceCard { scroll-margin-top: 1rem; }
 
 /* A feature of the Pro plan, to an organiser without it (V35, variant B of the review 2026-10-14,
@@ -937,13 +989,13 @@ th[data-sort].sort-desc::after {
    Never in the queue; never to the staff. */
 .s2p-pro {
     display: inline-flex; align-items: center; margin-left: 0.5rem; padding: 0.05rem 0.45rem;
-    border: 1px solid rgba(13, 202, 240, 0.45); background: rgba(13, 202, 240, 0.12); color: var(--s2p-action);
+    border: 1px solid var(--s2p-action-45); background: var(--s2p-action-12); color: var(--s2p-action);
     border-radius: 4px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1.4;
     vertical-align: middle; white-space: nowrap;
 }
 .s2p-pro-box {
-    border: 1px solid rgba(13, 202, 240, 0.28); background: rgba(13, 202, 240, 0.06); border-radius: var(--s2p-radius);
-    padding: 0.75rem 0.9rem; color: #dfe3e7; font-size: 0.9rem;
+    border: 1px solid var(--s2p-action-28); background: var(--s2p-action-06); border-radius: var(--s2p-radius);
+    padding: 0.75rem 0.9rem; color: var(--s2p-text-lede); font-size: 0.9rem;
 }
 .s2p-pro-box p { margin: 0 0 0.6rem 0; }
 /* the comment styles without Pro: the others under the list's heading "W planie Pro" (optgroup), not to pick — quieter than the one
@@ -962,42 +1014,42 @@ th[data-sort].sort-desc::after {
 .s2p-mw-960 { max-width: 960px !important; }
 .s2p-product-hero { padding: 0.5rem 0 1.75rem; border-bottom: 1px solid var(--s2p-border); }
 .s2p-product-hero .s2p-pro { margin-left: 0; }
-.s2p-product-hero h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 800; color: #fff; margin: 0.6rem 0; letter-spacing: -0.01em; }
-.s2p-product-lede { color: #dfe3e7; font-size: 1.1rem; max-width: 56ch; margin-bottom: 1.25rem; }
+.s2p-product-hero h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 800; color: var(--s2p-white); margin: 0.6rem 0; letter-spacing: -0.01em; }
+.s2p-product-lede { color: var(--s2p-text-lede); font-size: 1.1rem; max-width: 56ch; margin-bottom: 1.25rem; }
 .s2p-product-note { color: var(--s2p-text-muted); font-size: 0.875rem; margin: 0.75rem 0 0; }
 .s2p-product-cta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .s2p-plans { display: grid; gap: 1rem; margin-top: 1.75rem; }
 @media (min-width: 768px) { .s2p-plans { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); } }
 .s2p-plan { border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); padding: 1.25rem; background: var(--s2p-bg-card); min-width: 0; }
 .s2p-plan-pro {
-    border-color: rgba(13, 202, 240, 0.45);
-    background: linear-gradient(180deg, rgba(13, 202, 240, 0.07), rgba(13, 202, 240, 0) 60%), var(--s2p-bg-card);
+    border-color: var(--s2p-action-45);
+    background: linear-gradient(180deg, var(--s2p-action-07), var(--s2p-action-00) 60%), var(--s2p-bg-card);
 }
-.s2p-plan h2 { font-size: 1.25rem; font-weight: 700; color: #f8f9fa; margin: 0; }
+.s2p-plan h2 { font-size: 1.25rem; font-weight: 700; color: var(--s2p-light); margin: 0; }
 .s2p-plan-sub { color: var(--s2p-text-muted); font-size: 0.9rem; margin: 0.25rem 0 1rem; }
 .s2p-plan ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
-.s2p-plan li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.4rem; color: #e9ecef; }
+.s2p-plan li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.4rem; color: var(--s2p-text-soft); }
 .s2p-plan li::before { content: "\2713"; color: var(--s2p-text-muted); font-weight: 700; }
 .s2p-plan-pro li::before { color: var(--s2p-action); }
-.s2p-plan li b { display: block; color: #fff; font-weight: 600; }
+.s2p-plan li b { display: block; color: var(--s2p-white); font-weight: 600; }
 .s2p-plan li span { color: var(--s2p-text-muted); font-size: 0.9rem; }
 .s2p-faq-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--s2p-text-muted); font-weight: 700; margin: 2.25rem 0 0; }
 .s2p-faq { margin-top: 1.25rem; display: grid; gap: 1.25rem; }
 @media (min-width: 768px) { .s2p-faq { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.s2p-faq h3 { font-size: 1rem; font-weight: 700; color: #f8f9fa; margin: 0 0 0.35rem; }
+.s2p-faq h3 { font-size: 1rem; font-weight: 700; color: var(--s2p-light); margin: 0 0 0.35rem; }
 .s2p-faq p { color: var(--s2p-text-muted); margin: 0; font-size: 0.925rem; }
 
 /* The guide "Jak działa Scan2Play" (guide.html, 2026-10-12): a section per moment of a party, each line the app's own button or badge
    beside what it does — pictures of them (spans), not controls; one column on a phone. */
-.s2p-guide-lede { color: #dfe3e7; max-width: 66ch; }
+.s2p-guide-lede { color: var(--s2p-text-lede); max-width: 66ch; }
 .s2p-guide section { border-top: 1px solid var(--s2p-border); padding-top: 1rem; margin-top: 1.25rem; scroll-margin-top: 1rem;
                      display: grid; gap: 0.85rem; }
-.s2p-guide section h2 { font-size: 1.2rem; font-weight: 700; color: #f8f9fa; margin: 0; }
+.s2p-guide section h2 { font-size: 1.2rem; font-weight: 700; color: var(--s2p-light); margin: 0; }
 .s2p-guide-row { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0.35rem 1rem; align-items: start; }
 .s2p-guide-row:not(.s2p-guide-text) > :first-child { justify-self: start; pointer-events: none; }
-.s2p-guide-row p { margin: 0; color: #dfe3e7; max-width: 62ch; }
+.s2p-guide-row p { margin: 0; color: var(--s2p-text-lede); max-width: 62ch; }
 .s2p-guide-text { grid-template-columns: minmax(0, 1fr); }
-.s2p-guide-row-name { font-weight: 600; color: #f1f3f5; padding-top: 0.15rem; }
+.s2p-guide-row-name { font-weight: 600; color: var(--s2p-text-row); padding-top: 0.15rem; }
 /* a button named inside a sentence: a picture as tall as the line, not a 44 px target (it is not one) */
 .s2p-guide-inline { pointer-events: none; vertical-align: baseline; display: inline-block !important; min-height: 0 !important;
                     padding: 0 0.4rem; line-height: 1.5; }
@@ -1025,11 +1077,11 @@ th[data-sort].sort-desc::after {
 /* --- The history's day headings (history.html): a row where a new day starts. Hidden while the list is sorted by a column
        (list-tools.js puts .s2p-sorted on the table): the rows of a day are no longer together then. --- */
 .s2p-day-heading > td {
-    background: #1b1b1b !important;
+    background: var(--s2p-bg-day) !important;
     color: var(--s2p-text-muted) !important;
     font-size: 0.85rem;
     padding-top: 0.6rem !important;
-    border-bottom-color: #444 !important;
+    border-bottom-color: var(--s2p-border-mid) !important;
 }
 .s2p-sorted .s2p-day-heading { display: none; }
 
@@ -1050,11 +1102,11 @@ th[data-sort].sort-desc::after {
     gap: 0.75rem;
     max-width: 36rem;
     padding: 0.6rem 0.8rem;
-    background: #262626;
+    background: var(--s2p-bg-hover);
     color: var(--s2p-text);
-    border: 1px solid #555;
+    border: 1px solid var(--s2p-border-strong);
     border-radius: 0.5rem;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 18px var(--s2p-black-50);
 }
 .s2p-undo-toast[hidden] { display: none; }
 /* a form not saved (forms.js, components :: formRefused): the same toast, red-edged, above the "Cofnij" one when both show */

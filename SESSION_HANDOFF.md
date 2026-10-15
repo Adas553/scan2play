@@ -8,6 +8,13 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, late night — the deferred small items, PR 5 "the front-end refactors", on the branch `claude/frontend-refactors` on top
+  of `claude/sw-window-test` (#88); a PR to `dev`.** One "Kopiuj" for every DJ page (`dj-nav.js`; "Skopiowano" only when it was copied;
+  `copy-the-*` red before); `forms.js` by the form's whole path (`/staff-link`, `/staff-remove` matched nothing); every colour of
+  `app.css` a token on `:root` of its own value — the owner chose no change of the look (`AppCssColoursTest`, red before); 6.7 "one
+  action per view" (the owner). `run.py` reads `DevToolsActivePort` again while Windows locks it (in #86, merged forward). Tests: 719
+  unit, 126 browser. **The owner:** merge #85 → #86 → #87 → #88 → this PR in order, then the release to `main`; decide whether the
+  near-identical tones are merged, and the two `.btn-action` of a closed party with an empty queue ("Wznów imprezę", "Drukuj").
 - **2026-10-15, late night — the deferred small items, PR 4 "the window `sw.js` picks, tested", on the branch `claude/sw-window-test`
   on top of `claude/guest-refresh-focus` (#87); a PR to `dev`.** A headless browser runs no `notificationclick`, so the choice is
   `openThePanel(windows, url, openWindow)` in `sw.js` (no change in behaviour); the scenario `notification-opens-the-partys-panel`
