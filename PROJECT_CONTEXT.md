@@ -285,7 +285,7 @@ history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, b
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, the address selected where the clipboard is refused —, the guide, and the
 form of the old "Zgłoś uwagę", `POST /dj/feedback`), "Wyloguj",
 "Usuń konto" (red, the last one) — in place of four icons without words (the design review, 2026-10-09; `.s2p-account-bar` keeps the open
-menu over the sticky tab bar). What a DJ sets before a party is on the page **"Ustawienia imprezy"** (below). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again).
+menu over the sticky tab bar). What a DJ sets before a party is on the page **"Ustawienia imprezy"** (below). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again). **The forms tell the truth** (the review of 2026-10-14, W1 / W11): a form the server refuses (the session ran out — a 403 for the CSRF token —, the plan, the access) or that never reaches it says ✗ on its button and why — its own note (`[data-form-error]`, the DJ's profiles and tip link) or the page's notice `components :: formRefused` ("Nie zapisano. Sesja mogła wygasnąć albo zerwało się połączenie: skopiuj wpisany tekst i odśwież stronę.", "Odśwież stronę", ×; on the panel and the settings) — never ✓; the page does not reload by itself, so what was typed can be copied; "Zakończ imprezę" refused leaves the panel open; a refused "Cofnij" shows the notice too. The button that sent a form waits for the answer (`disabled`), so a double tap sends once (two taps on 💸 counted two tips); a form sent without a button (the vibe's select) is not held back. **A poll that keeps failing** (three in a row: no network, a 5xx) shows "Brak połączenia z serwerem: lista może być nieaktualna." above the queue (`[data-poll-offline]`, `polling.js`, W12); the next answer hides it.
 
 **Notifications on the DJ's devices** (Web Push; only when the server has the VAPID keys — Section 10): the switch "Powiadomienia
 o prośbach" in the card "To urządzenie" of the page "Ustawienia imprezy" (`js/dashboard/push.js`; the panel's row "To urządzenie" says
@@ -374,7 +374,9 @@ its words kept for a screen reader). A tap on the line (or its "▾") unfolds th
 words, "Podejrzyj", the number, "↩ Przywróć" in words and the AI's whole comment; it stays unfolded after "Pokaż więcej", a filter or
 a skip put back (`tabs.js` → `reopenCards`). The column sort stays as a row of buttons.
 `list-tools.js`: the search hides a heading with no row left under it; a sort by a column hides them all (`.s2p-sorted`), undoing it
-puts the server's order back. **"Wyczyść historię"** (shown while the history is not empty; asks first — `data-confirm`) sends
+puts the server's order back. On the standalone page (`/dj/history-view?party=`) a filter and "Pokaż więcej" load the page again with
+the party it shows (its `#partyCode`; the review of 2026-10-14 W7 — without it the server showed the person's default party under this
+one's heading). **"Wyczyść historię"** (shown while the history is not empty; asks first — `data-confirm`) sends
 `POST /dj/dashboard/clear-history` (`DjService.clearHistory`, under the party's lock "S2PR"): the party's played and rejected requests
 are **deleted**, the guests' words with them — never a waiting one, and never one the DJ skipped within the last 2 hours (it keeps its
 song out of the queue and stays in the history until that ends). The AI's duplicate rule reads the played songs, so after it the AI no
@@ -976,7 +978,7 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 667. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 668. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
   security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
@@ -994,7 +996,7 @@ GuestQueueService          → DjService
   test there.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
-  Chrome, with a Python stand-in server that the scenarios configure; 96 scenarios. The stand-in sends the real CSP **enforced** and
+  Chrome, with a Python stand-in server that the scenarios configure; 102 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`. `gh` is not installed

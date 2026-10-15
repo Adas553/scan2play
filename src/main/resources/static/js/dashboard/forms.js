@@ -33,19 +33,35 @@ import { csrfHeaders, partyCode, showPartyActive } from './common.js';
 
         e.preventDefault();
 
+        // The button that sent the form waits for the answer: a double tap sends once (the review of 2026-10-14, W11 — two taps on
+        // 💸 counted two tips). A form sent without a button (the vibe's select) is not held back: a second choice must be sent.
+        const btn = e.submitter || form.querySelector('button[type="submit"]');
+        const sender = e.submitter;
+        if (sender) sender.disabled = true;
+
         fetch(action, {
             method: 'POST',
             headers: csrfHeaders(),
             body: withParty(new FormData(form)),
             redirect: 'manual'
         }).then(function(response) {
+            // Refused — the session ran out (403 for the CSRF token), the plan, the access, a field the server does not take: ✗ and
+            // why, and nothing that would show the change as made (the review of 2026-10-14, W1: ✓ while nothing was saved)
+            if (!accepted(response)) {
+                refused(form, btn);
+                return;
+            }
+            hideRefused();
+            const error = form.querySelector('[data-form-error]');
+            if (error) error.hidden = true;
+
             // A song played or skipped, or the queue cleared: the queue is fetched now, so the rows go at once
             if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/clear-queue')) {
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
             }
             // A skip or a "Zagrane" that went through: "Cofnij" for a few seconds (the server answers with a redirect, read as
             // opaqueredirect) — "Zagrane" is the button tapped most, so the one tapped by mistake most (the owner, 2026-10-10)
-            if ((action.includes('/dashboard/dismiss') || action.includes('/dashboard/play')) && accepted(response)) {
+            if (action.includes('/dashboard/dismiss') || action.includes('/dashboard/play')) {
                 offerUndo(form, action.includes('/dashboard/play') ? 'play' : 'dismiss');
             }
             // A skipped or played request put back from the history: it is in the queue again and no longer in the history
@@ -75,30 +91,67 @@ import { csrfHeaders, partyCode, showPartyActive } from './common.js';
                 return; // no flash needed for these buttons
             }
 
-            // A form that says why the server refused it (the DJ's profiles: not a profile on that site) shows it; ✗, not ✓
-            const ok = accepted(response);
-            const error = form.querySelector('[data-form-error]');
-            if (error) {
-                error.hidden = ok;
-            }
-
-            // Flash the submit button briefly as confirmation
-            const btn = form.querySelector('button[type="submit"]');
-            if (btn) {
-                const original = btn.textContent;
-                const flash = ok || !error ? 'btn-success' : 'btn-danger';
-                btn.textContent = flash === 'btn-success' ? '✓' : '✗';
-                btn.classList.add(flash);
-                setTimeout(function() {
-                    btn.textContent = original;
-                    btn.classList.remove(flash);
-                }, 1500);
-            }
+            flash(btn, true);   // the submit button says ✓ for a moment
         }).catch(function(err) {
+            // the request never reached the server (no network): as refused — nothing was saved
             console.error('[Dashboard] AJAX form error:', err);
+            refused(form, btn);
+        }).finally(function() {
+            if (sender) sender.disabled = false;
         });
     });
 })();
+
+/**
+ * The button says ✓ (saved) or ✗ (not) for a moment, then its own label again — its markup, not only its text ("Zakończ imprezę"
+ * has a long and a short label in spans). A second answer within the moment keeps the first label.
+ */
+function flash(btn, ok) {
+    if (!btn) return;
+    if (btn.s2pLabel === undefined) btn.s2pLabel = btn.innerHTML;
+    const style = ok ? 'btn-success' : 'btn-danger';
+    btn.classList.remove('btn-success', 'btn-danger');
+    btn.textContent = ok ? '✓' : '✗';
+    btn.classList.add(style);
+    clearTimeout(btn.s2pFlash);
+    btn.s2pFlash = setTimeout(function() {
+        btn.innerHTML = btn.s2pLabel;
+        btn.s2pLabel = undefined;
+        btn.classList.remove(style);
+    }, 1500);
+}
+
+/**
+ * A form the server refused, or that never reached it: ✗ on its button, and why — the form's own note when it has one (the DJ's
+ * profiles: not a profile on that site), else the page's notice (fragments/components :: formRefused): not saved, copy what you
+ * typed and reload. The page is not reloaded by itself: what the DJ typed would go with it.
+ */
+function refused(form, btn) {
+    const error = form.querySelector('[data-form-error]');
+    if (error) {
+        error.hidden = false;
+    } else {
+        showRefused();
+    }
+    flash(btn, false);
+}
+
+function showRefused() {
+    const notice = document.querySelector('[data-form-refused]');
+    if (notice) notice.hidden = false;
+}
+
+function hideRefused() {
+    const notice = document.querySelector('[data-form-refused]');
+    if (notice) notice.hidden = true;
+}
+
+document.querySelectorAll('[data-form-refused-reload]').forEach(function (button) {
+    button.addEventListener('click', function () { window.location.reload(); });
+});
+document.querySelectorAll('[data-form-refused-close]').forEach(function (button) {
+    button.addEventListener('click', hideRefused);
+});
 
 /**
  * The party the page shows goes with every form (V32): the server works on that party and checks the person's permissions there —
@@ -158,11 +211,19 @@ if (undoButton) {
         clearTimeout(undoTimer);
         hideUndo();
         fetch('/dj/dashboard/restore', { method: 'POST', headers: csrfHeaders(), body: body, redirect: 'manual' })
-            .then(function () {
+            .then(function (response) {
+                // refused (the session ran out): say so — the song is not back (it said nothing before)
+                if (!accepted(response)) {
+                    showRefused();
+                    return;
+                }
                 emit(EVENTS.GUEST_QUEUE_CHANGED);
                 emit(EVENTS.HISTORY_CHANGED);
             })
-            .catch(function (err) { console.error('[Dashboard] Undo error:', err); });
+            .catch(function (err) {
+                console.error('[Dashboard] Undo error:', err);
+                showRefused();
+            });
     });
 }
 

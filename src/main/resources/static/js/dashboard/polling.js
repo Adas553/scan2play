@@ -79,6 +79,20 @@ function accessChanged(value) {
     return value !== null && shown !== null && shown.value !== '' && value !== shown.value;
 }
 
+/**
+ * Polls that failed in a row (no network, a 5xx). From OFFLINE_AFTER the bar [data-poll-offline] says the list may be out of date —
+ * one failure is a hiccup the next poll puts right; the first answer hides it (the review of 2026-10-14, W12: the DJ's Wi-Fi gone
+ * for minutes, and the queue looked current).
+ */
+const OFFLINE_AFTER = 3;
+let failedPolls = 0;
+
+function pollAnswered(ok) {
+    failedPolls = ok ? 0 : failedPolls + 1;
+    const bar = document.querySelector('[data-poll-offline]');
+    if (bar) bar.hidden = failedPolls < OFFLINE_AFTER;
+}
+
 // One chain of polls: the next one is scheduled when one ends; a poll asked for meanwhile (pollNow) comes right after it
 let nextPoll = null;
 let polling = false;
@@ -132,6 +146,7 @@ async function refreshTable() {
 
         // 304 Not Modified — queue unchanged, skip DOM replacement
         if (response.status === 304) {
+            pollAnswered(true);
             return;
         }
 
@@ -140,6 +155,7 @@ async function refreshTable() {
             return;
         }
         if (!response.ok) throw new Error('HTTP ' + response.status);
+        pollAnswered(true);
 
         // Store new ETag for next poll
         const newETag = response.headers.get('ETag');
@@ -170,6 +186,7 @@ async function refreshTable() {
         keepChosen();
     } catch (err) {
         console.error('[Polling] Refresh error:', err);
+        pollAnswered(false);
     } finally {
         polling = false;
         nextPoll = pollAgain || !document.hidden ? setTimeout(refreshTable, pollAgain ? 0 : 3000) : null;
