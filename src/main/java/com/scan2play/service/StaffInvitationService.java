@@ -38,7 +38,7 @@ public class StaffInvitationService {
     private final PartySettingsQueryService partySettingsQueryService;
 
     /** What came of the organiser's "Zaproś". */
-    public enum InviteOutcome { INVITED, RENEWED, INVALID_ADDRESS, FULL }
+    public enum InviteOutcome { INVITED, RENEWED, INVALID_ADDRESS, OWN_ADDRESS, FULL }
 
     /** What came of the person's "Dołącz": the outcome of joining, or {@code GONE} — cancelled, answered elsewhere, too old. */
     public enum AnswerOutcome { JOINED, ALREADY, OWNER, FULL, GONE }
@@ -63,11 +63,25 @@ public class StaffInvitationService {
      */
     @Transactional
     public InviteOutcome invite(String partyCode, String typedAddress, Set<StaffPermission> permissions) {
+        return invite(partyCode, typedAddress, permissions, null);
+    }
+
+    /**
+     * The same, the organiser's own verified address known ({@code organiserAddress}, null when Google confirms none): an invitation
+     * to it is {@link InviteOutcome#OWN_ADDRESS} and nothing is saved — it would take a place for 30 days and join nobody ("Dołącz" on
+     * one's own party only deletes it; the review of 2026-10-14). Someone already on the staff cannot be told by an address (the staff
+     * keep no addresses): their invitation joins nothing and goes when they answer it.
+     */
+    @Transactional
+    public InviteOutcome invite(String partyCode, String typedAddress, Set<StaffPermission> permissions, String organiserAddress) {
         Optional<String> address = EmailAddresses.clean(typedAddress);
         if (address.isEmpty()) {
             return InviteOutcome.INVALID_ADDRESS;
         }
         String key = EmailAddresses.key(address.get());
+        if (organiserAddress != null && !organiserAddress.isBlank() && key.equals(EmailAddresses.key(organiserAddress))) {
+            return InviteOutcome.OWN_ADDRESS;
+        }
         Set<StaffPermission> granted = permissions.isEmpty() ? EnumSet.noneOf(StaffPermission.class) : EnumSet.copyOf(permissions);
         Optional<PartySettingsEntity> party = partySettingsRepository.lockByPartyCode(partyCode);
         Optional<StaffInvitationEntity> earlier = invitationRepository.findByPartyCodeAndEmailKey(partyCode, key);
@@ -122,7 +136,9 @@ public class StaffInvitationService {
      * "Dołącz": the person whose verified address the invitation names joins the party's staff with its permissions, and the
      * invitation goes — in one transaction, under the party row's lock: the same invitation answered twice at once (two tabs, the
      * app and a browser) joins once ({@code StaffInvitationIT}). {@code GONE} when it is not there any more, is not for this address,
-     * or waited too long. The person's own party (the organiser invited themselves): the invitation goes, nothing joins.
+     * or waited too long. The person's own party (the organiser invited themselves): the invitation goes, nothing joins. A full staff
+     * (the organiser's plan went from Pro to Free: fewer places than people): {@code FULL}, and the invitation goes too — kept, it sent
+     * the person to this question, and a 409, on every opening of the panel for 30 days (the review of 2026-10-14).
      */
     @Transactional
     public Answer accept(long invitationId, String verifiedAddress, String userId, String name) {
@@ -137,9 +153,7 @@ public class StaffInvitationService {
             return new Answer(AnswerOutcome.GONE, null);
         }
         JoinOutcome joined = partyStaffService.addToStaff(party.get(), userId, name, found.get().getPermissions(), true);
-        if (joined != JoinOutcome.FULL) {
-            invitationRepository.deleteForAddress(invitationId, key);
-        }
+        invitationRepository.deleteForAddress(invitationId, key);
         return new Answer(switch (joined) {
             case JOINED -> AnswerOutcome.JOINED;
             case ALREADY -> AnswerOutcome.ALREADY;

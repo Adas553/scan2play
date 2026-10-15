@@ -12,10 +12,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,7 +41,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PlanService {
 
-    /** The organisers' plans by their Google subject (AppConfig): read once per {@code CACHE_TTL}, emptied when a plan is written. */
+    /**
+     * The organisers' plans by their Google subject (AppConfig): read once per {@code CACHE_TTL}, emptied when a plan is written. What
+     * is kept is the row's plan with its end ({@link Read}), so a plan ends when its row says, not up to {@code CACHE_TTL} later.
+     */
     public static final String CACHE = "accountPlan";
     public static final Duration CACHE_TTL = Duration.ofMinutes(10);
 
@@ -89,6 +98,16 @@ public class PlanService {
         }
     }
 
+    /** A plan as its row says it: the plan and its end (null: none) — the same rule as {@link DjPlanEntity#planAt}. */
+    record Read(Plan plan, Instant until) {
+
+        static final Read NONE = new Read(Plan.FREE, null);
+
+        Plan at(Instant now) {
+            return until == null || until.isAfter(now) ? plan : Plan.FREE;
+        }
+    }
+
     public boolean isEnforced() {
         return enforced;
     }
@@ -105,12 +124,12 @@ public class PlanService {
             return Plan.PRO;
         }
         Cache cache = cache();
-        Plan cached = cache.get(ownerId, Plan.class);
+        Read cached = cache.get(ownerId, Read.class);
         if (cached == null) {
-            cached = planRepository.findById(ownerId).map(row -> row.planAt(Instant.now())).orElse(Plan.FREE);
+            cached = planRepository.findById(ownerId).map(row -> new Read(row.getPlan(), row.getValidUntil())).orElse(Read.NONE);
             cache.put(ownerId, cached);
         }
-        return cached;
+        return cached.at(Instant.now());
     }
 
     /** The plan the party works with: its organiser's. */
@@ -178,17 +197,52 @@ public class PlanService {
 
     /**
      * A new DJ's trial of Pro ({@code scan2play.plans.trial-days}), when their party is made: only while the plans are enforced and
-     * only once — a DJ with a row of {@code dj_plan} already gets none. The caller's transaction (the party's creation).
+     * only once per Google account — a DJ with a row of {@code dj_plan} gets none, and neither does one who had a trial and deleted
+     * the account since ({@code trial_used}, V36: only the account's {@link #trialKey} outlives it — the owner, 2026-10-15). The
+     * caller's transaction (the party's creation); the cached plan goes after its commit — before it, a request reading the plan
+     * meanwhile found no row and kept Free for {@code CACHE_TTL} (the review of 2026-10-14).
      */
     public void startTrial(String ownerId) {
         if (!enforced || trialDays == 0 || planRepository.existsById(ownerId)) {
             return;
         }
+        String key = trialKey(ownerId);
+        if (planRepository.trialUsed(key)) {
+            log.info("DJ {}: had a trial of Pro before (an account deleted since) — none again", ownerId);
+            return;
+        }
         Instant now = Instant.now();
         planRepository.save(DjPlanEntity.builder().ownerId(ownerId).plan(Plan.PRO).source(PlanSource.TRIAL)
                 .validUntil(now.plus(Duration.ofDays(trialDays))).updatedAt(now).build());
-        cache().evict(ownerId);
+        planRepository.markTrialUsed(key);
+        afterCommit(() -> cache().evict(ownerId));
         log.info("DJ {}: a trial of Pro for {} days", ownerId, trialDays);
+    }
+
+    /**
+     * The key a Google account is remembered by in {@code trial_used} (V36): the SHA-256 of its Google subject, in lower-case hex —
+     * PostgreSQL's {@code encode(sha256(convert_to(owner_id, 'UTF8')), 'hex')}, which V36 used for the trials before it.
+     */
+    public static String trialKey(String ownerId) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(ownerId.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is in every JVM", e);
+        }
+    }
+
+    /** After the commit of the caller's transaction; at once without one (a unit test). */
+    private static void afterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 
     /** The organiser's plan read again on the next request (their row changed). */

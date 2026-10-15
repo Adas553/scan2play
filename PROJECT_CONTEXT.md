@@ -224,6 +224,10 @@ without the address; "Nie, dziękuję"), cancelled by the organiser, or with the
 subject as `party_settings.owner_id`), `plan` (`Plan`: FREE / PRO), `source` (`PlanSource`: TRIAL / PAID / GIFT), `validUntil` (null = no
 end; after it the row reads as FREE, `planAt`), `updatedAt`. **Empty at first: no row is Free.** Deleted with the account. Read only by
 `PlanService` and only while the plans are enforced (below).
+**`trial_used`** (V36, the owner 2026-10-15; no entity — native queries of `DjPlanRepository`) — the Google accounts that had a trial of
+Pro: `owner_hash` (PK, the SHA-256 of the Google subject in hex, `PlanService.trialKey` = PostgreSQL's
+`encode(sha256(convert_to(owner_id, 'UTF8')), 'hex')`), `used_at`. **Not deleted with the account** — that is what it is for: the
+same Google account after "Usuń konto" gets no second trial; nothing else of the account (the privacy policy, section 5).
 **`spring_session`, `spring_session_attributes`** (V11, Spring Session's own schema, no entity) — the HTTP sessions; expired ones are
 deleted every minute.
 
@@ -246,7 +250,9 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   saved); the hosts' link is a 404 as an old one; the people already on the staff keep their access — only no one new joins while the
   places are taken. The card says "Twoje listy są zachowane: 🚫 3 · ⭐ 5. Wrócą, gdy włączysz Pro".
 - **A trial**: `scan2play.plans.trial-days` (env `PLANS_TRIAL_DAYS`, 0) days of Pro written for a new DJ when their party is made —
-  only while enforced, once per DJ (`PlanService.startTrial`). When the plans are switched on, the DJs of that day get Pro for a while
+  only while enforced, once per Google account — also after "Usuń konto" (`trial_used`, V36; `PlanService.startTrial`). The
+  cached plan goes after the trial's commit, and the cache keeps the row's end (`PlanService.Read`): a plan ends at its `validUntil`
+  (that moment is Free already), not up to 10 min later. When the plans are switched on, the DJs of that day get Pro for a while
   by one data migration (to decide then).
 - The server refuses a Pro feature's endpoint (`PlanService.require` → `PlanRequiredException`, a 403) — `PlanFeatureEndpointsTest`
   walks them all; the pages show it as 6.7 says ("PRO"). No payment, no prices: "Zobacz, co daje Pro" leads to `/pro`, which says to
@@ -432,7 +438,7 @@ dziękuję" (`POST /dj/invitation/decline`: the invitation goes; the panel says 
 "no-panel", not a DJ's party). Joining (`accept`, `@Transactional`): the invitation must be for that verified address and not too old;
 the party row locked, the invitation asked again from the database (another tab may have answered it), then
 `PartyStaffService.addToStaff` (not the owner, not twice, the places — the invitation's own counted already) and the invitation
-deleted — two "Dołącz" at once join once (`StaffInvitationIT`, seen red without the lock: the unique key). "Zaproś" counts the places
+deleted — two "Dołącz" at once join once (`StaffInvitationIT`, seen red without the lock: the unique key). "Zaproś" refuses the organiser's own verified address (`OWN_ADDRESS`: it would hold a place and join nobody) and counts the places
 under the same lock: the staff and the invitations never pass 10, however many invitations and joins come at once (`StaffInvitationIT`).
 An invitation to the organiser's own party is deleted with a note. The link stays the other way.
 **Joining** — never a side effect of opening a page (the review: two top-level navigations of a foreign site joined a logged-in DJ to
@@ -640,7 +646,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V35`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`), `db/migration/V1..V36`.
 
 ### 6.7 The look (`app.css`, the design review of 2026-10-09)
 
@@ -773,7 +779,7 @@ real use leaves the log quiet. The browser tests run the dashboard, the guest pa
 | `partySettings` | partyCode | 24 h / 500 | `PartySettingsQueryService.getSettings` — every caller gets a **copy**; `updateSettings` reads the row under its lock (`lockByPartyCode`: two writes take turns, `PartySettingsWritesIT`) and evicts after its commit |
 | `qr-codes` | text + size | 24 h / 1000 | `QrCodeService` |
 | `dashboardQueue` | partyCode | 3 s / 200 | `DjService.getDashboardQueue` — the guest page and the dashboard's first render; evicted after the commit of a new request, a vote, a 👍, a song played, skipped or restored, a tip, the queue cleared. The poll does **not** read it: a changed fingerprint renders `getWaiting` (review 2026-10-14 K1) |
-| `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted when a trial is written, `forget`, and with the account |
+| `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted after the commit of a trial, by `forget`, and with the account; the value is the row's plan with its end (`PlanService.Read`), so a plan ends on time |
 
 The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit.
 
@@ -863,6 +869,7 @@ schema behind Flyway's back.
 | V32 | `party_staff.permissions` varchar(200) NOT NULL (no default: the app always writes it) — the people on a staff get the role "Obsługa kolejki" (`QUEUE,TIPS,CLEAR_QUEUE,OPEN_CLOSE,HISTORY`, what they could do before; `StaffPermissionMigrationIT`); `party_settings.owner_name` varchar(100), nullable: the organiser's Google name |
 | V33 | `party_settings.staff_link_permissions` varchar(200), nullable (null = no link): the invitation link's role; a link made before gets "Obsługa kolejki" (`StaffLinkMigrationIT`) |
 | V34 | table `staff_invitation` (id, `party_code` FK ON DELETE CASCADE, `email`, `email_key` varchar(254), `permissions` varchar(200), `invited_at`; UNIQUE `uk_staff_invitation_email` (party, email_key), index `idx_staff_invitation_email_key`): invitations to the staff by e-mail |
+| V36 | table `trial_used` (`owner_hash` varchar(64) PK, `used_at` timestamptz NOT NULL DEFAULT now()), filled with the keys of the `dj_plan` rows of source TRIAL: the Google accounts that had a trial, kept after "Usuń konto" (`TrialUsedMigrationIT`, `DjPlanIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -938,7 +945,7 @@ GuestQueueService          → DjService
 |--------|------|-------|
 | GET | `/dj/dashboard` | `party` (none: the default panel): the dashboard; "no-panel" when the person has none (V32); with an invitation waiting after the login, back to it; with an invitation by e-mail for the verified address, `/dj/invitation` first (V34) |
 | GET | `/dj/invitation` | the invitation by e-mail waiting for the person's verified address (V34): `join.html` with "Dołącz" / "Nie, dziękuję"; none → the panel |
-| POST | `/dj/invitation/accept` | `id`: joins with the invitation's role (V34; only the verified address it names) → that party's panel; gone / too old → the panel with a note; 409 full |
+| POST | `/dj/invitation/accept` | `id`: joins with the invitation's role (V34; only the verified address it names) → that party's panel; gone / too old → the panel with a note; 409 full — and the invitation goes too (kept, it asked "Dołączyć?" on every opening of the panel for 30 days) |
 | POST | `/dj/invitation/decline` | `id`: the invitation goes (V34; only the verified address it names) → the panel with a note |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
@@ -994,11 +1001,11 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 677. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!Scan2playApplicationTests,!*IT"`, no database): 691. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
   security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 75 tests in 21 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 77 tests in 22 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT` (the history's order, the
   queue's fingerprint — also changes that cancel out in counts —, the night's clearing of the queues, the retention), `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
@@ -1006,11 +1013,12 @@ GuestQueueService          → DjService
   after "Zagrane"; a song the DJ skipped, and put back), `PartySettingsWritesIT` (two settings' writes at once keep both; the hosts' old
   link writes nothing), `AccountDeletionIT` ("Dołącz" during the deletion waits, no deadlock; a request in flight is not saved; the
   requests in one statement), `FirstLoginIT` (a first login in eight tabs at once — one party), `PartyStaffRepositoryIT`,
-  `StaffInvitationIT`, `PushSubscriptionRepositoryIT`, `DjPlanIT` (V35: a plan's row as written, gone with the account); with a
+  `StaffInvitationIT`, `PushSubscriptionRepositoryIT`, `DjPlanIT` (V35: a plan's row as written, gone with the account; V36: no second trial after "Usuń konto", the key the same in Java
+  and SQL); with a
   database of their own, migrated to the version before and given rows the old way: `TimestampMigrationIT` (V12 — the same moments;
   red when the old values are read as UTC), `VibeMigrationIT` (V16), `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT`
   (V19: the YouTube parties go with their data, a requests-only party stays), `SkipCommentMigrationIT`, `CommentStyleMigrationIT`,
-  `RequestNumberMigrationIT` (V28), `StaffLinkMigrationIT`, `StaffPermissionMigrationIT` (V32). New SQL that locks or counts gets a
+  `RequestNumberMigrationIT` (V28), `StaffLinkMigrationIT`, `StaffPermissionMigrationIT` (V32), `TrialUsedMigrationIT` (V36: the trials before it remembered). New SQL that locks or counts gets a
   test there.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless

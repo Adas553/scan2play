@@ -166,5 +166,54 @@ class PlanServiceTest {
         plans(true, "", 30).startTrial("new");
         verify(rows).save(org.mockito.ArgumentMatchers.argThat(row -> row.getOwnerId().equals("new") && row.getPlan() == Plan.PRO
                 && row.getSource() == PlanSource.TRIAL && row.getValidUntil().isAfter(Instant.now().plus(Duration.ofDays(29)))));
+        verify(rows).markTrialUsed(PlanService.trialKey("new"));
+    }
+
+    /**
+     * A Google account that had a trial and deleted its account (its {@code dj_plan} row went with it) gets no second one: only the
+     * key of the account (a SHA-256, {@code trial_used}) is left (the owner, 2026-10-15; {@code DjPlanIT}).
+     */
+    @Test
+    void theTrial_isNotGivenAgain_toAnAccountThatHadOne() {
+        when(rows.existsById("back")).thenReturn(false);
+        when(rows.trialUsed(PlanService.trialKey("back"))).thenReturn(true);
+
+        plans(true, "", 30).startTrial("back");
+
+        verify(rows, never()).save(any());
+        assertThat(PlanService.trialKey("back")).as("SHA-256 in hex").hasSize(64).doesNotContain("back");
+    }
+
+    /** The plan read into the cache ends when its row says, not up to 10 minutes later (the cache's own time). */
+    @Test
+    void enforced_aCachedPlan_endsWhenItsRowSays() throws InterruptedException {
+        row("owner", Plan.PRO, Instant.now().plusMillis(300));
+        PlanService plans = plans(true, "", 0);
+
+        assertThat(plans.planOf("owner")).isEqualTo(Plan.PRO);
+        Thread.sleep(500);
+        assertThat(plans.planOf("owner")).isEqualTo(Plan.FREE);
+        verify(rows, times(1)).findById("owner");   // from the cache: it knows the end
+    }
+
+    /**
+     * The trial's row is in the cache's view only after the commit: evicted before it, a request reading the plan meanwhile put FREE
+     * back for 10 minutes (the review of 2026-10-14).
+     */
+    @Test
+    void theTrial_evictsTheCachedPlan_afterTheCommit() {
+        when(rows.findById("new")).thenReturn(Optional.empty());
+        PlanService plans = plans(true, "", 30);
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            plans.startTrial("new");
+            assertThat(plans.planOf("new")).as("read meanwhile (no row yet): FREE, cached").isEqualTo(Plan.FREE);
+            row("new", Plan.PRO, Instant.now().plus(Duration.ofDays(30)));
+            org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit);
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+        assertThat(plans.planOf("new")).as("after the commit: the trial").isEqualTo(Plan.PRO);
     }
 }

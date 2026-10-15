@@ -97,6 +97,19 @@ class StaffInvitationServiceTest {
         verify(invitations, never()).save(any());
     }
 
+    /**
+     * The organiser types their own address (the one Google confirms for them): no invitation — it would take a place for 30 days and
+     * join nobody ("Dołącz" on one's own party only deletes it). Gmail's dots and case do not hide it.
+     */
+    @Test
+    void zapros_theOrganisersOwnAddress_savesNothing() {
+        assertThat(service.invite(PARTY, "Adam.Lasut@gmail.com", StaffRole.QUEUE.permissions(), "adamlasut@gmail.com"))
+                .isEqualTo(InviteOutcome.OWN_ADDRESS);
+        verify(invitations, never()).save(any());
+        assertThat(service.invite(PARTY, "ola@gmail.com", StaffRole.QUEUE.permissions(), "adamlasut@gmail.com"))
+                .isEqualTo(InviteOutcome.INVITED);
+    }
+
     /** The same address again: its role changed and 30 days again — no second row; a waiting one takes no new place. */
     @Test
     void zapros_theSameAddressAgain_changesItsInvitation() {
@@ -141,6 +154,20 @@ class StaffInvitationServiceTest {
         order.verify(invitations).existsByIdAndEmailKeyAndInvitedAtAfter(eq(3L), eq("kasia@gmail.com"), any());
         order.verify(staff).addToStaff(pub, "kasia", "Kasia", EnumSet.of(StaffPermission.HISTORY), true);
         order.verify(invitations).deleteForAddress(3L, "kasia@gmail.com");
+    }
+
+    /**
+     * "Dołącz" when the staff is full (the organiser's plan went from Pro to Free: fewer places than people): the invitation goes too —
+     * kept, it sent the person to "Dołącz" and a 409 on every opening of the panel for 30 days (the review of 2026-10-14).
+     */
+    @Test
+    void dolacz_onAFullStaff_theInvitationGoes() {
+        when(invitations.findById(3L)).thenReturn(Optional.of(invitation(3L, "kasia@gmail.com", Instant.now())));
+        when(invitations.existsByIdAndEmailKeyAndInvitedAtAfter(eq(3L), eq("kasia@gmail.com"), any())).thenReturn(true);
+        when(staff.addToStaff(pub, "kasia", "Kasia", EnumSet.of(StaffPermission.HISTORY), true)).thenReturn(PartyStaffService.JoinOutcome.FULL);
+
+        assertThat(service.accept(3L, "kasia@gmail.com", "kasia", "Kasia").outcome()).isEqualTo(AnswerOutcome.FULL);
+        verify(invitations).deleteForAddress(3L, "kasia@gmail.com");
     }
 
     /** Another person's invitation, one too old, one answered meanwhile (another tab), no verified address: nothing joins. */

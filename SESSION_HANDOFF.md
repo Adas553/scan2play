@@ -8,6 +8,14 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, group 6 "Przed włączeniem planów", on the branch `claude/before-the-plans` on
+  top of `claude/privacy-policy-hosting` (#70); a PR to `dev`.** PROJECT_CONTEXT 4.1 / 9 / 10 / 13, the review's status. The owner
+  chose: no second trial after "Usuń konto" — V36 `trial_used` keeps the SHA-256 of the Google subject (`PlanService.trialKey`), the
+  privacy policy says so. The trial evicts the cached plan after its commit; the cache keeps the plan's end. "Dołącz" on a full staff
+  deletes the invitation (no 409 loop); "Zaproś" refuses the organiser's own address (`OWN_ADDRESS`). The endpoint tests check the
+  status (the summary's CSV was a 404 nobody saw), the staff-wide endpoints, `/dj/history-view`, the ETag Free↔Pro, `/pro` in the
+  sitemap. Tests: 691 unit, 77 database. **Next:** the owner merges #70, then this PR; the terms (staff, hosts' link, Pro) before
+  `PLANS_ENFORCE` are the owner's text; group 7 "Porządki" when the owner wants it.
 - **2026-10-15, later — the review of 2026-10-14, W14 the privacy policy, on the branch `claude/privacy-policy-hosting` from
   `origin/dev` = `b131071`; a PR to `dev`.** The owner's answers: Railway Hobby (logs 7 days), Cloudflare Web Analytics "probably on",
   Railway's DPA "probably accepted" — it needs a signature of its own (DocuSign), so the policy says plainly that the data is in the USA

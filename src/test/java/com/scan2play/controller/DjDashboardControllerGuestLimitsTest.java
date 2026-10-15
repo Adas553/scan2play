@@ -120,4 +120,25 @@ class DjDashboardControllerGuestLimitsTest {
         party.setHostWanted("Hej sokoły\nAkcent");
         assertThat(poll(false).getHeader("ETag")).isNotEqualTo(etag).startsWith("\"q-3-42-w");
     }
+    /**
+     * The organiser's plan changes, the queue stays (V35): Free and Pro are two versions of the rows (without Pro no "💸" and no ⭐),
+     * so the window that had Pro's rows gets the Free ones, not a 304.
+     */
+    @Test
+    void aChangeOfThePlan_isANewVersionOfTheQueue() {
+        party.setOwnerId("organiser");
+        party.setHostWanted("Hej sokoły");
+        String pro = etagWith(com.scan2play.service.Plans.enforced("organiser"));
+        String free = etagWith(com.scan2play.service.Plans.enforced());
+
+        assertThat(pro).isEqualTo("\"q-3-42-w" + Integer.toHexString("Hej sokoły".hashCode()) + "\"");
+        assertThat(free).as("no hosts' wishes, no tips").isEqualTo("\"q-3-42-f\"").isNotEqualTo(pro);
+    }
+
+    private String etagWith(com.scan2play.service.PlanService plans) {
+        controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
+                mock(com.scan2play.service.StaffInvitationService.class), plans);
+        return poll(false).getHeader("ETag");
+    }
 }
