@@ -16,7 +16,7 @@ public class GeminiConfig {
      * connection lived — after the guest's own request had long timed out (spring.mvc.async.request-timeout, 30 s) — and a
      * few of them used up the threads that evaluate every guest's request. A failed call sends the request on to the DJ
      * unchecked ({@code SongEvaluationService.withoutTheAi}). 15 s: Gemini 3.5 Flash took up to 8.3 s in the comparison of
-     * 2026-10-07 — a margin, still well under the guest's 30 s.
+     * 2026-10-07, 3.6 Flash up to 3.7 s on 2026-10-15 — a margin, still well under the guest's 30 s.
      */
     static final int TIMEOUT_MS = 15_000;
 
