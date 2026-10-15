@@ -8,6 +8,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, later — the review of 2026-10-14, W14 the privacy policy, on the branch `claude/privacy-policy-hosting` from
+  `origin/dev` = `b131071`; a PR to `dev`.** The owner's answers: Railway Hobby (logs 7 days), Cloudflare Web Analytics "probably on",
+  Railway's DPA "probably accepted" — it needs a signature of its own (DocuSign), so the policy says plainly that the data is in the USA
+  and names no clauses. Both languages: the plan, the guests' texts in the logs, who sees the IP, the providers' list (Railway us-east4,
+  Cloudflare + Web Analytics, Google, Apple, the push services), what "Usuń konto" removes. Tests: 677 unit (`SmokeTest`). **The owner:**
+  sign Railway's DPA, check Web Analytics is on for the site. **Next:** group 6 "Przed włączeniem planów".
 - **2026-10-15, later — the review of 2026-10-14, the leftovers of "Formularze mówią prawdę", on the branch
   `claude/quiet-failures-speak` from `origin/dev` = `be516ad`; a PR to `dev` (next to "Spójność zapisów", #68 — no file of the
   code shared; both append to this file and the review's status).** PROJECT_CONTEXT 5.1 / 5.2 / 13. The History tab, its filter and
