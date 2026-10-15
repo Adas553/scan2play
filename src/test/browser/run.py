@@ -138,18 +138,28 @@ class DevTools:
     session, a command, its answer. The session must stay open while the page runs — closing it ends the emulation it set."""
 
     def __init__(self, profile, deadline):
-        port_file = Path(profile) / 'DevToolsActivePort'   # the browser writes the port it picked (--remote-debugging-port=0)
-        while not port_file.is_file() or not port_file.read_text().strip():
-            if time.monotonic() > deadline:
-                raise RuntimeError('the browser did not open its DevTools port')
-            time.sleep(0.1)
-        port = int(port_file.read_text().split()[0])
-        while True:
-            pages = json.load(urllib.request.urlopen('http://127.0.0.1:%d/json/list' % port, timeout=5))
-            page = next((p for p in pages if p.get('type') == 'page'), None)
-            if page or time.monotonic() > deadline:
-                break
-            time.sleep(0.1)
+        # the browser writes the port it picked (--remote-debugging-port=0) into the profile; on Windows the file may be locked while
+        # it is being written (PermissionError: a scenario without a verdict, twice in some 500 runs), so it is read again until it is in
+        port_file = Path(profile) / 'DevToolsActivePort'
+        port = None
+        while port is None:
+            try:
+                port = int(port_file.read_text().split()[0])
+            except (OSError, ValueError, IndexError):
+                if time.monotonic() > deadline:
+                    raise RuntimeError('the browser did not open its DevTools port')
+                time.sleep(0.1)
+        page = None
+        while page is None:
+            try:
+                pages = json.load(urllib.request.urlopen('http://127.0.0.1:%d/json/list' % port, timeout=5))
+                page = next((p for p in pages if p.get('type') == 'page'), None)
+            except (OSError, ValueError):
+                pass
+            if page is None:
+                if time.monotonic() > deadline:
+                    break
+                time.sleep(0.1)
         if not page:
             raise RuntimeError('the browser has no page')
         path = page['webSocketDebuggerUrl'].split(str(port), 1)[1]
