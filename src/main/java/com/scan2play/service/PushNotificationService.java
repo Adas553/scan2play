@@ -215,7 +215,8 @@ public class PushNotificationService {
 
     /** What the service worker shows: the texts in the device's language, the song, how to fold and where a tap leads. */
     String payload(PushSubscriptionEntity device, String partyCode, String songName) {
-        Locale locale = device.getLocale() == null ? Locale.ENGLISH : Locale.forLanguageTag(device.getLocale());
+        // a device subscribed before its language was kept: Polish, as a page with no language (WebConfig; review 2026-10-14)
+        Locale locale = device.getLocale() == null ? Locale.forLanguageTag("pl") : Locale.forLanguageTag(device.getLocale());
         Map<String, String> message = new LinkedHashMap<>();
         message.put("title", messageSource.getMessage("push.new_request.title", null, locale));
         // "{0}" stays in the text: the service worker puts the count in (no arguments → no MessageFormat here)
