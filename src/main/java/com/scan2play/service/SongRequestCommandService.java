@@ -57,6 +57,7 @@ public class SongRequestCommandService {
     private static final int SKIPS_READ = 100;
 
     private final SongRequestRepository songRequestRepository;
+    private final DjService djService;
 
     /**
      * Saves {@code request}, unless the same song already waits in the party's queue: then the waiting song gets one vote more
@@ -83,6 +84,7 @@ public class SongRequestCommandService {
             }
             if (songRequestRepository.addVote(song.getId()) > 0) {
                 song.setVotes(song.getVotes() + 1);
+                djService.refreshQueue(request.getPartyCode());
                 log.info("Party [{}]: one more vote for '{}' ({} now)", request.getPartyCode(), song.getSongName(), song.getVotes());
                 return new Saved(Outcome.VOTE, song);
             }
@@ -98,6 +100,8 @@ public class SongRequestCommandService {
             // a song in the queue gets the party's next number ("#27", V28) — under this lock, so two at once never share one
             Integer number = songRequestRepository.nextRequestNumber(request.getPartyCode());
             request.setRequestNumber(number != null ? number : songRequestRepository.maxRequestNumber(request.getPartyCode()) + 1);
+            // the guests' list shows the new song with its next read, not up to 3 s later (review 2026-10-14 K1)
+            djService.refreshQueue(request.getPartyCode());
         }
         return new Saved(Outcome.NEW, songRequestRepository.save(request));
     }

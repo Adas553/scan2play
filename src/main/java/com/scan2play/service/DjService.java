@@ -51,7 +51,7 @@ public class DjService {
      * and Thymeleaf rendering when the queue hasn't changed between polls.
      *
      * @param partyCode The unique code of the party.
-     * @return A fingerprint string (e.g. "12-487-15": count, max id, votes).
+     * @return A fingerprint string (count, max id, a hash of the rows — see the repository).
      */
     public String getQueueFingerprint(String partyCode) {
         String raw = songRequestRepository.computeFingerprint(partyCode, List.of(DECISION_ACCEPTED));
@@ -73,39 +73,35 @@ public class DjService {
         );
     }
 
+    /**
+     * The party's waiting requests, read now — not through the 3 s cache of {@link #getDashboardQueue}. The DJ's poll renders
+     * from it when the queue's fingerprint changed (review 2026-10-14 K1): the cache, filled by a guest's page a moment before a
+     * new request committed, gave the old list under the new ETag, and every later poll was a 304 over it. Read after the
+     * fingerprint, so the list is never older than the ETag it is sent with.
+     */
+    public List<SongRequestEntity> getWaiting(String partyCode) {
+        return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
+    }
+
     // ---- Song Actions ----
 
     /**
-     * The one place a request becomes "played": the decision, and the moment it happened (kept when it is already
-     * set, so a second confirmation does not move a song in the history).
-     */
-    static void markPlayed(SongRequestEntity song, Instant now) {
-        song.setDecision(DECISION_PLAYED);
-        if (song.getPlayedAt() == null) {
-            song.setPlayedAt(now);
-        }
-    }
-
-    /**
-     * Marks a specific song request as "played" in the database.
-     * Validates that the song belongs to the given party (IDOR protection).
+     * Marks a waiting song request as "played" — the moment it happened recorded, kept when it is set already, so a second
+     * confirmation does not move a song in the history. One conditional {@code UPDATE} ({@link SongRequestRepository#markPlayed}):
+     * only the given party's request (IDOR protection), and only one that waits or has played — a window with an old list cannot
+     * play a request skipped, cleared or rejected meanwhile.
      *
      * @param id             The ID of the song request.
      * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
      */
     @Transactional
     public void markSongAsPlayed(Long id, String ownerPartyCode) {
-        songRequestRepository.findById(id).ifPresent(song -> {
-            if (!song.getPartyCode().equals(ownerPartyCode)) {
-                log.warn("IDOR blocked: DJ party {} tried to mark song {} (belongs to party {})",
-                        ownerPartyCode, id, song.getPartyCode());
-                return;
-            }
-            markPlayed(song, Instant.now());
-            songRequestRepository.save(song);
-            evictDashboardQueueAfterCommit(song.getPartyCode());
-            log.info("Marked song ID={} as PLAYED for party {}", id, song.getPartyCode());
-        });
+        if (songRequestRepository.markPlayed(id, ownerPartyCode, Instant.now()) > 0) {
+            evictDashboardQueueAfterCommit(ownerPartyCode);
+            log.info("Marked song ID={} as PLAYED for party {}", id, ownerPartyCode);
+        } else {
+            log.warn("Not marked played: DJ party {} asked for song {} (not theirs, gone, or no longer waiting)", ownerPartyCode, id);
+        }
     }
 
     /**
@@ -194,11 +190,6 @@ public class DjService {
         return changed > 0;
     }
 
-    /** The party's waiting requests, read now (not through the 3 s cache of {@link #getDashboardQueue}). */
-    private List<SongRequestEntity> getWaiting(String partyCode) {
-        return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
-    }
-
     /**
      * The DJ clears the queue ("Wyczyść kolejkę"): every waiting request leaves it as rejected, with {@code clearedAt} set and the
      * AI's comment kept, and shows in the history's rejected requests as cleared by the DJ — in the page's language (V25; the fixed
@@ -239,7 +230,10 @@ public class DjService {
         return deleted;
     }
 
-    /** The party's waiting requests changed outside this class (a guest's 👍): read them again, not from the 3 s cache. */
+    /**
+     * The party's waiting requests changed outside this class (a guest's request or 👍): read them again, not from the 3 s cache —
+     * after the commit, when there is a transaction.
+     */
     public void refreshQueue(String partyCode) {
         evictDashboardQueueAfterCommit(partyCode);
     }
