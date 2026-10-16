@@ -45,6 +45,11 @@
 
         <!--/* the next step is the page's one action (filled); the tip above it is the second kind (the design review, 2026-10-09) */-->
         <a th:href="@{/p/{code}(code=${partyCode})}" class="btn btn-action btn-lg mt-4" th:text="#{result.button.suggest_another}">Suggest another one</a>
+
+        <!--/* "Zarezerwuj tego DJ-a" (the DJ's profiles) under a request that reached the DJ, as the tip: the moment a guest is glad */-->
+        <th:block th:if="${response.decision == 'accepted'}">
+            <div th:replace="~{fragments/components :: djBooking(null, ${instagramUrl}, ${facebookUrl}, ${tiktokUrl})}"></div>
+        </th:block>
     </div>
 </div>
 <div th:replace="~{fragments/components :: footer}"></div>

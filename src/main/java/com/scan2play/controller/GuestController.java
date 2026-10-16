@@ -60,16 +60,13 @@ public class GuestController {
             PartySettingsEntity settings = planService.asPlanned(partySettingsQueryService.getSettings(partyCode));
 
             if (!settings.isActive()) {
-                model.addAttribute(PARTY_CODE, partyCode);   // "check again" opens the party's link
-                return "party_ended";
+                return partyEnded(model, partyCode, settings);
             }
 
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
             model.addAttribute(VIBE_NOTE, settings.getVibeNote());
             model.addAttribute(DJ_NAME, settings.getDjName());
-            model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
-            model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
-            model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
+            addProfiles(model, settings);
             model.addAttribute(TIP_URL, settings.getTipUrl());
             model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, request.getSession(false)));
             model.addAttribute(PARTY_CODE, partyCode);
@@ -194,8 +191,7 @@ public class GuestController {
                 PartySettingsEntity settings = planService.asPlanned(partySettingsQueryService.getSettings(partyCode));
 
                 if (!settings.isActive()) {
-                    model.addAttribute(PARTY_CODE, partyCode);
-                    return "party_ended";
+                    return partyEnded(model, partyCode, settings);
                 }
 
                 // Nothing typed (only spaces get past the form's "required"; a POST may skip the form): back to the form before
@@ -250,12 +246,33 @@ public class GuestController {
                 model.addAttribute(TIP_URL, settings.getTipUrl());
                 // who plays, at the top as on the party page: the result is the same party, not another app (the design review, 2026-10-09)
                 model.addAttribute(DJ_NAME, settings.getDjName());
+                // "Zarezerwuj tego DJ-a" under an accepted request: the guest writes to the DJ on a profile (an idea from Rekwest)
+                addProfiles(model, settings);
                 return "result";
             } catch (IllegalArgumentException e) {
                 log.warn("Song request for unknown party code: {}", partyCode);
                 return REDIRECT_HOME;
             }
         };
+    }
+
+    /**
+     * The page "the DJ is not taking requests": "check again" opens the party's link, and under it the DJ's profiles with "Zarezerwuj
+     * tego DJ-a na swoją imprezę" (an idea from Rekwest, 2026-10-16) — the guest who liked the night writes to the DJ there; Scan2Play
+     * keeps no guest's address. As the organiser's plan has the profiles (V35).
+     */
+    private static String partyEnded(Model model, String partyCode, PartySettingsEntity settings) {
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(DJ_NAME, settings.getDjName());
+        addProfiles(model, settings);
+        return "party_ended";
+    }
+
+    /** The DJ's profiles (V24): https addresses as SocialLinks wrote them, or null. */
+    private static void addProfiles(Model model, PartySettingsEntity settings) {
+        model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
+        model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
+        model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
     }
 
     /**
