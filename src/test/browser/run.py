@@ -19,14 +19,18 @@ devtools restarts it whenever that changes; CLAUDE.md):
 Needs: Python 3 (standard library only), Java (the same one mvnw uses), Chrome or Edge. No Node, no new dependency.
 """
 import argparse
+import base64
+import json
 import os
 import re
+import socket
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -124,6 +128,99 @@ def scenario_viewports():
 
 DEFAULT_WINDOW = '1280,900'
 
+# A headless browser's window is never narrower than about 500 px (measured: --window-size=390,844 gives innerWidth 496 … 504, in the
+# old headless mode and the new, with any scale factor) — a phone's width is set through the DevTools protocol instead.
+PHONE_WIDTH = 768
+
+
+class DevTools:
+    """The least of the Chrome DevTools protocol over its WebSocket (the standard library has no WebSocket client): one page's
+    session, a command, its answer. The session must stay open while the page runs — closing it ends the emulation it set."""
+
+    def __init__(self, profile, deadline):
+        # the browser writes the port it picked (--remote-debugging-port=0) into the profile; on Windows the file may be locked while
+        # it is being written (PermissionError: a scenario without a verdict, twice in some 500 runs), so it is read again until it is in
+        port_file = Path(profile) / 'DevToolsActivePort'
+        port = None
+        while port is None:
+            try:
+                port = int(port_file.read_text().split()[0])
+            except (OSError, ValueError, IndexError):
+                if time.monotonic() > deadline:
+                    raise RuntimeError('the browser did not open its DevTools port')
+                time.sleep(0.1)
+        page = None
+        while page is None:
+            try:
+                pages = json.load(urllib.request.urlopen('http://127.0.0.1:%d/json/list' % port, timeout=5))
+                page = next((p for p in pages if p.get('type') == 'page'), None)
+            except (OSError, ValueError):
+                pass
+            if page is None:
+                if time.monotonic() > deadline:
+                    break
+                time.sleep(0.1)
+        if not page:
+            raise RuntimeError('the browser has no page')
+        path = page['webSocketDebuggerUrl'].split(str(port), 1)[1]
+        self.sock = socket.create_connection(('127.0.0.1', port), timeout=10)
+        key = base64.b64encode(os.urandom(16)).decode()
+        self.sock.sendall(('GET %s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n'
+                           'Sec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n\r\n' % (path, port, key)).encode())
+        answer = b''
+        while b'\r\n\r\n' not in answer:
+            chunk = self.sock.recv(4096)
+            if not chunk:
+                raise RuntimeError('the DevTools WebSocket closed')
+            answer += chunk
+        if b' 101 ' not in answer.split(b'\r\n', 1)[0]:
+            raise RuntimeError('the DevTools WebSocket refused: ' + answer.split(b'\r\n', 1)[0].decode(errors='replace'))
+        self.buffer = answer.split(b'\r\n\r\n', 1)[1]
+        self.last_id = 0
+
+    def _read(self, n):
+        while len(self.buffer) < n:
+            chunk = self.sock.recv(65536)
+            if not chunk:
+                raise RuntimeError('the DevTools WebSocket closed')
+            self.buffer += chunk
+        data, self.buffer = self.buffer[:n], self.buffer[n:]
+        return data
+
+    def _message(self):
+        """The next whole message (the browser sends unmasked frames; a long one may come in several)."""
+        parts = []
+        while True:
+            head = self._read(2)
+            length = head[1] & 0x7f
+            if length == 126:
+                length = int.from_bytes(self._read(2), 'big')
+            elif length == 127:
+                length = int.from_bytes(self._read(8), 'big')
+            parts.append(self._read(length))
+            if head[0] & 0x80:
+                return b''.join(parts)
+
+    def call(self, method, **params):
+        self.last_id += 1
+        payload = json.dumps({'id': self.last_id, 'method': method, 'params': params}).encode()
+        mask = os.urandom(4)
+        length = len(payload)
+        header = bytes([0x81]) + (bytes([0x80 | length]) if length < 126 else bytes([0x80 | 126]) + length.to_bytes(2, 'big'))
+        self.sock.sendall(header + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(payload)))
+        while True:
+            message = json.loads(self._message())
+            if message.get('id') == self.last_id:
+                if 'error' in message:
+                    raise RuntimeError('%s: %s' % (method, message['error']))
+                return message.get('result')
+
+    def close(self):
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+
 
 def kill(process):
     if process.poll() is not None:
@@ -154,8 +251,18 @@ def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DE
     blocked = ['www.youtube.com', 'i.ytimg.com', 'itunes.apple.com']
     flags.append('--host-resolver-rules=' + ', '.join('MAP %s ~NOTFOUND' % host for host in blocked))
     url = 'http://127.0.0.1:%d/dj/dashboard?scenario=%s' % (port, name)
-    process = subprocess.Popen([chrome] + flags + [url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    width, height = (int(n) for n in window.split(','))
+    phone = width < PHONE_WIDTH
+    if phone:
+        flags.append('--remote-debugging-port=0')   # the page's width is set before it loads (DevTools), then it is opened
+    process = subprocess.Popen([chrome] + flags + ['about:blank' if phone else url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    devtools = None
     try:
+        if phone:
+            # a phone's screen: this width and height, no scroll bar taking a part of it (mobile), the page's own viewport meta
+            devtools = DevTools(profile, time.monotonic() + 30)
+            devtools.call('Emulation.setDeviceMetricsOverride', width=width, height=height, deviceScaleFactor=1, mobile=True)
+            devtools.call('Page.navigate', url=url)
         # Wait for the verdict — but not the whole timeout for a browser that never started (a runner without a usable Chrome would
         # otherwise spend it on every scenario): once the process is gone, give the page a few seconds more and stop.
         deadline, gone_since = time.monotonic() + timeout, None
@@ -165,7 +272,11 @@ def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DE
                 if time.monotonic() - gone_since > 5:
                     print('      the browser exited with code %s before the scenario finished' % process.returncode, flush=True)
                     break
+    except (OSError, RuntimeError, ValueError) as e:
+        print('      the browser could not be given the phone\'s width: %s' % e, flush=True)
     finally:
+        if devtools:
+            devtools.close()
         kill(process)
         shutil.rmtree(profile, ignore_errors=True)
     return stand.result_data.get(name)

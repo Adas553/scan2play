@@ -8,6 +8,35 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-15, late night — the deferred small items, PR 5 "the front-end refactors", on the branch `claude/frontend-refactors` on top
+  of `claude/sw-window-test` (#88); a PR to `dev`.** One "Kopiuj" for every DJ page (`dj-nav.js`; "Skopiowano" only when it was copied;
+  `copy-the-*` red before); `forms.js` by the form's whole path (`/staff-link`, `/staff-remove` matched nothing); every colour of
+  `app.css` a token on `:root` of its own value — the owner chose no change of the look (`AppCssColoursTest`, red before); 6.7 "one
+  action per view" (the owner). `run.py` reads `DevToolsActivePort` again while Windows locks it (in #86, merged forward). Tests: 719
+  unit, 126 browser. **The owner:** merge #85 → #86 → #87 → #88 → this PR in order, then the release to `main`; decide whether the
+  near-identical tones are merged, and the two `.btn-action` of a closed party with an empty queue ("Wznów imprezę", "Drukuj").
+- **2026-10-15, late night — the deferred small items, PR 4 "the window `sw.js` picks, tested", on the branch `claude/sw-window-test`
+  on top of `claude/guest-refresh-focus` (#87); a PR to `dev`.** A headless browser runs no `notificationclick`, so the choice is
+  `openThePanel(windows, url, openWindow)` in `sw.js` (no change in behaviour); the scenario `notification-opens-the-partys-panel`
+  loads the real `/sw.js` into a page and gives it windows that record what is done (red before; the old "any /dj/ window" red on 5
+  steps). Tests: 122 browser.
+- **2026-10-15, late night — the deferred small items, PR 3 "the focus after the guest's ↻ Odśwież", on the branch
+  `claude/guest-refresh-focus` on top of `claude/browser-narrow-widths` (#86); a PR to `dev`.** `guest-party.js` `focusPlace()`: the
+  list put in whole in place of the old one keeps the keyboard's focus ("↻ Odśwież", the search, the same song's 👍; in the unfolded
+  rest once it is in). The stand-in's `GET /p/ABC12/queue` answers the real `guestQueue` fragment now (`guest-queue.html`). Tests:
+  718 unit, 121 browser (`guest-refresh-keeps-the-focus`, `guest-back-keeps-the-focus`, red before).
+- **2026-10-15, late night — the deferred small items, PR 2 "a phone's real width in the browser tests", on the branch
+  `claude/browser-narrow-widths` on top of `claude/guest-session-clock` (#85); a PR to `dev`.** A headless window is never narrower
+  than ~500 px (measured: Chrome and Edge, both headless modes, any scale factor), so `run.py` sets a phone's size through the
+  DevTools protocol before it opens the scenario (a small stdlib WebSocket client): the `max-width: 400px` / `380px` rules of
+  `app.css` are tested now (`phone-width-390`, `phone-width-360`, red before, and red when the rules go). Tests: 119 browser.
+- **2026-10-15, late night — the deferred small items, PR 1 "the guest's limit on a clock", on the branch `claude/guest-session-clock`
+  from `origin/dev` = `1e16a91`; a PR to `dev`.** Checked first: `main` = `dev` in content (#83, #84 merged, deployed 19:11);
+  production enforces the CSP (`Content-Security-Policy`, not `-Report-Only`), sends `Referrer-Policy: same-origin` and
+  `Permissions-Policy`; Railway's log (read only) has no "CSP violation" since. `GuestSessionService` takes a `Clock`; its test waits
+  to the second on a clock it moves (a new one: the wait the guest is told is exactly enough). Tests: 718 unit. **Next:** the order
+  agreed with the owner — PR 2 the browser harness at a real 390 / 380 px, PR 3 the focus after the guest's "↻ Odśwież", PR 4 the
+  window `sw.js` picks, tested, PR 5 the front-end refactors; one PR each to `dev`, each on the one before.
 - **2026-10-15, night — the guests' song suggestions, on the branch `claude/song-suggestions` from `origin/dev` = `7c742ac`; a PR to
   `dev`.** The owner: "shakira da" did not suggest "Dai Dai" (it did for "shakira dai"). Checked on iTunes: it matches whole words only
   ("zenek prz" gives nothing), the American store lacks Polish songs ("Akcent – Przekorny Los" only in PL), and it gives a song several

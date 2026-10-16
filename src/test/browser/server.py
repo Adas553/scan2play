@@ -6,7 +6,7 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
   /dj/dashboard                      the page; ?scenario=NAME also adds the runner; sent with the real Content-Security-Policy
                                      (csp.txt), enforced
   POST /csp-report                   204 (the page's violations are caught by harness.js)
-  /js/*, /css/*, /images/*           src/main/resources/static
+  /js/*, /css/*, /images/*, /sw.js   src/main/resources/static (the service worker as a script: sw-window.js loads it into the page)
   /webjars/bootstrap/*               Bootstrap from its webjar in the local Maven repository (the version the pom names), as
                                      the real server serves it — so the policy is checked against Bootstrap's CSS and script too
   /harness/*                         this directory (harness.js, scenarios/*.js)
@@ -14,6 +14,7 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
   POST /__config  {json}             merged into the state (see default_state for the keys)
   GET  /dj/history-view/fragment     the REAL history fragment (rendered by DashboardPageRenderTest: history-<filter>.html, and
                                      history-<filter>-more.html when the request has a limit — "Show more")
+  GET  /p/ABC12/queue                the REAL list of the guest page alone (guest-queue.html, GuestPageRenderTest: the list of guest-many)
   GET  /p/ABC12/queue/more           the REAL folded rest of the guest's list (guest-queue-more.html, GuestPageRenderTest)
   POST /p/ABC12/vote                 a guest's 👍 (guest-party.js): the REAL answer, that song's row (state 'voteAnswer':
                                      guest-vote-answer.html, or guest-vote-gone.html — GuestPageRenderTest); the X-Requested-With
@@ -235,7 +236,7 @@ class Handler(BaseHTTPRequestHandler):
             policy = stand.csp()
             return self._send(200, stand.page(query.get('page', ['dashboard'])[0], 'scenario' in query), 'text/html; charset=utf-8',
                               {'Content-Security-Policy': policy} if policy else None)
-        if path.startswith('/js/') or path.startswith('/css/') or path.startswith('/images/'):
+        if path.startswith('/js/') or path.startswith('/css/') or path.startswith('/images/') or path == '/sw.js':
             return self._file(stand.static, path[1:])
         if path.startswith('/harness/'):
             return self._file(stand.browser, path[len('/harness/'):])
@@ -257,7 +258,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/p/') and path.endswith('/queue'):   # the guest's list fetched again: as the real server renders it
             if state['guestQueueStatus']:
                 return self._send(state['guestQueueStatus'])
-            with open(os.path.join(stand.rendered, 'guest-vote-answer.html'), encoding='utf-8') as f:
+            with open(os.path.join(stand.rendered, 'guest-queue.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/updates':
             with stand.lock:
