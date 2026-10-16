@@ -75,4 +75,15 @@ class SongListTest {
         String full = IntStream.rangeClosed(1, 120).mapToObj(i -> i + "x".repeat(200)).collect(Collectors.joining("\n"));
         assertThat(SongList.tidy(full).length()).as("fits the column").isLessThanOrEqualTo(SongList.TEXT_MAX);
     }
+
+    /** What a list typed holds, counted as {@link SongList#tidy} keeps it but without its limit: the page says what did not fit. */
+    @Test
+    void entries_countsWhatTidyKeeps_beyondTheLimitToo() {
+        String many = IntStream.rangeClosed(1, 150).mapToObj(i -> "Song " + i).collect(Collectors.joining("\n"));
+
+        assertThat(SongList.entries(many)).isEqualTo(150);
+        assertThat(SongList.entries("  Akcent  \r\n\r\nakcent\nA\nej\nsanah – Szampan\n")).as("as tidy: no blanks, repeats, short ones")
+                .isEqualTo(2);
+        assertThat(SongList.entries(null)).isZero();
+    }
 }

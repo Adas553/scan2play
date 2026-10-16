@@ -75,12 +75,16 @@
                         <textarea id="hostBlockedInput" name="blocked" rows="3" maxlength="16000"
                                   class="form-control form-control-sm bg-black text-light border-secondary"
                                   th:text="${hostBlocked}" th:placeholder="#{host.blocked.placeholder}"></textarea>
+                        <div class="s2p-list-count" data-list-for="hostBlockedInput" aria-live="polite"
+                             th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
                     </div>
                     <div class="col-md-6">
                         <label for="hostWantedInput" class="form-label text-light small mb-1" th:text="#{host.wanted.label}">⭐ Must play</label>
                         <textarea id="hostWantedInput" name="wanted" rows="3" maxlength="16000"
                                   class="form-control form-control-sm bg-black text-light border-secondary"
                                   th:text="${hostWanted}" th:placeholder="#{host.wanted.placeholder}"></textarea>
+                        <div class="s2p-list-count" data-list-for="hostWantedInput" aria-live="polite"
+                             th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{dashboard.vibe.note.save}">Save</button>
@@ -251,6 +255,8 @@
 <div th:replace="~{fragments/components :: formRefused}"></div>
 
 <script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
+<!--/* the lines each hosts' list holds, and a warning over the limit (SongList.MAX_LINES) */-->
+<script src="/js/song-list-count.js" th:src="@{/js/song-list-count.js}"></script>
 <!-- the page's forms in the background, the notifications, the app — the panel's own modules (js/dashboard/settings-page.js) -->
 <script type="module" src="/js/dashboard/settings-page.js" th:src="@{/js/dashboard/settings-page.js}"></script>
 <div th:replace="~{fragments/components :: footer}"></div>

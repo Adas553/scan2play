@@ -9,6 +9,16 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-16 — the site's icon for Google Search, on the branch `claude/site-icon` from `origin/dev`; a PR to `dev`.** The owner: Google
+  showed a grey globe beside scan2play.com.pl. `/favicon.ico` (16 / 32 / 48 px) was there, but no page named it — Google needs
+  `<link rel="icon">` on the home page. The `seo` fragment (the public pages) names `/favicon.ico`, `images/icon-192.png` and the
+  apple-touch-icon. Tests: 723 unit (`SmokeTest`, red before), 129 browser. **The owner, after the release:** Search Console → URL
+  Inspection of the home page → "Request indexing" (Google takes days to weeks otherwise).
+- **2026-10-16 — the hosts' lists count their entries, on the branch `claude/host-lists-limit` from `origin/dev`; a PR to `dev`.** The
+  owner: "co jak DJ wpisze 100 piosenek?" — a list keeps 100 (`SongList.MAX_LINES`, the owner: "zostaw 100"; the lists never reach the
+  AI), but 120 lines were saved as 100 without a word. Now under each list "N z 100 pozycji" as it is typed and a warning over 100
+  (`js/song-list-count.js`, on "Ustawienia imprezy" and `/h/…`); the hosts' page after such a save says the rest did not fit. Tests:
+  723 unit, 129 browser (`host-lists-count`, `host-page-count`, red without the script).
 - **2026-10-16 — the guest is asked for the artist and the title, on the branch `claude/artist-and-title` from `origin/dev`; a PR to
   `dev`.** Production: one line of lyrics ("Dziewczyno jak wino uderzasz do głowy") gave four different made-up songs, each rejected
   by the vibe. The owner: ask for "wykonawca i tytuł" — a line of lyrics typed is the guest's own risk. The field's hint, the empty
@@ -64,6 +74,17 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    search the model makes ("5,000 free search requests per month, then $14 per 1,000"; the docs and third parties differ); (c) how
    many requests are lyrics, from Railway's log. Weak spots: a lyric the model labels a title and matches to a made-up title skips
    the search; the guest waits 1–3 s longer on a searched request.
+7. **Ideas from Rekwest (rekwest.app, the biggest competitor; the owner, 2026-10-16: "dopisz")** — features to borrow, never their
+   look, texts or screenshots. Rekwest: Free $0 (unlimited, ads), Professional $4.99 / month, Enterprise $29.17 / month (2026-10-16);
+   no AI on their page — ours (the vibe filter, the comments, "⚠ Sprawdź"), the hosts' lists by a link and Polish are what to show.
+   - **A dedication with a request** ("dla Ani na 18-stkę"): the guest adds a short message, the DJ sees it by the song; the AI can
+     refuse an offensive one. Cheap; for weddings and birthdays.
+   - **The DJ's contact after the party:** the "party ended" page and the result page show the DJ's profile and "Zarezerwuj tego DJ-a
+     na swoją imprezę" (Rekwest e-mails the guests afterwards — we collect no guests' e-mails and should not). The profiles exist (V24).
+   - **A TV screen** in the hall or the pub: the guests' most wanted songs (the votes) and the QR code beside them — not a queue of
+     what plays next (Scan2Play has no DJ's play order). A page of its own for a screen, polled like the panel.
+   - **The landing page:** show at once how it looks — the guest's page on a phone and the DJ's panel on a laptop, side by side
+     (their hero does it well); then three steps, the features, pages for whom (wedding DJs, club DJs, pubs, karaoke), an FAQ.
 
 ## Waiting for the owner (not code)
 

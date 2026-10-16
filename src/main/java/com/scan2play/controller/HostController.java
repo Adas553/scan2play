@@ -45,6 +45,7 @@ public class HostController {
         model.addAttribute(DJ_NAME, settings.getDjName());
         model.addAttribute(HOST_BLOCKED, settings.getHostBlocked());
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
+        model.addAttribute(SONG_LIST_MAX, SongList.MAX_LINES);
         return "host";
     }
 
@@ -65,6 +66,9 @@ public class HostController {
         });
         log.info("Party [{}]: the hosts saved their lists", settings.getPartyCode());
         redirectAttributes.addFlashAttribute(HOST_SAVED, true);
+        if (SongList.entries(blocked) > SongList.MAX_LINES || SongList.entries(wanted) > SongList.MAX_LINES) {
+            redirectAttributes.addFlashAttribute(HOST_DROPPED, SongList.MAX_LINES);   // the first ones kept: the page says so
+        }
         return "redirect:/h/" + token;
     }
 

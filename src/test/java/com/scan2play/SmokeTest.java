@@ -73,6 +73,10 @@ class SmokeTest {
                 .andExpect(content().string(containsString("<title>Scan2Play – prośby o piosenki od gości przez kod QR</title>")))
                 .andExpect(content().string(containsString("<meta name=\"description\" content=\"Goście skanują kod QR")))
                 .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/\">")))
+                // the site's icon, named on the home page (Google Search shows it beside the result only then; 2026-10-16 a grey globe)
+                .andExpect(content().string(containsString("<link rel=\"icon\" href=\"/favicon.ico\" sizes=\"48x48\">")))
+                .andExpect(content().string(containsString("<link rel=\"icon\" type=\"image/png\" sizes=\"192x192\" href=\"/images/icon-192.png\">")))
+                .andExpect(content().string(containsString("<link rel=\"apple-touch-icon\" href=\"/images/apple-touch-icon.png\">")))
                 .andExpect(content().string(containsString("<link rel=\"alternate\" hreflang=\"en\" href=\"https://www.scan2play.com.pl/?lang=en\">")))
                 .andExpect(content().string(containsString("<meta property=\"og:image\" content=\"https://www.scan2play.com.pl/images/og-image.png\">")))
                 .andExpect(content().string(containsString("<meta property=\"og:locale\" content=\"pl_PL\">")));

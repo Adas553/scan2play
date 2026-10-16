@@ -56,8 +56,20 @@ public final class SongList {
         return lines.isEmpty() ? null : String.join("\n", lines);
     }
 
+    /**
+     * How many entries {@code typed} holds, counted as {@link #tidy} keeps them but without its limit — more than
+     * {@value #MAX_LINES}: the rest did not fit, and the page says so (js/song-list-count.js counts the same way as it is typed).
+     */
+    public static int entries(String typed) {
+        return lines(typed, Integer.MAX_VALUE).size();
+    }
+
     /** The entries of {@code text} as {@link #tidy} keeps them. */
     static List<String> lines(String text) {
+        return lines(text, MAX_LINES);
+    }
+
+    private static List<String> lines(String text, int limit) {
         if (text == null) {
             return List.of();
         }
@@ -68,7 +80,7 @@ public final class SongList {
             String key = words(line);
             if (key.replace(" ", "").length() >= SHORTEST && seen.add(key)) {
                 kept.add(line);
-                if (kept.size() == MAX_LINES) {
+                if (kept.size() == limit) {
                     break;
                 }
             }

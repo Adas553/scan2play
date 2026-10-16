@@ -216,6 +216,7 @@ public class DjDashboardController {
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
         model.addAttribute(HOST_BLOCKED_COUNT, entries(settings.getHostBlocked()));
         model.addAttribute(HOST_WANTED_COUNT, entries(settings.getHostWanted()));
+        model.addAttribute(SONG_LIST_MAX, SongList.MAX_LINES);
         // a link made more than 30 days ago (V37) is shown as none: it opens nothing, and "Utwórz link" makes a new one
         boolean hostLinkWorks = settings.hostLinkWorks(Instant.now());
         model.addAttribute(HOST_LINK, hostLinkWorks ? cleanBaseUrl + "/h/" + settings.getHostToken() : null);

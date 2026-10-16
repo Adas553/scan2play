@@ -172,7 +172,10 @@ The evening summary counts them ("Napiwki", "💸 N" at the songs) and the CSV h
 
 **The hosts' lists** (V29, the owner 2026-10-09: the couple at a wedding — or the host of a party, the pub's owner — usually send
 the DJ a "do not play" and a "must play" list): "🚫 Nie grać" and "⭐ Koniecznie zagrać" in `party_settings`, one song or artist per
-line (`util/SongList`: at most 100 lines of 150 characters, repeats and lines of fewer than 3 letters left out). A line matches a
+line (`util/SongList`: at most 100 lines of 150 characters, repeats and lines of fewer than 3 letters left out; matched in our code,
+never sent to the AI). Under each list, as it is typed, "37 z 100 pozycji" and over 100 "Za dużo pozycji — zapisze się tylko 100
+pierwszych." (`js/song-list-count.js`, the server's way of counting — `SongList.entries`; 2026-10-16: 120 lines were saved as 100
+without a word); the hosts' page after such a save says "Zapisane, ale lista mieści najwyżej 100 pozycji…" (`hostDropped`). A line matches a
 song when its words stand in the song's name one after another, as people read them (case, accents, "ł" and punctuation ignored;
 whole words: "Szampan" is not "Szampany"): "Akcent" is every song of Akcent, "Przez twe oczy zielone" that song by anyone. In
 `SongEvaluationService`: a request whose guest's words name a blocked one is refused **before the AI is asked**; one the AI worked
@@ -631,7 +634,9 @@ the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an
 link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
 `scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages:
 `fragments/components :: seo(path, title, description)` writes the description, the canonical address in the page's language,
-the `hreflang` alternates and Open Graph with `images/og-image.png`; on the landing page, the guide, `/privacy`, `/terms`, `/pro`).
+the `hreflang` alternates, Open Graph with `images/og-image.png` and the site's icon — `rel="icon"` `/favicon.ico` (16 / 32 / 48 px)
+and `images/icon-192.png`, `apple-touch-icon` (Google Search shows the icon beside a result only when the home page names it;
+2026-10-16: a grey globe); on the landing page, the guide, `/privacy`, `/terms`, `/pro`).
 
 ### 6.4 Templates
 
@@ -653,6 +658,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes ("Kopiuj" of the link: `dj-nav.js`) |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`; a browser that refuses the session storage gets the page at once, without the memory) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
+| `js/song-list-count.js` | the hosts' lists ("Ustawienia imprezy", `/h/…`): the entries each holds of `SongList.MAX_LINES`, a warning over it |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side, the Polish store; iTunes matches whole words only, so a word being typed is completed here — the words before it are asked too, 50 songs kept in memory while the word grows, both asks at once — and the songs whose title, then artist, has a word starting so come first ("shakira da" → "Dai Dai"); each song once; an answer for what the field no longer says is dropped; an ARIA combobox — `aria-expanded`, `aria-controls`, `aria-activedescendant`) |
 | `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles — the look of Section 6.7 |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
@@ -969,7 +975,7 @@ GuestQueueService          → DjService
 | POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid` |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
 | POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |
-| POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" |
+| POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" (a list over 100: the first 100 kept, `hostDropped` says so) |
 | GET | `/privacy`, `/terms` | legal pages |
 | GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
 | GET | `/robots.txt`, `/sitemap.xml` | for search engines (`SeoController`, 2026-10-14) |
