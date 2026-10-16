@@ -69,6 +69,17 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    search the model makes ("5,000 free search requests per month, then $14 per 1,000"; the docs and third parties differ); (c) how
    many requests are lyrics, from Railway's log. Weak spots: a lyric the model labels a title and matches to a made-up title skips
    the search; the guest waits 1–3 s longer on a searched request.
+7. **Ideas from Rekwest (rekwest.app, the biggest competitor; the owner, 2026-10-16: "dopisz")** — features to borrow, never their
+   look, texts or screenshots. Rekwest: Free $0 (unlimited, ads), Professional $4.99 / month, Enterprise $29.17 / month (2026-10-16);
+   no AI on their page — ours (the vibe filter, the comments, "⚠ Sprawdź"), the hosts' lists by a link and Polish are what to show.
+   - **A dedication with a request** ("dla Ani na 18-stkę"): the guest adds a short message, the DJ sees it by the song; the AI can
+     refuse an offensive one. Cheap; for weddings and birthdays.
+   - **The DJ's contact after the party:** the "party ended" page and the result page show the DJ's profile and "Zarezerwuj tego DJ-a
+     na swoją imprezę" (Rekwest e-mails the guests afterwards — we collect no guests' e-mails and should not). The profiles exist (V24).
+   - **A TV screen** in the hall or the pub: the guests' most wanted songs (the votes) and the QR code beside them — not a queue of
+     what plays next (Scan2Play has no DJ's play order). A page of its own for a screen, polled like the panel.
+   - **The landing page:** show at once how it looks — the guest's page on a phone and the DJ's panel on a laptop, side by side
+     (their hero does it well); then three steps, the features, pages for whom (wedding DJs, club DJs, pubs, karaoke), an FAQ.
 
 ## Waiting for the owner (not code)
 
