@@ -499,7 +499,8 @@ The texts call the party's owner "organizator" and the people "obsługa".
 ### 5.2 Guest Flow
 
 `/p/{partyCode}` (no login) → our logo, "🎧 Gra: …" and the vibe as one quiet line ("Klimat imprezy: …"), then the form — the question
-"Co chcesz usłyszeć?" is the label of its one field for a song — a title, an artist or a line of the lyrics (song suggestions from
+"Co chcesz usłyszeć?" is the label of its one field for a song — "Wpisz wykonawcę i tytuł." (2026-10-16, the owner: no promise of a song found by a line
+of its lyrics — the AI still tries, the field takes any text; song suggestions from
 iTunes, asked by the browser) → `POST /p/{partyCode}/request` (`songName`; an async `Callable`) → the result page (decision, the AI's
 comment, the votes). A request the AI reads as a mood is not saved: the guest is back at the form with the text and
 `guest.error.song_only` (the DJ sets the mood). An empty request (only spaces) goes back at once with `guest.error.empty` — no

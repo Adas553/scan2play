@@ -97,6 +97,16 @@ class GuestPageRenderTest {
         writePreview("index.html", render(PL, Map.of()));
     }
 
+    /**
+     * The guest is asked for the artist and the title (the owner, 2026-10-16): the AI does not always find a song by a line of its lyrics
+     * — it made up four different songs for one line —, so the page promises nothing of the kind.
+     */
+    @Test
+    void theGuestIsAskedForTheArtistAndTheTitle_notALineOfTheLyrics() {
+        assertThat(render(PL, Map.of())).contains(">Wpisz wykonawcę i tytuł.<").doesNotContain("tekstu");
+        assertThat(render(Locale.ENGLISH, Map.of())).contains(">Type the artist and the title.<").doesNotContain("lyrics");
+    }
+
     /** For a look in a browser (the page links /css/app.css): target/guest-page/NAME. */
     private static void writePreview(String name, String html) {
         try {
