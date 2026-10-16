@@ -275,9 +275,14 @@
 <!--/* The head of a public page for search engines and shared links (2026-10-14): what the page is (description), its one address in
      its language (canonical: Polish at the page's own path, English with ?lang=en — WebConfig), the other language's (hreflang), and
      the card of a link shared on Messenger / WhatsApp / Facebook (Open Graph: title, description, the picture images/og-image.png).
-     siteUrl comes from SiteUrlAdvice (scan2play.site-url); without it (a render test that gives none) only the description. */-->
+     siteUrl comes from SiteUrlAdvice (scan2play.site-url); without it (a render test that gives none) only the description and the
+     icons. The site's icon (our mark): Google Search shows it beside a result only when the home page names it with rel="icon" — at
+     least 48 px, at an address that does not change (2026-10-16: a grey globe, no link named it); the PNG for a sharper one. */-->
 <th:block th:fragment="seo(path, title, description)" th:with="english=${#messages.msg('html.lang') == 'en'}">
     <meta name="description" th:content="${description}">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192.png">
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
     <th:block th:if="${siteUrl != null}" th:with="here=${siteUrl + path}, canonical=${siteUrl + path + (english ? '?lang=en' : '')}">
     <link rel="canonical" th:href="${canonical}">
     <link rel="alternate" hreflang="pl" th:href="${here}">
