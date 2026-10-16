@@ -8,6 +8,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-16 — the look tidied, on the branch `claude/look-tidy` on top of `claude/owner-items-done` (#91); a PR to `dev`.** The
+  owner: "scal te kolory" — the near-identical tones merged (14 tokens fewer: five near-whites → `--s2p-white` / `--s2p-light` /
+  `--s2p-text`, three panel backgrounds → `--s2p-bg-elevated`, edges `#444` / `#495057` → `--s2p-border-strong`, one yellow); 6.7
+  "zrób jak uważasz" — a closed party's empty queue shows "Drukuj" as an outline ("Wznów imprezę" is the one action;
+  `closed-party-one-action`, red before); the keys' legend under the queue — "Skróty klawiszowe", each key a `<kbd>` with one word
+  (the owner accepted the texts and the screenshots). Tests: 719 unit, 127 browser.
 - **2026-10-16 — the owner's settings of the review of 2026-10-14 are done** (the owner): Railway "Wait for CI" (W13; read on Railway:
   `source.checkSuites: true`), the Cloudflare rate-limit rule for `/p/*` (W3 / W4), Dependabot alerts and security updates (W15).
   Production enforces the CSP since 2026-10-15 (`CSP_ENFORCE=true`; no "CSP violation" in Railway's log since). The deferred small

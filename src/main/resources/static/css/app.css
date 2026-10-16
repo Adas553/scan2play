@@ -45,44 +45,31 @@
     --s2p-radius:        8px;       /* buttons and fields */
     --s2p-radius-card:   12px;      /* cards */
     --s2p-font:          'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    /* Every other colour of this file, by what it is for (review 2026-10-14: 111 colours were written where they are used). The
-       values are the ones that were written there — the look did not change; tones close to each other (the five near-whites,
-       the panels' backgrounds) are kept apart, to be merged as a decision of the look. --s2p-<colour>-<n>: that colour at an
-       alpha of n %. */
+    /* Every other colour of this file, by what it is for (review 2026-10-14: 111 colours were written where they were used,
+       50 values). 2026-10-16 the near-identical tones merged (the owner): white, light and --s2p-text for the light texts (five
+       near-whites were), one dim text, --s2p-bg-elevated for the panels (three were), two edges, one yellow. A colour of a rule is
+       one of these (AppCssColoursTest). --s2p-<colour>-<n>: that colour at an alpha of n %. */
     --s2p-white:          #fff;                      /* white: the headings, a hover's text, the table head, links in a message */
-    --s2p-light:          #f8f9fa;                   /* Bootstrap's "light": cards' titles, second headings, the picked outline */
-    --s2p-text-row:       #f1f3f5;                   /* the name of a row (.s2p-row, the guide's rows) */
-    --s2p-text-soft:      #e9ecef;                   /* a message's text, the jumps, the plans' lines */
-    --s2p-text-lede:      #dfe3e7;                   /* the ledes of the guide and the product page, the Pro box */
-    --s2p-text-dim:       #cfcfcf;                   /* the error page's description, .text-secondary-bright */
-    --s2p-outline-text:   #ced4da;                   /* the text of an outline-secondary button */
-    --s2p-grey-light:     #adb5bd;                   /* a hint, the hover edge of an outline-secondary button */
+    --s2p-light:          #f8f9fa;                   /* cards' titles, second headings, a row's name */
+    --s2p-text-dim:       #ced4da;                   /* an outline-secondary's text, the error page's description */
     --s2p-grey:           #6c757d;                   /* the edge of an outline-secondary button and of "Pomiń" */
     --s2p-ink:            #212529;                   /* dark text on the light picked button */
     --s2p-action-active:  #3dd5f3;                   /* the action button pressed */
     --s2p-bg-landing:     #121212;                   /* the landing page */
-    --s2p-bg-panel:       #1a1a1a;                   /* the guide's steps, the provider cards, the song suggestions */
-    --s2p-bg-day:         #1b1b1b;                   /* a day's heading in the history */
     --s2p-bg-row:         #232323;                   /* a row of the queue and the history, the active tab */
-    --s2p-bg-hover:       #262626;                   /* a row under the pointer, the "Cofnij" bar, the guide's step number */
+    --s2p-bg-hover:       #262626;                   /* a row under the pointer, the "Cofnij" bar, a key of the keys' legend */
     --s2p-bg-thead:       #1a1a2e;                   /* the head of the DJ's tables */
-    --s2p-bg-warning:     #2b2000;                   /* the "party closed" message */
-    --s2p-bg-note:        #2e2810;                   /* the floating note of a 👍 */
-    --s2p-border-strong:  #555;                      /* a card under the pointer, the "Cofnij" bar */
-    --s2p-border-mid:     #444;                      /* under a day's heading in the history */
-    --s2p-border-alert:   #495057;                   /* the edge of a grey message */
+    --s2p-bg-warning:     #2b2000;                   /* the "party closed" message, the floating note of a 👍 */
+    --s2p-border-strong:  #555;                      /* a card under the pointer, the "Cofnij" bar, a grey message */
     --s2p-border-light:   #dee2e6;                   /* the edge of the small QR code */
     --s2p-black:          #000;                      /* the shadow of the 👍 count's text */
-    --s2p-warning:        #ffc107;                   /* a skip (the history's ⏭), "Pomiń" under the pointer */
-    --s2p-warning-text:   #ffca2c;                   /* a warning's words */
+    --s2p-warning:        #ffc107;                   /* a skip (⏭), "Pomiń" under the pointer, a warning's words */
     --s2p-action-45:      rgba(13, 202, 240, 0.45);
     --s2p-action-28:      rgba(13, 202, 240, 0.28);
     --s2p-action-12:      rgba(13, 202, 240, 0.12);
     --s2p-action-07:      rgba(13, 202, 240, 0.07);
-    --s2p-action-06:      rgba(13, 202, 240, 0.06);
     --s2p-action-00:      rgba(13, 202, 240, 0);
     --s2p-warning-50:     rgba(255, 193, 7, 0.5);
-    --s2p-warning-15:     rgba(255, 193, 7, 0.15);
     --s2p-warning-12:     rgba(255, 193, 7, 0.12);
     --s2p-danger-55:      rgba(255, 123, 123, 0.55);
     --s2p-danger-20:      rgba(255, 123, 123, 0.2);
@@ -95,7 +82,6 @@
     --s2p-white-05:       rgba(255, 255, 255, 0.05);
     --s2p-black-70:       rgba(0, 0, 0, 0.7);
     --s2p-black-60:       rgba(0, 0, 0, 0.6);
-    --s2p-black-55:       rgba(0, 0, 0, 0.55);
     --s2p-black-50:       rgba(0, 0, 0, 0.5);
 }
 
@@ -120,6 +106,19 @@ body {
 /* --- THE LOOK (the design review, 2026-10-09) — what every page shares. Three kinds of button: the action (filled cyan, one per
        screen: .btn-action), the second kind (an outline, light text: .btn-outline-light / -secondary), the text one (.btn-link);
        red only as an outline, for what deletes. Green says "accepted", yellow money and "check" — statuses, not actions. --- */
+/* One action per view (6.7): a closed party's is "Wznów imprezę" in its banner — the empty queue's "Drukuj" is an outline (the
+   second kind) while the banner shows it; once the party is resumed (the banner goes, a reload or a poll) the action again. */
+.page-dj:has(#party-closed-banner:not(.d-none) .btn-action) #queueEmpty .btn-action {
+    --bs-btn-color: var(--s2p-light);
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: var(--s2p-light);
+    --bs-btn-hover-color: var(--s2p-black);
+    --bs-btn-hover-bg: var(--s2p-light);
+    --bs-btn-hover-border-color: var(--s2p-light);
+    --bs-btn-active-color: var(--s2p-black);
+    --bs-btn-active-bg: var(--s2p-light);
+    --bs-btn-active-border-color: var(--s2p-light);
+}
 .btn-action {
     --bs-btn-color: var(--s2p-action-ink);
     --bs-btn-bg: var(--s2p-action);
@@ -152,11 +151,11 @@ body {
 }
 /* the second kind, grey: readable light text (Bootstrap's grey text was 3.3 : 1), the picked one of a group filled light */
 .btn-outline-secondary {
-    --bs-btn-color: var(--s2p-outline-text);
+    --bs-btn-color: var(--s2p-text-dim);
     --bs-btn-border-color: var(--s2p-grey);
     --bs-btn-hover-color: var(--s2p-white);
     --bs-btn-hover-bg: var(--s2p-white-08);
-    --bs-btn-hover-border-color: var(--s2p-grey-light);
+    --bs-btn-hover-border-color: var(--s2p-text-muted);
     --bs-btn-active-color: var(--s2p-ink);
     --bs-btn-active-bg: var(--s2p-light);
     --bs-btn-active-border-color: var(--s2p-light);
@@ -185,14 +184,14 @@ body {
 .alert-warning,
 .alert-danger,
 .alert-secondary {
-    --bs-alert-color: var(--s2p-text-soft);
+    --bs-alert-color: var(--s2p-text);
     --bs-alert-link-color: var(--s2p-white);
 }
 .alert-info      { --bs-alert-bg: var(--s2p-action-12);  --bs-alert-border-color: var(--s2p-action-45); }
 .alert-success   { --bs-alert-bg: var(--s2p-green-12);   --bs-alert-border-color: var(--s2p-green-50); }
 .alert-warning   { --bs-alert-bg: var(--s2p-warning-12);   --bs-alert-border-color: var(--s2p-warning-50); }
 .alert-danger    { --bs-alert-bg: var(--s2p-danger-12); --bs-alert-border-color: var(--s2p-danger-55); }
-.alert-secondary { --bs-alert-bg: var(--s2p-white-05); --bs-alert-border-color: var(--s2p-border-alert); }
+.alert-secondary { --bs-alert-bg: var(--s2p-white-05); --bs-alert-border-color: var(--s2p-border-strong); }
 
 /* A card's heading and its one line of help: every card of the dashboard's settings the same way */
 .s2p-card-title { font-size: 1.05rem; font-weight: 700; color: var(--s2p-light); margin-bottom: 0.25rem; }
@@ -423,7 +422,7 @@ th[data-sort].sort-desc::after {
     padding: 2rem 2.5rem;
     border-radius: 16px;
     border: 2px solid var(--s2p-border);
-    background: var(--s2p-bg-panel);
+    background: var(--s2p-bg-elevated);
     transition: transform 0.2s, border-color 0.2s;
     text-decoration: none;
     min-width: 220px;
@@ -453,7 +452,7 @@ th[data-sort].sort-desc::after {
     display: flex;
     align-items: flex-start;
     gap: 1.25rem;
-    background: var(--s2p-bg-panel);
+    background: var(--s2p-bg-elevated);
     border: 1px solid var(--s2p-border);
     border-radius: 14px;
     padding: 1.25rem 1.5rem;
@@ -500,10 +499,10 @@ th[data-sort].sort-desc::after {
     left: 0;
     right: 0;
     z-index: 1050;
-    background: var(--s2p-bg-panel);
+    background: var(--s2p-bg-elevated);
     border: 1px solid var(--s2p-border);
     border-radius: 10px;
-    box-shadow: 0 8px 28px var(--s2p-black-55);
+    box-shadow: 0 8px 28px var(--s2p-black-50);
     overflow: hidden;
     max-height: 320px;
     overflow-y: auto;
@@ -664,9 +663,9 @@ th[data-sort].sort-desc::after {
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }
-.s2p-hint            { color: var(--s2p-grey-light) !important; }
+.s2p-hint            { color: var(--s2p-text-muted) !important; }
 .s2p-hint-note       { font-size: 0.8rem !important; max-width: 260px !important; margin-inline: auto !important; }
-.s2p-alert-closed    { background-color: var(--s2p-bg-warning) !important; color: var(--s2p-warning-text) !important; }
+.s2p-alert-closed    { background-color: var(--s2p-bg-warning) !important; color: var(--s2p-warning) !important; }
 .s2p-footer          { color: var(--s2p-text-muted) !important; font-size: 0.85rem !important; }
 /* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
    played or skipped it) stays in its place, dimmed, until the list is fetched again; the note of a 👍 that did not count floats over
@@ -685,7 +684,7 @@ th[data-sort].sort-desc::after {
 .s2p-vote-mine       { cursor: default; pointer-events: none; }
 .s2p-song-gone       { opacity: 0.45; }
 .s2p-vote-note {
-    --bs-alert-bg: var(--s2p-bg-note);   /* floats over the list: solid, not a see-through tint */
+    --bs-alert-bg: var(--s2p-bg-warning);   /* floats over the list: solid, not a see-through tint */
     position: fixed;
     left: 50%;
     bottom: 1rem;
@@ -794,7 +793,7 @@ th[data-sort].sort-desc::after {
     --bs-btn-hover-bg: transparent;
     --bs-btn-hover-color: var(--s2p-warning);
     --bs-btn-hover-border-color: var(--s2p-warning);
-    --bs-btn-active-bg: var(--s2p-warning-15);
+    --bs-btn-active-bg: var(--s2p-warning-12);
     --bs-btn-active-color: var(--s2p-warning);
     --bs-btn-active-border-color: var(--s2p-warning);
 }
@@ -933,6 +932,21 @@ th[data-sort].sort-desc::after {
 #queueList:not(:has(#song-list > tr[data-song-id])) .table-responsive,
 #queueList:not(:has(#song-list > tr[data-song-id])) [data-list-search],
 #queueList:not(:has(#song-list > tr[data-song-id])) .s2p-queue-keys { display: none !important; }
+/* The legend of the queue's keys: a quiet title, then each key drawn as a key (an edge, a deeper bottom edge) and one word */
+.s2p-queue-keys {
+    flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem;
+    margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--s2p-border);
+    font-size: 0.8125rem; color: var(--s2p-text-muted);
+}
+.s2p-keys-title { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.s2p-key { display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+.s2p-key kbd {
+    min-width: 1.6rem; padding: 0.125rem 0.4rem; text-align: center;
+    font-family: inherit; font-size: 0.75rem; font-weight: 600; line-height: 1.4; color: var(--s2p-light);
+    background: var(--s2p-bg-hover); border: 1px solid var(--s2p-border-strong); border-bottom-width: 2px; border-radius: 4px;
+    box-shadow: none;
+}
+.s2p-key-what { margin-left: 0.15rem; }
 /* the request the keyboard works on (queue-keys.js: ↑ ↓, C, Enter, S) */
 #song-list > tr.s2p-chosen { outline: 2px solid var(--s2p-action); outline-offset: -2px; }
 /* the AI's comment under a song of the queue: one line, the whole of it in the title */
@@ -955,14 +969,14 @@ th[data-sort].sort-desc::after {
 .s2p-rows { border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); background: var(--s2p-bg-elevated); overflow: hidden; }
 .s2p-row {
     display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.55rem 0.9rem;
-    color: var(--s2p-text-row); text-decoration: none; border-top: 1px solid var(--s2p-border);
+    color: var(--s2p-light); text-decoration: none; border-top: 1px solid var(--s2p-border);
 }
 .s2p-row:first-child { border-top: 0; }
 .s2p-row:hover, .s2p-row:focus-visible { background: var(--s2p-bg-hover); color: var(--s2p-white); }
 .s2p-row:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; }
 .s2p-row-name { font-weight: 600; white-space: nowrap; }
 .s2p-row-state { margin-left: auto; color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
-.s2p-row-warn { color: var(--s2p-warning-text); font-weight: 600; }
+.s2p-row-warn { color: var(--s2p-warning); font-weight: 600; }
 .s2p-row::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; }
 /* the QR code small beside the guests' link and the print: the card was 440 px of a phone */
 .s2p-qr-compact { display: flex; gap: 1rem; align-items: center; }
@@ -976,7 +990,7 @@ th[data-sort].sort-desc::after {
 .s2p-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .s2p-chips a {
     flex: none; display: flex; align-items: center; min-height: 44px; padding: 0.4rem 0.9rem;
-    border: 1px solid var(--s2p-border); border-radius: 999px; color: var(--s2p-text-soft); text-decoration: none; font-size: 0.9rem;
+    border: 1px solid var(--s2p-border); border-radius: 999px; color: var(--s2p-text); text-decoration: none; font-size: 0.9rem;
 }
 .s2p-chips a:hover { border-color: var(--s2p-light); color: var(--s2p-white); }
 #hostListsCard, #linksCard, #limitsCard, #deviceCard { scroll-margin-top: 1rem; }
@@ -994,8 +1008,8 @@ th[data-sort].sort-desc::after {
     vertical-align: middle; white-space: nowrap;
 }
 .s2p-pro-box {
-    border: 1px solid var(--s2p-action-28); background: var(--s2p-action-06); border-radius: var(--s2p-radius);
-    padding: 0.75rem 0.9rem; color: var(--s2p-text-lede); font-size: 0.9rem;
+    border: 1px solid var(--s2p-action-28); background: var(--s2p-action-07); border-radius: var(--s2p-radius);
+    padding: 0.75rem 0.9rem; color: var(--s2p-text); font-size: 0.9rem;
 }
 .s2p-pro-box p { margin: 0 0 0.6rem 0; }
 /* the comment styles without Pro: the others under the list's heading "W planie Pro" (optgroup), not to pick — quieter than the one
@@ -1015,7 +1029,7 @@ th[data-sort].sort-desc::after {
 .s2p-product-hero { padding: 0.5rem 0 1.75rem; border-bottom: 1px solid var(--s2p-border); }
 .s2p-product-hero .s2p-pro { margin-left: 0; }
 .s2p-product-hero h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 800; color: var(--s2p-white); margin: 0.6rem 0; letter-spacing: -0.01em; }
-.s2p-product-lede { color: var(--s2p-text-lede); font-size: 1.1rem; max-width: 56ch; margin-bottom: 1.25rem; }
+.s2p-product-lede { color: var(--s2p-text); font-size: 1.1rem; max-width: 56ch; margin-bottom: 1.25rem; }
 .s2p-product-note { color: var(--s2p-text-muted); font-size: 0.875rem; margin: 0.75rem 0 0; }
 .s2p-product-cta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .s2p-plans { display: grid; gap: 1rem; margin-top: 1.75rem; }
@@ -1028,7 +1042,7 @@ th[data-sort].sort-desc::after {
 .s2p-plan h2 { font-size: 1.25rem; font-weight: 700; color: var(--s2p-light); margin: 0; }
 .s2p-plan-sub { color: var(--s2p-text-muted); font-size: 0.9rem; margin: 0.25rem 0 1rem; }
 .s2p-plan ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
-.s2p-plan li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.4rem; color: var(--s2p-text-soft); }
+.s2p-plan li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.4rem; color: var(--s2p-text); }
 .s2p-plan li::before { content: "\2713"; color: var(--s2p-text-muted); font-weight: 700; }
 .s2p-plan-pro li::before { color: var(--s2p-action); }
 .s2p-plan li b { display: block; color: var(--s2p-white); font-weight: 600; }
@@ -1041,15 +1055,15 @@ th[data-sort].sort-desc::after {
 
 /* The guide "Jak działa Scan2Play" (guide.html, 2026-10-12): a section per moment of a party, each line the app's own button or badge
    beside what it does — pictures of them (spans), not controls; one column on a phone. */
-.s2p-guide-lede { color: var(--s2p-text-lede); max-width: 66ch; }
+.s2p-guide-lede { color: var(--s2p-text); max-width: 66ch; }
 .s2p-guide section { border-top: 1px solid var(--s2p-border); padding-top: 1rem; margin-top: 1.25rem; scroll-margin-top: 1rem;
                      display: grid; gap: 0.85rem; }
 .s2p-guide section h2 { font-size: 1.2rem; font-weight: 700; color: var(--s2p-light); margin: 0; }
 .s2p-guide-row { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0.35rem 1rem; align-items: start; }
 .s2p-guide-row:not(.s2p-guide-text) > :first-child { justify-self: start; pointer-events: none; }
-.s2p-guide-row p { margin: 0; color: var(--s2p-text-lede); max-width: 62ch; }
+.s2p-guide-row p { margin: 0; color: var(--s2p-text); max-width: 62ch; }
 .s2p-guide-text { grid-template-columns: minmax(0, 1fr); }
-.s2p-guide-row-name { font-weight: 600; color: var(--s2p-text-row); padding-top: 0.15rem; }
+.s2p-guide-row-name { font-weight: 600; color: var(--s2p-light); padding-top: 0.15rem; }
 /* a button named inside a sentence: a picture as tall as the line, not a 44 px target (it is not one) */
 .s2p-guide-inline { pointer-events: none; vertical-align: baseline; display: inline-block !important; min-height: 0 !important;
                     padding: 0 0.4rem; line-height: 1.5; }
@@ -1077,11 +1091,11 @@ th[data-sort].sort-desc::after {
 /* --- The history's day headings (history.html): a row where a new day starts. Hidden while the list is sorted by a column
        (list-tools.js puts .s2p-sorted on the table): the rows of a day are no longer together then. --- */
 .s2p-day-heading > td {
-    background: var(--s2p-bg-day) !important;
+    background: var(--s2p-bg-elevated) !important;
     color: var(--s2p-text-muted) !important;
     font-size: 0.85rem;
     padding-top: 0.6rem !important;
-    border-bottom-color: var(--s2p-border-mid) !important;
+    border-bottom-color: var(--s2p-border-strong) !important;
 }
 .s2p-sorted .s2p-day-heading { display: none; }
 

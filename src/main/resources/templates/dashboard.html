@@ -376,9 +376,21 @@
             </tbody>
         </table>
         </div>
-        <!--/* The queue's keys (queue-keys.js), on a computer only; "Zagrane" / "Pomiń" for whom may press them */-->
-        <p class="d-none d-md-block small text-secondary mt-2 mb-0 s2p-queue-keys" id="queueKeys"
-           th:text="${access == null or access.may('QUEUE')} ? #{dashboard.queue.keys} : #{dashboard.queue.keys.viewer}">Keys</p>
+        <!--/* The queue's keys (queue-keys.js), on a computer only: each key drawn as a key with one word of what it does (the owner,
+             2026-10-16: one line of text was hard to read); "Zagrane" / "Pomiń" / "Cofnij" for whom may press them. Ctrl+C and Ctrl+Z
+             work too — the guide names them. */-->
+        <div class="d-none d-md-flex s2p-queue-keys" id="queueKeys" role="note" th:attr="aria-label=#{dashboard.queue.keys.title}"
+             th:with="mayPlay=${access == null or access.may('QUEUE')}">
+            <span class="s2p-keys-title" th:text="#{dashboard.queue.keys.title}">Keyboard shortcuts</span>
+            <span class="s2p-key"><kbd>↑</kbd><kbd>↓</kbd> <span class="s2p-key-what" th:text="#{dashboard.queue.keys.choose}">choose</span></span>
+            <span class="s2p-key"><kbd>C</kbd> <span class="s2p-key-what" th:text="#{dashboard.queue.keys.copy}">copy</span></span>
+            <th:block th:if="${mayPlay}">
+                <span class="s2p-key"><kbd>Enter</kbd> <span class="s2p-key-what" th:text="#{dashboard.queue.keys.played}">played</span></span>
+                <span class="s2p-key"><kbd>S</kbd> <span class="s2p-key-what" th:text="#{dashboard.queue.keys.skip}">skip</span></span>
+                <span class="s2p-key"><kbd>Backspace</kbd> <span class="s2p-key-what" th:text="#{dashboard.queue.keys.undo}">undo</span></span>
+            </th:block>
+            <span class="s2p-key"><kbd>Esc</kbd> <span class="s2p-key-what" th:text="#{dashboard.queue.keys.none}">deselect</span></span>
+        </div>
         <!--/* Nothing waits (app.css shows it while the polled list has no request — :has): what to do next, not a table of nine
              headings over "the queue is empty" — the QR code was folded away under the settings (the design review, 2026-10-09) */-->
         <div class="text-center py-4 s2p-queue-empty" id="queueEmpty">

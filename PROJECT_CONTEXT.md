@@ -295,8 +295,10 @@ creates the DJ's party on the first visit; the old tile links `/start/{kind}` le
 leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (on a wide screen every verdict's word as wide as the longer of "ZAGRANE" /
 "POMINIĘTE" — hidden copies in an inline grid, `.s2p-decision-word` —, so the "↩ Przywróć" after them stand in one column; amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
 under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1; "Zagrane" has both too, 2026-10-10), "Kopiuj" (the artist and the title for the search
-box of the DJ's software) and "Podejrzyj" on every waiting request, and on a computer the queue's keys — "Klawiatura: ↑ ↓ wybór · C kopiuj · Enter
-zagrane · S pomiń · Esc" under the list (`queue-keys.js`, 2026-10-12; the staff without the queue's buttons: only ↑ ↓ / C / Esc); the vibe, the vibe note, "Kto gra";
+box of the DJ's software) and "Podejrzyj" on every waiting request, and on a computer the queue's keys — "Skróty klawiszowe", each key drawn as a key
+(`<kbd>`) with one word: ↑ ↓ wybierz · C kopiuj · Enter zagrane · S pomiń · Backspace cofnij · Esc odznacz, under the list (`queue-keys.js`,
+2026-10-12; the legend 2026-10-16; Ctrl+C / Ctrl+Z work too, the guide names them; the staff without the queue's buttons: only ↑ ↓ / C /
+Esc); the vibe, the vibe note, "Kto gra";
 the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
@@ -670,13 +672,14 @@ What every page shares, so a new screen looks like the others:
   prośbę", "▶ Zagrane", "Zaloguj się przez Google i dołącz", "Zapisz listę", "Zaproponuj kolejną", "Drukuj"). The owner (2026-10-15):
   the same action repeated is one — on every item of a list ("▶ Zagrane" of each request), at the top and the bottom of a long page
   (the landing page); a window over the page (the feedback's "Wyślij") and the "Cofnij" bar are views of their own, with their own.
-  Two different `.btn-action` in one view — never. The second kind — an outline
+  Two different `.btn-action` in one view — never: a closed party's action is "Wznów imprezę", so the empty queue's "Drukuj" is an
+  outline while the banner shows it (`app.css`, `:has`; `closed-party-one-action`). The second kind — an outline
   (`btn-outline-light` / `-secondary`, the picked one of a group filled light): "Pomiń", "Zapisz" in the settings, "Podejrzyj", the
   tip (`btn-outline-warning`: money); the text one — `btn-link` ("↻ Odśwież", "−1"). What deletes is an outline in `--s2p-danger-text`,
   never filled red. Green (`btn-success`, dark text) and yellow are statuses — "Twoja", a given 👍, ⚠, 💸 — not actions.
 - **Colours** as tokens on `:root`, nowhere else in `app.css` (`AppCssColoursTest`; 2026-10-15 every colour written in a rule became a
-  token of its own value — the near-whites and the panels' backgrounds are still several tones, to merge as a decision of the look;
-  `--s2p-<colour>-<n>` is that colour at an alpha of n %): `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under
+  token, 2026-10-16 the near-identical tones merged — the owner: three light texts `--s2p-white` / `--s2p-light` / `--s2p-text`, one
+  panel background `--s2p-bg-elevated`, two edges, one yellow; `--s2p-<colour>-<n>` is that colour at an alpha of n %): `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under
   WCAG AA; `.text-secondary` / `.text-muted` use it), `--s2p-danger-text`, `--s2p-green-ink`. Messages (`.alert-*`) are a tint of their
   colour with a coloured edge and light text — Bootstrap's pale boxes were the brightest things on a dark page.
 - **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
