@@ -47,16 +47,10 @@
                 return parts.map(text).join(' ');
             }), ['', '', '2 na gościa · 3 min']);
             t.step('the limits that hold on one line', (function () {
-                // at a phone's 390 px: a headless Chrome's window is never narrower than 500 px (measured: innerWidth 500 for
-                // --window-size=390,…), so the page is narrowed to 390 for this one measure; the lines of the text are counted by a
-                // Range (one box per line)
-                const root = document.documentElement, before = root.style.width;
-                root.style.width = '390px';
+                // at a phone's 390 px (run.py sets the width); the lines of the text are counted by a Range (one box per line)
                 const range = document.createRange();
                 range.selectNodeContents(row('limits').querySelector('[data-limit-calm]'));
-                const lines = new Set(Array.from(range.getClientRects()).map(function (r) { return Math.round(r.top); })).size;
-                root.style.width = before;
-                return lines;
+                return new Set(Array.from(range.getClientRects()).map(function (r) { return Math.round(r.top); })).size;
             })(), 1);
             t.step('no "PRO" where nothing is Pro', [markOf(row('staff').querySelector('.s2p-row-name'))], ['no mark']);
             t.step('each row one line, a thumb\'s target, inside the screen', ['hosts', 'links', 'limits'].filter(function (name) {

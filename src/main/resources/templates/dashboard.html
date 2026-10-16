@@ -163,7 +163,7 @@
                         <div class="input-group input-group-sm">
                             <input type="text" class="form-control bg-dark text-light border-secondary"
                                    th:value="${permanentLink}" id="partyLinkInput" readonly th:attr="aria-label=#{dashboard.qr.link}">
-                            <button class="btn btn-outline-secondary" type="button" id="copyPartyLinkBtn" th:text="#{dashboard.qr.copy}" th:attr="data-copied=#{dashboard.qr.copied}">
+                            <button class="btn btn-outline-secondary" type="button" id="copyPartyLinkBtn" data-copy-target="partyLinkInput" th:text="#{dashboard.qr.copy}" th:attr="data-copied=#{dashboard.qr.copied}">
                                 Copy
                             </button>
                         </div>

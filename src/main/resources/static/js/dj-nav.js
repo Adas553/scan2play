@@ -12,18 +12,32 @@ document.addEventListener('submit', function (e) {
     }
 }, true);
 
-// ---- "Kopiuj" in "Pomoc i kontakt" (and "Kopiuj adres" on the page /pro): the address to the clipboard, "Skopiowano" on the button
-// for a moment. Where the clipboard is refused, the address shown (user-select: all; the element data-copy-select names, else
-// #helpEmail) is selected for the person to copy themselves. ----
+// ---- "Kopiuj", one for every DJ page (review 2026-10-14: four copies of it, each failing its own way): a button with
+// data-copy-target copies the value of that field (the party link, the hosts' and the staff's link), one with data-copy-text its text
+// (the address in "Pomoc i kontakt" and on /pro). "Skopiowano" (data-copied) on the button for a moment — only when it was copied.
+// Without the clipboard (plain HTTP, refused) the text is copied the old way, from a field of its own (the one shown may be folded
+// away, and a hidden selection copies nothing, though the browser says it did); refused that way too, the text shown is selected for
+// the person to copy (the field; the element data-copy-select names, else #helpEmail), and the button says nothing. ----
 document.addEventListener('click', function (e) {
-    var button = e.target.closest ? e.target.closest('button[data-copy-text]') : null;
+    var button = e.target.closest ? e.target.closest('button[data-copy-target], button[data-copy-text]') : null;
     if (!button) return;
-    var label = button.textContent;
+    var field = button.hasAttribute('data-copy-target') ? document.getElementById(button.getAttribute('data-copy-target')) : null;
+    var text = field ? field.value : button.getAttribute('data-copy-text');
+    if (button.s2pCopyLabel === undefined) button.s2pCopyLabel = button.textContent;   // a second tap during "Skopiowano"
     var done = function () {
-        button.textContent = button.getAttribute('data-copied') || label;
-        setTimeout(function () { button.textContent = label; }, 1500);
+        button.textContent = button.getAttribute('data-copied') || button.s2pCopyLabel;
+        clearTimeout(button.s2pCopyTimer);
+        button.s2pCopyTimer = setTimeout(function () {
+            button.textContent = button.s2pCopyLabel;
+            button.s2pCopyLabel = undefined;
+        }, 1500);
     };
-    var select = function () {
+    var selectShown = function () {
+        if (field) {
+            field.focus();
+            field.select();
+            return;
+        }
         var shown = document.getElementById(button.getAttribute('data-copy-select') || 'helpEmail');
         if (!shown) return;
         var range = document.createRange();
@@ -32,10 +46,33 @@ document.addEventListener('click', function (e) {
         selection.removeAllRanges();
         selection.addRange(range);
     };
+    var theOldWay = function () {
+        var copy = document.createElement('textarea');
+        copy.value = text;
+        copy.setAttribute('readonly', '');
+        copy.style.position = 'fixed';
+        copy.style.opacity = '0';
+        document.body.appendChild(copy);
+        copy.focus({ preventScroll: true });
+        copy.select();
+        var copied = false;
+        try {
+            copied = document.execCommand('copy');
+        } catch (err) {
+            copied = false;
+        }
+        copy.remove();
+        if (copied) {
+            button.focus({ preventScroll: true });
+            done();
+        } else {
+            selectShown();
+        }
+    };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(button.getAttribute('data-copy-text')).then(done, select);
+        navigator.clipboard.writeText(text).then(done, theOldWay);
     } else {
-        select();
+        theOldWay();
     }
 });
 

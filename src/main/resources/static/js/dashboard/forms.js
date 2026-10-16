@@ -1,5 +1,5 @@
 /**
- * The forms of the DJ panel: the POST forms submitted by AJAX, and the "copy" button of the party link.
+ * The forms of the DJ panel: the POST forms submitted by AJAX. ("Kopiuj" of the party link: dj-nav.js, as on every DJ page.)
  */
 import { EVENTS, emit } from './events.js';
 import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
@@ -11,9 +11,32 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account, the hosts' link, the staff's link and access, the panel switcher, a pasted invitation and leaving a staff (V30) —
-// a page reload / redirect is expected: the new link, the list or the other party's panel is shown at once.
+// Excluded: logout, delete-account, the hosts' link, the panel switcher, a pasted invitation and leaving a staff (V30) — a page
+// reload / redirect is expected: the new link, the list or the other party's panel is shown at once.
+//
+// What a form does is chosen by its path, the whole of it (review 2026-10-14: a part of the address was looked for — "/staff-link"
+// and "/staff-remove" matched no form at all, and a new path holding an old one would have taken its behaviour).
 // ==========================================================================
+
+/** The forms sent as a page load, not by fetch(). */
+const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host-link', '/dj/panel', '/dj/join', '/dj/staff/leave']);
+/** The forms after which the queue is fetched at once (a song played, skipped, put back; the hosts' lists; a tip; ...). */
+const CHANGE_THE_QUEUE = new Set(['/dj/dashboard/play', '/dj/dashboard/dismiss', '/dj/dashboard/clear-queue', '/dj/dashboard/restore',
+    '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count']);
+/** The forms after which the history is fetched again. */
+const CHANGE_THE_HISTORY = new Set(['/dj/dashboard/restore', '/dj/dashboard/clear-history']);
+/** The forms whose button does not say ✓: what follows shows it (the history fetched again, the new count, the party's state). */
+const NO_FLASH = new Set(['/dj/dashboard/restore', '/dj/dashboard/tip-count', '/dj/dashboard/clear-history', '/dj/end-party',
+    '/dj/start-party']);
+
+/** The form's path ("/dj/dashboard/play"), without the address and the query. */
+function pathOf(form) {
+    try {
+        return new URL(form.action, location.href).pathname;
+    } catch (e) {
+        return '';
+    }
+}
 
 (function initAjaxFormInterceptor() {
     document.addEventListener('submit', function(e) {
@@ -27,9 +50,8 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 
         // Allow these actions to do a full page reload
         const action = form.action || '';
-        if (action.includes('/logout') || action.includes('/delete-account') || action.includes('/host-link')
-            || action.includes('/staff-link') || action.includes('/staff-remove') || action.includes('/dj/panel')
-            || action.includes('/dj/join') || action.includes('/dj/staff/leave')) return;
+        const path = pathOf(form);
+        if (RELOADS.has(path)) return;
 
         e.preventDefault();
 
@@ -55,42 +77,21 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
             const error = form.querySelector('[data-form-error]');
             if (error) error.hidden = true;
 
-            // A song played or skipped, or the queue cleared: the queue is fetched now, so the rows go at once
-            if (action.includes('/dashboard/play') || action.includes('/dashboard/dismiss') || action.includes('/dashboard/clear-queue')) {
-                emit(EVENTS.GUEST_QUEUE_CHANGED);
-            }
+            // The queue fetched now, so the change shows at once: a song played, skipped or put back from the history, the queue
+            // cleared, the hosts' lists saved (V29: a song on the wish list gets its ⭐), the party's day of guest requests started
+            // again (W4: the poll says so at once, X-Guest-Limits — the warning goes), a tip counted or taken back (V28)
+            if (CHANGE_THE_QUEUE.has(path)) emit(EVENTS.GUEST_QUEUE_CHANGED);
+            // A request put back (it is no longer in the history) or the history cleared (what is left of it: a skip that still
+            // keeps its song out): the history fetched again
+            if (CHANGE_THE_HISTORY.has(path)) emit(EVENTS.HISTORY_CHANGED);
             // A skip or a "Zagrane" that went through: "Cofnij" for a few seconds (the server answers with a redirect, read as
             // opaqueredirect) — "Zagrane" is the button tapped most, so the one tapped by mistake most (the owner, 2026-10-10)
-            if (action.includes('/dashboard/dismiss') || action.includes('/dashboard/play')) {
-                offerUndo(form, action.includes('/dashboard/play') ? 'play' : 'dismiss');
+            if (path === '/dj/dashboard/dismiss' || path === '/dj/dashboard/play') {
+                offerUndo(form, path === '/dj/dashboard/play' ? 'play' : 'dismiss');
             }
-            // A skipped or played request put back from the history: it is in the queue again and no longer in the history
-            if (action.includes('/dashboard/restore')) {
-                emit(EVENTS.GUEST_QUEUE_CHANGED);
-                emit(EVENTS.HISTORY_CHANGED);
-                return;   // the history is fetched again: no button left to flash
-            }
-            // The party's day of guest requests started again (W4): the poll says so at once (X-Guest-Limits) — the warning goes
-            // The hosts' lists saved (V29): the queue is fetched again — a song on the wish list gets its ⭐
-            if (action.includes('/dashboard/host-lists') || action.includes('/dashboard/guest-limit-reset')) {
-                emit(EVENTS.GUEST_QUEUE_CHANGED);
-            }
-            // A tip counted or taken back (V28): the queue is fetched again with the new count
-            if (action.includes('/dashboard/tip-count')) {
-                emit(EVENTS.GUEST_QUEUE_CHANGED);
-                return;
-            }
-            // The history cleared: what is left of it (a skip that still keeps its song out) is fetched again
-            if (action.includes('/dashboard/clear-history')) {
-                emit(EVENTS.HISTORY_CHANGED);
-                return;
-            }
-
-            // --- Party state toggle (end/start party) ---
-            if (action.includes('/end-party') || action.includes('/start-party')) {
-                showPartyActive(!action.includes('/end-party'));   // the other windows follow with their next poll
-                return; // no flash needed for these buttons
-            }
+            // The party ended or started: the panel shows it (the other windows follow with their next poll)
+            if (path === '/dj/end-party' || path === '/dj/start-party') showPartyActive(path === '/dj/start-party');
+            if (NO_FLASH.has(path)) return;
 
             flash(btn, true);   // the submit button says ✓ for a moment
         }).catch(function(err) {
@@ -222,28 +223,4 @@ if (undoButton) {
 // above (fetch) — data-auto-submit instead of an inline onchange (CSP, review 5.1).
 document.querySelectorAll('select[data-auto-submit]').forEach(function (select) {
     select.addEventListener('change', function () { select.form.requestSubmit(); });
-});
-// ==========================================================================
-// COPY THE PARTY LINK (and the hosts' link, V29: data-copy-target names its input)
-// ==========================================================================
-
-function copyPartyLink(button, inputId) {
-    const input = document.getElementById(inputId);
-    navigator.clipboard.writeText(input.value).then(function() {
-        const original = button.innerText;
-        const copied = button.getAttribute('data-copied') || 'Copied!';
-        button.innerText = copied;
-        setTimeout(function() { button.innerText = original; }, 2000);
-    }).catch(function() {
-        // Fallback for non-HTTPS or denied permissions
-        input.select();
-        input.setSelectionRange(0, 99999);
-        document.execCommand('copy');
-    });
-}
-
-const copyButton = document.getElementById('copyPartyLinkBtn');
-if (copyButton) copyButton.addEventListener('click', function () { copyPartyLink(copyButton, 'partyLinkInput'); });
-document.querySelectorAll('button[data-copy-target]').forEach(function (button) {
-    button.addEventListener('click', function () { copyPartyLink(button, button.getAttribute('data-copy-target')); });
 });

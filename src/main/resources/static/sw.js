@@ -49,21 +49,30 @@ self.addEventListener('push', function (event) {
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
     const url = new URL((event.notification.data && event.notification.data.url) || '/dj/dashboard', self.location.origin);
-    const party = url.searchParams.get('party');
     event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windows) {
-        const ours = windows.filter(function (client) {
-            return new URL(client.url).pathname.indexOf('/dj/') === 0 && 'focus' in client;
-        });
-        const there = ours.find(function (client) {
-            const at = new URL(client.url);
-            return at.pathname === url.pathname && (!party || at.searchParams.get('party') === party);
-        });
-        if (there) return there.focus();
-        const other = ours.find(function (client) { return 'navigate' in client; });
-        if (other) {
-            return other.navigate(url.href).then(function (moved) { return (moved || other).focus(); })
-                .catch(function () { return self.clients.openWindow(url.href); });
-        }
-        return self.clients.openWindow(url.href);
+        return openThePanel(windows, url, function (href) { return self.clients.openWindow(href); });
     }));
 });
+
+/**
+ * Which window a tap shows, and how: {@code windows} as clients.matchAll gives them, {@code url} the notification's address (a URL),
+ * {@code openWindow} opens a new one. A function of its own so that the browser tests can run it (a headless browser runs no
+ * notificationclick; src/test/browser/scenarios/sw-window.js loads this file into a page).
+ */
+function openThePanel(windows, url, openWindow) {
+    const party = url.searchParams.get('party');
+    const ours = windows.filter(function (client) {
+        return new URL(client.url).pathname.indexOf('/dj/') === 0 && 'focus' in client;
+    });
+    const there = ours.find(function (client) {
+        const at = new URL(client.url);
+        return at.pathname === url.pathname && (!party || at.searchParams.get('party') === party);
+    });
+    if (there) return there.focus();
+    const other = ours.find(function (client) { return 'navigate' in client; });
+    if (other) {
+        return other.navigate(url.href).then(function (moved) { return (moved || other).focus(); })
+            .catch(function () { return openWindow(url.href); });
+    }
+    return openWindow(url.href);
+}
