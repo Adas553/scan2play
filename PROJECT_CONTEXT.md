@@ -547,7 +547,7 @@ own cooldown for requests never sent). One guest with a script can spend 3 for t
 above the queue has **"Odblokuj prośby gości"** for whom may set the limits (the organiser, the staff with `LIMITS`; not a plan's
 feature) — `POST /dj/dashboard/guest-limit-reset`, `GuestRequestLimiter.resetParty`: the party's 24 h start again, the addresses keep
 their windows (W4). A stricter limit per address was not added: a venue's Wi-Fi is one address for all its guests; a scripted flood is
-for a rate-limit rule in Cloudflare (the owner's setting).
+for the rate-limit rule in Cloudflare for `/p/*` (the owner's setting, in place since 2026-10-16).
 
 2 and 3 are `GuestRequestLimiter` (Caffeine, in memory; the address windows by party, so a dashboard's poll reads only its own
 party's and a flood of made-up addresses at one party cannot push another's out — review 2026-10-14); 0 switches a limit off. The guests' 👍 have their own per-network limit
@@ -793,11 +793,9 @@ the party's code, without the IP — the privacy policy says so, W14), newlines 
 scripts change styles through `element.style`, which the policy allows), checked over every template by
 `NoInlineCodeInTemplatesTest`; images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; no frames;
 `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only**
-while `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. Switch it on once
-real use leaves the log quiet — the plan (2026-10-15): the Railway log has no `CSP violation` since the Web Analytics beacon went;
-the owner sets `CSP_ENFORCE=true` on Railway, opens the landing page, a guest's page, the panel, "Ustawienia", "Obsługa", the history,
-the summary and the QR print in a browser with the console open, and watches the log for `CSP violation` for a week; back:
-delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
+while `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. **Enforced on
+Railway since 2026-10-15** (`CSP_ENFORCE=true`; the response header is `Content-Security-Policy`, not `-Report-Only`; no `CSP
+violation` in the log since); the owner watches the log for a week; back: delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
 (Section 13); the standalone history page is not covered by them.
 
 ---
@@ -920,9 +918,9 @@ the owner's choice). Variables now: `GOOGLE_AI_API_KEY`, `GOOGLE_CLIENT_ID` / `_
 before its database fails once and Railway restarts it, and a database that falls asleep under a running app breaks the request
 that holds the dropped connection (seen once, 2026-10-06 16:04). Switch the database's sleep off before real customers. Later deploys: 2026-10-06 the notifications (PR #9, V21) and the
 versioned script addresses (PR #10); 2026-10-07 PR #11 via #12 (`a06e4be`: clear the history, the comment style, V22 and V23
-applied in 0.05 s, "Push notifications on"). **Still
-open:** `CSP_ENFORCE` stays off until a few days of real use leave the log quiet (Section 13), then `true`; Dependabot alerts and
-security updates switched on in GitHub.
+applied in 0.05 s, "Push notifications on"). Since:
+`CSP_ENFORCE=true` (2026-10-15), Dependabot alerts and security updates on, Railway waits for the CI before it deploys `main`
+(`checkSuites: true`, 2026-10-16).
 
 ---
 
@@ -1025,7 +1023,7 @@ GuestQueueService          → DjService
   per shown window every 3 s).
 
 ### Security
-- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
+- The CSP is enforced on Railway since 2026-10-15 (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
   Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`, injected by Cloudflare into the HTML) — switched off since
   (2026-10-15: "Disabled" for the site, no beacon in the page). Switched on again, it needs its host in the CSP and a sentence in
   the privacy policy.
@@ -1066,7 +1064,7 @@ GuestQueueService          → DjService
   reads it). `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
   (`.github/dependabot.yml`): security fixes only (version updates off by `open-pull-requests-limit: 0`); it works from the default
-  branch `main` and needs "Dependabot alerts" and "security updates" switched on in the repository's settings.
+  branch `main`; "Dependabot alerts" and "security updates" are on in the repository's settings (2026-10-16).
 
 ### AI
 - No retry when Gemini is down (the request goes to the DJ unchecked; `AiHealthMonitor` writes it to the log); no check that a song
