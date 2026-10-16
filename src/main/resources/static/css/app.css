@@ -932,6 +932,11 @@ th[data-sort].sort-desc::after {
 #queueList:not(:has(#song-list > tr[data-song-id])) .table-responsive,
 #queueList:not(:has(#song-list > tr[data-song-id])) [data-list-search],
 #queueList:not(:has(#song-list > tr[data-song-id])) .s2p-queue-keys { display: none !important; }
+/* Under a hosts' list: how many entries it holds of the most kept (js/song-list-count.js); over the limit, the warning's yellow */
+.s2p-list-count { margin-top: 0.25rem; font-size: 0.8125rem; color: var(--s2p-text-muted); text-align: right; }
+.s2p-list-over { color: var(--s2p-warning); }
+.s2p-list-warning { display: block; font-weight: 600; text-align: left; }
+.s2p-list-warning[hidden] { display: none; }
 /* The legend of the queue's keys: a quiet title, then each key drawn as a key (an edge, a deeper bottom edge) and one word */
 .s2p-queue-keys {
     flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem;

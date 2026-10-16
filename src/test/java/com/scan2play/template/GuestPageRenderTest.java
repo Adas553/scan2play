@@ -192,6 +192,20 @@ class GuestPageRenderTest {
         assertThat(engine.process("fragments/guest-queue", Set.of("guestQueue"), context).strip()).isEmpty();
     }
 
+    /** A list longer than the limit, saved (HostController: the first ones kept): the hosts read that the rest did not fit, not "saved". */
+    @Test
+    void theHostsPage_saysWhenAListDidNotFit() {
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(Map.of("hostToken", "AbC_123-xyz", "hostSaved", true, "hostDropped", 100, "songListMax", 100));
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+        String html = engine.process("host", context);
+
+        assertThat(html).contains("id=\"hostDropped\"", "Zapisane, ale lista mieści najwyżej 100 pozycji — dalsze się nie zapisały.")
+                .doesNotContain("id=\"hostSaved\"", "??");
+    }
+
     /** The hosts' page (V29, /h/{token}): both lists, the form to its own secret address, no Referer and no search engine. */
     @Test
     void theHostsPage_showsBothLists_andPostsToItsLink() {
@@ -201,17 +215,21 @@ class GuestPageRenderTest {
                     JakartaServletWebApplication.buildApplication(servletContext)
                             .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
             context.setVariables(Map.of("hostToken", "AbC_123-xyz", "djName", "DJ Koko", "hostBlocked", "Akcent\nBaby Shark",
-                    "hostWanted", "Hej sokoły", "hostSaved", true));
+                    "hostWanted", "Hej sokoły", "hostSaved", true, "songListMax", 100));
             context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
             String html = engine.process("host", context);
             if (locale == PL) {
                 writePreview("host.html", html);
+                writeForTheBrowserTests("host.html", html);
                 assertThat(html).contains("🚫 Nie grać", "⭐ Koniecznie zagrać", "✓ Zapisane", "🎧 Gra: DJ Koko");
             }
 
             assertThat(html).doesNotContain("??");
             assertThat(html).contains("action=\"/h/AbC_123-xyz\"", "method=\"post\"", "content=\"no-referrer\"", "noindex");
             assertThat(html).contains(">Akcent\nBaby Shark</textarea>", ">Hej sokoły</textarea>");
+            // the lines each list holds, counted as typed (js/song-list-count.js), and the limit
+            assertThat(html).contains("<script src=\"/js/song-list-count.js\">", "data-list-for=\"blocked\"", "data-list-for=\"wanted\"",
+                    "data-list-max=\"100\"");
         }
     }
 

@@ -182,6 +182,9 @@ class SettingsPageRenderTest {
                         "id=\"hostLinkUntil\"", ">Działa do " + com.scan2play.util.Times.day(java.time.Instant.now().plus(java.time.Duration.ofDays(30)))
                                 + ".<")
                 .doesNotContain("para młoda, solenizant", "Na następną imprezę");
+        assertThat(html).as("the lines each hosts' list holds, counted as typed (js/song-list-count.js), and the limit")
+                .contains("<script src=\"/js/song-list-count.js\">", "data-list-for=\"hostBlockedInput\"",
+                        "data-list-for=\"hostWantedInput\"", "data-list-max=\"100\"");
         assertThat(html).as("the DJ's profiles (V24) and tip link (V27), each form with its note for a refused one hidden until then")
                 .contains("id=\"linksCard\"", "id=\"djLinksForm\"", "action=\"/dj/dashboard/dj-links\"", "id=\"instagramInput\"",
                         "id=\"facebookInput\"", "id=\"tiktokInput\"", "value=\"https://www.instagram.com/dj.koko/\"",

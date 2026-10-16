@@ -73,6 +73,8 @@ public final class ViewAttributes {
     // --- The hosts' lists (V29): the DJ's card and the hosts' page /h/{token} ---
     public static final String HOST_BLOCKED = "hostBlocked";
     public static final String HOST_WANTED = "hostWanted";
+    /** The most entries a hosts' list keeps ({@code SongList.MAX_LINES}): the forms count against it (js/song-list-count.js). */
+    public static final String SONG_LIST_MAX = "songListMax";
     /** The hosts' link to give them, or null when the DJ made none. */
     public static final String HOST_LINK = "hostLink";
     /** The day the hosts' link stops working ("14.11", V37). */
@@ -85,6 +87,8 @@ public final class ViewAttributes {
     public static final String HOST_TOKEN = "hostToken";
     /** "Zapisane" on the hosts' page after a save. */
     public static final String HOST_SAVED = "hostSaved";
+    /** Flash: a hosts' list was longer than this many entries — the first ones are kept, the page says the rest did not fit. */
+    public static final String HOST_DROPPED = "hostDropped";
 
     // --- The party's staff (V30, V32) ---
     /** Whether the person owns the panel's party (else they are on its staff, {@link #ACCESS}). */
