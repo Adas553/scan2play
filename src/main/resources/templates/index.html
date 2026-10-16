@@ -40,7 +40,8 @@
             <!-- Hidden Party Code Input -->
             <input type="hidden" name="partyCode" th:value="${partyCode}" />
 
-            <!--/* A specific song: a title, an artist or a line of the lyrics (the DJ sets the mood). A request the AI reads as a mood
+            <!--/* A specific song: the artist and the title (the owner, 2026-10-16: the page promises no song found by a line of its lyrics —
+                 the AI still tries; the DJ sets the mood). A request the AI reads as a mood
                  comes back here with its text (lastRequest), asking for a song. The question is the field's label. */-->
             <div class="mb-3">
                 <label for="songInput" class="form-label fw-bold fs-5" th:text="#{home.subtitle}">What do you want to hear?</label>

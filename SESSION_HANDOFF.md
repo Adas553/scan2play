@@ -9,6 +9,11 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-16 — the guest is asked for the artist and the title, on the branch `claude/artist-and-title` from `origin/dev`; a PR to
+  `dev`.** Production: one line of lyrics ("Dziewczyno jak wino uderzasz do głowy") gave four different made-up songs, each rejected
+  by the vibe. The owner: ask for "wykonawca i tytuł" — a line of lyrics typed is the guest's own risk. The field's hint, the empty
+  request's note, the QR poster and cards, the guide (PL / EN); the AI still tries lyrics. Next, if wanted: Gemini's Google Search
+  grounding for a line of lyrics — a test with `GeminiComparison` first (the owner's yes for the key). Tests: 720 unit, 127 browser.
 - **2026-10-16 — the state.** `main` = `dev` in content (release #93, deployed by Railway 2026-10-16 06:49 UTC; Railway waits for
   the CI). The review of 2026-10-14 is done and released: K1, W1–W15, the small items, the deferred ones (#85–#89) and the look
   (#92) — `docs/history/review-2026-10-14.md`, "Status poprawek". Of the review of 2026-09-30 only 2.3 (one instance) is left.

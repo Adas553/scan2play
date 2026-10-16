@@ -124,6 +124,8 @@ class QrPrintPageTest {
         assertThat(html.indexOf("</h1>")).isLessThan(html.indexOf("class=\"logo\""));
         assertThat(html.indexOf("class=\"logo\"")).isLessThan(html.indexOf("class=\"qr\""));
         assertThat(html).doesNotContain("class=\"cards\"", "??");
+        // the artist and the title, not a line of the lyrics (the owner, 2026-10-16: the AI does not always find a song by it)
+        assertThat(html).contains("Wpisz wykonawcę i tytuł", "Type the artist and the title").doesNotContain("tekstu", "lyrics");
     }
 
     @Test
@@ -135,6 +137,7 @@ class QrPrintPageTest {
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
         assertThat(html).contains("Zeskanuj i zamów piosenkę", "Scan to request a song").doesNotContain("??");
+        assertThat(html).contains("Wykonawca i tytuł", "The artist and the title").doesNotContain("tekstu", "lyrics");
     }
 
     @Test
