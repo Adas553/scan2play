@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-15
+# Session Handoff — 2026-10-16
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
@@ -8,6 +8,18 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-16 — the look tidied, on the branch `claude/look-tidy` on top of `claude/owner-items-done` (#91); a PR to `dev`.** The
+  owner: "scal te kolory" — the near-identical tones merged (14 tokens fewer: five near-whites → `--s2p-white` / `--s2p-light` /
+  `--s2p-text`, three panel backgrounds → `--s2p-bg-elevated`, edges `#444` / `#495057` → `--s2p-border-strong`, one yellow); 6.7
+  "zrób jak uważasz" — a closed party's empty queue shows "Drukuj" as an outline ("Wznów imprezę" is the one action;
+  `closed-party-one-action`, red before); the keys' legend under the queue — "Skróty klawiszowe", each key a `<kbd>` with one word
+  (the owner accepted the texts and the screenshots). Tests: 719 unit, 127 browser.
+- **2026-10-16 — the owner's settings of the review of 2026-10-14 are done** (the owner): Railway "Wait for CI" (W13; read on Railway:
+  `source.checkSuites: true`), the Cloudflare rate-limit rule for `/p/*` (W3 / W4), Dependabot alerts and security updates (W15).
+  Production enforces the CSP since 2026-10-15 (`CSP_ENFORCE=true`; no "CSP violation" in Railway's log since). The deferred small
+  items #85–#89 are in `dev`, the release is #90. **Left to the owner:** a week's watch of the CSP log; the terms (staff, the hosts'
+  link, Pro) before `PLANS_ENFORCE`; whether the near-identical tones of `app.css` are merged; the two `.btn-action` of a closed
+  party with an empty queue (6.7).
 - **2026-10-15, late night — the deferred small items, PR 5 "the front-end refactors", on the branch `claude/frontend-refactors` on top
   of `claude/sw-window-test` (#88); a PR to `dev`.** One "Kopiuj" for every DJ page (`dj-nav.js`; "Skopiowano" only when it was copied;
   `copy-the-*` red before); `forms.js` by the form's whole path (`/staff-link`, `/staff-remove` matched nothing); every colour of
@@ -666,8 +678,8 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    Decided against (2026-10-03): "play later" without rejecting; a sound / a count in the tab title on a new request.
 4. **After go-live:** watch the log for "CSP violation" and "AI check" for a few days, then `CSP_ENFORCE=true` — first the Cloudflare
    Web Analytics beacon (the only report so far): switch it off in Cloudflare (Analytics → Web Analytics, the automatic setup for
-   the site) or allow it in the CSP. Dependabot alerts and security updates: GitHub → the repository's Settings → "Advanced
-   Security" (older UI: "Code security and analysis") → "Dependabot alerts" and "Dependabot security updates" → Enable.
+   the site) or allow it in the CSP. Done: the beacon off, `CSP_ENFORCE=true` since 2026-10-15; Dependabot alerts and security
+   updates on (2026-10-16).
 5. **The Gemini comparison** — done 2026-10-07 (Start here): 3.5 Flash, level low, the rewritten prompt. `GeminiComparison` stays
    for the next model or prompt change. The key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
 6. The review of 2026-10-14 (`docs/history/review-2026-10-14.md`): K1, W5, W6, W15, W1, W7, W11, W12, W2, W3, W4, W10 done (Start here); the rest by its order of PRs.
@@ -685,11 +697,6 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   run configuration (Railway: done 2026-10-06).
 - **Spotify:** the Spotify app in the Developer Dashboard and the variables `SPOTIFY_*` and `SPOTIFY_TOKEN_KEY` in IntelliJ are no
   longer used — delete them (Railway: done 2026-10-06).
-- **Dependabot** alerts and security updates: switch them on in GitHub (Next, item 4; the review of 2026-10-14 W15: no security PR
-  ever came, so they are probably off).
-- **Railway "Wait for CI"** (the review of 2026-10-14 W13): the service `scan2play` deploys `main` without waiting for the checks
-  (`checkSuites: false`) — switch it on in the service's settings (Source).
-- **A rate-limit rule in Cloudflare** for `/p/*` (the review of 2026-10-14 W3 / W4): every anonymous `GET /p/…` writes a session row.
 - **A budget alert** for the Gemini key's project in Google Cloud Billing (each request is paid now).
 - **The OAuth client "Klient internetowy 1"** shows a warning in Google Cloud Console (2026-10-03): probably the disabled secret
   `****IgiS` — delete it (`****pfTe` is the one in use).

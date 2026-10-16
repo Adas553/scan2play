@@ -282,4 +282,31 @@
             t.step('"Ustaw klimat" opens them, the vibe in view', shows(document.getElementById('vibeSelect')), true);
         }
     });
+    // PROJECT_CONTEXT 6.7, one action per view (the owner, 2026-10-16): a closed party with nothing waiting showed two —
+    // "Wznów imprezę" in the banner and "Drukuj plakat i karty" of the empty queue. The party's own action wins; "Drukuj" is an
+    // outline while the party is closed, and the action again once it is resumed (the banner goes without a reload).
+    S2P.scenario({
+        name: 'closed-party-one-action',
+        title: 'a closed party with an empty queue: one action button — "Wznów imprezę"; "Drukuj" an outline until the party is resumed',
+        setup: { queue: [], partyActive: false },
+        run: async function (t) {
+            await t.waitFor(function () { return shows(document.getElementById('queueEmpty')); }, 'the empty queue', 8000);
+            await t.waitFor(function () { return shows(document.getElementById('party-closed-banner')); }, 'the closed party', 8000);
+            // a filled action: the cyan of --s2p-action
+            const actions = Array.from(document.querySelectorAll('.btn-action')).filter(shows).filter(function (b) {
+                return getComputedStyle(b).backgroundColor === 'rgb(13, 202, 240)';
+            });
+            t.step('one filled action: "Wznów imprezę"', actions.map(function (b) { return b.textContent.trim(); }), ['▶ Wznów imprezę']);
+            t.step('"Drukuj" an outline: no fill, a light edge', (function () {
+                const print = document.querySelector('#queueEmpty .btn-action');
+                const style = getComputedStyle(print);
+                return [style.backgroundColor, style.borderTopColor !== 'rgba(0, 0, 0, 0)'];
+            })(), ['rgba(0, 0, 0, 0)', true]);
+            await t.stand.config({ partyActive: true });   // resumed on another device: the next poll hides the banner
+            await t.waitFor(function () { return !shows(document.getElementById('party-closed-banner')); }, 'the party resumed', 8000);
+            await t.sleep(400);   // the button's colour transition (Bootstrap: 0.15 s)
+            t.step('resumed: "Drukuj" the action again', getComputedStyle(document.querySelector('#queueEmpty .btn-action')).backgroundColor,
+                'rgb(13, 202, 240)');
+        }
+    });
 })();

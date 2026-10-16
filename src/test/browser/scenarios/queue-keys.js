@@ -1,3 +1,24 @@
+/**
+ * The legend of the keys under the queue (the owner, 2026-10-16: "more professional and readable"): its title, then each key drawn as
+ * a key (<kbd>) with one word of what it does; the keys and the words as pairs, and whether the keys are drawn as keys (an edge).
+ */
+function keysLegend() {
+    const legend = document.getElementById('queueKeys');
+    const title = legend.querySelector('.s2p-keys-title');
+    const kbds = Array.from(legend.querySelectorAll('kbd'));
+    return {
+        title: title ? title.textContent.trim() : null,
+        pairs: Array.from(legend.querySelectorAll('.s2p-key')).map(function (item) {
+            return [Array.from(item.querySelectorAll('kbd')).map(function (k) { return k.textContent.trim(); }).join(' '),
+                item.querySelector('.s2p-key-what') ? item.querySelector('.s2p-key-what').textContent.trim() : null];
+        }),
+        drawn: kbds.length > 0 && kbds.every(function (k) {
+            const style = getComputedStyle(k);
+            return parseFloat(style.borderTopWidth) >= 1 && style.borderTopStyle === 'solid' && style.backgroundColor !== 'rgba(0, 0, 0, 0)';
+        })
+    };
+}
+
 // "KOPIUJ" AND THE QUEUE'S KEYS (queue-keys.js): the song to the clipboard as words for the DJ software's search ("Daft Punk One More
 // Time", no " - "), and ↑ ↓ / C / Enter / S / Esc on the queue — for the DJ at the laptop. Enter / S press the request's own
 // "Zagrane" / "Pomiń" once; Ctrl+C copies the chosen song (a selected text stays the browser's), Ctrl+Z is "Cofnij"; typing in the search box and the staff's "Podgląd" (no buttons) send nothing. The chosen request
@@ -52,8 +73,11 @@
         setup: { updatesStatus: 304 },
         run: async function (t) {
             const copied = catchClipboard();
-            t.step('the keys named under the queue', document.getElementById('queueKeys').textContent.trim(),
-                'Klawiatura: ↑ ↓ wybór · C lub Ctrl+C kopiuj · Enter zagrane · S pomiń · Backspace lub Ctrl+Z cofnij · Esc');
+            t.step('the keys named under the queue: a title, each key drawn as a key with what it does', keysLegend(), {
+                title: 'Skróty klawiszowe',
+                pairs: [['↑ ↓', 'wybierz'], ['C', 'kopiuj'], ['Enter', 'zagrane'], ['S', 'pomiń'], ['Backspace', 'cofnij'], ['Esc', 'odznacz']],
+                drawn: true
+            });
             t.step('nothing chosen at first', chosen(), []);
 
             press('Enter');
@@ -286,7 +310,9 @@
         setup: { updatesStatus: 304 },
         run: async function (t) {
             const copied = catchClipboard();
-            t.step('the keys named', document.getElementById('queueKeys').textContent.trim(), 'Klawiatura: ↑ ↓ wybór · C lub Ctrl+C kopiuj · Esc');
+            t.step('the keys named: only what the viewer may do', keysLegend(), {
+                title: 'Skróty klawiszowe', pairs: [['↑ ↓', 'wybierz'], ['C', 'kopiuj'], ['Esc', 'odznacz']], drawn: true
+            });
             press('ArrowDown');
             press('Enter');
             press('s');

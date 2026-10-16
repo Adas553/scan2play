@@ -295,8 +295,10 @@ creates the DJ's party on the first visit; the old tile links `/start/{kind}` le
 leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (on a wide screen every verdict's word as wide as the longer of "ZAGRANE" /
 "POMINIĘTE" — hidden copies in an inline grid, `.s2p-decision-word` —, so the "↩ Przywróć" after them stand in one column; amber, not the red "ODRZUCONE"; "⏭ Pominięta przez DJ-a …" in its title; on a phone only ⏭, beside the votes; still
 under the "Rejected" filter), V23; "Cofnij" for 8 s, "↩ Przywróć" in the history — Section 4.1; "Zagrane" has both too, 2026-10-10), "Kopiuj" (the artist and the title for the search
-box of the DJ's software) and "Podejrzyj" on every waiting request, and on a computer the queue's keys — "Klawiatura: ↑ ↓ wybór · C kopiuj · Enter
-zagrane · S pomiń · Esc" under the list (`queue-keys.js`, 2026-10-12; the staff without the queue's buttons: only ↑ ↓ / C / Esc); the vibe, the vibe note, "Kto gra";
+box of the DJ's software) and "Podejrzyj" on every waiting request, and on a computer the queue's keys — "Skróty klawiszowe", each key drawn as a key
+(`<kbd>`) with one word: ↑ ↓ wybierz · C kopiuj · Enter zagrane · S pomiń · Backspace cofnij · Esc odznacz, under the list (`queue-keys.js`,
+2026-10-12; the legend 2026-10-16; Ctrl+C / Ctrl+Z work too, the guide names them; the staff without the queue's buttons: only ↑ ↓ / C /
+Esc); the vibe, the vibe note, "Kto gra";
 the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
@@ -547,7 +549,7 @@ own cooldown for requests never sent). One guest with a script can spend 3 for t
 above the queue has **"Odblokuj prośby gości"** for whom may set the limits (the organiser, the staff with `LIMITS`; not a plan's
 feature) — `POST /dj/dashboard/guest-limit-reset`, `GuestRequestLimiter.resetParty`: the party's 24 h start again, the addresses keep
 their windows (W4). A stricter limit per address was not added: a venue's Wi-Fi is one address for all its guests; a scripted flood is
-for a rate-limit rule in Cloudflare (the owner's setting).
+for the rate-limit rule in Cloudflare for `/p/*` (the owner's setting, in place since 2026-10-16).
 
 2 and 3 are `GuestRequestLimiter` (Caffeine, in memory; the address windows by party, so a dashboard's poll reads only its own
 party's and a flood of made-up addresses at one party cannot push another's out — review 2026-10-14); 0 switches a limit off. The guests' 👍 have their own per-network limit
@@ -670,13 +672,14 @@ What every page shares, so a new screen looks like the others:
   prośbę", "▶ Zagrane", "Zaloguj się przez Google i dołącz", "Zapisz listę", "Zaproponuj kolejną", "Drukuj"). The owner (2026-10-15):
   the same action repeated is one — on every item of a list ("▶ Zagrane" of each request), at the top and the bottom of a long page
   (the landing page); a window over the page (the feedback's "Wyślij") and the "Cofnij" bar are views of their own, with their own.
-  Two different `.btn-action` in one view — never. The second kind — an outline
+  Two different `.btn-action` in one view — never: a closed party's action is "Wznów imprezę", so the empty queue's "Drukuj" is an
+  outline while the banner shows it (`app.css`, `:has`; `closed-party-one-action`). The second kind — an outline
   (`btn-outline-light` / `-secondary`, the picked one of a group filled light): "Pomiń", "Zapisz" in the settings, "Podejrzyj", the
   tip (`btn-outline-warning`: money); the text one — `btn-link` ("↻ Odśwież", "−1"). What deletes is an outline in `--s2p-danger-text`,
   never filled red. Green (`btn-success`, dark text) and yellow are statuses — "Twoja", a given 👍, ⚠, 💸 — not actions.
 - **Colours** as tokens on `:root`, nowhere else in `app.css` (`AppCssColoursTest`; 2026-10-15 every colour written in a rule became a
-  token of its own value — the near-whites and the panels' backgrounds are still several tones, to merge as a decision of the look;
-  `--s2p-<colour>-<n>` is that colour at an alpha of n %): `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under
+  token, 2026-10-16 the near-identical tones merged — the owner: three light texts `--s2p-white` / `--s2p-light` / `--s2p-text`, one
+  panel background `--s2p-bg-elevated`, two edges, one yellow; `--s2p-<colour>-<n>` is that colour at an alpha of n %): `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under
   WCAG AA; `.text-secondary` / `.text-muted` use it), `--s2p-danger-text`, `--s2p-green-ink`. Messages (`.alert-*`) are a tint of their
   colour with a coloured edge and light text — Bootstrap's pale boxes were the brightest things on a dark page.
 - **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
@@ -793,11 +796,9 @@ the party's code, without the IP — the privacy policy says so, W14), newlines 
 scripts change styles through `element.style`, which the policy allows), checked over every template by
 `NoInlineCodeInTemplatesTest`; images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; no frames;
 `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only**
-while `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. Switch it on once
-real use leaves the log quiet — the plan (2026-10-15): the Railway log has no `CSP violation` since the Web Analytics beacon went;
-the owner sets `CSP_ENFORCE=true` on Railway, opens the landing page, a guest's page, the panel, "Ustawienia", "Obsługa", the history,
-the summary and the QR print in a browser with the console open, and watches the log for `CSP violation` for a week; back:
-delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
+while `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. **Enforced on
+Railway since 2026-10-15** (`CSP_ENFORCE=true`; the response header is `Content-Security-Policy`, not `-Report-Only`; no `CSP
+violation` in the log since); the owner watches the log for a week; back: delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
 (Section 13); the standalone history page is not covered by them.
 
 ---
@@ -920,9 +921,9 @@ the owner's choice). Variables now: `GOOGLE_AI_API_KEY`, `GOOGLE_CLIENT_ID` / `_
 before its database fails once and Railway restarts it, and a database that falls asleep under a running app breaks the request
 that holds the dropped connection (seen once, 2026-10-06 16:04). Switch the database's sleep off before real customers. Later deploys: 2026-10-06 the notifications (PR #9, V21) and the
 versioned script addresses (PR #10); 2026-10-07 PR #11 via #12 (`a06e4be`: clear the history, the comment style, V22 and V23
-applied in 0.05 s, "Push notifications on"). **Still
-open:** `CSP_ENFORCE` stays off until a few days of real use leave the log quiet (Section 13), then `true`; Dependabot alerts and
-security updates switched on in GitHub.
+applied in 0.05 s, "Push notifications on"). Since:
+`CSP_ENFORCE=true` (2026-10-15), Dependabot alerts and security updates on, Railway waits for the CI before it deploys `main`
+(`checkSuites: true`, 2026-10-16).
 
 ---
 
@@ -1025,7 +1026,7 @@ GuestQueueService          → DjService
   per shown window every 3 s).
 
 ### Security
-- The CSP is report-only on Railway until switched on (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
+- The CSP is enforced on Railway since 2026-10-15 (`CSP_ENFORCE=true`; locally it is on). Reported so far (2026-10-06): only
   Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`, injected by Cloudflare into the HTML) — switched off since
   (2026-10-15: "Disabled" for the site, no beacon in the page). Switched on again, it needs its host in the CSP and a sentence in
   the privacy policy.
@@ -1066,7 +1067,7 @@ GuestQueueService          → DjService
   reads it). `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
   (`.github/dependabot.yml`): security fixes only (version updates off by `open-pull-requests-limit: 0`); it works from the default
-  branch `main` and needs "Dependabot alerts" and "security updates" switched on in the repository's settings.
+  branch `main`; "Dependabot alerts" and "security updates" are on in the repository's settings (2026-10-16).
 
 ### AI
 - No retry when Gemini is down (the request goes to the DJ unchecked; `AiHealthMonitor` writes it to the log); no check that a song
