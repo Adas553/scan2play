@@ -55,7 +55,19 @@ class HostControllerTest {
                 .andExpect(view().name("host"))
                 .andExpect(model().attribute("hostBlocked", "Akcent"))
                 .andExpect(model().attribute("djName", "DJ Koko"))
-                .andExpect(model().attribute("hostToken", TOKEN));
+                .andExpect(model().attribute("hostToken", TOKEN))
+                .andExpect(model().attribute("songListMax", com.scan2play.util.SongList.MAX_LINES));
+    }
+
+    /** A list longer than the limit: the first {@code MAX_LINES} are kept, and the page says the rest did not fit (not only "saved"). */
+    @Test
+    void aListLongerThanTheLimit_keepsTheFirstOnes_andSaysTheRestDidNotFit() throws Exception {
+        String many = java.util.stream.IntStream.rangeClosed(1, 120).mapToObj(i -> "Song " + i)
+                .collect(java.util.stream.Collectors.joining("\n"));
+        mockMvc.perform(post("/h/" + TOKEN).param("blocked", many).param("wanted", "Perfect"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("hostSaved", true))
+                .andExpect(flash().attribute("hostDropped", com.scan2play.util.SongList.MAX_LINES));
     }
 
     @Test
@@ -84,7 +96,8 @@ class HostControllerTest {
         mockMvc.perform(post("/h/" + TOKEN).param("blocked", "").param("wanted", " Hej sokoły \n\nPerfect"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/h/" + TOKEN))
-                .andExpect(flash().attribute("hostSaved", true));
+                .andExpect(flash().attribute("hostSaved", true))
+                .andExpect(flash().attributeCount(1));
 
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());

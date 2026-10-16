@@ -24,24 +24,33 @@
             <p class="text-secondary mb-0" th:text="#{host.intro}">Write the songs or artists, one per line.</p>
         </div>
 
-        <div th:if="${hostSaved}" id="hostSaved" class="alert alert-success text-center fw-bold py-2" role="status"
-             th:text="#{host.saved}">✓ Saved — the DJ sees your list</div>
+        <div th:if="${hostSaved != null and hostDropped == null}" id="hostSaved" class="alert alert-success text-center fw-bold py-2"
+             role="status" th:text="#{host.saved}">✓ Saved — the DJ sees your list</div>
+        <!--/* a list longer than the limit (SongList.MAX_LINES): the first ones are kept — said, not only "saved" */-->
+        <div th:if="${hostDropped != null}" id="hostDropped" class="alert alert-warning text-center fw-bold py-2" role="status"
+             th:text="#{host.dropped(${hostDropped})}">Saved — but a list holds at most 100 lines; the rest were not saved.</div>
 
         <form th:action="@{/h/{token}(token=${hostToken})}" method="post" class="m-0" id="hostForm">
             <label for="blocked" class="form-label fw-bold" th:text="#{host.blocked.label}">🚫 Don't play</label>
             <p class="small text-secondary mb-1" th:text="#{host.blocked.help}">A guest who asks for one hears that you asked the DJ not to play it.</p>
-            <textarea id="blocked" name="blocked" rows="6" maxlength="16000" class="form-control mb-3"
+            <textarea id="blocked" name="blocked" rows="6" maxlength="16000" class="form-control"
                       th:text="${hostBlocked}" th:placeholder="#{host.blocked.placeholder}"></textarea>
+            <div class="s2p-list-count mb-3" data-list-for="blocked" aria-live="polite"
+                 th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
 
             <label for="wanted" class="form-label fw-bold" th:text="#{host.wanted.label}">⭐ Must play</label>
             <p class="small text-secondary mb-1" th:text="#{host.wanted.help}">A guest's request for one always reaches the DJ, marked ⭐.</p>
-            <textarea id="wanted" name="wanted" rows="6" maxlength="16000" class="form-control mb-3"
+            <textarea id="wanted" name="wanted" rows="6" maxlength="16000" class="form-control"
                       th:text="${hostWanted}" th:placeholder="#{host.wanted.placeholder}"></textarea>
+            <div class="s2p-list-count mb-3" data-list-for="wanted" aria-live="polite"
+                 th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
 
             <button type="submit" class="btn btn-action btn-lg w-100" th:text="#{host.save}">Save</button>
         </form>
         <p class="small text-secondary text-center mt-3 mb-0" th:text="#{host.footer}">Up to 100 lines on each list. You can come back and change it any time.</p>
     </div>
 </div>
+<!--/* the lines each list holds, and a warning over the limit (SongList.MAX_LINES) — no inline script (CSP) */-->
+<script src="/js/song-list-count.js" th:src="@{/js/song-list-count.js}"></script>
 </body>
 </html>

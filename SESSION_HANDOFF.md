@@ -9,6 +9,11 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-16 — the hosts' lists count their entries, on the branch `claude/host-lists-limit` from `origin/dev`; a PR to `dev`.** The
+  owner: "co jak DJ wpisze 100 piosenek?" — a list keeps 100 (`SongList.MAX_LINES`, the owner: "zostaw 100"; the lists never reach the
+  AI), but 120 lines were saved as 100 without a word. Now under each list "N z 100 pozycji" as it is typed and a warning over 100
+  (`js/song-list-count.js`, on "Ustawienia imprezy" and `/h/…`); the hosts' page after such a save says the rest did not fit. Tests:
+  723 unit, 129 browser (`host-lists-count`, `host-page-count`, red without the script).
 - **2026-10-16 — the guest is asked for the artist and the title, on the branch `claude/artist-and-title` from `origin/dev`; a PR to
   `dev`.** Production: one line of lyrics ("Dziewczyno jak wino uderzasz do głowy") gave four different made-up songs, each rejected
   by the vibe. The owner: ask for "wykonawca i tytuł" — a line of lyrics typed is the guest's own risk. The field's hint, the empty
