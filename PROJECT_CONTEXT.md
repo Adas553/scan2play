@@ -75,7 +75,10 @@ one line, empty clears; both saved by one form, `POST /dj/dashboard/party-words`
 `tiktokUrl` (V24, ≤ 200: the DJ's profiles, set on the page "Ustawienia imprezy" — the guests see buttons with the sites' icons (Bootstrap Icons' paths inline, MIT) under "🎧 Gra: …" (new tab, `rel="noopener noreferrer
 nofollow"`), the QR print "Instagram @djkoko"; `POST /dj/dashboard/dj-links` takes "@name", a name or a link copied from the app and
 keeps an https address on that site, `util/SocialLinks` — anything else, a look-alike host too, is a 400 and nothing is saved; the
-form shows why, `[data-form-error]` in `forms.js`; no result-page nudge, by the owner's choice), `tipUrl` (V27, ≤ 200: the
+form shows why, `[data-form-error]` in `forms.js`; no "follow the DJ" on the result page, by the owner's choice of 2026-10-07 —
+but since 2026-10-16 "Zarezerwuj tego DJ-a na swoją imprezę" over the same buttons on the "party ended" page, with who played, and
+under an accepted request: `components :: djBooking`, only with a profile; an idea from Rekwest, whose guests are e-mailed after
+the party — Scan2Play keeps no guest's address), `tipUrl` (V27, ≤ 200: the
 DJ's tip link — the DJ's page on Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee or Ko-fi; `POST /dj/dashboard/tip-link`,
 a field under the profiles; `util/TipLinks` keeps an https address on one of those hosts with a plain path — no query, login part or
 port; anything else is a 400 and nothing is saved; the guests see "💸 Napiwek dla DJ-a" on the party page — with "revolut.me/djkoko · prosto do DJ-a, poza
@@ -520,7 +523,8 @@ yellow vanished on Windows). The guest's own songs are marked on the party page 
 one request; the guest's requests are remembered in the session). The DJ's profiles and "💸 Napiwek dla DJ-a" come **under the list**
 (`#djSupport`; the design review, 2026-10-09: above the form they pushed the field to the lower half of a phone's screen). The result
 page has the logo and "🎧 Gra: …" at the top (`djName`), the verdict sized to the screen (`.s2p-verdict`: "PRZEKAZANE" broke into
-"PRZEKAZAN / E") and "Zaproponuj kolejną" as its one main button.
+"PRZEKAZAN / E") and "Zaproponuj kolejną" as its one main button; under it, for a request that reached the DJ, the DJ's profiles
+under "Zarezerwuj tego DJ-a na swoją imprezę" (`components :: djBooking`; also on the "party ended" page, under "↻ Sprawdź ponownie").
 Until 2026-10-08 there were "🔥 Najwięcej głosów" and "Ostatnio wysłane" as well — one song showed up to three times (the owner:
 too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer; the keyboard's focus stays on its
 place in the new list ("↻ Odśwież", the search, the same song's 👍 — in the unfolded rest once it is in). A 👍 or a "↻ Odśwież" that does not go

@@ -9,6 +9,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-16 — the DJ's contact after the party (Next 7, an idea from Rekwest), on the branch `claude/dj-contact-after-party` from
+  `origin/dev`; a PR to `dev`.** The page "party ended" (under "↻ Sprawdź ponownie", with "🎧 DJ Koko") and the result of a request
+  that reached the DJ (under "Zaproponuj kolejną") show the DJ's profiles under "Zarezerwuj tego DJ-a na swoją imprezę" / "Napisz do
+  DJ-a przez profil:" (`components :: djBooking`; the buttons are one fragment now, `djLinks`, the party page's too). Only with a
+  profile, as the plan has them (Pro, V35); no guest's address is kept. The owner said on 2026-10-07 "no »follow the DJ« on the result
+  page" — this one is "book", asked for on 2026-10-16. Tests: 725 unit, browser `dj-booking-party-ended`, `dj-booking-result`.
 - **2026-10-16 — the site's icon for Google Search, on the branch `claude/site-icon` from `origin/dev`; a PR to `dev`.** The owner: Google
   showed a grey globe beside scan2play.com.pl. `/favicon.ico` (16 / 32 / 48 px) was there, but no page named it — Google needs
   `<link rel="icon">` on the home page. The `seo` fragment (the public pages) names `/favicon.ico`, `images/icon-192.png` and the
@@ -24,8 +30,8 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   by the vibe. The owner: ask for "wykonawca i tytuł" — a line of lyrics typed is the guest's own risk. The field's hint, the empty
   request's note, the QR poster and cards, the guide (PL / EN); the AI still tries lyrics. Next, if wanted: Gemini's Google Search
   grounding for a line of lyrics — a test with `GeminiComparison` first (the owner's yes for the key). Tests: 720 unit, 127 browser.
-- **2026-10-16 — the state.** `main` = `dev` in content (release #93, deployed by Railway 2026-10-16 06:49 UTC; Railway waits for
-  the CI). The review of 2026-10-14 is done and released: K1, W1–W15, the small items, the deferred ones (#85–#89) and the look
+- **2026-10-16 — the state.** `main` = `dev` in content (release #100 — #99, #101, #102 —, deployed by Railway 2026-10-16 15:13 UTC —
+  SUCCESS, the icon's `<link rel="icon">` live; Railway waits for the CI). The review of 2026-10-14 is done and released: K1, W1–W15, the small items, the deferred ones (#85–#89) and the look
   (#92) — `docs/history/review-2026-10-14.md`, "Status poprawek". Of the review of 2026-09-30 only 2.3 (one instance) is left.
   Production: the CSP enforced (`CSP_ENFORCE=true` since 2026-10-15, no "CSP violation" in the log since), `gemini-3.6-flash`, the
   plans not enforced (`PLANS_ENFORCE` unset: every party has every feature), the notifications on (the VAPID keys on Railway; the owner tried them on a phone, 2026-10-16: "działa"), the
@@ -79,8 +85,8 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    no AI on their page — ours (the vibe filter, the comments, "⚠ Sprawdź"), the hosts' lists by a link and Polish are what to show.
    - **A dedication with a request** ("dla Ani na 18-stkę"): the guest adds a short message, the DJ sees it by the song; the AI can
      refuse an offensive one. Cheap; for weddings and birthdays.
-   - **The DJ's contact after the party:** the "party ended" page and the result page show the DJ's profile and "Zarezerwuj tego DJ-a
-     na swoją imprezę" (Rekwest e-mails the guests afterwards — we collect no guests' e-mails and should not). The profiles exist (V24).
+   - **The DJ's contact after the party:** built 2026-10-16 (Start here). Left, if DJs ask: a phone number or a website as a contact
+     (the profiles are Instagram / Facebook / TikTok only).
    - **A TV screen** in the hall or the pub: the guests' most wanted songs (the votes) and the QR code beside them — not a queue of
      what plays next (Scan2Play has no DJ's play order). A page of its own for a screen, polled like the panel.
    - **The landing page:** show at once how it looks — the guest's page on a phone and the DJ's panel on a laptop, side by side

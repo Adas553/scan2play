@@ -351,17 +351,11 @@ class GuestPageRenderTest {
     }
 
     private static String renderResult(com.scan2play.model.DjResponse response) {
-        return renderResult(response, null);
+        return renderResult(response, Map.of());
     }
 
     private static String renderResult(com.scan2play.model.DjResponse response, String tipUrl) {
-        MockServletContext servletContext = new MockServletContext();
-        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
-                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
-        Map<String, Object> model = new HashMap<>(Map.of("response", response, "partyCode", "ABC12"));
-        model.put("tipUrl", tipUrl);
-        context.setVariables(model);
-        return engine.process("result", context);
+        return renderResult(response, Map.<String, Object>of("tipUrl", tipUrl));
     }
 
     /**
@@ -580,5 +574,58 @@ class GuestPageRenderTest {
         assertThat(html.split("<svg ", -1)).as("an icon on each button, drawn in the text's colour").hasSize(3);
         assertThat(html).contains("fill=\"currentColor\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"");
         assertThat(render(PL, Map.of())).doesNotContain("id=\"djLinks\"");
+    }
+
+    /**
+     * The DJ's contact after the party (an idea from Rekwest, 2026-10-16): the page "party ended" and the result of a request that
+     * reached the DJ show the DJ's profiles under "Zarezerwuj tego DJ-a na swoją imprezę" — the guest writes to the DJ there, Scan2Play
+     * keeps no guest's address. Nothing without a profile: a name alone is no way to reach the DJ.
+     */
+    @Test
+    void theDjsContact_onThePartyEndedPage_andUnderAnAcceptedRequest() {
+        Map<String, Object> dj = Map.of("djName", "DJ <b>Koko</b>", "instagramUrl", "https://www.instagram.com/dj.koko/",
+                "facebookUrl", "https://www.facebook.com/djkoko", "tiktokUrl", "https://www.tiktok.com/@dj_koko");
+        String ended = renderEnded(PL, dj);
+        writePreview("party-ended.html", ended);
+        writeForTheBrowserTests("party-ended.html", ended);
+
+        assertThat(ended).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ-a na swoją imprezę<", ">Napisz do DJ-a przez profil:<",
+                "🎧 DJ &lt;b&gt;Koko&lt;/b&gt;", "<a href=\"https://www.instagram.com/dj.koko/\" target=\"_blank\" rel=\"noopener noreferrer nofollow\"",
+                "href=\"https://www.facebook.com/djkoko\"", "href=\"https://www.tiktok.com/@dj_koko\"").doesNotContain("??");
+        assertThat(ended.split("<svg ", -1)).as("an icon on each button").hasSize(4);
+        assertThat(ended.indexOf("id=\"djBooking\"")).as("under \"check again\"").isGreaterThan(ended.indexOf("id=\"checkAgainBtn\""));
+        assertThat(renderEnded(Locale.ENGLISH, dj)).contains(">Book this DJ for your own party<", ">Message the DJ on their profile:<");
+        assertThat(renderEnded(PL, Map.of("djName", "DJ Koko"))).as("a name alone").doesNotContain("djBooking", "Zarezerwuj", "DJ Koko");
+        assertThat(renderEnded(PL, Map.of())).doesNotContain("djBooking").contains("id=\"checkAgainBtn\"");
+
+        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title"), dj);
+        writeForTheBrowserTests("result.html", accepted);
+        assertThat(accepted).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ-a na swoją imprezę<", "href=\"https://www.tiktok.com/@dj_koko\"")
+                .doesNotContain("??");
+        assertThat(accepted.split("🎧", -1)).as("who plays once, at the top").hasSize(2);
+        assertThat(accepted.indexOf("id=\"djBooking\"")).as("under the page's one action")
+                .isGreaterThan(accepted.indexOf("href=\"/p/ABC12\""));
+        assertThat(renderResult(new com.scan2play.model.DjResponse("rejected", "Nie dziś", "Nirvana - Lithium", "title"), dj))
+                .doesNotContain("djBooking", "Zarezerwuj");
+    }
+
+    private static String renderEnded(Locale locale, Map<String, Object> extra) {
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
+        Map<String, Object> model = new HashMap<>(Map.of("partyCode", "ABC12"));
+        model.putAll(extra);
+        context.setVariables(model);
+        return engine.process("party_ended", context);
+    }
+
+    private static String renderResult(com.scan2play.model.DjResponse response, Map<String, Object> extra) {
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        Map<String, Object> model = new HashMap<>(Map.of("response", response, "partyCode", "ABC12"));
+        model.putAll(extra);
+        context.setVariables(model);
+        return engine.process("result", context);
     }
 }
