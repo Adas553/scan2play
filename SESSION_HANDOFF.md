@@ -53,6 +53,17 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
    key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
 5. **Before `PLANS_ENFORCE`:** the terms (the staff, the hosts' link, the plan Pro) are the owner's text; then the plans can be
    enforced (PROJECT_CONTEXT 4.1 / 13).
+6. **A song found by a line of its lyrics — Gemini's Google Search** (the owner, 2026-10-16: "zapisz to do zrobienia"). Production
+   2026-10-16: "Dziewczyno jak wino uderzasz do głowy" gave four different made-up songs; since #96 the guest is asked for the artist
+   and the title, the AI still tries lyrics. The plan: the first call as today (no search); a second call with "Grounding with Google
+   Search" only when the answer says `requestKind` "lyrics" (`DjResponse.isLyrics()`) or its song shares no word with the guest's
+   text (`SongNames.sharesNoWord`, the "⚠ Sprawdź" case). Before building: (a) a test with `GeminiComparison` — the four requests of
+   2026-10-16 and similar lines, without and with the search: right / wrong, time; it needs the Gemini key from IntelliJ's run
+   configuration (the owner's yes, read by a script, never written) and the right title of that song from the owner; top up the
+   prepaid credits first (2.95 zł on 2026-10-16); (b) how Google bills it for Gemini 3 — per request with the search on, or per
+   search the model makes ("5,000 free search requests per month, then $14 per 1,000"; the docs and third parties differ); (c) how
+   many requests are lyrics, from Railway's log. Weak spots: a lyric the model labels a title and matches to a made-up title skips
+   the search; the guest waits 1–3 s longer on a searched request.
 
 ## Waiting for the owner (not code)
 
