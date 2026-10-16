@@ -13,7 +13,7 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   the CI). The review of 2026-10-14 is done and released: K1, W1–W15, the small items, the deferred ones (#85–#89) and the look
   (#92) — `docs/history/review-2026-10-14.md`, "Status poprawek". Of the review of 2026-09-30 only 2.3 (one instance) is left.
   Production: the CSP enforced (`CSP_ENFORCE=true` since 2026-10-15, no "CSP violation" in the log since), `gemini-3.6-flash`, the
-  plans not enforced (`PLANS_ENFORCE` unset: every party has every feature), the notifications on (the VAPID keys on Railway), the
+  plans not enforced (`PLANS_ENFORCE` unset: every party has every feature), the notifications on (the VAPID keys on Railway; the owner tried them on a phone, 2026-10-16: "działa"), the
   service sleeps when idle (`sleepApplication`: the first guest after a quiet spell waits a few seconds; the log then shows Hikari's
   "Failed to validate connection").
 - **The history of 2026-10-05 … 16** (every branch and PR, the owner's words, how it was verified):
@@ -55,8 +55,6 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   delete the variable (a restart, no deploy).
 - **`server.forward-headers-strategy=FRAMEWORK`** trusts `X-Forwarded-*`: safe while Railway's own address cannot be reached past
   Cloudflare — keep it so.
-- **The notifications on a phone:** the VAPID keys are on Railway ("Push notifications on" in the log); if not done yet, switch the
-  notifications on on an Android phone and on an iPhone (from the Home Screen) and send a request.
 
 - **YouTube API key:** delete the key **"Klucz API 2"** in Google Cloud Console and the variable **`YOUTUBE_API_KEY`** in IntelliJ's
   run configuration (Railway: done 2026-10-06).
