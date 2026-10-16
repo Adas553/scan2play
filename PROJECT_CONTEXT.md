@@ -634,7 +634,9 @@ the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an
 link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
 `scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages:
 `fragments/components :: seo(path, title, description)` writes the description, the canonical address in the page's language,
-the `hreflang` alternates and Open Graph with `images/og-image.png`; on the landing page, the guide, `/privacy`, `/terms`, `/pro`).
+the `hreflang` alternates, Open Graph with `images/og-image.png` and the site's icon — `rel="icon"` `/favicon.ico` (16 / 32 / 48 px)
+and `images/icon-192.png`, `apple-touch-icon` (Google Search shows the icon beside a result only when the home page names it;
+2026-10-16: a grey globe); on the landing page, the guide, `/privacy`, `/terms`, `/pro`).
 
 ### 6.4 Templates
 

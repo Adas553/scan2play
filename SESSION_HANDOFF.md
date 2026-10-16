@@ -9,6 +9,11 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-16 — the site's icon for Google Search, on the branch `claude/site-icon` from `origin/dev`; a PR to `dev`.** The owner: Google
+  showed a grey globe beside scan2play.com.pl. `/favicon.ico` (16 / 32 / 48 px) was there, but no page named it — Google needs
+  `<link rel="icon">` on the home page. The `seo` fragment (the public pages) names `/favicon.ico`, `images/icon-192.png` and the
+  apple-touch-icon. Tests: 723 unit (`SmokeTest`, red before), 129 browser. **The owner, after the release:** Search Console → URL
+  Inspection of the home page → "Request indexing" (Google takes days to weeks otherwise).
 - **2026-10-16 — the hosts' lists count their entries, on the branch `claude/host-lists-limit` from `origin/dev`; a PR to `dev`.** The
   owner: "co jak DJ wpisze 100 piosenek?" — a list keeps 100 (`SongList.MAX_LINES`, the owner: "zostaw 100"; the lists never reach the
   AI), but 120 lines were saved as 100 without a word. Now under each list "N z 100 pozycji" as it is typed and a warning over 100
