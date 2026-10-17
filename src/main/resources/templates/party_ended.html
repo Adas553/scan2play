@@ -25,6 +25,7 @@
                     <a th:href="${partyCode != null} ? ${'/p/' + partyCode} : '/'" id="checkAgainBtn"
                        class="btn btn-action px-4" th:text="#{party.ended.check_again}">↻ Check again</a>
                 </div>
+                <div th:replace="~{fragments/components :: djBooking(${djName}, ${instagramUrl}, ${facebookUrl}, ${tiktokUrl})}"></div>
                 <p class="mt-4 mb-0 small">
                     <a href="/" class="text-secondary-bright" th:text="#{party.ended.own_party}">Want this at your own party? Scan2Play</a>
                 </p>

@@ -488,4 +488,44 @@ class GuestControllerTest {
         assertThat(asPlanned.getValue().getCooldownMinutes()).isEqualTo(3);
         assertThat(settings.getRequestLimit()).as("the party's own value kept").isEqualTo(5);
     }
+
+    /**
+     * The DJ's contact after the party (an idea from Rekwest, 2026-10-16): the page "party ended" — opened, or answering a request — and
+     * the result page get the DJ's profiles, the ended page also who played; without Pro none (the profiles are a Pro feature, V35).
+     */
+    @Test
+    void theEndedPage_andTheResult_getTheDjsProfiles_onlyWithPro() throws Exception {
+        settings.setDjName("DJ Koko");
+        settings.setOwnerId("owner");
+        settings.setInstagramUrl("https://www.instagram.com/dj/");
+        settings.setFacebookUrl("https://www.facebook.com/dj");
+        settings.setTiktokUrl("https://www.tiktok.com/@dj");
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of()))
+                .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 42L));
+        ExtendedModelMap result = new ExtendedModelMap();
+        assertThat(controller.requestSong(PARTY, "Song", result, session, request, redirectAttributes).call()).isEqualTo("result");
+        assertThat(result).containsEntry("instagramUrl", "https://www.instagram.com/dj/")
+                .containsEntry("facebookUrl", "https://www.facebook.com/dj").containsEntry("tiktokUrl", "https://www.tiktok.com/@dj");
+
+        settings.setActive(false);
+        ExtendedModelMap opened = new ExtendedModelMap();
+        ExtendedModelMap answered = new ExtendedModelMap();
+        assertThat(controller.partyIndex(PARTY, opened, request)).isEqualTo("party_ended");
+        assertThat(controller.requestSong(PARTY, "Song", answered, session, request, redirectAttributes).call()).isEqualTo("party_ended");
+        for (ExtendedModelMap ended : java.util.List.of(opened, answered)) {
+            assertThat(ended).containsEntry("partyCode", PARTY).containsEntry("djName", "DJ Koko")
+                    .containsEntry("instagramUrl", "https://www.instagram.com/dj/")
+                    .containsEntry("facebookUrl", "https://www.facebook.com/dj").containsEntry("tiktokUrl", "https://www.tiktok.com/@dj");
+        }
+
+        GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
+                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced());
+        ExtendedModelMap freeEnded = new ExtendedModelMap();
+        assertThat(free.partyIndex(PARTY, freeEnded, request)).isEqualTo("party_ended");
+        assertThat(freeEnded.get("instagramUrl")).isNull();
+        assertThat(freeEnded.get("facebookUrl")).isNull();
+        assertThat(freeEnded.get("tiktokUrl")).isNull();
+    }
 }
