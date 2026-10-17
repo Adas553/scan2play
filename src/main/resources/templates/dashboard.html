@@ -335,7 +335,7 @@
                                         th:text="#{dashboard.dedication(${note.text})}">💌 “…”</th:block> <span th:unless="${note.checked}"
                                         class="badge text-bg-secondary s2p-dedication-unchecked" th:title="#{dashboard.dedication.unchecked.title}"
                                         th:text="#{dashboard.dedication.unchecked}">unchecked</span></span>
-                                <span th:if="${notes != null and req.dedications > notes.size()}" class="small text-secondary"
+                                <span th:if="${notes != null and req.dedications > notes.size()}" class="small text-secondary s2p-dedication-more"
                                       th:text="#{dashboard.dedication.more(${req.dedications - notes.size()})}">+2 more</span>
                             </th:block>
                             <!--/* the AI's comment to the guest: one line, the whole of it in the title */-->
@@ -357,6 +357,10 @@
                     </div>
                 </td>
                 <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
+                    <!--/* how many dedications (V38): only on a phone's folded card, which hides them (app.css) — beside the votes, so the
+                         card keeps its one line; a tap shows them */-->
+                    <span th:if="${req.dedications > 0}" class="badge text-bg-secondary s2p-dedication-count"
+                          th:title="#{dashboard.dedication.count.title}" th:text="${'💌 ' + req.dedications}">💌 3</span>
                     <span class="badge" th:classappend="${req.votes > 1} ? 'text-bg-warning' : 'text-bg-secondary'" th:text="${req.votes}">1</span>
                     <!--/* On a phone the card is folded (cards.js, app.css): the song, ⚠ / ⭐, the votes, "Zagrane" / "Pomiń" — this "▾"
                          (or a tap on the card) unfolds the guest's words, the AI's comment, "Podejrzyj" and 💸. A wide screen shows them all. */-->

@@ -131,6 +131,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.panel(any(), any(), any())).thenReturn(java.util.Optional.of(access));
         when(sessionHelper.takeNote(any())).thenReturn(java.util.Optional.ofNullable(note));
         when(djService.getDashboardQueue(PARTY)).thenReturn(queue);
+        when(djService.dedicationsOf(queue)).thenReturn(dedications);
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
@@ -387,6 +388,14 @@ class DashboardPageRenderTest {
                 new DjSessionHelper.Note("dashboard.staff.joined", "Klub Ola", false));
     }
 
+    /** The guests' dedications the dashboard's queue shows (V38), by the song's id: none, unless a test gives them. */
+    private static Map<Long, List<com.scan2play.entity.SongRequestDedicationEntity>> dedications = Map.of();
+
+    private static com.scan2play.entity.SongRequestDedicationEntity dedication(long songId, String text) {
+        return com.scan2play.entity.SongRequestDedicationEntity.builder().songRequestId(songId).text(text).checked(true)
+                .createdAt(java.time.Instant.now()).build();
+    }
+
     /** A waiting request with its number (V28), the guest's words, the AI's comment, the votes and the DJ's tips. */
     private static SongRequestEntity numbered(long id, int number, String name, String guestText, int votes, int tips) {
         SongRequestEntity request = song(id, name);
@@ -409,7 +418,18 @@ class DashboardPageRenderTest {
                 numbered(11, 12, "Daft Punk - One More Time", "daft punk one more time", 4, 2),
                 numbered(12, 13, "sanah - Szampan", "orła cień", 1, 0),
                 numbered(13, 14, "Golec uOrkiestra - Hej sokoły", "hej sokoły dla babci", 2, 0));
-        String owner = renderDashboard(party(), queue, PL);
+        // the first one with four guests' dedications (V38): the newest three shown, "+1 więcej"; a phone folds them to "💌 4"
+        queue.getFirst().setDedications(4);
+        dedications = Map.of(11L, List.of(dedication(11, "Dla Zosi"), dedication(11, "Dla Ani"),
+                dedication(11, "Dla Damiana od najlepszego wujka")));
+        String owner;
+        try {
+            owner = renderDashboard(party(), queue, PL);
+        } finally {
+            dedications = Map.of();
+        }
+        assertThat(owner).contains("💌 „Dla Damiana od najlepszego wujka”", ">+1 więcej<", "s2p-dedication-count", ">💌 4<",
+                "title=\"Dedykacje gości — dotknij karty, żeby je przeczytać\"");
         assertThat(owner).contains("class=\"btn btn-sm d-md-none s2p-card-toggle\" aria-expanded=\"false\"",
                 "aria-label=\"Szczegóły\"", "s2p-check-song", "s2p-host-wanted", "💸 2", ">Podejrzyj<");
         // "Kopiuj" and the queue's keys (queue-keys.js): "Zagrane" / "Pomiń" by the keyboard only for whom may press them

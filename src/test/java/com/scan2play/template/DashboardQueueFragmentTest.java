@@ -234,8 +234,8 @@ class DashboardQueueFragmentTest {
         assertThat(html.indexOf("dla Ani")).isLessThan(html.indexOf("od świadków"));
 
         context.setVariable("dedications", null);
-        assertThat(engine.process("dashboard", Set.of("songTableBody"), context)).as("no map (a test, an old page): no line")
-                .doesNotContain("💌");
+        assertThat(engine.process("dashboard", Set.of("songTableBody"), context)).as("no map (a test, an old page): no line, the count only")
+                .doesNotContain("s2p-dedication\"", "💌 „").contains(">💌 5<");
     }
 
     private static SongRequestDedicationEntity dedication(long songId, String text, boolean checked) {

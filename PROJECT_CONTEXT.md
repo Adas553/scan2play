@@ -525,7 +525,8 @@ comment, the votes). A request the AI reads as a mood is not saved: the guest is
 `guest.error.song_only` (the DJ sets the mood) — with the dedication too. Under the field "💌 Dodaj dedykację" (a `details`, no
 script, V38): an optional line of ≤ 100 characters only the DJ sees; the result page says "💌 Dedykacja trafiła do DJ-a." or that
 the AI kept it out (`DjResponse.dedicationOk`); the DJ's queue shows the newest 3 under the song ("💌 „…”", "niesprawdzona", "+N
-więcej"). An empty request (only spaces) goes back at once with `guest.error.empty` — no
+więcej") — on a phone's folded card only "💌 3" beside the votes (the owner's screenshot, 2026-10-17: three filled half the
+screen), a tap shows them, each on a line of its own. An empty request (only spaces) goes back at once with `guest.error.empty` — no
 limit used, no AI asked. Under the form: "Twoja prośba „…” czeka u DJ-a" — or, with several, "Czekają u DJ-a Twoje prośby: 3" — and
 **one list**, "Prośby gości": every waiting request once, the most votes first and the newest first among equal votes
 (`GuestQueueService.byVotes`), unnumbered — the DJ picks the order —, the first 5 shown and the rest folded under "Pokaż pozostałe

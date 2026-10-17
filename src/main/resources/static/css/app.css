@@ -372,8 +372,9 @@ th[data-sort].sort-desc::after {
 .page-guest .accepted { color: var(--s2p-green); }
 /* The guest's dedication (V38): a quiet line under the song's field, unfolded on a tap */
 .s2p-dedication-box summary { color: var(--s2p-action); cursor: pointer; width: fit-content; line-height: 44px; }   /* 44 px to tap */
-/* The guests' dedications under a song of the DJ's queue */
+/* The guests' dedications under a song of the DJ's queue; their count only on a phone's folded card (section 8) */
 .s2p-dedication { color: var(--s2p-text); }
+.s2p-dedication-count { display: none; }
 .page-guest .rejected { color: var(--s2p-red); }
 /* The result's verdict ("TAK!", "NIE", "PRZEKAZANE"): as big as a phone's width allows — display-1 broke "PRZEKAZAN / E" */
 .s2p-verdict {
@@ -770,7 +771,8 @@ th[data-sort].sort-desc::after {
     /* the title on a line of its own, ⚠ / ⭐ side by side under it, then the guest's words and the AI's comment */
     .page-dj #song-list .song-cell > div > span.d-flex { flex-flow: row wrap !important; align-items: center; gap: 0.15rem 0.4rem; }
     .page-dj #song-list .guest-text,
-    .page-dj #song-list .s2p-queue-comment { flex: 1 1 100%; }
+    .page-dj #song-list .s2p-queue-comment,
+    .page-dj #song-list :is(.s2p-dedication, .s2p-dedication-more) { flex: 1 1 100%; }
     /* a waiting request is accepted: its ✔ says nothing */
     .page-dj #song-list td.status-accepted { display: none; }
     .page-dj #song-list td[data-sort-value="votes"] { display: flex; align-items: center; gap: 0.25rem; }
@@ -786,6 +788,9 @@ th[data-sort].sort-desc::after {
     .page-dj #song-list > tr:not(.s2p-open) .s2p-queue-comment,
     .page-dj #song-list > tr:not(.s2p-open) .song-cell :is(a.btn, .s2p-btn-copy) { display: none; }
     .page-dj #song-list > tr:not(.s2p-open):has(.s2p-check-song) .guest-text { display: block; }
+    /* the guests' dedications (V38; the owner's screenshot, 2026-10-17: three filled half the screen): folded, only "💌 3" beside the song */
+    .page-dj #song-list > tr:not(.s2p-open) :is(.s2p-dedication, .s2p-dedication-more) { display: none; }
+    .page-dj #song-list > tr:not(.s2p-open) .s2p-dedication-count { display: inline-block; }
     .page-dj #song-list > tr:not(.s2p-open) .s2p-tip-count:not(:has(.s2p-btn-tip.btn-warning)),
     .page-dj #song-list > tr:not(.s2p-open) .s2p-tip-count form:has(.s2p-btn-untip) { display: none !important; }
     /* nothing to tap in the row (the staff's "Podgląd"): no empty row under the song */
