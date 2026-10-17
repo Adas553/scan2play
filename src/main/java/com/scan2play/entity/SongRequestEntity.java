@@ -76,6 +76,15 @@ public class SongRequestEntity {
     @Builder.Default
     private int tips = 0;
 
+    /**
+     * How many guests' dedications the song has (V38, {@code SongRequestDedicationEntity}): the queue shows the newest few and
+     * "+N", and its fingerprint counts this, so a dedication added without a vote reaches the DJ's open panel. Changed only by one
+     * atomic {@code UPDATE} ({@code SongRequestRepository.addDedication}).
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private int dedications = 0;
+
     private String style;
     private String decision;
 

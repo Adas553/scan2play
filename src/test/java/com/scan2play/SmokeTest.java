@@ -235,13 +235,14 @@ class SmokeTest {
     }
 
     @Test
-    @DisplayName("The landing page offers one kind of party, the one for DJs, through /start; no YouTube, no Spotify")
+    @DisplayName("The landing page offers one kind of party, the one for DJs, through /start (at the top and at the end); no YouTube, no Spotify")
     void landingPage_offersTheTileForDjs() throws Exception {
         String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
 
-        assertThat(html).containsOnlyOnce("href=\"/start\"").containsOnlyOnce("class=\"provider-card ")
+        assertThat(html.split("href=\"/start", -1)).as("every start is /start, twice").hasSize(3);
+        assertThat(html).contains("id=\"landingStart\" class=\"btn btn-action btn-lg px-4\"")
                 .doesNotContain("/start/youtube", "/start/requests", "spotify", "YouTube API Services");
-        assertThat(html).as("our mark above the title").contains("<img src=\"/images/logo.svg\" alt=\"\" class=\"s2p-hero-mark mb-4\">");
+        assertThat(html).as("our logo above the title").contains("class=\"s2p-logo\"");
     }
 
     @Test
@@ -361,7 +362,7 @@ class SmokeTest {
 
             // (without messages_en, "en" gets the JVM's own locale's bundle — Polish on a Polish machine; the check holds for both)
             assertThat(html).as(language).doesNotContain("Auto-Pilot", "Playlist", "Shuffle", "Losow", "YouTube")
-                    .containsAnyOf("Jak to działa?", "How does it work?");
+                    .containsAnyOf("Jak to działa", "How it works");
         }
     }
 

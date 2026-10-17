@@ -66,6 +66,7 @@ public class GuestController {
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
             model.addAttribute(VIBE_NOTE, settings.getVibeNote());
             model.addAttribute(DJ_NAME, settings.getDjName());
+            model.addAttribute(DEDICATIONS_ON, settings.isDedicationsOn());
             addProfiles(model, settings);
             model.addAttribute(TIP_URL, settings.getTipUrl());
             model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, request.getSession(false)));
@@ -179,6 +180,7 @@ public class GuestController {
     @PostMapping("/{partyCode}/request")
     public Callable<String> requestSong(@PathVariable String partyCode,
                               @RequestParam String songName,
+                              @RequestParam(required = false) String dedication,
                               Model model,
                               HttpSession session,
                               HttpServletRequest request,
@@ -221,8 +223,11 @@ public class GuestController {
                 // The guest's earlier requests and 👍: the same song asked for again while it waits is not one more vote
                 Set<Long> alreadyTheirs = new HashSet<>(guestSessionService.myRequestIds(session, partyCode));
                 alreadyTheirs.addAll(guestVoteService.myVotes(session, partyCode));
+                // the guest's dedication (V38) is checked by the AI in the same call; only the DJ sees it. Not while the DJ has them
+                // switched off: one sent anyway (an old page) is left out, the song judged as without it
+                String takenDedication = settings.isDedicationsOn() ? dedication : null;
                 DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
-                        styleOf(settings, locale), alreadyTheirs);
+                        styleOf(settings, locale), alreadyTheirs, takenDedication);
                 // A request that came to nothing — a mood sent back to the form, a rejected song, the guest's own song asked for
                 // again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
                 if (response.isMood() || response.ownSong() || DECISION_REJECTED.equalsIgnoreCase(response.decision())) {
@@ -231,6 +236,7 @@ public class GuestController {
                 if (response.isMood()) {
                     // A mood, not a song (the DJ sets the mood): nothing was saved. Back to the form with the text, asking for a song.
                     redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
+                    redirectAttributes.addFlashAttribute(LAST_DEDICATION, takenDedication);
                     return refuse(redirectAttributes, partyCode, "guest.error.song_only");
                 }
 

@@ -19,6 +19,44 @@
             + (await t.stand.count('POST /dj/dashboard/tip-count')) + (await t.stand.count('POST /dj/dashboard/restore'));
     };
 
+    // The guests' dedications (V38, the owner's screenshot 2026-10-17: three of them filled half a phone's screen): a folded card shows
+    // only "💌 4" beside the song; a tap unfolds them, each on a line of its own, with "+1 więcej". A wide screen shows them as before.
+    S2P.scenario({
+        name: 'queue-cards-dedications-folded',
+        title: 'the queue on a phone: a card folds its dedications to "💌 4", a tap shows them, each on a line of its own',
+        page: 'dashboard-cards',
+        viewport: '390,844',
+        setup: { updatesStatus: 304 },
+        run: async function (t) {
+            const row = queueRow(11);
+            const lines = function () { return Array.from(row.querySelectorAll('.s2p-dedication')); };
+            const count = row.querySelector('.s2p-dedication-count');
+            t.step('folded: no dedication, "💌 4" beside the song',
+                [lines().length, lines().filter(shows).length, shows(row.querySelector('.s2p-dedication-more')), shows(count),
+                    count ? count.textContent.trim() : null], [3, 0, false, true, '💌 4']);
+            row.querySelector('.song-title').click();
+            const tops = lines().map(function (line) { return Math.round(line.getBoundingClientRect().top); });
+            t.step('unfolded: the three, "+1 więcej", no "💌 4"',
+                [lines().filter(shows).length, shows(row.querySelector('.s2p-dedication-more')), shows(count)], [3, true, false]);
+            t.check('each on a line of its own (tops ' + tops.join(', ') + ')', tops[0] < tops[1] && tops[1] < tops[2]);
+            t.check('nothing wider than the card', lines().every(function (line) {
+                return line.getBoundingClientRect().right <= row.getBoundingClientRect().right + 1; }));
+        }
+    });
+
+    S2P.scenario({
+        name: 'queue-dedications-wide',
+        title: 'the queue on a wide screen: the dedications under the song as before, no "💌 4"',
+        page: 'dashboard-cards',
+        setup: { updatesStatus: 304 },
+        run: async function (t) {
+            const row = queueRow(11);
+            t.step('the three shown, "+1 więcej", no count',
+                [Array.from(row.querySelectorAll('.s2p-dedication')).filter(shows).length, shows(row.querySelector('.s2p-dedication-more')),
+                    shows(row.querySelector('.s2p-dedication-count'))], [3, true, false]);
+        }
+    });
+
     S2P.scenario({
         name: 'queue-cards-folded',
         title: 'the queue on a phone: a card folded to its song, ⚠ (with the guest\'s words) / ⭐, the votes, "Zagrane" / "Pomiń" and a counted "💸 2" — a tap unfolds the rest and sends nothing, a tap on "Pomiń" skips and unfolds nothing',

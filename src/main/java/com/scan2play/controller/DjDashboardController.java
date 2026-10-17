@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.HistoryFilter;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.DjService;
@@ -165,7 +166,9 @@ public class DjDashboardController {
         model.addAttribute(PERMANENT_LINK, guestUrl);
 
         // --- Active Queue (Accepted songs only) ---
-        model.addAttribute(HISTORY, djService.getDashboardQueue(partyCode));
+        List<SongRequestEntity> queue = djService.getDashboardQueue(partyCode);
+        model.addAttribute(HISTORY, queue);
+        model.addAttribute(DEDICATIONS, djService.dedicationsOf(queue));   // the guests' dedications under their songs (V38)
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
 
         return "dashboard";
@@ -211,6 +214,7 @@ public class DjDashboardController {
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
         model.addAttribute(TIP_URL, settings.getTipUrl());
         model.addAttribute(COMMENT_STYLE, planned.getCommentStyle());
+        model.addAttribute(DEDICATIONS_ON, settings.isDedicationsOn());   // the guests' dedications on or off (V38)
         // --- The hosts' lists (V29) and the link that lets them fill the lists ---
         model.addAttribute(HOST_BLOCKED, settings.getHostBlocked());
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
@@ -401,7 +405,9 @@ public class DjDashboardController {
         // The list read now, not the 3 s cache the guests' page fills: a request committed after the cache was filled would get
         // the new ETag over the old list, and every later poll a 304 — the request never shown (review 2026-10-14 K1)
         response.setHeader("ETag", etag);
-        model.addAttribute(HISTORY, djService.getWaiting(partyCode));
+        List<SongRequestEntity> waiting = djService.getWaiting(partyCode);
+        model.addAttribute(HISTORY, waiting);
+        model.addAttribute(DEDICATIONS, djService.dedicationsOf(waiting));
         model.addAttribute(WANTED_SONGS, SongList.of(planned.getHostWanted()));
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)

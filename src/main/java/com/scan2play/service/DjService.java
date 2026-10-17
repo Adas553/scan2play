@@ -1,7 +1,9 @@
 package com.scan2play.service;
 
 import com.scan2play.util.AfterCommit;
+import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.repository.SongRequestDedicationRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongNames;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Service responsible for song queue management and direct song actions.
@@ -40,6 +45,7 @@ public class DjService {
     public static final String QUEUE_CACHE = "dashboardQueue";
 
     private final SongRequestRepository songRequestRepository;
+    private final SongRequestDedicationRepository dedicationRepository;
     private final CacheManager cacheManager;
 
     // ---- Queue Queries ----
@@ -80,6 +86,22 @@ public class DjService {
      */
     public List<SongRequestEntity> getWaiting(String partyCode) {
         return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
+    }
+
+    /** How many of a song's dedications the queue shows: the newest; "+N" says how many more there are. */
+    static final int DEDICATIONS_SHOWN = 3;
+
+    /**
+     * The newest {@value #DEDICATIONS_SHOWN} dedications of each of the songs (V38), by the song's id, the oldest of them first. No
+     * query when none of the songs has one ({@code dedications} on the row) — the queue of most parties.
+     */
+    public Map<Long, List<SongRequestDedicationEntity>> dedicationsOf(List<SongRequestEntity> songs) {
+        List<Long> ids = songs.stream().filter(song -> song.getDedications() > 0).map(SongRequestEntity::getId).toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return dedicationRepository.findNewest(ids, DEDICATIONS_SHOWN).stream()
+                .collect(Collectors.groupingBy(SongRequestDedicationEntity::getSongRequestId, LinkedHashMap::new, Collectors.toList()));
     }
 
     // ---- Song Actions ----

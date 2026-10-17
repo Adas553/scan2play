@@ -35,6 +35,12 @@
 
         <p class="mt-4 lead fst-italic text-light" th:text="${response.comment}">DJ's Comment</p>
 
+        <!--/* the guest's dedication (V38): it went to the DJ, or the AI kept it out and the song went without it */-->
+        <p th:if="${response.dedicationOk == true}" id="dedicationSent" class="mt-3 mb-0 fw-semibold"
+           th:text="#{result.dedication.sent}">💌 Your dedication went to the DJ.</p>
+        <p th:if="${response.dedicationOk == false}" id="dedicationRefused" class="mt-3 mb-0 small text-warning"
+           th:text="#{result.dedication.refused}">The dedication was not added.</p>
+
         <!--/* the song's number (V28): the guest finds it in the list and writes it in the title of a tip */-->
         <p th:if="${response.requestNumber != null and response.decision == 'accepted'}" id="requestNumber" class="mt-3 mb-0 fw-bold"
            th:text="#{result.number(${'#' + response.requestNumber})}">Your song's number: #27</p>

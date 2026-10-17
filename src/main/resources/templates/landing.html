@@ -10,115 +10,164 @@
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<body class="page-landing">
+<!--/* The landing page (2026-10-17, an idea from Rekwest — its features, never its look or texts): at once how it looks, the DJ's
+     panel on a laptop and the guest's page on a phone — real pictures of the app, of a made-up party, in the page's language
+     (src/test/browser/screenshots.py writes them from GuestPageRenderTest / DashboardPageRenderTest) —, then three steps, what one
+     gets, for whom, the questions (details: no script, CSP) and the start again. No prices: the plans are not enforced (Next 5). */-->
+<body class="page-landing" th:with="lang=${#messages.msg('html.lang') == 'en' ? 'en' : 'pl'}">
 
-<div class="container hero-section">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <!--/* our mark, large, above the title */-->
-            <img src="/images/logo.svg" alt="" class="s2p-hero-mark mb-4">
-            <h1 class="display-4 fw-bold mb-4" th:text="#{landing.hero.title}">Scan2Play - Your Virtual DJ Assistant</h1>
-
-            <p class="lead mb-5" th:text="#{landing.hero.subtitle}">
-                Let your guests request music via QR code,
-                while AI ensures the perfect party vibe.
-            </p>
-
-            <div class="provider-cards">
-                <!--/* For DJs: no player — the DJ plays from their own software, Scan2Play collects the guests' requests (Google login) */-->
-                <a href="/start" class="provider-card provider-card--requests text-center">
-                    <div class="btn btn-action btn-lg w-100" th:text="#{landing.btn.start.requests}">
-                        Collect guest requests
-                    </div>
-                    <small class="d-block mt-2 s2p-hint" th:text="#{landing.hint.requests}">Requires a Google account</small>
-                    <small class="d-block mt-2 s2p-hint s2p-hint-note"
-                           th:text="#{landing.hint.requests.note}">
-                        You play from your own software. Guests request songs by QR code, the AI filters out the junk. No player.
-                    </small>
-                </a>
+<header class="container s2p-landing-hero">
+    <div class="row align-items-center g-5">
+        <div class="col-lg-5 text-center text-lg-start">
+            <div class="fs-3 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+            <h1 class="s2p-landing-title" th:text="#{landing.hero.title}">Guests request songs. AI keeps the vibe. You play.</h1>
+            <p class="s2p-landing-lede" th:text="#{landing.hero.subtitle}">Guests scan a QR code and type a song on their phone…</p>
+            <!--/* For DJs: no player — the DJ plays from their own software, Scan2Play collects the guests' requests (Google login) */-->
+            <div class="s2p-landing-cta">
+                <a href="/start" id="landingStart" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
+                <!--/* The guide for DJs, public (the owner, 2026-10-12): read before the first login */-->
+                <a th:href="#{help.guide.href}" href="/how-it-works" id="landingGuide" class="btn btn-outline-light btn-lg"
+                   th:text="#{landing.guide}">How Scan2Play works →</a>
             </div>
-
-            <!--/* The guide for DJs, public (the owner, 2026-10-12): read before the first login */-->
-            <a th:href="#{help.guide.href}" href="/how-it-works" id="landingGuide" class="btn btn-link mt-3"
-               th:text="#{landing.guide}">How Scan2Play works →</a>
-
-            <!--/* The party's staff (V30, the owner 2026-10-09): a bartender pastes the owner's invitation link here — the installed app
-                 starts on this page, and a link from an e-mail would open in the browser, with a login of its own. POST /join: a link of
-                 a party goes straight to Google's login (StaffController), anything else comes back with ?staffLink=invalid.
-                 A <details>: it opens without a script (CSP). Quiet, a line of text under the DJs' card — the DJs are who the page is for
-                 (the owner, 2026-10-09: the full-width button was too loud, "Jestem z obsługi" too casual). */-->
-            <details class="s2p-staff-login s2p-mw-500 mx-auto mt-4 text-start" id="staffLogin" th:open="${param.staffLink != null}">
-                <summary class="text-center small text-secondary" th:text="#{landing.staff.summary}">Invited to a party's team? Join →</summary>
-                <form th:action="@{/join}" method="post" class="mt-3" id="staffLoginForm">
-                    <label for="staffLinkPaste" class="form-label small" th:text="#{landing.staff.label}">Paste the invitation link you got from the owner</label>
-                    <input type="text" id="staffLinkPaste" name="link" maxlength="300" autocomplete="off" required
-                           class="form-control mb-2" th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
-                    <!--/* a guests' link pasted by mistake (…/p/…) is told apart: it never was an invitation */-->
-                    <div th:if="${param.staffLink != null}" id="staffLinkInvalid" class="text-danger small mb-2" role="alert"
-                         th:text="${param.staffLink[0] == 'guests'} ? #{landing.staff.guests} : #{landing.staff.invalid}">That link does not work — ask the owner for a new one.</div>
-                    <button type="submit" class="btn btn-action w-100" th:text="#{join.button}">Log in with Google and join</button>
-                </form>
-            </details>
-
-            <div th:if="${param.error}" class="alert alert-danger mt-4" role="alert" th:text="#{landing.error.login}">
+            <p class="s2p-landing-free"><span th:text="#{landing.hero.free}">Free. No card, nothing to install.</span>
+                <span th:text="${'· ' + #messages.msg('landing.hint.requests')}">· Requires a Google account</span></p>
+            <div th:if="${param.error}" class="alert alert-danger mt-3" role="alert" th:text="#{landing.error.login}">
                 Login failed. Please try again.
             </div>
         </div>
-    </div>
-</div>
-
-<!-- How It Works — 5-step guide -->
-<div class="container guide-section">
-    <h2 class="text-center fw-bold mb-5" th:text="#{landing.guide.title}">How does it work?</h2>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="guide-steps">
-
-                <div class="guide-step">
-                    <div class="guide-step-number">1</div>
-                    <div class="guide-step-body">
-                        <h5 class="fw-bold" th:text="#{landing.guide.step1.title}">Start Your Party</h5>
-                        <p class="text-secondary mb-0" th:utext="#{landing.guide.step1.text}">Log in with Google…</p>
-                    </div>
+        <div class="col-lg-7">
+            <!--/* The laptop and the phone are drawn by app.css around the pictures; the phone overlaps the laptop's lower left */-->
+            <figure class="s2p-devices">
+                <div class="s2p-laptop">
+                    <img id="landingDashboardShot" th:src="@{'/images/landing/dashboard-' + ${lang} + '.webp'}"
+                         src="/images/landing/dashboard-pl.webp" width="1920" height="1140" fetchpriority="high"
+                         th:alt="#{landing.hero.alt.dashboard}" alt="The DJ's panel on a laptop">
                 </div>
-
-                <div class="guide-step">
-                    <div class="guide-step-number">2</div>
-                    <div class="guide-step-body">
-                        <h5 class="fw-bold" th:text="#{landing.guide.step2.title}">Set the Vibe & Limits</h5>
-                        <p class="text-secondary mb-0" th:utext="#{landing.guide.step2.text}">Pick a Global Vibe…</p>
-                    </div>
+                <div class="s2p-laptop-base" aria-hidden="true"></div>
+                <div class="s2p-phone">
+                    <img id="landingGuestShot" th:src="@{'/images/landing/guest-' + ${lang} + '.webp'}"
+                         src="/images/landing/guest-pl.webp" width="780" height="1560"
+                         th:alt="#{landing.hero.alt.guest}" alt="The guest's page on a phone">
                 </div>
-
-                <div class="guide-step">
-                    <div class="guide-step-number">3</div>
-                    <div class="guide-step-body">
-                        <h5 class="fw-bold" th:text="#{landing.guide.step3.title}">Share the QR Code</h5>
-                        <p class="text-secondary mb-0" th:utext="#{landing.guide.step3.text}">Your dashboard generates…</p>
-                    </div>
-                </div>
-
-                <div class="guide-step">
-                    <div class="guide-step-number">4</div>
-                    <div class="guide-step-body">
-                        <h5 class="fw-bold" th:text="#{landing.guide.step4.title}">Manage the Queue</h5>
-                        <p class="text-secondary mb-0" th:utext="#{landing.guide.step4.text}">All requests land on…</p>
-                    </div>
-                </div>
-
-                <div class="guide-step">
-                    <div class="guide-step-number">5</div>
-                    <div class="guide-step-body">
-                        <h5 class="fw-bold" th:text="#{landing.guide.step5.title}">Enjoy the Party!</h5>
-                        <p class="text-secondary mb-0" th:utext="#{landing.guide.step5.text}">Focus on the crowd…</p>
-                    </div>
-                </div>
-
-            </div>
+            </figure>
         </div>
     </div>
-</div>
+
+    <!--/* The party's staff (V30, the owner 2026-10-09): a bartender pastes the owner's invitation link here — the installed app
+         starts on this page, and a link from an e-mail would open in the browser, with a login of its own. POST /join: a link of
+         a party goes straight to Google's login (StaffController), anything else comes back with ?staffLink=invalid.
+         A <details>: it opens without a script (CSP). Quiet, a line of text — the DJs are who the page is for. */-->
+    <details class="s2p-staff-login s2p-mw-500 mx-auto mt-5 text-start" id="staffLogin" th:open="${param.staffLink != null}">
+        <summary class="text-center small text-secondary" th:text="#{landing.staff.summary}">Invited to a party's team? Join →</summary>
+        <form th:action="@{/join}" method="post" class="mt-3" id="staffLoginForm">
+            <label for="staffLinkPaste" class="form-label small" th:text="#{landing.staff.label}">Paste the invitation link you got from the owner</label>
+            <input type="text" id="staffLinkPaste" name="link" maxlength="300" autocomplete="off" required
+                   class="form-control mb-2" th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
+            <!--/* a guests' link pasted by mistake (…/p/…) is told apart: it never was an invitation */-->
+            <div th:if="${param.staffLink != null}" id="staffLinkInvalid" class="text-danger small mb-2" role="alert"
+                 th:text="${param.staffLink[0] == 'guests'} ? #{landing.staff.guests} : #{landing.staff.invalid}">That link does not work — ask the owner for a new one.</div>
+            <button type="submit" class="btn btn-action w-100" th:text="#{join.button}">Log in with Google and join</button>
+        </form>
+    </details>
+</header>
+
+<main>
+    <!--/* Three steps, from the login to the queue */-->
+    <section class="s2p-landing-section" id="landingSteps">
+        <div class="container">
+            <h2 th:text="#{landing.steps.title}">How it works</h2>
+            <ol class="s2p-landing-grid s2p-landing-grid-3 s2p-landing-steps">
+                <li class="s2p-landing-step">
+                    <span class="s2p-landing-step-number" aria-hidden="true">1</span>
+                    <h3 th:text="#{landing.step1.title}">Start a party</h3>
+                    <p th:text="#{landing.step1.text}">Log in with Google…</p>
+                </li>
+                <li class="s2p-landing-step">
+                    <span class="s2p-landing-step-number" aria-hidden="true">2</span>
+                    <h3 th:text="#{landing.step2.title}">Guests scan and request</h3>
+                    <p th:text="#{landing.step2.text}">With their phone, no app…</p>
+                </li>
+                <li class="s2p-landing-step">
+                    <span class="s2p-landing-step-number" aria-hidden="true">3</span>
+                    <h3 th:text="#{landing.step3.title}">You play from the queue</h3>
+                    <p th:text="#{landing.step3.text}">The AI lets through only what fits…</p>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!--/* What one gets: the features a DJ asks about first; the hosts' list is Pro (PlanFeature.HOST_LISTS), marked so */-->
+    <section class="s2p-landing-section" id="landingFeatures">
+        <div class="container">
+            <h2 th:text="#{landing.features.title}">What you get</h2>
+            <div class="s2p-landing-grid s2p-landing-grid-3">
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎯</span>
+                    <h3 th:text="#{landing.feature.vibe.title}">The AI keeps the vibe</h3><p th:text="#{landing.feature.vibe.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">⚠️</span>
+                    <h3 th:text="#{landing.feature.words.title}">You see what the guest asked for</h3><p th:text="#{landing.feature.words.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">👍</span>
+                    <h3 th:text="#{landing.feature.votes.title}">The room's votes</h3><p th:text="#{landing.feature.votes.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🚫</span>
+                    <h3 th:text="#{landing.feature.limits.title}">No repeats, no spam</h3><p th:text="#{landing.feature.limits.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">⭐</span>
+                    <h3><th:block th:text="#{landing.feature.hosts.title}">The hosts' list</th:block><span class="s2p-pro">PRO</span></h3>
+                    <p th:text="#{landing.feature.hosts.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🔔</span>
+                    <h3 th:text="#{landing.feature.phone.title}">Your phone and your team</h3><p th:text="#{landing.feature.phone.text}">…</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!--/* For whom: one card each now; pages of their own for search engines later (Next 7) */-->
+    <section class="s2p-landing-section" id="landingWho">
+        <div class="container">
+            <h2 th:text="#{landing.who.title}">Who it is for</h2>
+            <div class="s2p-landing-grid s2p-landing-grid-4">
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">💍</span>
+                    <h3 th:text="#{landing.who.wedding.title}">Wedding DJs</h3><p th:text="#{landing.who.wedding.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎧</span>
+                    <h3 th:text="#{landing.who.club.title}">Clubs and parties</h3><p th:text="#{landing.who.club.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🍺</span>
+                    <h3 th:text="#{landing.who.pub.title}">Pubs and bars</h3><p th:text="#{landing.who.pub.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎤</span>
+                    <h3 th:text="#{landing.who.karaoke.title}">Karaoke</h3><p th:text="#{landing.who.karaoke.text}">…</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!--/* The questions one asks before the first login: each folded (details), 44 px to tap */-->
+    <section class="s2p-landing-section" id="landingFaq">
+        <div class="container">
+            <h2 th:text="#{landing.faq.title}">Questions</h2>
+            <div class="s2p-landing-faq">
+                <details><summary th:text="#{landing.faq.install.q}">Do guests have to install anything?</summary>
+                    <p th:text="#{landing.faq.install.a}">…</p></details>
+                <details><summary th:text="#{landing.faq.player.q}">Does Scan2Play play the music?</summary>
+                    <p th:text="#{landing.faq.player.a}">…</p></details>
+                <details><summary th:text="#{landing.faq.price.q}">How much does it cost?</summary>
+                    <p><th:block th:text="#{landing.faq.price.a}">…</th:block>
+                        <a href="/pro" class="d-block mt-2" th:text="#{landing.faq.price.link}">See what Pro gives →</a></p></details>
+                <details><summary th:text="#{landing.faq.ai.q}">What if the AI gets it wrong or is down?</summary>
+                    <p th:text="#{landing.faq.ai.a}">…</p></details>
+                <details><summary th:text="#{landing.faq.phone.q}">Does it work on the DJ's phone?</summary>
+                    <p th:text="#{landing.faq.phone.a}">…</p></details>
+                <details><summary th:text="#{landing.faq.data.q}">What do you collect about guests?</summary>
+                    <p><th:block th:text="#{landing.faq.data.a}">…</th:block>
+                        <a href="/privacy" class="d-block mt-2" th:text="#{landing.faq.data.link}">Privacy policy →</a></p></details>
+            </div>
+        </div>
+    </section>
+
+    <!--/* The start again, for whoever read to the end */-->
+    <section class="s2p-landing-section s2p-landing-final" id="landingFinal">
+        <div class="container text-center">
+            <h2 th:text="#{landing.final.title}">Ready for your next party?</h2>
+            <p class="s2p-landing-lede mx-auto" th:text="#{landing.final.text}">You start a party in a minute…</p>
+            <a href="/start" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
+            <p class="s2p-landing-free mt-3" th:text="#{landing.hero.free}">Free. No card, nothing to install.</p>
+        </div>
+    </section>
+</main>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 

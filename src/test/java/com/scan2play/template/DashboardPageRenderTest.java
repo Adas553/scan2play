@@ -131,6 +131,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.panel(any(), any(), any())).thenReturn(java.util.Optional.of(access));
         when(sessionHelper.takeNote(any())).thenReturn(java.util.Optional.ofNullable(note));
         when(djService.getDashboardQueue(PARTY)).thenReturn(queue);
+        when(djService.dedicationsOf(queue)).thenReturn(dedications);
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
@@ -387,6 +388,14 @@ class DashboardPageRenderTest {
                 new DjSessionHelper.Note("dashboard.staff.joined", "Klub Ola", false));
     }
 
+    /** The guests' dedications the dashboard's queue shows (V38), by the song's id: none, unless a test gives them. */
+    private static Map<Long, List<com.scan2play.entity.SongRequestDedicationEntity>> dedications = Map.of();
+
+    private static com.scan2play.entity.SongRequestDedicationEntity dedication(long songId, String text) {
+        return com.scan2play.entity.SongRequestDedicationEntity.builder().songRequestId(songId).text(text).checked(true)
+                .createdAt(java.time.Instant.now()).build();
+    }
+
     /** A waiting request with its number (V28), the guest's words, the AI's comment, the votes and the DJ's tips. */
     private static SongRequestEntity numbered(long id, int number, String name, String guestText, int votes, int tips) {
         SongRequestEntity request = song(id, name);
@@ -409,7 +418,18 @@ class DashboardPageRenderTest {
                 numbered(11, 12, "Daft Punk - One More Time", "daft punk one more time", 4, 2),
                 numbered(12, 13, "sanah - Szampan", "orła cień", 1, 0),
                 numbered(13, 14, "Golec uOrkiestra - Hej sokoły", "hej sokoły dla babci", 2, 0));
-        String owner = renderDashboard(party(), queue, PL);
+        // the first one with four guests' dedications (V38): the newest three shown, "+1 więcej"; a phone folds them to "💌 4"
+        queue.getFirst().setDedications(4);
+        dedications = Map.of(11L, List.of(dedication(11, "Dla Zosi"), dedication(11, "Dla Ani"),
+                dedication(11, "Dla Damiana od najlepszego wujka")));
+        String owner;
+        try {
+            owner = renderDashboard(party(), queue, PL);
+        } finally {
+            dedications = Map.of();
+        }
+        assertThat(owner).contains("💌 „Dla Damiana od najlepszego wujka”", ">+1 więcej<", "s2p-dedication-count", ">💌 4<",
+                "title=\"Dedykacje gości — dotknij karty, żeby je przeczytać\"");
         assertThat(owner).contains("class=\"btn btn-sm d-md-none s2p-card-toggle\" aria-expanded=\"false\"",
                 "aria-label=\"Szczegóły\"", "s2p-check-song", "s2p-host-wanted", "💸 2", ">Podejrzyj<");
         // "Kopiuj" and the queue's keys (queue-keys.js): "Zagrane" / "Pomiń" by the keyboard only for whom may press them
@@ -419,6 +439,8 @@ class DashboardPageRenderTest {
         assertThat(owner).as("the way out of a spent day (W4)").contains(">Odblokuj prośby gości<");
         write("dashboard-cards.html", owner);
 
+        // the staff's "Podgąd": the plain cards, one line each (queue-cards-viewer) — the dedications are the owner's page's
+        queue.getFirst().setDedications(0);
         PartyStaffService staff = mock(PartyStaffService.class);
         String viewer = renderDashboard(party(), queue, PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(), staff,
                 new MockHttpSession(), new PartyStaffService.Access(party(), false, StaffRole.VIEWER.permissions()), null);
@@ -729,5 +751,63 @@ class DashboardPageRenderTest {
         int at = html.indexOf("data-settings-row=\"" + row + "\"");
         assertThat(at).as("the row " + row).isPositive();
         return html.substring(at, html.indexOf("</a>", at));
+    }
+
+    /**
+     * The DJ's panel of a made-up party, for the pictures of the landing page (src/test/browser/screenshots.py: a laptop's screen,
+     * {@code static/images/landing/dashboard-<lang>.webp}): the queue with the guests' words, the AI's comments, the votes, a song on the
+     * hosts' list (⭐), one to check (⚠) and tips. No real person in it.
+     */
+    @Test
+    void theLandingPagesPicture_ofTheDashboard() throws IOException {
+        for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            boolean pl = locale == PL;
+            PartySettingsEntity party = party();
+            party.setDjName("DJ Kuba");
+            party.setGlobalVibe(VibeType.WEDDING_CLASSICS);
+            party.setHostWanted("Przez twe oczy zielone");
+            List<SongRequestEntity> queue = List.of(
+                    demo(21, 12, "Zenek Martyniuk - Przez twe oczy zielone", "zenek oczy zielone", 9, 0, 1,
+                            pl ? "Sala już śpiewa — to musi polecieć!" : "The whole room sings this one!"),
+                    demo(22, 15, "ABBA - Dancing Queen", "abba dancing queen", 6, 2, 4,
+                            pl ? "Klasyk parkietu, idealny na rozkręcenie." : "A dance-floor classic, perfect to warm up."),
+                    demo(23, 18, "Dawid Podsiadło - Małomiasteczkowy", "podsiadło małomiasteczkowy", 4, 0, 7,
+                            pl ? "Świetny wybór na drugą część wieczoru." : "Great pick for the second half of the night."),
+                    demo(24, 21, "Smash Mouth - All Star", "ta piosenka ze shreka", 2, 0, 11,
+                            pl ? "Dobra energia, wszyscy znają refren." : "Good energy, everyone knows the chorus."),
+                    demo(25, 23, "Queen - Don't Stop Me Now", "queen dont stop me now", 3, 1, 14,
+                            pl ? "Petarda na koniec seta!" : "A banger to end the set!"));
+            String html = renderDashboard(party, queue, locale);
+            assertThat(html).contains("DJ Kuba", "s2p-host-wanted", "s2p-check-song").doesNotContain("??");
+            write("landing-demo-dashboard-" + locale.getLanguage() + ".html", html);
+        }
+    }
+
+    private static SongRequestEntity demo(long id, int number, String name, String guestText, int votes, int tips, int minute,
+                                          String comment) {
+        SongRequestEntity request = song(id, name);
+        request.setRequestNumber(number);
+        request.setGuestText(guestText);
+        request.setVotes(votes);
+        request.setTips(tips);
+        request.setDjComment(comment);
+        request.setRequestedAt(java.time.LocalDateTime.of(2026, 10, 17, 21, minute).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
+        return request;
+    }
+
+    /** The guests' dedications (V38) on or off in the card "Impreza", saved as soon as picked (data-auto-submit), as the vibe. */
+    @Test
+    void theDedications_areSwitchedInThePartyCard() {
+        String on = renderDashboard(party(), List.of(), PL);
+        assertThat(on).contains("action=\"/dj/dashboard/dedications\"", "id=\"dedicationsSelect\"", ">Dedykacje gości<",
+                "value=\"true\" selected=\"selected\">Włączone<", "value=\"false\">Wyłączone<").doesNotContain("??");
+        assertThat(on.indexOf("id=\"dedicationsSelect\"")).as("in the card \"Impreza\"").isGreaterThan(on.indexOf("id=\"partyCard\""))
+                .isLessThan(on.indexOf("action=\"/dj/dashboard/party-words\""));
+        assertThat(on.substring(on.indexOf("id=\"dedicationsSelect\""))).startsWith("id=\"dedicationsSelect\" name=\"on\" data-auto-submit");
+
+        PartySettingsEntity offParty = party();
+        offParty.setDedicationsOn(false);
+        assertThat(renderDashboard(offParty, List.of(), PL)).contains("value=\"false\" selected=\"selected\">Wyłączone<");
+        assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">Guests’ dedications<", ">On<", ">Off<");
     }
 }

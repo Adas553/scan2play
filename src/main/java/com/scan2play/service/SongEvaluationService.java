@@ -9,6 +9,7 @@ import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.Schema;
 import com.google.genai.types.Type;
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
@@ -85,6 +86,24 @@ public class SongEvaluationService {
             .propertyOrdering("songName", "requestKind", "decision", "comment")
             .build();
 
+    /**
+     * The answer's shape for a request with a dedication (V38): the same, and {@code dedicationOk} required — whether the dedication
+     * may go to the DJ. A request without one is asked with {@link #ANSWER_SCHEMA}, as before V38.
+     */
+    static final Schema ANSWER_WITH_DEDICATION_SCHEMA = Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                    "decision", Schema.builder().type(Type.Known.STRING).enum_(DECISION_ACCEPTED, DECISION_REJECTED).build(),
+                    "comment", Schema.builder().type(Type.Known.STRING).build(),
+                    "songName", Schema.builder().type(Type.Known.STRING).build(),
+                    "requestKind", Schema.builder().type(Type.Known.STRING)
+                            .enum_(DjResponse.KIND_TITLE, DjResponse.KIND_ARTIST, DjResponse.KIND_LYRICS, DjResponse.KIND_MOOD)
+                            .build(),
+                    "dedicationOk", Schema.builder().type(Type.Known.BOOLEAN).build()))
+            .required("decision", "comment", "songName", "requestKind", "dedicationOk")
+            .propertyOrdering("songName", "requestKind", "decision", "comment", "dedicationOk")
+            .build();
+
     @Value("${google.ai.model-name}")
     private String modelName;
 
@@ -105,6 +124,8 @@ public class SongEvaluationService {
 
     /** Config for AI evaluation requests — default temperature allows creative DJ comments; built in {@link #init()}. */
     private GenerateContentConfig aiJsonConfig;
+    /** The same for a request with a dedication: {@link #ANSWER_WITH_DEDICATION_SCHEMA}. */
+    private GenerateContentConfig aiJsonDedicationConfig;
 
     private final Client client;
     private final ObjectMapper objectMapper;
@@ -126,6 +147,8 @@ public class SongEvaluationService {
     private Map<String, String> vibeNoteTemplates;
     /** The block of each comment style but {@link CommentStyle#CLASSIC}, per language code. */
     private Map<String, Map<CommentStyle, String>> commentStyleRules;
+    /** The guest's dedication in the prompt (V38), per language code. */
+    private Map<String, String> dedicationTemplates;
 
     /**
      * Loads AI prompt templates for all supported languages.
@@ -137,21 +160,25 @@ public class SongEvaluationService {
                 .responseSchema(ANSWER_SCHEMA)
                 .thinkingConfig(thinkingConfig(modelName, thinkingBudget, thinkingLevel))
                 .build();
+        this.aiJsonDedicationConfig = aiJsonConfig.toBuilder().responseSchema(ANSWER_WITH_DEDICATION_SCHEMA).build();
         try {
             var prompts = new HashMap<String, String>();
             var duplicates = new HashMap<String, String>();
             var vibeNotes = new HashMap<String, String>();
             var styles = new HashMap<String, Map<CommentStyle, String>>();
+            var dedications = new HashMap<String, String>();
             for (String lang : SUPPORTED_LANGS) {
                 vibeNotes.put(lang, loadResource("classpath:prompts/prompt-vibe-note_" + lang + ".txt"));
                 prompts.put(lang, loadResource("classpath:prompts/prompt-template_" + lang + ".txt"));
                 duplicates.put(lang, loadResource("classpath:prompts/prompt-duplicate-rule_" + lang + ".txt"));
                 styles.put(lang, commentStyleRules(loadResource("classpath:prompts/prompt-comment-style_" + lang + ".txt"), lang));
+                dedications.put(lang, loadResource("classpath:prompts/prompt-dedication_" + lang + ".txt"));
             }
             this.promptTemplates = Map.copyOf(prompts);
             this.duplicateRuleTemplates = Map.copyOf(duplicates);
             this.vibeNoteTemplates = Map.copyOf(vibeNotes);
             this.commentStyleRules = Map.copyOf(styles);
+            this.dedicationTemplates = Map.copyOf(dedications);
         } catch (IOException e) {
             log.error("Failed to load prompt templates", e);
             throw new RuntimeException("System configuration error: prompt templates missing", e);
@@ -214,7 +241,19 @@ public class SongEvaluationService {
      * counted as one more vote on it ({@link SongRequestCommandService}), unless it is one of {@code guestsOwnIds}.
      */
     public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style, Set<Long> guestsOwnIds) {
+        return evaluateAndSaveSong(partyCode, guestText, style, guestsOwnIds, null);
+    }
+
+    /**
+     * The same, with the guest's dedication (V38; null or blank: none): one line of at most
+     * {@value SongRequestDedicationEntity#TEXT_MAX} characters, checked by the AI in the same call. It goes to the DJ with the song —
+     * unchecked when the AI could not be asked —, unless the AI found it offensive; the answer says which
+     * ({@link DjResponse#dedicationOk()}). A request without one is asked exactly as before V38.
+     */
+    public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style, Set<Long> guestsOwnIds,
+                                          String dedication) {
         String songName = forPrompt(guestText);
+        String dedicationText = asDedication(dedication);
         log.info("Party [{}]: Evaluating request: '{}' with style: '{}'", partyCode, songName, style);
 
         // as the organiser's plan lets it work (V35): without Pro no hosts' lists, the classic comments, the default repeats' window
@@ -233,7 +272,8 @@ public class SongEvaluationService {
         String recentSongs = recentSongsContext(recentlyPlayed, settings.getDuplicateCheckWindow());
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(), locale);
+        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(),
+                dedicationText, locale);
         if (aiResponse == null) {
             aiHealthMonitor.recordUnchecked();
             aiResponse = withoutTheAi(partyCode, songName, locale);
@@ -255,8 +295,16 @@ public class SongEvaluationService {
                 ? YouTubeSearchLinks.forQuery(searchQueryFor(aiResponse, songName))
                 : null;
 
+        // the dedication: the AI's word on it, or unchecked when the AI could not be asked
+        boolean dedicationLetThrough = dedicationText != null
+                && (aiResponse.isUnchecked() || Boolean.TRUE.equals(aiResponse.dedicationOk()));
+        SongRequestCommandService.Dedication toSave = dedicationLetThrough
+                ? new SongRequestCommandService.Dedication(dedicationText, !aiResponse.isUnchecked())
+                : null;
+
         // 3. Database Operations: a new row, or one more vote on the same song waiting in the queue
-        SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds);
+        SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds,
+                toSave);
         if (saved.outcome() == SongRequestCommandService.Outcome.SKIPPED_BY_DJ) {
             // The DJ skipped this song lately (usually: they do not have it): nothing saved, the guest is told to pick another one
             return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.skipped_by_dj", null, locale),
@@ -277,8 +325,22 @@ public class SongEvaluationService {
             aiResponse = aiResponse.withVerdict(savedRequest.getDecision(), savedRequest.getDjComment());
         }
 
+        // what the guest hears of the dedication: it went to the DJ, or the AI kept it out of a song that went; else nothing
+        boolean inTheQueue = DECISION_ACCEPTED.equals(savedRequest.getDecision());
+        Boolean dedicationOk = saved.dedicationAdded() ? Boolean.TRUE
+                : dedicationText != null && !dedicationLetThrough && inTheQueue ? Boolean.FALSE : null;
+        if (dedicationText != null) {
+            log.info("Party [{}]: a dedication ({} characters) {}", partyCode, dedicationText.length(),
+                    saved.dedicationAdded() ? "went to the DJ" : dedicationOk == Boolean.FALSE ? "refused by the AI" : "not saved");
+        }
         return aiResponse.savedAs(savedRequest.getId(), savedRequest.getRequestNumber(), savedRequest.getSongName(),
-                savedRequest.getVotes(), saved.outcome() == SongRequestCommandService.Outcome.ALREADY_YOURS);
+                savedRequest.getVotes(), saved.outcome() == SongRequestCommandService.Outcome.ALREADY_YOURS).withDedication(dedicationOk);
+    }
+
+    /** The guest's dedication as it is kept and given to the AI: one line, at most 100 characters; null for none. */
+    static String asDedication(String dedication) {
+        String line = Texts.oneLine(dedication, SongRequestDedicationEntity.TEXT_MAX);
+        return line.isEmpty() ? null : line;
     }
 
     // ---- Private helpers ----
@@ -331,11 +393,11 @@ public class SongEvaluationService {
 
     /** The AI's answer, or null when the AI could not be asked (an error, a timeout, an answer that is not JSON). */
     private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
-                                      Locale locale) {
+                                      String dedication, Locale locale) {
         try {
-            String prompt = buildPrompt(songName, style, recentSongs, vibeNote, commentStyle, locale);
+            String prompt = buildPrompt(songName, style, recentSongs, vibeNote, commentStyle, dedication, locale);
             long started = System.nanoTime();
-            String text = askAi(prompt, aiJsonConfig);
+            String text = askAi(prompt, dedication == null ? aiJsonConfig : aiJsonDedicationConfig);
             // how long the guest waited for the AI: search the log for "AI answered" (2026-10-07: 3.5 Flash timed out a while)
             log.info("AI answered in {} ms ({})", (System.nanoTime() - started) / 1_000_000, modelName);
             DjResponse answer = objectMapper.readValue(text, DjResponse.class);
@@ -436,6 +498,15 @@ public class SongEvaluationService {
      */
     String buildPrompt(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
                        Locale locale) {
+        return buildPrompt(songName, style, recentSongs, vibeNote, commentStyle, null, locale);
+    }
+
+    /**
+     * The same, with the guest's dedication (V38) after the other rules: its text in quotes (without double quotes of its own) and
+     * the step that asks the AI for {@code dedicationOk}; none, the prompt as it was before V38.
+     */
+    String buildPrompt(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
+                       String dedication, Locale locale) {
         String lang = resolvePromptLanguage(locale);
         String note = Texts.oneLine(vibeNote, PartySettingsEntity.VIBE_NOTE_MAX).replace('"', '\'');
         String vibeRule = note.isEmpty() ? "" : String.format(vibeNoteTemplates.get(lang), note);
@@ -445,7 +516,12 @@ public class SongEvaluationService {
         String styleRule = commentStyle == null || commentStyle == CommentStyle.CLASSIC
                 ? ""
                 : System.lineSeparator() + commentStyleRules.get(lang).get(commentStyle) + System.lineSeparator();
-        return String.format(promptTemplates.get(lang), songName, genreForPrompt(style, lang), vibeRule + duplicateRule + styleRule);
+        String dedicationRule = dedication == null || dedication.isBlank()
+                ? ""
+                : String.format(dedicationTemplates.get(lang), Texts.oneLine(dedication, SongRequestDedicationEntity.TEXT_MAX)
+                        .replace('"', '\'')) + System.lineSeparator();
+        return String.format(promptTemplates.get(lang), songName, genreForPrompt(style, lang),
+                vibeRule + duplicateRule + styleRule + dedicationRule);
     }
 
     /** How the prompt names "no genre": words, not the code "ANY" — the AI once quoted "'ANY'" to a guest (2026-10-07). */
@@ -469,7 +545,8 @@ public class SongEvaluationService {
     }
 
     private SongRequestCommandService.Saved saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style,
-                                                            String trackUrl, Set<Long> guestsOwnIds) {
+                                                            String trackUrl, Set<Long> guestsOwnIds,
+                                                            SongRequestCommandService.Dedication dedication) {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
                 .songName(aiResponse.songName())
@@ -481,7 +558,7 @@ public class SongEvaluationService {
                 .requestedAt(Instant.now())
                 .build();
 
-        return songRequestCommandService.saveOrVote(entity, guestsOwnIds);
+        return songRequestCommandService.saveOrVote(entity, guestsOwnIds, dedication);
     }
 }
 

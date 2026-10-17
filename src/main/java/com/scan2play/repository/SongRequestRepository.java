@@ -90,8 +90,8 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                                  @Param("to") Instant to, Pageable pageable);
 
     /**
-     * A fingerprint of the queue state: how many wait, the newest id, and an md5 of every waiting row's id, votes and tips (the
-     * DJ's tips change no row count). Used for ETag-based 304 Not Modified responses during AJAX polling. The hash, not sums of
+     * A fingerprint of the queue state: how many wait, the newest id, and an md5 of every waiting row's id, votes, tips and
+     * dedications (the DJ's tips change no row count; a guest's dedication on their own waiting song changes no vote, V38). Used for ETag-based 304 Not Modified responses during AJAX polling. The hash, not sums of
      * them (review 2026-10-14 W6): a "Zagrane" and a restore of an older request with as many votes, or a 👍 moved from one song
      * to another, left the sums as they were and the DJ's other windows on the old list. One pass over the same ≤ 300 rows the
      * sums read; {@code idx_party_decision_time} finds them.
@@ -101,7 +101,7 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * @return A string like "12-487-9e107d9d372bb6826bd81d3542a419d6" (count-maxId-md5); "0-0-" and the md5 of nothing if empty.
      */
     @Query(value = "SELECT CONCAT_WS('-', COUNT(*), COALESCE(MAX(id), 0),"
-            + " md5(COALESCE(string_agg(CONCAT_WS(':', id, votes, tips), ',' ORDER BY id), '')))"
+            + " md5(COALESCE(string_agg(CONCAT_WS(':', id, votes, tips, dedications), ',' ORDER BY id), '')))"
             + " FROM song_requests WHERE party_code = :partyCode AND decision IN (:decisions)", nativeQuery = true)
     String computeFingerprint(@Param("partyCode") String partyCode,
                               @Param("decisions") Collection<String> decisions);
@@ -157,6 +157,15 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE SongRequestEntity s SET s.votes = s.votes + 1 WHERE s.id = :id AND s.decision = 'accepted'")
     int addVote(@Param("id") Long id);
+
+    /**
+     * One dedication more on a song (V38): its count, which the queue's fingerprint reads. Atomic, as {@link #addVote}; called under
+     * the party's requests' lock with the dedication's row ({@code SongRequestCommandService}).
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.dedications = s.dedications + 1 WHERE s.id = :id")
+    int addDedication(@Param("id") Long id);
 
     /**
      * A guest's 👍 on a song in the list of the party page ({@code GuestVoteService}): one vote more, only for a song of this party
