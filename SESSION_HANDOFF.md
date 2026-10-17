@@ -14,7 +14,10 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   that reached the DJ (under "Zaproponuj kolejną") show the DJ's profiles under "Zarezerwuj tego DJ-a na swoją imprezę" / "Napisz do
   DJ-a przez profil:" (`components :: djBooking`; the buttons are one fragment now, `djLinks`, the party page's too). Only with a
   profile, as the plan has them (Pro, V35); no guest's address is kept. The owner said on 2026-10-07 "no »follow the DJ« on the result
-  page" — this one is "book", asked for on 2026-10-16. Tests: 725 unit, browser `dj-booking-party-ended`, `dj-booking-result`.
+  page" — this one is "book", asked for on 2026-10-16. 2026-10-17, the owner's screenshot: the heading was unreadable on the ended
+  page (Bootstrap's dark text of its card, 1.1 : 1; "nic nie widać") — now a panel of its own (`.s2p-booking`: the DJ's name in cyan,
+  a white heading, the note dimmed), "DJ‑a" with a non-breaking hyphen (it broke "DJ- / a"); the browser scenarios check every line's
+  contrast (red before). Tests: 725 unit, browser `dj-booking-party-ended`, `dj-booking-result`.
 - **2026-10-16 — the site's icon for Google Search, on the branch `claude/site-icon` from `origin/dev`; a PR to `dev`.** The owner: Google
   showed a grey globe beside scan2play.com.pl. `/favicon.ico` (16 / 32 / 48 px) was there, but no page named it — Google needs
   `<link rel="icon">` on the home page. The `seo` fragment (the public pages) names `/favicon.ico`, `images/icon-192.png` and the

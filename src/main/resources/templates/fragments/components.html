@@ -229,14 +229,14 @@
      the DJ, "Zarezerwuj tego DJ-a na swoją imprezę" over the DJ's profiles — the guest who liked the night writes to the DJ there.
      Scan2Play keeps no guest's address (Rekwest e-mails the guests afterwards; we do not). Only with a profile: a name alone is no way
      to reach the DJ. Who played (djName) on the ended page, where nothing else names them; null on the result page (named at its top). */-->
-<div th:fragment="djBooking(djName, instagramUrl, facebookUrl, tiktokUrl)"
-     th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null}" id="djBooking"
-     class="s2p-support mt-4 pt-3 border-top border-secondary">
-    <p class="fw-bold mb-0" th:text="#{party.book.title}">Book this DJ for your own party</p>
-    <p th:if="${djName != null}" class="mb-0 text-light" th:text="${'🎧 ' + djName}">🎧 DJ Koko</p>
-    <p class="small text-secondary-bright mb-0" th:text="#{party.book.note}">Message the DJ on their profile:</p>
+<section th:fragment="djBooking(djName, instagramUrl, facebookUrl, tiktokUrl)"
+         th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null}" id="djBooking" class="s2p-booking"
+         aria-labelledby="djBookingTitle">
+    <p th:if="${djName != null}" class="s2p-booking-dj" th:text="${'🎧 ' + djName}">🎧 DJ Koko</p>
+    <h2 id="djBookingTitle" class="s2p-booking-title" th:text="#{party.book.title}">Book this DJ for your own party</h2>
+    <p class="s2p-booking-note" th:text="#{party.book.note}">Message the DJ on their profile:</p>
     <p th:replace="~{:: djLinks(${instagramUrl}, ${facebookUrl}, ${tiktokUrl})}"></p>
-</div>
+</section>
 
 <!--/* The DJ's tip link (V27) on the party page and under an accepted request: only an address util/TipLinks kept, on a service that
      takes tips. The guests pay there, straight to the DJ — Scan2Play never sees the money, and the line under the button says so.

@@ -381,6 +381,24 @@ th[data-sort].sort-desc::after {
 }
 /* The DJ's profiles and tip on the party page: under the list, one quiet block (the form comes first) */
 .s2p-support { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+/* "Zarezerwuj tego DJ-a" (components :: djBooking) on the "party ended" page and under an accepted request: a panel of its own in
+   the card, its colours set here — the ended page's card has Bootstrap's dark text (2026-10-17: the heading was unreadable) */
+.s2p-booking {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: center;
+    background-color: var(--s2p-bg-row);
+    border: 1px solid var(--s2p-border);
+    border-radius: var(--s2p-radius-card);
+}
+.s2p-booking-dj    { margin: 0; color: var(--s2p-action); font-size: 0.9rem; font-weight: 600; }
+.s2p-booking-title { margin: 0; color: var(--s2p-white); font-size: 1.15rem; font-weight: 700; text-wrap: balance; }
+.s2p-booking-note  { margin: 0 0 0.5rem; color: var(--s2p-text-muted); font-size: 0.9rem; }
 
 /* ==========================================================================
  * 6. LANDING PAGE
