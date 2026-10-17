@@ -589,7 +589,7 @@ class GuestPageRenderTest {
         writePreview("party-ended.html", ended);
         writeForTheBrowserTests("party-ended.html", ended);
 
-        assertThat(ended).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ-a na swoją imprezę<", ">Napisz do DJ-a przez profil:<",
+        assertThat(ended).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ\u2011a na swoją imprezę<", ">Napisz do DJ\u2011a przez profil:<",
                 "🎧 DJ &lt;b&gt;Koko&lt;/b&gt;", "<a href=\"https://www.instagram.com/dj.koko/\" target=\"_blank\" rel=\"noopener noreferrer nofollow\"",
                 "href=\"https://www.facebook.com/djkoko\"", "href=\"https://www.tiktok.com/@dj_koko\"").doesNotContain("??");
         assertThat(ended.split("<svg ", -1)).as("an icon on each button").hasSize(4);
@@ -600,7 +600,7 @@ class GuestPageRenderTest {
 
         String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title"), dj);
         writeForTheBrowserTests("result.html", accepted);
-        assertThat(accepted).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ-a na swoją imprezę<", "href=\"https://www.tiktok.com/@dj_koko\"")
+        assertThat(accepted).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ\u2011a na swoją imprezę<", "href=\"https://www.tiktok.com/@dj_koko\"")
                 .doesNotContain("??");
         assertThat(accepted.split("🎧", -1)).as("who plays once, at the top").hasSize(2);
         assertThat(accepted.indexOf("id=\"djBooking\"")).as("under the page's one action")
