@@ -439,6 +439,8 @@ class DashboardPageRenderTest {
         assertThat(owner).as("the way out of a spent day (W4)").contains(">Odblokuj prośby gości<");
         write("dashboard-cards.html", owner);
 
+        // the staff's "Podgąd": the plain cards, one line each (queue-cards-viewer) — the dedications are the owner's page's
+        queue.getFirst().setDedications(0);
         PartyStaffService staff = mock(PartyStaffService.class);
         String viewer = renderDashboard(party(), queue, PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(), staff,
                 new MockHttpSession(), new PartyStaffService.Access(party(), false, StaffRole.VIEWER.permissions()), null);
