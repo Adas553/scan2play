@@ -295,7 +295,13 @@ sees under the form), `PlayHistoryService.Page`.
 
 ### 5.1 DJ Flow
 
-Landing page `/` → one tile, "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
+Landing page `/` (2026-10-17, an idea from Rekwest — its features, never its look or texts): the title, "Zbieraj prośby gości" and "Jak
+działa Scan2Play", beside them the DJ's panel in a laptop and the guest's page in a phone — real pictures of the app, of a made-up
+party, in the page's language (`static/images/landing/{dashboard,guest}-{pl,en}.webp`, written by `src/test/browser/screenshots.py`
+from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLandingPagesPicture_…`; run it again after a change of
+the look) —, then three steps, what one gets (the hosts' list marked PRO), for whom (wedding DJs, clubs, pubs, karaoke — pages of
+their own later), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
+"Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
 leaves as rejected with `skipped_at`, keeping the AI's comment — the history says "POMINIĘTE" in place of the verdict (on a wide screen every verdict's word as wide as the longer of "ZAGRANE" /
@@ -668,6 +674,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
 | `images/og-image.png` | the picture of a shared link (Open Graph, 1200×630: the mark, "Scan2Play", "Prośby o piosenki od gości przez kod QR"; 2026-10-14) |
+| `images/landing/*.webp` | the landing page's pictures of the app (2026-10-17): the DJ's panel (1920 × 1140) and the guest's page (780 × 1560), PL and EN, of a made-up party — `src/test/browser/screenshots.py` writes them |
 | `images/logo.svg`, `favicon.ico` | our mark: three QR finder corners and a cyan play triangle on the dark tile (2026-10-04); on the landing page, the dashboard, the guest page, the QR poster and cards; the favicon is the same mark at 16 / 32 / 48 px |
 
 ### 6.6 Resources
@@ -1069,6 +1076,8 @@ GuestQueueService          → DjService
   (V19: the YouTube parties go with their data, a requests-only party stays), `SkipCommentMigrationIT`, `CommentStyleMigrationIT`,
   `RequestNumberMigrationIT` (V28), `StaffLinkMigrationIT`, `StaffPermissionMigrationIT` (V32), `TrialUsedMigrationIT` (V36: the trials before it remembered). New SQL that locks or counts gets a
   test there.
+- **The landing page's pictures** (`python src/test/browser/screenshots.py`): the same pieces as the browser tests (a copy of the
+  repo, Maven there, the stand-in, headless Chrome) write `static/images/landing/*.webp` — look at them before committing.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
   Chrome, with a Python stand-in server that the scenarios configure; 108 scenarios. The stand-in sends the real CSP **enforced** and

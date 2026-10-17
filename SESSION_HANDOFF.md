@@ -9,6 +9,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-17 — the landing page (Next 7, an idea from Rekwest), on the branch `claude/landing-page` from `origin/dev`; a PR to
+  `dev`.** The owner's picks: real pictures of the app, "Dla kogo" a section now (pages of their own later), no prices yet. At
+  once the DJ's panel in a laptop and the guest's page in a phone (WebP, PL / EN, of a made-up party "DJ Kuba",
+  `src/test/browser/screenshots.py`), then three steps, six features, four kinds of party, six questions and the start again; the
+  staff's way in and the guide stay. The old tile, the five steps and their CSS are gone. Tests: 728 unit, browser `landing-phone`,
+  `landing-wide`. Next, after #106: the dedications on the page and in the pictures (run the script again).
 - **2026-10-16 — the DJ's contact after the party (Next 7, an idea from Rekwest), on the branch `claude/dj-contact-after-party` from
   `origin/dev`; a PR to `dev`.** The page "party ended" (under "↻ Sprawdź ponownie", with "🎧 DJ Koko") and the result of a request
   that reached the DJ (under "Zaproponuj kolejną") show the DJ's profiles under "Zarezerwuj tego DJ-a na swoją imprezę" / "Napisz do
@@ -92,8 +98,8 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
      (the profiles are Instagram / Facebook / TikTok only).
    - **A TV screen** in the hall or the pub: the guests' most wanted songs (the votes) and the QR code beside them — not a queue of
      what plays next (Scan2Play has no DJ's play order). A page of its own for a screen, polled like the panel.
-   - **The landing page:** show at once how it looks — the guest's page on a phone and the DJ's panel on a laptop, side by side
-     (their hero does it well); then three steps, the features, pages for whom (wedding DJs, club DJs, pubs, karaoke), an FAQ.
+   - **The landing page:** built 2026-10-17 (Start here). Left: pages of their own for whom (wedding DJs, clubs, pubs, karaoke —
+     for search engines, in the sitemap).
 
 ## Waiting for the owner (not code)
 

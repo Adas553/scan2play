@@ -628,4 +628,76 @@ class GuestPageRenderTest {
         context.setVariables(model);
         return engine.process("result", context);
     }
+    /**
+     * The guest's page of a made-up party, for the pictures of the landing page (src/test/browser/screenshots.py: a phone's screen,
+     * {@code static/images/landing/guest-<lang>.webp}): who plays, the vibe, the field, the guest's own request waiting and the most
+     * wanted songs with their votes. No real person in it.
+     */
+    @Test
+    void theLandingPagesPicture_ofTheGuestsPage() {
+        for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            List<SongRequestEntity> songs = List.of(
+                    demo(1, 12, "Zenek Martyniuk - Przez twe oczy zielone", 9), demo(2, 15, "ABBA - Dancing Queen", 6),
+                    demo(3, 18, "Dawid Podsiadło - Małomiasteczkowy", 4), demo(4, 21, "Queen - Don't Stop Me Now", 3),
+                    demo(5, 23, "sanah - Szampan", 1));
+            String html = render(locale, Map.of("djName", "DJ Kuba", "globalVibe", VibeType.WEDDING_CLASSICS,
+                    "guestQueue", new GuestQueue(songs, List.of(), Set.of(5L), "sanah - Szampan", 1, Set.of(2L))));
+            assertThat(html).contains("DJ Kuba", "sanah - Szampan").doesNotContain("??");
+            writeForTheBrowserTests("landing-demo-guest-" + locale.getLanguage() + ".html", html);
+        }
+    }
+
+    private static SongRequestEntity demo(long id, int number, String name, int votes) {
+        return SongRequestEntity.builder().id(id).songName(name).requestNumber(number).votes(votes).build();
+    }
+    /**
+     * The landing page (2026-10-17, an idea from Rekwest): at once how it looks — the DJ's panel on a laptop and the guest's page on
+     * a phone, real pictures of the app in the page's language (src/test/browser/screenshots.py), each with its size and what it shows
+     * —, then three steps, what one gets, for whom and the questions (details: no script), and the start again at the end. The way in
+     * for the staff and the guide stay.
+     */
+    @Test
+    void theLandingPage_showsTheApp_thenTheStepsTheFeaturesForWhomAndTheQuestions() {
+        for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            String lang = locale.getLanguage();
+            MockServletContext servletContext = new MockServletContext();
+            WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                    .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
+            context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+            String html = engine.process("landing", context);
+            writeForTheBrowserTests("landing-" + lang + ".html", html);
+
+            assertThat(html).as(lang).doesNotContain("??");
+            assertThat(tag(html, "landingDashboardShot")).contains("src=\"/images/landing/dashboard-" + lang + ".webp\"",
+                    "width=\"1920\"", "height=\"1140\"", "alt=\"", "fetchpriority=\"high\"");
+            assertThat(tag(html, "landingGuestShot")).contains("src=\"/images/landing/guest-" + lang + ".webp\"",
+                    "width=\"780\"", "height=\"1560\"", "alt=\"");
+            for (String shot : List.of("dashboard", "guest")) {
+                assertThat(getClass().getResource("/static/images/landing/" + shot + "-" + lang + ".webp")).as(shot + " " + lang).isNotNull();
+            }
+            assertThat(html.indexOf("id=\"landingSteps\"")).as("the steps after the pictures")
+                    .isGreaterThan(html.indexOf("id=\"landingGuestShot\""));
+            assertThat(html.split("class=\"s2p-landing-step\"", -1)).as("three steps").hasSize(4);
+            assertThat(section(html, "landingFeatures").split("class=\"s2p-landing-card\"", -1)).as("six features").hasSize(7);
+            assertThat(section(html, "landingWho").split("class=\"s2p-landing-card\"", -1)).as("four kinds of party").hasSize(5);
+            assertThat(section(html, "landingFaq").split("<details", -1)).as("six questions").hasSize(7);
+            assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
+            assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/pro\"",
+                    "href=\"/privacy\"");
+            if (locale == Locale.ENGLISH) {
+                assertThat(html).contains(">Guests request songs. AI keeps the vibe. You play.<", ">Wedding DJs<");
+                continue;
+            }
+            assertThat(html).contains(">Goście proszą o piosenki. AI pilnuje klimatu. Ty grasz.<", ">Czy goście muszą coś instalować?<",
+                    ">DJ weselny<");
+        }
+    }
+
+    /** The element with this id and all that is in it, up to the next section of the page. */
+    private static String section(String html, String id) {
+        int at = html.indexOf("id=\"" + id + "\"");
+        assertThat(at).as(id).isPositive();
+        int end = html.indexOf("<section", at);
+        return html.substring(at, end < 0 ? html.length() : end);
+    }
 }

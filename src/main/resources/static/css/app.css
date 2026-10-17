@@ -406,9 +406,6 @@ th[data-sort].sort-desc::after {
  * ========================================================================== */
 .page-landing { background-color: var(--s2p-bg-landing); color: var(--s2p-white); }
 .page-landing h1 { text-wrap: balance; }
-/* Vertical padding only: the element is also a Bootstrap .container, whose side padding the row inside it (negative margins)
-   relies on — a `padding: 100px 0` took it away and the page was 12 px wider than a phone, so it could be nudged sideways. */
-.hero-section  { padding-block: 100px; text-align: center; }
 
 /* Our logo (fragment components :: logo): the mark and the name, sized by the font of the heading it stands in. The mark's
    dark tile is close to the page's background, so a faint ring keeps its edge visible. */
@@ -417,8 +414,7 @@ th[data-sort].sort-desc::after {
     align-items: center;
     gap: 0.3em;
 }
-.s2p-logo-mark,
-.s2p-hero-mark {
+.s2p-logo-mark {
     border-radius: 22%;
     box-shadow: 0 0 0 1px var(--s2p-white-18);
 }
@@ -427,80 +423,88 @@ th[data-sort].sort-desc::after {
 .s2p-logo > span { align-self: baseline; }
 .s2p-logo-mark { width: 1.15em; height: 1.15em; }
 .s2p-logo-two  { color: var(--s2p-cyan); }
-.s2p-hero-mark { width: 96px; height: 96px; }
 
 
-.provider-cards {
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+/* The landing page (2026-10-17): at once how it looks — the DJ's panel in a laptop and the guest's page in a phone, drawn here
+   around real pictures of the app —, then three steps, what one gets, for whom and the questions. Vertical padding only: the
+   elements are also Bootstrap .containers, whose side padding the rows inside them rely on (a phone could be nudged sideways). */
+.s2p-landing-hero { padding-block: 2.5rem 2rem; }
+@media (min-width: 992px) { .s2p-landing-hero { padding-block: 4.5rem 3rem; } }
+.s2p-landing-title {
+    font-size: clamp(2rem, 4.6vw, 3.1rem); font-weight: 800; line-height: 1.12; letter-spacing: -0.01em;
+    color: var(--s2p-white); margin: 1.25rem 0 1rem;
 }
-.provider-card {
-    padding: 2rem 2.5rem;
-    border-radius: 16px;
-    border: 2px solid var(--s2p-border);
-    background: var(--s2p-bg-elevated);
-    transition: transform 0.2s, border-color 0.2s;
-    text-decoration: none;
-    min-width: 220px;
-}
-.provider-card:hover { transform: translateY(-4px); border-color: var(--s2p-border-strong); }
-.provider-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.s2p-landing-lede { color: var(--s2p-text); font-size: 1.15rem; max-width: 52ch; margin-bottom: 1.5rem; }
+@media (max-width: 991.98px) { .s2p-landing-lede { margin-inline: auto; } }
+.s2p-landing-cta { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+@media (min-width: 992px) { .s2p-landing-cta { justify-content: flex-start; } }
+.s2p-landing-free { color: var(--s2p-text-muted); font-size: 0.9rem; margin: 0.9rem 0 0; }
 
-/* The landing page's one tile: a quiet card around its one action (the colour is the button's, not a glowing frame) */
-.provider-card--requests { max-width: 26rem; }
-.provider-card--requests:hover { border-color: var(--s2p-action); }
-
-
-/* --- How-it-works guide (landing page) --- */
-.guide-section {
-    padding-block: 60px 80px;   /* vertical only, like .hero-section above */
-}
-.guide-section h2 {
-    color: var(--s2p-white);
-    font-size: 1.8rem;
-}
-.guide-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-}
-.guide-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.25rem;
-    background: var(--s2p-bg-elevated);
-    border: 1px solid var(--s2p-border);
-    border-radius: 14px;
-    padding: 1.25rem 1.5rem;
-    transition: border-color 0.2s;
-}
-.guide-step:hover {
-    border-color: var(--s2p-border-strong);
-}
-.guide-step-number {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--s2p-bg-hover);
+/* The devices: a laptop (a frame and its base) and a phone over its lower left. Sized in % of the figure, so they scale together. */
+.s2p-devices { position: relative; margin: 0; padding: 0 0 7% 9%; }
+.s2p-laptop {
+    padding: 2.4% 2.4% 0;
+    background: var(--s2p-bg-row);
     border: 1px solid var(--s2p-border-strong);
-    color: var(--s2p-action);
-    font-weight: 800;
-    font-size: 1.1rem;
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 30px 70px var(--s2p-black-60);
 }
-.guide-step-body h5 {
-    color: var(--s2p-white);
-    margin-bottom: 0.35rem;
+.s2p-laptop img { display: block; width: 100%; height: auto; border-radius: 4px 4px 0 0; }
+.s2p-laptop-base {
+    height: 14px; margin: 0 -5%;
+    background: linear-gradient(var(--s2p-border-strong), var(--s2p-bg-hover));
+    border-radius: 0 0 16px 16px;
 }
-.guide-step-body p {
-    font-size: 0.92rem;
-    line-height: 1.55;
+.s2p-phone {
+    position: absolute; left: 0; bottom: 0; width: 28%;
+    padding: 2.4%;
+    background: var(--s2p-black);
+    border: 1px solid var(--s2p-border-strong);
+    border-radius: 18% / 9%;
+    box-shadow: 0 24px 50px var(--s2p-black-70);
 }
+.s2p-phone img { display: block; width: 100%; height: auto; border-radius: 14% / 7%; }
+
+/* The sections under the hero: a heading each, cards in a grid — one column on a phone, two on a tablet, three or four wide */
+.s2p-landing-section { padding-block: 3rem; border-top: 1px solid var(--s2p-border); }
+.s2p-landing-section h2 {
+    font-size: clamp(1.5rem, 3.4vw, 2rem); font-weight: 800; color: var(--s2p-white); text-align: center; margin-bottom: 1.75rem;
+}
+.s2p-landing-grid { display: grid; gap: 1rem; padding: 0; margin: 0; list-style: none; }
+@media (min-width: 768px) { .s2p-landing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 992px) {
+    .s2p-landing-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .s2p-landing-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.s2p-landing-card,
+.s2p-landing-step {
+    background: var(--s2p-bg-card); border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); padding: 1.25rem;
+}
+.s2p-landing-card h3,
+.s2p-landing-step h3 { font-size: 1.05rem; font-weight: 700; color: var(--s2p-light); margin: 0.6rem 0 0.35rem; }
+.s2p-landing-card p,
+.s2p-landing-step p { color: var(--s2p-text-muted); margin: 0; font-size: 0.95rem; }
+.s2p-landing-icon { font-size: 1.6rem; line-height: 1; }
+.s2p-landing-step-number {
+    display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem;
+    border-radius: 50%; border: 1px solid var(--s2p-action-45); background: var(--s2p-action-12);
+    color: var(--s2p-action); font-weight: 800;
+}
+
+/* The questions: each folded, the question 44 px to tap */
+.s2p-landing-faq { max-width: 760px; margin: 0 auto; display: grid; gap: 0.5rem; }
+.s2p-landing-faq details { background: var(--s2p-bg-card); border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
+.s2p-landing-faq summary {
+    cursor: pointer; padding: 0.7rem 1rem; min-height: 44px; display: flex; align-items: center; gap: 0.75rem;
+    font-weight: 600; color: var(--s2p-light); list-style: none;
+}
+.s2p-landing-faq summary::-webkit-details-marker { display: none; }
+.s2p-landing-faq summary::after { content: "▾"; margin-left: auto; color: var(--s2p-text-muted); }
+.s2p-landing-faq details[open] > summary::after { content: "▴"; }
+.s2p-landing-faq summary:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; border-radius: var(--s2p-radius-card); }
+.s2p-landing-faq details p { padding: 0 1rem 1rem; margin: 0; color: var(--s2p-text-muted); }
+.s2p-landing-final { padding-block: 3.5rem 1rem; }
 
 /* ==========================================================================
  * 6b. SONG AUTOCOMPLETE DROPDOWN — index.html (guest page)
@@ -681,8 +685,6 @@ th[data-sort].sort-desc::after {
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }
-.s2p-hint            { color: var(--s2p-text-muted) !important; }
-.s2p-hint-note       { font-size: 0.8rem !important; max-width: 260px !important; margin-inline: auto !important; }
 .s2p-alert-closed    { background-color: var(--s2p-bg-warning) !important; color: var(--s2p-warning) !important; }
 .s2p-footer          { color: var(--s2p-text-muted) !important; font-size: 0.85rem !important; }
 /* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
