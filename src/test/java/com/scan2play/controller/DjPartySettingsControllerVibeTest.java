@@ -167,4 +167,19 @@ class DjPartySettingsControllerVibeTest {
                 .andExpect(status().isBadRequest());
         assertThat(VibeType.valueOf("KIDS")).isNotNull();
     }
+    /** The guests' dedications (V38) on or off, saved as soon as picked — by whoever may change the vibe (V32). */
+    @SuppressWarnings("unchecked")
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void theDedications_areSwitchedOnOrOff(boolean on) throws Exception {
+        mockMvc.perform(post("/dj/dashboard/dedications").param("partyCode", PARTY).param("on", String.valueOf(on))
+                .principal(token).session(session)).andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
+        verify(sessionHelper).require(eq(PARTY), eq(com.scan2play.model.StaffPermission.VIBE), any(), any());
+        verify(settingsService).updateSettings(eq(PARTY), updater.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).dedicationsOn(!on).build();
+        updater.getValue().accept(party);
+        assertThat(party.isDedicationsOn()).isEqualTo(on);
+    }
 }

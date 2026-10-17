@@ -110,6 +110,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.HISTORY, get("/dj/history-view").param("party", PUB)),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/vibe").param("partyCode", PUB).param("newVibe", "ANY")),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/comment-style").param("partyCode", PUB).param("commentStyle", "FUNNY")),
+                Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/dedications").param("partyCode", PUB).param("on", "false")),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/party-words").param("partyCode", PUB).param("vibeNote", "x")
                         .param("djName", "x")),
                 Arguments.of(StaffPermission.LIMITS, post("/dj/dashboard/limits").param("partyCode", PUB).param("requestLimit", "2")

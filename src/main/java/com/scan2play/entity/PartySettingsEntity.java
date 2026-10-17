@@ -87,6 +87,14 @@ public class PartySettingsEntity {
     private String djName;
 
     /**
+     * Whether the guests may add a dedication to a request (V38): the field under the song's on the party page, and the server takes
+     * one only while this is on. On by default; the DJ switches it in the card "Impreza".
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean dedicationsOn = true;
+
+    /**
      * The DJ's profiles (V24), for the guests to follow: an https address on Instagram / Facebook / TikTok as
      * {@code util.SocialLinks} wrote it from what the DJ typed; null = not shown.
      */

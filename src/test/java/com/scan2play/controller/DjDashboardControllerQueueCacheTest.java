@@ -67,14 +67,14 @@ class DjDashboardControllerQueueCacheTest {
 
         @Bean
         DjService djService(SongRequestRepository songRequestRepository, CacheManager cacheManager) {
-            return new DjService(songRequestRepository, cacheManager);
+            return new DjService(songRequestRepository, mock(com.scan2play.repository.SongRequestDedicationRepository.class), cacheManager);
         }
 
         @Bean
         SongRequestCommandService songRequestCommandService(SongRequestRepository songRequestRepository, DjService djService) {
             PartySettingsRepository parties = mock(PartySettingsRepository.class);
             when(parties.existsByPartyCode(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
-            return new SongRequestCommandService(songRequestRepository, parties, djService);
+            return new SongRequestCommandService(songRequestRepository, mock(com.scan2play.repository.SongRequestDedicationRepository.class), parties, djService);
         }
     }
 

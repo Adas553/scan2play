@@ -628,6 +628,7 @@ class GuestPageRenderTest {
         context.setVariables(model);
         return engine.process("result", context);
     }
+
     /**
      * The guest's page of a made-up party, for the pictures of the landing page (src/test/browser/screenshots.py: a phone's screen,
      * {@code static/images/landing/guest-<lang>.webp}): who plays, the vibe, the field, the guest's own request waiting and the most
@@ -699,5 +700,34 @@ class GuestPageRenderTest {
         assertThat(at).as(id).isPositive();
         int end = html.indexOf("<section", at);
         return html.substring(at, end < 0 ? html.length() : end);
+    }
+
+    /**
+     * The guest's dedication (V38): folded under the song's field ("💌 Dodaj dedykację", no script — a details element), at most 100
+     * characters, posted with the song; unfolded with what the guest typed when a mood brought them back. Only the DJ sees it. The
+     * result says whether it went to the DJ.
+     */
+    @Test
+    void theDedication_isFoldedUnderTheField_andTheResultSaysWhatCameOfIt() {
+        String html = render(PL, Map.of());
+        assertThat(html).contains("id=\"dedicationBox\"", ">💌 Dodaj dedykację<", "name=\"dedication\"", "maxlength=\"100\"",
+                "Zobaczy ją tylko DJ").doesNotContain("??");
+        assertThat(tag(html, "dedicationBox")).doesNotContain("open");
+        assertThat(html.indexOf("id=\"dedicationInput\"")).isGreaterThan(html.indexOf("id=\"songInput\""))
+                .isLessThan(html.indexOf("id=\"submitBtn\""));
+        assertThat(tag(html, "dedicationInput")).doesNotContain("required");
+        String back = render(PL, Map.of("lastDedication", "dla <Ani>"));
+        assertThat(tag(back, "dedicationBox")).contains("open");
+        assertThat(tag(back, "dedicationInput")).contains("value=\"dla &lt;Ani&gt;\"");
+        assertThat(render(Locale.ENGLISH, Map.of())).contains(">💌 Add a dedication<", "Only the DJ sees it");
+        assertThat(render(PL, Map.of("dedicationsOn", false))).as("the DJ switched them off").doesNotContain("dedicationBox", "name=\"dedication\"");
+        assertThat(render(PL, Map.of("dedicationsOn", true))).contains("id=\"dedicationBox\"");
+
+        com.scan2play.model.DjResponse accepted = new com.scan2play.model.DjResponse("accepted", "ok", "sanah - Szampan", "title");
+        assertThat(renderResult(accepted.withDedication(true))).contains("id=\"dedicationSent\"", "💌 Dedykacja trafiła do DJ-a")
+                .doesNotContain("??", "dedicationRefused");
+        assertThat(renderResult(accepted.withDedication(false))).contains("id=\"dedicationRefused\"", "Dedykacji nie dołączono")
+                .doesNotContain("dedicationSent");
+        assertThat(renderResult(accepted)).doesNotContain("dedicationSent", "dedicationRefused");
     }
 }

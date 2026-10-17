@@ -53,6 +53,8 @@ class SongEvaluationServiceTest {
     private PushNotificationService pushNotifications;
     @Mock
     private PartyStaffService partyStaff;
+    @Mock
+    private com.scan2play.repository.SongRequestDedicationRepository dedications;
 
     private SongEvaluationService service;
     private final AiHealthMonitor aiHealth = new AiHealthMonitor();
@@ -61,7 +63,7 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off());
+                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off());
         service.init();
     }
 
@@ -274,7 +276,7 @@ class SongEvaluationServiceTest {
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, new DefaultResourceLoader(),
-                new SongRequestCommandService(songRequestRepository, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans) {
+                new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -761,5 +763,114 @@ class SongEvaluationServiceTest {
                 .evaluateAndSaveSong(PARTY_CODE, "y", "ANY");
         assertThat(none.decision()).isEqualTo("rejected");
         assertThat(saved.getValue().getDecision()).isEqualTo("rejected");
+    }
+
+    // ---- the guest's dedication (V38) ----
+
+    private static final String SZAMPAN = "{\"decision\":\"accepted\",\"comment\":\"Hej!\",\"songName\":\"sanah - Szampan\","
+            + "\"requestKind\":\"title\"";
+
+    private DjResponse askedInPolish(SongEvaluationService ai, String dedication) {
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(Locale.of("pl"));
+        try {
+            return ai.evaluateAndSaveSong(PARTY_CODE, "szampan", "ANY", Set.of(), dedication);
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+    }
+
+    private static List<String> required(GenerateContentConfig config) {
+        return config.responseSchema().flatMap(com.google.genai.types.Schema::required).orElse(List.of());
+    }
+
+    /**
+     * A dedication is checked by the AI with the request: its rule after the others, one line without double quotes, and the answer's
+     * field "dedicationOk" required. Without one (blank too) the prompt and the answer's schema are what they were before V38 —
+     * a request without a dedication is judged as before.
+     */
+    @Test
+    void aDedication_isGivenToTheAi_andWithoutOneThePromptIsAsBefore() {
+        aParty(0);
+        savesWithId();
+        SongEvaluationService ai = answering(SZAMPAN + ",\"dedicationOk\":true}");
+
+        askedInPolish(ai, null);
+        askedInPolish(ai, "   ");
+        askedInPolish(ai, "dla \"Ani\"\n na 18-stkę");
+
+        assertThat(prompts.get(0)).isEqualTo(prompts.get(1)).doesNotContain("edykacj", "dedicationOk");
+        assertThat(required(configs.get(0))).doesNotContain("dedicationOk");
+        assertThat(configs.get(1)).isSameAs(configs.get(0));
+        assertThat(prompts.get(2)).contains("Dedykacja gościa", "\"dla 'Ani' na 18-stkę\"", "\"dedicationOk\"")
+                .startsWith(prompts.get(0).substring(0, prompts.get(0).indexOf("Odpowiedz wyłącznie")).strip());
+        assertThat(prompts.get(2).indexOf("Dedykacja gościa")).isGreaterThan(prompts.get(2).indexOf("Krok 3"))
+                .isLessThan(prompts.get(2).indexOf("Odpowiedz wyłącznie"));
+        assertThat(required(configs.get(2))).contains("decision", "comment", "songName", "requestKind", "dedicationOk");
+        assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.CLASSIC, "for Anna", Locale.ENGLISH))
+                .contains("The guest's dedication", "\"for Anna\"").doesNotContain("Dedykacja");
+    }
+
+    /** A dedication the AI lets through goes to the DJ with the song: one line, cut to 100, on the song's row, counted. */
+    @Test
+    void aDedicationTheAiLetsThrough_goesToTheDj_withTheSong() {
+        aParty(0);
+        savesWithId();
+        ArgumentCaptor<com.scan2play.entity.SongRequestDedicationEntity> dedication =
+                ArgumentCaptor.forClass(com.scan2play.entity.SongRequestDedicationEntity.class);
+
+        DjResponse response = askedInPolish(answering(SZAMPAN + ",\"dedicationOk\":true}"), "  dla Ani\n na 18-stkę " + "!".repeat(120));
+
+        verify(dedications).save(dedication.capture());
+        assertThat(dedication.getValue().getText()).hasSize(100).startsWith("dla Ani na 18-stkę !");
+        assertThat(dedication.getValue().getSongRequestId()).isEqualTo(9L);
+        assertThat(dedication.getValue().isChecked()).isTrue();
+        assertThat(dedication.getValue().getCreatedAt()).isNotNull();
+        verify(songRequestRepository).addDedication(9L);
+        assertThat(response.dedicationOk()).isTrue();
+    }
+
+    /** An offensive dedication (or an answer without the field): the song goes to the DJ without it, and the guest is told. */
+    @Test
+    void aDedicationTheAiRefuses_isNotSaved_butTheSongIs() {
+        aParty(0);
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+
+        DjResponse refused = askedInPolish(answering(SZAMPAN + ",\"dedicationOk\":false}"), "coś obraźliwego");
+        DjResponse unsaid = askedInPolish(answering(SZAMPAN + "}"), "coś obraźliwego");
+
+        assertThat(saved.getAllValues()).hasSize(2).allMatch(row -> "accepted".equals(row.getDecision()));
+        verify(dedications, never()).save(any());
+        verify(songRequestRepository, never()).addDedication(any());
+        assertThat(refused.dedicationOk()).isFalse();
+        assertThat(unsaid.dedicationOk()).isFalse();
+    }
+
+    /** The AI could not be asked: the request goes to the DJ unchecked, its dedication too — marked unchecked. */
+    @Test
+    void withoutTheAi_theDedicationGoesUnchecked() {
+        aParty(0);
+        savesWithId();
+        when(messageSource.getMessage(eq("ai.unavailable.to_dj"), any(), any(Locale.class))).thenReturn("Przekazane DJ-owi");
+        ArgumentCaptor<com.scan2play.entity.SongRequestDedicationEntity> dedication =
+                ArgumentCaptor.forClass(com.scan2play.entity.SongRequestDedicationEntity.class);
+
+        DjResponse response = askedInPolish(answering(null), "dla Ani");
+
+        verify(dedications).save(dedication.capture());
+        assertThat(dedication.getValue().isChecked()).isFalse();
+        assertThat(response.dedicationOk()).isTrue();
+    }
+
+    /** A rejected song is not in the queue: its dedication is not saved, and nothing is said about it. */
+    @Test
+    void aRejectedSong_takesNoDedication() {
+        aParty(0);
+        savesWithId();
+
+        DjResponse response = askedInPolish(answering("{\"decision\":\"rejected\",\"comment\":\"Nie dziś\",\"songName\":\"Nirvana - Lithium\","
+                + "\"requestKind\":\"title\",\"dedicationOk\":true}"), "dla Ani");
+
+        verify(dedications, never()).save(any());
+        assertThat(response.dedicationOk()).isNull();
     }
 }

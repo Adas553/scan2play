@@ -107,6 +107,18 @@ public class DjPartySettingsController {
     }
 
     /**
+     * Whether the guests may add a dedication to a request (V38): saved as soon as the DJ picks, as the vibe. Off, the party page has
+     * no field and the server takes none.
+     */
+    @PostMapping("/dashboard/dedications")
+    public String updateDedications(@RequestParam String partyCode, @RequestParam boolean on,
+                                    OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setDedicationsOn(on));
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
      * The card "Impreza"'s words, under one "Zapisz" (the design review, 2026-10-10: each field had its own): the DJ's own words
      * about the vibe (V16) — one line, at most {@value PartySettingsEntity#VIBE_NOTE_MAX} characters; the AI is given it with every
      * request, the guests see it on the party page — and who plays (V17), e.g. "DJ Koko" — at most

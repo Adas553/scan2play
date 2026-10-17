@@ -37,6 +37,8 @@
         <p><strong>Dla gości (anonimowi użytkownicy):</strong></p>
         <ul>
             <li>Tekst zamówienia piosenki (tytuł, wykonawca albo fragment tekstu) — zapisywany tak, jak go wpisano (do 150 znaków), i widoczny dla DJ-a tej imprezy obok piosenki wybranej przez AI; trafia też do logów serwera (z kodem imprezy, bez adresu IP); nie wpisuj w nim danych osobowych</li>
+            <li>Dedykacja do prośby, gdy ją dopiszesz (do 100 znaków) — widzi ją tylko DJ tej imprezy przy piosence, inni goście nie;
+                sprawdza ją AI (Google Gemini) razem z prośbą; usuwana razem z prośbą</li>
             <li>Identyfikator sesji (ciasteczko) — do limitu próśb i do rozpoznania Twoich wcześniejszych próśb i 👍 na tej imprezie (oznaczenie „Twoja”, głos liczony raz); bez danych osobowych</li>
             <li>Adres IP — widzą go Cloudflare i dostawca hostingu (pkt 6), przez których przechodzi każde połączenie ze stroną. Sama aplikacja trzyma go tylko w pamięci serwera, do limitów próśb i 👍 z jednej sieci na imprezie (ochrona przed nadużyciami); nie zapisuje go w bazie danych ani w swoich logach</li>
         </ul>
@@ -65,7 +67,7 @@
 
         <h3>5. Okres przechowywania danych</h3>
         <ul>
-            <li>Zamówienia piosenek: usuwane automatycznie po 30 dniach od zamówienia (albo wcześniej, gdy DJ usunie swoje konto)</li>
+            <li>Zamówienia piosenek (razem z dedykacjami): usuwane automatycznie po 30 dniach od zamówienia (albo wcześniej, gdy DJ usunie swoje konto)</li>
             <li>Sesje (logowanie DJ-a, identyfikator sesji gościa): przechowywane w bazie danych i usuwane po 30 minutach bez aktywności</li>
             <li>Wybrany język strony: gdy wybierzesz go adresem z <code>?lang=pl</code> albo <code>?lang=en</code>, ciasteczko <code>lang</code> z samym kodem języka zapamiętuje go w Twojej przeglądarce na rok, żeby kolejne strony były w tym języku; nic nie trafia do bazy danych</li>
             <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie lub 👍 z tej sieci</li>

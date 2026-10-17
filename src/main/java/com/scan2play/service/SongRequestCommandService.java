@@ -1,7 +1,9 @@
 package com.scan2play.service;
 
+import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.repository.SongRequestDedicationRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.SongNames;
@@ -42,8 +44,22 @@ public class SongRequestCommandService {
      * @param request the row the request is in now: the new one, or the waiting song it was counted on (with its votes), or the
      *                request the DJ skipped ({@link Outcome#SKIPPED_BY_DJ}; nothing was saved)
      */
-    public record Saved(Outcome outcome, SongRequestEntity request) {
+    public record Saved(Outcome outcome, SongRequestEntity request, boolean dedicationAdded) {
+
+        public Saved(Outcome outcome, SongRequestEntity request) {
+            this(outcome, request, false);
+        }
     }
+
+    /**
+     * A guest's dedication with the request (V38): one line of at most {@value SongRequestDedicationEntity#TEXT_MAX} characters;
+     * {@code checked} false when the AI could not be asked.
+     */
+    public record Dedication(String text, boolean checked) {
+    }
+
+    /** The most dedications a song keeps: the queue shows the newest few, and a guest's own song asked again uses no limit of theirs. */
+    static final int DEDICATIONS_PER_SONG = 20;
 
     /** The upper 32 bits of every lock key of guest requests: "S2PR". */
     private static final long REQUESTS_LOCK_SPACE = 0x5332_5052L << 32;
@@ -59,6 +75,7 @@ public class SongRequestCommandService {
     private static final int SKIPS_READ = 100;
 
     private final SongRequestRepository songRequestRepository;
+    private final SongRequestDedicationRepository dedicationRepository;
     private final PartySettingsRepository partySettingsRepository;
     private final DjService djService;
 
@@ -84,6 +101,32 @@ public class SongRequestCommandService {
      */
     @Transactional
     public Saved saveOrVote(SongRequestEntity request, Set<Long> guestsOwnIds) {
+        return saveOrVote(request, guestsOwnIds, null);
+    }
+
+    /**
+     * The same, with the guest's dedication (V38; null: none): saved on the song's row — the new one, the waiting song a vote was
+     * counted on, or the guest's own waiting song asked again — and counted there, under the same lock. Not with a rejected request
+     * (not in the queue) nor a song the DJ skipped; not past {@link #DEDICATIONS_PER_SONG} on one song.
+     */
+    @Transactional
+    public Saved saveOrVote(SongRequestEntity request, Set<Long> guestsOwnIds, Dedication dedication) {
+        Saved saved = save(request, guestsOwnIds);
+        boolean inTheQueue = saved.outcome() != Outcome.SKIPPED_BY_DJ && DECISION_ACCEPTED.equals(saved.request().getDecision());
+        if (dedication == null || !inTheQueue || saved.request().getDedications() >= DEDICATIONS_PER_SONG) {
+            return saved;
+        }
+        SongRequestEntity song = saved.request();
+        dedicationRepository.save(SongRequestDedicationEntity.builder().songRequestId(song.getId()).text(dedication.text())
+                .checked(dedication.checked()).createdAt(Instant.now()).build());
+        songRequestRepository.addDedication(song.getId());
+        song.setDedications(song.getDedications() + 1);
+        // the guest's own song asked again: no vote changed the queue, the dedication did (its count is in the fingerprint)
+        djService.refreshQueue(request.getPartyCode());
+        return new Saved(saved.outcome(), song, true);
+    }
+
+    private Saved save(SongRequestEntity request, Set<Long> guestsOwnIds) {
         songRequestRepository.lockRequests(lockKey(request.getPartyCode()));
         if (!partySettingsRepository.existsByPartyCode(request.getPartyCode())) {
             throw new IllegalArgumentException("Party not found: " + request.getPartyCode());

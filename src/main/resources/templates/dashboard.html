@@ -131,6 +131,17 @@
                             </optgroup>
                         </select>
                     </form>
+                    <!--/* The guests' dedications (V38) on or off: saved as soon as picked; off, the party page has no field */-->
+                    <form th:action="@{/dj/dashboard/dedications}" method="POST" class="m-0 col-6">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <label for="dedicationsSelect" class="form-label small text-light mb-1"
+                               th:text="#{dashboard.dedications.label}">Guests' dedications</label>
+                        <select id="dedicationsSelect" name="on" data-auto-submit
+                                class="form-select form-select-sm bg-black text-light border-secondary">
+                            <option value="true" th:selected="${dedicationsOn != false}" th:text="#{dashboard.dedications.on}">On</option>
+                            <option value="false" th:selected="${dedicationsOn == false}" th:text="#{dashboard.dedications.off}">Off</option>
+                        </select>
+                    </form>
                     <!--/* The DJ's own words about the vibe (V16: the AI is given them, the guests see them) and who plays (V17: "🎧 Gra: DJ
                          Koko" on the party page); empty clears either */-->
                     <form th:action="@{/dj/dashboard/party-words}" method="POST" class="m-0 col-12" id="partyWordsForm">
@@ -318,6 +329,15 @@
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>
                             <span th:unless="${#strings.isEmpty(req.guestText)}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${req.guestText})}">Guest: “…”</span>
+                            <!--/* the guests' dedications (V38): the newest few, "niesprawdzona" when the AI was down, "+N" for the rest */-->
+                            <th:block th:if="${dedications != null}" th:with="notes=${dedications.get(req.id)}">
+                                <span th:each="note : ${notes}" class="small text-break s2p-dedication"><th:block
+                                        th:text="#{dashboard.dedication(${note.text})}">💌 “…”</th:block> <span th:unless="${note.checked}"
+                                        class="badge text-bg-secondary s2p-dedication-unchecked" th:title="#{dashboard.dedication.unchecked.title}"
+                                        th:text="#{dashboard.dedication.unchecked}">unchecked</span></span>
+                                <span th:if="${notes != null and req.dedications > notes.size()}" class="small text-secondary s2p-dedication-more"
+                                      th:text="#{dashboard.dedication.more(${req.dedications - notes.size()})}">+2 more</span>
+                            </th:block>
                             <!--/* the AI's comment to the guest: one line, the whole of it in the title */-->
                             <span th:unless="${#strings.isEmpty(req.djComment)}" class="small text-secondary s2p-queue-comment"
                                   th:title="${req.djComment}" th:text="#{dashboard.ai_comment(${req.djComment})}">AI: Good pick</span>
@@ -337,6 +357,10 @@
                     </div>
                 </td>
                 <td class="text-center" data-sort-value="votes" th:attr="data-val=${req.votes}">
+                    <!--/* how many dedications (V38): only on a phone's folded card, which hides them (app.css) — beside the votes, so the
+                         card keeps its one line; a tap shows them */-->
+                    <span th:if="${req.dedications > 0}" class="badge text-bg-secondary s2p-dedication-count"
+                          th:title="#{dashboard.dedication.count.title}" th:text="${'💌 ' + req.dedications}">💌 3</span>
                     <span class="badge" th:classappend="${req.votes > 1} ? 'text-bg-warning' : 'text-bg-secondary'" th:text="${req.votes}">1</span>
                     <!--/* On a phone the card is folded (cards.js, app.css): the song, ⚠ / ⭐, the votes, "Zagrane" / "Pomiń" — this "▾"
                          (or a tap on the card) unfolds the guest's words, the AI's comment, "Podejrzyj" and 💸. A wide screen shows them all. */-->
