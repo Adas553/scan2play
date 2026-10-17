@@ -370,6 +370,10 @@ th[data-sort].sort-desc::after {
     margin-bottom: 15px;
 }
 .page-guest .accepted { color: var(--s2p-green); }
+/* The guest's dedication (V38): a quiet line under the song's field, unfolded on a tap */
+.s2p-dedication-box summary { color: var(--s2p-action); cursor: pointer; width: fit-content; line-height: 44px; }   /* 44 px to tap */
+/* The guests' dedications under a song of the DJ's queue */
+.s2p-dedication { color: var(--s2p-text); }
 .page-guest .rejected { color: var(--s2p-red); }
 /* The result's verdict ("TAK!", "NIE", "PRZEKAZANE"): as big as a phone's width allows — display-1 broke "PRZEKAZAN / E" */
 .s2p-verdict {

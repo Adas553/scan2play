@@ -66,6 +66,12 @@ public final class ViewAttributes {
     public static final String ERROR_MESSAGE = "errorMessage";
     /** The text of a request sent back to the form (a mood, not a song). */
     public static final String LAST_REQUEST = "lastRequest";
+    /** The dedication of a request sent back to the form (V38), as the guest typed it. */
+    public static final String LAST_DEDICATION = "lastDedication";
+    /** Whether the guests may add a dedication (V38, {@code PartySettingsEntity.dedicationsOn}). */
+    public static final String DEDICATIONS_ON = "dedicationsOn";
+    /** The newest dedications of the queue's songs (V38), by the song's id ({@code DjService.dedicationsOf}). */
+    public static final String DEDICATIONS = "dedications";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";

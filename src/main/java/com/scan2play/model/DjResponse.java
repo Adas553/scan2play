@@ -22,6 +22,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * @param ownSong     The same song already waits as the guest's own request: nothing was saved or counted.
  * @param requestNumber The song's number at the party (V28, "#27"): of the new request or of the waiting song the request was
  *                    counted on; null when the song is not in the queue (rejected, nothing saved).
+ * @param dedicationOk The guest's dedication (V38): in the AI's answer, whether it may go to the DJ (asked only when there is
+ *                    one); once saved, {@code TRUE} — it went to the DJ —, {@code FALSE} — the AI found it offensive, the song went
+ *                    without it —, or null: no dedication, or the song did not reach the queue.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record DjResponse(
@@ -32,7 +35,8 @@ public record DjResponse(
         Long requestId,
         int votes,
         boolean ownSong,
-        Integer requestNumber
+        Integer requestNumber,
+        Boolean dedicationOk
 ) {
 
     public static final String KIND_TITLE = "title";
@@ -40,6 +44,12 @@ public record DjResponse(
     public static final String KIND_LYRICS = "lyrics";
     public static final String KIND_MOOD = "mood";
     public static final String KIND_UNCHECKED = "unchecked";
+
+    /** A response without a word about a dedication. */
+    public DjResponse(String decision, String comment, String songName, String requestKind, Long requestId,
+                      int votes, boolean ownSong, Integer requestNumber) {
+        this(decision, comment, songName, requestKind, requestId, votes, ownSong, requestNumber, null);
+    }
 
     /** A response without a number of the song (not in the queue). */
     public DjResponse(String decision, String comment, String songName, String requestKind, Long requestId,
@@ -84,13 +94,18 @@ public record DjResponse(
 
     /** The same response under another song name (what the guest typed, when the AI left the name empty). */
     public DjResponse withSongName(String name) {
-        return new DjResponse(decision, comment, name, requestKind, requestId, votes, ownSong, requestNumber);
+        return new DjResponse(decision, comment, name, requestKind, requestId, votes, ownSong, requestNumber, dedicationOk);
     }
 
     /** The same request with another verdict: the one a song waiting in the queue was taken with. */
     public DjResponse withVerdict(String newDecision, String newComment) {
         return new DjResponse(newDecision, newComment, songName, requestKind, requestId, votes, ownSong,
-                requestNumber);
+                requestNumber, dedicationOk);
+    }
+
+    /** The same response with what came of the guest's dedication ({@link #dedicationOk}). */
+    public DjResponse withDedication(Boolean ok) {
+        return new DjResponse(decision, comment, songName, requestKind, requestId, votes, ownSong, requestNumber, ok);
     }
 
     /**
@@ -98,6 +113,6 @@ public record DjResponse(
      * and votes), or the guest's own song that already waited ({@code ownSong}) — with the song's number ({@code null}: none).
      */
     public DjResponse savedAs(Long id, Integer number, String name, int votesNow, boolean guestsOwnSong) {
-        return new DjResponse(decision, comment, name, requestKind, id, votesNow, guestsOwnSong, number);
+        return new DjResponse(decision, comment, name, requestKind, id, votesNow, guestsOwnSong, number, dedicationOk);
     }
 }

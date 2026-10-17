@@ -55,6 +55,17 @@
                      th:text="#{home.form.input.help.song}">A title, an artist or a line of the lyrics</div>
             </div>
 
+            <!--/* The guest's dedication (V38): folded, no script (a details element); unfolded with what was typed when a mood brought
+                 the guest back. The AI checks it with the song; only the DJ sees it. */-->
+            <details th:if="${dedicationsOn != false}" id="dedicationBox" class="mb-3 s2p-dedication-box"
+                     th:open="${!#strings.isEmpty(lastDedication)}">
+                <summary th:text="#{home.form.dedication.toggle}">💌 Add a dedication</summary>
+                <label for="dedicationInput" class="visually-hidden" th:text="#{home.form.dedication.label}">Dedication</label>
+                <input type="text" id="dedicationInput" name="dedication" class="form-control mt-2" maxlength="100"
+                       aria-describedby="dedicationHelp" th:value="${lastDedication}" th:placeholder="#{home.form.dedication.placeholder}">
+                <div id="dedicationHelp" class="form-text text-secondary mt-1" th:text="#{home.form.dedication.help}">Only the DJ sees it.</div>
+            </details>
+
             <button type="submit" id="submitBtn" class="btn btn-action btn-lg w-100"
                     th:attr="data-text-submitting=#{home.form.button.submitting}">
                 <span id="submitBtnText" th:text="#{home.form.button.submit}">Send to DJ!</span>

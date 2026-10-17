@@ -1,5 +1,6 @@
 package com.scan2play.template;
 
+import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,7 @@ import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
 
@@ -206,5 +208,37 @@ class DashboardQueueFragmentTest {
 
         assertThat(html).contains("Nic nie pasuje.");
         assertThat(html).doesNotContain("??");
+    }
+
+    @Test
+    @DisplayName("V38: the guests' dedications under the song, newest last, escaped; \"niesprawdzona\" without the AI, \"+N\" for the rest")
+    void shouldShowTheGuestsDedications() {
+        SongRequestEntity szampan = accepted(1, "sanah - Szampan");
+        szampan.setDedications(5);
+        SongRequestEntity plain = accepted(2, "Beta");
+        Map<Long, List<SongRequestDedicationEntity>> dedications = Map.of(1L, List.of(
+                dedication(1L, "dla Ani na <b>18-stkę</b>", true), dedication(1L, "dla Pana Młodego", false),
+                dedication(1L, "od świadków", true)));
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariable("history", List.of(szampan, plain));
+        context.setVariable("dedications", dedications);
+        String html = engine.process("dashboard", Set.of("songTableBody"), context);
+
+        assertThat(html).contains("💌 „dla Ani na &lt;b&gt;18-stkę&lt;/b&gt;”", "💌 „dla Pana Młodego”", "💌 „od świadków”",
+                ">+2 więcej<").doesNotContain("??");
+        assertThat(html.split("s2p-dedication\"", -1)).as("three lines, one each").hasSize(4);
+        assertThat(html.split("s2p-dedication-unchecked", -1)).as("the unchecked one marked").hasSize(2);
+        assertThat(html.substring(html.indexOf("data-song-id=\"2\""))).doesNotContain("💌");
+        assertThat(html.indexOf("dla Ani")).isLessThan(html.indexOf("od świadków"));
+
+        context.setVariable("dedications", null);
+        assertThat(engine.process("dashboard", Set.of("songTableBody"), context)).as("no map (a test, an old page): no line")
+                .doesNotContain("💌");
+    }
+
+    private static SongRequestDedicationEntity dedication(long songId, String text, boolean checked) {
+        return SongRequestDedicationEntity.builder().songRequestId(songId).text(text).checked(checked).createdAt(java.time.Instant.now()).build();
     }
 }

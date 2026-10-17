@@ -730,4 +730,19 @@ class DashboardPageRenderTest {
         assertThat(at).as("the row " + row).isPositive();
         return html.substring(at, html.indexOf("</a>", at));
     }
+    /** The guests' dedications (V38) on or off in the card "Impreza", saved as soon as picked (data-auto-submit), as the vibe. */
+    @Test
+    void theDedications_areSwitchedInThePartyCard() {
+        String on = renderDashboard(party(), List.of(), PL);
+        assertThat(on).contains("action=\"/dj/dashboard/dedications\"", "id=\"dedicationsSelect\"", ">Dedykacje gości<",
+                "value=\"true\" selected=\"selected\">Włączone<", "value=\"false\">Wyłączone<").doesNotContain("??");
+        assertThat(on.indexOf("id=\"dedicationsSelect\"")).as("in the card \"Impreza\"").isGreaterThan(on.indexOf("id=\"partyCard\""))
+                .isLessThan(on.indexOf("action=\"/dj/dashboard/party-words\""));
+        assertThat(on.substring(on.indexOf("id=\"dedicationsSelect\""))).startsWith("id=\"dedicationsSelect\" name=\"on\" data-auto-submit");
+
+        PartySettingsEntity offParty = party();
+        offParty.setDedicationsOn(false);
+        assertThat(renderDashboard(offParty, List.of(), PL)).contains("value=\"false\" selected=\"selected\">Wyłączone<");
+        assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">Guests’ dedications<", ">On<", ">Off<");
+    }
 }
