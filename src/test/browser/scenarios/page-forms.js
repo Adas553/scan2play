@@ -47,6 +47,25 @@
         }
     });
 
+    // The guests' dedications (V38) on or off: saved as soon as picked, as the vibe
+    S2P.scenario({
+        name: 'dedications-switch-saves-on-change',
+        title: 'switching the guests\' dedications off saves it at once, by fetch (the page stays)',
+        run: async function (t) {
+            const select = document.getElementById('dedicationsSelect');
+            t.step('at first on', select ? select.value : null, 'true');
+            if (!select) {
+                return;
+            }
+            select.value = 'false';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            await waitForPosts(t, '/dj/dashboard/dedications', 1, 'the switch saved');
+            const saved = (await t.stand.requests('POST /dj/dashboard/dedications'))[0].q;
+            t.step('"off" is sent with the party', [saved.on, !!saved.partyCode], ['false', true]);
+            t.check('the page did not reload (the select is the same element)', document.getElementById('dedicationsSelect') === select);
+        }
+    });
+
     // The DJ's profiles (V24): the server refuses one that is not a profile on its site (400) — the form says so, the button ✗, not
     // a ✓ for something not saved; saved again, the note goes.
     S2P.scenario({
