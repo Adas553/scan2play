@@ -752,6 +752,49 @@ class DashboardPageRenderTest {
         assertThat(at).as("the row " + row).isPositive();
         return html.substring(at, html.indexOf("</a>", at));
     }
+
+    /**
+     * The DJ's panel of a made-up party, for the pictures of the landing page (src/test/browser/screenshots.py: a laptop's screen,
+     * {@code static/images/landing/dashboard-<lang>.webp}): the queue with the guests' words, the AI's comments, the votes, a song on the
+     * hosts' list (⭐), one to check (⚠) and tips. No real person in it.
+     */
+    @Test
+    void theLandingPagesPicture_ofTheDashboard() throws IOException {
+        for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            boolean pl = locale == PL;
+            PartySettingsEntity party = party();
+            party.setDjName("DJ Kuba");
+            party.setGlobalVibe(VibeType.WEDDING_CLASSICS);
+            party.setHostWanted("Przez twe oczy zielone");
+            List<SongRequestEntity> queue = List.of(
+                    demo(21, 12, "Zenek Martyniuk - Przez twe oczy zielone", "zenek oczy zielone", 9, 0, 1,
+                            pl ? "Sala już śpiewa — to musi polecieć!" : "The whole room sings this one!"),
+                    demo(22, 15, "ABBA - Dancing Queen", "abba dancing queen", 6, 2, 4,
+                            pl ? "Klasyk parkietu, idealny na rozkręcenie." : "A dance-floor classic, perfect to warm up."),
+                    demo(23, 18, "Dawid Podsiadło - Małomiasteczkowy", "podsiadło małomiasteczkowy", 4, 0, 7,
+                            pl ? "Świetny wybór na drugą część wieczoru." : "Great pick for the second half of the night."),
+                    demo(24, 21, "Smash Mouth - All Star", "ta piosenka ze shreka", 2, 0, 11,
+                            pl ? "Dobra energia, wszyscy znają refren." : "Good energy, everyone knows the chorus."),
+                    demo(25, 23, "Queen - Don't Stop Me Now", "queen dont stop me now", 3, 1, 14,
+                            pl ? "Petarda na koniec seta!" : "A banger to end the set!"));
+            String html = renderDashboard(party, queue, locale);
+            assertThat(html).contains("DJ Kuba", "s2p-host-wanted", "s2p-check-song").doesNotContain("??");
+            write("landing-demo-dashboard-" + locale.getLanguage() + ".html", html);
+        }
+    }
+
+    private static SongRequestEntity demo(long id, int number, String name, String guestText, int votes, int tips, int minute,
+                                          String comment) {
+        SongRequestEntity request = song(id, name);
+        request.setRequestNumber(number);
+        request.setGuestText(guestText);
+        request.setVotes(votes);
+        request.setTips(tips);
+        request.setDjComment(comment);
+        request.setRequestedAt(java.time.LocalDateTime.of(2026, 10, 17, 21, minute).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
+        return request;
+    }
+
     /** The guests' dedications (V38) on or off in the card "Impreza", saved as soon as picked (data-auto-submit), as the vibe. */
     @Test
     void theDedications_areSwitchedInThePartyCard() {
