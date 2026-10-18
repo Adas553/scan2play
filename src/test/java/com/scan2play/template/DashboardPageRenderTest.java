@@ -478,7 +478,8 @@ class DashboardPageRenderTest {
         assertThat(html).as("no \"Wklej link\" on another's party: she has joined already (the owner, 2026-10-10)")
                 .doesNotContain("id=\"joinStaffForm\"", "action=\"/dj/join\"");
         assertThat(html).as("the QR code, its link and its print: the staff's too — it is on the tables anyway (the owner, 2026-10-09)")
-                .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"", "aria-label=\"Link dla gości\"");
+                .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"", "aria-label=\"Link dla gości\"",
+                        "id=\"tvScreenLink\"");
         assertThat(html).as("the owner's: the settings, the limits, the lists, the profiles, the tip link, the staff")
                 .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
                         "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", "data-settings-row=\"links\"",
@@ -777,8 +778,22 @@ class DashboardPageRenderTest {
                             pl ? "Dobra energia, wszyscy znają refren." : "Good energy, everyone knows the chorus."),
                     demo(25, 23, "Queen - Don't Stop Me Now", "queen dont stop me now", 3, 1, 14,
                             pl ? "Petarda na koniec seta!" : "A banger to end the set!"));
-            String html = renderDashboard(party, queue, locale);
-            assertThat(html).contains("DJ Kuba", "s2p-host-wanted", "s2p-check-song").doesNotContain("??");
+            // the guests' dedications (V38) under two songs
+            queue.get(0).setDedications(2);
+            queue.get(2).setDedications(1);
+            dedications = Map.of(
+                    21L, List.of(dedication(21, pl ? "Dla Młodej Pary — wszystkiego najlepszego!" : "For the newlyweds — all the best!"),
+                            dedication(21, pl ? "Dla babci Heli" : "For Grandma Helen")),
+                    23L, List.of(dedication(23, pl ? "Dla Ani na 18-stkę" : "For Anna on her 18th")));
+            String html;
+            try {
+                html = renderDashboard(party, queue, locale);
+            } finally {
+                dedications = Map.of();
+            }
+            assertThat(html).contains("DJ Kuba", "s2p-host-wanted", "s2p-check-song",
+                    pl ? "Dla babci Heli" : "For Grandma Helen", pl ? "Dla Ani na 18-stkę" : "For Anna on her 18th")
+                    .doesNotContain("??", pl ? ">wczoraj<" : ">yesterday<");
             write("landing-demo-dashboard-" + locale.getLanguage() + ".html", html);
         }
     }
@@ -791,8 +806,31 @@ class DashboardPageRenderTest {
         request.setVotes(votes);
         request.setTips(tips);
         request.setDjComment(comment);
-        request.setRequestedAt(java.time.LocalDateTime.of(2026, 10, 17, 21, minute).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
+        // today, whenever the pictures are made: the day under the time says "dziś" ("wczoraj" with a fixed date a day later)
+        request.setRequestedAt(java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).atTime(21, minute)
+                .atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
         return request;
+    }
+
+    /**
+     * The screen for a TV (Next 7 c, an idea from Rekwest): under the QR code's print, the party's public screen in a new tab — the
+     * most wanted songs and the code, to open on a TV or a laptop by a projector.
+     */
+    @Test
+    void theQrCard_leadsToTheTvScreen() {
+        String html = renderDashboard(party(), List.of(), PL);
+        assertThat(DashboardPageRenderTest.tagOf(html, "tvScreenLink")).contains("href=\"/p/HARN1/tv\"", "target=\"_blank\"",
+                "rel=\"noopener\"");
+        assertThat(html).contains(">📺 Ekran na TV<");
+        assertThat(html.indexOf("id=\"tvScreenLink\"")).as("beside the print").isGreaterThan(html.indexOf("id=\"qrPrintLink\""));
+        assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">📺 Screen for a TV<");
+    }
+
+    /** The opening tag of the element with this id. */
+    static String tagOf(String html, String id) {
+        int at = html.indexOf("id=\"" + id + "\"");
+        assertThat(at).as(id).isPositive();
+        return html.substring(html.lastIndexOf('<', at), html.indexOf('>', at) + 1);
     }
 
     /** The guests' dedications (V38) on or off in the card "Impreza", saved as soon as picked (data-auto-submit), as the vibe. */

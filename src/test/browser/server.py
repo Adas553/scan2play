@@ -16,6 +16,8 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
                                      history-<filter>-more.html when the request has a limit — "Show more")
   GET  /p/ABC12/queue                the REAL list of the guest page alone (guest-queue.html, GuestPageRenderTest: the list of guest-many)
   GET  /p/ABC12/queue/more           the REAL folded rest of the guest's list (guest-queue-more.html, GuestPageRenderTest)
+  GET  /p/ABC12/tv/list              the REAL list of the screen for a TV (state 'tvList': tv-list.html, tv-list-next.html,
+                                     tv-list-empty.html, tv-list-ended.html — TvScreenWebTest), or the status 'tvListStatus'
   POST /p/ABC12/vote                 a guest's 👍 (guest-party.js): the REAL answer, that song's row (state 'voteAnswer':
                                      guest-vote-answer.html, or guest-vote-gone.html — GuestPageRenderTest); the X-Requested-With
                                      header is logged with the form's fields
@@ -77,6 +79,9 @@ def default_state():
         'postStatus': {},
         # What GET /p/ABC12/queue ("↻ Odśwież" of the guest page) answers instead of the list (the vote's answer file), e.g. 500
         'guestQueueStatus': None,
+        # What GET /p/ABC12/tv/list (the screen for a TV, tv.js) answers: the rendered list of that name, or the status instead
+        'tvList': 'tv-list',
+        'tvListStatus': None,
         'voteAnswer': 'guest-vote-answer',   # what POST /p/ABC12/vote answers ('guest-vote-gone': the song was played meanwhile)
         'requests': [],
     }
@@ -254,6 +259,11 @@ class Handler(BaseHTTPRequestHandler):
         state = stand.state
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/p/') and path.endswith('/tv/list'):   # the screen for a TV fetches its list again (tv.js)
+            if state['tvListStatus']:
+                return self._send(state['tvListStatus'])
+            with open(os.path.join(stand.rendered, state['tvList'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path.startswith('/p/') and path.endswith('/queue'):   # the guest's list fetched again: as the real server renders it
             if state['guestQueueStatus']:
