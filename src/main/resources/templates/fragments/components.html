@@ -342,6 +342,16 @@
 
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
+<!--/* The page's language (LanguageSwitchAdvice, the owner 2026-10-18): this page with ?lang=pl / ?lang=en, kept in a cookie for the
+     next pages (WebConfig); each name in its own language, the one shown marked. None on a page answered to a POST. In the footer of
+     every page, and at the top of the landing page. A pill of two, the language shown filled (app.css, .s2p-lang-switch). */-->
+<nav th:fragment="langSwitch(navId, extraClass)" th:if="${langSwitch != null}" th:id="${navId}" class="s2p-lang-switch"
+     th:classappend="${extraClass}" aria-label="Język / Language" th:with="english=${#messages.msg('html.lang') == 'en'}">
+    <a th:href="${langSwitch.pl}" href="?lang=pl" lang="pl" hreflang="pl" th:attr="aria-current=${english ? null : 'true'}">Polski</a>
+    <span aria-hidden="true">·</span>
+    <a th:href="${langSwitch.en}" href="?lang=en" lang="en" hreflang="en" th:attr="aria-current=${english ? 'true' : null}">English</a>
+</nav>
+
 <!-- ======================================================================
      Footer Fragment — Scan2Play's legal pages (required for Google OAuth verification)
      ====================================================================== -->
@@ -351,16 +361,7 @@
             <a href="/privacy" class="text-secondary me-3" th:text="#{footer.privacy}">Privacy Policy</a>
             <a href="/terms" class="text-secondary me-3" th:text="#{footer.terms}">Terms of Service</a>
         </p>
-        <!--/* The page's language (LanguageSwitchAdvice, the owner 2026-10-18): this page with ?lang=pl / ?lang=en, kept in a cookie for
-             the next pages (WebConfig); each name in its own language, the one shown marked. None on a page answered to a POST. */-->
-        <nav th:if="${langSwitch != null}" id="langSwitch" class="mb-2 s2p-lang-switch" aria-label="Język / Language"
-             th:with="english=${#messages.msg('html.lang') == 'en'}">
-            <a th:href="${langSwitch.pl}" href="?lang=pl" lang="pl" hreflang="pl" th:attr="aria-current=${english ? null : 'true'}"
-               class="px-2" th:classappend="${english} ? 'text-secondary' : 'text-white fw-semibold'">Polski</a>
-            <span class="text-secondary" aria-hidden="true">·</span>
-            <a th:href="${langSwitch.en}" href="?lang=en" lang="en" hreflang="en" th:attr="aria-current=${english ? 'true' : null}"
-               class="px-2" th:classappend="${english} ? 'text-white fw-semibold' : 'text-secondary'">English</a>
-        </nav>
+        <nav th:replace="~{fragments/components :: langSwitch('langSwitch', 'mb-2')}"></nav>
         <p class="mb-0">&copy; 2026 Scan2Play</p>
     </div>
 </footer>

@@ -34,3 +34,43 @@ S2P.scenario({
         t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
     }
 });
+
+/** The landing page's switch at the top (the owner, 2026-10-18): on the first screen, on the right, above the logo, tappable. */
+function topSwitchShows(t) {
+    const nav = document.getElementById('langSwitchTop');
+    t.check('the switch at the top of the landing page', !!nav);
+    if (!nav) {
+        return;
+    }
+    const links = Array.from(nav.querySelectorAll('a'));
+    const box = nav.getBoundingClientRect();
+    t.step('Polski (marked) and English', links.map(function (a) { return [a.textContent.trim(), a.getAttribute('aria-current')]; }),
+        [['Polski', 'true'], ['English', null]]);
+    t.check('on the first screen, above the logo', box.bottom <= window.innerHeight
+        && box.bottom <= document.querySelector('.s2p-landing-hero .s2p-logo').getBoundingClientRect().top + 1);
+    // the right edge of the page's column (on a wide screen the column is centred, not the window's edge)
+    const column = document.querySelector('.s2p-landing-hero').getBoundingClientRect();
+    t.check('on the right of the page\'s column', links[1].getBoundingClientRect().right >= column.right - 40);
+    t.step('each at least 40 px high (a finger)', links.filter(function (a) { return a.getBoundingClientRect().height < 40; }).length, 0);
+    t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+}
+
+S2P.scenario({
+    name: 'lang-switch-landing-top-phone',
+    title: 'the landing page on a phone: "Polski · English" at the top, on the right, above the logo',
+    page: 'landing-pl',
+    viewport: '390,844',
+    run: async function (t) {
+        topSwitchShows(t);
+    }
+});
+
+S2P.scenario({
+    name: 'lang-switch-landing-top-wide',
+    title: 'the landing page on a laptop: "Polski · English" at the top, on the right, above the logo',
+    page: 'landing-pl',
+    viewport: '1366,900',
+    run: async function (t) {
+        topSwitchShows(t);
+    }
+});

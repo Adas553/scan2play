@@ -691,10 +691,15 @@ class GuestPageRenderTest {
             WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                     .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
             context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+            // what LanguageSwitchAdvice adds to every page's model
+            context.setVariable("langSwitch", new com.scan2play.controller.LanguageSwitchAdvice.LanguageSwitch("/?lang=pl", "/?lang=en"));
             String html = engine.process("landing", context);
             writeForTheBrowserTests("landing-" + lang + ".html", html);
 
             assertThat(html).as(lang).doesNotContain("??");
+            // the language at the top too (the owner, 2026-10-18), above the logo — and in the footer
+            assertThat(html.indexOf("id=\"langSwitchTop\"")).as("at the top").isPositive().isLessThan(html.indexOf("id=\"landingStart\""));
+            assertThat(html).contains("id=\"langSwitch\"").containsPattern("id=\"langSwitchTop\"[^>]*>\\s*<a [^>]*href=\"/\\?lang=pl\"");
             assertThat(tag(html, "landingDashboardShot")).contains("src=\"/images/landing/dashboard-" + lang + ".webp\"",
                     "width=\"1920\"", "height=\"1140\"", "alt=\"", "fetchpriority=\"high\"");
             assertThat(tag(html, "landingGuestShot")).contains("src=\"/images/landing/guest-" + lang + ".webp\"",

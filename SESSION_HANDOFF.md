@@ -13,10 +13,11 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   between Polish and English, the guest's page too, then "the extended version". In every page's footer "Polski · English"
   (`LanguageSwitchAdvice` → the page's own address with `?lang=`, its `?party=` and other parameters kept; `WebConfig` keeps the
   pick in the cookie `lang`, which the privacy pages describe already) — the hosts' page and the staff's invitation got the footer
-  for it —, and in the panel's menu "Konto" ("Język / Language": the footer is far under a long queue). None on a page answered to a
+  for it —, at the top of the landing page (on the right, above the logo; the owner asked) and in the panel's menu "Konto" ("Język /
+  Language": the footer is far under a long queue). None on a page answered to a
   POST (the result of a request). The TV screen, the QR poster and the evening summary (print pages) stay as they are. Tests:
   `LanguageSwitchAdviceTest`, `GuestNoSessionWebTest` (the switch on a real page, no session), `GuestPageRenderTest`,
-  `DashboardPageRenderTest`; browser `lang-switch-in-the-account-menu`, `lang-switch-in-the-footer`.
+  `DashboardPageRenderTest`; browser `lang-switch-in-the-account-menu`, `lang-switch-in-the-footer`, `lang-switch-landing-top-phone` / `-wide`.
 - **2026-10-18 — the state.** `main` = `dev` in content. Releases: #108 (the dedications #106 and the landing page #107; V38
   applied, deployed 2026-10-17 21:18 UTC) and #110 (#109, the landing page without the PRO badge; deployed 2026-10-18 08:40 UTC) —
   both SUCCESS; Railway waits for the CI. Live and checked: the home page with `/images/landing/*.webp`, the headers
