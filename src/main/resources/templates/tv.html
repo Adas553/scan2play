@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link href="/css/tv.css" th:href="@{/css/tv.css}" rel="stylesheet">
+</head>
+<!--/*
+    The screen for a TV in the hall or the pub (TvScreenController, Next 7 c): the party's QR code on the left, the guests' ten most
+    wanted songs with their votes on the right — no order of play, no guests' words or dedications. Polish and English at once, as
+    the QR poster (the guests are of both); the texts are written here, each in an element with its own lang. js/tv.js fetches the
+    list (the fragment tvList) again every few seconds and keeps the screen awake.
+*/-->
+<body>
+<main class="tv">
+    <section class="tv-code">
+        <p class="tv-logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+        <h1><span lang="pl">Zeskanuj i poproś o piosenkę</span>
+            <span lang="en" class="second">Scan to request a song</span></h1>
+        <img th:if="${qrCodeBase64}" class="tv-qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
+        <p class="tv-link" th:text="${permanentLink}">www.scan2play.com.pl/p/ABCDE</p>
+        <p th:if="${djName}" class="tv-dj">🎧 <span th:text="${djName}">DJ Koko</span></p>
+    </section>
+
+    <section id="tvList" class="tv-list" th:fragment="tvList" th:attr="data-url=@{/p/{code}/tv/list(code=${partyCode})}">
+        <h2><span aria-hidden="true">🔥</span> <span lang="pl">Najczęściej wybierane</span>
+            <span lang="en" class="second">Most wanted</span></h2>
+        <th:block th:if="${isActive}">
+            <ol th:unless="${#lists.isEmpty(tvSongs)}" class="tv-songs">
+                <li class="tv-song" th:each="song : ${tvSongs}">
+                    <span class="tv-name" th:text="${song.songName}">Wilki - Baśka</span>
+                    <span class="tv-votes"><span aria-hidden="true">👍</span> <span th:text="${song.votes}">0</span></span>
+                </li>
+            </ol>
+            <p th:if="${#lists.isEmpty(tvSongs)}" id="tvEmpty" class="tv-note">
+                <span lang="pl">Jeszcze nikt nie poprosił — zeskanuj kod i bądź pierwszy!</span>
+                <span lang="en" class="second">No requests yet — scan the code and be the first!</span></p>
+        </th:block>
+        <p th:unless="${isActive}" id="tvEnded" class="tv-note">
+            <span lang="pl">DJ nie przyjmuje teraz próśb</span>
+            <span lang="en" class="second">The DJ is not taking requests now</span></p>
+    </section>
+</main>
+<script src="/js/tv.js" th:src="@{/js/tv.js}"></script>
+</body>
+</html>

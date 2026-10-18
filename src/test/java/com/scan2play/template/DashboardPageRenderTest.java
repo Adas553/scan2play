@@ -478,7 +478,8 @@ class DashboardPageRenderTest {
         assertThat(html).as("no \"Wklej link\" on another's party: she has joined already (the owner, 2026-10-10)")
                 .doesNotContain("id=\"joinStaffForm\"", "action=\"/dj/join\"");
         assertThat(html).as("the QR code, its link and its print: the staff's too — it is on the tables anyway (the owner, 2026-10-09)")
-                .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"", "aria-label=\"Link dla gości\"");
+                .contains("id=\"partyLinkInput\"", "value=\"http://localhost:8080/p/HARN1\"", "id=\"qrPrintLink\"", "aria-label=\"Link dla gości\"",
+                        "id=\"tvScreenLink\"");
         assertThat(html).as("the owner's: the settings, the limits, the lists, the profiles, the tip link, the staff")
                 .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
                         "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", "data-settings-row=\"links\"",
@@ -793,6 +794,27 @@ class DashboardPageRenderTest {
         request.setDjComment(comment);
         request.setRequestedAt(java.time.LocalDateTime.of(2026, 10, 17, 21, minute).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
         return request;
+    }
+
+    /**
+     * The screen for a TV (Next 7 c, an idea from Rekwest): under the QR code's print, the party's public screen in a new tab — the
+     * most wanted songs and the code, to open on a TV or a laptop by a projector.
+     */
+    @Test
+    void theQrCard_leadsToTheTvScreen() {
+        String html = renderDashboard(party(), List.of(), PL);
+        assertThat(DashboardPageRenderTest.tagOf(html, "tvScreenLink")).contains("href=\"/p/HARN1/tv\"", "target=\"_blank\"",
+                "rel=\"noopener\"");
+        assertThat(html).contains(">📺 Ekran na TV<");
+        assertThat(html.indexOf("id=\"tvScreenLink\"")).as("beside the print").isGreaterThan(html.indexOf("id=\"qrPrintLink\""));
+        assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">📺 Screen for a TV<");
+    }
+
+    /** The opening tag of the element with this id. */
+    static String tagOf(String html, String id) {
+        int at = html.indexOf("id=\"" + id + "\"");
+        assertThat(at).as(id).isPositive();
+        return html.substring(html.lastIndexOf('<', at), html.indexOf('>', at) + 1);
     }
 
     /** The guests' dedications (V38) on or off in the card "Impreza", saved as soon as picked (data-auto-submit), as the vibe. */

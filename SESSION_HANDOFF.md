@@ -111,8 +111,13 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
      evening's summary (today only the queue shows them).
    - **The DJ's contact after the party:** built 2026-10-16 (Start here). Left, if DJs ask: a phone number or a website as a contact
      (the profiles are Instagram / Facebook / TikTok only).
-   - **A TV screen** in the hall or the pub: the guests' most wanted songs (the votes) and the QR code beside them — not a queue of
-     what plays next (Scan2Play has no DJ's play order). A page of its own for a screen, polled like the panel.
+   - **A TV screen:** built 2026-10-18 on `claude/tv-screen` (a PR to `dev`). The owner's picks: public (`/p/{code}/tv`, no login on
+     the TV), the ten most wanted of the waiting songs (the guests' list's order, `GuestQueueService.mostWanted`), plan Free. The QR
+     code and the address on the left, the songs with their 👍 on the right, Polish and English at once like the poster; no guests'
+     words, no dedications, no session; `tv.js` fetches the list every 10 s and keeps the screen awake; "📺 Ekran na TV" beside
+     "Drukuj plakat i karty" in the panel's card "Kod QR" (the staff's too). Tests: `TvScreenWebTest`, `GuestQueueServiceTest`,
+     `DashboardPageRenderTest`; browser `tv-fits-a-full-hd-tv`, `tv-fits-a-small-tv` (a laptop's window of 1280 × 720 shows
+     ~570 px), `tv-list-refreshes`, `tv-keeps-the-list-when-offline`. Left, if DJs ask: the DJ's logo or a "now playing" line.
    - **The landing page:** built 2026-10-17 (Start here). Left: pages of their own for whom (wedding DJs, clubs, pubs, karaoke —
      for search engines, in the sitemap).
 

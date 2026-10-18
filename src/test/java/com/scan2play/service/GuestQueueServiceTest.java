@@ -62,6 +62,21 @@ class GuestQueueServiceTest {
         assertThat(queue.myVotes()).containsExactly(11L);
     }
 
+    /** The screen for a TV (Next 7 c): the ten most wanted of the waiting songs, in the order of the guests' list. */
+    @Test
+    void theTvScreen_showsTheTenMostWanted_inTheGuestsOrder() {
+        givenVotes(0, 5, 1, 1, 9, 0, 2, 3, 0, 4, 7, 6);   // ids 10..21, oldest first
+
+        assertThat(service.mostWanted(PARTY)).extracting(SongRequestEntity::getId)
+                .containsExactly(14L, 20L, 21L, 11L, 19L, 17L, 16L, 13L, 12L, 18L);
+    }
+
+    @Test
+    void theTvScreen_ofAnEmptyQueue_isEmpty() {
+        givenQueue();
+        assertThat(service.mostWanted(PARTY)).isEmpty();
+    }
+
     @Test
     void fiveOrFewerWaiting_areAllShown_nothingFolded() {
         givenQueue(10, 11, 12, 13, 14);

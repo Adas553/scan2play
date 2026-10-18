@@ -1,0 +1,225 @@
+/* The screen for a TV (templates/tv.html): dark, the colours of Scan2Play (app.css), sized by the screen — read from across the
+   hall, everything on one screen with nothing to scroll: the QR code on the left, the ten most wanted songs on the right. */
+
+:root {
+    --tv-bg: #0b0b0b;
+    --tv-card: #161616;
+    --tv-border: #333;
+    --tv-text: #e0e0e0;
+    --tv-muted: #a3acb6;
+    --tv-white: #ffffff;
+    --tv-cyan: #0dcaf0;
+    --tv-yellow: #ffc107;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: var(--tv-bg);
+    color: var(--tv-text);
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+body {
+    overflow: hidden;   /* a TV: nobody scrolls it */
+}
+
+.tv {
+    display: grid;
+    grid-template-columns: minmax(0, 38fr) minmax(0, 62fr);
+    gap: 3vw;
+    height: 100vh;
+    padding: 3.5vh 3vw;
+}
+
+/* the second language under the first, quieter (as on the QR poster) */
+.second {
+    display: block;
+    color: var(--tv-muted);
+    font-weight: 400;
+    font-size: 0.75em;
+}
+
+/* ---- The code ---- */
+
+.tv-code {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2vh;
+    min-height: 0;
+    text-align: center;
+}
+
+.tv-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.8vh;
+    margin: 0;
+    color: var(--tv-white);
+    font-size: 4.2vh;
+    font-weight: 700;
+}
+
+.tv-logo img {
+    width: auto;
+    height: 5vh;
+}
+
+.tv-logo .two {
+    color: var(--tv-cyan);
+}
+
+.tv-code h1 {
+    margin: 0;
+    color: var(--tv-white);
+    font-size: 4.2vh;
+    line-height: 1.2;
+}
+
+.tv-qr {
+    width: min(46vh, 30vw);
+    height: auto;
+    aspect-ratio: 1;
+    padding: 1.2vh;
+    border-radius: 1.5vh;
+    background: #ffffff;   /* a quiet zone around the code: phones read it on a dark screen */
+    image-rendering: pixelated;
+}
+
+.tv-link {
+    margin: 0;
+    color: var(--tv-cyan);
+    font-size: 2.6vh;
+    overflow-wrap: anywhere;
+}
+
+.tv-dj {
+    margin: 0;
+    color: var(--tv-white);
+    font-size: 3vh;
+    font-weight: 600;
+}
+
+/* ---- The most wanted ---- */
+
+.tv-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.tv-list h2 {
+    margin: 0 0 1.6vh;
+    color: var(--tv-white);
+    font-size: 4.4vh;
+    line-height: 1.2;
+}
+
+.tv-list h2 .second {
+    display: inline;
+    margin-left: 0.6vw;
+}
+
+.tv-songs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: rank;
+}
+
+/* ten rows in about 70 % of the screen's height, with room for the borders, which do not shrink with it (a laptop's browser on a
+   projector at 1280 × 720 shows a page ~570 px high) */
+.tv-song {
+    display: flex;
+    align-items: center;
+    gap: 1.5vw;
+    min-height: 6vh;
+    padding: 0.8vh 1.5vw;
+    border: 1px solid var(--tv-border);
+    border-radius: 1.2vh;
+    background: var(--tv-card);
+    font-size: 3.2vh;
+    line-height: 1.2;
+    counter-increment: rank;
+}
+
+.tv-song::before {
+    content: counter(rank);
+    min-width: 1.6em;
+    color: var(--tv-muted);
+    font-weight: 700;
+}
+
+/* one line each: a long name ends in "…" rather than pushing the list off the screen */
+.tv-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tv-white);
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.tv-votes {
+    flex: none;
+    padding: 0.2vh 1.2vw;
+    border: 2px solid var(--tv-yellow);
+    border-radius: 999px;
+    color: var(--tv-yellow);
+    font-weight: 700;
+}
+
+/* the room's favourite: filled, as a 👍 given on the guest's page */
+.tv-song:first-child .tv-votes {
+    background: var(--tv-yellow);
+    color: #000000;
+}
+
+.tv-note {
+    margin: auto 0;
+    color: var(--tv-muted);
+    font-size: 3.6vh;
+    text-align: center;
+}
+
+.tv-note .second {
+    margin-top: 1vh;
+}
+
+/* a screen standing upright (a phone, a portrait TV): the code above the list, and scrolling allowed */
+@media (orientation: portrait) {
+    body {
+        overflow: auto;
+    }
+
+    .tv {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .tv-qr {
+        width: min(60vw, 40vh);
+    }
+
+    .tv-code h1,
+    .tv-list h2,
+    .tv-logo {
+        font-size: 3vh;
+    }
+
+    .tv-song {
+        font-size: 2.4vh;
+    }
+}

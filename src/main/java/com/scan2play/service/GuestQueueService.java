@@ -23,6 +23,9 @@ public class GuestQueueService {
     /** How many of the waiting requests the page shows before "Pokaż wszystkie prośby". */
     static final int SHOWN = 5;
 
+    /** How many songs the screen for a TV shows: what a room reads from across the hall. */
+    static final int TV_SHOWN = 10;
+
     private final DjService djService;
 
     /**
@@ -54,6 +57,15 @@ public class GuestQueueService {
         List<SongRequestEntity> songs = byVotes(queue);
         int shown = Math.min(SHOWN, songs.size());
         return new GuestQueue(songs.subList(0, shown), songs.subList(shown, songs.size()), myIds, mySong, mine.size(), myVotes);
+    }
+
+    /**
+     * The screen for a TV ({@code /p/{code}/tv}, Next 7 c): the {@value #TV_SHOWN} most wanted of the waiting songs, in the order of
+     * the guests' list — the screen tells the room what the room wants, not what plays next.
+     */
+    public List<SongRequestEntity> mostWanted(String partyCode) {
+        List<SongRequestEntity> songs = byVotes(djService.getDashboardQueue(partyCode));   // cached 3 s: a TV polling costs little
+        return songs.subList(0, Math.min(TV_SHOWN, songs.size()));
     }
 
     /** Every waiting song, the most votes first, the newest first among equals (the queue comes oldest first). */

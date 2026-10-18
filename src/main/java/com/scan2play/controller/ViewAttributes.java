@@ -144,4 +144,6 @@ public final class ViewAttributes {
     /** An invitation by e-mail (V34): its id — the page's "Dołącz" / "Nie, dziękuję" answer it; null for the link. */
     public static final String JOIN_INVITATION_ID = "joinInvitationId";
     public static final String JOIN_PROBLEM = "joinProblem";
+    /** The screen for a TV (Next 7 c): the most wanted of the waiting songs, {@code GuestQueueService.mostWanted}. */
+    public static final String TV_SONGS = "tvSongs";
 }
