@@ -353,8 +353,12 @@ class GuestPageRenderTest {
         writePreview("landing.html", pages[0]);
 
         assertThat(pages[0]).doesNotContain("??");
-        assertThat(pages[0]).contains("id=\"staffLogin\"", "Masz zaproszenie do obsługi imprezy? Dołącz →", "action=\"/join\"",
-                "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"");
+        // the owner, 2026-10-18 ("czy ten przycisk jest profesjonalny"): words a newcomer knows, no "→" on what only unfolds, and
+        // under the last "Zbieraj prośby gości" — not floating between the hero and the steps
+        assertThat(pages[0]).contains("id=\"staffLogin\"", ">Masz link z zaproszeniem od DJ-a? Wklej go tutaj<", "action=\"/join\"",
+                "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"", "obsługi imprezy? Dołącz");
+        assertThat(pages[0].indexOf("id=\"staffLogin\"")).as("under the final start, above the footer")
+                .isGreaterThan(pages[0].indexOf("id=\"landingFinal\"")).isLessThan(pages[0].indexOf("<footer"));
         assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");
         assertThat(tag(pages[1], "staffLogin")).as("open after a link that did not work").contains("open");
         assertThat(pages[1]).contains("id=\"staffLinkInvalid\"", "Ten link nie działa — poproś organizatora o nowy.");
@@ -662,14 +666,22 @@ class GuestPageRenderTest {
     @Test
     void theLandingPagesPicture_ofTheGuestsPage() {
         for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            // the English picture: songs known everywhere (the owner, 2026-10-18), as on the panel's picture
+            boolean pl = locale == PL;
+            String dj = pl ? "DJ Kuba" : "DJ Alex";
+            String mine = pl ? "sanah - Szampan" : "Dua Lipa - Levitating";
             List<SongRequestEntity> songs = List.of(
-                    demo(1, 12, "Zenek Martyniuk - Przez twe oczy zielone", 9), demo(2, 15, "ABBA - Dancing Queen", 6),
-                    demo(3, 18, "Dawid Podsiadło - Małomiasteczkowy", 4), demo(4, 21, "Queen - Don't Stop Me Now", 3),
-                    demo(5, 23, "sanah - Szampan", 1));
-            String html = render(locale, Map.of("djName", "DJ Kuba", "globalVibe", VibeType.WEDDING_CLASSICS,
-                    "guestQueue", new GuestQueue(songs, List.of(), Set.of(5L), "sanah - Szampan", 1, Set.of(2L))));
+                    demo(1, 12, pl ? "Zenek Martyniuk - Przez twe oczy zielone" : "Whitney Houston - I Wanna Dance with Somebody", 9),
+                    demo(2, 15, "ABBA - Dancing Queen", 6),
+                    demo(3, 18, pl ? "Dawid Podsiadło - Małomiasteczkowy" : "Ed Sheeran - Perfect", 4),
+                    demo(4, 21, "Queen - Don't Stop Me Now", 3), demo(5, 23, mine, 1));
+            String html = render(locale, Map.of("djName", dj, "globalVibe", VibeType.WEDDING_CLASSICS,
+                    "guestQueue", new GuestQueue(songs, List.of(), Set.of(5L), mine, 1, Set.of(2L))));
             // the dedication (V38) folded under the field: unfolded, it pushed the guests' requests out of the phone's screen
-            assertThat(html).contains("DJ Kuba", "sanah - Szampan", "id=\"dedicationBox\"").doesNotContain("??");
+            assertThat(html).contains(dj, mine, "id=\"dedicationBox\"").doesNotContain("??");
+            if (!pl) {
+                assertThat(html).doesNotContain("Zenek", "Podsiadło", "sanah");
+            }
             writeForTheBrowserTests("landing-demo-guest-" + locale.getLanguage() + ".html", html);
         }
     }
