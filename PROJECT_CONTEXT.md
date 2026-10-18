@@ -960,7 +960,8 @@ the owner's choice). Variables now: `GOOGLE_AI_API_KEY`, `GOOGLE_CLIENT_ID` / `_
 `SPRING_JPA_HIBERNATE_DDL_AUTO` removed. No `TZ`: the JVM is UTC. **Both services sleep** after ~10 minutes without traffic
 (Railway's serverless, kept on purpose while only friends use it): the first request wakes the app (~6 s), an app that wakes
 before its database fails once and Railway restarts it, and a database that falls asleep under a running app breaks the request
-that holds the dropped connection (seen once, 2026-10-06 16:04). Switch the database's sleep off before real customers. Later deploys: 2026-10-06 the notifications (PR #9, V21) and the
+that holds the dropped connection (seen once, 2026-10-06 16:04). A sleeping app also runs no `@Scheduled` job — the nightly
+clearing and purges (Section 4.1) did not run — so the owner decided (2026-10-18) to switch the sleep off for both services. Later deploys: 2026-10-06 the notifications (PR #9, V21) and the
 versioned script addresses (PR #10); 2026-10-07 PR #11 via #12 (`a06e4be`: clear the history, the comment style, V22 and V23
 applied in 0.05 s, "Push notifications on"). Since:
 `CSP_ENFORCE=true` (2026-10-15), Dependabot alerts and security updates on, Railway waits for the CI before it deploys `main`

@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-16
+# Session Handoff — 2026-10-18
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
@@ -9,6 +9,20 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
+- **2026-10-18 — the state.** `main` = `dev` in content. Releases: #108 (the dedications #106 and the landing page #107; V38
+  applied, deployed 2026-10-17 21:18 UTC) and #110 (#109, the landing page without the PRO badge; deployed 2026-10-18 08:40 UTC) —
+  both SUCCESS; Railway waits for the CI. Live and checked: the home page with `/images/landing/*.webp`, the headers
+  `Content-Security-Policy` (enforced), `Referrer-Policy`, `Permissions-Policy`, `<link rel="icon">`. The review of 2026-10-14 is done
+  and released (`docs/history/review-2026-10-14.md`, "Status poprawek"); of the review of 2026-09-30 only 2.3 (one instance) is left.
+  Production: `CSP_ENFORCE=true` since 2026-10-15 (no "CSP violation" in the log up to 2026-10-18), `gemini-3.6-flash` (no AI error in
+  the log since 2026-10-15), the plans not enforced (`PLANS_ENFORCE` unset: every party has every feature), the notifications on.
+  **Sleeping:** both services, `scan2play` and `Postgres`, still have `sleepApplication` on (2026-10-18). A sleeping app runs no
+  `@Scheduled` job, so the nightly ones (04:40 the queues, 04:45 the 30-day purge, 04:50 the staff invitations — Polish time) ran
+  only on a night someone happened to keep it awake. Decided (the owner, 2026-10-18): **switch the sleep off** rather than change the
+  code. Mind: these jobs log only when they removed something ("Queue cleanup: …", "Song request cleanup: …"), so a quiet night
+  leaves no line. Waking also shows the app starting before its database: "Connection to postgres.railway.internal:5432 refused"
+  (Flyway, at start) on 2026-10-16 10:55 and 2026-10-18 02:19 UTC — each time Railway restarted the app and it was up a second later;
+  with both services awake it should not happen.
 - **2026-10-17 — the landing page (Next 7, an idea from Rekwest), on the branch `claude/landing-page` from `origin/dev`; a PR to
   `dev`.** The owner's picks: real pictures of the app, "Dla kogo" a section now (pages of their own later), no prices yet. At
   once the DJ's panel in a laptop and the guest's page in a phone (WebP, PL / EN, of a made-up party "DJ Kuba",
@@ -54,13 +68,6 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   by the vibe. The owner: ask for "wykonawca i tytuł" — a line of lyrics typed is the guest's own risk. The field's hint, the empty
   request's note, the QR poster and cards, the guide (PL / EN); the AI still tries lyrics. Next, if wanted: Gemini's Google Search
   grounding for a line of lyrics — a test with `GeminiComparison` first (the owner's yes for the key). Tests: 720 unit, 127 browser.
-- **2026-10-16 — the state.** `main` = `dev` in content (release #100 — #99, #101, #102 —, deployed by Railway 2026-10-16 15:13 UTC —
-  SUCCESS, the icon's `<link rel="icon">` live; Railway waits for the CI). The review of 2026-10-14 is done and released: K1, W1–W15, the small items, the deferred ones (#85–#89) and the look
-  (#92) — `docs/history/review-2026-10-14.md`, "Status poprawek". Of the review of 2026-09-30 only 2.3 (one instance) is left.
-  Production: the CSP enforced (`CSP_ENFORCE=true` since 2026-10-15, no "CSP violation" in the log since), `gemini-3.6-flash`, the
-  plans not enforced (`PLANS_ENFORCE` unset: every party has every feature), the notifications on (the VAPID keys on Railway; the owner tried them on a phone, 2026-10-16: "działa"), the
-  service sleeps when idle (`sleepApplication`: the first guest after a quiet spell waits a few seconds; the log then shows Hikari's
-  "Failed to validate connection").
 - **The history of 2026-10-05 … 16** (every branch and PR, the owner's words, how it was verified):
   `docs/history/session-handoff-2026-10-16.md`.
 
@@ -118,6 +125,12 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Waiting for the owner (not code)
 
+- **Railway's sleep:** switch `sleepApplication` off for `scan2play` and `Postgres` (Settings → Deploy → Serverless). Next morning:
+  the log after 04:40 / 04:45 Polish time (02:40 / 02:45 UTC until 2026-10-25, then 03:40 / 03:45) — a "Queue cleanup" line only if a
+  request had waited more than a day.
+- **Search Console:** URL Inspection of the home page → "Request indexing" (the icon, the new landing page).
+- **Gemini's prepaid credits:** top up or turn on auto-reload (at zero the API answers 402 and every request goes to the DJ
+  unchecked); a spending limit for the project in AI Studio.
 - **The CSP's week:** `CSP_ENFORCE=true` since 2026-10-15 — watch Railway's log for "CSP violation" until about 2026-10-22; back:
   delete the variable (a restart, no deploy).
 - **`server.forward-headers-strategy=FRAMEWORK`** trusts `X-Forwarded-*`: safe while Railway's own address cannot be reached past
