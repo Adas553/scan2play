@@ -643,7 +643,8 @@ class GuestPageRenderTest {
                     demo(5, 23, "sanah - Szampan", 1));
             String html = render(locale, Map.of("djName", "DJ Kuba", "globalVibe", VibeType.WEDDING_CLASSICS,
                     "guestQueue", new GuestQueue(songs, List.of(), Set.of(5L), "sanah - Szampan", 1, Set.of(2L))));
-            assertThat(html).contains("DJ Kuba", "sanah - Szampan").doesNotContain("??");
+            // the dedication (V38) folded under the field: unfolded, it pushed the guests' requests out of the phone's screen
+            assertThat(html).contains("DJ Kuba", "sanah - Szampan", "id=\"dedicationBox\"").doesNotContain("??");
             writeForTheBrowserTests("landing-demo-guest-" + locale.getLanguage() + ".html", html);
         }
     }
@@ -680,6 +681,9 @@ class GuestPageRenderTest {
                     .isGreaterThan(html.indexOf("id=\"landingGuestShot\""));
             assertThat(html.split("class=\"s2p-landing-step\"", -1)).as("three steps").hasSize(4);
             assertThat(section(html, "landingFeatures").split("class=\"s2p-landing-card\"", -1)).as("six features").hasSize(7);
+            // the guests' dedications (V38) in place of "no repeats, no spam" — the repeats are in the vibe's card now
+            assertThat(section(html, "landingFeatures")).contains(locale == PL ? ">Dedykacje<" : ">Dedications<")
+                    .doesNotContain(locale == PL ? "Bez powtórek" : "No repeats");
             assertThat(section(html, "landingWho").split("class=\"s2p-landing-card\"", -1)).as("four kinds of party").hasSize(5);
             assertThat(section(html, "landingFaq").split("<details", -1)).as("six questions").hasSize(7);
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);

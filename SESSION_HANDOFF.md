@@ -14,7 +14,9 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   once the DJ's panel in a laptop and the guest's page in a phone (WebP, PL / EN, of a made-up party "DJ Kuba",
   `src/test/browser/screenshots.py`), then three steps, six features, four kinds of party, six questions and the start again; the
   staff's way in and the guide stay. The old tile, the five steps and their CSS are gone. Tests: 728 unit, browser `landing-phone`,
-  `landing-wide`. Next, after #106: the dedications on the page and in the pictures (run the script again).
+  `landing-wide`. 2026-10-18, on `claude/landing-dedications`: the dedications on the page — a card "Dedykacje" in place of "Bez
+  powtórek i spamu" (the repeats now in the vibe's card; six cards for the grid of three) — and in the pictures (two songs with
+  dedications in the panel, the folded "💌 Dodaj dedykację" on the phone; the panel's demo is dated today, else "wczoraj").
 - **2026-10-17 — a dedication with a request (Next 7, an idea from Rekwest), on the branch `claude/request-dedication` from `origin/dev`;
   a PR to `dev`.** The owner's picks: an offensive one is dropped and the song goes on (the guest is told); every dedication kept,
   a vote's too (a table of its own, V38); plan Free; only the DJ sees them. Under the song's field "💌 Dodaj dedykację" (a `details`,
