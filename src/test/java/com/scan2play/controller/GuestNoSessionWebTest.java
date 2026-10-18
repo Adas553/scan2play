@@ -113,8 +113,8 @@ class GuestNoSessionWebTest {
         MvcResult result = mockMvc.perform(get("/p/ENDED").header("Accept-Language", "pl-PL")).andExpect(status().isOk()).andReturn();
         noSession(result);
         String html = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(html).contains("id=\"langSwitch\"", "href=\"/p/ENDED?lang=pl\"", "href=\"/p/ENDED?lang=en\"", ">Polski<", ">English<");
-        assertThat(html).containsPattern("<a [^>]*href=\"/p/ENDED\\?lang=pl\"[^>]*aria-current=\"true\"")
-                .doesNotContainPattern("<a [^>]*href=\"/p/ENDED\\?lang=en\"[^>]*aria-current");
+        assertThat(html).contains("id=\"langSwitch\"", "href=\"/p/ENDED?lang=pl#langSwitch\"", "href=\"/p/ENDED?lang=en#langSwitch\"", ">Polski<", ">English<");
+        assertThat(html).containsPattern("<a [^>]*href=\"/p/ENDED\\?lang=pl#langSwitch\"[^>]*aria-current=\"true\"")
+                .doesNotContainPattern("<a [^>]*href=\"/p/ENDED\\?lang=en#langSwitch\"[^>]*aria-current");
     }
 }

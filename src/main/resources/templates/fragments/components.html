@@ -344,12 +344,14 @@
 
 <!--/* The page's language (LanguageSwitchAdvice, the owner 2026-10-18): this page with ?lang=pl / ?lang=en, kept in a cookie for the
      next pages (WebConfig); each name in its own language, the one shown marked. None on a page answered to a POST. In the footer of
-     every page, and at the top of the landing page. A pill of two, the language shown filled (app.css, .s2p-lang-switch). */-->
+     every page, and at the top of the landing page. A pill of two, the language shown filled (app.css, .s2p-lang-switch). Each link
+     ends in this switch's id: the page in the other language opens where the switch is — at the footer, not at the top — and the
+     pages cross-fade (app.css, @view-transition): the change looks smooth without a script (the owner, 2026-10-18). */-->
 <nav th:fragment="langSwitch(navId, extraClass)" th:if="${langSwitch != null}" th:id="${navId}" class="s2p-lang-switch"
      th:classappend="${extraClass}" aria-label="Język / Language" th:with="english=${#messages.msg('html.lang') == 'en'}">
-    <a th:href="${langSwitch.pl}" href="?lang=pl" lang="pl" hreflang="pl" th:attr="aria-current=${english ? null : 'true'}">Polski</a>
+    <a th:href="${langSwitch.pl + '#' + navId}" href="?lang=pl" lang="pl" hreflang="pl" th:attr="aria-current=${english ? null : 'true'}">Polski</a>
     <span aria-hidden="true">·</span>
-    <a th:href="${langSwitch.en}" href="?lang=en" lang="en" hreflang="en" th:attr="aria-current=${english ? 'true' : null}">English</a>
+    <a th:href="${langSwitch.en + '#' + navId}" href="?lang=en" lang="en" hreflang="en" th:attr="aria-current=${english ? 'true' : null}">English</a>
 </nav>
 
 <!-- ======================================================================

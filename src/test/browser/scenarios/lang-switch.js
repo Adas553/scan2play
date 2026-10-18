@@ -74,3 +74,35 @@ S2P.scenario({
         topSwitchShows(t);
     }
 });
+
+/** The @view-transition rules of the page's stylesheets that apply now (in the media rules that match). */
+function viewTransitionRules() {
+    const found = [];
+    function walk(rules) {
+        Array.from(rules).forEach(function (rule) {
+            if (rule.constructor && rule.constructor.name === 'CSSViewTransitionRule') {
+                found.push(rule.navigation);
+            } else if (rule.media && rule.cssRules && window.matchMedia(rule.media.mediaText).matches) {
+                walk(rule.cssRules);
+            }
+        });
+    }
+    Array.from(document.styleSheets).forEach(function (sheet) {
+        try { walk(sheet.cssRules); } catch (e) { /* another origin's sheet */ }
+    });
+    return found;
+}
+
+S2P.scenario({
+    name: 'lang-switch-smooth',
+    title: 'the language changes smoothly: the pages cross-fade (@view-transition, not with "reduce motion"), and the footer\'s links open the other language at the footer',
+    page: 'landing-pl',
+    viewport: '390,844',
+    run: async function (t) {
+        t.step('the pages cross-fade (navigation: auto)', viewTransitionRules(), ['auto']);
+        const footer = Array.from(document.querySelectorAll('#langSwitch a')).map(function (a) { return a.getAttribute('href'); });
+        t.step('the footer\'s links come back to the footer', footer, ['/?lang=pl#langSwitch', '/?lang=en#langSwitch']);
+        const top = Array.from(document.querySelectorAll('#langSwitchTop a')).map(function (a) { return a.getAttribute('href'); });
+        t.step('the top ones to the top', top, ['/?lang=pl#langSwitchTop', '/?lang=en#langSwitchTop']);
+    }
+});

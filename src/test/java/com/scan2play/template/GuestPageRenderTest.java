@@ -253,8 +253,8 @@ class GuestPageRenderTest {
             context.setVariable("langSwitch", langSwitch);
             context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
             String html = engine.process(page, context);
-            assertThat(html).as(page).contains("id=\"langSwitch\"", "href=\"/h/T?lang=pl\"", ">English<", "href=\"/privacy\"")
-                    .containsPattern("<a [^>]*href=\"/h/T\\?lang=en\"[^>]*aria-current=\"true\"");
+            assertThat(html).as(page).contains("id=\"langSwitch\"", "href=\"/h/T?lang=pl#langSwitch\"", ">English<", "href=\"/privacy\"")
+                    .containsPattern("<a [^>]*href=\"/h/T\\?lang=en#langSwitch\"[^>]*aria-current=\"true\"");
         });
     }
 
@@ -711,7 +711,7 @@ class GuestPageRenderTest {
             assertThat(html).as(lang).doesNotContain("??");
             // the language at the top too (the owner, 2026-10-18), above the logo — and in the footer
             assertThat(html.indexOf("id=\"langSwitchTop\"")).as("at the top").isPositive().isLessThan(html.indexOf("id=\"landingStart\""));
-            assertThat(html).contains("id=\"langSwitch\"").containsPattern("id=\"langSwitchTop\"[^>]*>\\s*<a [^>]*href=\"/\\?lang=pl\"");
+            assertThat(html).contains("id=\"langSwitch\"").containsPattern("id=\"langSwitchTop\"[^>]*>\\s*<a [^>]*href=\"/\\?lang=pl#langSwitchTop\"");
             assertThat(tag(html, "landingDashboardShot")).contains("src=\"/images/landing/dashboard-" + lang + ".webp\"",
                     "width=\"1920\"", "height=\"1140\"", "alt=\"", "fetchpriority=\"high\"");
             assertThat(tag(html, "landingGuestShot")).contains("src=\"/images/landing/guest-" + lang + ".webp\"",

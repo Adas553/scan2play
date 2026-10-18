@@ -22,7 +22,14 @@
     });
 
     window.addEventListener('error', function (e) { errors.push(String(e.message) + ' @' + String(e.filename).split('/').pop() + ':' + e.lineno); });
-    window.addEventListener('unhandledrejection', function (e) { errors.push('unhandled rejection: ' + String(e.reason)); });
+    window.addEventListener('unhandledrejection', function (e) {
+        // the browser's own cross-fade between two pages (app.css, @view-transition) given up — the harness loads a scenario's page
+        // and sizes the window at once; the page simply shows without the fade, nothing of ours failed
+        if (e.reason && e.reason.name === 'InvalidStateError' && /Transition was aborted/.test(String(e.reason.message))) {
+            return;
+        }
+        errors.push('unhandled rejection: ' + String(e.reason));
+    });
     ['error', 'warn'].forEach(function (level) {
         const original = console[level].bind(console);
         console[level] = function () {

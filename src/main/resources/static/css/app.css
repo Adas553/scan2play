@@ -692,6 +692,12 @@ th[data-sort].sort-desc::after {
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }
 .s2p-alert-closed    { background-color: var(--s2p-bg-warning) !important; color: var(--s2p-warning) !important; }
 .s2p-footer          { color: var(--s2p-text-muted) !important; font-size: 0.85rem !important; }
+/* The pages cross-fade when one leads to another of ours (the owner, 2026-10-18: the language changed without the page "blinking"):
+   the browser's own view transition, no script — Chrome / Edge 126+, Safari 18.2+; elsewhere a page loads as before. Both pages
+   need this rule (every page with app.css has it); none with "reduce motion". */
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition { navigation: auto; }
+}
 /* "Polski · English" (components :: langSwitch; the owner 2026-10-18: "profesjonalny"): a pill of two, the language shown filled —
    a picked option, not two underlined links —, a finger's height (40 px inside a 2 px edge) on every screen */
 .s2p-lang-switch {
