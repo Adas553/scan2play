@@ -89,8 +89,8 @@
                 return !(hit === item || item.contains(hit));
             }).map(function (item) { return item.textContent.trim(); });
             // the owner's four — "Instrukcja", "Pomoc i kontakt" (with the old "Zgłoś uwagę" in it, 2026-10-12), "Wyloguj", "Usuń
-            // konto" —, every one in reach
-            t.step('every item of the menu can be tapped: nothing (the sticky tab bar) lies over one', [items.length, covered], [4, []]);
+            // konto" — and, after the help, the language "Polski" / "English" (2026-10-18): every one in reach
+            t.step('every item of the menu can be tapped: nothing (the sticky tab bar) lies over one', [items.length, covered], [6, []]);
             t.step('the guide and the help first', items.slice(0, 2).map(function (item) { return item.textContent.trim(); }),
                 ['Instrukcja', 'Pomoc i kontakt']);
             t.step('every item is at least 44 px high', items.filter(function (i) { return i.getBoundingClientRect().height < 44 - 0.5; }).length, 0);

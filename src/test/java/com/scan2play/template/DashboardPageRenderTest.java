@@ -149,6 +149,9 @@ class DashboardPageRenderTest {
                         .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()),
                 locale);
         context.setVariables(model.asMap());
+        // what LanguageSwitchAdvice adds to every page's model (the footer's and the menu's "Polski · English")
+        context.setVariable("langSwitch", new com.scan2play.controller.LanguageSwitchAdvice.LanguageSwitch(
+                "/dj/dashboard?party=" + PARTY + "&lang=pl", "/dj/dashboard?party=" + PARTY + "&lang=en"));
         // what Spring Security's CsrfRequestDataValueProcessor / the `_csrf` request attribute give the real page
         context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         return engine.process(view, context);
@@ -824,6 +827,19 @@ class DashboardPageRenderTest {
         assertThat(html).contains(">📺 Ekran na TV<");
         assertThat(html.indexOf("id=\"tvScreenLink\"")).as("beside the print").isGreaterThan(html.indexOf("id=\"qrPrintLink\""));
         assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">📺 Screen for a TV<");
+    }
+
+    /**
+     * The language in the menu "Konto" (the owner, 2026-10-18): the panel's footer is far under a long queue, so the menu has
+     * "Polski" / "English" too — this panel ({@code ?party=}) in that language, the one shown marked.
+     */
+    @Test
+    void theAccountMenu_switchesTheLanguage() {
+        String html = renderDashboard(party(), List.of(), PL);
+        String menu = html.substring(html.indexOf("aria-labelledby=\"accountMenuBtn\""), html.indexOf("</ul>", html.indexOf("aria-labelledby=\"accountMenuBtn\"")));
+        assertThat(menu).contains("Język / Language", "href=\"/dj/dashboard?party=HARN1&amp;lang=en\"", ">English<", ">Polski<")
+                .containsPattern("<a [^>]*href=\"/dj/dashboard\\?party=HARN1&amp;lang=pl\"[^>]*aria-current=\"true\"");
+        assertThat(html).as("and the footer").contains("id=\"langSwitch\"");
     }
 
     /** The opening tag of the element with this id. */

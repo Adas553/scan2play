@@ -34,7 +34,7 @@ personal use) — migrations V18 and V19.
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
 | AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.6-flash` (thinking level low) |
 | Other            | ZXing 3.5.4 (QR codes; `javase` without its command line and image decoders), the Maven wrapper with the sha256 of Maven 3.9.12, Caffeine (caches), Maven; the guests' song suggestions come from Apple's iTunes Search API, asked by the browser |
-| i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes; the language: `?lang=pl` / `?lang=en` (any case, `en-US` too; kept in the cookie `lang` for a year — the pages' links do not carry it), else that cookie, else the browser's `Accept-Language`, with none — or an empty one, or `*` — Polish (`WebConfig`, 2026-10-14 / 15 — a crawler sends none) |
+| i18n             | `messages.properties` (EN), `messages_pl.properties` (PL) — non-ASCII as `\uXXXX` escapes; the language: `?lang=pl` / `?lang=en` (any case, `en-US` too; kept in the cookie `lang` for a year — the pages' links do not carry it), else that cookie, else the browser's `Accept-Language`, with none — or an empty one, or `*` — Polish (`WebConfig`, 2026-10-14 / 15 — a crawler sends none); the switch "Polski · English" (the fragment `components :: langSwitch`) in every page's footer, at the top of the landing page and in the panel's menu "Konto" (2026-10-18, `LanguageSwitchAdvice`: the page's own address with `?lang=`, its other parameters kept; none on a page answered to a POST; not on the print pages and the TV screen, which are in both languages or the DJ's) |
 
 ---
 
@@ -617,6 +617,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
+| `LanguageSwitchAdvice` | every page's model: `langSwitch` — this page's address with `?lang=pl` / `?lang=en` for the footer's switch (2026-10-18); null for a POST |
 | `TvScreenController` | the screen for a TV `/p/{code}/tv` (Next 7 c, 2026-10-18): the party's QR code and the ten most wanted songs (`GuestQueueService.mostWanted`), public, no session; its list alone `/p/{code}/tv/list` |
 | `FeedbackController` | `POST /dj/feedback` (JSON; 10 an hour per account, then 429) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |

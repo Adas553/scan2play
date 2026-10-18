@@ -233,6 +233,31 @@ class GuestPageRenderTest {
         }
     }
 
+    /**
+     * The language switch (LanguageSwitchAdvice, the owner 2026-10-18) on the two pages without the footer before: the hosts' page and
+     * the staff's invitation — the footer now, with "Polski · English".
+     */
+    @Test
+    void theHostsPage_andTheInvitation_haveTheFooter_withTheLanguageSwitch() {
+        var langSwitch = new com.scan2play.controller.LanguageSwitchAdvice.LanguageSwitch("/h/T?lang=pl", "/h/T?lang=en");
+        Map<String, Map<String, Object>> pages = Map.of(
+                "host", Map.of("hostToken", "T", "djName", "DJ Koko", "hostBlocked", "", "hostWanted", "", "songListMax", 100),
+                "join", Map.of("joinPartyName", "Klub Ola", "joinOwnerName", "Ola Kowalska", "joinLoggedIn", false,
+                        "joinToken", "invite", "joinRole", com.scan2play.model.StaffRole.QUEUE,
+                        "joinPermissions", List.copyOf(com.scan2play.model.StaffRole.QUEUE.permissions())));
+        pages.forEach((page, model) -> {
+            MockServletContext servletContext = new MockServletContext();
+            WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                    .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), Locale.ENGLISH);
+            context.setVariables(model);
+            context.setVariable("langSwitch", langSwitch);
+            context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+            String html = engine.process(page, context);
+            assertThat(html).as(page).contains("id=\"langSwitch\"", "href=\"/h/T?lang=pl\"", ">English<", "href=\"/privacy\"")
+                    .containsPattern("<a [^>]*href=\"/h/T\\?lang=en\"[^>]*aria-current=\"true\"");
+        });
+    }
+
     /** The staff's invitation (V30, /join/{token}): the party named, one button through the login, no Referer, no search engine. */
     @Test
     void theInvitationPage_namesTheParty_andLeadsToTheLogin() {
@@ -666,10 +691,15 @@ class GuestPageRenderTest {
             WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                     .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
             context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
+            // what LanguageSwitchAdvice adds to every page's model
+            context.setVariable("langSwitch", new com.scan2play.controller.LanguageSwitchAdvice.LanguageSwitch("/?lang=pl", "/?lang=en"));
             String html = engine.process("landing", context);
             writeForTheBrowserTests("landing-" + lang + ".html", html);
 
             assertThat(html).as(lang).doesNotContain("??");
+            // the language at the top too (the owner, 2026-10-18), above the logo — and in the footer
+            assertThat(html.indexOf("id=\"langSwitchTop\"")).as("at the top").isPositive().isLessThan(html.indexOf("id=\"landingStart\""));
+            assertThat(html).contains("id=\"langSwitch\"").containsPattern("id=\"langSwitchTop\"[^>]*>\\s*<a [^>]*href=\"/\\?lang=pl\"");
             assertThat(tag(html, "landingDashboardShot")).contains("src=\"/images/landing/dashboard-" + lang + ".webp\"",
                     "width=\"1920\"", "height=\"1140\"", "alt=\"", "fetchpriority=\"high\"");
             assertThat(tag(html, "landingGuestShot")).contains("src=\"/images/landing/guest-" + lang + ".webp\"",
