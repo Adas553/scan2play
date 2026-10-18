@@ -777,8 +777,22 @@ class DashboardPageRenderTest {
                             pl ? "Dobra energia, wszyscy znają refren." : "Good energy, everyone knows the chorus."),
                     demo(25, 23, "Queen - Don't Stop Me Now", "queen dont stop me now", 3, 1, 14,
                             pl ? "Petarda na koniec seta!" : "A banger to end the set!"));
-            String html = renderDashboard(party, queue, locale);
-            assertThat(html).contains("DJ Kuba", "s2p-host-wanted", "s2p-check-song").doesNotContain("??");
+            // the guests' dedications (V38) under two songs
+            queue.get(0).setDedications(2);
+            queue.get(2).setDedications(1);
+            dedications = Map.of(
+                    21L, List.of(dedication(21, pl ? "Dla Młodej Pary — wszystkiego najlepszego!" : "For the newlyweds — all the best!"),
+                            dedication(21, pl ? "Dla babci Heli" : "For Grandma Helen")),
+                    23L, List.of(dedication(23, pl ? "Dla Ani na 18-stkę" : "For Anna on her 18th")));
+            String html;
+            try {
+                html = renderDashboard(party, queue, locale);
+            } finally {
+                dedications = Map.of();
+            }
+            assertThat(html).contains("DJ Kuba", "s2p-host-wanted", "s2p-check-song",
+                    pl ? "Dla babci Heli" : "For Grandma Helen", pl ? "Dla Ani na 18-stkę" : "For Anna on her 18th")
+                    .doesNotContain("??", pl ? ">wczoraj<" : ">yesterday<");
             write("landing-demo-dashboard-" + locale.getLanguage() + ".html", html);
         }
     }
@@ -791,7 +805,9 @@ class DashboardPageRenderTest {
         request.setVotes(votes);
         request.setTips(tips);
         request.setDjComment(comment);
-        request.setRequestedAt(java.time.LocalDateTime.of(2026, 10, 17, 21, minute).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
+        // today, whenever the pictures are made: the day under the time says "dziś" ("wczoraj" with a fixed date a day later)
+        request.setRequestedAt(java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).atTime(21, minute)
+                .atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
         return request;
     }
 
