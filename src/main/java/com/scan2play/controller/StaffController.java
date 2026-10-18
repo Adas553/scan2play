@@ -160,8 +160,9 @@ public class StaffController {
     public String joinFromTheLandingPage(@RequestParam String link, HttpSession session) {
         Optional<String> token = tokenOf(link).filter(t -> partyStaffService.partyOfLink(t).isPresent());
         if (token.isEmpty()) {
+            // back at the field and its note (#staffLogin): it is at the end of the landing page, under the last start (2026-10-18)
             return GUESTS_LINK.matcher(link == null ? "" : link.strip()).matches()
-                    ? "redirect:/?staffLink=guests" : "redirect:/?staffLink=invalid";
+                    ? "redirect:/?staffLink=guests#staffLogin" : "redirect:/?staffLink=invalid#staffLogin";
         }
         session.setAttribute(SESSION_PENDING_INVITATION, token.get());
         return "redirect:/start";

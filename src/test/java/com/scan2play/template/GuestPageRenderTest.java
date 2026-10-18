@@ -353,8 +353,12 @@ class GuestPageRenderTest {
         writePreview("landing.html", pages[0]);
 
         assertThat(pages[0]).doesNotContain("??");
-        assertThat(pages[0]).contains("id=\"staffLogin\"", "Masz zaproszenie do obsługi imprezy? Dołącz →", "action=\"/join\"",
-                "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"");
+        // the owner, 2026-10-18 ("czy ten przycisk jest profesjonalny"): words a newcomer knows, no "→" on what only unfolds, and
+        // under the last "Zbieraj prośby gości" — not floating between the hero and the steps
+        assertThat(pages[0]).contains("id=\"staffLogin\"", ">Masz link z zaproszeniem od DJ-a? Wklej go tutaj<", "action=\"/join\"",
+                "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"", "obsługi imprezy? Dołącz");
+        assertThat(pages[0].indexOf("id=\"staffLogin\"")).as("under the final start, above the footer")
+                .isGreaterThan(pages[0].indexOf("id=\"landingFinal\"")).isLessThan(pages[0].indexOf("<footer"));
         assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");
         assertThat(tag(pages[1], "staffLogin")).as("open after a link that did not work").contains("open");
         assertThat(pages[1]).contains("id=\"staffLinkInvalid\"", "Ten link nie działa — poproś organizatora o nowy.");

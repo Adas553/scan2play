@@ -198,11 +198,11 @@ class StaffControllerTest {
 
         for (String bad : new String[]{"https://www.scan2play.com.pl/join/old-token", "not a link at all ?", ""}) {
             MockHttpSession other = new MockHttpSession();
-            mockMvc.perform(post("/join").param("link", bad).session(other)).andExpect(redirectedUrl("/?staffLink=invalid"));
+            mockMvc.perform(post("/join").param("link", bad).session(other)).andExpect(redirectedUrl("/?staffLink=invalid#staffLogin"));
             assertThat(other.getAttribute(StaffController.SESSION_PENDING_INVITATION)).as(bad).isNull();
         }
         mockMvc.perform(post("/join").param("link", "https://www.scan2play.com.pl/p/AB12C").session(new MockHttpSession()))
-                .andExpect(redirectedUrl("/?staffLink=guests"));
+                .andExpect(redirectedUrl("/?staffLink=guests#staffLogin"));
     }
 
     /** The link says the role it was made with (V33): "Podgląd", or the permissions ticked one by one. */

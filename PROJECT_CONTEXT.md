@@ -494,9 +494,10 @@ or an old link: the invitation page says what happened (409 / 404) — "Obsługa
 nie działa — organizator mógł utworzyć nowy". A link pasted in the app (an iPhone's Home Screen app has a login of its own; the field
 "Zaproszenie do obsługi? Wklej link" in "To urządzenie" of "Ustawienia imprezy" — on the person's own party and "no-panel" only, not on
 another's party: she has joined it already, it read as if she still had to (the owner, 2026-10-10) —, `POST /dj/join`) leads to that invitation; a guests' link
-(`…/p/…`) is told apart ("To link dla gości…, nie zaproszenie"). On the landing page, "Masz zaproszenie do obsługi imprezy? Dołącz →"
-(a `<details>`, `POST /join`, public): a party's link goes to Google's login, anything else back to `/?staffLink=invalid` (or
-`guests`) before any login.
+(`…/p/…`) is told apart ("To link dla gości…, nie zaproszenie"). On the landing page, under the last "Zbieraj prośby gości", "Masz link z zaproszeniem od
+DJ-a? Wklej go tutaj" (2026-10-18; it was "Masz zaproszenie do obsługi imprezy? Dołącz →" between the hero and the steps — a `<details>`,
+`POST /join`, public): a party's link goes to Google's login, anything else back to `/?staffLink=invalid#staffLogin` (or `guests`) —
+at the field and its note — before any login.
 **Which party a request works on** (`DjSessionHelper`, V32): **the page names it** — every form and fetch of the panel sends
 `partyCode` (hidden inputs; `forms.js` adds it to what it sends, the "Cofnij" bar too), the pages' links carry `?party=`, and the
 server checks the person's access to *that* party on every request (the owner without a query, a person of the staff by their row —
@@ -1016,7 +1017,7 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one, or one made more than 30 days ago (V37) |
-| POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid` |
+| POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid#staffLogin` |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
 | POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" (a list over 100: the first 100 kept, `hostDropped` says so) |
