@@ -9,7 +9,19 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Start here
 
-- **2026-10-18 — the language switch, on the branch `claude/lang-switch` from `origin/dev`; a PR to `dev`.** The owner: a switch
+- **2026-10-18 — the landing page cut off for a first visit (18:54 – 19:42 UTC), fixed.** Release #119 (#117: the English
+  pictures with songs known everywhere — Whitney Houston, ABBA, Ed Sheeran…, DJ Alex; #118: the staff's invitation moved under the
+  last "Zbieraj prośby gości", "Masz link z zaproszeniem od DJ-a? Wklej go tutaj", a link that does not work back to
+  `/?staffLink=invalid#staffLogin`) broke `GET /` without a session: 200, but the page stopped after 8192 bytes in "Dla kogo". The
+  owner saw it locally: `IllegalStateException: Cannot create a session after the response has been committed`. **The cause:** the
+  invitation form's CSRF token lives in the session, made lazily when the form renders; at the page's end, the server had sent the
+  first 8 KB already, and Spring Session cannot make a session then (at the top, before #118, it was within the first 8 KB). **The
+  fix** (#121, released in #122, deployed 19:42 UTC): `HomeController` loads the token before rendering; checked live — both
+  languages whole, the footer and the form there, no such exception in the log since. **Why no test caught it:** the `@WebMvcTest`s
+  have no Spring Session filter (in production it is the JDBC one); `LandingPageSessionWebTest` has it (sessions in memory) — red
+  before, green now. **Mind:** a form on a public page rendered after the first 8 KB, for a visitor without a session, needs its
+  token loaded in the controller — give such a page a test of that kind.
+- **2026-10-18 — the language switch (#115, released in #116).** The owner: a switch
   between Polish and English, the guest's page too, then "the extended version". In every page's footer "Polski · English"
   (`LanguageSwitchAdvice` → the page's own address with `?lang=`, its `?party=` and other parameters kept; `WebConfig` keeps the
   pick in the cookie `lang`, which the privacy pages describe already) — the hosts' page and the staff's invitation got the footer
@@ -18,9 +30,15 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   POST (the result of a request). The TV screen, the QR poster and the evening summary (print pages) stay as they are. Tests:
   `LanguageSwitchAdviceTest`, `GuestNoSessionWebTest` (the switch on a real page, no session), `GuestPageRenderTest`,
   `DashboardPageRenderTest`; browser `lang-switch-in-the-account-menu`, `lang-switch-in-the-footer`, `lang-switch-landing-top-phone` / `-wide`.
-- **2026-10-18 — the state.** `main` = `dev` in content. Releases: #108 (the dedications #106 and the landing page #107; V38
-  applied, deployed 2026-10-17 21:18 UTC) and #110 (#109, the landing page without the PRO badge; deployed 2026-10-18 08:40 UTC) —
-  both SUCCESS; Railway waits for the CI. Live and checked: the home page with `/images/landing/*.webp`, the headers
+  Tried and dropped (the owner: "zostawimy jak było"): a smooth change without a script — the pages cross-fading
+  (`@view-transition { navigation: auto }` in `app.css`, every navigation between our pages) and each switch's links ending in its id
+  (#120, closed; the branch `claude/lang-smooth` kept). The errors the owner saw while trying it were the landing page's above, not the
+  cross-fade. A change without any reload (AJAX, or the texts in JavaScript) was judged not worth it: the panel's modules would have to
+  start again after each swap.
+- **2026-10-18 — the state.** `main` = `dev` in content. Releases, all SUCCESS (Railway waits for the CI): #108 (the dedications
+  #106 and the landing page #107; V38 applied, deployed 2026-10-17 21:18 UTC), #110 (#109, the landing page without the PRO badge;
+  2026-10-18 08:40 UTC), #114 (the TV screen #113, the dedications on the landing page #112, this file #111; 10:13), #116 (the
+  language switch #115; 17:39), #119 (#117, #118; 18:54 — it cut the landing page off, above), #122 (the fix #121; 19:42). Live and checked: the home page with `/images/landing/*.webp`, the headers
   `Content-Security-Policy` (enforced), `Referrer-Policy`, `Permissions-Policy`, `<link rel="icon">`. The review of 2026-10-14 is done
   and released (`docs/history/review-2026-10-14.md`, "Status poprawek"); of the review of 2026-09-30 only 2.3 (one instance) is left.
   Production: `CSP_ENFORCE=true` since 2026-10-15 (no "CSP violation" in the log up to 2026-10-18), `gemini-3.6-flash` (no AI error in
