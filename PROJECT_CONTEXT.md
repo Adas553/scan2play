@@ -310,7 +310,7 @@ sees under the form), `PlayHistoryService.Page`.
 
 Landing page `/` (2026-10-17, an idea from Rekwest — its features, never its look or texts): the title, "Zbieraj prośby gości" and "Jak
 działa Scan2Play", beside them the DJ's panel in a laptop and the guest's page in a phone — real pictures of the app, of a made-up
-party, in the page's language (`static/images/landing/{dashboard,guest}-{pl,en}.webp`, written by `src/test/browser/screenshots.py`
+party, in the page's language — the English ones with songs known everywhere and DJ Alex (2026-10-18), the Polish ones with DJ Kuba — (`static/images/landing/{dashboard,guest}-{pl,en}.webp`, written by `src/test/browser/screenshots.py`
 from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLandingPagesPicture_…`; run it again after a change of
 the look; the panel shows the guests' dedications, the phone the folded "💌 Dodaj dedykację") —, then three steps, what one gets
 (six cards: the vibe — with no repeats —, the guest's words, the votes, the dedications, the hosts' list, the phone and the staff; no
