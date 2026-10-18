@@ -692,6 +692,8 @@ th[data-sort].sort-desc::after {
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }
 .s2p-alert-closed    { background-color: var(--s2p-bg-warning) !important; color: var(--s2p-warning) !important; }
 .s2p-footer          { color: var(--s2p-text-muted) !important; font-size: 0.85rem !important; }
+/* the footer's "Polski · English": a finger's height on every screen (the small text alone was ~37 px) */
+.s2p-lang-switch a   { display: inline-flex; align-items: center; min-height: 44px; }
 /* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
    played or skipped it) stays in its place, dimmed, until the list is fetched again; the note of a 👍 that did not count floats over
    the page — shown, it pushes nothing down (guest-party.js hides it after a few seconds). */
