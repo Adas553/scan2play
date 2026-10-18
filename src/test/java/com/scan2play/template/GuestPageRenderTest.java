@@ -685,6 +685,8 @@ class GuestPageRenderTest {
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
             assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/pro\"",
                     "href=\"/privacy\"");
+            // no "PRO" on one card: while the plans are not enforced, "Ile to kosztuje?" says what Pro gives (the owner, 2026-10-18)
+            assertThat(html).doesNotContain("s2p-pro", ">PRO<");
             if (locale == Locale.ENGLISH) {
                 assertThat(html).contains(">Guests request songs. AI keeps the vibe. You play.<", ">Wedding DJs<");
                 continue;

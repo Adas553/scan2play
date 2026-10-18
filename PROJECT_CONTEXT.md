@@ -312,7 +312,7 @@ Landing page `/` (2026-10-17, an idea from Rekwest — its features, never its l
 działa Scan2Play", beside them the DJ's panel in a laptop and the guest's page in a phone — real pictures of the app, of a made-up
 party, in the page's language (`static/images/landing/{dashboard,guest}-{pl,en}.webp`, written by `src/test/browser/screenshots.py`
 from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLandingPagesPicture_…`; run it again after a change of
-the look) —, then three steps, what one gets (the hosts' list marked PRO), for whom (wedding DJs, clubs, pubs, karaoke — pages of
+the look) —, then three steps, what one gets (no "PRO" on a card: "Ile to kosztuje?" says what Pro gives), for whom (wedding DJs, clubs, pubs, karaoke — pages of
 their own later), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
 "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
