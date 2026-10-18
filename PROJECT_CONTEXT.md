@@ -609,7 +609,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 
 | Class | Purpose |
 |-------|---------|
-| `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ; `/start` → Google's login |
+| `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ; `/start` → Google's login. The landing page's CSRF token (the invitation form at the page's end) is loaded before rendering: rendered at the end, after the first 8 KB had gone, it could make no session and a first visit got the page cut off (production, 2026-10-18; `LandingPageSessionWebTest` — with Spring Session's filter, which the other `@WebMvcTest`s lack) |
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `StaffController` | the staff's invitation `/join/{token}` (public; "Dołącz" a POST), the panel switcher `POST /dj/panel`, leaving a staff, a pasted link (V30); the owner's page "Obsługa" `/dj/staff`: permissions, the link and its role (V33), removing (V32), invitations by e-mail and their answer `/dj/invitation` (V34) |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
