@@ -50,6 +50,7 @@
         <p class="small text-secondary text-center mt-3 mb-0" th:text="#{host.footer}">Up to 100 lines on each list. You can come back and change it any time.</p>
     </div>
 </div>
+<div th:replace="~{fragments/components :: footer}"></div>
 <!--/* the lines each list holds, and a warning over the limit (SongList.MAX_LINES) — no inline script (CSP) */-->
 <script src="/js/song-list-count.js" th:src="@{/js/song-list-count.js}"></script>
 </body>

@@ -106,4 +106,15 @@ class GuestNoSessionWebTest {
     void aPartyThatHasEnded_saysSo_withoutASession() throws Exception {
         noSession(mockMvc.perform(get("/p/ENDED")).andExpect(status().isOk()).andReturn());
     }
+
+    /** The footer's "Polski · English" (LanguageSwitchAdvice, the owner 2026-10-18): this page in each language, the one shown marked. */
+    @Test
+    void theFooter_switchesTheLanguage_ofThisPage() throws Exception {
+        MvcResult result = mockMvc.perform(get("/p/ENDED").header("Accept-Language", "pl-PL")).andExpect(status().isOk()).andReturn();
+        noSession(result);
+        String html = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(html).contains("id=\"langSwitch\"", "href=\"/p/ENDED?lang=pl\"", "href=\"/p/ENDED?lang=en\"", ">Polski<", ">English<");
+        assertThat(html).containsPattern("<a [^>]*href=\"/p/ENDED\\?lang=pl\"[^>]*aria-current=\"true\"")
+                .doesNotContainPattern("<a [^>]*href=\"/p/ENDED\\?lang=en\"[^>]*aria-current");
+    }
 }

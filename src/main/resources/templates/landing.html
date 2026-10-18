@@ -17,6 +17,10 @@
 <body class="page-landing" th:with="lang=${#messages.msg('html.lang') == 'en' ? 'en' : 'pl'}">
 
 <header class="container s2p-landing-hero">
+    <!--/* the language at the top too (the owner, 2026-10-18): a visitor reads the page's first lines in it */-->
+    <div class="d-flex justify-content-end mb-2">
+        <nav th:replace="~{fragments/components :: langSwitch('langSwitchTop', 'small')}"></nav>
+    </div>
     <div class="row align-items-center g-5">
         <div class="col-lg-5 text-center text-lg-start">
             <div class="fs-3 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
