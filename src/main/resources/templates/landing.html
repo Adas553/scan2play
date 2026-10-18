@@ -96,7 +96,8 @@
         </div>
     </section>
 
-    <!--/* What one gets: the features a DJ asks about first; the hosts' list is Pro (PlanFeature.HOST_LISTS), marked so */-->
+    <!--/* What one gets: the features a DJ asks about first. No "PRO" on one card (the owner, 2026-10-18): while the plans are not
+         enforced, "Ile to kosztuje?" says what Pro gives */-->
     <section class="s2p-landing-section" id="landingFeatures">
         <div class="container">
             <h2 th:text="#{landing.features.title}">What you get</h2>
@@ -110,7 +111,7 @@
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🚫</span>
                     <h3 th:text="#{landing.feature.limits.title}">No repeats, no spam</h3><p th:text="#{landing.feature.limits.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">⭐</span>
-                    <h3><th:block th:text="#{landing.feature.hosts.title}">The hosts' list</th:block><span class="s2p-pro">PRO</span></h3>
+                    <h3 th:text="#{landing.feature.hosts.title}">The hosts' list</h3>
                     <p th:text="#{landing.feature.hosts.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🔔</span>
                     <h3 th:text="#{landing.feature.phone.title}">Your phone and your team</h3><p th:text="#{landing.feature.phone.text}">…</p></div>
