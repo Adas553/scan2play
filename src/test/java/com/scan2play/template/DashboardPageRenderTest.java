@@ -760,24 +760,29 @@ class DashboardPageRenderTest {
     /**
      * The DJ's panel of a made-up party, for the pictures of the landing page (src/test/browser/screenshots.py: a laptop's screen,
      * {@code static/images/landing/dashboard-<lang>.webp}): the queue with the guests' words, the AI's comments, the votes, a song on the
-     * hosts' list (⭐), one to check (⚠) and tips. No real person in it.
+     * hosts' list (⭐), one to check (⚠) and tips. No real person in it. The English picture has songs known everywhere and the guests'
+     * words in English (the owner, 2026-10-18: Zenek, sanah and Podsiadło are known in Poland only).
      */
     @Test
     void theLandingPagesPicture_ofTheDashboard() throws IOException {
         for (Locale locale : List.of(PL, Locale.ENGLISH)) {
             boolean pl = locale == PL;
             PartySettingsEntity party = party();
-            party.setDjName("DJ Kuba");
+            party.setDjName(pl ? "DJ Kuba" : "DJ Alex");
             party.setGlobalVibe(VibeType.WEDDING_CLASSICS);
-            party.setHostWanted("Przez twe oczy zielone");
+            party.setHostWanted(pl ? "Przez twe oczy zielone" : "I Wanna Dance with Somebody");
             List<SongRequestEntity> queue = List.of(
-                    demo(21, 12, "Zenek Martyniuk - Przez twe oczy zielone", "zenek oczy zielone", 9, 0, 1,
-                            pl ? "Sala już śpiewa — to musi polecieć!" : "The whole room sings this one!"),
+                    pl ? demo(21, 12, "Zenek Martyniuk - Przez twe oczy zielone", "zenek oczy zielone", 9, 0, 1,
+                            "Sala już śpiewa — to musi polecieć!")
+                       : demo(21, 12, "Whitney Houston - I Wanna Dance with Somebody", "whitney dance with somebody", 9, 0, 1,
+                            "The whole room sings this one!"),
                     demo(22, 15, "ABBA - Dancing Queen", "abba dancing queen", 6, 2, 4,
                             pl ? "Klasyk parkietu, idealny na rozkręcenie." : "A dance-floor classic, perfect to warm up."),
-                    demo(23, 18, "Dawid Podsiadło - Małomiasteczkowy", "podsiadło małomiasteczkowy", 4, 0, 7,
-                            pl ? "Świetny wybór na drugą część wieczoru." : "Great pick for the second half of the night."),
-                    demo(24, 21, "Smash Mouth - All Star", "ta piosenka ze shreka", 2, 0, 11,
+                    pl ? demo(23, 18, "Dawid Podsiadło - Małomiasteczkowy", "podsiadło małomiasteczkowy", 4, 0, 7,
+                            "Świetny wybór na drugą część wieczoru.")
+                       : demo(23, 18, "Ed Sheeran - Perfect", "ed sheeran perfect", 4, 0, 7,
+                            "Great pick for the slow dance."),
+                    demo(24, 21, "Smash Mouth - All Star", pl ? "ta piosenka ze shreka" : "the shrek song", 2, 0, 11,
                             pl ? "Dobra energia, wszyscy znają refren." : "Good energy, everyone knows the chorus."),
                     demo(25, 23, "Queen - Don't Stop Me Now", "queen dont stop me now", 3, 1, 14,
                             pl ? "Petarda na koniec seta!" : "A banger to end the set!"));
@@ -787,16 +792,21 @@ class DashboardPageRenderTest {
             dedications = Map.of(
                     21L, List.of(dedication(21, pl ? "Dla Młodej Pary — wszystkiego najlepszego!" : "For the newlyweds — all the best!"),
                             dedication(21, pl ? "Dla babci Heli" : "For Grandma Helen")),
-                    23L, List.of(dedication(23, pl ? "Dla Ani na 18-stkę" : "For Anna on her 18th")));
+                    23L, List.of(dedication(23, pl ? "Dla Ani na 18-stkę" : "For Mum and Dad — 30 years together")));
             String html;
             try {
                 html = renderDashboard(party, queue, locale);
             } finally {
                 dedications = Map.of();
             }
-            assertThat(html).contains("DJ Kuba", "s2p-host-wanted", "s2p-check-song",
-                    pl ? "Dla babci Heli" : "For Grandma Helen", pl ? "Dla Ani na 18-stkę" : "For Anna on her 18th")
+            write("landing-demo-dashboard-" + locale.getLanguage() + ".html", html);
+            assertThat(html).contains(pl ? "DJ Kuba" : "DJ Alex", "s2p-host-wanted", "s2p-check-song",
+                    pl ? "Dla babci Heli" : "For Grandma Helen", pl ? "Dla Ani na 18-stkę" : "For Mum and Dad — 30 years together")
                     .doesNotContain("??", pl ? ">wczoraj<" : ">yesterday<");
+            if (!pl) {
+                assertThat(html).as("songs known everywhere, the guests' words in English")
+                        .doesNotContain("Zenek", "Podsiadło", "sanah", "zielone", "shreka");
+            }
             write("landing-demo-dashboard-" + locale.getLanguage() + ".html", html);
         }
     }
