@@ -109,6 +109,9 @@ S2P.scenario({
   and only then opens the scenario — the page is laid out at the phone's own 390 or 360 px, so the rules of `app.css` for a narrow
   phone (`max-width: 400px`, `380px`) apply (`phone-width-390`, `phone-width-360`). The DevTools connection stays open while the
   scenario runs: closing it ends the emulation. Standard library only (a small WebSocket client in `run.py`).
+* **"Fits the screen" is measured against `document.documentElement.clientWidth`**, never `window.innerWidth`: on a phone (`mobile:
+  true`) the browser widens `innerWidth` to the content that sticks out, so `scrollWidth <= innerWidth` held while the landing page
+  moved left and right by 12 px (the owner, 2026-10-19; `landing-narrow-phone`, 320 px).
 
 ## In CI
 

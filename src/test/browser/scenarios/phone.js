@@ -77,7 +77,7 @@ S2P.scenario({
         // a flex item has one box however many lines it takes: one line is less than two font sizes high
         t.check('the song is on one line (' + Math.round(song.getBoundingClientRect().height) + ' px high)',
             song.getBoundingClientRect().height < 2 * parseFloat(getComputedStyle(song).fontSize));
-        t.check('the bar is inside the screen, with a margin', box.left >= 8 && box.right <= window.innerWidth - 8);
+        t.check('the bar is inside the screen, with a margin', box.left >= 8 && box.right <= document.documentElement.clientWidth - 8);
         t.check('the "Cofnij" button is big enough for a thumb (at least 36 px high)',
             bar.querySelector('[data-undo-button]').getBoundingClientRect().height >= 36);
     }
@@ -97,7 +97,7 @@ S2P.scenario({
         const inside = function (row) {
             const badge = row.querySelector('.s2p-check-song').getBoundingClientRect();
             const card = row.getBoundingClientRect();
-            return badge.left >= card.left && badge.right <= card.right && badge.right <= window.innerWidth;
+            return badge.left >= card.left && badge.right <= card.right && badge.right <= document.documentElement.clientWidth;
         };
         const queued = ['1', '2'].map(function (id) { return document.querySelector('#song-list tr[data-song-id="' + id + '"]'); });
         t.step('the queue: marked only the song with none of the guest\'s words', queued.map(marked), [false, true]);
@@ -111,7 +111,7 @@ S2P.scenario({
         });
         t.step('the history: marked only the song with none of the guest\'s words', rows.map(marked), [true, false]);
         t.check('the history: the mark inside the card', inside(rows[0]));
-        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });
 
@@ -148,7 +148,7 @@ S2P.scenario({
             [icons(card), Array.from(card.querySelectorAll('.s2p-skipped-label')).filter(shows).length], [['⏭'], 0]);
         t.check('the icon beside the votes, as ▶ of a song that played', besideTheVotes(card)
             && besideTheVotes(document.querySelector('#history-content tr[data-song-name="Played Bravo"]')));
-        t.check('"↩ Przywróć" shows inside the screen', shows(restore) && restore.getBoundingClientRect().right <= window.innerWidth);
+        t.check('"↩ Przywróć" shows inside the screen', shows(restore) && restore.getBoundingClientRect().right <= document.documentElement.clientWidth);
         const comment = card.querySelector('td.s2p-comment-cell');
         t.check('the AI\'s comment shows (hidden in the table below a wide screen)', shows(comment) && /parkiet/.test(comment.textContent));
         // the whole of it (2026-10-07 … 10: one line, a tap on it showed the rest; now the card folds as a whole)
@@ -163,7 +163,7 @@ S2P.scenario({
             [icons(cleared), Array.from(cleared.querySelectorAll('.s2p-skipped-label')).filter(shows).length,
                 cleared.querySelectorAll('form[action="/dj/dashboard/restore"]').length], [['🧹'], 0, 0]);
         t.check('the icon beside the votes', besideTheVotes(cleared));
-        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });
 
@@ -179,7 +179,7 @@ S2P.scenario({
             getComputedStyle(document.querySelector('.dj-tabbar .nav-link')).paddingLeft, '9.6px');
         const logo = document.querySelector('.s2p-account-bar .s2p-logo');
         t.step('the logo is not made smaller above 380 px', getComputedStyle(logo).fontSize === '18.4px', false);
-        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });
 
@@ -197,6 +197,6 @@ S2P.scenario({
             return box.top + box.height / 2;
         });
         t.step('the logo, "Zakończ" and "Konto" in one row', [middles.length, Math.max.apply(null, middles) - Math.min.apply(null, middles) < 4], [3, true]);
-        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });

@@ -12,7 +12,7 @@ function bookingShows(t) {
     const icons = Array.from(box.querySelectorAll('a svg'));
     t.step('the DJ\'s profiles: three buttons, each with its icon drawn', [box.querySelectorAll('a').length,
         icons.filter(function (svg) { const r = svg.getBoundingClientRect(); return r.width >= 14 && r.height >= 14; }).length], [3, 3]);
-    t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+    t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     // every line of the box readable on the box's own background (2026-10-17: the heading was #212529 on #1e1e1e, the owner: "nic nie widać")
     const unreadable = Array.from(box.querySelectorAll(':scope > :not(#djLinks)')).filter(function (p) { return contrast(p) < 4.5; })
         .map(function (p) { return p.textContent.trim() + ' ' + contrast(p).toFixed(1) + ' : 1'; });

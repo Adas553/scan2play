@@ -17,6 +17,6 @@ S2P.scenario({
         await t.waitFor(function () { return box.open; }, 'unfolded');
         const field = document.getElementById('staffLinkPaste');
         t.check('the field shown', field.getBoundingClientRect().height > 0);
-        t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });

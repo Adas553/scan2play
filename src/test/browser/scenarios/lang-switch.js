@@ -31,7 +31,7 @@ S2P.scenario({
         const links = Array.from(nav.querySelectorAll('a'));
         t.step('two links', links.map(function (a) { return a.textContent.trim(); }), ['Polski', 'English']);
         t.step('each at least 40 px high (a finger)', links.filter(function (a) { return a.getBoundingClientRect().height < 40; }).length, 0);
-        t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });
 
@@ -52,7 +52,7 @@ function topSwitchShows(t) {
     const column = document.querySelector('.s2p-landing-hero').getBoundingClientRect();
     t.check('on the right of the page\'s column', links[1].getBoundingClientRect().right >= column.right - 40);
     t.step('each at least 40 px high (a finger)', links.filter(function (a) { return a.getBoundingClientRect().height < 40; }).length, 0);
-    t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+    t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 }
 
 S2P.scenario({
