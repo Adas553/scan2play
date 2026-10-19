@@ -108,7 +108,7 @@
             await posted(t, 'POST /dj/dashboard/dismiss', 'the skip');
             t.step('a tap on "Pomiń" of a folded card skips it and unfolds nothing',
                 [await t.stand.count('POST /dj/dashboard/dismiss'), tipped.classList.contains('s2p-open')], [1, false]);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
         }
     });
 
@@ -208,13 +208,13 @@
             const restore = skipped.querySelector('form[action="/dj/dashboard/restore"] button');
             const box = restore.getBoundingClientRect();
             t.step('the skip\'s "↩" in its line: 44 × 44, inside the screen, its words kept for a screen reader',
-                [shows(restore), Math.round(box.width) >= 44 && Math.round(box.height) >= 44, box.right <= window.innerWidth,
+                [shows(restore), Math.round(box.width) >= 44 && Math.round(box.height) >= 44, box.right <= document.documentElement.clientWidth,
                     restore.textContent.trim()], [true, true, true, '↩ Przywróć']);
             t.step('folded: no AI\'s comment, guest\'s words or "Podejrzyj"; "⚠" on the song with none of the guest\'s words',
                 [shows(skipped.querySelector('td.s2p-comment-cell')), shows(entry('Played Bravo').querySelector('.guest-text')),
                     shows(skipped.querySelector('td[data-sort-value="song"] a.btn')), shows(entry('Played Alpha').querySelector('.s2p-check-song'))],
                 [false, false, false, true]);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             // "Zagrane" by mistake (the owner, 2026-10-10): a played entry has its "↩" in the line too (a cleared one none: history-phone)
             t.step('"↩" also in the line of every played entry',
                 [shows(entry('Played Bravo').querySelector('form[action="/dj/dashboard/restore"] button')),

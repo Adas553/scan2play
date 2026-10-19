@@ -461,6 +461,11 @@ th[data-sort].sort-desc::after {
     background: linear-gradient(var(--s2p-border-strong), var(--s2p-bg-hover));
     border-radius: 0 0 16px 16px;
 }
+/* a phone: the base wider than the screen only by what the column's padding holds — at -5 % it stuck out of a 320 px screen and the
+   page moved sideways (the owner, 2026-10-19) */
+@media (max-width: 575.98px) {
+    .s2p-laptop-base { margin: 0 -2%; }
+}
 .s2p-phone {
     position: absolute; left: 0; bottom: 0; width: 28%;
     padding: 2.4%;

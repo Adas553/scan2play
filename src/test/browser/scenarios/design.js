@@ -134,13 +134,13 @@
         page: 'guide-pl',
         viewport: '390,844',
         run: async function (t) {
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             const jumps = Array.from(document.querySelectorAll('#guideJump a'));
             t.step('six jumps, each to its section', jumps.map(function (a) { return !!document.querySelector(a.getAttribute('href')); }),
                 [true, true, true, true, true, true]);
             t.step('every jump whole on the screen', jumps.filter(function (a) {
                 const box = a.getBoundingClientRect();
-                return box.left < 0 || box.right > window.innerWidth;
+                return box.left < 0 || box.right > document.documentElement.clientWidth;
             }).map(function (a) { return a.textContent.trim(); }), []);
             t.step('the jumps and the way back at least 44 px high', tooSmall(document.getElementById('guideJump'))
                 .concat(tooSmall(document.getElementById('guideBack').parentElement)), []);
@@ -166,7 +166,7 @@
             const middle = function (el) { const box = el.getBoundingClientRect(); return box.top + box.height / 2; };
             t.check('the logo is in the row of the account', !!logo.closest('.s2p-account-bar'));
             t.check('…on one line with "Zakończ" and "Konto"', Math.abs(middle(logo) - middle(account)) < 8 && Math.abs(middle(end) - middle(account)) < 8);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             // the rendered rows (the stand-in's poll replaces them in 3 s)
             const first = document.querySelector('#song-list tr[data-song-id]');
             const top = Math.round(first.getBoundingClientRect().top);
@@ -243,7 +243,7 @@
             const logo = document.querySelector('.s2p-logo');
             t.check('in the logo\'s row', !!settings && Math.abs(middle(settings) - middle(logo)) < 8 && Math.abs(middle(panel) - middle(logo)) < 8);
             t.step('nothing to tap is lower than 44 px, nothing wider than the screen',
-                [tooSmall(settings.parentElement), document.documentElement.scrollWidth <= window.innerWidth], [[], true]);
+                [tooSmall(settings.parentElement), document.documentElement.scrollWidth <= document.documentElement.clientWidth], [[], true]);
         }
     });
 
@@ -254,11 +254,11 @@
         viewport: '390,844',
         run: async function (t) {
             t.step('nothing to tap is lower than 44 px', tooSmall(document.body), []);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             const jumps = Array.from(document.querySelectorAll('#settingsJump a'));
             t.step('every jump to a card whole on the screen (wrapped, not cut at the edge)', jumps.filter(function (a) {
                 const box = a.getBoundingClientRect();
-                return box.left < 0 || box.right > window.innerWidth;
+                return box.left < 0 || box.right > document.documentElement.clientWidth;
             }).map(function (a) { return a.textContent.trim(); }), []);
             t.check('"← Panel" leads to the panel of the same party', document.getElementById('backToPanel').getAttribute('href') === '/dj/dashboard?party=HARN1');
         }

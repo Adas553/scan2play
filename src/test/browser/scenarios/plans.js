@@ -55,7 +55,7 @@
             t.step('no "PRO" where nothing is Pro', [markOf(row('staff').querySelector('.s2p-row-name'))], ['no mark']);
             t.step('each row one line, a thumb\'s target, inside the screen', ['hosts', 'links', 'limits'].filter(function (name) {
                 const box = row(name).getBoundingClientRect();
-                return box.height < 44 - 0.5 || box.height > 60 || box.right > window.innerWidth;
+                return box.height < 44 - 0.5 || box.height > 60 || box.right > document.documentElement.clientWidth;
             }), []);
             // the list of the comment styles (the owner's screenshot, 2026-10-14: "Zabawne · Pro" read as one more choice): "Klasyczne"
             // to pick, the others under a heading of the list itself, "W planie Pro", not to pick and in a quieter colour
@@ -65,7 +65,7 @@
             }), [['Klasyczne', false, null], ['Zabawne', true, 'W planie Pro'], ['Sarkastyczne', true, 'W planie Pro'], ['Krótkie', true, 'W planie Pro']]);
             t.step('the ones not to pick in a quieter colour than "Klasyczne"', getComputedStyle(options[1]).color !== getComputedStyle(options[0]).color, true);
             t.step('nothing of Pro in the queue', document.querySelectorAll('#queueList .s2p-pro, #queueList [data-pro-offer]').length, 0);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
         }
     });
 
@@ -89,10 +89,10 @@
                 + 'form[action="/dj/dashboard/limits"]').length, 0);
             t.step('the lists wait — said, not lost', text(cards[0].querySelector('[data-pro-offer] p')).indexOf('Twoje listy są zachowane') === 0, true);
             t.step('nothing to tap is lower than 44 px', tooSmall(document.body), []);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             t.step('every jump whole on the screen', Array.from(document.querySelectorAll('#settingsJump a')).filter(function (a) {
                 const box = a.getBoundingClientRect();
-                return box.left < 0 || box.right > window.innerWidth;
+                return box.left < 0 || box.right > document.documentElement.clientWidth;
             }).map(text), []);
         }
     });
@@ -161,7 +161,7 @@
         t.step('the questions one asks before buying, answered', Array.from(document.querySelectorAll('[data-pro-faq] h3')).map(text),
             ['Co, gdy Pro się skończy?', 'Czy obsługa potrzebuje Pro?', 'A goście?']);
         t.step('nothing to tap is lower than 44 px', wide ? [] : tooSmall(document.body), []);
-        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     };
 
     S2P.scenario({
