@@ -11,6 +11,26 @@
         return shots;
     };
 
+    // The owner, 2026-10-19: the page moved a little to the right and left on a phone. The hero's row with Bootstrap's g-5 (a
+    // negative margin of 1.5 rem) stuck out 12 px each side of the container (0.75 rem). A phone widens window.innerWidth to what
+    // sticks out, so "fits" is measured against the layout viewport, document.documentElement.clientWidth.
+    S2P.scenario({
+        name: 'landing-narrow-phone',
+        title: 'the landing page on a narrow phone (320 px): nothing sticks out sideways, the page does not move left and right',
+        page: 'landing-pl',
+        viewport: '320,700',
+        run: async function (t) {
+            await pictures(t);
+            const width = document.documentElement.clientWidth;
+            const out = Array.from(document.querySelectorAll('body *')).filter(function (el) {
+                const r = el.getBoundingClientRect();
+                return r.width > 0 && (r.left < -0.5 || r.right > width + 0.5);
+            }).map(function (el) { return el.tagName.toLowerCase() + '.' + String(el.className).trim().split(/\s+/).slice(0, 2).join('.'); });
+            t.step('nothing sticks out of the screen', out.slice(0, 5), []);
+            t.check('no scrolling sideways', document.documentElement.scrollWidth <= width);
+        }
+    });
+
     S2P.scenario({
         name: 'landing-phone',
         title: 'the landing page on a phone: the title and the start in the first screen, the pictures under them, nothing wider than the screen, the questions 44 px and folded',
@@ -19,11 +39,11 @@
         run: async function (t) {
             const shots = await pictures(t);
             t.check('both pictures are drawn', shots.every(function (img) { return img.naturalWidth > 0 && img.getBoundingClientRect().width > 0; }));
-            t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             t.check('the title and "Zbieraj prośby gości" in the first screen', box('landingStart').bottom <= window.innerHeight
                 && shows(document.querySelector('.s2p-landing-title')));
             t.check('the pictures under the start, within the screen', box('landingDashboardShot').top > box('landingStart').bottom
-                && box('landingDashboardShot').right <= window.innerWidth && box('landingGuestShot').left >= 0);
+                && box('landingDashboardShot').right <= document.documentElement.clientWidth && box('landingGuestShot').left >= 0);
             const questions = Array.from(document.querySelectorAll('#landingFaq summary'));
             t.step('six questions, each 44 px to tap', [questions.length,
                 questions.filter(function (q) { return q.getBoundingClientRect().height >= 44 - 0.5; }).length], [6, 6]);
@@ -50,7 +70,7 @@
                 && box('landingGuestShot').bottom > box('landingDashboardShot').bottom);
             const cards = Array.from(document.querySelectorAll('#landingFeatures .s2p-landing-card'));
             t.step('the features three in a row', new Set(cards.map(function (c) { return Math.round(c.getBoundingClientRect().top); })).size, 2);
-            t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+            t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
         }
     });
 })();

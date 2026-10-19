@@ -16,7 +16,7 @@ function screenFits(t) {
         return name.getBoundingClientRect().height > parseFloat(getComputedStyle(name).fontSize) * 1.6;
     }).length, 0);
     t.check('nothing to scroll', document.documentElement.scrollHeight <= window.innerHeight
-        && document.documentElement.scrollWidth <= window.innerWidth);
+        && document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 }
 
 /** The first song's name on the screen. */

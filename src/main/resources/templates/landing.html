@@ -21,7 +21,9 @@
     <div class="d-flex justify-content-end mb-2">
         <nav th:replace="~{fragments/components :: langSwitch('langSwitchTop', 'small')}"></nav>
     </div>
-    <div class="row align-items-center g-5">
+    <!--/* gx-4 on a phone: the row's negative margin (half the gutter) no wider than the container's padding — with g-5 it stuck out
+         12 px each side and the page moved left and right (the owner, 2026-10-19); the wide gutter from lg up */-->
+    <div class="row align-items-center gx-4 gy-5 gx-lg-5">
         <div class="col-lg-5 text-center text-lg-start">
             <div class="fs-3 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
             <h1 class="s2p-landing-title" th:text="#{landing.hero.title}">Guests request songs. AI keeps the vibe. You play.</h1>

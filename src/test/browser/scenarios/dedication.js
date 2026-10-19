@@ -17,8 +17,8 @@ S2P.scenario({
         await t.sleep(100);
         const field = input.getBoundingClientRect();
         t.check('a tap unfolds it: the field shows', box.open && input.checkVisibility() && field.height > 0);
-        t.check('the field fits the screen', field.left >= 0 && field.right <= window.innerWidth);
-        t.check('no scrolling sideways', document.documentElement.scrollWidth <= window.innerWidth);
+        t.check('the field fits the screen', field.left >= 0 && field.right <= document.documentElement.clientWidth);
+        t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
         t.step('at most 100 characters', input.maxLength, 100);
 
         input.value = 'dla Ani na 18-stkę';
