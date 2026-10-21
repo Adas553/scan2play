@@ -314,7 +314,8 @@ party, in the page's language — the English ones with songs known everywhere a
 from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLandingPagesPicture_…`; run it again after a change of
 the look; the panel shows the guests' dedications, the phone the folded "💌 Dodaj dedykację") —, then three steps, what one gets
 (six cards: the vibe — with no repeats —, the guest's words, the votes, the dedications, the hosts' list, the phone and the staff; no
-"PRO" on a card: "Ile to kosztuje?" says what Pro gives), for whom (wedding DJs, clubs, pubs, karaoke — pages of
+"PRO" on a card; "Ile to kosztuje?" names Pro and links `/pro` only while the plans are enforced — `HomeController`'s
+`plansEnforced`; before, "Nic. Scan2Play jest za darmo…": the owner, 2026-10-21, `/pro` is a 404 then), for whom (wedding DJs, clubs, pubs, karaoke — pages of
 their own later), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
 "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
