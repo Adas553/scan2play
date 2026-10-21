@@ -4,10 +4,38 @@ name: Browser tests
 # in a headless Chrome, against a stand-in server. No database, no secrets: only Maven Central (for the build of the render test) and the Chrome that the runner image already has.
 # They are not part of `mvnw test` (the unit tests); this is the one place where a machine runs them.
 
+# Only for what they render or run (the owner, 2026-10-21: the Actions minutes of the month were at 90 %, three quarters of them
+# here): the templates, the static files, the texts, the code behind the rendered pages, the render tests and the scenarios. Not for
+# the documentation, the migrations, the repositories or the other tests. A later pattern wins over an earlier one; by hand:
+# workflow_dispatch.
 on:
   push:
     branches: [dev, main]
+    paths:
+      - 'src/main/**'
+      - '!src/main/resources/db/**'
+      - '!src/main/java/com/scan2play/repository/**'
+      - 'src/test/browser/**'
+      - '!src/test/browser/README.md'
+      - 'src/test/java/com/scan2play/template/**'
+      - 'src/test/java/com/scan2play/controller/**'
+      - 'src/test/java/com/scan2play/service/Plans*.java'
+      - 'pom.xml'
+      - '.mvn/**'
+      - '.github/workflows/browser-tests.yml'
   pull_request:
+    paths:
+      - 'src/main/**'
+      - '!src/main/resources/db/**'
+      - '!src/main/java/com/scan2play/repository/**'
+      - 'src/test/browser/**'
+      - '!src/test/browser/README.md'
+      - 'src/test/java/com/scan2play/template/**'
+      - 'src/test/java/com/scan2play/controller/**'
+      - 'src/test/java/com/scan2play/service/Plans*.java'
+      - 'pom.xml'
+      - '.mvn/**'
+      - '.github/workflows/browser-tests.yml'
   workflow_dispatch:
 
 permissions:

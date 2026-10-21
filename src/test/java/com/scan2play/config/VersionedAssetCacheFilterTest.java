@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * version as Railway sets it — a commit — in place of the local "dev" (for that one, see {@link #theLocalVersionIsNeverKept}).
  */
 @WebMvcTest(value = HomeController.class, properties = "spring.web.resources.chain.strategy.fixed.version=0123abcd")
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
 class VersionedAssetCacheFilterTest {
 
     @Autowired

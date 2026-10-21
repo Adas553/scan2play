@@ -246,6 +246,17 @@ class SmokeTest {
     }
 
     @Test
+    @DisplayName("While the plans are not enforced the landing page says nothing of Pro: \"Ile to kosztuje?\" says it is free, no link to /pro (a 404 then)")
+    void landingPage_saysNothingOfPro_whileThePlansAreOff() throws Exception {
+        for (String lang : java.util.List.of("pl", "en")) {
+            String html = mockMvc.perform(get("/").param("lang", lang)).andReturn().getResponse().getContentAsString();
+
+            assertThat(html).as(lang).doesNotContain("href=\"/pro\"").doesNotContainPattern("(?U)\\bPro\\b")
+                    .contains(lang.equals("pl") ? "Nic. Scan2Play jest za darmo" : "Nothing. Scan2Play is free");
+        }
+    }
+
+    @Test
     @DisplayName("GET /start (public) goes on to Google's login; so do the old links of the tiles")
     void start_goesToGooglesLogin() throws Exception {
         mockMvc.perform(get("/start"))
