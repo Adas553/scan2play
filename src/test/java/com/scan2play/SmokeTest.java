@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Locale;
@@ -350,7 +351,43 @@ class SmokeTest {
     void theDjsAddresses_areNotTakenForTheVersionedScripts() throws Exception {
         mockMvc.perform(get("/dj/js/anything")).andExpect(status().is3xxRedirection());
         mockMvc.perform(get("/dj/css/anything")).andExpect(status().is3xxRedirection());
-        mockMvc.perform(get("/other/js/dashboard/main.js")).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/other/js/dashboard/main.js")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * The review of 2026-10-21, C2: a DJ whose session expired (the phone in the pocket) opens the panel again — straight to Google's
+     * login, the page with its party remembered for after it; before, the landing page for DJs and the panel of another party.
+     */
+    @Test
+    @DisplayName("A DJ's page opened without a session → Google's login, the page with its ?party= remembered")
+    void aDjsPageOpenedWithoutASession_goesToGooglesLogin_andIsRemembered() throws Exception {
+        MvcResult result = mockMvc.perform(get("/dj/dashboard?party=ABC12").header("Sec-Fetch-Mode", "navigate"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/google"))
+                .andReturn();
+        Object saved = result.getRequest().getSession().getAttribute("SPRING_SECURITY_SAVED_REQUEST");
+        assertThat(saved).isInstanceOf(org.springframework.security.web.savedrequest.SavedRequest.class);
+        assertThat(((org.springframework.security.web.savedrequest.SavedRequest) saved).getRedirectUrl()).contains("/dj/dashboard?party=ABC12");
+    }
+
+    /** A fetch of the panel (the queue's poll) goes to "/" as before — polling.js reloads its page then — and is not remembered. */
+    @Test
+    @DisplayName("A fetch of the panel without a session → \"/\", not remembered")
+    void aFetchOfThePanelWithoutASession_goesToTheLandingPage_notRemembered() throws Exception {
+        MvcResult result = mockMvc.perform(get("/dj/dashboard/updates").param("partyCode", "ABC12").header("Sec-Fetch-Mode", "cors"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andReturn();
+        jakarta.servlet.http.HttpSession session = result.getRequest().getSession(false);
+        assertThat(session == null ? null : session.getAttribute("SPRING_SECURITY_SAVED_REQUEST")).isNull();
+    }
+
+    /** The review of 2026-10-21, C3: a mistyped address is "not found", not the landing page (a soft 404 for a search engine). */
+    @Test
+    @DisplayName("An address of no page → 404, not the landing page")
+    void anAddressOfNoPage_isA404() throws Exception {
+        mockMvc.perform(get("/nie-ma-takiej").header("Sec-Fetch-Mode", "navigate")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/nie-ma-takiej")).andExpect(status().isNotFound());
     }
 
     @Test

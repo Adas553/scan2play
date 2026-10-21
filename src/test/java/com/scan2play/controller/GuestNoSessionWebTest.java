@@ -61,9 +61,10 @@ class GuestNoSessionWebTest {
         assertThat(result.getRequest().getSession(false)).as("a session was made").isNull();
     }
 
+    /** "Ten kod imprezy nie istnieje" (the error page's 404), not the landing page for DJs (the review of 2026-10-21, C3). */
     @Test
-    void aCodeThatIsNoParty_goesHome_withoutASession() throws Exception {
-        noSession(mockMvc.perform(get("/p/X7Q2Z")).andExpect(status().is3xxRedirection()).andReturn());
+    void aCodeThatIsNoParty_isA404_withoutASession() throws Exception {
+        noSession(mockMvc.perform(get("/p/X7Q2Z")).andExpect(status().isNotFound()).andReturn());
     }
 
     @Test
