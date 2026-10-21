@@ -17,7 +17,8 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   fix): `docs/history/session-handoff-2026-10-18.md`. Checked live on 2026-10-21 with curl, no cookies: the home page whole to
   `</html>` in Polish and with `?lang=en`, the footer, "Polski · English" at the top, "Masz link z zaproszeniem od DJ-a? Wklej go
   tutaj" under the last "Zbieraj prośby gości"; `/p/{code}/tv` 200 (an unknown code 404). No "Cannot create a session after the
-  response has been committed" since 2026-10-18 19:12 UTC (the fix #121 was deployed at 19:42).
+  response has been committed" since 2026-10-18 19:12 UTC (the fix #121 was deployed at 19:42). Search Console: the owner has
+  requested the home page's indexing (done by 2026-10-21).
 - **The CSP's week (2026-10-15 … 21): not one "CSP violation"** in Railway's log — `CSP_ENFORCE=true` stays. No AI error either
   ("AI evaluation failed", "the AI could not be asked", 402): 10 requests asked that week (9 on 2026-10-16, 1 on 10-18), each
   answered by `gemini-3.6-flash`. The plans are not enforced (`PLANS_ENFORCE` unset), the notifications on.
@@ -97,7 +98,6 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 - **Railway's sleep:** still on (2026-10-21) — switch `sleepApplication` off for `scan2play` and `Postgres` (Settings → Deploy →
   Serverless). Next morning: the log after 04:40 / 04:45 Polish time (02:40 / 02:45 UTC until 2026-10-25, then 03:40 / 03:45) — a
   "Queue cleanup" line only if a request had waited more than a day.
-- **Search Console:** URL Inspection of the home page → "Request indexing" (the icon, the new landing page).
 - **Old PRs to `main`:** #2 and #7 (April) — close them.
 - **Gemini's prepaid credits:** top up or turn on auto-reload (at zero the API answers 402 and every request goes to the DJ
   unchecked); a spending limit for the project in AI Studio.
