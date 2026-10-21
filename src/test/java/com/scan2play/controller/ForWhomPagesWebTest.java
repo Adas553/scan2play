@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * The pages "Dla kogo" (Next 7, 2026-10-21): wedding DJs, clubs, pubs — public, for a search engine and a link sent to a DJ. Each is
  * Polish at its own address and English with {@code ?lang=en} (canonical, hreflang, like the other public pages), with its own
- * heading, four steps, four features and three questions, and links in its own language. No form (no session, no CSRF token).
+ * heading, four steps, four features and up to three questions, and links in its own language. No form (no session, no CSRF token).
  * Writes the pages of the browser tests ({@code target/browser-harness/for-whom-*.html}).
  */
 @WebMvcTest(ForWhomController.class)
@@ -35,6 +35,10 @@ class ForWhomPagesWebTest {
             "/dj-weselny", "Wesele bez kolejki przy konsoli",
             "/kluby", "Sala mówi, czego chce. Gatunek zostaje Twój.",
             "/puby", "Muzyka na życzenie gości, bez stania przy barze");
+
+    private static final Map<String, String> KINDS_PL = Map.of("/dj-weselny", "DJ weselny", "/kluby", "Kluby i imprezy", "/puby", "Puby i bary");
+    private static final Map<String, String> STEPS_PL = Map.of("/dj-weselny", "<h2>Jak to wygląda na weselu</h2>",
+            "/kluby", "<h2>Jak to wygląda w klubie</h2>", "/puby", "<h2>Jak to wygląda w pubie</h2>");
 
     @Autowired
     private MockMvc mockMvc;
@@ -62,7 +66,16 @@ class ForWhomPagesWebTest {
                     "<h1 class=\"s2p-landing-title\">" + heading.getValue() + "</h1>");
             assertThat(html.split("class=\"s2p-landing-step\"", -1)).as(path + ": four steps").hasSize(5);
             assertThat(section(html, "forWhomFeatures").split("class=\"s2p-landing-card\"", -1)).as(path + ": four features").hasSize(5);
-            assertThat(section(html, "forWhomFaq").split("<details", -1)).as(path + ": three questions").hasSize(4);
+            // three questions, the pubs' two (the owner, 2026-10-21: "Czy trzeba mieć DJ-a?" out)
+            assertThat(section(html, "forWhomFaq").split("<details", -1)).as(path + ": its questions")
+                    .hasSize(path.equals("/puby") ? 3 : 4);
+            // where one is (the owner, 2026-10-21: from the landing page's card the page looked the same): the breadcrumbs, the kind
+            // with its card's icon above the heading, the sections' headings of this kind of party
+            assertThat(html.indexOf("id=\"forWhomBreadcrumb\"")).as(path + ": the breadcrumbs first")
+                    .isPositive().isLessThan(html.indexOf("id=\"forWhomKind\"")).isLessThan(html.indexOf("<h1"));
+            assertThat(html).contains("href=\"/#landingWho\">Dla kogo</a>", "aria-current=\"page\">" + KINDS_PL.get(path) + "</li>");
+            assertThat(tagAndText(html, "forWhomKind")).contains(KINDS_PL.get(path));
+            assertThat(section(html, "forWhomSteps")).contains(STEPS_PL.get(path));
             assertThat(html.split("href=\"/start\"", -1)).as(path + ": the start at the top and at the end").hasSize(3);
             // the other two kinds of party, the home page (the logo) and the guide — in Polish, at their own addresses
             List<String> others = HEADINGS_PL.keySet().stream().filter(p -> !p.equals(path)).toList();
@@ -116,6 +129,13 @@ class ForWhomPagesWebTest {
     @Test
     void karaoke_hasNoPageYet() throws Exception {
         mockMvc.perform(get("/karaoke")).andExpect(status().is3xxRedirection());
+    }
+
+    /** The element with this id, up to its first closing tag. */
+    private static String tagAndText(String html, String id) {
+        int start = html.indexOf("id=\"" + id + "\"");
+        assertThat(start).as(id).isPositive();
+        return html.substring(start, html.indexOf("</p>", start));
     }
 
     private static String section(String html, String id) {

@@ -30,6 +30,14 @@
             t.step('nothing sticks out of the screen', wide.map(function (el) { return el.tagName + '.' + el.className; }), []);
             t.check('the heading and "Zbieraj prośby gości" in the first screen',
                 box(document.getElementById('forWhomStart')).bottom <= window.innerHeight && box(document.querySelector('h1')).top >= 0);
+            // where one is, at once (the owner, 2026-10-21: from the landing page's card the page looked the same)
+            const crumbs = document.getElementById('forWhomBreadcrumb');
+            const kind = document.getElementById('forWhomKind');
+            t.check('the breadcrumbs and the kind above the heading, in the first screen', box(crumbs).height > 0
+                && box(crumbs).bottom <= box(kind).top && box(kind).bottom <= box(document.querySelector('h1')).top
+                && box(kind).height > 0);
+            t.step('the breadcrumbs say the way back', Array.from(crumbs.querySelectorAll('li')).map(function (li) { return li.textContent.trim(); }),
+                ['Scan2Play', 'Dla kogo', 'DJ weselny']);
             const steps = Array.from(document.querySelectorAll('#forWhomSteps .s2p-landing-step'));
             t.step('four steps, one under another', [steps.length, rows(steps)], [4, 4]);
             const questions = Array.from(document.querySelectorAll('#forWhomFaq summary'));

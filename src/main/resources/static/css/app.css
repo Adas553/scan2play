@@ -522,6 +522,17 @@ th[data-sort].sort-desc::after {
 .s2p-landing-faq details p { padding: 0 1rem 1rem; margin: 0; color: var(--s2p-text-muted); }
 .s2p-landing-final { padding-block: 3.5rem 1rem; }
 
+/* A page "Dla kogo" (2026-10-21): where one is — the breadcrumbs (the logo, "Dla kogo", this kind) and the kind above the heading */
+.s2p-breadcrumb { align-items: center; font-size: 0.95rem; --bs-breadcrumb-divider-color: var(--s2p-text-muted); }
+.s2p-breadcrumb .breadcrumb-item:first-child { font-size: 1.35rem; font-weight: 700; }
+.s2p-breadcrumb a { color: var(--s2p-text); }
+.s2p-breadcrumb .breadcrumb-item.active { color: var(--s2p-light); font-weight: 600; }
+.s2p-forwhom-kind {
+    display: inline-flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0;
+    padding: 0.35rem 0.9rem; border: 1px solid var(--s2p-cyan); border-radius: 999px;
+    color: var(--s2p-cyan); font-weight: 700;
+}
+
 /* ==========================================================================
  * 6b. SONG AUTOCOMPLETE DROPDOWN — index.html (guest page)
  *     Floats below #songInput. Zero server involvement — iTunes API only.

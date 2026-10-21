@@ -318,8 +318,10 @@ the look; the panel shows the guests' dedications, the phone the folded "💌 Do
 cards lead to their pages "Dla kogo", below; karaoke has none yet), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
 **The pages "Dla kogo"** (`ForWhomController`, `for-whom.html`, 2026-10-21; Next 7): `/dj-weselny`, `/kluby`, `/puby` — for search
 engines (in the sitemap, Polish at the address, English with `?lang=en`, canonical and `hreflang` like the other public pages) and for
-a link sent to a DJ or a pub's owner. The landing page's hero with the same pictures (`landing :: devices`), then four steps, four
-features and three questions of that kind of party (`forWhom.KEY.*` — each page its own texts, not one page with a word swapped: a
+a link sent to a DJ or a pub's owner. Where one is, at once (the owner: from the landing page's card the page looked the same): breadcrumbs (the
+logo, "Dla kogo", this kind) and the kind with its card's icon above the heading. The landing page's hero with the same pictures
+(`landing :: devices`), then four steps and four features under headings of that kind of party ("na weselu", "w klubie"…) and up to
+three questions (the pubs' two) of that kind of party (`forWhom.KEY.*` — each page its own texts, not one page with a word swapped: a
 search engine counts that a doorway page; `ForWhomPagesWebTest` checks no paragraph repeats), the start again and the other two kinds
 as cards that are links (the whole card, `.stretched-link`). Every link in the page's language (`?lang=en` on an English page). No
 form (no session, no CSRF token) and no word of Pro while the plans are not enforced (the owner, 2026-10-21). No karaoke page: nothing
