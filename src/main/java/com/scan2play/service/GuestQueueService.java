@@ -54,17 +54,23 @@ public class GuestQueueService {
         List<SongRequestEntity> queue = djService.getDashboardQueue(partyCode); // oldest first (cached 3 s)
         List<SongRequestEntity> mine = queue.stream().filter(song -> myIds.contains(song.getId())).toList();
         String mySong = mine.size() == 1 ? mine.getFirst().getSongName() : null;
-        List<SongRequestEntity> songs = byVotes(queue);
+        // a request the AI did not judge is the guest's own words: the one who sent it sees it, the other guests do not (V39)
+        List<SongRequestEntity> songs = byVotes(queue.stream()
+                .filter(song -> song.isChecked() || myIds.contains(song.getId()))
+                .toList());
         int shown = Math.min(SHOWN, songs.size());
         return new GuestQueue(songs.subList(0, shown), songs.subList(shown, songs.size()), myIds, mySong, mine.size(), myVotes);
     }
 
     /**
      * The screen for a TV ({@code /p/{code}/tv}, Next 7 c): the {@value #TV_SHOWN} most wanted of the waiting songs, in the order of
-     * the guests' list — the screen tells the room what the room wants, not what plays next.
+     * the guests' list — the screen tells the room what the room wants, not what plays next. Only requests the AI judged: an
+     * unchecked one is a guest's own words, on a screen the whole hall reads (V39, the review of 2026-10-21).
      */
     public List<SongRequestEntity> mostWanted(String partyCode) {
-        List<SongRequestEntity> songs = byVotes(djService.getDashboardQueue(partyCode));   // cached 3 s: a TV polling costs little
+        List<SongRequestEntity> songs = byVotes(djService.getDashboardQueue(partyCode).stream()   // cached 3 s: a TV polling costs little
+                .filter(SongRequestEntity::isChecked)
+                .toList());
         return songs.subList(0, Math.min(TV_SHOWN, songs.size()));
     }
 

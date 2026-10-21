@@ -211,6 +211,19 @@ class DashboardQueueFragmentTest {
     }
 
     @Test
+    @DisplayName("V39: a request the AI did not judge is marked \"bez oceny AI\" — the guests' list and the TV do not show it")
+    void shouldMarkARequestTheAiDidNotJudge() {
+        SongRequestEntity unchecked = accepted(1, "cokolwiek gość wpisał");
+        unchecked.setChecked(false);
+
+        String html = render(List.of(unchecked, accepted(2, "Beta")), PL);
+
+        assertThat(html.split("s2p-request-unchecked", -1)).as("only the first row").hasSize(2);
+        assertThat(html).contains(">bez oceny AI<", "lista gości i ekran TV jej nie pokazują").doesNotContain("??");
+        assertThat(html.substring(html.indexOf("data-song-id=\"2\""))).doesNotContain("s2p-request-unchecked");
+    }
+
+    @Test
     @DisplayName("V38: the guests' dedications under the song, newest last, escaped; \"niesprawdzona\" without the AI, \"+N\" for the rest")
     void shouldShowTheGuestsDedications() {
         SongRequestEntity szampan = accepted(1, "sanah - Szampan");

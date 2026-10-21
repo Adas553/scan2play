@@ -331,6 +331,9 @@
                             <!--/* none of the guest's words in the AI's song: maybe another song in place of the one asked for */-->
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>
+                            <!--/* the AI was down (V39): the guest's own words, not on the guests' list nor the TV screen */-->
+                            <span th:unless="${req.checked}" class="badge text-bg-secondary align-self-start s2p-request-unchecked"
+                                  th:title="#{dashboard.request.unchecked.title}" th:text="#{dashboard.request.unchecked}">not checked by the AI</span>
                             <span th:unless="${#strings.isEmpty(req.guestText)}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${req.guestText})}">Guest: “…”</span>
                             <!--/* the guests' dedications (V38): the newest few, "niesprawdzona" when the AI was down, "+N" for the rest */-->

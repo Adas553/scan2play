@@ -119,4 +119,27 @@ class GuestQueueServiceTest {
         assertThat(queue.more()).isEmpty();
         assertThat(queue.mySong()).isNull();
     }
+
+    /**
+     * The review of 2026-10-21, S1: a request the AI could not judge (V39) is a guest's own words. The guests' list shows it only to
+     * the guest who sent it; the TV screen of the hall never.
+     */
+    @Test
+    void anUncheckedRequest_isOnlyOnItsOwnGuestsList_andNeverOnTheTv() {
+        SongRequestEntity checked = SongRequestEntity.builder().id(10L).partyCode(PARTY).songName("Wilki - Baśka").votes(1).build();
+        SongRequestEntity unchecked = SongRequestEntity.builder().id(11L).partyCode(PARTY).songName("whatever the guest typed")
+                .votes(3).checked(false).build();
+        when(djService.getDashboardQueue(PARTY)).thenReturn(List.of(checked, unchecked));
+
+        GuestQueue another = service.view(PARTY, Set.of(), Set.of());
+        assertThat(another.shown()).extracting(SongRequestEntity::getId).containsExactly(10L);
+        assertThat(another.more()).isEmpty();
+        assertThat(another.song(11L)).isEmpty();
+
+        GuestQueue theSender = service.view(PARTY, Set.of(11L), Set.of());
+        assertThat(theSender.shown()).extracting(SongRequestEntity::getId).containsExactly(11L, 10L);
+        assertThat(theSender.mySong()).isEqualTo("whatever the guest typed");
+
+        assertThat(service.mostWanted(PARTY)).extracting(SongRequestEntity::getId).containsExactly(10L);
+    }
 }
