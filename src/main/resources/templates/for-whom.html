@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}"
+      th:with="t=${'forWhom.' + forWhom.key + '.'}, lang=${#messages.msg('html.lang') == 'en' ? 'en' : 'pl'}, q=${lang == 'en' ? '?lang=en' : ''}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title th:text="${#messages.msg(t + 'seo.title')}">Wedding song requests by QR code – Scan2Play for DJs</title>
+    <th:block th:replace="~{fragments/components :: seo(${forWhom.path}, ${#messages.msg(t + 'seo.title')}, ${#messages.msg(t + 'seo.description')})}"></th:block>
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* A page "Dla kogo" (2026-10-21, ForWhomController): the landing page's look — its hero with the same pictures, then four steps,
+     four features and three questions of this kind of party (forWhom.KEY.*), the start again and the other kinds. The links stay in
+     the page's language (?lang=en on an English page), so a search engine follows each language through. */-->
+<body class="page-landing">
+
+<header class="container s2p-landing-hero">
+    <div class="d-flex justify-content-end mb-2">
+        <nav th:replace="~{fragments/components :: langSwitch('langSwitchTop', 'small')}"></nav>
+    </div>
+    <!--/* the landing page's gutters: gx-4 on a phone, else the row sticks out of the container and the page moves sideways */-->
+    <div class="row align-items-center gx-4 gy-5 gx-lg-5">
+        <div class="col-lg-5 text-center text-lg-start">
+            <div class="fs-3 fw-bold"><a th:href="${'/' + q}" href="/" id="forWhomHome" class="text-reset text-decoration-none"
+               th:title="#{forWhom.home}" title="Scan2Play home page"><th:block th:replace="~{fragments/components :: logo}"></th:block></a></div>
+            <h1 class="s2p-landing-title" th:text="${#messages.msg(t + 'title')}">A wedding without a queue at the booth</h1>
+            <p class="s2p-landing-lede" th:text="${#messages.msg(t + 'lede')}">Guests scan the QR code on their table…</p>
+            <div class="s2p-landing-cta">
+                <a href="/start" id="forWhomStart" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
+                <a th:href="${#messages.msg('help.guide.href') + q}" href="/how-it-works" class="btn btn-outline-light btn-lg"
+                   th:text="#{landing.guide}">How Scan2Play works →</a>
+            </div>
+            <p class="s2p-landing-free"><span th:text="#{landing.hero.free}">Free. No card, nothing to install.</span>
+                <span th:text="${'· ' + #messages.msg('landing.hint.requests')}">· Requires a Google account</span></p>
+        </div>
+        <div class="col-lg-7">
+            <figure th:replace="~{landing :: devices}"></figure>
+        </div>
+    </div>
+</header>
+
+<main>
+    <section class="s2p-landing-section" id="forWhomSteps">
+        <div class="container">
+            <h2 th:text="#{forWhom.steps.title}">How it goes</h2>
+            <ol class="s2p-landing-grid s2p-landing-grid-4 s2p-landing-steps">
+                <li class="s2p-landing-step" th:each="i : ${#numbers.sequence(1, 4)}">
+                    <span class="s2p-landing-step-number" aria-hidden="true" th:text="${i}">1</span>
+                    <h3 th:text="${#messages.msg(t + 'step' + i + '.title')}">Before the wedding</h3>
+                    <p th:text="${#messages.msg(t + 'step' + i + '.text')}">…</p>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="s2p-landing-section" id="forWhomFeatures">
+        <div class="container">
+            <h2 th:text="#{forWhom.features.title}">What helps</h2>
+            <div class="s2p-landing-grid s2p-landing-grid-4">
+                <div class="s2p-landing-card" th:each="i : ${#numbers.sequence(1, 4)}">
+                    <span class="s2p-landing-icon" aria-hidden="true" th:text="${#messages.msg(t + 'feature' + i + '.icon')}">💌</span>
+                    <h3 th:text="${#messages.msg(t + 'feature' + i + '.title')}">Dedications</h3>
+                    <p th:text="${#messages.msg(t + 'feature' + i + '.text')}">…</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="s2p-landing-section" id="forWhomFaq">
+        <div class="container">
+            <h2 th:text="#{forWhom.faq.title}">Questions</h2>
+            <div class="s2p-landing-faq">
+                <details th:each="i : ${#numbers.sequence(1, 3)}"><summary th:text="${#messages.msg(t + 'faq' + i + '.q')}">Can older guests manage?</summary>
+                    <p th:text="${#messages.msg(t + 'faq' + i + '.a')}">…</p></details>
+            </div>
+        </div>
+    </section>
+
+    <section class="s2p-landing-section s2p-landing-final" id="forWhomFinal">
+        <div class="container text-center">
+            <h2 th:text="#{landing.final.title}">Ready for your next party?</h2>
+            <p class="s2p-landing-lede mx-auto" th:text="#{landing.final.text}">You start a party in a minute…</p>
+            <a href="/start" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
+            <p class="s2p-landing-free mt-3" th:text="#{landing.hero.free}">Free. No card, nothing to install.</p>
+        </div>
+    </section>
+
+    <!--/* The other kinds of party: the landing page's cards, each a link */-->
+    <section class="s2p-landing-section" id="forWhomOthers">
+        <div class="container">
+            <h2 th:text="#{forWhom.others.title}">Who else it is for</h2>
+            <div class="s2p-landing-grid s2p-mw-800 mx-auto">
+                <div class="s2p-landing-card s2p-landing-card-link" th:each="other : ${forWhomOthers}">
+                    <h3><a th:href="${other.path + q}" href="/kluby" class="stretched-link"
+                           th:text="${#messages.msg('landing.who.' + other.key + '.title')}">Clubs and parties</a></h3>
+                    <p th:text="${#messages.msg('landing.who.' + other.key + '.text')}">…</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{fragments/components :: footer}"></div>
+
+</body>
+</html>

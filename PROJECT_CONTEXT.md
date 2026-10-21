@@ -314,8 +314,16 @@ party, in the page's language — the English ones with songs known everywhere a
 from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLandingPagesPicture_…`; run it again after a change of
 the look; the panel shows the guests' dedications, the phone the folded "💌 Dodaj dedykację") —, then three steps, what one gets
 (six cards: the vibe — with no repeats —, the guest's words, the votes, the dedications, the hosts' list, the phone and the staff; no
-"PRO" on a card: "Ile to kosztuje?" says what Pro gives), for whom (wedding DJs, clubs, pubs, karaoke — pages of
-their own later), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
+"PRO" on a card: "Ile to kosztuje?" says what Pro gives), for whom (wedding DJs, clubs, pubs, karaoke — the first three
+cards lead to their pages "Dla kogo", below; karaoke has none yet), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
+**The pages "Dla kogo"** (`ForWhomController`, `for-whom.html`, 2026-10-21; Next 7): `/dj-weselny`, `/kluby`, `/puby` — for search
+engines (in the sitemap, Polish at the address, English with `?lang=en`, canonical and `hreflang` like the other public pages) and for
+a link sent to a DJ or a pub's owner. The landing page's hero with the same pictures (`landing :: devices`), then four steps, four
+features and three questions of that kind of party (`forWhom.KEY.*` — each page its own texts, not one page with a word swapped: a
+search engine counts that a doorway page; `ForWhomPagesWebTest` checks no paragraph repeats), the start again and the other two kinds
+as cards that are links (the whole card, `.stretched-link`). Every link in the page's language (`?lang=en` on an English page). No
+form (no session, no CSRF token) and no word of Pro while the plans are not enforced (the owner, 2026-10-21). No karaoke page: nothing
+in the app is made for it yet (the owner, 2026-10-21).
 "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request
@@ -623,7 +631,8 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `FeedbackController` | `POST /dj/feedback` (JSON; 10 an hour per account, then 429) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation, at most 100 an hour |
-| `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
+| `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, the pages "Dla kogo" (`ForWhomController.PAGES`), `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
+| `ForWhomController` | the pages "Dla kogo" `/dj-weselny`, `/kluby`, `/puby` (one template, `for-whom.html`; the texts `forWhom.KEY.*`) — 2026-10-21 |
 | `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), "Scan2Play Pro" `/pro` (V35: what Pro adds, a file per language; a 404 while the plans are not enforced) |
 | `ViewAttributes` | names of the model attributes |
 
@@ -664,7 +673,9 @@ files under it); everything else keeps Spring Security's `no-store`,
 stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
 the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an empty header), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
 link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
-`scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages:
+`scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages; only for
+the controllers it names, `HomeController`, `LegalController`, `ForWhomController` — a new public page's controller goes there, or
+its head has no canonical address:
 `fragments/components :: seo(path, title, description)` writes the description, the canonical address in the page's language,
 the `hreflang` alternates, Open Graph with `images/og-image.png` and the site's icon — `rel="icon"` `/favicon.ico` (16 / 32 / 48 px)
 and `images/icon-192.png`, `apple-touch-icon` (Google Search shows the icon beside a result only when the home page names it;
@@ -672,7 +683,7 @@ and `images/icon-192.png`, `apple-touch-icon` (Google Search shows the icon besi
 
 ### 6.4 Templates
 
-`landing.html`, `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
+`landing.html`, `for-whom.html` (the pages "Dla kogo"), `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
 `qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html` (every provider the data passes through — Railway us-east4 — its DPA with the standard contractual clauses signed by the owner, 2026-10-15 —, Cloudflare (its Web Analytics is off: the owner, 2026-10-15), Google, Apple's iTunes search, the push services —, the server's logs with the guests' texts kept 7 days by Railway Hobby, the plan; `SmokeTest` checks both languages; keep it true when a provider, the region or the plan changes), `guide[_pl].html` (the public guide "Jak działa Scan2Play", 2026-10-12: a section per moment of a party, the app's buttons as pictures — `.s2p-guide-row`; keep it true to the app),
 `terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32), `pro[_pl].html` ("Scan2Play Pro", V35: a page of the product — the one action, the plans Free and Pro, what Pro gives, "Dobrze wiedzieć"; keep it true to `PlanFeature`; `ProPageRenderTest`), `tv.html` (the screen for a TV, 2026-10-18: Polish and English at once like the QR poster, written in the
 template; its fragment `tvList`) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
@@ -821,7 +832,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/dj-weselny`, `/kluby`, `/puby`, `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
 under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/webjars/**`, `/favicon.ico`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
@@ -1023,6 +1034,7 @@ GuestQueueService          → DjService
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" (a list over 100: the first 100 kept, `hostDropped` says so) |
 | GET | `/privacy`, `/terms` | legal pages |
 | GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
+| GET | `/dj-weselny`, `/kluby`, `/puby` | the pages "Dla kogo" (public; `ForWhomController`, 2026-10-21) |
 | GET | `/robots.txt`, `/sitemap.xml` | for search engines (`SeoController`, 2026-10-14) |
 | GET | `/pro` | "Scan2Play Pro" (V35): what stays free, what Pro adds, "Napisz, że chcesz Pro" (`mailto:`), the questions; a 404 while the plans are not enforced |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |

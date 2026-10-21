@@ -59,9 +59,13 @@ class SmokeTest {
         assertThat(xml).contains("<loc>https://www.scan2play.com.pl/</loc>", "<loc>https://www.scan2play.com.pl/?lang=en</loc>",
                 "<loc>https://www.scan2play.com.pl/jak-to-dziala</loc>", "<loc>https://www.scan2play.com.pl/privacy</loc>",
                 "<loc>https://www.scan2play.com.pl/terms</loc>",
+                // the pages "Dla kogo" (2026-10-21): wedding DJs, clubs, pubs — no karaoke yet
+                "<loc>https://www.scan2play.com.pl/dj-weselny</loc>", "<loc>https://www.scan2play.com.pl/dj-weselny?lang=en</loc>",
+                "<loc>https://www.scan2play.com.pl/kluby</loc>", "<loc>https://www.scan2play.com.pl/puby?lang=en</loc>",
+                "hreflang=\"en\" href=\"https://www.scan2play.com.pl/kluby?lang=en\"",
                 "hreflang=\"pl\" href=\"https://www.scan2play.com.pl/jak-to-dziala\"",
                 "hreflang=\"en\" href=\"https://www.scan2play.com.pl/jak-to-dziala?lang=en\"", "hreflang=\"x-default\"")
-                .doesNotContain("/pro", "/dj/", "/p/");
+                .doesNotContain("/pro", "/dj/", "/p/", "/karaoke");
     }
 
     @Test
