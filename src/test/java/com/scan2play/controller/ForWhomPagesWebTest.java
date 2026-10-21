@@ -83,6 +83,8 @@ class ForWhomPagesWebTest {
                 assertThat(section(html, "forWhomOthers")).contains("href=\"" + other + "\"");
             }
             assertThat(section(html, "forWhomOthers")).doesNotContain("href=\"" + path + "\"");
+            // and the way back at the page's end (the owner, 2026-10-21)
+            assertThat(section(html, "forWhomOthers")).contains("href=\"/\" id=\"forWhomBack\" class=\"link-light\">← Wróć na stronę główną</a>");
             assertThat(html).contains("id=\"forWhomHome\"", "href=\"/\"", "href=\"/jak-to-dziala\"", "id=\"langSwitchTop\"",
                     "src=\"/images/landing/dashboard-pl.webp\"");
             assertThat(html).as(path + ": no form — no session, no CSRF token").doesNotContain("<form", "_csrf");
@@ -101,6 +103,7 @@ class ForWhomPagesWebTest {
                     "<link rel=\"canonical\" href=\"" + SITE + path + "?lang=en\">", "<meta property=\"og:locale\" content=\"en_US\">",
                     "href=\"/?lang=en\"", "href=\"/how-it-works?lang=en\"", "src=\"/images/landing/dashboard-en.webp\"");
             assertThat(section(html, "forWhomOthers")).contains("?lang=en\"").doesNotContainPattern("href=\"/[a-z-]+\"");
+            assertThat(section(html, "forWhomOthers")).contains("href=\"/?lang=en\" id=\"forWhomBack\"", ">← Back to the home page</a>");
             assertThat(html).as(path + ": no Pro").doesNotContainPattern("(?U)\\bPro\\b").doesNotContain("/pro\"");
             writeForTheBrowserTests("for-whom-" + path.substring(1) + "-en.html", html);
         }

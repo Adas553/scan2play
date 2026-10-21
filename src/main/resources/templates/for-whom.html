@@ -110,6 +110,9 @@
                     <p th:text="${#messages.msg('landing.who.' + other.key + '.text')}">…</p>
                 </div>
             </div>
+            <!--/* the way back at the page's end, where the breadcrumbs are far above (the owner, 2026-10-21) */-->
+            <p class="text-center mt-4 mb-0"><a th:href="${'/' + q}" href="/" id="forWhomBack" class="link-light"
+                   th:text="#{forWhom.back}">← Back to the home page</a></p>
         </div>
     </section>
 </main>
