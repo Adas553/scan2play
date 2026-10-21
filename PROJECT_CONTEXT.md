@@ -1118,7 +1118,10 @@ GuestQueueService          → DjService
   Chrome, with a Python stand-in server that the scenarios configure; 108 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
-  `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`; the actions pinned by their commit (the version in a comment beside it — Dependabot
+  `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml` — none for a change of the documentation alone (`*.md`, `docs/`; the unit
+  tests still for `AGENTS.md` and its Copilot copy), and the browser tests only for what they render or run (`src/main` but the
+  migrations and the repositories, the render tests, the scenarios, `pom.xml`; the owner, 2026-10-21: the month's 2,000 free minutes
+  were at 90 %, three quarters of them the browser tests; `workflow_dispatch` runs any by hand); the actions pinned by their commit (the version in a comment beside it — Dependabot
   reads it). `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
   (`.github/dependabot.yml`): security fixes only (version updates off by `open-pull-requests-limit: 0`); it works from the default
