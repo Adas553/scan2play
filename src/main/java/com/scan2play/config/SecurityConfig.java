@@ -1,5 +1,6 @@
 package com.scan2play.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -7,8 +8,16 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.servlet.LocaleResolver;
 
 /**
@@ -55,12 +64,70 @@ public class SecurityConfig {
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), "
             + "browsing-topics=()";
 
+    /** Google's login (Spring's OAuth 2 client): where a DJ's page opened without a session goes. */
+    static final String GOOGLE_LOGIN = "/oauth2/authorization/google";
+
+    /** The DJ's pages and their fetches. */
+    private static final RequestMatcher DJ_PAGES = PathPatternRequestMatcher.withDefaults().matcher("/dj/**");
+
+    /**
+     * A page the browser opens (a link, the address bar, a reload, a notification), not a fetch of a page's script: a GET the browser
+     * marks {@code Sec-Fetch-Mode: navigate}. A browser without the header counts as a fetch — the landing page, as before.
+     */
+    private static final RequestMatcher NAVIGATION = request -> "GET".equals(request.getMethod())
+            && "navigate".equals(request.getHeader("Sec-Fetch-Mode"));
+
+    /**
+     * Where a request without a login goes (the review of 2026-10-21, C2, C3):
+     * <ul>
+     * <li>a DJ's page opened in the browser — straight to Google's login, which usually lets a person signed in to Google through
+     *     without a question, and back to that page ({@link #djPagesRemembered}): a DJ whose session expired while the phone was in
+     *     the pocket (30 minutes; a hidden panel does not poll) comes back to their panel, not to the landing page for DJs;</li>
+     * <li>a fetch of the panel's scripts — the landing page, as before: the script sees the redirect and loads its page again
+     *     ({@code polling.js} {@code reloadOnce}), which is then a page opened in the browser;</li>
+     * <li>any other address no handler is public for — 404: a mistyped address is "not found", not the landing page (for a search
+     *     engine a soft 404).</li>
+     * </ul>
+     */
+    static AuthenticationEntryPoint loginEntryPoint() {
+        AuthenticationEntryPoint google = new LoginUrlAuthenticationEntryPoint(GOOGLE_LOGIN);
+        AuthenticationEntryPoint landing = new LoginUrlAuthenticationEntryPoint("/");
+        return (request, response, refused) -> {
+            if (!DJ_PAGES.matches(request)) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            } else if (NAVIGATION.matches(request)) {
+                google.commence(request, response, refused);
+            } else {
+                landing.commence(request, response, refused);
+            }
+        };
+    }
+
+    /**
+     * The DJ's page asked for before the login, remembered in the session for after it — only a page opened in the browser: a poll of
+     * the queue or a fragment of the history would open bare after the login.
+     */
+    static RequestCache djPagesRemembered() {
+        HttpSessionRequestCache cache = new HttpSessionRequestCache();
+        cache.setRequestMatcher(request -> DJ_PAGES.matches(request) && NAVIGATION.matches(request));
+        return cache;
+    }
+
+    /** After the login: the DJ's page remembered before it ({@link #djPagesRemembered}), else the panel. */
+    static AuthenticationSuccessHandler loginSuccess(RequestCache remembered) {
+        SavedRequestAwareAuthenticationSuccessHandler success = new SavedRequestAwareAuthenticationSuccessHandler();
+        success.setDefaultTargetUrl("/dj/dashboard");
+        success.setRequestCache(remembered);
+        return success;
+    }
+
     /** The deploy's version the scripts and styles are linked under ({@code /<version>/js/...}, application.properties). */
     @Value("${spring.web.resources.chain.strategy.fixed.version:dev}")
     private String assetVersion;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, MessageSource messageSource, LocaleResolver localeResolver) throws Exception {
+        RequestCache remembered = djPagesRemembered();
         http
                 .headers(headers -> headers.contentSecurityPolicy(csp -> {
                             csp.policyDirectives(CONTENT_SECURITY_POLICY);
@@ -75,7 +142,10 @@ public class SecurityConfig {
                 // A browser sends its CSP report without a CSRF token
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report"))
                 // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
-                .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver)))
+                .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver))
+                        // no login: a DJ's page → Google's login and back; a fetch of the panel → "/"; any other address → 404
+                        .authenticationEntryPoint(loginEntryPoint()))
+                .requestCache(cache -> cache.requestCache(remembered))
                 .authorizeHttpRequests(auth -> auth
                         // Public resources, landing page, and guest party views
                         .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()
@@ -108,7 +178,8 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         // Use root landing page as custom login entry point
                         .loginPage("/")
-                        .defaultSuccessUrl("/dj/dashboard", true)
+                        // back to the DJ's page asked for before the login (with its ?party=), else the panel
+                        .successHandler(loginSuccess(remembered))
                         .failureHandler((request, response, exception) -> {
                             log.error("OAuth2 Login Failed: {}", exception.getMessage());
                             response.sendRedirect("/?error=auth_failed");

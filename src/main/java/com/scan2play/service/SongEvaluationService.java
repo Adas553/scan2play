@@ -555,6 +555,7 @@ public class SongEvaluationService {
                 .decision(aiResponse.decision())
                 .djComment(aiResponse.comment())
                 .trackUrl(trackUrl)
+                .checked(!aiResponse.isUnchecked())
                 .requestedAt(Instant.now())
                 .build();
 

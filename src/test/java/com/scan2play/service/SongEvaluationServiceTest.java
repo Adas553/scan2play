@@ -873,4 +873,50 @@ class SongEvaluationServiceTest {
         verify(dedications, never()).save(any());
         assertThat(response.dedicationOk()).isNull();
     }
+
+    /**
+     * The review of 2026-10-21, S1: a request the AI could not be asked about is the guest's own words — saved unchecked (V39), so the
+     * guests' list and the TV screen leave it out; a request the AI judged is saved checked.
+     */
+    @Test
+    void withoutTheAi_theRequestIsSavedUnchecked_withTheAi_checked() {
+        aParty(0);
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+        when(messageSource.getMessage(eq("ai.unavailable.to_dj"), any(), any(Locale.class))).thenReturn("Przekazane DJ-owi");
+
+        answering(null).evaluateAndSaveSong(PARTY_CODE, "cokolwiek gość wpisał", "ANY");
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baska", "ANY");
+
+        assertThat(saved.getAllValues()).extracting(SongRequestEntity::getSongName, SongRequestEntity::isChecked)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("cokolwiek gość wpisał", false),
+                        org.assertj.core.groups.Tuple.tuple("Wilki - Baśka", true));
+    }
+
+    /** A song waiting unchecked that the AI accepts now under the same name, in another guest's request: it may be shown now. */
+    @Test
+    void anUncheckedSong_acceptedByTheAiNow_becomesChecked() {
+        aParty(0);
+        SongRequestEntity waiting = waitingWilki();
+        waiting.setChecked(false);
+        when(songRequestRepository.addVote(5L)).thenReturn(1);
+
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", Set.of());
+
+        verify(songRequestRepository).markChecked(5L);
+        assertThat(waiting.isChecked()).isTrue();
+    }
+
+    /** …but not when the AI rejects it (the vote still counts): the AI may have rejected the very words that must not be shown. */
+    @Test
+    void anUncheckedSong_rejectedByTheAiNow_staysUnchecked() {
+        aParty(0);
+        SongRequestEntity waiting = waitingWilki();
+        waiting.setChecked(false);
+        when(songRequestRepository.addVote(5L)).thenReturn(1);
+
+        answering(WILKI_REJECTED).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY", Set.of());
+
+        verify(songRequestRepository, never()).markChecked(any());
+        assertThat(waiting.isChecked()).isFalse();
+    }
 }

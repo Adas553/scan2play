@@ -159,6 +159,16 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int addVote(@Param("id") Long id);
 
     /**
+     * The AI judged a request for this song after all (V39): a request that went to the DJ unchecked, with the guest's own words, got
+     * a vote from a request the AI accepted under the same name — it may be on the guests' list and the TV screen now. Called under
+     * the party's requests' lock with {@link #addVote}.
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SongRequestEntity s SET s.checked = true WHERE s.id = :id")
+    int markChecked(@Param("id") Long id);
+
+    /**
      * One dedication more on a song (V38): its count, which the queue's fingerprint reads. Atomic, as {@link #addVote}; called under
      * the party's requests' lock with the dedication's row ({@code SongRequestCommandService}).
      */
