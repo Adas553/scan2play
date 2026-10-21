@@ -75,7 +75,9 @@ public class GuestController {
         } catch (IllegalArgumentException e) {
             // DEBUG, not WARN: anyone can ask for any code, and a line for each filled the log (review 2026-10-14, M-2)
             log.debug("Invalid party code access attempt: {}", partyCode);
-            return REDIRECT_HOME;
+            // "Ten kod imprezy nie istnieje" (the error page's 404), not the landing page for DJs: a guest with a mistyped code or an
+            // old poster learned nothing there (the review of 2026-10-21, C3)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -257,7 +259,7 @@ public class GuestController {
                 return "result";
             } catch (IllegalArgumentException e) {
                 log.warn("Song request for unknown party code: {}", partyCode);
-                return REDIRECT_HOME;
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);   // the party's account deleted meanwhile, or a code made up
             }
         };
     }
