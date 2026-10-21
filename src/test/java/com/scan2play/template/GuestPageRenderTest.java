@@ -734,10 +734,12 @@ class GuestPageRenderTest {
             assertThat(section(html, "landingWho").split("class=\"stretched-link\"", -1)).as("three cards are links").hasSize(4);
             assertThat(section(html, "landingFaq").split("<details", -1)).as("six questions").hasSize(7);
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
-            assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/pro\"",
-                    "href=\"/privacy\"");
-            // no "PRO" on one card: while the plans are not enforced, "Ile to kosztuje?" says what Pro gives (the owner, 2026-10-18)
-            assertThat(html).doesNotContain("s2p-pro", ">PRO<");
+            assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/privacy\"");
+            // no "PRO" on one card (the owner, 2026-10-18); Pro and its page only while the plans are enforced (2026-10-21)
+            assertThat(html).doesNotContain("s2p-pro", ">PRO<", "href=\"/pro\"");
+            context.setVariable("plansEnforced", true);
+            assertThat(section(engine.process("landing", context), "landingFaq")).as("the plans enforced")
+                    .contains("href=\"/pro\"", locale == PL ? "Pro dodaje" : "Pro adds");
             if (locale == Locale.ENGLISH) {
                 assertThat(html).contains(">Guests request songs. AI keeps the vibe. You play.<", ">Wedding DJs<");
                 continue;

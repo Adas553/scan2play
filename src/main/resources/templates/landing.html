@@ -87,8 +87,8 @@
     </section>
 
     <!--/* What one gets: the features a DJ asks about first; six, for the grid of three (the guests' dedications, V38, took the place
-         of "no repeats, no spam" — the repeats are in the vibe's card). No "PRO" on one card (the owner, 2026-10-18): while the plans
-         are not enforced, "Ile to kosztuje?" says what Pro gives */-->
+         of "no repeats, no spam" — the repeats are in the vibe's card). No "PRO" on one card (the owner, 2026-10-18); "Ile to kosztuje?"
+         names Pro only while the plans are enforced */-->
     <section class="s2p-landing-section" id="landingFeatures">
         <div class="container">
             <h2 th:text="#{landing.features.title}">What you get</h2>
@@ -141,8 +141,10 @@
                 <details><summary th:text="#{landing.faq.player.q}">Does Scan2Play play the music?</summary>
                     <p th:text="#{landing.faq.player.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.price.q}">How much does it cost?</summary>
-                    <p><th:block th:text="#{landing.faq.price.a}">…</th:block>
-                        <a href="/pro" class="d-block mt-2" th:text="#{landing.faq.price.link}">See what Pro gives →</a></p></details>
+                    <!--/* Pro and its page only while the plans are enforced (HomeController; the owner, 2026-10-21: before, /pro is a
+                         404 — "schowaj to PRO, włączymy, jak będziemy używać") */-->
+                    <p><th:block th:text="${plansEnforced} ? #{landing.faq.price.a} : #{landing.faq.price.free}">…</th:block>
+                        <a th:if="${plansEnforced}" href="/pro" class="d-block mt-2" th:text="#{landing.faq.price.link}">See what Pro gives →</a></p></details>
                 <details><summary th:text="#{landing.faq.ai.q}">What if the AI gets it wrong or is down?</summary>
                     <p th:text="#{landing.faq.ai.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.phone.q}">Does it work on the DJ's phone?</summary>

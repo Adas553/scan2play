@@ -116,7 +116,9 @@ S2P.scenario({
 ## In CI
 
 `.github/workflows/browser-tests.yml` runs `python src/test/browser/run.py --no-sandbox` on `ubuntu-latest` (Java 21, Python 3.12, the
-runner's own Chrome) for every push to `dev` / `main`, every pull request and by hand; a failed run keeps the verdicts of the scenarios
+runner's own Chrome) for every push to `dev` / `main` and every pull request that changes what it renders or runs (the `paths` of the
+workflow: `src/main` but the migrations and the repositories, the render tests, the scenarios, `pom.xml` — 2026-10-21, to save the
+month's Actions minutes), and by hand; a failed run keeps the verdicts of the scenarios
 (`results/*.json`) as an artifact. It needs nothing but Maven Central: no database, no secrets. Two things in `run.py` are there for it:
 `mvnw` is started with `sh` (it is committed without the executable bit) and a Chrome that does not start ends the scenario after a few
 seconds instead of after the whole timeout. The unit tests have their own workflow, `.github/workflows/unit-tests.yml`.

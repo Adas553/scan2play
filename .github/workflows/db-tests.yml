@@ -5,10 +5,13 @@ name: Database tests
 # runs them alone (the unit tests are unit-tests.yml); they create and drop their own s2p_it_* database on the service below.
 # PostgreSQL 18 — the version of the production database on Railway (image postgres-ssl:18) and of the developer's machine.
 
+# Not for a change of the documentation alone (the owner, 2026-10-21: the Actions minutes of the month were at 90 %).
 on:
   push:
     branches: [dev, main]
+    paths-ignore: ['**.md', 'docs/**']
   pull_request:
+    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
 permissions:

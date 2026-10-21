@@ -314,14 +314,15 @@ party, in the page's language — the English ones with songs known everywhere a
 from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLandingPagesPicture_…`; run it again after a change of
 the look; the panel shows the guests' dedications, the phone the folded "💌 Dodaj dedykację") —, then three steps, what one gets
 (six cards: the vibe — with no repeats —, the guest's words, the votes, the dedications, the hosts' list, the phone and the staff; no
-"PRO" on a card: "Ile to kosztuje?" says what Pro gives), for whom (wedding DJs, clubs, pubs, karaoke — the first three
+"PRO" on a card; "Ile to kosztuje?" names Pro and links `/pro` only while the plans are enforced — `HomeController`'s
+`plansEnforced`; before, "Nic. Scan2Play jest za darmo…": the owner, 2026-10-21, `/pro` is a 404 then), for whom (wedding DJs, clubs, pubs, karaoke — the first three
 cards lead to their pages "Dla kogo", below; karaoke has none yet), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
 **The pages "Dla kogo"** (`ForWhomController`, `for-whom.html`, 2026-10-21; Next 7): `/dj-weselny`, `/kluby`, `/puby` — for search
 engines (in the sitemap, Polish at the address, English with `?lang=en`, canonical and `hreflang` like the other public pages) and for
 a link sent to a DJ or a pub's owner. Where one is, at once (the owner: from the landing page's card the page looked the same): breadcrumbs (the
 logo, "Dla kogo", this kind) and the kind with its card's icon above the heading. The landing page's hero with the same pictures
 (`landing :: devices`), then four steps and four features under headings of that kind of party ("na weselu", "w klubie"…) and up to
-three questions (the pubs' two) of that kind of party (`forWhom.KEY.*` — each page its own texts, not one page with a word swapped: a
+three questions (the pubs' two; `forWhom.KEY.*` — each page its own texts, not one page with a word swapped: a
 search engine counts that a doorway page; `ForWhomPagesWebTest` checks no paragraph repeats), the start again and the other two kinds
 as cards that are links (the whole card, `.stretched-link`). Every link in the page's language (`?lang=en` on an English page). No
 form (no session, no CSRF token) and no word of Pro while the plans are not enforced (the owner, 2026-10-21). No karaoke page: nothing
@@ -1132,7 +1133,10 @@ GuestQueueService          → DjService
   Chrome, with a Python stand-in server that the scenarios configure; 108 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
-  `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml`; the actions pinned by their commit (the version in a comment beside it — Dependabot
+  `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml` — none for a change of the documentation alone (`*.md`, `docs/`; the unit
+  tests still for `AGENTS.md` and its Copilot copy), and the browser tests only for what they render or run (`src/main` but the
+  migrations and the repositories, the render tests, the scenarios, `pom.xml`; the owner, 2026-10-21: the month's 2,000 free minutes
+  were at 90 %, three quarters of them the browser tests; `workflow_dispatch` runs any by hand); the actions pinned by their commit (the version in a comment beside it — Dependabot
   reads it). `gh` is not installed
   locally; the public API shows the runs, and failed tests are written as public annotations. **Dependabot**
   (`.github/dependabot.yml`): security fixes only (version updates off by `open-pull-requests-limit: 0`); it works from the default
