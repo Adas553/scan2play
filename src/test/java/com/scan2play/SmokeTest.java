@@ -174,6 +174,9 @@ class SmokeTest {
                     // Railway's DPA is signed (2026-10-15): the transfer to the USA rests on the standard contractual clauses
                     .andExpect(content().string(containsString(lang.equals("pl") ? "standardowych klauzulach umownych" : "standard contractual clauses")))
                     .andExpect(content().string(not(containsString(lang.equals("pl") ? "wyłącznie do Google" : "only sent to Google"))))
+                    // the song's name is on the guests' list and the TV screen, the guest's words when the AI does not know the song
+                    // (the review of 2026-10-21, S3)
+                    .andExpect(content().string(containsString(lang.equals("pl") ? "ekran TV w sali" : "the TV screen in the hall")))
                     // the cookie of the language picked by ?lang (WebConfig, the review of 2026-10-14)
                     .andExpect(content().string(containsString(lang.equals("pl") ? "ciasteczko <code>lang</code>" : "the cookie <code>lang</code>")));
         }

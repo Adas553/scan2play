@@ -111,7 +111,7 @@ guest's "–" back as a backspace; the AI is given the guest's words with "-" to
 (150, V14: what the guest typed, as typed — one line, what the AI is given; null for older requests; the queue and the history always show
 it under the song — the DJ checks the AI, 2026-10-04; when the AI's song has none of the guest's words — `SongNames.sharesNoWord`: a
 word of 3+ letters, its stem — the first max(3, length − 2) letters — looked for in the `comparable` name — the queue and the history mark it
-"⚠ Sprawdź", `needsCheck()`, computed when shown; 2026-10-07 "orła cień" became another song by its mood), `votes` (V15, ≥ 1: how many guests asked for it — see below), `dedications` (V38: how many guests' dedications it has —
+"⚠ Sprawdź", `needsCheck()`, computed when shown; 2026-10-07 "orła cień" became another song by its mood), `checked` (V39, NOT NULL, default true: false when the AI could not be asked and the request went to the DJ with the guest's own words — the guests' list shows it only to the guest who sent it, the TV screen never, the DJ's row says "bez oceny AI"; an accepted request of the same name counted on it marks it checked, `SongRequestRepository.markChecked` — the review of 2026-10-21, S1), `votes` (V15, ≥ 1: how many guests asked for it — see below), `dedications` (V38: how many guests' dedications it has —
 `SongRequestDedicationEntity`),
 `requestNumber` (V28: the song's number at its party, "#27" — given to a request that reaches the queue, from the party's
 `request_counter` raised in the same statement under the party's advisory lock (`UPDATE … RETURNING`; `SongRequestVotesIT`: 16 new
@@ -636,7 +636,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
 | `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1) |
-| `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes); `mostWanted`: the first ten of that order, for the screen for a TV |
+| `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes — but a request the AI did not judge, V39, only to the guest who sent it); `mostWanted`: the first ten of that order, for the screen for a TV, only requests the AI judged |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); evicts `dashboardQueue` after the commit |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
@@ -705,7 +705,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 ### 6.6 Resources
 
 `application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
-`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`, `prompt-dedication_{en,pl}`), `db/migration/V1..V38`.
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`, `prompt-dedication_{en,pl}`), `db/migration/V1..V39`.
 
 ### 6.7 The look (`app.css`, the design review of 2026-10-09)
 
@@ -953,6 +953,7 @@ schema behind Flyway's back.
 | V36 | table `trial_used` (`owner_hash` varchar(64) PK, `used_at` timestamptz NOT NULL DEFAULT now()), filled with the keys of the `dj_plan` rows of source TRIAL: the Google accounts that had a trial, kept after "Usuń konto" (`TrialUsedMigrationIT`, `DjPlanIT`) |
 | V37 | `party_settings.host_token_made_at`, `staff_token_made_at` timestamptz (nullable): when the hosts' and the invitation link were made — each works 30 days; a link there at the migration counts from it |
 | V38 | table `song_request_dedications` (`id` bigserial PK, `song_request_id` bigint NOT NULL FK → `song_requests` ON DELETE CASCADE, `text` varchar(100) NOT NULL, `checked` boolean NOT NULL, `created_at` timestamptz NOT NULL; index `idx_dedication_request` (song_request_id, id)), `song_requests.dedications` integer NOT NULL DEFAULT 0 and `party_settings.dedications_on` boolean NOT NULL DEFAULT true: the guests' dedications |
+| V39 | `song_requests.checked` boolean NOT NULL DEFAULT true; the requests whose comment is the app's note "AI jest chwilowo niedostępne…" / "The AI is unavailable right now…" (the text of `ai.unavailable.to_dj` since 2026-10-01) set to false: a request the AI did not judge stays off the guests' list and the TV screen (`RequestCheckedMigrationIT` reads the note from the bundles) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1013,7 +1014,7 @@ GuestQueueService          → DjService
 | GET | `/p/{partyCode}` | the guest's page (`party_ended` when closed); an unknown code goes to `/`. No session is made for an unknown code or a party that has ended (review 2026-10-14 W3: every `GET /p/{anything}` was a row in `spring_session`); an open party's page makes one — its form's CSRF token |
 | GET | `/p/{partyCode}/queue` | the guest's list alone: the first five (empty when closed, 404 for an unknown party) |
 | GET | `/p/{partyCode}/queue/more` | the rest of the guest's list, fetched when "Pokaż pozostałe prośby" is unfolded |
-| GET | `/p/{partyCode}/tv` | the screen for a TV (2026-10-18): the QR code, the ten most wanted songs and their votes — no guests' words, no dedications; "DJ nie przyjmuje teraz próśb" when closed; 404 for an unknown party; no session |
+| GET | `/p/{partyCode}/tv` | the screen for a TV (2026-10-18): the QR code, the ten most wanted songs and their votes — no guests' words, no dedications, no request the AI did not judge (V39); "DJ nie przyjmuje teraz próśb" when closed; 404 for an unknown party; no session |
 | GET | `/p/{partyCode}/tv/list` | the screen's list alone (`tv :: tvList`), fetched by `tv.js` every 10 s |
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
@@ -1093,11 +1094,11 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 696. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 762. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
   security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 80 tests in 22 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 89 tests in 25 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT` (the history's order, the
   queue's fingerprint — also changes that cancel out in counts —, the night's clearing of the queues, the retention), `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
@@ -1110,7 +1111,7 @@ GuestQueueService          → DjService
   database of their own, migrated to the version before and given rows the old way: `TimestampMigrationIT` (V12 — the same moments;
   red when the old values are read as UTC), `VibeMigrationIT` (V16), `SpotifyRemovalMigrationIT` (V18), `YouTubeRemovalMigrationIT`
   (V19: the YouTube parties go with their data, a requests-only party stays), `SkipCommentMigrationIT`, `CommentStyleMigrationIT`,
-  `RequestNumberMigrationIT` (V28), `StaffLinkMigrationIT`, `StaffPermissionMigrationIT` (V32), `TrialUsedMigrationIT` (V36: the trials before it remembered). New SQL that locks or counts gets a
+  `RequestNumberMigrationIT` (V28), `StaffLinkMigrationIT`, `StaffPermissionMigrationIT` (V32), `TrialUsedMigrationIT` (V36: the trials before it remembered), `RequestCheckedMigrationIT` (V39: the requests that went unchecked before it). New SQL that locks or counts gets a
   test there.
 - **The landing page's pictures** (`python src/test/browser/screenshots.py`): the same pieces as the browser tests (a copy of the
   repo, Maven there, the stand-in, headless Chrome) write `static/images/landing/*.webp` — look at them before committing.

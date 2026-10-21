@@ -85,6 +85,15 @@ public class SongRequestEntity {
     @Builder.Default
     private int dedications = 0;
 
+    /**
+     * Whether the AI judged the request (V39): false when it could not be asked and the request went to the DJ with the guest's own
+     * words. The guests' list and the TV screen leave such a request out ({@code GuestQueueService}) — only the guest who sent it and
+     * the DJ see it — until a request for the same song that the AI judged counts on it ({@code SongRequestRepository.addVote}).
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean checked = true;
+
     private String style;
     private String decision;
 

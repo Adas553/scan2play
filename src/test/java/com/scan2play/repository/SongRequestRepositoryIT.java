@@ -102,6 +102,21 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
                 .extracting(SongRequestEntity::getSongName).containsExactly("one", "two");
     }
 
+    /** V39: a request is saved checked unless it says otherwise; one that went unchecked is checked by {@code markChecked}. */
+    @Test
+    void anUncheckedRequest_isCheckedByMarkChecked() {
+        String party = newPartyCode();
+        SongRequestEntity judged = save(party, "judged", "accepted", Instant.now(), null);
+        SongRequestEntity unchecked = save(party, "unchecked", "accepted", Instant.now(), null);
+        jdbc.update("UPDATE song_requests SET checked = false WHERE id = ?", unchecked.getId());
+
+        assertThat(requests.markChecked(unchecked.getId())).isEqualTo(1);
+
+        assertThat(jdbc.queryForList("SELECT checked FROM song_requests WHERE party_code = ? ORDER BY id", Boolean.class, party))
+                .containsExactly(true, true);
+        assertThat(judged.isChecked()).isTrue();
+    }
+
     /**
      * Changes that cancel out in the counts and the sums (review 2026-10-14 W6): between two polls one song played and an older one
      * put back with the same votes, or a 👍 taken back from one song and given to another, or a 💸 moved. The fingerprint moved with

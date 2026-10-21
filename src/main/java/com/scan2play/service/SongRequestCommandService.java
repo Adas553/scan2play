@@ -139,6 +139,12 @@ public class SongRequestCommandService {
             }
             if (songRequestRepository.addVote(song.getId()) > 0) {
                 song.setVotes(song.getVotes() + 1);
+                if (!song.isChecked() && request.isChecked() && DECISION_ACCEPTED.equals(request.getDecision())) {
+                    // the AI has just accepted a song of the same name (V39): the guests' list and the TV may show it. Not on a
+                    // rejection — the AI may have rejected the very words that must not be on the TV
+                    songRequestRepository.markChecked(song.getId());
+                    song.setChecked(true);
+                }
                 djService.refreshQueue(request.getPartyCode());
                 log.info("Party [{}]: one more vote for '{}' ({} now)", request.getPartyCode(), song.getSongName(), song.getVotes());
                 return new Saved(Outcome.VOTE, song);
