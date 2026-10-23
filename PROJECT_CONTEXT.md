@@ -327,7 +327,7 @@ box of the DJ's software) and "Podejrzyj" on every waiting request, and on a com
 (`<kbd>`) with one word: ↑ ↓ wybierz · C kopiuj · Enter zagrane · S pomiń · Backspace cofnij · Esc odznacz, under the list (`queue-keys.js`,
 2026-10-12; the legend 2026-10-16; Ctrl+C / Ctrl+Z work too, the guide names them; the staff without the queue's buttons: only ↑ ↓ / C /
 Esc); the vibe, the vibe note, "Kto gra";
-the QR code (`/dj/qr-print`: an A4 poster or eight table cards, Polish and English); the
+the QR code (`/dj/qr-print`: an A4 poster or eight table cards, in the panel's language — a Polish panel prints Polish and English at once, any other English alone; 2026-10-23); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
 form of the old "Zgłoś uwagę", `POST /dj/feedback`), "Wyloguj",
@@ -1014,7 +1014,7 @@ GuestQueueService          → DjService
 | GET | `/p/{partyCode}` | the guest's page (`party_ended` when closed); an unknown code is a 404 — the error page's "Ten kod imprezy nie istnieje lub link jest niepoprawny" (until 2026-10-21 the landing page for DJs; a request sent to one, too). No session is made for an unknown code or a party that has ended (review 2026-10-14 W3: every `GET /p/{anything}` was a row in `spring_session`); an open party's page makes one — its form's CSRF token |
 | GET | `/p/{partyCode}/queue` | the guest's list alone: the first five (empty when closed, 404 for an unknown party) |
 | GET | `/p/{partyCode}/queue/more` | the rest of the guest's list, fetched when "Pokaż pozostałe prośby" is unfolded |
-| GET | `/p/{partyCode}/tv` | the screen for a TV (2026-10-18): the QR code, the ten most wanted songs and their votes — no guests' words, no dedications, no request the AI did not judge (V39); "DJ nie przyjmuje teraz próśb" when closed; 404 for an unknown party; no session |
+| GET | `/p/{partyCode}/tv` | the screen for a TV (2026-10-18): in the language of the DJ's panel (the panel's link carries `?lang=`; Polish: Polish and English at once, any other: English alone — 2026-10-23); the QR code, the ten most wanted songs and their votes — no guests' words, no dedications, no request the AI did not judge (V39); "DJ nie przyjmuje teraz próśb" when closed; 404 for an unknown party; no session |
 | GET | `/p/{partyCode}/tv/list` | the screen's list alone (`tv :: tvList`), fetched by `tv.js` every 10 s |
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
@@ -1064,7 +1064,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/guest-limit-reset` | the party's 24 h limit of guest requests starts again ("Odblokuj prośby gości" in the warning above the queue; `LIMITS`, not a plan's feature — review 2026-10-14 W4) |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
-| GET | `/dj/qr-print` | `layout` = poster / cards |
+| GET | `/dj/qr-print` | `layout` = poster / cards; what is printed speaks the panel's language (Polish: Polish and English; any other: English) |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE) |
@@ -1094,7 +1094,7 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 768. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 770. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
   security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.

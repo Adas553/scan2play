@@ -183,7 +183,7 @@
                            class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.print}">Print poster and cards</a>
                         <!--/* The screen for a TV (TvScreenController, Next 7 c): the code and the most wanted songs, public — opened on a
                              TV or a laptop by a projector, no login there */-->
-                        <a th:href="@{/p/{code}/tv(code=${partyCode})}" target="_blank" rel="noopener" id="tvScreenLink"
+                        <a th:href="@{/p/{code}/tv(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}" target="_blank" rel="noopener" id="tvScreenLink"
                            class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.tv}">Screen for a TV</a>
                     </div>
                 </div>
