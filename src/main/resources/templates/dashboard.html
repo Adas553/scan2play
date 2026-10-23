@@ -33,6 +33,7 @@
          (a request sent there shows here, to this visitor alone), or one's own party */-->
     <div th:if="${demo == true}" id="demoBar" class="alert alert-info d-flex flex-wrap align-items-center gap-2 mb-3" role="note">
         <span class="w-100" th:text="#{demo.bar.text}">This is a demo: an example party, nothing here is saved.</span>
+        <a href="/" id="demoHome" class="btn btn-sm btn-outline-light" th:text="#{demo.bar.home}">← Home page</a>
         <a th:href="@{/p/{code}(code=${partyCode})}" href="/p/DEMO" target="_blank" rel="noopener" id="demoGuest" class="btn btn-sm btn-light"
            th:text="#{demo.bar.guest}">📱 Open the guest page</a>
         <a th:href="@{/p/{code}/tv(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}" href="/p/DEMO/tv" target="_blank" rel="noopener"

@@ -135,7 +135,7 @@ class DemoPageRenderTest {
         String html = render(PL);
 
         assertThat(html).contains("<body class=\"page-dj\" data-demo=\"true\">", "id=\"demoBar\"", "id=\"demoNotice\"",
-                "To jest demo: przykładowa impreza", "href=\"/p/DEMO\"", "href=\"/p/DEMO/tv?lang=pl\"", "href=\"/start\"",
+                "To jest demo: przykładowa impreza", "id=\"demoHome\" class=\"btn btn-sm btn-outline-light\">← Strona główna<", "href=\"/p/DEMO\"", "href=\"/p/DEMO/tv?lang=pl\"", "href=\"/start\"",
                 "src=\"/js/dashboard/main.js\"");
         assertThat(html).as("no DJ's bar: no logout, no end of the party").doesNotContain("/dj/logout", "id=\"end-party-form\"");
         assertThat(html).contains("Wilki - Baśka", "ABBA - Dancing Queen", "My own request")

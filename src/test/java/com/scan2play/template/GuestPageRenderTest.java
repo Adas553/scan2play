@@ -576,6 +576,18 @@ class GuestPageRenderTest {
         assertThat(render(Locale.ENGLISH, Map.of())).contains("← Your DJ dashboard");
     }
 
+    /**
+     * A demo party's guest page (DemoParty; the owner, 2026-10-24): its way back leads to the demo's panel, in a browser too — the
+     * visitor came from there and has no DJ's dashboard (it led to Google's login).
+     */
+    @Test
+    void aDemoPartysGuestPage_leadsBackToTheDemo_inABrowserToo() {
+        String english = render(Locale.ENGLISH, Map.of("partyCode", "DEME"));
+        assertThat(tag(english, "backToDashboard")).contains("href=\"/demo\"");
+        assertThat(english).contains("← Back to the demo panel", "s2p-demo-back").doesNotContain("s2p-standalone-only", "/dj/dashboard");
+        assertThat(render(PL, Map.of("partyCode", "DEMO"))).contains("← Wróć do panelu demo").doesNotContain("??");
+    }
+
     /** Who plays (V17): "🎧 Gra: DJ Koko" under the title, escaped; nothing when the DJ wrote nothing. */
     @Test
     void whoPlays_isShownUnderTheTitle() {
