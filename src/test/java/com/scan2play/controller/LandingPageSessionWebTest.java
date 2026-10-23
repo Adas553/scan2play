@@ -13,6 +13,7 @@ import org.springframework.session.MapSession;
 import org.springframework.session.MapSessionRepository;
 import org.springframework.session.web.http.SessionRepositoryFilter;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.nio.charset.StandardCharsets;
@@ -44,6 +45,9 @@ class LandingPageSessionWebTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private com.scan2play.service.SiteCounter siteCounter;
 
     @Test
     void aFirstVisit_getsTheWholeLandingPage_withTheInvitationFormAndTheFooter() throws Exception {

@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Locale;
@@ -29,6 +30,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest({HomeController.class, CspReportController.class, LegalController.class, com.scan2play.controller.SeoController.class})
 @Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
 class SmokeTest {
+
+    @MockitoBean
+    private com.scan2play.service.SiteCounter siteCounter;
 
     @Autowired
     private MockMvc mockMvc;
@@ -258,6 +262,19 @@ class SmokeTest {
             assertThat(html).as(lang).doesNotContain("href=\"/pro\"").doesNotContainPattern("(?U)\\bPro\\b")
                     .contains(lang.equals("pl") ? "Nic. Scan2Play jest za darmo" : "Nothing. Scan2Play is free");
         }
+    }
+
+    /** The site's counter (V40): the landing page by its language, "Zacznij" — with the browser's name, a robot's left out there. */
+    @Test
+    @DisplayName("The landing page and \"Zacznij\" are counted, by the landing page's language")
+    void theLandingPageAndStart_areCounted() throws Exception {
+        String chrome = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/156.0 Safari/537.36";
+        mockMvc.perform(get("/").header("Accept-Language", "pl-PL").header("User-Agent", chrome)).andExpect(status().isOk());
+        mockMvc.perform(get("/").param("lang", "en").header("User-Agent", chrome)).andExpect(status().isOk());
+        mockMvc.perform(get("/start").header("User-Agent", chrome)).andExpect(status().is3xxRedirection());
+        org.mockito.Mockito.verify(siteCounter).countVisit(com.scan2play.service.SiteCounter.Event.LANDING_PL, chrome);
+        org.mockito.Mockito.verify(siteCounter).countVisit(com.scan2play.service.SiteCounter.Event.LANDING_EN, chrome);
+        org.mockito.Mockito.verify(siteCounter).countVisit(com.scan2play.service.SiteCounter.Event.START, chrome);
     }
 
     @Test

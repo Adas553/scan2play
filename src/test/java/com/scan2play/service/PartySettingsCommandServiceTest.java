@@ -34,6 +34,9 @@ class PartySettingsCommandServiceTest {
     @Spy
     private PlanService planService = Plans.off();
 
+    @Mock
+    private SiteCounter siteCounter;
+
     @InjectMocks
     private PartySettingsCommandService service;
 
@@ -53,6 +56,7 @@ class PartySettingsCommandServiceTest {
 
         assertThat(result.getPartyCode()).isEqualTo("ABC12");
         verify(partySettingsRepository, never()).save(any());
+        verify(siteCounter, never()).count(any());   // not a new DJ (V40)
     }
 
     @Test
@@ -68,6 +72,7 @@ class PartySettingsCommandServiceTest {
         assertThat(result.isActive()).isTrue();
         assertThat(result.getPartyCode()).isNotBlank().hasSize(5);
         verify(partySettingsRepository).save(any());
+        verify(siteCounter).count(SiteCounter.Event.NEW_DJ);   // the site's counter (V40)
     }
 
     // ---- updateSettings ----

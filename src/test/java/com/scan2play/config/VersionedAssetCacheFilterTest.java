@@ -22,6 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
 class VersionedAssetCacheFilterTest {
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.scan2play.service.SiteCounter siteCounter;
+
     @Autowired
     private MockMvc mockMvc;
 
