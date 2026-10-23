@@ -80,8 +80,8 @@ class DemoPageRenderTest {
         engine.setTemplateEngineMessageSource(messages);
     }
 
-    private static SongRequestEntity request(long id, String song, boolean checked, int number) {
-        return SongRequestEntity.builder().id(id).partyCode(DemoParty.CODE).songName(song).guestText(song.toLowerCase())
+    private static SongRequestEntity request(String code, long id, String song, boolean checked, int number) {
+        return SongRequestEntity.builder().id(id).partyCode(code).songName(song).guestText(song.toLowerCase())
                 .decision("accepted").votes(1).requestNumber(number).checked(checked).djComment("ok")
                 .requestedAt(Instant.now()).build();
     }
@@ -90,15 +90,16 @@ class DemoPageRenderTest {
 
     /** The demo page for a visitor whose session sent request 99 (request 98 is another visitor's). */
     private String render(Locale locale) {
-        PartySettingsEntity demo = PartySettingsEntity.builder().partyCode(DemoParty.CODE).ownerId("scan2play-demo").active(true)
+        String code = DemoParty.codeFor(locale);
+        PartySettingsEntity demo = PartySettingsEntity.builder().partyCode(code).ownerId("scan2play-demo").active(true)
                 .djName("DJ Demo").globalVibe(VibeType.ANY).hostWanted("Wilki - Baśka").build();
-        List<SongRequestEntity> waiting = List.of(request(1, "Wilki - Baśka", true, 1), request(2, "ABBA - Dancing Queen", true, 2),
-                request(98, "Another visitor's words", false, 3), request(99, "My own request", false, 4));
+        List<SongRequestEntity> waiting = List.of(request(code, 1, "Wilki - Baśka", true, 1), request(code, 2, "ABBA - Dancing Queen", true, 2),
+                request(code, 98, "Another visitor's words", false, 3), request(code, 99, "My own request", false, 4));
 
         DjService djService = mock(DjService.class);
-        when(djService.getWaiting(DemoParty.CODE)).thenReturn(waiting);
+        when(djService.getWaiting(code)).thenReturn(waiting);
         PartyStaffService staff = mock(PartyStaffService.class);
-        when(staff.staffOf(DemoParty.CODE)).thenReturn(List.of());
+        when(staff.staffOf(code)).thenReturn(List.of());
         QrCodeService qr = mock(QrCodeService.class);
         when(qr.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
         DjDashboardController panel = new DjDashboardController(djService, mock(PartySettingsCommandService.class), qr,
@@ -108,7 +109,7 @@ class DemoPageRenderTest {
         panel.init();
 
         PartySettingsQueryService settings = mock(PartySettingsQueryService.class);
-        when(settings.getSettings(DemoParty.CODE)).thenReturn(demo);
+        when(settings.getSettings(code)).thenReturn(demo);
         MockHttpSession session = new MockHttpSession();
         GuestSessionService guestSessions = mock(GuestSessionService.class);
         when(guestSessions.myRequestIds(any(), any())).thenReturn(Set.of(99L));
@@ -117,7 +118,7 @@ class DemoPageRenderTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setSession(session);
         ConcurrentModel model = new ConcurrentModel();
-        String view = controller.demo(model, request, new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "demo-token"), CHROME);
+        String view = controller.demo(model, request, new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "demo-token"), locale, CHROME);
         assertThat(view).isEqualTo("dashboard");
 
         MockServletContext servletContext = new MockServletContext();
@@ -149,8 +150,10 @@ class DemoPageRenderTest {
     }
 
     @Test
-    void inEnglish_theBarSpeaksEnglish() {
-        assertThat(render(Locale.ENGLISH)).contains("This is a demo: an example party", "Start your own party →",
-                "href=\"/p/DEMO/tv?lang=en\"").doesNotContain("??");
+    void inEnglish_theBarSpeaksEnglish_andShowsTheEnglishDemo() {
+        // the English demo party (the owner, 2026-10-24): its own examples and comments; its guest page and TV
+        assertThat(render(Locale.ENGLISH)).contains("This is a demo: an example party", "Start your own party →", "href=\"/p/DEME\"",
+                "href=\"/p/DEME/tv?lang=en\"", "value=\"DEME\"").doesNotContain("??", "/p/DEMO\"");
+        assertThat(render(Locale.GERMAN)).as("any other language: the English demo").contains("href=\"/p/DEME\"");
     }
 }

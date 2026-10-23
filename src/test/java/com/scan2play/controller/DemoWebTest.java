@@ -85,6 +85,14 @@ class DemoWebTest {
         verify(panel).demoQueue(any(), any(), eq(List.of(example)));
     }
 
+    /** The demo's poll and history show a demo party only: another party's code is a 404, not its queue. */
+    @Test
+    void anotherPartysCode_isA404() throws Exception {
+        mockMvc.perform(get("/demo/updates").param("partyCode", "ABC12")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/demo/history").param("partyCode", "ABC12")).andExpect(status().isNotFound());
+        verify(djService, never()).getWaiting("ABC12");
+    }
+
     @Test
     void nothingButAGet_isPublic() throws Exception {
         mockMvc.perform(post("/demo/updates")).andExpect(status().isForbidden());
