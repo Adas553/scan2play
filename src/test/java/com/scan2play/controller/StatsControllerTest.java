@@ -39,6 +39,7 @@ class StatsControllerTest {
         counts.put(Event.LOGIN, login);
         counts.put(Event.NEW_DJ, newDj);
         counts.put(Event.GUEST_REQUEST, requests);
+        counts.put(Event.DEMO, 0);
         return new SiteCounter.Day(LocalDate.parse(date), counts);
     }
 
@@ -49,9 +50,9 @@ class StatsControllerTest {
 
         String text = new StatsController(counter, OWNER).stats(login(OWNER));
 
-        assertThat(text).contains("landing PL", "landing EN", "start", "login", "new DJ", "guest requests");
+        assertThat(text).contains("landing PL", "landing EN", "start", "login", "new DJ", "guest requests", "demo");
         assertThat(text.lines().filter(line -> line.startsWith("2026-10-24")).findFirst().orElseThrow()).matches(
-                "2026-10-24\\s+15\\s+2\\s+2\\s+1\\s+1\\s+3");
+                "2026-10-24\\s+15\\s+2\\s+2\\s+1\\s+1\\s+3\\s+0");
         assertThat(text.indexOf("2026-10-24")).isLessThan(text.indexOf("2026-10-23"));
     }
 

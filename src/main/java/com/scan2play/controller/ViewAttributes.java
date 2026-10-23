@@ -35,6 +35,8 @@ public final class ViewAttributes {
     public static final String HISTORY_HAS_MORE = "historyHasMore";
     public static final String HISTORY_NEXT_LIMIT = "historyNextLimit";
     public static final String HISTORY_HEADING = "historyHeading";
+    /** The demo's panel (DemoController): only to look at — the page says so, its script sends nothing. */
+    public static final String DEMO = "demo";
     public static final String HISTORY_FILTER = "historyFilter";
     public static final String QR_CODE_BASE64 = "qrCodeBase64";
     public static final String PERMANENT_LINK = "permanentLink";

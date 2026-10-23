@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -177,6 +178,8 @@ public class SecurityConfig {
                         .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro").permitAll()
                         // what a search engine reads first (SeoController); before, both led to the login page, "/"
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
+                        // the demo (DemoController): the demo party's panel, only to look at, and its queue and history
+                        .requestMatchers(HttpMethod.GET, "/demo", "/demo/**").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // DJ dashboard is protected

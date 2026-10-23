@@ -272,9 +272,12 @@ public class SongEvaluationService {
         String recentSongs = recentSongsContext(recentlyPlayed, settings.getDuplicateCheckWindow());
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
-        DjResponse aiResponse = evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(),
-                dedicationText, locale);
-        if (aiResponse == null) {
+        // the demo party (DemoParty) asks no AI: a ready verdict — no Gemini call to pay for, and no free AI for anyone
+        DjResponse aiResponse = DemoParty.isDemo(partyCode) ? demoAnswer(songName, dedicationText, locale)
+                : evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(), dedicationText, locale);
+        if (DemoParty.isDemo(partyCode)) {
+            log.info("Party [{}]: the demo's ready answer, no AI", partyCode);
+        } else if (aiResponse == null) {
             aiHealthMonitor.recordUnchecked();
             aiResponse = withoutTheAi(partyCode, songName, locale);
         } else {
@@ -454,6 +457,20 @@ public class SongEvaluationService {
         return aiResponse.songName();
     }
 
+    /** How many ready comments the demo has ({@code demo.ai.comment.1} …). */
+    static final int DEMO_COMMENTS = 4;
+
+    /**
+     * The demo party's answer (DemoParty): the song as the guest wrote it, accepted, with one of the ready comments — the same text
+     * always the same comment; a dedication let through.
+     */
+    DjResponse demoAnswer(String songName, String dedication, Locale locale) {
+        String comment = messageSource.getMessage("demo.ai.comment." + (1 + Math.floorMod(songName.hashCode(), DEMO_COMMENTS)), null,
+                locale);
+        DjResponse answer = new DjResponse(DECISION_ACCEPTED, comment, SongNames.tidy(songName), DjResponse.KIND_TITLE);
+        return dedication == null ? answer : answer.withDedication(true);
+    }
+
     /** One call to Gemini; the text of its answer. Package-private so a test can answer instead of Gemini. */
     String askAi(String prompt, GenerateContentConfig config) {
         GenerateContentResponse response = client.models.generateContent(modelName, prompt, config);
@@ -555,7 +572,8 @@ public class SongEvaluationService {
                 .decision(aiResponse.decision())
                 .djComment(aiResponse.comment())
                 .trackUrl(trackUrl)
-                .checked(!aiResponse.isUnchecked())
+                // a visitor's request to the demo is theirs alone (DemoParty): the other visitors and the demo's TV never see it
+                .checked(!aiResponse.isUnchecked() && !DemoParty.isDemo(partyCode))
                 .requestedAt(Instant.now())
                 .build();
 

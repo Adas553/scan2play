@@ -18,6 +18,7 @@
  * Dependencies (DOM): <meta name="_csrf">, <meta name="_csrf_header">, <input id="partyCode">, <tbody id="song-list">,
  * <div id="queue-content">, <div id="history-content">.
  */
+import './demo.js';   // first: in the demo, it stops every form before forms.js sees it
 import './list-tools.js';
 import './forms.js';
 import './tabs.js';
