@@ -832,11 +832,16 @@ class DashboardPageRenderTest {
     @Test
     void theQrCard_leadsToTheTvScreen() {
         String html = renderDashboard(party(), List.of(), PL);
-        assertThat(DashboardPageRenderTest.tagOf(html, "tvScreenLink")).contains("href=\"/p/HARN1/tv\"", "target=\"_blank\"",
+        // the screen speaks the panel's language (the owner, 2026-10-23): the link carries it to the TV
+        assertThat(DashboardPageRenderTest.tagOf(html, "tvScreenLink")).contains("href=\"/p/HARN1/tv?lang=pl\"", "target=\"_blank\"",
                 "rel=\"noopener\"");
         assertThat(html).contains(">📺 Ekran na TV<");
         assertThat(html.indexOf("id=\"tvScreenLink\"")).as("beside the print").isGreaterThan(html.indexOf("id=\"qrPrintLink\""));
-        assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">📺 Screen for a TV<");
+        String english = renderDashboard(party(), List.of(), Locale.ENGLISH);
+        assertThat(english).contains(">📺 Screen for a TV<");
+        assertThat(DashboardPageRenderTest.tagOf(english, "tvScreenLink")).contains("href=\"/p/HARN1/tv?lang=en\"");
+        assertThat(DashboardPageRenderTest.tagOf(renderDashboard(party(), List.of(), Locale.GERMAN), "tvScreenLink"))
+                .as("any other language: English").contains("href=\"/p/HARN1/tv?lang=en\"");
     }
 
     /**

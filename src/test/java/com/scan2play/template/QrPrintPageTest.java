@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -118,7 +119,9 @@ class QrPrintPageTest {
 
         assertThat(html).contains("class=\"layout-poster\"", "<main class=\"poster\">", "data:image/png;base64,");
         assertThat(html).contains("https://www.scan2play.com.pl/p/" + PARTY, ">" + PARTY + "<");
-        assertThat(html).contains("<span lang=\"pl\">Zeskanuj i zamów piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>");
+        // a Polish panel: Polish and English at once; "poproś", as the TV screen and the rest of the app ("prośba"), not "zamów"
+        assertThat(html).contains("<span lang=\"pl\">Zeskanuj i poproś o piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>")
+                .doesNotContain("zamów");
         // our logo once, between the title and the code
         assertThat(html).containsOnlyOnce("<p class=\"logo\"><img src=\"/images/logo.svg\" alt=\"\"><span>Scan<span class=\"two\">2</span>Play</span></p>");
         assertThat(html.indexOf("</h1>")).isLessThan(html.indexOf("class=\"logo\""));
@@ -136,8 +139,27 @@ class QrPrintPageTest {
         assertThat(html.split("<section class=\"card\">", -1)).hasSize(9);
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
-        assertThat(html).contains("Zeskanuj i zamów piosenkę", "Scan to request a song").doesNotContain("??");
-        assertThat(html).contains("Wykonawca i tytuł", "The artist and the title").doesNotContain("tekstu", "lyrics");
+        assertThat(html).contains("Scan to request a song", "The artist and the title").doesNotContain("??", "lyrics");
+        assertThat(html).as("an English panel: English alone").doesNotContain("lang=\"pl\"", "Zeskanuj", "Wykonawca", "Kod", "class=\"second\"");
+        assertThat(render("cards", Locale.forLanguageTag("pl"))).contains("Zeskanuj i poproś o piosenkę", "Wykonawca i tytuł",
+                "<span lang=\"en\" class=\"second\">Scan to request a song</span>");
+    }
+
+    /**
+     * The owner, 2026-10-23: a DJ abroad printed a poster whose big words were Polish. A panel in any language but Polish prints
+     * English alone, as the primary text; a Polish panel keeps both (a Polish party's guests are of both).
+     */
+    @Test
+    void anEnglishPanel_printsAnEnglishPoster() throws IOException {
+        for (Locale locale : List.of(Locale.ENGLISH, Locale.GERMAN)) {
+            String html = render("poster", locale).replaceAll("\\s+", " ");
+            assertThat(html).as(locale.toString()).contains("<span lang=\"en\">Scan to request a song</span>",
+                    "<span lang=\"en\">Scan the code with your phone camera</span>", "<span lang=\"en\">Can't scan? Open:</span>",
+                    "<span lang=\"en\">Party code</span>: <strong>" + PARTY + "</strong>", "<span lang=\"en\">Tip</span>: <strong>",
+                    "alt=\"QR code\"");
+            assertThat(html).as(locale.toString()).doesNotContain("lang=\"pl\"", "class=\"second\"", "Zeskanuj", "Kod imprezy",
+                    "Napiwek", "kod QR");
+        }
     }
 
     @Test

@@ -99,7 +99,7 @@ class TvScreenWebTest {
 
         assertThat(html).contains("data:image/png;base64,iVBOR", ">www.scan2play.com.pl/p/ABC12<", "DJ Kuba",
                 "Zeskanuj i poproś o piosenkę", "Scan to request a song", "Najczęściej wybierane", "Most wanted",
-                "id=\"tvList\"", "data-url=\"/p/ABC12/tv/list\"", "/js/tv.js\"", "/css/tv.css\"");
+                "id=\"tvList\"", "data-url=\"/p/ABC12/tv/list?lang=pl\"", "/js/tv.js\"", "/css/tv.css\"");
         assertThat(html.split("class=\"tv-song\"", -1)).as("ten songs").hasSize(11);
         assertThat(html).contains("Zenek Martyniuk - Przez twe oczy zielone", ">9<", "Wilki - Baśka")
                 .doesNotContain("Lady Pank");
@@ -109,6 +109,27 @@ class TvScreenWebTest {
         assertThat(html).as("nothing inline (the CSP)").doesNotContainPattern("<script(?![^>]*\\bsrc=)")
                 .doesNotContainPattern("\\son[a-z]+=").doesNotContain("style=\"");
         write("tv.html", html);
+    }
+
+    /**
+     * The owner, 2026-10-23: the screen speaks the DJ's panel's language — the panel's link says it (?lang=en), and the list's address
+     * carries it on. English alone, as the primary text; a Polish screen (the default, a Polish TV) keeps both languages.
+     */
+    @Test
+    void anEnglishScreen_isEnglishAlone_andItsListToo() throws Exception {
+        String html = noSession(mockMvc.perform(get("/p/ABC12/tv").param("lang", "en")).andExpect(status().isOk()).andReturn());
+        assertThat(html).contains("<html lang=\"en\"", "<span lang=\"en\">Scan to request a song</span>",
+                "<span lang=\"en\">Most wanted</span>", "data-url=\"/p/ABC12/tv/list?lang=en\"", "alt=\"QR code\"");
+        assertThat(html).doesNotContain("lang=\"pl\"", "class=\"second\"", "Zeskanuj", "Najczęściej");
+
+        String list = noSession(mockMvc.perform(get("/p/ABC12/tv/list").param("lang", "en")).andExpect(status().isOk()).andReturn());
+        assertThat(list).contains("<span lang=\"en\">Most wanted</span>").doesNotContain("Najczęściej");
+        when(guestQueueService.mostWanted("ABC12")).thenReturn(List.of());
+        assertThat(noSession(mockMvc.perform(get("/p/ABC12/tv/list").header("Accept-Language", "de-DE")).andReturn()))
+                .as("a German TV: English").contains("<span lang=\"en\">No requests yet").doesNotContain("Jeszcze nikt");
+        assertThat(noSession(mockMvc.perform(get("/p/ABC12/tv").param("lang", "pl")).andReturn()))
+                .contains("<html lang=\"pl\"", "<span lang=\"pl\">Zeskanuj i poproś o piosenkę</span>",
+                        "<span lang=\"en\" class=\"second\">Scan to request a song</span>");
     }
 
     @Test
