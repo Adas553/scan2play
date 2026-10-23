@@ -9,9 +9,10 @@
     <link href="/css/qr-print.css" th:href="@{/css/qr-print.css}" rel="stylesheet">
 </head>
 <!--/*
-    The party's QR code to print (DjDashboardController.qrPrint): an A4 poster, or eight cards to cut out. What is printed speaks
-    Polish and English at once — the texts are written here, each in an element with its own lang — and the bar at the top, which
-    the print leaves out, speaks the DJ's language (the message bundles).
+    The party's QR code to print (DjDashboardController.qrPrint): an A4 poster, or eight cards to cut out. What is printed speaks the
+    language of the DJ's panel: a Polish panel prints Polish and English at once (a Polish party's guests are of both), any other
+    English alone (the owner, 2026-10-23: a DJ abroad got a Polish poster). The texts are written here, each in an element with its
+    own lang; the bar at the top, which the print leaves out, speaks the DJ's language (the message bundles).
 */-->
 <body th:class="${qrLayout == 'cards'} ? 'layout-cards' : 'layout-poster'">
 
@@ -28,22 +29,22 @@
 
 <main th:if="${qrLayout == 'poster'}" class="poster">
     <h1>
-        <span lang="pl">Zeskanuj i zamów piosenkę</span>
-        <span lang="en" class="second">Scan to request a song</span>
+        <span th:if="${#locale.language == 'pl'}" lang="pl">Zeskanuj i poproś o piosenkę</span>
+        <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan to request a song</span>
     </h1>
     <!--/* our logo (static/images/logo.svg and the name), right above the code it belongs to */-->
     <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
-    <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
+    <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR" th:alt="${#locale.language == 'pl' ? 'QR code / kod QR' : 'QR code'}">
     <ol class="steps">
-        <li><span lang="pl">Zeskanuj kod aparatem telefonu</span> <span lang="en" class="second">Scan the code with your phone camera</span></li>
-        <li><span lang="pl">Wpisz wykonawcę i tytuł</span> <span lang="en" class="second">Type the artist and the title</span></li>
-        <li><span lang="pl">DJ zagra Twoją piosenkę</span> <span lang="en" class="second">The DJ plays your song</span></li>
+        <li><span th:if="${#locale.language == 'pl'}" lang="pl">Zeskanuj kod aparatem telefonu</span> <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan the code with your phone camera</span></li>
+        <li><span th:if="${#locale.language == 'pl'}" lang="pl">Wpisz wykonawcę i tytuł</span> <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Type the artist and the title</span></li>
+        <li><span th:if="${#locale.language == 'pl'}" lang="pl">DJ zagra Twoją piosenkę</span> <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">The DJ plays your song</span></li>
     </ol>
     <p class="link">
-        <span lang="pl">Nie możesz zeskanować? Wejdź na:</span> <span lang="en" class="second">Can't scan? Open:</span><br>
+        <span th:if="${#locale.language == 'pl'}" lang="pl">Nie możesz zeskanować? Wejdź na:</span> <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Can't scan? Open:</span><br>
         <strong th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</strong>
     </p>
-    <p class="code"><span lang="pl">Kod imprezy</span> / <span lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
+    <p class="code"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Kod imprezy</span> / </th:block><span lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
     <!--/* The DJ's profiles (V24), as a guest reads them on paper: "Instagram @djkoko"; a Facebook page known only by its number
          has nothing to read, so it is left out here */-->
     <th:block th:fragment="djLinks" th:with="links=${T(com.scan2play.util.SocialLinks)},
@@ -57,7 +58,7 @@
     <!--/* The DJ's tip link (V27), as a guest types it from paper: on the poster under the profiles, on a card in the texts' column
          (the code's column is full with three profiles) */-->
     <p th:fragment="tipLink" th:if="${tipUrl != null}" class="tip">
-        <span lang="pl">Napiwek</span> / <span lang="en">Tip</span>:
+        <th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Napiwek</span> / </th:block><span lang="en">Tip</span>:
         <strong th:text="${T(com.scan2play.util.TipLinks).display(tipUrl)}">revolut.me/djkoko</strong>
     </p>
 </main>
@@ -67,16 +68,16 @@
         <!--/* the code's column: our logo above the code, the DJ's profiles under it (the owner, 2026-10-07); the texts beside */-->
         <div class="side">
             <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
-            <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR">
+            <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR" th:alt="${#locale.language == 'pl' ? 'QR code / kod QR' : 'QR code'}">
             <th:block th:replace="~{qr-print :: djLinks}"></th:block>
         </div>
         <div class="text">
-            <p class="title"><span lang="pl">Zeskanuj i zamów piosenkę</span><br>
-                <span lang="en" class="second">Scan to request a song</span></p>
-            <p class="small"><span lang="pl">Wykonawca i tytuł</span><br>
-                <span lang="en" class="second">The artist and the title</span></p>
+            <p class="title"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Zeskanuj i poproś o piosenkę</span><br></th:block>
+                <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan to request a song</span></p>
+            <p class="small"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Wykonawca i tytuł</span><br></th:block>
+                <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">The artist and the title</span></p>
             <p class="small link" th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</p>
-            <p class="small"><span lang="pl">Kod</span> / <span lang="en">Code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
+            <p class="small"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Kod</span> / </th:block><span lang="en">Code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
             <p th:replace="~{qr-print :: tipLink}" class="small"></p>
         </div>
     </section>
