@@ -770,6 +770,9 @@ What every page shares, so a new screen looks like the others:
   (`btn-outline-light` / `-secondary`, the picked one of a group filled light): "Pomiń", "Zapisz" in the settings, "Podejrzyj", the
   tip (`btn-outline-warning`: money); the text one — `btn-link` ("↻ Odśwież", "−1"). What deletes is an outline in `--s2p-danger-text`,
   never filled red. Green (`btn-success`, dark text) and yellow are statuses — "Twoja", a given 👍, ⚠, 💸 — not actions.
+  Under a pointer that hovers the action rises 2 px with a cyan glow (`--s2p-action-glow`; none on a phone, none with
+  `prefers-reduced-motion`), and the logo that leads home (`.s2p-home-logo`) turns the accent, its mark ringed in it (the owner,
+  2026-10-24; `AppCssHoverTest`).
 - **Colours** as tokens on `:root`, nowhere else in `app.css` (`AppCssColoursTest`; 2026-10-15 every colour written in a rule became a
   token, 2026-10-16 the near-identical tones merged — the owner: three light texts `--s2p-white` / `--s2p-light` / `--s2p-text`, one
   panel background `--s2p-bg-elevated`, two edges, one yellow; `--s2p-<colour>-<n>` is that colour at an alpha of n %): `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under

@@ -23,7 +23,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
         <nav th:aria-label="#{forWhom.breadcrumb}" aria-label="You are here" id="forWhomBreadcrumb">
             <ol class="breadcrumb s2p-breadcrumb mb-0">
-                <li class="breadcrumb-item"><a th:href="${'/' + q}" href="/" id="forWhomHome" class="text-reset text-decoration-none"
+                <li class="breadcrumb-item"><a th:href="${'/' + q}" href="/" id="forWhomHome" class="s2p-home-logo"
                        th:title="#{forWhom.home}" title="Scan2Play home page"><th:block th:replace="~{fragments/components :: logo}"></th:block></a></li>
                 <li class="breadcrumb-item"><a th:href="${'/' + q + '#landingWho'}" href="/#landingWho" th:text="#{landing.who.title}">Who it is for</a></li>
                 <li class="breadcrumb-item active" aria-current="page" th:text="${#messages.msg('landing.who.' + forWhom.key + '.title')}">Wedding DJs</li>
