@@ -58,8 +58,8 @@ A. **The review of 2026-10-21 — what is left** (done and released: S1 a #131, 
 B. **For the owner (not code):** try S1 b on a test party of your own (not the demo, which asks no AI): "pan młody to frajer"
    comes back to the field asking for a title; switch the notifications on in your own panel (the account `ADMIN_GOOGLE_ID`) for the alarm of O2;
    request the indexing of `/dj-weselny`, `/kluby`, `/puby` in Search Console; Cloudflare's "Managed robots.txt" (U4) if `/dj/`
-   should be disallowed for every robot. Before `PLANS_ENFORCE`: reword the wedding page's search-engine description (it names
-   "lista pary młodej", a Pro feature, beside "Za darmo").
+   should be disallowed for every robot. (The wedding page's search description no longer names the
+   couple's list, a Pro feature, beside "Za darmo" — the PR after #158.)
 C. **Search Console (2026-10-24, the owner's screenshots):** a 404 for `/oauth2/authorization/google` (last crawled 2026-07-23 —
    a login link, disallowed in `robots.txt`; nothing to fix); `/privacy`, `/terms`, their `?lang=en` and `/jak-to-dziala?lang=en`
    not crawled yet; `/jak-to-dziala` crawled, not indexed — Google's own pace for a young site. The sleep (until 2026-10-24) may
