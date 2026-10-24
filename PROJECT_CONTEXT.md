@@ -616,6 +616,8 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
 | `DjSongController` | mark played, skip, clear the queue, count a tip ("💸", V28) |
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
+| `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
+| `DemoController` | the demo (2026-10-24, on the branch `claude/demo` until November): `/demo` — the panel of the demo party of the visitor's language (`DemoParty.codeFor`: Polish `DEMO`, any other English `DEME`), the real `dashboard.html` with `demo`, to anyone without a login, only to look at (`js/dashboard/demo.js` stops every form and link to `/dj/…` and says "start your own party"); `/demo/updates` and `/demo/history` — its poll and History tab, as the panel's (`partyCode` a demo's, else 404). Each visitor sees the examples and their own requests (their session's), never another visitor's |
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
@@ -648,6 +650,8 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `SongRequestRetentionService` | the nightly clearing of requests waiting more than a day, and the purge of song requests (Section 4.1) |
 | `PushSubscriptionService` / `PushNotificationService` | the DJ's devices of the notifications (checked addresses, ≤ 10 per DJ) / sending a new request to them (Web Push, `zerodep-web-push-java`, off the request thread) |
 | `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …" |
+| `SiteCounter` | the site's counter (V40, 2026-10-24): per day (Polish time) the landing page seen (PL / EN), "Zacznij", logins, new DJs, guests' requests — numbers only, no address, browser or account; a robot's browser (search engines, Facebook's link previews, scanners, curl) is not counted; one atomic `INSERT … ON CONFLICT` per event, a failure only a WARN (`SiteCounterIT`) |
+| `DemoParty` | the demo parties, one per language (the owner, 2026-10-24): `DEMO` Polish, `DEME` English — four characters, never a real party's; owners `scan2play-demo` / `scan2play-demo-en`, no Google accounts. Each with its own vibe note, ⭐ and ten example requests with their comments (waiting ones with votes, dedications, a "⚠ Sprawdź", a ⭐ of the hosts; played, rejected, skipped), put back at every start and every night (04:55), the visitors' requests dropped. Their guest pages `/p/DEMO`, `/p/DEME` work, but no AI is asked: `SongEvaluationService.demoAnswer` — accepted, a ready comment (`demo.ai.comment.*`, "(demo: no AI check)"), saved unchecked, so only the visitor who sent it sees it (`DemoPartyIT`) |
 | `PlanService` | the plans (V35, Section 4.1 "Plans"): the organiser's `Plan` (the switch `scan2play.plans.enforce`, `pro-owners`, the row of `dj_plan`, cached), `require(party, PlanFeature)` (a 403), `asPlanned` (the party as its plan lets it work: for the guests, the AI, the queue's marks, the print — never saved), `view` (what the pages show: `plan.allows(…)`, `plan.pro(…)`), the staff's places, the trial |
 
 ### 6.3 Configuration
@@ -824,7 +828,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
 under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/webjars/**`, `/favicon.ico`,
-`/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`. Everything else needs the DJ's login. Without it (`SecurityConfig.loginEntryPoint`, the review of 2026-10-21, C2, C3): a DJ's page opened in the browser (`Sec-Fetch-Mode: navigate`) goes straight to Google's login and, after it, back to that page with its `?party=` (`djPagesRemembered`, `loginSuccess`; only such a page is remembered, never a poll or a fragment) — a DJ whose session expired with the phone in the pocket comes back to the panel, not to the landing page; a fetch of the panel goes to `/` as before (`polling.js` then loads its page again); any other address is a 404 (the error page), not the landing page; `/dj/**` validates the party the page
+`/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`, `GET /demo` and `GET /demo/**` (the demo, `DemoController`). Everything else needs the DJ's login. Without it (`SecurityConfig.loginEntryPoint`, the review of 2026-10-21, C2, C3): a DJ's page opened in the browser (`Sec-Fetch-Mode: navigate`) goes straight to Google's login and, after it, back to that page with its `?party=` (`djPagesRemembered`, `loginSuccess`; only such a page is remembered, never a poll or a fragment) — a DJ whose session expired with the phone in the pocket comes back to the panel, not to the landing page; a fetch of the panel goes to `/` as before (`polling.js` then loads its page again); any other address is a 404 (the error page), not the landing page; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
 `requireOwner` for what is never handed over (the staff, the profiles, the tip link, clearing the history, the account), `access` for
 what every person of the staff sees (the queue's poll, the QR print); and then, for a feature of the Pro plan, `PlanService.require`
@@ -878,7 +882,7 @@ below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH
 `localhost` or a public HTTPS address (Google refuses a LAN IP as a redirect URI); the guest side works through the LAN IP.
 **The plans** (V35, Section 4.1 "Plans"): `PLANS_ENFORCE` (default `false`: everything for everyone — not set on Railway),
 `SCAN2PLAY_PLANS_PRO_OWNERS` (Google subjects, comma-separated: Pro for ever — the owner's own `party_settings.owner_id`, testers),
-`PLANS_TRIAL_DAYS` (default 0). Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
+`PLANS_TRIAL_DAYS` (default 0). **`ADMIN_GOOGLE_ID`** (`scan2play.admin-id`): the owner's Google subject — the account that sees `/dj/stats` (V40); not a secret; unset, the page is a 404. Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
 **`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (staged 2026-10-13, live once the owner
 deploys it): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
 on average, 2 GB at the top) — the live data is ~55 MB. Measured on a copy (20 parties × 50 guests polling every 3 s, 1 500
@@ -954,6 +958,7 @@ schema behind Flyway's back.
 | V37 | `party_settings.host_token_made_at`, `staff_token_made_at` timestamptz (nullable): when the hosts' and the invitation link were made — each works 30 days; a link there at the migration counts from it |
 | V38 | table `song_request_dedications` (`id` bigserial PK, `song_request_id` bigint NOT NULL FK → `song_requests` ON DELETE CASCADE, `text` varchar(100) NOT NULL, `checked` boolean NOT NULL, `created_at` timestamptz NOT NULL; index `idx_dedication_request` (song_request_id, id)), `song_requests.dedications` integer NOT NULL DEFAULT 0 and `party_settings.dedications_on` boolean NOT NULL DEFAULT true: the guests' dedications |
 | V39 | `song_requests.checked` boolean NOT NULL DEFAULT true; the requests whose comment is the app's note "AI jest chwilowo niedostępne…" / "The AI is unavailable right now…" (the text of `ai.unavailable.to_dj` since 2026-10-01) set to false: a request the AI did not judge stays off the guests' list and the TV screen (`RequestCheckedMigrationIT` reads the note from the bundles) |
+| V40 | table `site_counter` (`day` date, `event` varchar(20), `count` integer, PK (day, event)): the site's counter — numbers per day, no personal data (`SiteCounter`, `/dj/stats`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1065,6 +1070,8 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster / cards; what is printed speaks the panel's language (Polish: Polish and English; any other: English) |
+| GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days; only the account `ADMIN_GOOGLE_ID` names, else 404 |
+| GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE) |
@@ -1094,11 +1101,11 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 770. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 785. Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
   security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 89 tests in 25 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 93 tests in 27 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT` (the history's order, the
   queue's fingerprint — also changes that cancel out in counts —, the night's clearing of the queues, the retention), `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),

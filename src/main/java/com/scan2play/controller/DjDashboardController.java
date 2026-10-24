@@ -241,6 +241,49 @@ public class DjDashboardController {
         model.addAttribute(PUSH_PUBLIC_KEY, pushNotificationService.publicKey());
     }
 
+    // ---- The demo (DemoController, DemoParty): the panel of a party no one owns, shown to anyone, only to look at ----
+
+    /** The demo's panel: as its owner sees it — every card, every button (the page's script keeps them from sending) — and the queue given. */
+    void demoPanel(Model model, PartySettingsEntity settings, List<SongRequestEntity> queue) {
+        PartyStaffService.Access access = demoAccess(settings);
+        String partyCode = settings.getPartyCode();
+        model.addAttribute(IS_ACTIVE, settings.isActive());
+        model.addAttribute(IS_OWNER, true);
+        model.addAttribute(PANEL_ACCESS, accessValue(access));
+        model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
+        model.addAttribute(PANELS, List.of());
+        model.addAttribute(HAS_OWN_PARTY, true);
+        addSettings(model, settings, true);
+        String guestUrl = guestUrl(partyCode);
+        model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, 250, 250));
+        model.addAttribute(PERMANENT_LINK, guestUrl);
+        demoQueue(model, settings, queue);
+    }
+
+    /** The demo's queue: the rows of the panel ({@code dashboard :: songTableBody}) for the queue given. */
+    void demoQueue(Model model, PartySettingsEntity settings, List<SongRequestEntity> queue) {
+        model.addAttribute(PARTY_CODE, settings.getPartyCode());
+        model.addAttribute(ACCESS, demoAccess(settings));
+        model.addAttribute(PLAN, planService.view(settings, true));
+        model.addAttribute(HISTORY, queue);
+        model.addAttribute(DEDICATIONS, djService.dedicationsOf(queue));
+        model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
+    }
+
+    /** The demo's History tab: the fragment the panel's tab shows ({@code history :: historyTableContent}). */
+    void demoHistory(Model model, PartySettingsEntity settings, int limit, String filter) {
+        model.addAttribute(PARTY_CODE, settings.getPartyCode());
+        model.addAttribute(IS_OWNER, true);
+        model.addAttribute(ACCESS, demoAccess(settings));
+        model.addAttribute(PLAN, planService.view(settings, true));
+        addHistory(model, settings, limit, filter);
+        model.addAttribute(HISTORY_HEADING, true);
+    }
+
+    private static PartyStaffService.Access demoAccess(PartySettingsEntity settings) {
+        return new PartyStaffService.Access(settings, true, java.util.Set.of());
+    }
+
     /** The entries of a hosts' list as stored ({@code SongList.tidy}: one per line), 0 for none. */
     static int entries(String list) {
         return list == null || list.isBlank() ? 0 : list.split("\n").length;

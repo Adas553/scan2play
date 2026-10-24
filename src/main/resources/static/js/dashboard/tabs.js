@@ -9,7 +9,7 @@
  * load this module: its tabs are plain links.
  */
 import { EVENTS, on } from './events.js';
-import { csrfHeaders, hideRefused, partyCode, showRefused } from './common.js';
+import { csrfHeaders, demoMode, hideRefused, partyCode, showRefused } from './common.js';
 import { captureListState, initSortableHeaders, restoreListState, setHistoryReloader } from './list-tools.js';
 import { reopenCards } from './cards.js';
 
@@ -82,7 +82,7 @@ import { reopenCards } from './cards.js';
      * {@code filter} says (all / played / rejected; none or an old value = all). The server filters.
      */
     function fetchHistory(limit, filter) {
-        let url = '/dj/history-view/fragment?partyCode=' + encodeURIComponent(partyCode());
+        let url = (demoMode() ? '/demo/history' : '/dj/history-view/fragment') + '?partyCode=' + encodeURIComponent(partyCode());
         if (limit) url += '&limit=' + encodeURIComponent(limit);
         if (filter && filter !== 'all') url += '&filter=' + encodeURIComponent(filter);
         return fetch(url, { headers: csrfHeaders() })

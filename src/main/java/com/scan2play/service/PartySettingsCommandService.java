@@ -22,6 +22,7 @@ public class PartySettingsCommandService {
     private final PartySettingsRepository partySettingsRepository;
     private final CacheManager cacheManager;
     private final PlanService planService;
+    private final SiteCounter siteCounter;
 
     /**
      * Retrieves the existing party for the given DJ (ownerId) or creates a new one if it doesn't exist.
@@ -52,6 +53,8 @@ public class PartySettingsCommandService {
         log.info("Creating new party for owner: {} with code: {}", ownerId, party.getPartyCode());
         PartySettingsEntity saved = partySettingsRepository.save(party);
         planService.startTrial(ownerId);   // only while the plans are enforced (V35); in this transaction, as the party
+        // a new DJ (V40) — once the party is there: a first login in two tabs makes it in one, the other rolls back
+        com.scan2play.util.AfterCommit.run(() -> siteCounter.count(SiteCounter.Event.NEW_DJ));
         return saved;
     }
 

@@ -217,9 +217,13 @@
 <!--/* The way back to the DJ's own dashboard from a guest's page — shown only in the installed app (app.css,
      display-mode: standalone). The app takes every address of the site, so the DJ testing their QR code landed on the guest page
      inside it with no address bar and no "back" (the owner, 2026-10-08). Only a DJ has the app: the manifest is on the dashboard
-     alone. "Twój": it leads to the dashboard of whoever is logged in, never to this party's. */-->
-<div th:fragment="back-to-dashboard" class="w-100 s2p-mw-500 mb-2 s2p-standalone-only">
-    <a href="/dj/dashboard" id="backToDashboard" class="btn btn-sm btn-outline-light" th:text="#{guest.back_to_dashboard}">← Your DJ dashboard</a>
+     alone. "Twój": it leads to the dashboard of whoever is logged in, never to this party's. A demo party's page (DemoParty) leads back
+     to the demo's panel instead, in a browser too: a visitor came from there and has no DJ's dashboard (the owner, 2026-10-24). */-->
+<div th:fragment="back-to-dashboard" class="w-100 s2p-mw-500 mb-2"
+     th:with="demoParty=${partyCode != null and T(com.scan2play.service.DemoParty).isDemo(partyCode)}"
+     th:classappend="${demoParty} ? 's2p-demo-back' : 's2p-standalone-only'">
+    <a href="/dj/dashboard" th:href="${demoParty} ? '/demo' : '/dj/dashboard'" id="backToDashboard" class="btn btn-sm btn-outline-light"
+       th:text="${demoParty} ? #{guest.back_to_demo} : #{guest.back_to_dashboard}">← Your DJ dashboard</a>
 </div>
 
 <!--/* The DJ's profiles (V24): a button each, opened in a new tab, nothing passed to the site — only https addresses on those sites, as
@@ -341,6 +345,13 @@
 </th:block>
 
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
+
+<!--/* Our logo as the way home, on the public pages (the guide, Pro, the demo; the owner, 2026-10-24): a link that looks like the logo
+     and says it is one — a hand, a lighter logo and "Scan2Play — strona główna" on hover, a ring on the keyboard's focus. The pages
+     keep their "← Strona główna" too: not everyone knows a logo leads home, and a phone has no hover. Never on a guest's page (the
+     party, the result, the hosts', the invitation, the TV): a guest at a wedding must not land on the page for DJs by a tap. */-->
+<a th:fragment="home-logo" href="/" class="s2p-home-logo" th:title="#{logo.home}" th:attr="aria-label=#{logo.home}"><th:block
+        th:replace="~{fragments/components :: logo}"></th:block></a>
 
 <!--/* The page's language (LanguageSwitchAdvice, the owner 2026-10-18): this page with ?lang=pl / ?lang=en, kept in a cookie for the
      next pages (WebConfig); each name in its own language, the one shown marked. None on a page answered to a POST. In the footer of

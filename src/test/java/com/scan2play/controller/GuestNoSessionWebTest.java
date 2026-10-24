@@ -38,6 +38,8 @@ class GuestNoSessionWebTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private com.scan2play.service.SiteCounter siteCounter;
+    @MockitoBean
     private SongEvaluationService songEvaluationService;
     @MockitoBean
     private GuestQueueService guestQueueService;

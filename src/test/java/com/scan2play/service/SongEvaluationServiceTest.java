@@ -919,4 +919,30 @@ class SongEvaluationServiceTest {
         verify(songRequestRepository, never()).markChecked(any());
         assertThat(waiting.isChecked()).isFalse();
     }
+
+    /**
+     * The demo party (DemoParty, the owner 2026-10-24): no AI is asked — a ready verdict, the song as the guest wrote it, a ready
+     * comment, the dedication let through; and the request is the visitor's alone (saved unchecked: the other visitors' lists and the
+     * TV never show it).
+     */
+    @Test
+    void theDemoParty_asksNoAi_andKeepsTheVisitorsRequestToThemselves() {
+        PartySettingsEntity demo = PartySettingsEntity.builder().partyCode(DemoParty.CODE).build();
+        when(partySettingsQueryService.getSettings(DemoParty.CODE)).thenReturn(demo);
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+        when(messageSource.getMessage(org.mockito.ArgumentMatchers.startsWith("demo.ai.comment."), any(), any(Locale.class)))
+                .thenReturn("Świetny wybór (demo)");
+
+        DjResponse response = answering("{\"decision\":\"rejected\"}").evaluateAndSaveSong(DemoParty.CODE, "  wilki   baśka ", "ANY",
+                Set.of(), "dla Ani");
+
+        assertThat(prompts).as("no AI asked").isEmpty();
+        assertThat(response.decision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(response.comment()).isEqualTo("Świetny wybór (demo)");
+        assertThat(response.dedicationOk()).isTrue();
+        assertThat(saved.getValue().getSongName()).isEqualTo("wilki baśka");
+        assertThat(saved.getValue().isChecked()).as("the visitor's alone").isFalse();
+        verify(dedications).save(any());
+        assertThat(aiHealth.takeSummary()).as("the AI's health: nothing to count").isNull();
+    }
 }

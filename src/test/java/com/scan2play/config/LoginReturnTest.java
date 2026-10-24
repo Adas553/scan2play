@@ -31,9 +31,20 @@ class LoginReturnTest {
     /** Where the login sends the person, with what the session remembers. */
     private String afterTheLogin(MockHttpSession session) throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
-        SecurityConfig.loginSuccess(remembered).onAuthenticationSuccess(
+        SecurityConfig.loginSuccess(remembered, () -> logins++).onAuthenticationSuccess(
                 request(session, "/login/oauth2/code/google", null, "navigate"), response, new TestingAuthenticationToken("dj", null));
         return response.getRedirectedUrl();
+    }
+
+    /** The logins the site's counter was told of (V40). */
+    private int logins;
+
+    /** Every login is counted once (V40, SiteCounter.Event.LOGIN), wherever it leads. */
+    @Test
+    void aLogin_isCounted() throws Exception {
+        afterTheLogin(new MockHttpSession());
+        afterTheLogin(new MockHttpSession());
+        org.assertj.core.api.Assertions.assertThat(logins).isEqualTo(2);
     }
 
     @Test

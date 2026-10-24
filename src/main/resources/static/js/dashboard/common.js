@@ -8,6 +8,14 @@ export function csrfHeaders() {
     return csrfToken && csrfHeader ? { [csrfHeader.getAttribute('content')]: csrfToken.getAttribute('content') } : {};
 }
 
+/**
+ * The demo's panel (/demo, DemoController): its queue and history are fetched from /demo/…, and nothing is sent (demo.js). The
+ * page says so on its body (data-demo).
+ */
+export function demoMode() {
+    return document.body !== null && document.body.dataset.demo === 'true';
+}
+
 /** The party code of the page (the dashboard, the settings, the standalone history page), or null. */
 export function partyCode() {
     const input = document.getElementById('partyCode');

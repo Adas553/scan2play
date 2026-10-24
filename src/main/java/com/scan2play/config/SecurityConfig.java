@@ -1,11 +1,14 @@
 package com.scan2play.config;
 
 import jakarta.servlet.http.HttpServletResponse;
+import com.scan2play.service.SiteCounter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -113,12 +116,18 @@ public class SecurityConfig {
         return cache;
     }
 
-    /** After the login: the DJ's page remembered before it ({@link #djPagesRemembered}), else the panel. */
-    static AuthenticationSuccessHandler loginSuccess(RequestCache remembered) {
+    /**
+     * After the login: the DJ's page remembered before it ({@link #djPagesRemembered}), else the panel. {@code loggedIn} runs first —
+     * the site's counter of logins (V40).
+     */
+    static AuthenticationSuccessHandler loginSuccess(RequestCache remembered, Runnable loggedIn) {
         SavedRequestAwareAuthenticationSuccessHandler success = new SavedRequestAwareAuthenticationSuccessHandler();
         success.setDefaultTargetUrl("/dj/dashboard");
         success.setRequestCache(remembered);
-        return success;
+        return (request, response, authentication) -> {
+            loggedIn.run();
+            success.onAuthenticationSuccess(request, response, authentication);
+        };
     }
 
     /** The deploy's version the scripts and styles are linked under ({@code /<version>/js/...}, application.properties). */
@@ -126,7 +135,8 @@ public class SecurityConfig {
     private String assetVersion;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, MessageSource messageSource, LocaleResolver localeResolver) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, MessageSource messageSource, LocaleResolver localeResolver,
+                                           ObjectProvider<SiteCounter> siteCounter) throws Exception {
         RequestCache remembered = djPagesRemembered();
         http
                 .headers(headers -> headers.contentSecurityPolicy(csp -> {
@@ -168,6 +178,8 @@ public class SecurityConfig {
                         .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro").permitAll()
                         // what a search engine reads first (SeoController); before, both led to the login page, "/"
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
+                        // the demo (DemoController): the demo party's panel, only to look at, and its queue and history
+                        .requestMatchers(HttpMethod.GET, "/demo", "/demo/**").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // DJ dashboard is protected
@@ -179,7 +191,7 @@ public class SecurityConfig {
                         // Use root landing page as custom login entry point
                         .loginPage("/")
                         // back to the DJ's page asked for before the login (with its ?party=), else the panel
-                        .successHandler(loginSuccess(remembered))
+                        .successHandler(loginSuccess(remembered, () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN))))
                         .failureHandler((request, response, exception) -> {
                             log.error("OAuth2 Login Failed: {}", exception.getMessage());
                             response.sendRedirect("/?error=auth_failed");

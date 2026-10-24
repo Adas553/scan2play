@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
 <head>
     <meta charset="UTF-8">
-    <title th:text="#{dashboard.title}">DJ Dashboard - Scan2Play</title>
+    <title th:text="${demo == true} ? #{demo.title} : #{dashboard.title}">DJ Dashboard - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
@@ -22,11 +22,43 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Scan2Play">
 </head>
-<body class="page-dj">
+<body class="page-dj" th:attr="data-demo=${demo == true} ? 'true' : null">
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
 
     <!-- Navigation and Alert Fragment -->
+    <th:block th:unless="${demo == true}">
     <div th:replace="~{fragments/components :: dj-nav(activeTab='panel', isActive=${isActive}, partyCode=${partyCode})}"></div>
+    </th:block>
+    <!--/* The demo (DemoController): no DJ's bar — what this is, and where to go from here: the guest's page and the TV of the demo party
+         (a request sent there shows here, to this visitor alone), or one's own party */-->
+    <th:block th:if="${demo == true}">
+    <!--/* our logo, the way home, and "← Strona główna" on the right — as the guide's heading row (the owner, 2026-10-24) */-->
+    <div id="demoHead" class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <div class="fs-4 fw-bold text-white"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></div>
+            <span class="badge text-bg-info">DEMO</span>
+        </div>
+        <a href="/" id="demoHome" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{demo.bar.home}">← Home page</a>
+    </div>
+    <!--/* a phone gets the short line and the buttons two by two, "start your own" across (2026-10-24: four lines and uneven rows) */-->
+    <div id="demoBar" class="alert alert-info mb-3" role="note">
+        <p class="mb-2"><span class="d-none d-sm-inline" th:text="#{demo.bar.text}">This is a demo: an example party, nothing here is saved.</span><span
+                class="d-sm-none" th:text="#{demo.bar.text.short}">Demo: an example party, nothing here is saved.</span></p>
+        <div class="row g-2">
+            <div class="col-6 col-sm-auto">
+                <a th:href="@{/p/{code}(code=${partyCode})}" href="/p/DEMO" target="_blank" rel="noopener" id="demoGuest"
+                   class="btn btn-sm btn-light w-100" th:text="#{demo.bar.guest}">📱 Guest page</a>
+            </div>
+            <div class="col-6 col-sm-auto">
+                <a th:href="@{/p/{code}/tv(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}" href="/p/DEMO/tv" target="_blank"
+                   rel="noopener" id="demoTv" class="btn btn-sm btn-outline-light w-100" th:text="#{demo.bar.tv}">📺 TV screen</a>
+            </div>
+            <div class="col-12 col-sm-auto ms-sm-auto">
+                <a href="/start" id="demoStart" class="btn btn-sm btn-action w-100" th:text="#{demo.bar.start}">Start your own party →</a>
+            </div>
+        </div>
+    </div>
+    </th:block>
 
     <!--/* What happened on the way here (V30, V32): "Dołączono do obsługi…", "Organizator … usunął Twój dostęp" — one message at a
          time, kept in the session until shown (DjSessionHelper.Note). */-->
@@ -332,7 +364,7 @@
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>
                             <!--/* the AI was down (V39): the guest's own words, not on the guests' list nor the TV screen */-->
-                            <span th:unless="${req.checked}" class="badge text-bg-secondary align-self-start s2p-request-unchecked"
+                            <span th:unless="${req.checked or demo == true}" class="badge text-bg-secondary align-self-start s2p-request-unchecked"
                                   th:title="#{dashboard.request.unchecked.title}" th:text="#{dashboard.request.unchecked}">not checked by the AI</span>
                             <span th:unless="${#strings.isEmpty(req.guestText)}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${req.guestText})}">Guest: “…”</span>
@@ -448,6 +480,9 @@
 
     <!--/* "Cofnij" after "Pomiń" or "Zagrane": shown by forms.js for a few seconds after either, puts the request back
          (/dj/dashboard/restore). The id stays "undoSkip": the browser scenarios and the CSS know it by it. */-->
+    <!--/* the demo's note (demo.js): a form or a link to a DJ's page was stopped */-->
+    <div th:if="${demo == true}" id="demoNotice" class="s2p-undo-toast" role="status" aria-live="polite" hidden
+         th:text="#{demo.notice}">Nothing is saved in the demo — start your own party to use this.</div>
     <div id="undoSkip" class="s2p-undo-toast" role="status" aria-live="polite" hidden>
         <!--/* after "Pomiń" or "Zagrane" (forms.js shows the one that happened): both put right by "Cofnij" (DjService.restoreSong) */-->
         <span data-undo-label="dismiss" th:text="#{dashboard.undo.skipped}">Skipped:</span>
