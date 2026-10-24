@@ -63,8 +63,9 @@ A. **The review of 2026-10-21 — what is left**, one PR per group. The owner's 
      yes; the key only from IntelliJ's run configuration, never in the repo).
 B. **Railway: Healthcheck Path** — set to `/privacy` (2026-10-24; Railway allows no dot, so not `/robots.txt`): check the next
    deploy's log for the healthcheck passing.
-C. **The branch `claude/for-whom-pages`** (`/dj-weselny`, `/kluby`, `/puby`): waits for the owner's yes to its texts; to fix: "Co
-   zagrałeś" (an impersonal form) and Pro features promised as free; bring `dev` in before its PR.
+C. **The pages "Dla kogo"** (`/dj-weselny`, `/kluby`, `/puby`, the branch `claude/for-whom-pages`): brought up to `dev` and fixed
+   in the PR after #145 (2026-10-24) — "Co grało i o co proszono", "PRO" on the Pro plan's steps and features and the price of the
+   plans once they are enforced. **Waits for the owner's yes to every text** (the PR lists them).
 
 0. **"⚠ Sprawdź"** — built 2026-10-07 (live). Still a case for the Gemini comparison (item 4).
 

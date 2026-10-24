@@ -329,8 +329,10 @@ logo, "Dla kogo", this kind) and the kind with its card's icon above the heading
 three questions (the pubs' two; `forWhom.KEY.*` — each page its own texts, not one page with a word swapped: a
 search engine counts that a doorway page; `ForWhomPagesWebTest` checks no paragraph repeats), the start again and the other two kinds
 as cards that are links (the whole card, `.stretched-link`). Every link in the page's language (`?lang=en` on an English page). No
-form (no session, no CSRF token) and no word of Pro while the plans are not enforced (the owner, 2026-10-21). No karaoke page: nothing
-in the app is made for it yet (the owner, 2026-10-21).
+form (no session, no CSRF token) and no word of Pro while the plans are not enforced (the owner, 2026-10-21); once they are, the
+steps and features of the Pro plan carry "PRO" (`ForWhomController.Page.pro`) and "Ile to kosztuje?" says what Free has and what Pro
+adds (`forWhom.pub.faq2.a.plans`; `ForWhomPagesPlansWebTest`) — the pages promise nothing of Pro as free (the owner, 2026-10-24). No
+karaoke page: nothing in the app is made for it yet (the owner, 2026-10-21).
 "Zbieraj prośby gości" → `/start` → Google's login → `/dj/dashboard` (`DjSessionHelper.getPartySettings`
 creates the DJ's party on the first visit; the old tile links `/start/{kind}` lead to the login too). The dashboard: the guest queue
 (polled every 3 s; sort, search, a number per request) with "Oznacz jako zagrane", "Pomiń" (`POST /dj/dashboard/dismiss`: the request

@@ -129,9 +129,10 @@ class ForWhomPagesWebTest {
         }
     }
 
+    /** No karaoke page yet: an unknown address, a 404 (the review of 2026-10-21, C3: before, the login sent it to the landing page). */
     @Test
     void karaoke_hasNoPageYet() throws Exception {
-        mockMvc.perform(get("/karaoke")).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/karaoke")).andExpect(status().isNotFound());
     }
 
     /** The element with this id, up to its first closing tag. */
