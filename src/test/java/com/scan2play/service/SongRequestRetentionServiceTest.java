@@ -9,6 +9,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Duration;
@@ -140,5 +142,34 @@ class SongRequestRetentionServiceTest {
         assertThat(scheduled).isNotNull();
         assertThat(scheduled.cron()).isEqualTo("0 45 4 * * *");
         assertThat(scheduled.zone()).isEqualTo("Europe/Warsaw");
+    }
+
+    @Test
+    @DisplayName("after a start both run as well — a night the app was down skips nothing")
+    void shouldRunBothAtStart() throws Exception {
+        EventListener listener = SongRequestRetentionService.class.getMethod("atStart").getAnnotation(EventListener.class);
+        assertThat(listener).isNotNull();
+        assertThat(listener.value()).containsExactly(ApplicationReadyEvent.class);
+        when(repository.deleteRequestedBefore(any(), eq(BATCH_SIZE))).thenReturn(0);
+        Instant before = Instant.now();
+
+        service.atStart();
+
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+        verify(repository).clearWaitingRequestedBefore(cutoff.capture(), any());
+        assertThat(Duration.between(cutoff.getValue(), before.minus(Duration.ofHours(24))).abs())
+                .as("only what has waited a day — never tonight's queue").isLessThan(Duration.ofMinutes(1));
+        verify(repository).deleteRequestedBefore(any(), eq(BATCH_SIZE));
+    }
+
+    @Test
+    @DisplayName("a failure at start is logged, never stops the start, and the other cleanup still runs")
+    void shouldNotStopTheStart_whenACleanupFails() {
+        when(repository.clearWaitingRequestedBefore(any(), any())).thenThrow(new IllegalStateException("database down"));
+        when(repository.deleteRequestedBefore(any(), eq(BATCH_SIZE))).thenReturn(0);
+
+        service.atStart();
+
+        verify(repository).deleteRequestedBefore(any(), eq(BATCH_SIZE));
     }
 }

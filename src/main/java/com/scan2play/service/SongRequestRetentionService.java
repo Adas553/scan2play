@@ -5,6 +5,8 @@ import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +40,25 @@ public class SongRequestRetentionService {
     static final Duration WAITING_KEPT = Duration.ofHours(24);
 
     private final SongRequestRepository songRequestRepository;
+
+    /**
+     * Both cleanups after a start as well: a night the app was down at 04:40 (a deploy, a crash, a sleeping service) would leave
+     * the old requests a day longer. Only what has waited a day or is a month old is touched — never tonight's queue. A failure is
+     * logged and never stops the start; the night tries again.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void atStart() {
+        runAtStart("Queue cleanup", this::clearOldWaitingRequests);
+        runAtStart("Song request cleanup", this::purgeStaleRequests);
+    }
+
+    private static void runAtStart(String what, Runnable cleanup) {
+        try {
+            cleanup.run();
+        } catch (RuntimeException e) {
+            log.warn("{} at start failed, the night's run tries again", what, e);
+        }
+    }
 
     /**
      * Clears from every queue what has waited more than {@link #WAITING_KEPT} (review 2026-10-14 W10) — as "Wyczyść kolejkę" does:
