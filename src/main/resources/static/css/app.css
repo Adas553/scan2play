@@ -1072,6 +1072,11 @@ th[data-sort].sort-desc::after {
 .s2p-row-state { margin-left: auto; color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
 .s2p-row-warn { color: var(--s2p-warning); font-weight: 600; }
 .s2p-row::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; }
+/* on a laptop's width 44 px each (still a finger's target, as a tablet's): with "Więcej" unfolded the queue starts in its first
+   screen; a phone keeps 52 px */
+@media (min-width: 992px) {
+    .s2p-row { min-height: 44px; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+}
 /* the QR code small beside the guests' link and the print: the card was 440 px of a phone */
 .s2p-qr-compact { display: flex; gap: 1rem; align-items: center; }
 .s2p-qr-compact-img { width: 120px; height: 120px; flex: none; border-radius: 8px; border: 1px solid var(--s2p-border-light); }

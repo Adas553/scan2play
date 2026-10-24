@@ -206,11 +206,6 @@ public class DjDashboardController {
         model.addAttribute(ACCESS, access);
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
         addSettings(model, settings, access.owner());
-        if (access.owner()) {   // the DJ's library (V41): the organiser's card alone
-            Optional<DjLibraryService.Info> library = djService.libraryOf(settings.getPartyCode());
-            model.addAttribute(LIBRARY_TRACKS, library.map(DjLibraryService.Info::tracks).orElse(null));
-            model.addAttribute(LIBRARY_UPLOADED, library.map(info -> Times.day(info.uploadedAt())).orElse(null));
-        }
         return "settings";
     }
 
@@ -219,6 +214,10 @@ public class DjDashboardController {
         String partyCode = settings.getPartyCode();
         if (owner) {
             model.addAttribute(STAFF, partyStaffService.staffOf(partyCode));
+            // the DJ's library (V41): the organiser's card and its row in "Więcej" alone
+            Optional<DjLibraryService.Info> library = djService.libraryOf(partyCode);
+            model.addAttribute(LIBRARY_TRACKS, library.map(DjLibraryService.Info::tracks).orElse(null));
+            model.addAttribute(LIBRARY_UPLOADED, library.map(info -> Times.day(info.uploadedAt())).orElse(null));
         }
         // what the organiser's plan has (V35): the cards of a feature without Pro say so to the organiser, in place of their form;
         // what the party works with — the comment style, the guests' limits — is the plan's (the saved values wait for Pro)
