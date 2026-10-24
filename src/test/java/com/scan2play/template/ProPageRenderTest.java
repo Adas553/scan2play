@@ -135,6 +135,9 @@ class ProPageRenderTest {
     @DisplayName("the way back: the panel for whoever is logged in, the landing page for anyone else")
     void shouldLeadBackWhereTheVisitorCameFrom() {
         assertThat(render(PL, ANONYMOUS)).contains("href=\"/\" id=\"proBack\"", ">← Strona główna<").doesNotContain("href=\"/dj/dashboard\"");
+        // our logo is the way home too, and says so (the owner, 2026-10-24): a link with its title
+        assertThat(render(PL, ANONYMOUS)).contains("<a href=\"/\" class=\"s2p-home-logo\"", "title=\"Scan2Play — strona główna\"",
+                "aria-label=\"Scan2Play — strona główna\"");
         assertThat(render(PL, dj())).contains("href=\"/dj/dashboard\" id=\"proBack\"", ">← Panel<");
     }
 

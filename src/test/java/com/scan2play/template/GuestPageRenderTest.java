@@ -571,7 +571,9 @@ class GuestPageRenderTest {
 
         for (String html : List.of(page, result)) {
             assertThat(html).contains("s2p-standalone-only", "id=\"backToDashboard\"", "href=\"/dj/dashboard\"", "← Twój panel DJ-a")
-                    .doesNotContain("??");
+                    .doesNotContain("??")
+                    // our logo is no link on a guest's page: a guest at a wedding does not land on the page for DJs by a tap
+                    .doesNotContain("s2p-home-logo");
         }
         assertThat(render(Locale.ENGLISH, Map.of())).contains("← Your DJ dashboard");
     }

@@ -445,6 +445,11 @@ th[data-sort].sort-desc::after {
 @media (min-width: 992px) { .s2p-landing-cta { justify-content: flex-start; } }
 /* a phone: the buttons one under another, all of one width (2026-10-24: three widths, stacked, looked untidy) */
 @media (max-width: 575.98px) { .s2p-landing-cta .btn { flex: 1 1 100%; } }
+
+/* Our logo as the way home (components :: home-logo): the logo as it is, a hand and a lighter logo on hover, a ring on the keyboard's focus */
+.s2p-home-logo { color: inherit; text-decoration: none; border-radius: var(--s2p-radius); transition: opacity 0.15s ease; }
+.s2p-home-logo:hover { color: inherit; opacity: 0.8; }
+.s2p-home-logo:focus-visible { outline: 2px solid var(--s2p-action); outline-offset: 4px; }
 .s2p-landing-free { color: var(--s2p-text-muted); font-size: 0.9rem; margin: 0.9rem 0 0; }
 
 /* The devices: a laptop (a frame and its base) and a phone over its lower left. Sized in % of the figure, so they scale together. */

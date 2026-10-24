@@ -32,11 +32,13 @@
     <!--/* The demo (DemoController): no DJ's bar — what this is, and where to go from here: the guest's page and the TV of the demo party
          (a request sent there shows here, to this visitor alone), or one's own party */-->
     <th:block th:if="${demo == true}">
-    <!--/* our logo, as the panel's heading row has it: the way home (the owner, 2026-10-24: the demo began with a bar, no logo) */-->
-    <div id="demoHead" class="d-flex align-items-center gap-2 mb-3">
-        <a href="/" id="demoHome" class="fs-4 fw-bold text-white text-decoration-none me-auto s2p-min-w-0"
-           th:title="#{demo.bar.home}" th:attr="aria-label=#{demo.bar.home}"><th:block th:replace="~{fragments/components :: logo}"></th:block></a>
-        <span class="badge text-bg-info">DEMO</span>
+    <!--/* our logo, the way home, and "← Strona główna" on the right — as the guide's heading row (the owner, 2026-10-24) */-->
+    <div id="demoHead" class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <div class="fs-4 fw-bold text-white"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></div>
+            <span class="badge text-bg-info">DEMO</span>
+        </div>
+        <a href="/" id="demoHome" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{demo.bar.home}">← Home page</a>
     </div>
     <!--/* a phone gets the short line and the buttons two by two, "start your own" across (2026-10-24: four lines and uneven rows) */-->
     <div id="demoBar" class="alert alert-info mb-3" role="note">

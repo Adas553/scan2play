@@ -346,6 +346,13 @@
 
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
+<!--/* Our logo as the way home, on the public pages (the guide, Pro, the demo; the owner, 2026-10-24): a link that looks like the logo
+     and says it is one — a hand, a lighter logo and "Scan2Play — strona główna" on hover, a ring on the keyboard's focus. The pages
+     keep their "← Strona główna" too: not everyone knows a logo leads home, and a phone has no hover. Never on a guest's page (the
+     party, the result, the hosts', the invitation, the TV): a guest at a wedding must not land on the page for DJs by a tap. */-->
+<a th:fragment="home-logo" href="/" class="s2p-home-logo" th:title="#{logo.home}" th:attr="aria-label=#{logo.home}"><th:block
+        th:replace="~{fragments/components :: logo}"></th:block></a>
+
 <!--/* The page's language (LanguageSwitchAdvice, the owner 2026-10-18): this page with ?lang=pl / ?lang=en, kept in a cookie for the
      next pages (WebConfig); each name in its own language, the one shown marked. None on a page answered to a POST. In the footer of
      every page, and at the top of the landing page. A pill of two, the language shown filled (app.css, .s2p-lang-switch). */-->
