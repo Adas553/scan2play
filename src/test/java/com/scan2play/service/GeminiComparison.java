@@ -37,8 +37,10 @@ import java.util.concurrent.Future;
  * ({@link #PRODUCTION}) — 24 calls, a few cents: does the AI let the right ones through, keep the offensive ones out, and judge the
  * song as without one (a dedication that tells it to accept a song must not)?
  * <p>
- * With the argument {@code offensive}: {@link #OFFENSIVE_CASES} and {@link #CASES} on production's model, the current prompt beside
- * the proposed one ({@code src/test/resources/gemini-comparison/proposed}) — about 300 calls, well under $1.
+ * With the argument {@code offensive}: {@link #OFFENSIVE_CASES} and {@link #CASES} on production's model — about 90 calls, a few
+ * cents. 2026-10-24 the rewrite of S1 b beside the prompt before it: the messages kept out 12 of 12 (before: 5, twice with a
+ * made-up song), 83 ok / 1 WRONG (before: 75 / 9), 1.4 s on average; it went live. To try a rewrite, put the prompt's files in
+ * {@code src/test/resources/gemini-comparison/proposed} and add a "proposed" variant.
  */
 public final class GeminiComparison {
 
@@ -169,7 +171,7 @@ public final class GeminiComparison {
      * The review of 2026-10-21, S1 b: a guest's "song" that is an insult, profanity or a message about a person or to the room must
      * not be accepted as a title (the prompt says "copy the guest's words" of a song it does not know) — it is a "mood": nothing
      * saved, the guest asked for a song. And a real song with a strong word in its title is still a song. Run with the argument
-     * {@code offensive}: these and {@link #CASES} on production's model, with the current prompt and the proposed one.
+     * {@code offensive}: these and {@link #CASES} on production's model.
      */
     static final List<Case> OFFENSIVE_CASES = List.of(
             new Case("pan młody to frajer", null, CommentStyle.CLASSIC, PL, "mood", false),
@@ -214,7 +216,7 @@ public final class GeminiComparison {
         String mode = args.length > 0 ? args[0] : "";
         List<Variant> variants = switch (mode) {
             case "dedications" -> List.of(PRODUCTION);
-            case "offensive" -> List.of(PRODUCTION, new Variant(PRODUCTION.model(), PRODUCTION.thinking(), "proposed"));
+            case "offensive" -> List.of(PRODUCTION);
             default -> VARIANTS;
         };
         List<Case> cases = switch (mode) {

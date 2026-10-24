@@ -38,13 +38,10 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 A. **The review of 2026-10-21 — what is left** (done and released: S1 a #131, C2/C3 #132, S2 + P1 #141, O2 #142, U2 + U3 #143,
    T2 + U4 + O3 + Tomcat #144; the details: the PRs and PROJECT_CONTEXT).
-   - **S1 b + R1:** in the PR after #147 (2026-10-24). R1 done: `PromptBuilder` holds the templates and builds the prompt
-     (`SongEvaluationService` asks Gemini and saves). S1 b **waits for the owner's run of `GeminiComparison offensive`** (IntelliJ,
-     `GOOGLE_AI_API_KEY` in the run configuration, never in the repo; ~300 calls, under $1): `OFFENSIVE_CASES` (an insult or a
-     message about a person or to the room → "mood": nothing saved, the guest asked for a song; a real song with a strong word
-     → still a song) and `CASES`, the current prompt beside the proposed one (`src/test/resources/gemini-comparison/proposed`).
-     Its report `target/gemini-comparison-offensive.md`: if "proposed" keeps the offensive ones out and loses none of `CASES`,
-     copy its two `prompt-template_*.txt` to `src/main/resources/prompts` (and their test, `thePrompt_buildsInEveryStyle`).
+   - **S1 b + R1:** R1 done in #148 (`PromptBuilder`). S1 b live with the PR after #148 (2026-10-24): an insult or a message is a
+     "mood" — the owner's `GeminiComparison offensive`: the messages kept out 12/12 (before 5/12, twice with a made-up song),
+     83 ok / 1 WRONG (before 75 / 9), 1.4 s. Left to watch: a sarcastic comment may be sharp with the guest (style SARCASTIC);
+     "somos hermanos" with the note "Salsa" accepted once of two (chance, the rules of the genre did not change).
    - **C1:** the nightly cleanups (requests waiting more than 24 h cleared, the 30-day purge, old invitations) also run after a
      start. Not urgent: the sleep is off. It touches only what is a day old — never a party's queue of tonight.
    - **R2** (a rule on comments in `AGENTS.md`), **O4's google-genai 1.78** (a try on the real Gemini, with the owner's yes).

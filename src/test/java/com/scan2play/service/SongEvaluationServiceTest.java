@@ -227,24 +227,35 @@ class SongEvaluationServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    /**
-     * The prompt builds whole in every style, with the note and the played songs, in both languages — production's and the proposed
-     * rewrite GeminiComparison tries beside it (the review of 2026-10-21, S1 b: an insult or a message is a "mood").
-     */
+    /** The prompt builds whole in every style, with the note, the played songs and a dedication, in both languages (GeminiComparison builds it so too). */
     @Test
     void thePrompt_buildsInEveryStyle() {
-        for (String which : List.of("current", "proposed")) {
-            PromptBuilder prompts = GeminiComparison.prompts(which);
-            for (Locale locale : List.of(Locale.forLanguageTag("pl"), Locale.ENGLISH)) {
-                for (CommentStyle style : CommentStyle.values()) {
-                    String prompt = prompts.build("orła cień", "ANY", "Wilki - Baśka", "Salsa", style, "dla Ani", locale);
-                    assertThat(prompt).as(which + " " + locale + " " + style)
-                            .contains("\"orła cień\"", "Salsa", "Wilki - Baśka", "songName", "dla Ani").doesNotContain("%s");
-                }
+        PromptBuilder prompts = GeminiComparison.prompts("current");
+        for (Locale locale : List.of(Locale.forLanguageTag("pl"), Locale.ENGLISH)) {
+            for (CommentStyle style : CommentStyle.values()) {
+                String prompt = prompts.build("orła cień", "ANY", "Wilki - Baśka", "Salsa", style, "dla Ani", locale);
+                assertThat(prompt).as(locale + " " + style)
+                        .contains("\"orła cień\"", "Salsa", "Wilki - Baśka", "songName", "dla Ani").doesNotContain("%s");
             }
         }
-        assertThat(GeminiComparison.prompts("proposed").build("pan młody to frajer", "ANY", null, Locale.forLanguageTag("pl")))
-                .contains("albo wiadomość: obraza", "Prawdziwa piosenka, której tytuł albo tekst ma mocne słowo");
+    }
+
+    /**
+     * The review of 2026-10-21, S1 b (the owner's GeminiComparison "offensive", 2026-10-24: the messages kept out 12 of 12, the
+     * current prompt 5 of 12 — twice with a made-up song; no request of CASES worse): an insult, profanity or a message about a person
+     * or to the room is a "mood" — nothing saved ({@link #aMood_isNotSaved}), the guest asked for a song —, a real song with a strong
+     * word still a song, and the comment does not repeat the message.
+     */
+    @Test
+    void anInsultOrAMessage_isAMood_aSongWithAStrongWordStillASong() {
+        assertThat(promptBuilder.build("pan młody to frajer", "ANY", null, Locale.forLanguageTag("pl")))
+                .contains("albo wiadomość: obraza, wulgaryzm, treść nienawistna, tekst o konkretnej osobie lub do sali",
+                        "Prawdziwa piosenka, której tytuł albo tekst ma mocne słowo, to nadal piosenka",
+                        "Przy wiadomości zamiast piosenki nie powtarzaj jej słów");
+        assertThat(promptBuilder.build("the groom is an idiot", "ANY", null, Locale.ENGLISH))
+                .contains("or a message: an insult, profanity, hate, words about a particular person or to the room",
+                        "A real song whose title or lyrics have a strong word is still a song",
+                        "For a message instead of a song, do not repeat its words");
     }
 
     /** "No genre" reaches the AI in words: it once quoted "'ANY'" to a guest (2026-10-07). A picked genre goes in quotes. */
