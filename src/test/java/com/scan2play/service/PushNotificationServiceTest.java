@@ -171,6 +171,27 @@ class PushNotificationServiceTest {
         assertThat(none.path("title").asText()).isEqualTo("🎵 Nowa prośba");
     }
 
+    /** The alarm of the review of 2026-10-21, O2: the AI stopped judging — the owner's devices, in their language, one tag. */
+    @Test
+    void theAiDownAlarm_goesToTheOwnersDevices_inTheirLanguage() throws Exception {
+        when(repository.findTop20ByOwnerIdOrderByCreatedAtDesc(OWNER)).thenReturn(List.of(device("https://fcm.googleapis.com/a", "pl")));
+        pushServiceAnswers(201);
+        PushNotificationService push = service(serverPublicKey, serverPrivateKey);
+        ObjectMapper json = new ObjectMapper();
+
+        push.notifyAiDown(OWNER);
+
+        verify(httpClient).send(any(HttpRequest.class), any());
+        JsonNode pl = json.readTree(push.aiDownPayload(device("https://fcm.googleapis.com/x", "pl")));
+        JsonNode en = json.readTree(push.aiDownPayload(device("https://fcm.googleapis.com/y", "en")));
+        assertThat(pl.path("title").asText()).isEqualTo("⚠ AI nie ocenia próśb");
+        assertThat(pl.path("body").asText()).contains("niesprawdzone", "Gemini");
+        assertThat(pl.path("tag").asText()).isEqualTo("s2p-ai");
+        assertThat(pl.path("url").asText()).isEqualTo("/dj/dashboard");
+        assertThat(pl.has("titleMany")).as("one alarm, nothing to count").isFalse();
+        assertThat(en.path("title").asText()).isEqualTo("⚠ The AI is not judging requests");
+    }
+
     @Test
     void aDeviceThePushServiceNoLongerKnows_isForgotten() throws Exception {
         when(repository.findTop20ByOwnerIdOrderByCreatedAtDesc(OWNER)).thenReturn(List.of(device("https://fcm.googleapis.com/gone", "pl")));

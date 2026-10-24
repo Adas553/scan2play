@@ -6,9 +6,12 @@ name: Database tests
 # PostgreSQL 18 — the version of the production database on Railway (image postgres-ssl:18) and of the developer's machine.
 
 # Not for a change of the documentation alone (the owner, 2026-10-21: the Actions minutes of the month were at 90 %).
+# A push runs them on `main` only: that is what Railway deploys, after waiting for these checks. A change reaches `dev` by a pull
+# request, which runs them on the same tree first — the push to `dev` that its merge makes ran them a second time for nothing
+# (the review of 2026-10-21, O3).
 on:
   push:
-    branches: [dev, main]
+    branches: [main]
     paths-ignore: ['**.md', 'docs/**']
   pull_request:
     paths-ignore: ['**.md', 'docs/**']

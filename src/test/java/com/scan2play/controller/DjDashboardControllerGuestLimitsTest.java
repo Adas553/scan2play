@@ -38,6 +38,7 @@ class DjDashboardControllerGuestLimitsTest {
     private GuestRequestLimiter limiter;
     private DjDashboardController controller;
     private PartySettingsEntity party;
+    private final com.scan2play.service.AiHealthMonitor aiHealth = new com.scan2play.service.AiHealthMonitor();
 
     @BeforeEach
     void setUp() {
@@ -45,7 +46,7 @@ class DjDashboardControllerGuestLimitsTest {
         sessionHelper = mock(DjSessionHelper.class);
         limiter = mock(GuestRequestLimiter.class);
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
-                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off());
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), aiHealth);
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getWaiting(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
@@ -88,6 +89,23 @@ class DjDashboardControllerGuestLimitsTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeader("ETag")).isEqualTo(ETAG);
         assertThat(response.getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("party-full");
+    }
+
+    /**
+     * The review of 2026-10-21, O2 (the owner, 2026-10-24): three requests in a row the AI did not judge — the bar "AI chwilowo nie
+     * ocenia próśb" above the queue of every panel, from the same header (a 304 too), alongside a reached limit; gone with an answer.
+     */
+    @Test
+    void theAiDown_isAFlagOfEveryAnswer_untilTheAiAnswersAgain() {
+        for (int i = 0; i < 3; i++) {
+            aiHealth.recordUnchecked();
+        }
+        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("ai-down");
+        when(limiter.isPartyLimitReached(PARTY)).thenReturn(true);
+        assertThat(poll(false).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("party-full,ai-down");
+
+        aiHealth.recordAnswered();
+        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("party-full");
     }
 
     @Test
@@ -138,7 +156,7 @@ class DjDashboardControllerGuestLimitsTest {
     private String etagWith(com.scan2play.service.PlanService plans) {
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
                 mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
-                mock(com.scan2play.service.StaffInvitationService.class), plans);
+                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
         return poll(false).getHeader("ETag");
     }
 }

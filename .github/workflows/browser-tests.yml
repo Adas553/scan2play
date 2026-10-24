@@ -8,9 +8,12 @@ name: Browser tests
 # here): the templates, the static files, the texts, the code behind the rendered pages, the render tests and the scenarios. Not for
 # the documentation, the migrations, the repositories or the other tests. A later pattern wins over an earlier one; by hand:
 # workflow_dispatch.
+# A push runs them on `main` only: that is what Railway deploys, after waiting for these checks. A change reaches `dev` by a pull
+# request, which runs them on the same tree first — the push to `dev` that its merge makes ran them a second time for nothing
+# (the review of 2026-10-21, O3).
 on:
   push:
-    branches: [dev, main]
+    branches: [main]
     paths:
       - 'src/main/**'
       - '!src/main/resources/db/**'

@@ -20,7 +20,7 @@ S2P.scenario({
 
 S2P.scenario({
     name: 'lang-switch-in-the-footer',
-    title: 'the footer\'s "Polski · English": both links shown, at least 40 px high to tap on a phone, readable',
+    title: 'the footer\'s "Polski · English": both links shown, at least 44 px high to tap on a phone, readable',
     viewport: '390,844',
     run: async function (t) {
         const nav = document.getElementById('langSwitch');
@@ -30,7 +30,7 @@ S2P.scenario({
         }
         const links = Array.from(nav.querySelectorAll('a'));
         t.step('two links', links.map(function (a) { return a.textContent.trim(); }), ['Polski', 'English']);
-        t.step('each at least 40 px high (a finger)', links.filter(function (a) { return a.getBoundingClientRect().height < 40; }).length, 0);
+        t.step('each at least 44 px high (a finger; review 2026-10-21, U4)', links.filter(function (a) { return a.getBoundingClientRect().height < 44; }).length, 0);
         t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });
@@ -51,7 +51,7 @@ function topSwitchShows(t) {
     // the right edge of the page's column (on a wide screen the column is centred, not the window's edge)
     const column = document.querySelector('.s2p-landing-hero').getBoundingClientRect();
     t.check('on the right of the page\'s column', links[1].getBoundingClientRect().right >= column.right - 40);
-    t.step('each at least 40 px high (a finger)', links.filter(function (a) { return a.getBoundingClientRect().height < 40; }).length, 0);
+    t.step('each at least 44 px high (a finger; review 2026-10-21, U4)', links.filter(function (a) { return a.getBoundingClientRect().height < 44; }).length, 0);
     t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 }
 

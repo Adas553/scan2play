@@ -153,19 +153,19 @@ public class StaffController {
     }
 
     /**
-     * The invitation link pasted on the landing page (public): a party's link goes to Google's login, the token waiting in the session —
-     * the panel then asks "Dołączyć?"; anything else is back on the landing page with a note, before any login.
+     * The invitation link pasted on the landing page (public): a party's link opens its invitation ({@code GET /join/{token}}: the
+     * party, the role, the login from there); anything else is back on the landing page with a note, before any login. A GET that
+     * keeps nothing, so the landing page's form needs no CSRF token and the landing page no session (the review of 2026-10-21, S2).
      */
-    @PostMapping("/join")
-    public String joinFromTheLandingPage(@RequestParam String link, HttpSession session) {
+    @GetMapping("/join")
+    public String joinFromTheLandingPage(@RequestParam(required = false) String link) {
         Optional<String> token = tokenOf(link).filter(t -> partyStaffService.partyOfLink(t).isPresent());
         if (token.isEmpty()) {
             // back at the field and its note (#staffLogin): it is at the end of the landing page, under the last start (2026-10-18)
             return GUESTS_LINK.matcher(link == null ? "" : link.strip()).matches()
                     ? "redirect:/?staffLink=guests#staffLogin" : "redirect:/?staffLink=invalid#staffLogin";
         }
-        session.setAttribute(SESSION_PENDING_INVITATION, token.get());
-        return "redirect:/start";
+        return "redirect:/join/" + token.get();
     }
 
     /** The token of a pasted link: the end of ".../join/AbC_1" (a slash after it too), or the token alone. */

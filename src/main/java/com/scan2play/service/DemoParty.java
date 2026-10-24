@@ -38,7 +38,7 @@ import static com.scan2play.service.DjService.DECISION_REJECTED;
  * but the AI is not asked ({@code SongEvaluationService.demoAnswer}) — the demo costs no Gemini call and is no free AI for anyone.
  * What a visitor sends is theirs alone: saved unchecked, so the other visitors' lists and the TV screen never show it, and the demo
  * panel shows each visitor only the examples and their own. {@link #reset} puts the examples back at every start and every night
- * (04:55 Polish time, after the queues' cleanup), and drops the visitors' requests.
+ * (04:55 Polish time, after the queues' cleanup), drops the visitors' requests and starts the party's daily limit again.
  * <p>
  * The codes have four characters: {@code CodeGenerator} makes five, so no DJ's party is ever given one of them.
  */
@@ -58,6 +58,7 @@ public class DemoParty {
     private final SongRequestDedicationRepository dedicationRepository;
     private final CacheManager cacheManager;
     private final PlatformTransactionManager transactionManager;
+    private final GuestRequestLimiter guestRequestLimiter;
 
     /** Whether the code is a demo's. */
     public static boolean isDemo(String partyCode) {
@@ -151,6 +152,8 @@ public class DemoParty {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
         for (Demo demo : DEMOS) {
             transaction.executeWithoutResult(status -> putBack(demo));
+            // the party's daily limit is one for all its visitors: a script that spent it would block the demo until a restart
+            guestRequestLimiter.resetParty(demo.code());
         }
     }
 

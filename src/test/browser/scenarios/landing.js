@@ -73,4 +73,20 @@
             t.check('no scrolling sideways', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
         }
     });
+    // The review of 2026-10-21, U4: the links in an unfolded answer ("Polityka prywatności →") were Bootstrap's #0d6efd on the card,
+    // 4.0 : 1 — under the 4.5 : 1 a text needs. contrast() is the helper of dj-booking.js (the scenarios' scripts share the page).
+    S2P.scenario({
+        name: 'landing-faq-links-readable',
+        title: 'the landing page: a link in an unfolded answer is readable on its card (contrast at least 4.5 : 1)',
+        page: 'landing-pl',
+        viewport: '390,844',
+        run: async function (t) {
+            const links = Array.from(document.querySelectorAll('.s2p-landing-faq details a'));
+            t.check('the questions have a link', links.length > 0);
+            links.forEach(function (a) { a.closest('details').open = true; });
+            const unreadable = links.filter(function (a) { return contrast(a) < 4.5; })
+                .map(function (a) { return a.textContent.trim() + ' ' + contrast(a).toFixed(1) + ' : 1'; });
+            t.step('every link readable', unreadable, []);
+        }
+    });
 })();

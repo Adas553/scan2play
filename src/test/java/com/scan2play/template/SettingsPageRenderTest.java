@@ -126,7 +126,7 @@ class SettingsPageRenderTest {
         when(push.publicKey()).thenReturn(PUBLIC_KEY);
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), limiter, push, staff,
-                mock(StaffInvitationService.class), plans);
+                mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 

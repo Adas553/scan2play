@@ -172,7 +172,7 @@ public class SecurityConfig {
                         // The hosts' lists (V29): a page opened by its secret link, without an account (HostController)
                         .requestMatchers("/h/*").permitAll()
                         // The staff's invitation (V30): opened before the login, it names the party (StaffController)
-                        .requestMatchers("/join", "/join/*").permitAll()   // POST /join: the link pasted on the landing page
+                        .requestMatchers("/join", "/join/*").permitAll()   // GET /join: the link pasted on the landing page
                         // Legal pages (Privacy Policy, Terms of Service) and the guide "Jak działa Scan2Play" (public: a DJ reads it before
                         // the first login, a person of the staff before joining — the owner, 2026-10-12)
                         .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro").permitAll()

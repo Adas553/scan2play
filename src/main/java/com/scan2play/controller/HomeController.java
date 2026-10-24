@@ -5,7 +5,6 @@ import com.scan2play.service.SiteCounter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,13 +33,14 @@ public class HomeController {
     }
 
     /**
-     * The landing page. Its form for the staff's invitation (POST /join) carries a CSRF token, kept in the session: the token is
-     * made here, before the page is rendered — the form is at the page's end, and by the time it was rendered the server had sent
-     * the first 8 KB, after which no session can be made (production, 2026-10-18: a first visit got the page cut off). Pro is named
-     * only while the plans are enforced ({@code plansEnforced}; the owner, 2026-10-21: before, its page is a 404).
+     * The landing page. It makes no session (the review of 2026-10-21, S2: a row in {@code spring_session} for every visitor,
+     * crawlers too): its form for the staff's invitation is a GET ({@code GET /join}), so it carries no CSRF token. A form that
+     * posts would need its token loaded here, before the page is rendered — after the first 8 KB no session can be made
+     * (production, 2026-10-18: a first visit got the page cut off). Pro is named only while the plans are enforced
+     * ({@code plansEnforced}; the owner, 2026-10-21: before, its page is a 404).
      */
     @GetMapping("/")
-    public String home(Authentication authentication, CsrfToken csrfToken, Model model, Locale locale,
+    public String home(Authentication authentication, Model model, Locale locale,
                        @RequestHeader(value = "User-Agent", required = false) String userAgent) {
         if (authentication != null && authentication.isAuthenticated()) {
             log.info("User already authenticated, redirecting to dashboard");
@@ -49,7 +49,6 @@ public class HomeController {
         // a visitor (a robot is not counted): how many come from a post, in which language (V40)
         siteCounter.countVisit("pl".equals(locale.getLanguage()) ? SiteCounter.Event.LANDING_PL : SiteCounter.Event.LANDING_EN,
                 userAgent);
-        csrfToken.getToken();   // the deferred token loaded — and its session made — while the response can still take a cookie
         model.addAttribute("plansEnforced", planService.isEnforced());
         return "landing";
     }

@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 /**
  * A guest's song request whose page was open longer than the session lives (30 minutes): the form's CSRF token went with the session,
  * and Spring Security refused it — the error page "403", the typed song lost (review 2026-10-14). Such a request goes back to the
- * party's page with what the guest typed in the field and a note to send it again; the page has a new session and token. Every
+ * party's page with what the guest typed — the song and the dedication — and a note to send it again; the page has a new session and token. Every
  * other refusal is Spring Security's own.
  */
 class GuestFormExpiredHandler implements AccessDeniedHandler {
@@ -52,6 +52,11 @@ class GuestFormExpiredHandler implements AccessDeniedHandler {
         String typed = request.getParameter("songName");
         if (typed != null && !typed.isBlank()) {
             flash.put(ViewAttributes.LAST_REQUEST, SongEvaluationService.asTyped(typed));
+        }
+        // the dedication too ("dla Ani na 18-stkę"): the page opens its field with it (review 2026-10-21, U3)
+        String dedication = SongEvaluationService.asDedication(request.getParameter("dedication"));
+        if (dedication != null) {
+            flash.put(ViewAttributes.LAST_DEDICATION, dedication);
         }
         flash.setTargetRequestPath(party);
         flashes.saveOutputFlashMap(flash, request, response);

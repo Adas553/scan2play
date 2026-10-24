@@ -4,9 +4,12 @@ name: Unit tests
 
 # Not for a change of the documentation alone (the owner, 2026-10-21: the Actions minutes of the month were at 90 %) — but AGENTS.md
 # and its Copilot copy, which the first step compares. A later pattern wins over an earlier one.
+# A push runs them on `main` only: that is what Railway deploys, after waiting for these checks. A change reaches `dev` by a pull
+# request, which runs them on the same tree first — the push to `dev` that its merge makes ran them a second time for nothing
+# (the review of 2026-10-21, O3).
 on:
   push:
-    branches: [dev, main]
+    branches: [main]
     paths: ['**', '!**.md', '!docs/**', 'AGENTS.md', '.github/copilot-instructions.md']
   pull_request:
     paths: ['**', '!**.md', '!docs/**', 'AGENTS.md', '.github/copilot-instructions.md']

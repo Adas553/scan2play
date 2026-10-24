@@ -104,7 +104,7 @@ class DemoPageRenderTest {
         when(qr.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
         DjDashboardController panel = new DjDashboardController(djService, mock(PartySettingsCommandService.class), qr,
                 mock(DjSessionHelper.class), mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
-                mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), com.scan2play.service.Plans.off());
+                mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor());
         ReflectionTestUtils.setField(panel, "rawBaseUrl", "http://localhost:8080/");
         panel.init();
 

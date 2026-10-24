@@ -521,6 +521,8 @@ th[data-sort].sort-desc::after {
 .s2p-landing-faq details[open] > summary::after { content: "▴"; }
 .s2p-landing-faq summary:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; border-radius: var(--s2p-radius-card); }
 .s2p-landing-faq details p { padding: 0 1rem 1rem; margin: 0; color: var(--s2p-text-muted); }
+/* a link in an answer ("Polityka prywatności →"): Bootstrap's blue was 4.0 : 1 on the card — the action's cyan is 9 : 1 (U4) */
+.s2p-landing-faq details a { color: var(--s2p-action); }
 .s2p-landing-final { padding-block: 3.5rem 1rem; }
 
 /* ==========================================================================
@@ -705,13 +707,13 @@ th[data-sort].sort-desc::after {
 .s2p-alert-closed    { background-color: var(--s2p-bg-warning) !important; color: var(--s2p-warning) !important; }
 .s2p-footer          { color: var(--s2p-text-muted) !important; font-size: 0.85rem !important; }
 /* "Polski · English" (components :: langSwitch; the owner 2026-10-18: "profesjonalny"): a pill of two, the language shown filled —
-   a picked option, not two underlined links —, a finger's height (40 px inside a 2 px edge) on every screen */
+   a picked option, not two underlined links —, a finger's height (44 px inside a 2 px edge; review 2026-10-21, U4) on every screen */
 .s2p-lang-switch {
     display: inline-flex; align-items: center; gap: 2px; padding: 2px;
     border: 1px solid var(--s2p-border); border-radius: 999px;
 }
 .s2p-lang-switch a {
-    display: inline-flex; align-items: center; min-height: 40px; padding: 0 0.9rem; border-radius: 999px;
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.9rem; border-radius: 999px;
     color: var(--s2p-text-muted) !important; font-weight: 500; text-decoration: none;
 }
 .s2p-lang-switch a:hover,

@@ -98,7 +98,7 @@ class DjDashboardControllerQueueCacheTest {
         when(sessionHelper.access(eq(PARTY), any(), any())).thenReturn(new PartyStaffService.Access(party, true, StaffPermission.all()));
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class),
                 sessionHelper, mock(PlayHistoryService.class), mock(GuestRequestLimiter.class), mock(PushNotificationService.class),
-                mock(PartyStaffService.class), mock(StaffInvitationService.class), Plans.off());
+                mock(PartyStaffService.class), mock(StaffInvitationService.class), Plans.off(), new com.scan2play.service.AiHealthMonitor());
     }
 
     private static SongRequestEntity waiting(long id, String name) {
