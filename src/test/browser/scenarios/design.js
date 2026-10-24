@@ -185,14 +185,14 @@
             t.step('a row per rare setting, each to its card on the page "Ustawienia imprezy" (the staff: their own page)', rows.map(function (row) {
                 return [row.dataset.settingsRow, row.getAttribute('href')];
             }), [['hosts', '/dj/settings?party=HARN1#hostListsCard'], ['links', '/dj/settings?party=HARN1#linksCard'],
-                ['limits', '/dj/settings?party=HARN1#limitsCard'], ['staff', '/dj/staff?party=HARN1'], ['device', '/dj/settings?party=HARN1#deviceCard']]);
+                ['library', '/dj/settings?party=HARN1#libraryCard'], ['limits', '/dj/settings?party=HARN1#limitsCard'], ['staff', '/dj/staff?party=HARN1'], ['device', '/dj/settings?party=HARN1#deviceCard']]);
             const stateOf = function (row) {   // what shows of it (the row of the limits has its states near a limit hidden)
                 const state = row.querySelector('.s2p-row-state');
                 const parts = state.children.length ? Array.from(state.children).filter(shows) : [state];
                 return parts.map(function (p) { return p.textContent.replace(/\s+/g, ' ').trim(); }).join(' ');
             };
-            t.step('each says its state', rows.slice(0, 4).map(stateOf),
-                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', '2 na gościa · 3 min', 'Osób: 1']);
+            t.step('each says its state', rows.slice(0, 5).map(stateOf),
+                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Niewgrana', '2 na gościa · 3 min', 'Osób: 1']);
             t.step('each a thumb\'s target', rows.filter(function (row) { return row.getBoundingClientRect().height < 44; }).length, 0);
             t.check('the queue starts in the first screen with them unfolded', document.getElementById('queueList').getBoundingClientRect().top < window.innerHeight);
         }

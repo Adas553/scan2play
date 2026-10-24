@@ -392,8 +392,10 @@ of a phone is at 316 px (was 382). **The settings fold** under that button on ev
 `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`) and hold only what the DJ uses during a party
 (they were seven cards, 4900 px of a phone): the card **"Impreza"** (the vibe and the AI's comments saved as soon as picked, the vibe
 note and "Kto gra" under one "Zapisz") and **"Kod QR"** (small, beside the guests' link, "Kopiuj", "Drukuj plakat i karty", "📺 Ekran na TV"), then
-**"Więcej"** (`#settingsMore`): a row per rare setting with its state, 52 px each — "Lista gospodarzy · 🚫 0 · ⭐ 1 · link" (or
-"Nieużywana"), "Profile i napiwki · Instagram · napiwki" (or "Nieustawione"), "Limity gości · 2 na gościa · 3 min" (from 80 %
+**"Więcej"** (`#settingsMore`): a row per rare setting with its state, 52 px each (44 from 992 px wide: the queue
+stays in a laptop's first screen) — "Lista gospodarzy · 🚫 0 · ⭐ 1 · link" (or
+"Nieużywana"), "Profile i napiwki · Instagram · napiwki" (or "Nieustawione"), "Twoja biblioteka · Utworów: 1 234" (or
+"Niewgrana"; the organiser's, V41), "Limity gości · 2 na gościa · 3 min" (from 80 %
 of a server limit its use in yellow, "Impreza 250/300" before "Sieć 26/30" — `polling.js` keeps it current from
 `X-Guest-Limits-Use`), "Obsługa · Osób: 1" (→ `/dj/staff`), "To urządzenie · Powiadomienia wył.". Each row leads to its card on the
 page "Ustawienia imprezy". Each card and row only for whom may change it (V32: hidden, not greyed): a co-organiser sees "Impreza",

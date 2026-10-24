@@ -244,6 +244,11 @@
                               th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
                               th:text="${plan.pro('PROFILES')} ? '' : (${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named})">Instagram · tips</span>
                     </a>
+                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="library" th:href="${settingsUrl + '#libraryCard'}">
+                        <span class="s2p-row-name"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
+                        <span class="s2p-row-state"
+                              th:text="${plan.pro('LIBRARY')} ? '' : (${libraryTracks != null} ? #{settings.row.library(${libraryTracks})} : #{settings.row.library.none})">Songs: 1,234</span>
+                    </a>
                     <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" class="s2p-row"
                        data-settings-row="limits" th:href="${settingsUrl + '#limitsCard'}"
                        th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
