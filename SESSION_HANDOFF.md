@@ -13,7 +13,7 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 ## Start here
 
-- **2026-10-24 (evening) — the state.** `main` = `dev` in content: release #153 (`c80e2ab`) deployed 17:45 UTC, SUCCESS, no 5xx
+- **2026-10-24 (evening) — the state.** `dev` is ahead of `main` by #155 (R2) and #156 (C1) — in the release PR after #156. Before them, release #153 (`c80e2ab`) deployed 17:45 UTC, SUCCESS, no 5xx
   since; every deploy now waits for the healthcheck `/privacy` (passing since #145). Today's releases, the last first:
   - #153: #151 (hover: the logo that leads home turns the accent, the action button rises 2 px — not on a phone, not with
     `prefers-reduced-motion`), #152 (`/` is the home page for a logged-in DJ too, its start buttons "Przejdź do panelu", their
@@ -46,12 +46,15 @@ A. **The review of 2026-10-21 — what is left** (done and released: S1 a #131, 
      `GeminiComparison offensive`: the messages kept out 12/12, before 5/12 twice with a made-up song; 83 ok / 1 WRONG, before
      75 / 9; 1.4 s). Left to watch: a sarcastic comment may be sharp with the guest (style SARCASTIC); "somos hermanos" with the
      note "Salsa" accepted once of two (chance — the genre's rules did not change).
-   - **R2:** done in the PR after #154 — the rule on comments in `AGENTS.md` (and its Copilot copy): why it is so now in the
+   - **R2:** done, #155 — the rule on comments in `AGENTS.md` (and its Copilot copy): why it is so now in the
      code; who and when in `docs/history/`, the PR, the commit. Tidy such comments when touching them anyway.
-   - **C1:** done in the PR after R2 — the nightly cleanups (requests waiting more than 24 h cleared, the 30-day purge, old
+   - **C1:** done, #156 — the nightly cleanups (requests waiting more than 24 h cleared, the 30-day purge, old
      invitations) also run after a start (`atStart`); a failure is logged, never stops the start. Only what is a day old — never a
      party's queue of tonight.
-   - **O4's google-genai 1.78:** a try on the real Gemini first (the owner's local agent, `GeminiComparison`, as for S1 b).
+   - **O4's google-genai 1.78:** left at 1.74 (the owner, 2026-10-24) — 1.75–1.78 bring nothing we use (continuation tokens,
+     the Interactions API, streaming fixes, longer default timeouts — we set our own in `GeminiConfig`), no security fix. Back to it
+     with a security fix or a feature we need; then a try on the real Gemini first (`GeminiComparison`): 1.77's automatic
+     continuation in `generateContent` could ask again on its own.
 B. **For the owner (not code):** try S1 b on a test party of your own (not the demo, which asks no AI): "pan młody to frajer"
    comes back to the field asking for a title; switch the notifications on in your own panel (the account `ADMIN_GOOGLE_ID`) for the alarm of O2;
    request the indexing of `/dj-weselny`, `/kluby`, `/puby` in Search Console; Cloudflare's "Managed robots.txt" (U4) if `/dj/`
