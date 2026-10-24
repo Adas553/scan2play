@@ -22,7 +22,7 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 - **The repository is public** since 2026-10-24 (`LICENSE`: viewing only). GitHub Actions have no minute limit now, so O3 (CI
   running twice) is not urgent. Nothing secret in the repo, the docs or a commit — ever.
 - **Railway (checked 2026-10-24, read only):** the sleep is off for `scan2play` and `Postgres` (the nightly jobs and the demo's
-  04:55 reset run now; C1 is less urgent); a spending limit of 15 USD (an alert at 10 USD); no Healthcheck Path yet (item B).
+  04:55 reset run now; C1 is less urgent); a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy` (set 2026-10-24, from the next deploy).
   After Railway's incident of 2026-10-21 the owner replaced the Gemini key, the Google OAuth secret and the database's password,
   and removed the database's public TCP proxy.
 - **The market:** after the posts on Facebook ~15 visits, 2 clicks on "Zacznij", 1 login — watch `/dj/stats`. Ideas: a short film
@@ -47,17 +47,22 @@ A. **The review of 2026-10-21 — what is left**, one PR per group. The owner's 
      panel (`X-Guest-Limits: ai-down`) until the AI answers. **For the owner:** switch the notifications on in your own panel
      ("To urządzenie" → Powiadomienia) on the phone that should get the alarm — the push goes only to devices subscribed by
      that account.
-   - **U2 + U3:** done in the PR after #142 (2026-10-24): the owner's words — "Limit {0} piosenek wykorzystany. Daj szansę innym
+   - **U2 + U3:** done in #143 (2026-10-24): the owner's words — "Limit {0} piosenek wykorzystany. Daj szansę innym
      i spróbuj za {1}.", "Zagrana — prośba przechodzi do historii", "Czas na następną imprezę?"; `ImpersonalPolishTextsTest` keeps
      "-łeś" / "-łaś" / "Gotowy" out of the Polish bundle. The dedication comes back after an expired page
      (`GuestFormExpiredHandler`, `GuestNoSessionWebTest`).
    - **C1:** the nightly cleanups also after a start (less urgent: the sleep is off).
-   - **O3:** CI without double runs (not urgent: the repo is public).
-   - **R1** (`PromptBuilder` out of `SongEvaluationService`), **R2** (a rule on comments in `AGENTS.md`), **O4** (Tomcat 11.0.27,
-     google-genai 1.78 — the latter with a try on the real Gemini, with the owner's yes), **T2**, **U4**.
+   - **T2 + U4 + O3 + O4's Tomcat:** done in the PR after #143 (2026-10-24): `HostPageSessionWebTest` (the hosts' form token
+     is written right after `<form>`, at the page's top — within 8 KB however long the lists; it was never a live bug); the
+     language switch 44 px, the FAQ's links in the action's cyan (4.0 → 9 : 1; browser scenarios); CI on PRs and on pushes to
+     `main` only; Tomcat 11.0.27. **For the owner (U4):** Cloudflare's "Managed robots.txt" adds a second `User-agent: *` group
+     before ours (Security → Bots) — switch it off if `/dj/` should be disallowed for every robot.
+   - **R1** (`PromptBuilder` out of `SongEvaluationService` — best with S1 b), **R2** (a rule on comments in `AGENTS.md`),
+     **O4's google-genai 1.78** (a try on the real Gemini, with the owner's yes).
    - **S1 b:** a step in the prompt that rejects an offensive "title" — first `GeminiComparison` with the real key (the owner's
      yes; the key only from IntelliJ's run configuration, never in the repo).
-B. **Railway: a Healthcheck Path** (e.g. `/robots.txt`), so a deploy takes the traffic only once the app answers.
+B. **Railway: Healthcheck Path** — set to `/privacy` (2026-10-24; Railway allows no dot, so not `/robots.txt`): check the next
+   deploy's log for the healthcheck passing.
 C. **The branch `claude/for-whom-pages`** (`/dj-weselny`, `/kluby`, `/puby`): waits for the owner's yes to its texts; to fix: "Co
    zagrałeś" (an impersonal form) and Pro features promised as free; bring `dev` in before its PR.
 
@@ -118,7 +123,6 @@ C. **The branch `claude/for-whom-pages`** (`/dj-weselny`, `/kluby`, `/puby`): wa
 
 ## Waiting for the owner (not code)
 
-- **Railway's Healthcheck Path** (item B): Settings → Deploy → Healthcheck Path, e.g. `/robots.txt`.
 - **The nightly jobs now that the sleep is off:** a morning's log after 04:40 / 04:45 / 04:55 Polish time (02:40 … UTC until
   2026-10-25, then 03:40 …) — "Queue cleanup" only if a request had waited more than a day; the demo's reset every night.
 - **Old PRs to `main`:** #2 and #7 (April) — close them.
