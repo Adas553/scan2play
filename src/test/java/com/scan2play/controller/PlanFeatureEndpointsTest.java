@@ -95,7 +95,9 @@ class PlanFeatureEndpointsTest {
                         new DjSongController(mock(DjService.class), helper, plans),
                         new DjPartySettingsController(settings, mock(AccountDeletionService.class), helper, plans),
                         dashboard,
-                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans))
+                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans),
+                        new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),
+                                DjLibraryController.MAX_BYTES))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -115,7 +117,9 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.GUEST_LIMITS, true, post("/dj/dashboard/limits").param("partyCode", PUB).param("requestLimit", "5")
                         .param("cooldownMinutes", "1").param("duplicateCheckWindow", "30")),
                 Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary").param("party", PUB)),
-                Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary/csv").param("party", PUB)));
+                Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary/csv").param("party", PUB)),
+                Arguments.of(PlanFeature.LIBRARY, false, post("/dj/library").param("partyCode", PUB)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM).content("#EXTM3U\nA - B.mp3\n")));
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -160,7 +164,9 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(get("/dj/history-view/fragment").param("partyCode", PUB)),
                 Arguments.of(get("/dj/history-view").param("party", PUB)),
                 Arguments.of(get("/dj/settings").param("party", PUB)),
-                Arguments.of(get("/dj/qr-print").param("party", PUB)));
+                Arguments.of(get("/dj/qr-print").param("party", PUB)),
+                // deleting the library needs no Pro: the organiser's own data goes whatever the plan
+                Arguments.of(post("/dj/library/delete").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{0}")

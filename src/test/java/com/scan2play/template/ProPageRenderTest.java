@@ -101,7 +101,7 @@ class ProPageRenderTest {
                 "data-copy-text=\"scan2playcontact@gmail.com\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
                 "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", ">Pro<", "Wszystko z Free, a do tego:",
                 ">Lista gospodarzy<", ">Twoje profile i napiwki<", ">Podsumowanie wieczoru<", ">Komentarze AI z charakterem<",
-                ">Własne limity gości<", ">Obsługa do 10 osób<",
+                ">Własne limity gości<", ">Obsługa do 10 osób<", ">Twoja biblioteka<",
                 "data-pro-faq", ">Co, gdy Pro się skończy?<", ">Czy obsługa potrzebuje Pro?<", ">A goście?<",
                 "Płatności w aplikacji jeszcze nie ma", "src=\"/js/dj-nav.js\"")
                 .doesNotContain("??");
@@ -123,7 +123,7 @@ class ProPageRenderTest {
 
         assertThat(html).contains("lang=\"en\"", ">Scan2Play Pro</h1>", "href=\"mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro\"",
                 ">Tell us you want Pro<", "data-copied=\"Copied\"", ">Copy address<", "data-plan=\"free\"", "data-plan=\"pro\"",
-                "Everything in Free, plus:", ">The hosts’ list<", ">Staff of up to 10<", "data-pro-faq", ">What if Pro ends?<")
+                "Everything in Free, plus:", ">The hosts’ list<", ">Staff of up to 10<", ">Your library<", "data-pro-faq", ">What if Pro ends?<")
                 .doesNotContain("??");
         assertThat(count(html, "btn-action")).isEqualTo(1);
         assertThat(render(Locale.GERMAN, dj())).contains("lang=\"en\"");

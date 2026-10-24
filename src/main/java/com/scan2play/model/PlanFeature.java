@@ -17,5 +17,10 @@ public enum PlanFeature {
     /** The guests' limits set by the DJ; without Pro every party has the defaults (2 requests, 3 min, no repeats of the last 15). */
     GUEST_LIMITS,
     /** "Podsumowanie wieczoru" and its CSV. */
-    SUMMARY
+    SUMMARY,
+    /**
+     * The DJ's library (V41): the queue marks each request "✓" or "✗" by the DJ's own collection. Without Pro the uploaded library is
+     * kept but marks nothing; deleting it needs no plan.
+     */
+    LIBRARY
 }

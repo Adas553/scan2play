@@ -29,6 +29,8 @@ class DjServiceTest {
     private SongRequestRepository songRequestRepository;
     @Mock
     private CacheManager cacheManager;
+    @Mock
+    private DjLibraryService libraryService;
 
     @InjectMocks
     private DjService djService;
@@ -239,5 +241,33 @@ class DjServiceTest {
         assertThat(djService.countTip(5L, PARTY_CODE, true)).isFalse();
 
         verify(cacheManager, never()).getCache(any());
+    }
+
+    // ---- the DJ's library (V41) ----
+
+    private static SongRequestEntity waiting(long id, String song) {
+        return SongRequestEntity.builder().id(id).partyCode(PARTY_CODE).songName(song).decision(DECISION_ACCEPTED).build();
+    }
+
+    @Test
+    void libraryMarks_sayForEachSong_whetherTheDjHasIt_inOneLookup() {
+        when(libraryService.info(PARTY_CODE)).thenReturn(Optional.of(new DjLibraryService.Info(2, DjLibraryParser.Format.M3U, Instant.now())));
+        when(libraryService.found(eq(PARTY_CODE), anyCollection()))
+                .thenReturn(java.util.Set.of(com.scan2play.util.SongNames.libraryKey("Daft Punk - One More Time")));
+
+        var marks = djService.libraryMarksOf(PARTY_CODE, List.of(waiting(1, "Daft Punk - One More Time"), waiting(2, "Wilki - Baśka"),
+                waiting(3, "Daft Punk - One More Time (Radio Edit)")));
+
+        assertThat(marks).containsEntry(1L, true).containsEntry(2L, false).containsEntry(3L, true).hasSize(3);
+        verify(libraryService, times(1)).found(eq(PARTY_CODE), anyCollection());
+    }
+
+    @Test
+    void libraryMarks_areNone_withoutALibrary_orWithoutSongs() {
+        when(libraryService.info(PARTY_CODE)).thenReturn(Optional.empty());
+
+        assertThat(djService.libraryMarksOf(PARTY_CODE, List.of(waiting(1, "Wilki - Baśka")))).isEmpty();
+        assertThat(djService.libraryMarksOf(PARTY_CODE, List.of())).isEmpty();
+        verify(libraryService, never()).found(anyString(), anyCollection());
     }
 }

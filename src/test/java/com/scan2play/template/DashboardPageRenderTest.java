@@ -132,6 +132,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.takeNote(any())).thenReturn(java.util.Optional.ofNullable(note));
         when(djService.getDashboardQueue(PARTY)).thenReturn(queue);
         when(djService.dedicationsOf(queue)).thenReturn(dedications);
+        when(djService.libraryMarksOf(PARTY, queue)).thenReturn(libraryMarks);
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
@@ -398,6 +399,8 @@ class DashboardPageRenderTest {
 
     /** The guests' dedications the dashboard's queue shows (V38), by the song's id: none, unless a test gives them. */
     private static Map<Long, List<com.scan2play.entity.SongRequestDedicationEntity>> dedications = Map.of();
+    /** The queue's marks of the DJ's library (V41), by the song's id: none, unless a test gives them. */
+    private static Map<Long, Boolean> libraryMarks = Map.of();
 
     private static com.scan2play.entity.SongRequestDedicationEntity dedication(long songId, String text) {
         return com.scan2play.entity.SongRequestDedicationEntity.builder().songRequestId(songId).text(text).checked(true)
@@ -883,5 +886,37 @@ class DashboardPageRenderTest {
         offParty.setDedicationsOn(false);
         assertThat(renderDashboard(offParty, List.of(), PL)).contains("value=\"false\" selected=\"selected\">Wyłączone<");
         assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">Guests’ dedications<", ">On<", ">Off<");
+    }
+
+    /**
+     * The DJ's library (V41): each waiting song "✓ Masz" or "✗ Nie masz" under its name, with what it means on hover; a song the
+     * service has no mark for (no library) none. Written for the browser tests as {@code dashboard-library.html}.
+     */
+    @Test
+    void theLibrary_marksEachSong() throws IOException {
+        libraryMarks = Map.of(1L, true, 2L, false);
+        try {
+            String html = renderDashboard(party(), List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan"), song(3, "ABBA - SOS")), PL);
+
+            assertWhatTheScriptsNeed(html);
+            assertThat(rowFor(html, 1)).contains("data-library=\"have\"", "text-bg-success", ">✓ Masz<", "title=\"Ten utwór jest w Twojej bibliotece\"");
+            assertThat(rowFor(html, 2)).contains("data-library=\"missing\"", ">✗ Nie masz<", "title=\"Tego utworu nie ma w Twojej bibliotece");
+            assertThat(rowFor(html, 3)).doesNotContain("data-library", "s2p-library");
+            write("dashboard-library.html", html);
+        } finally {
+            libraryMarks = Map.of();
+        }
+    }
+
+    @Test
+    void withoutALibrary_noSongIsMarked() {
+        assertThat(renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL)).doesNotContain("data-library", "s2p-library");
+    }
+
+    /** The row of the song {@code id} in the queue, up to the next row. */
+    private static String rowFor(String html, long id) {
+        int start = html.indexOf("data-song-id=\"" + id + "\"");
+        int end = html.indexOf("</tr>", start);
+        return html.substring(start, end);
     }
 }

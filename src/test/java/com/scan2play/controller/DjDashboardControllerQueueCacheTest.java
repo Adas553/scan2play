@@ -67,7 +67,8 @@ class DjDashboardControllerQueueCacheTest {
 
         @Bean
         DjService djService(SongRequestRepository songRequestRepository, CacheManager cacheManager) {
-            return new DjService(songRequestRepository, mock(com.scan2play.repository.SongRequestDedicationRepository.class), cacheManager);
+            return new DjService(songRequestRepository, mock(com.scan2play.repository.SongRequestDedicationRepository.class), cacheManager,
+                mock(com.scan2play.service.DjLibraryService.class));
         }
 
         @Bean
