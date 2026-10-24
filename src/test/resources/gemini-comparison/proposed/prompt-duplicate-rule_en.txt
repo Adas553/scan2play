@@ -1,3 +1,0 @@
-
-Songs that have already played tonight: [%s].
-If the guest asks for one of them (also misspelled, shortened or in another remix), reject the request and say with humour in the comment that it already played.

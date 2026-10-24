@@ -1,3 +1,0 @@
-
-Piosenki, które już dziś zagrały: [%s].
-Jeśli gość prosi o jedną z nich (także z literówką, skrótem albo w innym remiksie), odrzuć prośbę i w komentarzu powiedz z humorem, że już leciała.
