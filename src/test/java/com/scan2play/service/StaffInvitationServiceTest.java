@@ -12,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -192,5 +194,22 @@ class StaffInvitationServiceTest {
         assertThat(service.decline(3L, "Kasia.Kowalska@gmail.com")).isTrue();
         assertThat(service.decline(4L, "kasiakowalska@gmail.com")).isFalse();
         assertThat(service.decline(3L, null)).isFalse();
+    }
+
+    @Test
+    void theOldInvitations_goAfterAStartToo_andAFailureNeverStopsIt() throws Exception {
+        EventListener listener = StaffInvitationService.class.getMethod("atStart").getAnnotation(EventListener.class);
+        assertThat(listener).isNotNull();
+        assertThat(listener.value()).containsExactly(ApplicationReadyEvent.class);
+        Instant before = Instant.now();
+
+        service.atStart();
+
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+        verify(invitations).deleteMadeBefore(cutoff.capture());
+        assertThat(cutoff.getValue()).isBefore(before.minus(StaffInvitationEntity.MAX_AGE_DAYS, ChronoUnit.DAYS).plusSeconds(60));
+
+        when(invitations.deleteMadeBefore(any())).thenThrow(new IllegalStateException("database down"));
+        service.atStart();
     }
 }

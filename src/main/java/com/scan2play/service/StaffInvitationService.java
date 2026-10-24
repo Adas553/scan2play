@@ -10,6 +10,8 @@ import com.scan2play.util.EmailAddresses;
 import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -183,6 +185,16 @@ public class StaffInvitationService {
         String key = EmailAddresses.key(verifiedAddress);
         return invitationRepository.findById(invitationId)
                 .filter(i -> i.getEmailKey().equals(key) && i.getInvitedAt().isAfter(waitingSince()));
+    }
+
+    /** The same after a start: a night the app was down skips nothing. A failure is logged and never stops the start. */
+    @EventListener(ApplicationReadyEvent.class)
+    public void atStart() {
+        try {
+            purgeOldInvitations();
+        } catch (RuntimeException e) {
+            log.warn("Staff invitation cleanup at start failed, the night's run tries again", e);
+        }
     }
 
     /** Runs daily at 04:50: the invitations no one answered in {@value StaffInvitationEntity#MAX_AGE_DAYS} days go. */

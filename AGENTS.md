@@ -49,6 +49,7 @@ Coding guidelines:
 * Always use bounded queries (Top N / Pageable) — never load unbounded result sets
 * Add composite database indexes for frequently queried column combinations
 * Leverage caching (`@Cacheable` / `@CachePut`) to avoid redundant DB hits on hot paths
+* Comments say why the code is as it is now — the reason a reader needs before changing it. Who decided what and when, what was tried before, how it was found ("the owner, 2026-10-07", "it was 100 until …") belong in `docs/history/`, the PR or the commit message, not in the code; tidy such comments when you touch them anyway, not in a PR of their own
 
 When analyzing code:
 
