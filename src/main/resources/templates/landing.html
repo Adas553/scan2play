@@ -44,8 +44,9 @@
             </div>
         </div>
         <div class="col-lg-7">
-            <!--/* The laptop and the phone are drawn by app.css around the pictures; the phone overlaps the laptop's lower left */-->
-            <figure class="s2p-devices">
+            <!--/* The laptop and the phone are drawn by app.css around the pictures; the phone overlaps the laptop's lower left. The
+                 pages "Dla kogo" show them too (for-whom.html, the same ${lang}) */-->
+            <figure th:fragment="devices" class="s2p-devices">
                 <div class="s2p-laptop">
                     <img id="landingDashboardShot" th:src="@{'/images/landing/dashboard-' + ${lang} + '.webp'}"
                          src="/images/landing/dashboard-pl.webp" width="1920" height="1140" fetchpriority="high"
@@ -111,17 +112,21 @@
         </div>
     </section>
 
-    <!--/* For whom: one card each now; pages of their own for search engines later (Next 7) */-->
-    <section class="s2p-landing-section" id="landingWho">
+    <!--/* For whom: a card each, the first three leading to a page of their own (ForWhomController, 2026-10-21; in the page's
+         language: ?lang=en on the English page) — the whole card is the link. Karaoke has none yet (the owner, 2026-10-21) */-->
+    <section class="s2p-landing-section" id="landingWho" th:with="q=${lang == 'en' ? '?lang=en' : ''}">
         <div class="container">
             <h2 th:text="#{landing.who.title}">Who it is for</h2>
             <div class="s2p-landing-grid s2p-landing-grid-4">
-                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">💍</span>
-                    <h3 th:text="#{landing.who.wedding.title}">Wedding DJs</h3><p th:text="#{landing.who.wedding.text}">…</p></div>
-                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎧</span>
-                    <h3 th:text="#{landing.who.club.title}">Clubs and parties</h3><p th:text="#{landing.who.club.text}">…</p></div>
-                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🍺</span>
-                    <h3 th:text="#{landing.who.pub.title}">Pubs and bars</h3><p th:text="#{landing.who.pub.text}">…</p></div>
+                <div class="s2p-landing-card s2p-landing-card-link"><span class="s2p-landing-icon" aria-hidden="true">💍</span>
+                    <h3><a th:href="${'/dj-weselny' + q}" href="/dj-weselny" class="stretched-link" th:text="#{landing.who.wedding.title}">Wedding DJs</a></h3>
+                    <p th:text="#{landing.who.wedding.text}">…</p></div>
+                <div class="s2p-landing-card s2p-landing-card-link"><span class="s2p-landing-icon" aria-hidden="true">🎧</span>
+                    <h3><a th:href="${'/kluby' + q}" href="/kluby" class="stretched-link" th:text="#{landing.who.club.title}">Clubs and parties</a></h3>
+                    <p th:text="#{landing.who.club.text}">…</p></div>
+                <div class="s2p-landing-card s2p-landing-card-link"><span class="s2p-landing-icon" aria-hidden="true">🍺</span>
+                    <h3><a th:href="${'/puby' + q}" href="/puby" class="stretched-link" th:text="#{landing.who.pub.title}">Pubs and bars</a></h3>
+                    <p th:text="#{landing.who.pub.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎤</span>
                     <h3 th:text="#{landing.who.karaoke.title}">Karaoke</h3><p th:text="#{landing.who.karaoke.text}">…</p></div>
             </div>
