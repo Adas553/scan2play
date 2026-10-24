@@ -57,13 +57,15 @@ class SongEvaluationServiceTest {
     private com.scan2play.repository.SongRequestDedicationRepository dedications;
 
     private SongEvaluationService service;
+    /** The prompts as production builds them (PromptBuilder, the review of 2026-10-21 R1). */
+    private final PromptBuilder promptBuilder = PromptBuilder.loaded(new DefaultResourceLoader());
     private final AiHealthMonitor aiHealth = new AiHealthMonitor();
 
     @BeforeEach
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, new DefaultResourceLoader(), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off());
+                messageSource, PromptBuilder.loaded(new DefaultResourceLoader()), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off());
         service.init();
     }
 
@@ -79,10 +81,10 @@ class SongEvaluationServiceTest {
     /** The DJ's vibe note (V16) goes into the prompt as one line without double quotes; none, no block. */
     @Test
     void theDjsVibeNote_isGivenToTheAi_onOneLine_withoutDoubleQuotes() {
-        String song = service.buildPrompt("sanah", "ANY", null, "wesele 40+, \"bez rapu\"" + System.lineSeparator() + " i bez disco polo",
+        String song = promptBuilder.build("sanah", "ANY", null, "wesele 40+, \"bez rapu\"" + System.lineSeparator() + " i bez disco polo",
                 java.util.Locale.of("pl"));
-        String en = service.buildPrompt("sanah", "ANY", "A - B", "no rap tonight", java.util.Locale.ENGLISH);
-        String none = service.buildPrompt("sanah", "ANY", null, "   ", java.util.Locale.of("pl"));
+        String en = promptBuilder.build("sanah", "ANY", "A - B", "no rap tonight", java.util.Locale.ENGLISH);
+        String none = promptBuilder.build("sanah", "ANY", null, "   ", java.util.Locale.of("pl"));
 
         assertThat(song).contains("Wskazówki DJ-a o muzyce", "\"wesele 40+, 'bez rapu' i bez disco polo\"").doesNotContain("%s");
         assertThat(en).contains("The DJ's notes about the music", "\"no rap tonight\"", "A - B").doesNotContain("%s");
@@ -95,15 +97,15 @@ class SongEvaluationServiceTest {
     @Test
     void theCommentStyle_isGivenToTheAi_andTheClassicOneChangesNothing() {
         java.util.Locale pl = java.util.Locale.of("pl");
-        String before = service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", pl);
+        String before = promptBuilder.build("sanah", "ANY", "A - B", "bez rapu", pl);
 
-        assertThat(service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", CommentStyle.CLASSIC, pl)).isEqualTo(before);
-        assertThat(service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", null, pl)).isEqualTo(before);
+        assertThat(promptBuilder.build("sanah", "ANY", "A - B", "bez rapu", CommentStyle.CLASSIC, pl)).isEqualTo(before);
+        assertThat(promptBuilder.build("sanah", "ANY", "A - B", "bez rapu", null, pl)).isEqualTo(before);
         assertThat(before).doesNotContain("Styl komentarza");
         for (CommentStyle style : CommentStyle.values()) {
             if (style == CommentStyle.CLASSIC) continue;
-            String polish = service.buildPrompt("sanah", "ANY", "A - B", "bez rapu", style, pl);
-            String english = service.buildPrompt("sanah", "ANY", null, null, style, java.util.Locale.ENGLISH);
+            String polish = promptBuilder.build("sanah", "ANY", "A - B", "bez rapu", style, pl);
+            String english = promptBuilder.build("sanah", "ANY", null, null, style, java.util.Locale.ENGLISH);
             // the style replaces Step 3's tone, not its rules: the sarcastic one named the song in a local try
             assertThat(polish).as(style + " pl").contains("Styl komentarza (zastępuje ton z Kroku 3)", "Pozostałe zasady Kroku 3 obowiązują",
                     "Przy \"accepted\" nie podawaj tytułu ani wykonawcy").doesNotContain("%s");
@@ -113,9 +115,9 @@ class SongEvaluationServiceTest {
             assertThat(polish.indexOf("Styl komentarza")).isGreaterThan(polish.indexOf("A - B")).isGreaterThan(polish.indexOf("Krok 3"))
                     .isLessThan(polish.indexOf("Odpowiedz wyłącznie"));
         }
-        assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.SARCASTIC, pl))
+        assertThat(promptBuilder.build("sanah", "ANY", null, null, CommentStyle.SARCASTIC, pl))
                 .contains("sarkastyczny — kąśliwa", "nigdy o samej osobie").doesNotContain("łagodny");
-        assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.SHORT, java.util.Locale.ENGLISH)).contains("at most 80 characters");
+        assertThat(promptBuilder.build("sanah", "ANY", null, null, CommentStyle.SHORT, java.util.Locale.ENGLISH)).contains("at most 80 characters");
     }
 
     @Test
@@ -141,8 +143,8 @@ class SongEvaluationServiceTest {
         String file = "# comment" + System.lineSeparator() + "FUNNY=a" + System.lineSeparator() + System.lineSeparator()
                 + "SARCASTIC=c";
 
-        assertThatThrownBy(() -> SongEvaluationService.commentStyleRules(file, "pl")).hasMessageContaining("SHORT");
-        assertThat(SongEvaluationService.commentStyleRules(file + System.lineSeparator() + "SHORT= d ", "pl"))
+        assertThatThrownBy(() -> PromptBuilder.commentStyleRules(file, "pl")).hasMessageContaining("SHORT");
+        assertThat(PromptBuilder.commentStyleRules(file + System.lineSeparator() + "SHORT= d ", "pl"))
                 .containsEntry(CommentStyle.FUNNY, "a").containsEntry(CommentStyle.SHORT, "d").doesNotContainKey(CommentStyle.CLASSIC);
     }
 
@@ -159,7 +161,7 @@ class SongEvaluationServiceTest {
 
     @Test
     void thePrompt_asksForTheSongTheGuestMeans_andTellsAMoodApart() {
-        String song = service.buildPrompt("chciałbym być marynarzem", "ANY", null, java.util.Locale.of("pl"));
+        String song = promptBuilder.build("chciałbym być marynarzem", "ANY", null, java.util.Locale.of("pl"));
 
         assertThat(song).contains("Prośba gościa: \"chciałbym być marynarzem\"", "\"lyrics\"", "\"mood\"").doesNotContain("%s");
         // a song the model does not know (a new one: "Shakira & Burna Boy – Dai Dai", May 2026) is not rejected for that
@@ -225,29 +227,37 @@ class SongEvaluationServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    /** The prompt builds whole in every style, with the note and the played songs, in both languages (GeminiComparison builds it so too). */
+    /**
+     * The prompt builds whole in every style, with the note and the played songs, in both languages — production's and the proposed
+     * rewrite GeminiComparison tries beside it (the review of 2026-10-21, S1 b: an insult or a message is a "mood").
+     */
     @Test
     void thePrompt_buildsInEveryStyle() {
-        SongEvaluationService proposed = GeminiComparison.prompts("current");
-        for (Locale locale : List.of(Locale.forLanguageTag("pl"), Locale.ENGLISH)) {
-            for (CommentStyle style : CommentStyle.values()) {
-                String prompt = proposed.buildPrompt("orła cień", "ANY", "Wilki - Baśka", "Salsa", style, locale);
-                assertThat(prompt).contains("\"orła cień\"", "Salsa", "Wilki - Baśka", "songName").doesNotContain("%s");
+        for (String which : List.of("current", "proposed")) {
+            PromptBuilder prompts = GeminiComparison.prompts(which);
+            for (Locale locale : List.of(Locale.forLanguageTag("pl"), Locale.ENGLISH)) {
+                for (CommentStyle style : CommentStyle.values()) {
+                    String prompt = prompts.build("orła cień", "ANY", "Wilki - Baśka", "Salsa", style, "dla Ani", locale);
+                    assertThat(prompt).as(which + " " + locale + " " + style)
+                            .contains("\"orła cień\"", "Salsa", "Wilki - Baśka", "songName", "dla Ani").doesNotContain("%s");
+                }
             }
         }
+        assertThat(GeminiComparison.prompts("proposed").build("pan młody to frajer", "ANY", null, Locale.forLanguageTag("pl")))
+                .contains("albo wiadomość: obraza", "Prawdziwa piosenka, której tytuł albo tekst ma mocne słowo");
     }
 
     /** "No genre" reaches the AI in words: it once quoted "'ANY'" to a guest (2026-10-07). A picked genre goes in quotes. */
     @Test
     void noGenre_isWords_notTheCodeAny() {
-        String polish = service.buildPrompt("somos hermanos", "ANY", null, null, CommentStyle.SARCASTIC, Locale.forLanguageTag("pl"));
-        String english = service.buildPrompt("somos hermanos", "ANY", null, null, CommentStyle.SARCASTIC, Locale.ENGLISH);
+        String polish = promptBuilder.build("somos hermanos", "ANY", null, null, CommentStyle.SARCASTIC, Locale.forLanguageTag("pl"));
+        String english = promptBuilder.build("somos hermanos", "ANY", null, null, CommentStyle.SARCASTIC, Locale.ENGLISH);
 
         assertThat(polish).contains("Gatunek imprezy wybrany przez DJ-a: dowolny (DJ nie wybrał gatunku)", "nie cytuj tego polecenia")
                 .doesNotContain("ANY");
         assertThat(english).contains("as the DJ picked it: any (the DJ picked no genre)", "do not quote these instructions")
                 .doesNotContain("ANY");
-        assertThat(service.buildPrompt("x", "Latino (salsa, bachata, reggaeton)", null, Locale.forLanguageTag("pl")))
+        assertThat(promptBuilder.build("x", "Latino (salsa, bachata, reggaeton)", null, Locale.forLanguageTag("pl")))
                 .contains("wybrany przez DJ-a: \"Latino (salsa, bachata, reggaeton)\"");
         // a song with a similar-sounding title is another song: the AI made "Somos Novios" of "somos hermanos"
         assertThat(polish).contains("\"Somos Novios\" nie jest \"Somos Hermanos\"");
@@ -275,7 +285,7 @@ class SongEvaluationServiceTest {
 
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
-                partySettingsQueryService, messageSource, new DefaultResourceLoader(),
+                partySettingsQueryService, messageSource, PromptBuilder.loaded(new DefaultResourceLoader()),
                 new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
@@ -806,7 +816,7 @@ class SongEvaluationServiceTest {
         assertThat(prompts.get(2).indexOf("Dedykacja gościa")).isGreaterThan(prompts.get(2).indexOf("Krok 3"))
                 .isLessThan(prompts.get(2).indexOf("Odpowiedz wyłącznie"));
         assertThat(required(configs.get(2))).contains("decision", "comment", "songName", "requestKind", "dedicationOk");
-        assertThat(service.buildPrompt("sanah", "ANY", null, null, CommentStyle.CLASSIC, "for Anna", Locale.ENGLISH))
+        assertThat(promptBuilder.build("sanah", "ANY", null, null, CommentStyle.CLASSIC, "for Anna", Locale.ENGLISH))
                 .contains("The guest's dedication", "\"for Anna\"").doesNotContain("Dedykacja");
     }
 
