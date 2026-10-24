@@ -11,15 +11,16 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account, the hosts' link, the panel switcher, a pasted invitation and leaving a staff (V30) — a page
-// reload / redirect is expected: the new link, the list or the other party's panel is shown at once.
+// Excluded: logout, delete-account, the hosts' link, the panel switcher, a pasted invitation, leaving a staff (V30) and deleting the
+// DJ's library (V41) — a page reload / redirect is expected: the new link, the list or the other party's panel is shown at once.
 //
 // What a form does is chosen by its path, the whole of it (review 2026-10-14: a part of the address was looked for — "/staff-link"
 // and "/staff-remove" matched no form at all, and a new path holding an old one would have taken its behaviour).
 // ==========================================================================
 
 /** The forms sent as a page load, not by fetch(). */
-const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host-link', '/dj/panel', '/dj/join', '/dj/staff/leave']);
+const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host-link', '/dj/panel', '/dj/join', '/dj/staff/leave',
+    '/dj/library/delete']);
 /** The forms after which the queue is fetched at once (a song played, skipped, put back; the hosts' lists; a tip; ...). */
 const CHANGE_THE_QUEUE = new Set(['/dj/dashboard/play', '/dj/dashboard/dismiss', '/dj/dashboard/clear-queue', '/dj/dashboard/restore',
     '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count']);

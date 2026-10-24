@@ -117,6 +117,12 @@ class SettingsPageRenderTest {
     /** The same with the plans as {@code plans} decides them (V35). */
     private static String render(PartyStaffService.Access access, GuestRequestLimiter limiter, Locale locale,
                                  com.scan2play.service.PlanService plans) {
+        return render(access, limiter, locale, plans, mock(DjService.class));
+    }
+
+    /** The same with the party's queue and library (V41) as {@code djService} has them. */
+    private static String render(PartyStaffService.Access access, GuestRequestLimiter limiter, Locale locale,
+                                 com.scan2play.service.PlanService plans, DjService djService) {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.access(any(), any(), any())).thenReturn(access);
         PartyStaffService staff = mock(PartyStaffService.class);
@@ -124,7 +130,7 @@ class SettingsPageRenderTest {
                 .memberName("Kasia").joinedAt(Instant.now()).build()));
         PushNotificationService push = mock(PushNotificationService.class);
         when(push.publicKey()).thenReturn(PUBLIC_KEY);
-        DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
+        DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), limiter, push, staff,
                 mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
@@ -204,7 +210,27 @@ class SettingsPageRenderTest {
                 .contains("id=\"deviceCard\"", "id=\"pushSettings\"", "data-public-key=\"" + PUBLIC_KEY + "\"", "id=\"pushToggle\"",
                         ">Powiadomienia o prośbach<", "id=\"installApp\"", "id=\"installAppBtn\"", "id=\"joinStaffForm\"", "action=\"/dj/join\"",
                         ">Zaproszenie do obsługi? Wklej link<");
+        assertThat(html).as("the DJ's library (V41): a file sent by library.js, what it does, none uploaded yet")
+                .contains("href=\"#libraryCard\"", "id=\"libraryCard\"", ">Twoja biblioteka<", "id=\"libraryForm\"",
+                        "action=\"/dj/library\"", "id=\"libraryFile\"", "accept=\".xml,.m3u,.m3u8\"", "data-sending=\"Wgrywam…\"",
+                        "data-refused=\"Nie udało się wgrać pliku.", "id=\"libraryAnswer\" role=\"status\" hidden",
+                        "Plik → Eksportuj kolekcję w formacie XML", ">Nie masz jeszcze wgranej biblioteki.<")
+                .doesNotContain("action=\"/dj/library/delete\"");
         write("settings.html", html);
+    }
+
+    /** A library uploaded: how many tracks and when, and the way to delete it. */
+    @Test
+    void theOwnersLibrary_saysItsTracksAndDay_andCanBeDeleted() {
+        DjService djService = mock(DjService.class);
+        Instant uploaded = Instant.now();
+        when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(
+                new com.scan2play.service.DjLibraryService.Info(1234, com.scan2play.service.DjLibraryParser.Format.REKORDBOX, uploaded)));
+
+        String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), djService);
+
+        assertThat(html).contains("id=\"libraryState\"", ">Utwory w bibliotece: 1\u00A0234 · wgrano " + com.scan2play.util.Times.day(uploaded) + "<",
+                "id=\"libraryForm\"", "action=\"/dj/library/delete\"", ">Usuń bibliotekę<");
     }
 
     /** The use of each server limit is a badge the DJ notices: grey, yellow from 80 %, red at the limit. */
@@ -240,7 +266,7 @@ class SettingsPageRenderTest {
 
         assertThat(html).contains("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"pushToggle\"", "id=\"settingsJump\"")
                 .doesNotContain("id=\"linksCard\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
-                        "href=\"/dj/staff", "id=\"joinStaffForm\"");
+                        "href=\"/dj/staff", "id=\"joinStaffForm\"", "id=\"libraryCard\"", "href=\"#libraryCard\"");
         write("settings-staff.html", html);
     }
 
@@ -297,6 +323,9 @@ class SettingsPageRenderTest {
                 .contains("id=\"limitsCard\"", "Każda impreza bez Pro: 2 prośby na gościa, potem 3 min przerwy, bez powtórek z ostatnich 15.",
                         "id=\"serverLimitsInfo\"")
                 .doesNotContain("action=\"/dj/dashboard/limits\"", "id=\"requestLimit\"");
+        assertThat(html).as("the library: what it would do, no form")
+                .contains("id=\"libraryCard\"", "Wgraj swoją bibliotekę, a przy każdej prośbie zobaczysz, czy masz ten utwór.")
+                .doesNotContain("id=\"libraryForm\"", "action=\"/dj/library\"");
         assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"");
         write("settings-free.html", html);
     }
@@ -318,5 +347,18 @@ class SettingsPageRenderTest {
                 com.scan2play.service.Plans.enforced());
         assertThat(html).contains("id=\"deviceCard\"")
                 .doesNotContain("id=\"hostListsCard\"", "id=\"limitsCard\"", "s2p-pro", "id=\"settingsJump\"");
+    }
+
+    /** A library uploaded under Pro, the plan gone: it waits, unmarked — and it can still be deleted (the organiser's own data). */
+    @Test
+    void aFreeOrganisersLibrary_waits_andCanBeDeleted() {
+        DjService djService = mock(DjService.class);
+        when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(
+                new com.scan2play.service.DjLibraryService.Info(10, com.scan2play.service.DjLibraryParser.Format.M3U, Instant.now())));
+
+        String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.enforced(), djService);
+
+        assertThat(html).contains("Twoja biblioteka jest zapisana — znaczniki w kolejce wrócą z planem Pro.", "action=\"/dj/library/delete\"")
+                .doesNotContain("id=\"libraryForm\"");
     }
 }

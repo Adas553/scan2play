@@ -49,6 +49,7 @@
         <a th:if="${isOwner}" href="#linksCard"><span th:text="#{dashboard.links.title}">Profiles and tips</span></a>
         <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" href="#limitsCard"><span
            th:text="#{dashboard.limits.title}">Guest limits</span></a>
+        <a th:if="${isOwner}" href="#libraryCard"><span th:text="#{settings.library.title}">Your library</span></a>
         <a th:if="${isOwner}" th:href="@{/dj/staff(party=${partyCode})}" th:text="#{dashboard.staff.title} + ' ›'">Staff ›</a>
         <a href="#deviceCard" th:text="#{dashboard.device.title}">This device</a>
     </nav>
@@ -206,6 +207,35 @@
                 </summary>
                 <p class="text-secondary mt-2 mb-0" th:text="#{dashboard.limits.server.help}">One network is e.g. the venue's Wi-Fi…</p>
             </details>
+        </section>
+
+        <!--/* The DJ's library (V41, Pro): a rekordbox collection or an M3U playlist, sent as it is by library.js (the request's body, not a
+             form's upload: DjLibraryController); the queue then marks each request "✓" or "✗". The organiser's alone. Without Pro the
+             card says so in place of the form, and a library uploaded before waits — it can still be deleted. */-->
+        <section th:if="${isOwner}" class="card bg-dark border-secondary p-3" id="libraryCard">
+            <h2 class="s2p-card-title"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+            <th:block th:if="${plan.pro('LIBRARY')}"><div
+                 th:replace="~{fragments/components :: proOffer(${libraryTracks != null} ? #{plan.library.kept} : #{plan.library.offer})}"></div></th:block>
+            <th:block th:unless="${plan.pro('LIBRARY')}">
+            <p class="small text-secondary mb-2" th:text="#{settings.library.help}">Upload your rekordbox collection…</p>
+            <p class="small text-light mb-2" id="libraryState"
+               th:text="${libraryTracks != null} ? #{settings.library.state(${libraryTracks}, ${libraryUploaded})} : #{settings.library.none}">No library uploaded yet.</p>
+            <form th:action="@{/dj/library}" method="POST" class="m-0" id="libraryForm"
+                  th:attr="data-sending=#{settings.library.sending},data-refused=#{settings.library.error.other}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <label for="libraryFile" class="form-label small text-light mb-1" th:text="#{settings.library.file}">File (XML, M3U, M3U8)</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <input type="file" id="libraryFile" name="file" accept=".xml,.m3u,.m3u8" required
+                           class="form-control form-control-sm bg-black text-light border-secondary s2p-library-file">
+                    <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{settings.library.upload}">Upload</button>
+                </div>
+                <p class="small mt-2 mb-0" id="libraryAnswer" role="status" hidden></p>
+            </form>
+            </th:block>
+            <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0 mt-3">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.library.delete}">Delete library</button>
+            </form>
         </section>
 
         <!--/* This device: the notifications and the app (each shown by its script only where it helps), and an invitation to another

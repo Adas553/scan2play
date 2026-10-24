@@ -62,4 +62,28 @@ class SongNamesTest {
     void nothingToCompare_isNoWarning(String guestText, String songName) {
         assertThat(SongNames.sharesNoWord(guestText, songName)).isFalse();
     }
+
+    @ParameterizedTest(name = "\"{0}\" is \"{1}\" in the DJ's library")
+    @DisplayName("a song of the DJ's library: the AI's name matches it without the versions, the guests and the punctuation")
+    @CsvSource(delimiter = '|', value = {
+            "Daft Punk - One More Time                    | Daft Punk - One More Time (Radio Edit)",
+            "Daft Punk - One More Time                    | DAFT PUNK – one more time [Extended Mix]",
+            "Wilki - Baśka                                | Wilki - Baska",
+            "Calvin Harris - This Is What You Came For    | Calvin Harris feat. Rihanna - This Is What You Came For",
+            "Calvin Harris - This Is What You Came For    | Calvin Harris - This Is What You Came For (feat. Rihanna)",
+            "Calvin Harris ft. Rihanna - This Is What You Came For | Calvin Harris - This Is What You Came For",
+    })
+    void theLibraryKey_isTheSongWithoutItsVersion(String asked, String inLibrary) {
+        assertThat(SongNames.libraryKey(asked)).isNotEmpty().isEqualTo(SongNames.libraryKey(inLibrary));
+    }
+
+    @Test
+    @DisplayName("another song, or another artist's, is another key; nothing to compare is an empty key; a long one is cut")
+    void theLibraryKey_tellsSongsApart() {
+        assertThat(SongNames.libraryKey("Daft Punk - One More Time")).isNotEqualTo(SongNames.libraryKey("Daft Punk - Digital Love"));
+        assertThat(SongNames.libraryKey("Wilki - Baśka")).isNotEqualTo(SongNames.libraryKey("Dżem - Baśka"));
+        assertThat(SongNames.libraryKey(null)).isEmpty();
+        assertThat(SongNames.libraryKey(" (Radio Edit) - !!")).isEmpty();
+        assertThat(SongNames.libraryKey("a".repeat(500))).hasSize(SongNames.LIBRARY_KEY_MAX);
+    }
 }

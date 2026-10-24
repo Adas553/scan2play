@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A rekordbox collection as "File > Export Collection in xml format" writes it (shortened: no cue points, fewer attributes). -->
+<DJ_PLAYLISTS Version="1.0.0">
+  <PRODUCT Name="rekordbox" Version="6.8.5" Company="AlphaTheta"/>
+  <COLLECTION Entries="12">
+    <TRACK TrackID="1" Name="One More Time (Radio Edit)" Artist="Daft Punk" Album="Discovery" Genre="House" Kind="MP3 File" TotalTime="320" AverageBpm="122.00" Tonality="5A" Location="file://localhost/C:/Users/dj/Music/Daft%20Punk%20-%20One%20More%20Time.mp3">
+      <TEMPO Inizio="0.025" Bpm="122.00" Metro="4/4" Battito="1"/>
+    </TRACK>
+    <TRACK TrackID="2" Name="Baśka" Artist="Wilki" Album="Wilki" Genre="Rock" Kind="MP3 File" TotalTime="245" AverageBpm="128.00" Location="file://localhost/C:/Users/dj/Music/Wilki%20-%20Baska.mp3"/>
+    <TRACK TrackID="3" Name="Dancing Queen" Artist="ABBA" Album="Arrival" Genre="Disco" Kind="FLAC File" TotalTime="231" AverageBpm="101.00" Location="file://localhost/C:/Users/dj/Music/ABBA%20-%20Dancing%20Queen.flac"/>
+    <TRACK TrackID="4" Name="Uptown Funk (feat. Bruno Mars)" Artist="Mark Ronson" Album="Uptown Special" Genre="Funk" Kind="MP3 File" TotalTime="270" AverageBpm="115.00" Location="file://localhost/C:/Users/dj/Music/Uptown%20Funk.mp3"/>
+    <TRACK TrackID="5" Name="Don't Stop Me Now" Artist="Queen" Album="Jazz" Genre="Rock" Kind="MP3 File" TotalTime="209" AverageBpm="156.00" Location="file://localhost/C:/Users/dj/Music/Queen.mp3"/>
+    <TRACK TrackID="6" Name="Ściernisco" Artist="Golec uOrkiestra" Album="Golec uOrkiestra 2" Genre="Folk" Kind="MP3 File" TotalTime="230" AverageBpm="132.00" Location="file://localhost/C:/Users/dj/Music/Golec.mp3"/>
+    <TRACK TrackID="7" Name="Przez Twe Oczy Zielone" Artist="Akcent" Album="" Genre="Disco Polo" Kind="MP3 File" TotalTime="215" AverageBpm="130.00" Location="file://localhost/C:/Users/dj/Music/Akcent.mp3"/>
+    <TRACK TrackID="8" Name="Levitating" Artist="Dua Lipa" Album="Future Nostalgia" Genre="Pop" Kind="M4A File" TotalTime="203" AverageBpm="103.00" Location="file://localhost/C:/Users/dj/Music/Levitating.m4a"/>
+    <TRACK TrackID="9" Name="Sen o Victorii" Artist="Dżem" Album="Detox" Genre="Rock" Kind="MP3 File" TotalTime="290" AverageBpm="84.00" Location="file://localhost/C:/Users/dj/Music/Dzem.mp3"/>
+    <TRACK TrackID="10" Name="This Is What You Came For" Artist="Calvin Harris feat. Rihanna" Album="" Genre="EDM" Kind="MP3 File" TotalTime="222" AverageBpm="124.00" Location="file://localhost/C:/Users/dj/Music/Calvin.mp3"/>
+    <TRACK TrackID="11" Name="Mr. Brightside" Artist="The Killers" Album="Hot Fuss" Genre="Rock" Kind="MP3 File" TotalTime="222" AverageBpm="148.00" Location="file://localhost/C:/Users/dj/Music/Killers.mp3"/>
+    <TRACK TrackID="12" Name="Intro (DJ Tool)" Artist="" Album="" Genre="" Kind="WAV File" TotalTime="16" AverageBpm="120.00" Location="file://localhost/C:/Users/dj/Music/intro.wav"/>
+  </COLLECTION>
+  <PLAYLISTS>
+    <NODE Type="0" Name="ROOT" Count="1">
+      <NODE Name="Wesele" Type="1" KeyType="0" Entries="3">
+        <TRACK Key="2"/>
+        <TRACK Key="3"/>
+        <TRACK Key="7"/>
+      </NODE>
+    </NODE>
+  </PLAYLISTS>
+</DJ_PLAYLISTS>

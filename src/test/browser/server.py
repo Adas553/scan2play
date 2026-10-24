@@ -74,6 +74,9 @@ def default_state():
         'historyStatus': None,         # e.g. 500: GET history-view/fragment fails (the History tab and its buttons must cope)
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
+        # What POST /dj/library answers (V41): its status and the server's one sentence (422: not a library, 413: too large)
+        'libraryStatus': 200,
+        'libraryAnswer': 'Gotowe — utwory w bibliotece: 3.',
         # The status a POST path answers with instead of its usual answer, e.g. {'/dj/dashboard/host-lists': 403}: the server
         # refused it (the session ran out — CSRF —, the plan, the access); null = the usual answer again
         'postStatus': {},
@@ -221,6 +224,9 @@ class Handler(BaseHTTPRequestHandler):
             fields.update({k: v[-1] for k, v in parse_qs(body.decode('utf-8')).items()})
         elif body and 'application/json' in content_type:   # the switch of notifications sends the browser's subscription as JSON
             fields.update(json.loads(body.decode('utf-8')))
+        elif body and 'application/octet-stream' in content_type:   # a file sent as it is (library.js, V41)
+            fields['__contentType'] = content_type
+            fields['__body'] = body.decode('utf-8', 'replace')
         elif body and 'multipart/form-data' in content_type:
             message = BytesParser(policy=HTTP).parsebytes(b'Content-Type: ' + content_type.encode('ascii') + b'\r\n\r\n' + body)
             for part in message.iter_parts():
@@ -343,6 +349,8 @@ class Handler(BaseHTTPRequestHandler):
             stand.event(name).set()
             return self._json({})
         fields = self._fields(query, body, self.headers.get('Content-Type'))
+        if path == '/dj/library':   # a fetch() with the CSRF token in its header, not in a form field
+            fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and path.endswith('/vote'):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         self._note('POST', path, fields)
@@ -394,6 +402,10 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/dj/staff/link', '/dj/staff/remove', '/dj/staff/permissions', '/dj/staff/invite', '/dj/staff/invitation/cancel'):
             # the owner's page "Obsługa" (V32, V34): back to it
             return self._send(302, headers={'Location': '/dj/staff'})
+        if path == '/dj/library':                     # the DJ's library (V41): the server's sentence, plain text
+            return self._send(state['libraryStatus'], state['libraryAnswer'].encode('utf-8'), 'text/plain; charset=utf-8')
+        if path == '/dj/library/delete':              # back to the settings, as the real server
+            return self._send(302, headers={'Location': '/dj/settings'})
         if path == '/dj/push/unsubscribe':
             return self._send(204)
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/party-words', '/dj/dashboard/comment-style',

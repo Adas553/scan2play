@@ -76,6 +76,11 @@ public final class ViewAttributes {
     public static final String DEDICATIONS_ON = "dedicationsOn";
     /** The newest dedications of the queue's songs (V38), by the song's id ({@code DjService.dedicationsOf}). */
     public static final String DEDICATIONS = "dedications";
+    /** The queue's marks of the DJ's library (V41): song id → in it or not; none without a library or without Pro. */
+    public static final String LIBRARY_MARKS = "libraryMarks";
+    /** The settings' card of the DJ's library (V41): how many tracks (null: none uploaded) and the day of the upload. */
+    public static final String LIBRARY_TRACKS = "libraryTracks";
+    public static final String LIBRARY_UPLOADED = "libraryUploaded";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";
