@@ -740,7 +740,12 @@ class GuestPageRenderTest {
             // the guests' dedications (V38) in place of "no repeats, no spam" — the repeats are in the vibe's card now
             assertThat(section(html, "landingFeatures")).contains(locale == PL ? ">Dedykacje<" : ">Dedications<")
                     .doesNotContain(locale == PL ? "Bez powtórek" : "No repeats");
-            assertThat(section(html, "landingWho").split("class=\"s2p-landing-card\"", -1)).as("four kinds of party").hasSize(5);
+            assertThat(section(html, "landingWho").split("class=\"s2p-landing-card", -1)).as("four kinds of party").hasSize(5);
+            // the first three lead to their pages "Dla kogo" (2026-10-21), in the page's language; karaoke has none yet
+            String q = locale == PL ? "" : "?lang=en";
+            assertThat(section(html, "landingWho")).contains("href=\"/dj-weselny" + q + "\"", "href=\"/kluby" + q + "\"",
+                    "href=\"/puby" + q + "\"").doesNotContain("karaoke\"");
+            assertThat(section(html, "landingWho").split("class=\"stretched-link\"", -1)).as("three cards are links").hasSize(4);
             assertThat(section(html, "landingFaq").split("<details", -1)).as("six questions").hasSize(7);
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
             assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/privacy\"");

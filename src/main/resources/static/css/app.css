@@ -503,6 +503,12 @@ th[data-sort].sort-desc::after {
 .s2p-landing-card p,
 .s2p-landing-step p { color: var(--s2p-text-muted); margin: 0; font-size: 0.95rem; }
 .s2p-landing-icon { font-size: 1.6rem; line-height: 1; }
+/* A card that leads to a page "Dla kogo" (2026-10-21): the whole card is the link (Bootstrap's .stretched-link on its heading's) */
+.s2p-landing-card-link { position: relative; transition: border-color 0.15s; }
+.s2p-landing-card-link:hover,
+.s2p-landing-card-link:focus-within { border-color: var(--s2p-cyan); }
+.s2p-landing-card-link h3 a { color: inherit; text-decoration: none; }
+.s2p-landing-card-link h3::after { content: " →"; color: var(--s2p-cyan); }
 .s2p-landing-step-number {
     display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem;
     border-radius: 50%; border: 1px solid var(--s2p-action-45); background: var(--s2p-action-12);
@@ -524,6 +530,17 @@ th[data-sort].sort-desc::after {
 /* a link in an answer ("Polityka prywatności →"): Bootstrap's blue was 4.0 : 1 on the card — the action's cyan is 9 : 1 (U4) */
 .s2p-landing-faq details a { color: var(--s2p-action); }
 .s2p-landing-final { padding-block: 3.5rem 1rem; }
+
+/* A page "Dla kogo" (2026-10-21): where one is — the breadcrumbs (the logo, "Dla kogo", this kind) and the kind above the heading */
+.s2p-breadcrumb { align-items: center; font-size: 0.95rem; --bs-breadcrumb-divider-color: var(--s2p-text-muted); }
+.s2p-breadcrumb .breadcrumb-item:first-child { font-size: 1.35rem; font-weight: 700; }
+.s2p-breadcrumb a { color: var(--s2p-text); }
+.s2p-breadcrumb .breadcrumb-item.active { color: var(--s2p-light); font-weight: 600; }
+.s2p-forwhom-kind {
+    display: inline-flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0;
+    padding: 0.35rem 0.9rem; border: 1px solid var(--s2p-cyan); border-radius: 999px;
+    color: var(--s2p-cyan); font-weight: 700;
+}
 
 /* ==========================================================================
  * 6b. SONG AUTOCOMPLETE DROPDOWN — index.html (guest page)

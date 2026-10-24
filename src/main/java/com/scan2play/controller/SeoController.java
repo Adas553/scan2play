@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * What a search engine reads first (2026-10-14): {@code /robots.txt} — the DJ's pages and the login are not for it, and where the
@@ -19,8 +20,10 @@ import java.util.List;
 @RestController
 public class SeoController {
 
-    /** The public pages, at their Polish address. */
-    static final List<String> PAGES = List.of("/", "/jak-to-dziala", "/privacy", "/terms");
+    /** The public pages, at their Polish address: the pages "Dla kogo" ({@link ForWhomController}) after the home page. */
+    static final List<String> PAGES = Stream.of(
+            List.of("/"), ForWhomController.PAGES.stream().map(ForWhomController.Page::path).toList(),
+            List.of("/jak-to-dziala", "/privacy", "/terms")).flatMap(List::stream).toList();
 
     private final String siteUrl;
     private final PlanService planService;

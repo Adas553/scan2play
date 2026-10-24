@@ -176,6 +176,8 @@ public class SecurityConfig {
                         // Legal pages (Privacy Policy, Terms of Service) and the guide "Jak działa Scan2Play" (public: a DJ reads it before
                         // the first login, a person of the staff before joining — the owner, 2026-10-12)
                         .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro").permitAll()
+                        // the pages "Dla kogo" (ForWhomController, 2026-10-21)
+                        .requestMatchers("/dj-weselny", "/kluby", "/puby").permitAll()
                         // what a search engine reads first (SeoController); before, both led to the login page, "/"
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         // the demo (DemoController): the demo party's panel, only to look at, and its queue and history
