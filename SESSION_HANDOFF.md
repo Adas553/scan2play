@@ -48,8 +48,9 @@ A. **The review of 2026-10-21 — what is left** (done and released: S1 a #131, 
      note "Salsa" accepted once of two (chance — the genre's rules did not change).
    - **R2:** done in the PR after #154 — the rule on comments in `AGENTS.md` (and its Copilot copy): why it is so now in the
      code; who and when in `docs/history/`, the PR, the commit. Tidy such comments when touching them anyway.
-   - **C1:** the nightly cleanups (requests waiting more than 24 h cleared, the 30-day purge, old invitations) also run after a
-     start. Not urgent: the sleep is off. It touches only what is a day old — never a party's queue of tonight.
+   - **C1:** done in the PR after R2 — the nightly cleanups (requests waiting more than 24 h cleared, the 30-day purge, old
+     invitations) also run after a start (`atStart`); a failure is logged, never stops the start. Only what is a day old — never a
+     party's queue of tonight.
    - **O4's google-genai 1.78:** a try on the real Gemini first (the owner's local agent, `GeminiComparison`, as for S1 b).
 B. **For the owner (not code):** try S1 b on a test party of your own (not the demo, which asks no AI): "pan młody to frajer"
    comes back to the field asking for a title; switch the notifications on in your own panel (the account `ADMIN_GOOGLE_ID`) for the alarm of O2;

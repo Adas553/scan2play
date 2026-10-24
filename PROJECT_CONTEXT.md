@@ -133,7 +133,8 @@ batches of 1000, at most 200 batches a night; and with the account. **A request 
 more than 24 h (`clearOldWaitingRequests` → `clearWaitingRequestedBefore`: rejected with `cleared_at`, as "Wyczyść kolejkę" — the history
 shows it cleared). The queue is the party's 300 oldest waiting requests and a DJ keeps one code for every event, so last week's requests
 stood above tonight's and, past 300, hid them (review 2026-10-14 W10, decided for the owner: "zrób jak uważasz"). Within a day the
-party's own limit is 300, so no "more than 300" note is needed.
+party's own limit is 300, so no "more than 300" note is needed. Both also run after every start (`atStart`, `ApplicationReadyEvent`;
+a failure is logged and never stops the start), so a night the app was down skips nothing.
 
 **Votes** (`SongRequestCommandService.saveOrVote`, V15): an accepted request for a song that already waits in the party's queue (the
 same name by `util/SongNames.comparable` — case, accents, punctuation ignored) is not a row of its own: the waiting song gets
@@ -245,7 +246,7 @@ a Google account: `partyCode` (FK, ON DELETE CASCADE), `email` (≤ 254, as the 
 "gmail.com"; other domains as they are), `permissions` (as `party_staff.permissions`), `invitedAt`. UNIQUE (party, email_key) — the
 same address again changes the role and gives it 30 days again —, index by `email_key` (the login's lookup). Waits
 `StaffInvitationEntity.MAX_AGE_DAYS` = 30 days: an older one counts for nothing (every read takes `invited_at` after now − 30 days) and
-`StaffInvitationService.purgeOldInvitations` deletes it at 04:50 (Polish time). Gone when answered ("Dołącz": it becomes a row of `party_staff`,
+`StaffInvitationService.purgeOldInvitations` deletes it at 04:50 (Polish time) and after every start. Gone when answered ("Dołącz": it becomes a row of `party_staff`,
 without the address; "Nie, dziękuję"), cancelled by the organiser, or with the party.
 **`DjPlanEntity` → `dj_plan`** (V35, the owner 2026-10-14) — a DJ's plan, one row per organiser: `ownerId` (the primary key, the Google
 subject as `party_settings.owner_id`), `plan` (`Plan`: FREE / PRO), `source` (`PlanSource`: TRIAL / PAID / GIFT), `validUntil` (null = no
