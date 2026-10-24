@@ -31,6 +31,8 @@
             <!--/* For DJs: no player — the DJ plays from their own software, Scan2Play collects the guests' requests (Google login) */-->
             <div class="s2p-landing-cta">
                 <a href="/start" id="landingStart" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
+                <!--/* The demo, without a login (the owner, 2026-10-24: people who saw a post left at Google's login) */-->
+                <a href="/demo" id="landingDemo" class="btn btn-outline-light btn-lg" th:text="#{landing.demo}">👀 See the demo</a>
                 <!--/* The guide for DJs, public (the owner, 2026-10-12): read before the first login */-->
                 <a th:href="#{help.guide.href}" href="/how-it-works" id="landingGuide" class="btn btn-outline-light btn-lg"
                    th:text="#{landing.guide}">How Scan2Play works →</a>

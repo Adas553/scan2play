@@ -38,7 +38,9 @@ public class SiteCounter {
         /** A DJ's first login: their party made. */
         NEW_DJ,
         /** A guest's request sent to a party (before the limits and the AI). */
-        GUEST_REQUEST
+        GUEST_REQUEST,
+        /** The demo's panel seen ({@code /demo}). */
+        DEMO
     }
 
     /** One day's counts, every event there (0 when none). */

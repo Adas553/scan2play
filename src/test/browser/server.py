@@ -270,7 +270,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(state['guestQueueStatus'])
             with open(os.path.join(stand.rendered, 'guest-queue.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
-        if path == '/dj/dashboard/updates':
+        if path in ('/dj/dashboard/updates', '/demo/updates'):   # the demo's panel polls its own (DemoController), the same rows
             with stand.lock:
                 if state['updatesStatus']:
                     return self._send(state['updatesStatus'])

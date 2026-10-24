@@ -8,7 +8,7 @@
  * sees the list, and it is fetched at once when the window is shown again.
  */
 import { EVENTS, on } from './events.js';
-import { csrfHeaders, focusSpot, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
+import { csrfHeaders, demoMode, focusSpot, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 import { reopenCards } from './cards.js';
 import { keepChosen } from './queue-keys.js';
@@ -163,7 +163,8 @@ async function refreshTable() {
         }
 
         const sentAt = Date.now();
-        const response = await fetch('/dj/dashboard/updates?partyCode=' + encodeURIComponent(party), {
+        // the demo's panel polls its own queue (DemoController), the DJ's the party's
+        const response = await fetch((demoMode() ? '/demo/updates' : '/dj/dashboard/updates') + '?partyCode=' + encodeURIComponent(party), {
             method: 'GET',
             headers: headers
         });

@@ -42,12 +42,12 @@ public class StatsController {
     /** The days as lines: the date, then each count; a header naming them. */
     static String render(List<SiteCounter.Day> days) {
         StringBuilder text = new StringBuilder("Scan2Play — the last " + DAYS + " days (Polish time), people only, no robots\n\n");
-        text.append(String.format("%-10s  %10s  %10s  %6s  %6s  %6s  %14s%n", "day", "landing PL", "landing EN", "start", "login",
-                "new DJ", "guest requests"));
+        text.append(String.format("%-10s  %10s  %10s  %6s  %6s  %6s  %14s  %6s%n", "day", "landing PL", "landing EN", "start", "login",
+                "new DJ", "guest requests", "demo"));
         for (SiteCounter.Day day : days) {
-            text.append(String.format("%-10s  %10d  %10d  %6d  %6d  %6d  %14d%n", day.day(), day.counts().get(Event.LANDING_PL),
+            text.append(String.format("%-10s  %10d  %10d  %6d  %6d  %6d  %14d  %6d%n", day.day(), day.counts().get(Event.LANDING_PL),
                     day.counts().get(Event.LANDING_EN), day.counts().get(Event.START), day.counts().get(Event.LOGIN),
-                    day.counts().get(Event.NEW_DJ), day.counts().get(Event.GUEST_REQUEST)));
+                    day.counts().get(Event.NEW_DJ), day.counts().get(Event.GUEST_REQUEST), day.counts().get(Event.DEMO)));
         }
         if (days.isEmpty()) {
             text.append("(nothing counted yet)\n");

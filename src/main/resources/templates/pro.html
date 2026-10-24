@@ -15,9 +15,9 @@
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-960">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
-        <a th:if="${loggedIn}" href="/dj/dashboard" id="proBack" class="btn btn-sm btn-outline-light">← Panel</a>
-        <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light">← Home</a>
+        <div class="fs-4 fw-bold text-white"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></div>
+        <a th:if="${loggedIn}" href="/dj/dashboard" id="proBack" class="btn btn-sm btn-outline-light text-nowrap">← Panel</a>
+        <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light text-nowrap">← Home</a>
     </div>
 
     <header class="s2p-product-hero" data-pro-hero>

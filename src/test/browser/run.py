@@ -81,7 +81,7 @@ def mirror(src, dst):
 def render(work):
     """The render tests in the copy: write target/browser-harness/dashboard*.html, guest.html, qr-print-*.html and csp.txt."""
     wrapper = work / ('mvnw.cmd' if os.name == 'nt' else 'mvnw')
-    command = [str(wrapper), '-B', '-ntp', '-q', 'test', '-Dtest=DashboardPageRenderTest,GuestPageRenderTest,QrPrintPageTest,StaffPageRenderTest,SettingsPageRenderTest,GuidePageRenderTest,ProPageRenderTest,TvScreenWebTest', '-Dsurefire.failIfNoSpecifiedTests=false']
+    command = [str(wrapper), '-B', '-ntp', '-q', 'test', '-Dtest=DashboardPageRenderTest,GuestPageRenderTest,QrPrintPageTest,StaffPageRenderTest,SettingsPageRenderTest,GuidePageRenderTest,ProPageRenderTest,TvScreenWebTest,DemoPageRenderTest', '-Dsurefire.failIfNoSpecifiedTests=false']
     if os.name != 'nt':
         command.insert(0, 'sh')   # mvnw is committed without the executable bit (mode 100644): a checkout on Linux could not run it directly
     print('rendering the dashboard in the copy: ' + ' '.join(command[1 if os.name == 'nt' else 2:]), flush=True)
