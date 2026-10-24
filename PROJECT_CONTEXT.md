@@ -868,7 +868,7 @@ names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owne
 what every person of the staff sees (the queue's poll, the QR print); and then, for a feature of the Pro plan, `PlanService.require`
 (V35: the party's organiser's plan; a 403 without it while the plans are enforced — `PlanFeatureEndpointsTest`; the hosts' page
 `/h/{token}` is a 404 then). `POST /join/{token}` joins only logged in, with CSRF; an
-invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). A guest's request whose token went with the session (the page open over 30 minutes) goes back to `/p/{code}` with the typed song and "Strona była otwarta za długo — wyślij prośbę jeszcze raz." (`GuestFormExpiredHandler`), not to the error page "403". Logout `POST
+invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` is exempt). A guest's request whose token went with the session (the page open over 30 minutes) goes back to `/p/{code}` with the typed song, its dedication (review 2026-10-21, U3) and "Strona była otwarta za długo — wyślij prośbę jeszcze raz." (`GuestFormExpiredHandler`), not to the error page "403". Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.
 `Referrer-Policy: same-origin` (the secrets in `/h/…` and `/join/…` never leave in a `Referer`) and `Permissions-Policy` (no camera,
 microphone, location, payment, devices — `SecurityConfig.PERMISSIONS_POLICY`) on every answer. The error page's "Spróbuj ponownie"

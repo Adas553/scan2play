@@ -341,7 +341,7 @@ public class SongEvaluationService {
     }
 
     /** The guest's dedication as it is kept and given to the AI: one line, at most 100 characters; null for none. */
-    static String asDedication(String dedication) {
+    public static String asDedication(String dedication) {
         String line = Texts.oneLine(dedication, SongRequestDedicationEntity.TEXT_MAX);
         return line.isEmpty() ? null : line;
     }

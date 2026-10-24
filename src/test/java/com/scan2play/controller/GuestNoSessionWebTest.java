@@ -77,14 +77,14 @@ class GuestNoSessionWebTest {
 
     /**
      * The guest's page was open longer than the session lives (30 minutes): the form's CSRF token is gone with it. The request comes
-     * back to the party's page with what the guest typed and a note, not to the error page "403" with the song lost (review
-     * 2026-10-14).
+     * back to the party's page with what the guest typed — the song and the dedication — and a note, not to the error page "403"
+     * with the song lost (review 2026-10-14; the dedication: review 2026-10-21, U3).
      */
     @Test
     void aRequestFromAPageOpenTooLong_comesBackToTheParty_withItsText() throws Exception {
         MvcResult result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/p/ABC12/request")
-                        .param("songName", "Wilki - Baśka").param("_csrf", "a-token-of-an-old-session")
-                        .header("Accept-Language", "pl-PL"))
+                        .param("songName", "Wilki - Baśka").param("dedication", "  dla Ani\nna 18-stkę ")
+                        .param("_csrf", "a-token-of-an-old-session").header("Accept-Language", "pl-PL"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/p/ABC12"))
                 .andReturn();
@@ -97,6 +97,8 @@ class GuestNoSessionWebTest {
         assertThat(flashes).singleElement().satisfies(flash -> {
             assertThat(flash.getTargetRequestPath()).isEqualTo("/p/ABC12");
             assertThat(flash.get("lastRequest")).isEqualTo("Wilki - Baśka");
+            // the dedication too (review 2026-10-21, U3: "dla Ani na 18-stkę" was lost), one line as the page's field takes it
+            assertThat(flash.get("lastDedication")).isEqualTo("dla Ani na 18-stkę");
             assertThat((String) flash.get("errorMessage")).contains("wyślij prośbę jeszcze raz");
         });
 

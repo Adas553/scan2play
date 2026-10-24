@@ -42,13 +42,15 @@ A. **The review of 2026-10-21 — what is left**, one PR per group. The owner's 
      kept a day (`VersionedAssetCacheFilter`; after changing a picture purge Cloudflare's cache); `DemoParty.reset` starts the
      demos' daily limit again (`DemoPartyTest`). After the release: curl `/` without cookies — no `Set-Cookie`, the whole page —
      and the headers of `/webjars/bootstrap/css/bootstrap.min.css` and `/images/logo.svg`.
-   - **O2:** done in the PR after #141 (2026-10-24; the owner's picks: both, after 3): 3 unchecked requests in a row → one push
+   - **O2:** done in #142 (2026-10-24; the owner's picks: both, after 3): 3 unchecked requests in a row → one push
      "⚠ AI nie ocenia próśb" to the devices of `ADMIN_GOOGLE_ID` (at most every 6 h) and a red bar above the queue of every
      panel (`X-Guest-Limits: ai-down`) until the AI answers. **For the owner:** switch the notifications on in your own panel
      ("To urządzenie" → Powiadomienia) on the phone that should get the alarm — the push goes only to devices subscribed by
      that account.
-   - **U2 + U3:** impersonal forms for the guests ("Wykorzystałeś limit", "Zagrałeś ją", "Gotowy na…"); the dedication comes back
-     after an expired page (`GuestFormExpiredHandler`).
+   - **U2 + U3:** done in the PR after #142 (2026-10-24): the owner's words — "Limit {0} piosenek wykorzystany. Daj szansę innym
+     i spróbuj za {1}.", "Zagrana — prośba przechodzi do historii", "Czas na następną imprezę?"; `ImpersonalPolishTextsTest` keeps
+     "-łeś" / "-łaś" / "Gotowy" out of the Polish bundle. The dedication comes back after an expired page
+     (`GuestFormExpiredHandler`, `GuestNoSessionWebTest`).
    - **C1:** the nightly cleanups also after a start (less urgent: the sleep is off).
    - **O3:** CI without double runs (not urgent: the repo is public).
    - **R1** (`PromptBuilder` out of `SongEvaluationService`), **R2** (a rule on comments in `AGENTS.md`), **O4** (Tomcat 11.0.27,
