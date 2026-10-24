@@ -1,6 +1,8 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.model.LibraryMark;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.EveningSummaryService;
@@ -24,10 +26,12 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import static com.scan2play.controller.ViewAttributes.DJ_NAME;
 import static com.scan2play.controller.ViewAttributes.EVENING;
 import static com.scan2play.controller.ViewAttributes.EVENINGS;
+import static com.scan2play.controller.ViewAttributes.LIBRARY_GAPS;
 import static com.scan2play.controller.ViewAttributes.PARTY_CODE;
 import static com.scan2play.controller.ViewAttributes.SUMMARY;
 
@@ -57,7 +61,11 @@ public class DjSummaryController {
         model.addAttribute(DJ_NAME, settings.getDjName());
         model.addAttribute(EVENINGS, evenings);
         model.addAttribute(EVENING, shown);
-        model.addAttribute(SUMMARY, shown == null ? null : eveningSummaryService.summarize(settings.getPartyCode(), shown));
+        List<SongRequestEntity> requests = shown == null ? List.of() : eveningSummaryService.requests(settings.getPartyCode(), shown);
+        model.addAttribute(SUMMARY, shown == null ? null : EveningSummaryService.summarize(shown, requests));
+        // "Nie masz w bibliotece" (V42): with the plan that marks by the library, and a library
+        model.addAttribute(LIBRARY_GAPS, shown != null && planService.allows(settings, PlanFeature.LIBRARY)
+                ? eveningSummaryService.libraryGaps(settings.getPartyCode(), requests).orElse(null) : null);
         return "summary";
     }
 
@@ -71,8 +79,10 @@ public class DjSummaryController {
         if (shown == null) {
             return ResponseEntity.notFound().build();
         }
-        String csv = EveningSummaryService.toCsv(eveningSummaryService.requests(settings.getPartyCode(), shown), messageSource,
-                locale);
+        List<SongRequestEntity> requests = eveningSummaryService.requests(settings.getPartyCode(), shown);
+        Map<Long, LibraryMark> marks = planService.allows(settings, PlanFeature.LIBRARY)
+                ? eveningSummaryService.libraryMarks(settings.getPartyCode(), requests) : Map.of();
+        String csv = EveningSummaryService.toCsv(requests, marks, messageSource, locale);
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION,

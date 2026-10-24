@@ -1,7 +1,9 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.model.LibraryMark;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.LibraryKey;
 import com.scan2play.util.SongNames;
 import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +19,13 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static com.scan2play.service.DjService.DECISION_PLAYED;
 import static com.scan2play.service.DjService.DECISION_REJECTED;
@@ -65,6 +70,13 @@ public class EveningSummaryService {
         }
     }
 
+    /**
+     * A song the AI let through that the DJ's library (V42) has no song of ({@code MISSING}) or only one of its title by another artist
+     * ({@code SIMILAR}): its name as first asked for, the votes and the requests of the evening — what to get before the next one.
+     */
+    public record LibraryGap(String name, int votes, int requests, LibraryMark mark) {
+    }
+
     /** An artist of the songs the AI let through: how many of their songs the guests asked for, and those songs' votes. */
     public record ArtistCount(String name, int songs, int votes) {
     }
@@ -100,6 +112,7 @@ public class EveningSummaryService {
     }
 
     private final SongRequestRepository songRequestRepository;
+    private final DjLibraryService libraryService;
 
     /** The party's evenings with requests, the latest first. */
     @Transactional(readOnly = true)
@@ -130,7 +143,7 @@ public class EveningSummaryService {
         return summarize(evening, requests(partyCode, evening));
     }
 
-    static Summary summarize(LocalDate evening, List<SongRequestEntity> requests) {
+    public static Summary summarize(LocalDate evening, List<SongRequestEntity> requests) {
         int played = 0;
         int waiting = 0;
         int skipped = 0;
@@ -190,6 +203,55 @@ public class EveningSummaryService {
                 waits.isEmpty() ? null : Math.round(waits.stream().mapToLong(Long::longValue).average().orElse(0)),
                 waits.isEmpty() ? null : waits.stream().mapToLong(Long::longValue).max().orElse(0),
                 requests.size() >= MAX_REQUESTS);
+    }
+
+    /**
+     * The evening's songs not in the party's library ({@link #libraryGaps(List, Map)}), by the library as it is now; empty when the
+     * party has none. One lookup for all the evening's titles.
+     */
+    @Transactional(readOnly = true)
+    public Optional<List<LibraryGap>> libraryGaps(String partyCode, List<SongRequestEntity> requests) {
+        if (libraryService.info(partyCode).isEmpty()) {
+            return Optional.empty();
+        }
+        Set<LibraryKey> keys = new HashSet<>();
+        requests.stream().filter(request -> statusOf(request) != Status.REJECTED_BY_AI)
+                .forEach(request -> keys.add(LibraryKey.of(request.getSongName())));
+        return Optional.of(libraryGaps(requests, libraryService.marks(partyCode, keys)));
+    }
+
+    /** Each request's mark by the party's library as it is now, by its id — the CSV's column; none when the party has no library. */
+    @Transactional(readOnly = true)
+    public Map<Long, LibraryMark> libraryMarks(String partyCode, List<SongRequestEntity> requests) {
+        if (libraryService.info(partyCode).isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, LibraryKey> keys = new LinkedHashMap<>();
+        requests.forEach(request -> keys.put(request.getId(), LibraryKey.of(request.getSongName())));
+        Map<LibraryKey, LibraryMark> marks = libraryService.marks(partyCode, new HashSet<>(keys.values()));
+        Map<Long, LibraryMark> byId = new LinkedHashMap<>();
+        keys.forEach((id, key) -> byId.put(id, marks.getOrDefault(key, LibraryMark.MISSING)));
+        return byId;
+    }
+
+    /**
+     * The songs the AI let through that {@code marks} says the library has not ("✗") or has only by another artist ("?"), each once
+     * — the requests of one song, by its {@link LibraryKey}, are one line with their votes added — the most wanted first.
+     */
+    static List<LibraryGap> libraryGaps(List<SongRequestEntity> requests, Map<LibraryKey, LibraryMark> marks) {
+        Map<LibraryKey, LibraryGap> gaps = new LinkedHashMap<>();
+        for (SongRequestEntity request : requests) {
+            LibraryKey key = LibraryKey.of(request.getSongName());
+            LibraryMark mark = marks.get(key);
+            if (statusOf(request) == Status.REJECTED_BY_AI || key.isEmpty() || mark == null || mark == LibraryMark.HAVE) {
+                continue;
+            }
+            gaps.merge(key, new LibraryGap(request.getSongName(), request.getVotes(), 1, mark),
+                    (had, one) -> new LibraryGap(had.name(), had.votes() + one.votes(), had.requests() + 1, had.mark()));
+        }
+        return gaps.values().stream()
+                .sorted(Comparator.comparingInt(LibraryGap::votes).reversed().thenComparing(Comparator.comparingInt(LibraryGap::requests).reversed()))
+                .toList();
     }
 
     private static <T> List<T> firstOf(List<T> list, int count) {
@@ -281,8 +343,14 @@ public class EveningSummaryService {
      * text.
      */
     public static String toCsv(List<SongRequestEntity> requests, MessageSource messages, Locale locale) {
+        return toCsv(requests, Map.of(), messages, locale);
+    }
+
+    /** The same with a column of how each request stands against the DJ's library (V42) — none when {@code marks} is empty. */
+    public static String toCsv(List<SongRequestEntity> requests, Map<Long, LibraryMark> marks, MessageSource messages, Locale locale) {
         StringBuilder csv = new StringBuilder().append(BYTE_ORDER_MARK)
-                .append(messages.getMessage("summary.csv.header", null, locale)).append("\r\n");
+                .append(messages.getMessage("summary.csv.header", null, locale))
+                .append(marks.isEmpty() ? "" : ";" + messages.getMessage("summary.csv.library", null, locale)).append("\r\n");
         for (SongRequestEntity request : requests) {
             String status = messages.getMessage("summary.csv.status." + statusOf(request).name(), null, locale);
             csv.append(String.join(";",
@@ -294,7 +362,12 @@ public class EveningSummaryService {
                     String.valueOf(request.getVotes()),
                     String.valueOf(request.getTips()),
                     cell(status),
-                    cell(request.getDjComment()))).append("\r\n");
+                    cell(request.getDjComment())));
+            if (!marks.isEmpty()) {
+                LibraryMark mark = marks.getOrDefault(request.getId(), LibraryMark.MISSING);
+                csv.append(';').append(cell(messages.getMessage("summary.csv.library." + mark.name(), null, locale)));
+            }
+            csv.append("\r\n");
         }
         return csv.toString();
     }
