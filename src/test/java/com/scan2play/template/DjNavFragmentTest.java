@@ -85,6 +85,19 @@ class DjNavFragmentTest {
         assertThat(html).doesNotContain("Queue (Dashboard)", "??", "<html", "<body");
     }
 
+    /**
+     * The panel's logo is the way to the home page (the owner, 2026-10-24: in the panel, the history, the settings and the staff it
+     * was the logo alone — no link, no hover; the demo's and the public pages' logo was one). "/" shows a logged-in DJ the home page
+     * with "Przejdź do panelu".
+     */
+    @Test
+    @DisplayName("the logo leads to the home page, as on the public pages")
+    void theLogo_leadsToTheHomePage() {
+        String html = render("panel", PL);
+
+        assertThat(html).contains("<a href=\"/\" class=\"s2p-home-logo\"", "title=\"Scan2Play — strona główna\"", "class=\"s2p-logo\"");
+    }
+
     @Test
     @DisplayName("the labels in Polish, with every message key resolved")
     void shouldRenderInPolish() {

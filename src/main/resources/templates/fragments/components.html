@@ -42,7 +42,8 @@
     <!--/* One row with our logo (2026-10-10, the design review: the logo had a row of its own under the tabs — four rows above a
          phone's queue) */-->
     <div class="d-flex align-items-center gap-2 mb-2 s2p-account-bar">
-        <div class="fs-4 fw-bold text-white me-auto s2p-min-w-0"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+        <!--/* the way to the home page, as on the public pages (the owner, 2026-10-24): "/" shows a logged-in DJ the home page */-->
+        <div class="fs-4 fw-bold text-white me-auto s2p-min-w-0"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></div>
 
         <!--/* the question names the party: a person of the staff closes the organiser's (the review, 2026-10-10) */-->
         <form id="end-party-form" th:if="${access == null or access.may('OPEN_CLOSE')}"
