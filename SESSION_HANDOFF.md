@@ -13,13 +13,17 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 ## Start here
 
-- **2026-10-24 (evening) — the state.** `main` = `dev` in content: release #147 (`6b3bbee`) deployed 14:35 UTC, SUCCESS — the
-  healthcheck `/privacy` passed before the traffic moved (the first deploys with it: #145 at 13:12, #147), no 5xx since. Today's
-  releases: #145 (the review of 2026-10-21: #140 docs, #141 S2 + P1 and the demo's limit, #142 O2, #143 U2 + U3, #144 T2 + U4 + O3
-  + Tomcat 11.0.27) and #147 (#146: the pages "Dla kogo" `/dj-weselny`, `/kluby`, `/puby`, the texts the owner's; the vibe
-  "Dowolny" without "(ocenia AI)"). Checked by the owner with curl after #145: `/` sends no `Set-Cookie`; `/images/logo.svg`
-  `public, max-age=86400`, `cf-cache-status: HIT`. Earlier on 2026-10-24 (#139, 08:54): #131 (S1, V39), #132 (C2, C3), #134,
-  #136 (`/dj/stats`, V40), #137 (the demo), #138 (`LICENSE`).
+- **2026-10-24 (evening) — the state.** `main` = `dev` in content: release #153 (`c80e2ab`) deployed 17:45 UTC, SUCCESS, no 5xx
+  since; every deploy now waits for the healthcheck `/privacy` (passing since #145). Today's releases, the last first:
+  - #153: #151 (hover: the logo that leads home turns the accent, the action button rises 2 px — not on a phone, not with
+    `prefers-reduced-motion`), #152 (`/` is the home page for a logged-in DJ too, its start buttons "Przejdź do panelu", their
+    visit not counted), #154 (the logo of the DJ's bar — panel, history, settings, staff — is that link too).
+  - #150 (16:06): #148 (`PromptBuilder`, R1), #149 (S1 b live: an insult or a message instead of a song is a "mood").
+  - #147 (14:35): #146 (the pages "Dla kogo" `/dj-weselny`, `/kluby`, `/puby`; the vibe "Dowolny" without "(ocenia AI)").
+  - #145 (13:12): the review of 2026-10-21 — #140 docs, #141 S2 + P1 and the demo's limit, #142 O2, #143 U2 + U3, #144 T2 + U4 +
+    O3 + Tomcat 11.0.27. Checked by the owner with curl: `/` sends no `Set-Cookie`; `/images/logo.svg` `public, max-age=86400`,
+    `cf-cache-status: HIT`.
+  - #139 (08:54): #131 (S1, V39), #132 (C2, C3), #134, #136 (`/dj/stats`, V40), #137 (the demo), #138 (`LICENSE`).
 - **The repository is public** since 2026-10-24 (`LICENSE`: viewing only). GitHub Actions have no minute limit now; CI
   runs on PRs and on pushes to `main` only (O3, #144). Nothing secret in the repo, the docs or a commit — ever.
 - **Railway (checked 2026-10-24, read only):** the sleep is off for `scan2play` and `Postgres` (the nightly jobs and the demo's
@@ -38,14 +42,17 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 A. **The review of 2026-10-21 — what is left** (done and released: S1 a #131, C2/C3 #132, S2 + P1 #141, O2 #142, U2 + U3 #143,
    T2 + U4 + O3 + Tomcat #144; the details: the PRs and PROJECT_CONTEXT).
-   - **S1 b + R1:** R1 done in #148 (`PromptBuilder`). S1 b live with the PR after #148 (2026-10-24): an insult or a message is a
-     "mood" — the owner's `GeminiComparison offensive`: the messages kept out 12/12 (before 5/12, twice with a made-up song),
-     83 ok / 1 WRONG (before 75 / 9), 1.4 s. Left to watch: a sarcastic comment may be sharp with the guest (style SARCASTIC);
-     "somos hermanos" with the note "Salsa" accepted once of two (chance, the rules of the genre did not change).
+   - **S1 b + R1:** done — R1 #148 (`PromptBuilder`), S1 b #149, live since #150: an insult or a message is a "mood" (the owner's
+     `GeminiComparison offensive`: the messages kept out 12/12, before 5/12 twice with a made-up song; 83 ok / 1 WRONG, before
+     75 / 9; 1.4 s). Left to watch: a sarcastic comment may be sharp with the guest (style SARCASTIC); "somos hermanos" with the
+     note "Salsa" accepted once of two (chance — the genre's rules did not change).
+   - **R2:** done in the PR after #154 — the rule on comments in `AGENTS.md` (and its Copilot copy): why it is so now in the
+     code; who and when in `docs/history/`, the PR, the commit. Tidy such comments when touching them anyway.
    - **C1:** the nightly cleanups (requests waiting more than 24 h cleared, the 30-day purge, old invitations) also run after a
      start. Not urgent: the sleep is off. It touches only what is a day old — never a party's queue of tonight.
-   - **R2** (a rule on comments in `AGENTS.md`), **O4's google-genai 1.78** (a try on the real Gemini, with the owner's yes).
-B. **For the owner (not code):** switch the notifications on in your own panel (the account `ADMIN_GOOGLE_ID`) for the alarm of O2;
+   - **O4's google-genai 1.78:** a try on the real Gemini first (the owner's local agent, `GeminiComparison`, as for S1 b).
+B. **For the owner (not code):** try S1 b on a test party of your own (not the demo, which asks no AI): "pan młody to frajer"
+   comes back to the field asking for a title; switch the notifications on in your own panel (the account `ADMIN_GOOGLE_ID`) for the alarm of O2;
    request the indexing of `/dj-weselny`, `/kluby`, `/puby` in Search Console; Cloudflare's "Managed robots.txt" (U4) if `/dj/`
    should be disallowed for every robot. Before `PLANS_ENFORCE`: reword the wedding page's search-engine description (it names
    "lista pary młodej", a Pro feature, beside "Za darmo").
@@ -76,8 +83,12 @@ C. **Search Console (2026-10-24, the owner's screenshots):** a 404 for `/oauth2/
    ideas raised: a "do not play" list of the couple / the DJ checked before the AI; a link for the couple to fill in their
    must-play / do-not-play list and the vibe before the wedding; parties planned ahead (several, each with its own QR code).
    Decided against (2026-10-03): "play later" without rejecting; a sound / a count in the tab title on a new request.
-4. **The Gemini comparison** — last run 2026-10-15 for `gemini-3.6-flash` (level low: 64 ok / 2 wrong, 1.6 s on average,
-   ~$2.1 per 1000; the review of 2026-10-14, "Status poprawek"). `GeminiComparison` stays for the next model or prompt change. The
+   Left for later (the owner, 2026-10-24): an AI assistant's chat in the panel for the DJ's questions — Gemini with the guide and
+   the FAQ as its only source, ~1 grosz a question (less with context caching), a daily limit per DJ, a candidate for Pro; first
+   see what DJs ask through the contact form (a search in the guide costs nothing and makes nothing up).
+4. **The Gemini comparison** — last full run 2026-10-15 for `gemini-3.6-flash` (level low: 64 ok / 2 wrong, 1.6 s on average,
+   ~$2.1 per 1000; the review of 2026-10-14, "Status poprawek"); 2026-10-24 the mode `offensive` for S1 b (A above), run by the
+   owner's local agent with the key from IntelliJ's run configuration. `GeminiComparison` stays for the next model or prompt change. The
    key's limits (Tier 1): 1 000 requests a minute, 10 000 a day — ~30–60 weddings a day.
 5. **Before `PLANS_ENFORCE`:** the terms (the staff, the hosts' link, the plan Pro) are the owner's text; then the plans can be
    enforced (PROJECT_CONTEXT 4.1 / 13).
