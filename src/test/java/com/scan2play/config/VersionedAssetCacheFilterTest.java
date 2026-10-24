@@ -15,7 +15,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * The scripts and styles under a deploy's version are kept for a year; nothing else is ({@link VersionedAssetCacheFilter}). The
+ * The scripts and styles under a deploy's version are kept for a year, Bootstrap and the images a day; nothing else is
+ * ({@link VersionedAssetCacheFilter}). The
  * version as Railway sets it — a commit — in place of the local "dev" (for that one, see {@link #theLocalVersionIsNeverKept}).
  */
 @WebMvcTest(value = HomeController.class, properties = "spring.web.resources.chain.strategy.fixed.version=0123abcd")
@@ -40,7 +41,7 @@ class VersionedAssetCacheFilterTest {
     }
 
     @Test
-    @DisplayName("an address without the version, an old deploy's one, a page, an image: Spring Security's no-store as before")
+    @DisplayName("an address without the version, an old deploy's one, a page: Spring Security's no-store as before")
     void everythingElse_isNotKept() throws Exception {
         mockMvc.perform(get("/js/dashboard/main.js")).andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
@@ -49,6 +50,25 @@ class VersionedAssetCacheFilterTest {
         mockMvc.perform(get("/")).andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
         mockMvc.perform(get("/0123abcd/images/icon-192.png"))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
+    }
+
+    /**
+     * The review of 2026-10-21, P1: Bootstrap (31 KB gzip), the logo, the icons and the landing page's pictures went with
+     * {@code no-store} — every phone fetched them again on every page, through Railway. Their addresses carry no version, so a day,
+     * not a year: a new Bootstrap or picture reaches everyone by the next day (Cloudflare's copy: purge it after such a change).
+     */
+    @Test
+    @DisplayName("Bootstrap and the images: kept for a day")
+    void bootstrapAndTheImages_areKeptForADay() throws Exception {
+        for (String path : new String[]{"/webjars/bootstrap/css/bootstrap.min.css", "/webjars/bootstrap/js/bootstrap.bundle.min.js",
+                "/images/logo.svg", "/images/icon-192.png", "/images/landing/guest-pl.webp", "/favicon.ico"}) {
+            mockMvc.perform(get(path)).andExpect(status().isOk())
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "public, max-age=86400"))
+                    .andExpect(header().doesNotExist(HttpHeaders.PRAGMA))
+                    .andExpect(header().doesNotExist(HttpHeaders.EXPIRES));
+        }
+        mockMvc.perform(get("/images/no-such-image.png")).andExpect(status().isNotFound())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
     }
 

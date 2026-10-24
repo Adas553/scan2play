@@ -335,7 +335,7 @@ class GuestPageRenderTest {
                 .doesNotContain("action=\"/join/", "href=\"/dj/dashboard\"", "href=\"/start\"", "??");
     }
 
-    /** "👥 Jestem z obsługi" on the landing page (V30): folded, a form to POST /join; open with a note after a link that did not work. */
+    /** "👥 Jestem z obsługi" on the landing page (V30): folded, a form to GET /join (no session, review 2026-10-21 S2); open with a note after a link that did not work. */
     @Test
     void theLandingPage_letsTheStaffPasteTheirLink() {
         String[] pages = new String[2];
@@ -355,7 +355,7 @@ class GuestPageRenderTest {
         assertThat(pages[0]).doesNotContain("??");
         // the owner, 2026-10-18 ("czy ten przycisk jest profesjonalny"): words a newcomer knows, no "→" on what only unfolds, and
         // under the last "Zbieraj prośby gości" — not floating between the hero and the steps
-        assertThat(pages[0]).contains("id=\"staffLogin\"", ">Masz link z zaproszeniem od DJ-a? Wklej go tutaj<", "action=\"/join\"",
+        assertThat(pages[0]).contains("id=\"staffLogin\"", ">Masz link z zaproszeniem od DJ-a? Wklej go tutaj<", "action=\"/join\" method=\"get\"",
                 "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"", "obsługi imprezy? Dołącz");
         assertThat(pages[0].indexOf("id=\"staffLogin\"")).as("under the final start, above the footer")
                 .isGreaterThan(pages[0].indexOf("id=\"landingFinal\"")).isLessThan(pages[0].indexOf("<footer"));

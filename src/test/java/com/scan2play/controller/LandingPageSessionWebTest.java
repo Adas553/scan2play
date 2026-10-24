@@ -55,6 +55,19 @@ class LandingPageSessionWebTest {
         assertThat(result.getResolvedException()).isNull();
         String html = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(result.getResponse().getContentAsByteArray().length).as("longer than the 8 KB it was cut at").isGreaterThan(8192);
-        assertThat(html).contains("id=\"staffLoginForm\"", "name=\"_csrf\"", "<footer", "</html>");
+        assertThat(html).contains("id=\"staffLoginForm\"", "<footer", "</html>");
+    }
+
+    /**
+     * The review of 2026-10-21, S2: the landing page made a session — a row in {@code spring_session} for 30 minutes — for every
+     * visitor, crawlers and monitors too, only for the CSRF token of its invitation form. That form is a GET now: no token, no session.
+     */
+    @Test
+    void aFirstVisit_makesNoSession() throws Exception {
+        MvcResult result = mockMvc.perform(get("/").header("Accept-Language", "pl-PL")).andExpect(status().isOk()).andReturn();
+        assertThat(result.getResponse().getHeaders("Set-Cookie")).as("no session cookie")
+                .noneMatch(cookie -> cookie.startsWith("SESSION="));
+        String html = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("method=\"get\" class=\"mt-3\" id=\"staffLoginForm\"").doesNotContain("name=\"_csrf\"");
     }
 }

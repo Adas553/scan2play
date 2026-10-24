@@ -188,21 +188,23 @@ class StaffControllerTest {
         verify(sessionHelper).note(session, new DjSessionHelper.Note("dashboard.staff.old_link", null, true));
     }
 
-    /** "Masz zaproszenie…? Dołącz →" on the landing page: a party's link goes to Google's login; anything else back, before a login. */
+    /**
+     * "Masz link z zaproszeniem…?" on the landing page: a party's link opens its invitation ("Dołączyć?", the login from there);
+     * anything else back, before a login. A GET that keeps nothing (the review of 2026-10-21, S2: the landing page needs no session).
+     */
     @Test
-    void theLinkPastedOnTheLandingPage_goesToTheLogin_orBackWithANote() throws Exception {
+    void theLinkPastedOnTheLandingPage_opensItsInvitation_orBackWithANote() throws Exception {
         MockHttpSession session = new MockHttpSession();
-        mockMvc.perform(post("/join").param("link", " https://www.scan2play.com.pl/join/" + TOKEN + " ").session(session))
-                .andExpect(redirectedUrl("/start"));
-        assertThat(session.getAttribute(StaffController.SESSION_PENDING_INVITATION)).isEqualTo(TOKEN);
+        mockMvc.perform(get("/join").param("link", " https://www.scan2play.com.pl/join/" + TOKEN + " ").session(session))
+                .andExpect(redirectedUrl("/join/" + TOKEN));
+        assertThat(session.getAttribute(StaffController.SESSION_PENDING_INVITATION)).as("kept by the invitation page, not here").isNull();
 
         for (String bad : new String[]{"https://www.scan2play.com.pl/join/old-token", "not a link at all ?", ""}) {
-            MockHttpSession other = new MockHttpSession();
-            mockMvc.perform(post("/join").param("link", bad).session(other)).andExpect(redirectedUrl("/?staffLink=invalid#staffLogin"));
-            assertThat(other.getAttribute(StaffController.SESSION_PENDING_INVITATION)).as(bad).isNull();
+            mockMvc.perform(get("/join").param("link", bad)).andExpect(redirectedUrl("/?staffLink=invalid#staffLogin"));
         }
-        mockMvc.perform(post("/join").param("link", "https://www.scan2play.com.pl/p/AB12C").session(new MockHttpSession()))
+        mockMvc.perform(get("/join").param("link", "https://www.scan2play.com.pl/p/AB12C"))
                 .andExpect(redirectedUrl("/?staffLink=guests#staffLogin"));
+        mockMvc.perform(get("/join")).andExpect(redirectedUrl("/?staffLink=invalid#staffLogin"));
     }
 
     /** The link says the role it was made with (V33): "Podgląd", or the permissions ticked one by one. */
