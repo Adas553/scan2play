@@ -33,7 +33,7 @@ permission to use, copy or build on the code). Nothing secret may be committed �
 | Layer            | Technology |
 |------------------|------------|
 | Language         | Java 21 |
-| Framework        | Spring Boot 4.0.8 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat raised to 11.0.26 by `tomcat.version` in `pom.xml` (security fixes after the parent's 11.0.24 — review 2026-10-14 W15; drop it once the parent manages 11.0.26 or later) |
+| Framework        | Spring Boot 4.0.8 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat raised to 11.0.27 by `tomcat.version` in `pom.xml` (security fixes after the parent's 11.0.24 — review 2026-10-14 W15, review 2026-10-21 O4; drop it once the parent manages 11.0.27 or later) |
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
 | AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.6-flash` (thinking level low) |
@@ -1008,8 +1008,9 @@ the owner's choice). Variables now: `GOOGLE_AI_API_KEY`, `GOOGLE_CLIENT_ID` / `_
 `SPRING_JPA_HIBERNATE_DDL_AUTO` removed. Since: `VAPID_*`, `CSP_ENFORCE`, `ADMIN_GOOGLE_ID` (2026-10-24). No `TZ`: the JVM is UTC.
 **Neither service sleeps** (Railway's serverless switched off for `scan2play` and `Postgres`, checked 2026-10-24): a sleeping app
 ran no `@Scheduled` job — the nightly clearing and purges (Section 4.1) and the demo's reset (5.5) — and an app that woke before
-its database failed once at start. **No Healthcheck Path** is set yet (2026-10-24): Railway switches traffic to a new deploy when
-its process is up, not when the app answers. **The database** is reachable only on Railway's private network (its public TCP
+its database failed once at start. **Healthcheck Path `/privacy`** (2026-10-24): Railway switches traffic to a new deploy only when
+it answers 200 there — a static public page, no database, no session, not counted in `site_counter` (`/` would count a visit,
+and Railway allows no dot in the path, so not `/robots.txt`). Keep it public and light. **The database** is reachable only on Railway's private network (its public TCP
 proxy removed 2026-10-21). After the incident Railway reported on 2026-10-21 the owner replaced the Gemini key, the Google OAuth
 secret and the database's password. The workspace has a spending limit of 15 USD a month (an alert at 10 USD). Later deploys: 2026-10-06 the notifications (PR #9, V21) and the
 versioned script addresses (PR #10); 2026-10-07 PR #11 via #12 (`a06e4be`: clear the history, the comment style, V22 and V23
@@ -1163,7 +1164,8 @@ GuestQueueService          → DjService
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
   Chrome, with a Python stand-in server that the scenarios configure; 108 scenarios. The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
-- **CI** (GitHub Actions, every push to `dev` / `main` and every PR): `unit-tests.yml` (also checks that
+- **CI** (GitHub Actions, every PR and every push to `main` — not to `dev`: its changes come by PRs that ran them on the same
+  tree; the review of 2026-10-21, O3): `unit-tests.yml` (also checks that
   `.github/copilot-instructions.md` is `AGENTS.md`), `db-tests.yml` (`postgres:18`), `browser-tests.yml` — none for a change of the documentation alone (`*.md`, `docs/`; the unit
   tests still for `AGENTS.md` and its Copilot copy), and the browser tests only for what they render or run (`src/main` but the
   migrations and the repositories, the render tests, the scenarios, `pom.xml`; the owner, 2026-10-21: the month's 2,000 free minutes
