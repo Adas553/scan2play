@@ -443,6 +443,8 @@ th[data-sort].sort-desc::after {
 @media (max-width: 991.98px) { .s2p-landing-lede { margin-inline: auto; } }
 .s2p-landing-cta { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
 @media (min-width: 992px) { .s2p-landing-cta { justify-content: flex-start; } }
+/* a phone: the buttons one under another, all of one width (2026-10-24: three widths, stacked, looked untidy) */
+@media (max-width: 575.98px) { .s2p-landing-cta .btn { flex: 1 1 100%; } }
 .s2p-landing-free { color: var(--s2p-text-muted); font-size: 0.9rem; margin: 0.9rem 0 0; }
 
 /* The devices: a laptop (a frame and its base) and a phone over its lower left. Sized in % of the figure, so they scale together. */

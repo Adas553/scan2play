@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
 <head>
     <meta charset="UTF-8">
-    <title th:text="#{dashboard.title}">DJ Dashboard - Scan2Play</title>
+    <title th:text="${demo == true} ? #{demo.title} : #{dashboard.title}">DJ Dashboard - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
@@ -31,15 +31,32 @@
     </th:block>
     <!--/* The demo (DemoController): no DJ's bar — what this is, and where to go from here: the guest's page and the TV of the demo party
          (a request sent there shows here, to this visitor alone), or one's own party */-->
-    <div th:if="${demo == true}" id="demoBar" class="alert alert-info d-flex flex-wrap align-items-center gap-2 mb-3" role="note">
-        <span class="w-100" th:text="#{demo.bar.text}">This is a demo: an example party, nothing here is saved.</span>
-        <a href="/" id="demoHome" class="btn btn-sm btn-outline-light" th:text="#{demo.bar.home}">← Home page</a>
-        <a th:href="@{/p/{code}(code=${partyCode})}" href="/p/DEMO" target="_blank" rel="noopener" id="demoGuest" class="btn btn-sm btn-light"
-           th:text="#{demo.bar.guest}">📱 Open the guest page</a>
-        <a th:href="@{/p/{code}/tv(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}" href="/p/DEMO/tv" target="_blank" rel="noopener"
-           id="demoTv" class="btn btn-sm btn-outline-light" th:text="#{demo.bar.tv}">📺 TV screen</a>
-        <a href="/start" id="demoStart" class="btn btn-sm btn-action ms-auto" th:text="#{demo.bar.start}">Start your own party →</a>
+    <th:block th:if="${demo == true}">
+    <!--/* our logo, as the panel's heading row has it: the way home (the owner, 2026-10-24: the demo began with a bar, no logo) */-->
+    <div id="demoHead" class="d-flex align-items-center gap-2 mb-3">
+        <a href="/" id="demoHome" class="fs-4 fw-bold text-white text-decoration-none me-auto s2p-min-w-0"
+           th:title="#{demo.bar.home}" th:attr="aria-label=#{demo.bar.home}"><th:block th:replace="~{fragments/components :: logo}"></th:block></a>
+        <span class="badge text-bg-info">DEMO</span>
     </div>
+    <!--/* a phone gets the short line and the buttons two by two, "start your own" across (2026-10-24: four lines and uneven rows) */-->
+    <div id="demoBar" class="alert alert-info mb-3" role="note">
+        <p class="mb-2"><span class="d-none d-sm-inline" th:text="#{demo.bar.text}">This is a demo: an example party, nothing here is saved.</span><span
+                class="d-sm-none" th:text="#{demo.bar.text.short}">Demo: an example party, nothing here is saved.</span></p>
+        <div class="row g-2">
+            <div class="col-6 col-sm-auto">
+                <a th:href="@{/p/{code}(code=${partyCode})}" href="/p/DEMO" target="_blank" rel="noopener" id="demoGuest"
+                   class="btn btn-sm btn-light w-100" th:text="#{demo.bar.guest}">📱 Guest page</a>
+            </div>
+            <div class="col-6 col-sm-auto">
+                <a th:href="@{/p/{code}/tv(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}" href="/p/DEMO/tv" target="_blank"
+                   rel="noopener" id="demoTv" class="btn btn-sm btn-outline-light w-100" th:text="#{demo.bar.tv}">📺 TV screen</a>
+            </div>
+            <div class="col-12 col-sm-auto ms-sm-auto">
+                <a href="/start" id="demoStart" class="btn btn-sm btn-action w-100" th:text="#{demo.bar.start}">Start your own party →</a>
+            </div>
+        </div>
+    </div>
+    </th:block>
 
     <!--/* What happened on the way here (V30, V32): "Dołączono do obsługi…", "Organizator … usunął Twój dostęp" — one message at a
          time, kept in the session until shown (DjSessionHelper.Note). */-->
