@@ -25,9 +25,10 @@ class VibeMessagesTest {
                 assertThat(messages.getMessage("vibe." + vibe.name(), null, null, locale)).as(vibe + " in " + locale).isNotBlank();
             }
         }
-        // "Any": no genre, the AI judges (the guests pick no vibe)
-        assertThat(messages.getMessage("vibe.ANY", null, Locale.ENGLISH)).isEqualTo("Any (the AI judges)");
-        assertThat(messages.getMessage("vibe.ANY", null, Locale.forLanguageTag("pl"))).isEqualTo("Dowolny (ocenia AI)");
+        // "Any": no genre (the guests pick no vibe). No "(ocenia AI)" beside it: the AI judges by every vibe, and the note read as if
+        // only this one (the owner, 2026-10-24)
+        assertThat(messages.getMessage("vibe.ANY", null, Locale.ENGLISH)).isEqualTo("Any");
+        assertThat(messages.getMessage("vibe.ANY", null, Locale.forLanguageTag("pl"))).isEqualTo("Dowolny");
         assertThat(messages.getMessage("vibe.LATINO", null, Locale.forLanguageTag("pl"))).contains("salsa", "bachata", "reggaeton");
     }
 

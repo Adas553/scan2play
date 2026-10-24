@@ -335,7 +335,7 @@ class DashboardPageRenderTest {
         assertThat(html).as("the vibe note (V16) and who plays (V17): one form, one \"Zapisz\"")
                 .contains("action=\"/dj/dashboard/party-words\"", "id=\"vibeNoteInput\"", "id=\"djNameInput\"", ">Opis klimatu<", ">Kto gra<")
                 .doesNotContain("action=\"/dj/dashboard/dj-name\"", "action=\"/dj/dashboard/vibe-note\"", "(widzą goście)");
-        assertThat(html).contains("Dowolny (ocenia AI)").doesNotContain("Goście wybierają");
+        assertThat(html).contains(">Dowolny<").doesNotContain("Goście wybierają", "ocenia AI");
         assertThat(html).contains("Gość: „ta o Baśce, co ją Wilki grają”");
         assertThat(html.split(">⚠ Sprawdź<", -1)).as("only the song with none of the guest's words").hasSize(2);
         // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)
