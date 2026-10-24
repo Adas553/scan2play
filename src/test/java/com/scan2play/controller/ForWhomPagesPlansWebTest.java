@@ -82,4 +82,14 @@ class ForWhomPagesPlansWebTest {
         assertThat(faq).contains("Za darmo masz wszystko, czego potrzeba na imprezę. Pro dodaje")
                 .doesNotContain("Nic. Scan2Play jest za darmo");
     }
+
+    /** What search engines show beside "Za darmo" is what Free has: the couple's list is Pro. */
+    @Test
+    void theWeddingDescription_promisesNothingOfPro() throws Exception {
+        String head = page("/dj-weselny").split("</head>")[0];
+        String english = page("/dj-weselny?lang=en").split("</head>")[0];
+
+        assertThat(head).contains("Za darmo").doesNotContain("pary młodej");
+        assertThat(english).contains("Free").doesNotContain("couple");
+    }
 }

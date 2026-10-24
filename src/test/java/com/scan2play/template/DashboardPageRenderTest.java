@@ -132,6 +132,8 @@ class DashboardPageRenderTest {
         when(sessionHelper.takeNote(any())).thenReturn(java.util.Optional.ofNullable(note));
         when(djService.getDashboardQueue(PARTY)).thenReturn(queue);
         when(djService.dedicationsOf(queue)).thenReturn(dedications);
+        when(djService.libraryMarksOf(PARTY, queue)).thenReturn(libraryMarks);
+        when(djService.libraryOf(PARTY)).thenReturn(library);
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
@@ -398,6 +400,10 @@ class DashboardPageRenderTest {
 
     /** The guests' dedications the dashboard's queue shows (V38), by the song's id: none, unless a test gives them. */
     private static Map<Long, List<com.scan2play.entity.SongRequestDedicationEntity>> dedications = Map.of();
+    /** The queue's marks of the DJ's library (V41), by the song's id: none, unless a test gives them. */
+    private static Map<Long, Boolean> libraryMarks = Map.of();
+    /** The party's library (V41): none, unless a test gives one. */
+    private static java.util.Optional<com.scan2play.service.DjLibraryService.Info> library = java.util.Optional.empty();
 
     private static com.scan2play.entity.SongRequestDedicationEntity dedication(long songId, String text) {
         return com.scan2play.entity.SongRequestDedicationEntity.builder().songRequestId(songId).text(text).checked(true)
@@ -512,7 +518,8 @@ class DashboardPageRenderTest {
 
         assertThat(html).contains(">Współorganizator<", ">Ustawienia<", "id=\"partyCard\"", "data-settings-row=\"limits\"",
                         "data-settings-row=\"hosts\"", "data-settings-row=\"device\"", "data-open-settings")
-                .doesNotContain("data-settings-row=\"staff\"", "data-settings-row=\"links\"", "action=\"/dj/dashboard/tip-link\"", "id=\"staffMenuLink\"",
+                .doesNotContain("data-settings-row=\"staff\"", "data-settings-row=\"links\"", "data-settings-row=\"library\"",
+                        "action=\"/dj/dashboard/tip-link\"", "id=\"staffMenuLink\"",
                         "action=\"/dj/delete-account\"");
     }
 
@@ -883,5 +890,64 @@ class DashboardPageRenderTest {
         offParty.setDedicationsOn(false);
         assertThat(renderDashboard(offParty, List.of(), PL)).contains("value=\"false\" selected=\"selected\">Wyłączone<");
         assertThat(renderDashboard(party(), List.of(), Locale.ENGLISH)).contains(">Guests’ dedications<", ">On<", ">Off<");
+    }
+
+    /**
+     * The DJ's library (V41): each waiting song "✓ Masz" or "✗ Nie masz" under its name, with what it means on hover; a song the
+     * service has no mark for (no library) none. Written for the browser tests as {@code dashboard-library.html}.
+     */
+    @Test
+    void theLibrary_marksEachSong() throws IOException {
+        libraryMarks = Map.of(1L, true, 2L, false);
+        try {
+            String html = renderDashboard(party(), List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan"), song(3, "ABBA - SOS")), PL);
+
+            assertWhatTheScriptsNeed(html);
+            assertThat(rowFor(html, 1)).contains("data-library=\"have\"", "text-bg-success", ">✓ Masz<", "title=\"Ten utwór jest w Twojej bibliotece\"");
+            assertThat(rowFor(html, 2)).contains("data-library=\"missing\"", ">✗ Nie masz<", "title=\"Tego utworu nie ma w Twojej bibliotece");
+            assertThat(rowFor(html, 3)).doesNotContain("data-library", "s2p-library");
+            write("dashboard-library.html", html);
+        } finally {
+            libraryMarks = Map.of();
+        }
+    }
+
+    @Test
+    void withoutALibrary_noSongIsMarked() {
+        assertThat(renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL)).doesNotContain("data-library", "s2p-library");
+    }
+
+    /** The row of the song {@code id} in the queue, up to the next row. */
+    private static String rowFor(String html, long id) {
+        int start = html.indexOf("data-song-id=\"" + id + "\"");
+        int end = html.indexOf("</tr>", start);
+        return html.substring(start, end);
+    }
+
+    /** "Więcej" has the DJ's library (V41) too: how many songs, or that none was uploaded; the way to its card. */
+    @Test
+    void theRowOfTheLibrary_saysItsSongs() {
+        assertThat(rowOf(renderDashboard(party(), List.of(), PL), "library"))
+                .contains("href=\"/dj/settings?party=" + PARTY + "#libraryCard\"", ">Twoja biblioteka<", ">Niewgrana<");
+
+        library = java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(1234,
+                com.scan2play.service.DjLibraryParser.Format.REKORDBOX, java.time.Instant.now()));
+        try {
+            assertThat(rowOf(renderDashboard(party(), List.of(), PL), "library")).contains(">Utworów: 1\u00A0234<");
+            assertThat(rowOf(renderDashboard(party(), List.of(), Locale.ENGLISH), "library")).contains(">Songs: 1,234<");
+        } finally {
+            library = java.util.Optional.empty();
+        }
+    }
+
+    /** Without Pro (V35): the row stays for the organiser with "PRO" by its name and no state, as the other Pro rows. */
+    @Test
+    void theRowOfTheLibrary_withoutPro_saysPro() {
+        PartySettingsEntity party = party();
+        String html = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, com.scan2play.service.Plans.enforced());
+        assertThat(rowOf(html, "library")).contains("class=\"s2p-pro\">PRO<", "class=\"s2p-row-state\"></span>")
+                .doesNotContain("Niewgrana");
     }
 }

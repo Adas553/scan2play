@@ -13,7 +13,9 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 ## Start here
 
-- **2026-10-24 (evening) — the state.** `dev` is ahead of `main` by #155 (R2) and #156 (C1) — in the release PR after #156. Before them, release #153 (`c80e2ab`) deployed 17:45 UTC, SUCCESS, no 5xx
+- **2026-10-24 (late evening) — the state.** Released in #158 (deployed 18:40 UTC, SUCCESS, no 5xx): R2 (#155), C1 (#156), the
+  handoff (#157). In `dev`, not released: #159 (the wedding page's search description without the couple's list); open: the PR of
+  **the DJ's library** (V41, Pro — below, item 3). Before them, release #153 (`c80e2ab`) deployed 17:45 UTC, SUCCESS, no 5xx
   since; every deploy now waits for the healthcheck `/privacy` (passing since #145). Today's releases, the last first:
   - #153: #151 (hover: the logo that leads home turns the accent, the action button rises 2 px — not on a phone, not with
     `prefers-reduced-motion`), #152 (`/` is the home page for a logged-in DJ too, its start buttons "Przejdź do panelu", their
@@ -58,8 +60,8 @@ A. **The review of 2026-10-21 — what is left** (done and released: S1 a #131, 
 B. **For the owner (not code):** try S1 b on a test party of your own (not the demo, which asks no AI): "pan młody to frajer"
    comes back to the field asking for a title; switch the notifications on in your own panel (the account `ADMIN_GOOGLE_ID`) for the alarm of O2;
    request the indexing of `/dj-weselny`, `/kluby`, `/puby` in Search Console; Cloudflare's "Managed robots.txt" (U4) if `/dj/`
-   should be disallowed for every robot. Before `PLANS_ENFORCE`: reword the wedding page's search-engine description (it names
-   "lista pary młodej", a Pro feature, beside "Za darmo").
+   should be disallowed for every robot. (The wedding page's search description no longer names the
+   couple's list, a Pro feature, beside "Za darmo" — the PR after #158.)
 C. **Search Console (2026-10-24, the owner's screenshots):** a 404 for `/oauth2/authorization/google` (last crawled 2026-07-23 —
    a login link, disallowed in `robots.txt`; nothing to fix); `/privacy`, `/terms`, their `?lang=en` and `/jak-to-dziala?lang=en`
    not crawled yet; `/jak-to-dziala` crawled, not indexed — Google's own pace for a young site. The sleep (until 2026-10-24) may
@@ -81,8 +83,14 @@ C. **Search Console (2026-10-24, the owner's screenshots):** a 404 for `/oauth2/
    **DJ's branding on the guest page**: the profiles are built (2026-10-07, the history 2026-10-16); left: **the DJ's logo** (small,
    re-encoded on the server to PNG, kept in the database, served from our address — the CSP needs no change; the privacy policy
    to update). A candidate "premium" feature.
-3. **Ideas, only if the DJs ask:** the DJ's library (an export from rekordbox / Serato / M3U) → "✓ you have it" beside each request,
-   a lyric matched to the version the DJ has, "the DJ does not have it" at once, a list of what guests asked for and the DJ lacks;
+3. **The DJ's library — built 2026-10-24 (V41, Pro; the owner: M3U and rekordbox XML, the ✓ / ✗ mark only):** "Twoja biblioteka" in
+   the settings (the organiser alone) takes a rekordbox collection (File → Export Collection in xml format) or an M3U / M3U8 playlist
+   (≤ 50 000 tracks, ≤ 64 MB); each waiting request then shows "✓ Masz" or "✗ Nie masz" (`SongNames.libraryKey`: no case, accents,
+   punctuation, "(Radio Edit)", "feat. X"). To try it without a library of your own: the files of `src/test/resources/library/`
+   (`rekordbox.xml`, `playlist.m3u8`) — upload one, ask a guest's request for "Wilki - Baśka" (✓) and one not there (✗); or a free
+   rekordbox / Mixxx with a few mp3 files, exported. Left, if DJs ask: Serato's CSV, Traktor's NML, a looser match (`pg_trgm`), "the
+   DJ does not have it" to the guest, a list of what was asked and is missing.
+   **Ideas, only if the DJs ask:** a lyric matched to the version the DJ has (by the library);
    (notifications on the DJ's phone: built 2026-10-06, see the history 2026-10-16 — a store app only if Web Push is not enough). Other
    ideas raised: a "do not play" list of the couple / the DJ checked before the AI; a link for the couple to fill in their
    must-play / do-not-play list and the vibe before the wedding; parties planned ahead (several, each with its own QR code).

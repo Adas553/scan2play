@@ -15,6 +15,8 @@ import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
+import com.scan2play.model.PlanFeature;
+import com.scan2play.service.DjLibraryService;
 import com.scan2play.util.SongList;
 import com.scan2play.util.Texts;
 import com.scan2play.util.Times;
@@ -36,6 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -175,9 +178,15 @@ public class DjDashboardController {
         List<SongRequestEntity> queue = djService.getDashboardQueue(partyCode);
         model.addAttribute(HISTORY, queue);
         model.addAttribute(DEDICATIONS, djService.dedicationsOf(queue));   // the guests' dedications under their songs (V38)
+        model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, queue));   // "✓" / "✗" by the DJ's library (V41)
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
 
         return "dashboard";
+    }
+
+    /** The queue's marks of the DJ's library (V41): only with the plan that has it — without Pro the library waits, unmarked. */
+    private Map<Long, Boolean> libraryMarks(PartySettingsEntity settings, List<SongRequestEntity> songs) {
+        return planService.allows(settings, PlanFeature.LIBRARY) ? djService.libraryMarksOf(settings.getPartyCode(), songs) : Map.of();
     }
 
     /**
@@ -205,6 +214,10 @@ public class DjDashboardController {
         String partyCode = settings.getPartyCode();
         if (owner) {
             model.addAttribute(STAFF, partyStaffService.staffOf(partyCode));
+            // the DJ's library (V41): the organiser's card and its row in "Więcej" alone
+            Optional<DjLibraryService.Info> library = djService.libraryOf(partyCode);
+            model.addAttribute(LIBRARY_TRACKS, library.map(DjLibraryService.Info::tracks).orElse(null));
+            model.addAttribute(LIBRARY_UPLOADED, library.map(info -> Times.day(info.uploadedAt())).orElse(null));
         }
         // what the organiser's plan has (V35): the cards of a feature without Pro say so to the organiser, in place of their form;
         // what the party works with — the comment style, the guests' limits — is the plan's (the saved values wait for Pro)
@@ -440,8 +453,11 @@ public class DjDashboardController {
         PartySettingsEntity planned = planService.asPlanned(settings);
         PlanService.View plan = planService.view(settings, access.owner());
         String fingerprint = djService.getQueueFingerprint(partyCode);
+        // a new library (V41) marks the same queue anew: its upload's moment is part of the ETag (only with the plan that shows marks)
+        String library = plan.allows("LIBRARY") ? djService.libraryOf(partyCode)
+                .map(info -> "-l" + Long.toHexString(info.uploadedAt().toEpochMilli())).orElse("") : "";
         String wanted = (planned.getHostWanted() == null ? "" : "-w" + Integer.toHexString(planned.getHostWanted().hashCode()))
-                + (plan.allows("TIPS") ? "" : "-f");
+                + (plan.allows("TIPS") ? "" : "-f") + library;
         String etag = "\"q-" + fingerprint + wanted + "\"";
 
         String ifNoneMatch = request.getHeader("If-None-Match");
@@ -458,6 +474,7 @@ public class DjDashboardController {
         List<SongRequestEntity> waiting = djService.getWaiting(partyCode);
         model.addAttribute(HISTORY, waiting);
         model.addAttribute(DEDICATIONS, djService.dedicationsOf(waiting));
+        model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, waiting));
         model.addAttribute(WANTED_SONGS, SongList.of(planned.getHostWanted()));
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)

@@ -248,6 +248,17 @@ same address again changes the role and gives it 30 days again —, index by `em
 `StaffInvitationEntity.MAX_AGE_DAYS` = 30 days: an older one counts for nothing (every read takes `invited_at` after now − 30 days) and
 `StaffInvitationService.purgeOldInvitations` deletes it at 04:50 (Polish time) and after every start. Gone when answered ("Dołącz": it becomes a row of `party_staff`,
 without the address; "Nie, dziękuję"), cancelled by the organiser, or with the party.
+**The DJ's library → `dj_library`, `dj_library_track`** (V41, plan Pro; plain SQL in `DjLibraryService`, no entity) — the songs of the
+organiser's own collection, so the queue marks each waiting request "✓ Masz" or "✗ Nie masz". `dj_library`: one row per party
+(`party_code` PK, FK ON DELETE CASCADE), `track_count`, `format` (`M3U` / `REKORDBOX`), `uploaded_at` (part of the panel's ETag:
+a new upload marks the same queue anew). `dj_library_track`: (`party_code` FK to `dj_library` ON DELETE CASCADE, `match_key` ≤ 200),
+PK of both — the queue's lookup, its few keys at once (`match_key = ANY(?)`). Only keys are kept: `SongNames.libraryKey` — the
+`comparable` name without a version in brackets ("(Radio Edit)", "[Extended Mix]", "(feat. X)") and without "feat. / ft. / featuring
+X" — no title as written, no path. The file (`DjLibraryParser`, streamed: StAX with no DTD and no entities for a rekordbox
+collection — its `COLLECTION`'s `TRACK`s by `Artist` + `Name`; an M3U's `#EXTINF` titles or its files' names, line by line in UTF-8 or else Windows-1250 (an old
+Windows playlist), a name with one " - " kept both ways round) of at most `DjLibraryService.MAX_TRACKS` = 50 000 tracks and 64 MB replaces the whole library in one
+transaction under the party row's lock (`DjLibraryIT`: two uploads at once end as one of them). Goes when deleted ("Usuń bibliotekę",
+whatever the plan), with a new upload, or with the party.
 **`DjPlanEntity` → `dj_plan`** (V35, the owner 2026-10-14) — a DJ's plan, one row per organiser: `ownerId` (the primary key, the Google
 subject as `party_settings.owner_id`), `plan` (`Plan`: FREE / PRO), `source` (`PlanSource`: TRIAL / PAID / GIFT), `validUntil` (null = no
 end; after it the row reads as FREE, `planAt`), `updatedAt`. **Empty at first: no row is Free.** Deleted with the account. Read only by
@@ -268,7 +279,8 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 - **Pro features** (`PlanFeature`): the hosts' lists and their link (`HOST_LISTS`), the profiles (`PROFILES`), the tip link and 💸
   (`TIPS`), the AI's comment styles but "Klasyczne" (`COMMENT_STYLES`), the guests' limits set by the DJ (`GUEST_LIMITS` — without Pro
   every party has a new party's 2 requests / 3 min / no repeats of the last 15, `PartySettingsEntity.DEFAULT_*`), "Podsumowanie
-  wieczoru" and its CSV (`SUMMARY`); and the staff's places (`Plan.staffPlaces`): 10 with Pro, 1 without (the invitations by e-mail
+  wieczoru" and its CSV (`SUMMARY`), the DJ's library and its marks in the queue (`LIBRARY`, V41 — without Pro the library is kept,
+  unmarked; deleting it needs no plan); and the staff's places (`Plan.staffPlaces`): 10 with Pro, 1 without (the invitations by e-mail
   waiting count, as before). **Everyone's**: the QR code and prints, the AI, the queue and its keys, the votes and 👍, the vibe, its
   note and "Kto gra", the history, the notifications, 1 person of staff.
 - **The staff work the organiser's party with the organiser's plan** (the party's `ownerId` decides, never the person's); on their
@@ -296,7 +308,7 @@ party), HISTORY, VIBE (the card "Impreza"), LIMITS, HOST_LISTS (the lists and th
 TIPS, CLEAR_QUEUE, OPEN_CLOSE, HISTORY — what every person of the staff could do before V32; `DEFAULT`: the role picked first for a new link and for "Zaproś", and what a link made before V33 gives), CO_ORGANISER
 "Współorganizator" (all of them), CUSTOM "Własne" (ticked one by one) ·
 `Plan` (V35) FREE (1 place of staff) / PRO (every `PlanFeature`, 10 places) · `PlanFeature` HOST_LISTS, PROFILES, TIPS, COMMENT_STYLES,
-GUEST_LIMITS, SUMMARY · `PlanSource` TRIAL / PAID / GIFT ·
+GUEST_LIMITS, SUMMARY, LIBRARY · `PlanSource` TRIAL / PAID / GIFT ·
 `HistoryFilter` all / played / rejected (an old link's "guest" / "background" reads as all) · `VibeType` ANY and 16 genres (V16:
 Polish hits, 2000s/2010s, R&B & soul, folk / biesiada, kids added; bachata, salsa and reggaeton merged into LATINO — the rows moved
 by the migration).
@@ -380,8 +392,10 @@ of a phone is at 316 px (was 382). **The settings fold** under that button on ev
 `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`) and hold only what the DJ uses during a party
 (they were seven cards, 4900 px of a phone): the card **"Impreza"** (the vibe and the AI's comments saved as soon as picked, the vibe
 note and "Kto gra" under one "Zapisz") and **"Kod QR"** (small, beside the guests' link, "Kopiuj", "Drukuj plakat i karty", "📺 Ekran na TV"), then
-**"Więcej"** (`#settingsMore`): a row per rare setting with its state, 52 px each — "Lista gospodarzy · 🚫 0 · ⭐ 1 · link" (or
-"Nieużywana"), "Profile i napiwki · Instagram · napiwki" (or "Nieustawione"), "Limity gości · 2 na gościa · 3 min" (from 80 %
+**"Więcej"** (`#settingsMore`): a row per rare setting with its state, 52 px each (44 from 992 px wide: the queue
+stays in a laptop's first screen) — "Lista gospodarzy · 🚫 0 · ⭐ 1 · link" (or
+"Nieużywana"), "Profile i napiwki · Instagram · napiwki" (or "Nieustawione"), "Twoja biblioteka · Utworów: 1 234" (or
+"Niewgrana"; the organiser's, V41), "Limity gości · 2 na gościa · 3 min" (from 80 %
 of a server limit its use in yellow, "Impreza 250/300" before "Sieć 26/30" — `polling.js` keeps it current from
 `X-Guest-Limits-Use`), "Obsługa · Osób: 1" (→ `/dj/staff`), "To urządzenie · Powiadomienia wył.". Each row leads to its card on the
 page "Ustawienia imprezy". Each card and row only for whom may change it (V32: hidden, not greyed): a co-organiser sees "Impreza",
@@ -656,6 +670,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
 | `DjSongController` | mark played, skip, clear the queue, count a tip ("💸", V28) |
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
+| `DjLibraryController` | the DJ's library (V41, Pro, the organiser alone): `POST /dj/library` — the file as the request's body (`application/octet-stream`, `js/dashboard/library.js`; not a form's upload: Spring Security reads a form's body for the CSRF token before anything checks the login, so a large upload would be anyone's to send), read up to 64 MB, answered with one sentence (200 saved, 413 too large, 422 not a library / no song / too many); `POST /dj/library/delete` (no plan needed) |
 | `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
 | `DemoController` | the demo (2026-10-24, live since #137; Section 5.5): `/demo` — the panel of the demo party of the visitor's language (`DemoParty.codeFor`: Polish `DEMO`, any other English `DEME`), the real `dashboard.html` with `demo`, to anyone without a login, only to look at (`js/dashboard/demo.js` stops every form and link to `/dj/…` and says "start your own party"); `/demo/updates` and `/demo/history` — its poll and History tab, as the panel's (`partyCode` a demo's, else 404). Each visitor sees the examples and their own requests (their session's), never another visitor's |
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
@@ -694,6 +709,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …"; 3 unchecked in a row: the AI is down — a push to the site's owner (`PushNotificationService.notifyAiDown`, at most every 6 h) and the panels' bar `ai-down` (Section 7.1) |
 | `SiteCounter` | the site's counter (V40, 2026-10-24): per day (Polish time) the landing page seen (PL / EN), "Zacznij", logins, new DJs, guests' requests — numbers only, no address, browser or account; a robot's browser (search engines, Facebook's link previews, scanners, curl) is not counted; one atomic `INSERT … ON CONFLICT` per event, a failure only a WARN (`SiteCounterIT`) |
 | `DemoParty` | the demo parties, one per language (the owner, 2026-10-24): `DEMO` Polish, `DEME` English — four characters, never a real party's; owners `scan2play-demo` / `scan2play-demo-en`, no Google accounts. Each with its own vibe note, ⭐ and ten example requests with their comments (waiting ones with votes, dedications, a "⚠ Sprawdź", a ⭐ of the hosts; played, rejected, skipped), put back at every start and every night (04:55), the visitors' requests dropped, the party's daily limit started again. Their guest pages `/p/DEMO`, `/p/DEME` work, but no AI is asked: `SongEvaluationService.demoAnswer` — accepted, a ready comment (`demo.ai.comment.*`, "(demo: no AI check)"), saved unchecked, so only the visitor who sent it sees it (`DemoPartyIT`) |
+| `DjLibraryParser` / `DjLibraryService` | the DJ's library (V41): the file read into song keys (a rekordbox collection, an M3U / M3U8 playlist; a binary file or another XML refused) / the keys saved whole, under the party row's lock, and looked up a queue at a time (`DjLibraryIT`); `DjService.libraryMarksOf` gives the queue's marks |
 | `PlanService` | the plans (V35, Section 4.1 "Plans"): the organiser's `Plan` (the switch `scan2play.plans.enforce`, `pro-owners`, the row of `dj_plan`, cached), `require(party, PlanFeature)` (a 403), `asPlanned` (the party as its plan lets it work: for the guests, the AI, the queue's marks, the print — never saved), `view` (what the pages show: `plan.allows(…)`, `plan.pro(…)`), the staff's places, the trial |
 
 ### 6.3 Configuration
@@ -1019,6 +1035,7 @@ schema behind Flyway's back.
 | V38 | table `song_request_dedications` (`id` bigserial PK, `song_request_id` bigint NOT NULL FK → `song_requests` ON DELETE CASCADE, `text` varchar(100) NOT NULL, `checked` boolean NOT NULL, `created_at` timestamptz NOT NULL; index `idx_dedication_request` (song_request_id, id)), `song_requests.dedications` integer NOT NULL DEFAULT 0 and `party_settings.dedications_on` boolean NOT NULL DEFAULT true: the guests' dedications |
 | V39 | `song_requests.checked` boolean NOT NULL DEFAULT true; the requests whose comment is the app's note "AI jest chwilowo niedostępne…" / "The AI is unavailable right now…" (the text of `ai.unavailable.to_dj` since 2026-10-01) set to false: a request the AI did not judge stays off the guests' list and the TV screen (`RequestCheckedMigrationIT` reads the note from the bundles) |
 | V40 | table `site_counter` (`day` date, `event` varchar(20), `count` integer, PK (day, event)): the site's counter — numbers per day, no personal data (`SiteCounter`, `/dj/stats`) |
+| V41 | tables `dj_library` (`party_code` PK, FK ON DELETE CASCADE, `track_count`, `format` varchar(10), `uploaded_at`) and `dj_library_track` (`party_code` FK to `dj_library` ON DELETE CASCADE, `match_key` varchar(200), PK both): the DJ's library — song keys only (`DjLibraryService`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1062,6 +1079,8 @@ HostController             → PartySettingsRepository, PartySettingsCommandServ
 TvScreenController         → PartySettingsQueryService, GuestQueueService, QrCodeService
 DjSongController           → DjService, DjSessionHelper, PlanService
 DjSummaryController        → EveningSummaryService, DjSessionHelper, MessageSource, PlanService
+DjLibraryController        → DjLibraryService, DjSessionHelper, PlanService, MessageSource
+DjService                  → SongRequestRepository, SongRequestDedicationRepository, CacheManager, DjLibraryService (the queue's library marks)
 SongEvaluationService      → Gemini Client, SongRequestRepository, SongRequestCommandService, PartySettingsQueryService, PushNotificationService, PartyStaffService
 SongRequestCommandService  → SongRequestRepository, PartySettingsRepository, DjService (evicts the queue's cache after a new request or a vote)
 AccountDeletionService     → the repositories of every table of a DJ's data, CacheManager
@@ -1136,6 +1155,8 @@ GuestQueueService          → DjService
 | GET | `/dj/qr-print` | `layout` = poster / cards; what is printed speaks the panel's language (Polish: Polish and English; any other: English) |
 | GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days; only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
+| POST | `/dj/library` | `partyCode`; the body is the file (`application/octet-stream`): the DJ's library (V41, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks |
+| POST | `/dj/library/delete` | `partyCode`: the library deleted (the organiser, any plan); back to `/dj/settings#libraryCard` |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE) |

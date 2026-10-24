@@ -84,7 +84,9 @@ class StaffPermissionEndpointsTest {
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), com.scan2play.service.Plans.off()),
                         new StaffController(staff, mock(PartySettingsCommandService.class), helper,
                                 mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off()),
-                        new FeedbackController(mock(com.scan2play.repository.FeedbackRepository.class), helper))
+                        new FeedbackController(mock(com.scan2play.repository.FeedbackRepository.class), helper),
+                        new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper,
+                                com.scan2play.service.Plans.off(), codesAsTexts(), DjLibraryController.MAX_BYTES))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -168,7 +170,11 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(post("/dj/staff/remove").param("partyCode", PUB).param("id", "7")),
                 Arguments.of(post("/dj/staff/link").param("partyCode", PUB).param("link", "new").param("role", "CO_ORGANISER")),
                 Arguments.of(post("/dj/staff/invite").param("partyCode", PUB).param("email", "ola@gmail.com").param("role", "CO_ORGANISER")),
-                Arguments.of(post("/dj/staff/invitation/cancel").param("partyCode", PUB).param("id", "3")));
+                Arguments.of(post("/dj/staff/invitation/cancel").param("partyCode", PUB).param("id", "3")),
+                // the DJ's library (V41): the organiser's own collection
+                Arguments.of(post("/dj/library").param("partyCode", PUB).contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                        .content("#EXTM3U\nA - B.mp3\n")),
+                Arguments.of(post("/dj/library/delete").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{0}")

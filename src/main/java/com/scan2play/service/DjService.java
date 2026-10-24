@@ -15,9 +15,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -47,6 +50,7 @@ public class DjService {
     private final SongRequestRepository songRequestRepository;
     private final SongRequestDedicationRepository dedicationRepository;
     private final CacheManager cacheManager;
+    private final DjLibraryService libraryService;
 
     // ---- Queue Queries ----
 
@@ -102,6 +106,27 @@ public class DjService {
         }
         return dedicationRepository.findNewest(ids, DEDICATIONS_SHOWN).stream()
                 .collect(Collectors.groupingBy(SongRequestDedicationEntity::getSongRequestId, LinkedHashMap::new, Collectors.toList()));
+    }
+
+    /** The party's library (V41) as the settings show it, and its version for the panel's ETag; empty when it has none. */
+    public Optional<DjLibraryService.Info> libraryOf(String partyCode) {
+        return libraryService.info(partyCode);
+    }
+
+    /**
+     * For each of the songs, by its id: whether it is in the party's library (V41) by {@link SongNames#libraryKey} — "✓" or "✗" in
+     * the queue. One lookup for all of them (the queue is at most its 300); none, and no marks, when the party has no library.
+     */
+    public Map<Long, Boolean> libraryMarksOf(String partyCode, List<SongRequestEntity> songs) {
+        if (songs.isEmpty() || libraryService.info(partyCode).isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> keys = new LinkedHashMap<>();
+        songs.forEach(song -> keys.put(song.getId(), SongNames.libraryKey(song.getSongName())));
+        Set<String> found = libraryService.found(partyCode, new HashSet<>(keys.values()));
+        Map<Long, Boolean> marks = new LinkedHashMap<>();
+        keys.forEach((id, key) -> marks.put(id, found.contains(key)));
+        return marks;
     }
 
     // ---- Song Actions ----

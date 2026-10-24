@@ -244,6 +244,11 @@
                               th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
                               th:text="${plan.pro('PROFILES')} ? '' : (${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named})">Instagram · tips</span>
                     </a>
+                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="library" th:href="${settingsUrl + '#libraryCard'}">
+                        <span class="s2p-row-name"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
+                        <span class="s2p-row-state"
+                              th:text="${plan.pro('LIBRARY')} ? '' : (${libraryTracks != null} ? #{settings.row.library(${libraryTracks})} : #{settings.row.library.none})">Songs: 1,234</span>
+                    </a>
                     <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" class="s2p-row"
                        data-settings-row="limits" th:href="${settingsUrl + '#limitsCard'}"
                        th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
@@ -364,6 +369,14 @@
                             <span th:if="${wantedSongs != null and wantedSongs.matches(req.songName)}"
                                   class="badge text-bg-info align-self-start s2p-host-wanted"
                                   th:title="#{dashboard.host.wanted.title}" th:text="#{dashboard.host.wanted}">⭐ The hosts want it</span>
+                            <!--/* the DJ's library (V41, Pro): "✓" the DJ has the song, "✗" not under this name — none without a library */-->
+                            <span th:if="${libraryMarks != null and libraryMarks.containsKey(req.id)}"
+                                  th:with="have=${libraryMarks.get(req.id)}"
+                                  class="badge align-self-start s2p-library"
+                                  th:classappend="${have} ? 'text-bg-success' : 'text-bg-dark border border-secondary'"
+                                  th:attr="data-library=${have} ? 'have' : 'missing'"
+                                  th:title="${have} ? #{dashboard.library.have.title} : #{dashboard.library.missing.title}"
+                                  th:text="${have} ? #{dashboard.library.have} : #{dashboard.library.missing}">✓ You have it</span>
                             <!--/* none of the guest's words in the AI's song: maybe another song in place of the one asked for */-->
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>
