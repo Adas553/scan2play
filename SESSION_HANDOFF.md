@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-24
+# Session Handoff — 2026-10-24 (evening)
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
@@ -13,16 +13,17 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 ## Start here
 
-- **2026-10-24 — the state.** `main` = `dev` = `7ff26ed` (#139), deployed on Railway 2026-10-24 08:54 UTC, SUCCESS. Since the
-  review of 2026-10-21: #131 (S1: an unchecked request stays off the TV and the guests' list, V39), #132 (C2: a DJ whose session
-  expired comes back through Google's login to the panel; C3: an unknown party or address is a 404), #134 (the QR poster and the
-  TV screen in the DJ panel's language), #136 (the site's counter `/dj/stats`, V40; `ADMIN_GOOGLE_ID` set on Railway), #137 (the
-  demo `/demo`: the parties `DEMO` in Polish and `DEME` in English, no Gemini, a visitor's request seen only by that visitor; the
-  logo links to the home page on the public pages), #138 (`LICENSE`, "All rights reserved").
-- **The repository is public** since 2026-10-24 (`LICENSE`: viewing only). GitHub Actions have no minute limit now, so O3 (CI
-  running twice) is not urgent. Nothing secret in the repo, the docs or a commit — ever.
+- **2026-10-24 (evening) — the state.** `main` = `dev` in content: release #147 (`6b3bbee`) deployed 14:35 UTC, SUCCESS — the
+  healthcheck `/privacy` passed before the traffic moved (the first deploys with it: #145 at 13:12, #147), no 5xx since. Today's
+  releases: #145 (the review of 2026-10-21: #140 docs, #141 S2 + P1 and the demo's limit, #142 O2, #143 U2 + U3, #144 T2 + U4 + O3
+  + Tomcat 11.0.27) and #147 (#146: the pages "Dla kogo" `/dj-weselny`, `/kluby`, `/puby`, the texts the owner's; the vibe
+  "Dowolny" without "(ocenia AI)"). Checked by the owner with curl after #145: `/` sends no `Set-Cookie`; `/images/logo.svg`
+  `public, max-age=86400`, `cf-cache-status: HIT`. Earlier on 2026-10-24 (#139, 08:54): #131 (S1, V39), #132 (C2, C3), #134,
+  #136 (`/dj/stats`, V40), #137 (the demo), #138 (`LICENSE`).
+- **The repository is public** since 2026-10-24 (`LICENSE`: viewing only). GitHub Actions have no minute limit now; CI
+  runs on PRs and on pushes to `main` only (O3, #144). Nothing secret in the repo, the docs or a commit — ever.
 - **Railway (checked 2026-10-24, read only):** the sleep is off for `scan2play` and `Postgres` (the nightly jobs and the demo's
-  04:55 reset run now; C1 is less urgent); a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy` (set 2026-10-24, from the next deploy).
+  04:55 reset run now; C1 is less urgent); a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy` (set 2026-10-24, passing since #145).
   After Railway's incident of 2026-10-21 the owner replaced the Gemini key, the Google OAuth secret and the database's password,
   and removed the database's public TCP proxy.
 - **The market:** after the posts on Facebook ~15 visits, 2 clicks on "Zacznij", 1 login — watch `/dj/stats`. Ideas: a short film
@@ -35,37 +36,23 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 ## Next (the owner picks)
 
-A. **The review of 2026-10-21 — what is left**, one PR per group. The owner's order (2026-10-24): this file and PROJECT_CONTEXT →
-   S2 + P1 → O2 → U2 + U3; the rest after.
-   - **S2 + P1:** done in #141 (2026-10-24): the landing page's invitation form is `GET /join?link=` → `/join/{token}`,
-     no CSRF token, no session (`LandingPageSessionWebTest`: no `SESSION` cookie); `/webjars/**`, `/images/**`, `/favicon.ico`
-     kept a day (`VersionedAssetCacheFilter`; after changing a picture purge Cloudflare's cache); `DemoParty.reset` starts the
-     demos' daily limit again (`DemoPartyTest`). After the release: curl `/` without cookies — no `Set-Cookie`, the whole page —
-     and the headers of `/webjars/bootstrap/css/bootstrap.min.css` and `/images/logo.svg`.
-   - **O2:** done in #142 (2026-10-24; the owner's picks: both, after 3): 3 unchecked requests in a row → one push
-     "⚠ AI nie ocenia próśb" to the devices of `ADMIN_GOOGLE_ID` (at most every 6 h) and a red bar above the queue of every
-     panel (`X-Guest-Limits: ai-down`) until the AI answers. **For the owner:** switch the notifications on in your own panel
-     ("To urządzenie" → Powiadomienia) on the phone that should get the alarm — the push goes only to devices subscribed by
-     that account.
-   - **U2 + U3:** done in #143 (2026-10-24): the owner's words — "Limit {0} piosenek wykorzystany. Daj szansę innym
-     i spróbuj za {1}.", "Zagrana — prośba przechodzi do historii", "Czas na następną imprezę?"; `ImpersonalPolishTextsTest` keeps
-     "-łeś" / "-łaś" / "Gotowy" out of the Polish bundle. The dedication comes back after an expired page
-     (`GuestFormExpiredHandler`, `GuestNoSessionWebTest`).
-   - **C1:** the nightly cleanups also after a start (less urgent: the sleep is off).
-   - **T2 + U4 + O3 + O4's Tomcat:** done in the PR after #143 (2026-10-24): `HostPageSessionWebTest` (the hosts' form token
-     is written right after `<form>`, at the page's top — within 8 KB however long the lists; it was never a live bug); the
-     language switch 44 px, the FAQ's links in the action's cyan (4.0 → 9 : 1; browser scenarios); CI on PRs and on pushes to
-     `main` only; Tomcat 11.0.27. **For the owner (U4):** Cloudflare's "Managed robots.txt" adds a second `User-agent: *` group
-     before ours (Security → Bots) — switch it off if `/dj/` should be disallowed for every robot.
-   - **R1** (`PromptBuilder` out of `SongEvaluationService` — best with S1 b), **R2** (a rule on comments in `AGENTS.md`),
-     **O4's google-genai 1.78** (a try on the real Gemini, with the owner's yes).
-   - **S1 b:** a step in the prompt that rejects an offensive "title" — first `GeminiComparison` with the real key (the owner's
-     yes; the key only from IntelliJ's run configuration, never in the repo).
-B. **Railway: Healthcheck Path** — set to `/privacy` (2026-10-24; Railway allows no dot, so not `/robots.txt`): check the next
-   deploy's log for the healthcheck passing.
-C. **The pages "Dla kogo"** (`/dj-weselny`, `/kluby`, `/puby`, the branch `claude/for-whom-pages`): brought up to `dev` and fixed
-   in the PR after #145 (2026-10-24) — "Co grało i o co proszono", "PRO" on the Pro plan's steps and features and the price of the
-   plans once they are enforced. **Waits for the owner's yes to every text** (the PR lists them).
+A. **The review of 2026-10-21 — what is left** (done and released: S1 a #131, C2/C3 #132, S2 + P1 #141, O2 #142, U2 + U3 #143,
+   T2 + U4 + O3 + Tomcat #144; the details: the PRs and PROJECT_CONTEXT).
+   - **S1 b + R1:** R1 done in #148 (`PromptBuilder`). S1 b live with the PR after #148 (2026-10-24): an insult or a message is a
+     "mood" — the owner's `GeminiComparison offensive`: the messages kept out 12/12 (before 5/12, twice with a made-up song),
+     83 ok / 1 WRONG (before 75 / 9), 1.4 s. Left to watch: a sarcastic comment may be sharp with the guest (style SARCASTIC);
+     "somos hermanos" with the note "Salsa" accepted once of two (chance, the rules of the genre did not change).
+   - **C1:** the nightly cleanups (requests waiting more than 24 h cleared, the 30-day purge, old invitations) also run after a
+     start. Not urgent: the sleep is off. It touches only what is a day old — never a party's queue of tonight.
+   - **R2** (a rule on comments in `AGENTS.md`), **O4's google-genai 1.78** (a try on the real Gemini, with the owner's yes).
+B. **For the owner (not code):** switch the notifications on in your own panel (the account `ADMIN_GOOGLE_ID`) for the alarm of O2;
+   request the indexing of `/dj-weselny`, `/kluby`, `/puby` in Search Console; Cloudflare's "Managed robots.txt" (U4) if `/dj/`
+   should be disallowed for every robot. Before `PLANS_ENFORCE`: reword the wedding page's search-engine description (it names
+   "lista pary młodej", a Pro feature, beside "Za darmo").
+C. **Search Console (2026-10-24, the owner's screenshots):** a 404 for `/oauth2/authorization/google` (last crawled 2026-07-23 —
+   a login link, disallowed in `robots.txt`; nothing to fix); `/privacy`, `/terms`, their `?lang=en` and `/jak-to-dziala?lang=en`
+   not crawled yet; `/jak-to-dziala` crawled, not indexed — Google's own pace for a young site. The sleep (until 2026-10-24) may
+   have slowed the crawl (a first request ~6 s, a failure when the app woke before its database), not caused these.
 
 0. **"⚠ Sprawdź"** — built 2026-10-07 (live). Still a case for the Gemini comparison (item 4).
 

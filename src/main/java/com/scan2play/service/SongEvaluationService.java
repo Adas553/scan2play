@@ -13,7 +13,6 @@ import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
-import com.scan2play.model.VibeType;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongList;
 import com.scan2play.util.SongNames;
@@ -25,17 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -61,9 +53,6 @@ public class SongEvaluationService {
 
     /** The longest guest's text that reaches the prompt ({@link #forPrompt}). */
     static final int GUEST_TEXT_MAX = 150;
-
-    private static final String DEFAULT_LANG = "en";
-    private static final List<String> SUPPORTED_LANGS = List.of("en", "pl");
 
     /**
      * The shape of the AI's answer ({@link DjResponse}), given to Gemini with the request: JSON mode alone promises valid JSON, not
@@ -132,27 +121,14 @@ public class SongEvaluationService {
     private final SongRequestRepository songRequestRepository;
     private final PartySettingsQueryService partySettingsQueryService;
     private final MessageSource messageSource;
-    private final ResourceLoader resourceLoader;
+    private final PromptBuilder promptBuilder;
     private final SongRequestCommandService songRequestCommandService;
     private final AiHealthMonitor aiHealthMonitor;
     private final PushNotificationService pushNotificationService;
     private final PartyStaffService partyStaffService;
     private final PlanService planService;
 
-    /** Prompt template per language code (e.g. "en" → english prompt, "pl" → polish prompt). */
-    private Map<String, String> promptTemplates;
-    /** Duplicate rule template per language code. */
-    private Map<String, String> duplicateRuleTemplates;
-    /** The DJ's vibe note in the prompt, per language code. */
-    private Map<String, String> vibeNoteTemplates;
-    /** The block of each comment style but {@link CommentStyle#CLASSIC}, per language code. */
-    private Map<String, Map<CommentStyle, String>> commentStyleRules;
-    /** The guest's dedication in the prompt (V38), per language code. */
-    private Map<String, String> dedicationTemplates;
-
-    /**
-     * Loads AI prompt templates for all supported languages.
-     */
+    /** The answer's configs: the model, its thinking, the schema (with the dedication's field or without). */
     @PostConstruct
     public void init() {
         this.aiJsonConfig = GenerateContentConfig.builder()
@@ -161,46 +137,6 @@ public class SongEvaluationService {
                 .thinkingConfig(thinkingConfig(modelName, thinkingBudget, thinkingLevel))
                 .build();
         this.aiJsonDedicationConfig = aiJsonConfig.toBuilder().responseSchema(ANSWER_WITH_DEDICATION_SCHEMA).build();
-        try {
-            var prompts = new HashMap<String, String>();
-            var duplicates = new HashMap<String, String>();
-            var vibeNotes = new HashMap<String, String>();
-            var styles = new HashMap<String, Map<CommentStyle, String>>();
-            var dedications = new HashMap<String, String>();
-            for (String lang : SUPPORTED_LANGS) {
-                vibeNotes.put(lang, loadResource("classpath:prompts/prompt-vibe-note_" + lang + ".txt"));
-                prompts.put(lang, loadResource("classpath:prompts/prompt-template_" + lang + ".txt"));
-                duplicates.put(lang, loadResource("classpath:prompts/prompt-duplicate-rule_" + lang + ".txt"));
-                styles.put(lang, commentStyleRules(loadResource("classpath:prompts/prompt-comment-style_" + lang + ".txt"), lang));
-                dedications.put(lang, loadResource("classpath:prompts/prompt-dedication_" + lang + ".txt"));
-            }
-            this.promptTemplates = Map.copyOf(prompts);
-            this.duplicateRuleTemplates = Map.copyOf(duplicates);
-            this.vibeNoteTemplates = Map.copyOf(vibeNotes);
-            this.commentStyleRules = Map.copyOf(styles);
-            this.dedicationTemplates = Map.copyOf(dedications);
-        } catch (IOException e) {
-            log.error("Failed to load prompt templates", e);
-            throw new RuntimeException("System configuration error: prompt templates missing", e);
-        }
-    }
-
-    /**
-     * The comment styles' blocks of one language: a line {@code STYLE=text} for each style but {@link CommentStyle#CLASSIC} (blank
-     * lines and {@code #} comments ignored). A style without its line stops the start: the DJ would pick it and get the classic one.
-     */
-    static Map<CommentStyle, String> commentStyleRules(String file, String lang) {
-        Map<CommentStyle, String> rules = new EnumMap<>(CommentStyle.class);
-        file.lines().map(String::strip).filter(line -> !line.isEmpty() && !line.startsWith("#")).forEach(line -> {
-            int eq = line.indexOf('=');
-            rules.put(CommentStyle.valueOf(line.substring(0, eq)), line.substring(eq + 1).strip());
-        });
-        for (CommentStyle style : CommentStyle.values()) {
-            if (style != CommentStyle.CLASSIC && !rules.containsKey(style)) {
-                throw new IllegalStateException("prompt-comment-style_" + lang + ".txt has no line for " + style);
-            }
-        }
-        return Collections.unmodifiableMap(rules);
     }
 
     /**
@@ -215,11 +151,6 @@ public class SongEvaluationService {
         return ThinkingConfig.builder()
                 .thinkingLevel(new ThinkingLevel(ThinkingLevel.Known.valueOf(level.strip().toUpperCase(Locale.ROOT))))
                 .build();
-    }
-
-    private String loadResource(String location) throws IOException {
-        Resource resource = resourceLoader.getResource(location);
-        return resource.getContentAsString(StandardCharsets.UTF_8);
     }
 
     /**
@@ -398,7 +329,7 @@ public class SongEvaluationService {
     private DjResponse evaluateWithAi(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
                                       String dedication, Locale locale) {
         try {
-            String prompt = buildPrompt(songName, style, recentSongs, vibeNote, commentStyle, dedication, locale);
+            String prompt = promptBuilder.build(songName, style, recentSongs, vibeNote, commentStyle, dedication, locale);
             long started = System.nanoTime();
             String text = askAi(prompt, dedication == null ? aiJsonConfig : aiJsonDedicationConfig);
             // how long the guest waited for the AI: search the log for "AI answered" (2026-10-07: 3.5 Flash timed out a while)
@@ -493,72 +424,6 @@ public class SongEvaluationService {
      */
     public static String asTyped(String guestText) {
         return Texts.oneLine(guestText, GUEST_TEXT_MAX);
-    }
-
-    /** The prompt in the guest's language, with the request, the style and the duplicate rule filled in. */
-    String buildPrompt(String songName, String style, String recentSongs, Locale locale) {
-        return buildPrompt(songName, style, recentSongs, null, locale);
-    }
-
-    /**
-     * The same, with the DJ's vibe note (V16) before the duplicate rule: one line of at most
-     * {@value PartySettingsEntity#VIBE_NOTE_MAX} characters, without double quotes (the prompt puts it in quotes); nothing when
-     * the DJ wrote none.
-     */
-    String buildPrompt(String songName, String style, String recentSongs, String vibeNote, Locale locale) {
-        return buildPrompt(songName, style, recentSongs, vibeNote, CommentStyle.CLASSIC, locale);
-    }
-
-    /**
-     * The same, with the DJ's comment style (V22) after the other rules, where it overrides the comments the prompt gives as
-     * examples; {@link CommentStyle#CLASSIC} (or none) adds nothing — the prompt as it was.
-     */
-    String buildPrompt(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
-                       Locale locale) {
-        return buildPrompt(songName, style, recentSongs, vibeNote, commentStyle, null, locale);
-    }
-
-    /**
-     * The same, with the guest's dedication (V38) after the other rules: its text in quotes (without double quotes of its own) and
-     * the step that asks the AI for {@code dedicationOk}; none, the prompt as it was before V38.
-     */
-    String buildPrompt(String songName, String style, String recentSongs, String vibeNote, CommentStyle commentStyle,
-                       String dedication, Locale locale) {
-        String lang = resolvePromptLanguage(locale);
-        String note = Texts.oneLine(vibeNote, PartySettingsEntity.VIBE_NOTE_MAX).replace('"', '\'');
-        String vibeRule = note.isEmpty() ? "" : String.format(vibeNoteTemplates.get(lang), note);
-        String duplicateRule = (recentSongs != null)
-                ? String.format(duplicateRuleTemplates.get(lang), recentSongs)
-                : "";
-        String styleRule = commentStyle == null || commentStyle == CommentStyle.CLASSIC
-                ? ""
-                : System.lineSeparator() + commentStyleRules.get(lang).get(commentStyle) + System.lineSeparator();
-        String dedicationRule = dedication == null || dedication.isBlank()
-                ? ""
-                : String.format(dedicationTemplates.get(lang), Texts.oneLine(dedication, SongRequestDedicationEntity.TEXT_MAX)
-                        .replace('"', '\'')) + System.lineSeparator();
-        return String.format(promptTemplates.get(lang), songName, genreForPrompt(style, lang),
-                vibeRule + duplicateRule + styleRule + dedicationRule);
-    }
-
-    /** How the prompt names "no genre": words, not the code "ANY" — the AI once quoted "'ANY'" to a guest (2026-10-07). */
-    private static final Map<String, String> ANY_GENRE = Map.of(
-            "pl", "dowolny (DJ nie wybrał gatunku)",
-            "en", "any (the DJ picked no genre)");
-
-    /** The party's genre as the prompt gives it: a picked one in quotes (the guest-facing name), none in plain words. */
-    static String genreForPrompt(String style, String lang) {
-        return style == null || style.isBlank() || VibeType.ANY.name().equals(style)
-                ? ANY_GENRE.getOrDefault(lang, ANY_GENRE.get(DEFAULT_LANG))
-                : "\"" + style.replace('"', '\'') + "\"";
-    }
-
-    /**
-     * Maps a Locale to a supported prompt language. Falls back to English for unsupported locales.
-     */
-    private String resolvePromptLanguage(Locale locale) {
-        String lang = locale.getLanguage();
-        return promptTemplates.containsKey(lang) ? lang : DEFAULT_LANG;
     }
 
     private SongRequestCommandService.Saved saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style,
