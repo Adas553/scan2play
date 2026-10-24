@@ -4,6 +4,8 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.HistoryFilter;
 import com.scan2play.model.StaffPermission;
+import com.scan2play.service.AiHealthMonitor;
+import com.scan2play.service.DemoParty;
 import com.scan2play.service.DjService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsCommandService;
@@ -32,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -67,14 +70,17 @@ public class DjDashboardController {
     private final PartyStaffService partyStaffService;
     private final StaffInvitationService staffInvitationService;
     private final PlanService planService;
+    private final AiHealthMonitor aiHealthMonitor;
 
     /**
-     * On every answer of the queue poll, 304 too: the limits that stop guest songs now, comma-separated —
-     * {@value #FLAG_PARTY_FULL} (the party's 24-hour limit) — or {@value #FLAG_NONE}. The dashboard shows or hides its warnings
-     * by it.
+     * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
+     * {@value #FLAG_PARTY_FULL} (the party's 24-hour limit stops guest songs), {@value #FLAG_AI_DOWN} (the AI does not judge the
+     * requests, {@code AiHealthMonitor}; the review of 2026-10-21, O2) — or {@value #FLAG_NONE}. The dashboard shows or hides its
+     * warnings by it.
      */
     static final String GUEST_LIMITS_HEADER = "X-Guest-Limits";
     static final String FLAG_PARTY_FULL = "party-full";
+    static final String FLAG_AI_DOWN = "ai-down";
     static final String FLAG_NONE = "none";
 
     /**
@@ -236,6 +242,7 @@ public class DjDashboardController {
         model.addAttribute(PARTY_REQUESTS_USED, guestRequestLimiter.partyRequestsUsed(partyCode));
         model.addAttribute(BUSIEST_NETWORK_REQUESTS_USED, guestRequestLimiter.busiestClientRequestsUsed(partyCode));
         model.addAttribute(PARTY_LIMIT_REACHED, guestRequestLimiter.isPartyLimitReached(partyCode));
+        model.addAttribute(AI_DOWN, aiDown(partyCode));
 
         // --- Notifications on the DJ's devices (offered only when the server has the keys) ---
         model.addAttribute(PUSH_PUBLIC_KEY, pushNotificationService.publicKey());
@@ -473,7 +480,19 @@ public class DjDashboardController {
 
     /** The value of {@link #GUEST_LIMITS_HEADER}. */
     private String guestLimitFlags(String partyCode) {
-        return guestRequestLimiter.isPartyLimitReached(partyCode) ? FLAG_PARTY_FULL : FLAG_NONE;
+        List<String> flags = new ArrayList<>(2);
+        if (guestRequestLimiter.isPartyLimitReached(partyCode)) {
+            flags.add(FLAG_PARTY_FULL);
+        }
+        if (aiDown(partyCode)) {
+            flags.add(FLAG_AI_DOWN);
+        }
+        return flags.isEmpty() ? FLAG_NONE : String.join(",", flags);
+    }
+
+    /** Whether the panel says the AI does not judge the requests now — never the demo's, which asks no AI. */
+    private boolean aiDown(String partyCode) {
+        return !DemoParty.isDemo(partyCode) && aiHealthMonitor.isAiDown();
     }
 }
 

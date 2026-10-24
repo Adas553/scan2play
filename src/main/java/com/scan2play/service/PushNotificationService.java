@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * Tells the DJ's devices that a new song is on their list (Web Push, RFC 8030 / 8291 / 8292): one encrypted message to each device
@@ -204,20 +205,62 @@ public class PushNotificationService {
     }
 
     void sendToDevices(String ownerId, String partyCode, String songName) {
+        sendToDevices(ownerId, "party " + partyCode, device -> payload(device, partyCode, songName));
+    }
+
+    /**
+     * The AI stopped judging the guests' requests ({@code AiHealthMonitor}: unchecked ones in a row — Gemini's credits at zero, its
+     * key refused): the site's owner's devices get "⚠ AI nie ocenia próśb". Returns at once, as {@link #notifyNewRequest}.
+     */
+    public void notifyAiDown(String ownerId) {
+        if (keyPair == null || ownerId == null) {
+            return;
+        }
+        try {
+            sender.execute(() -> sendToDevices(ownerId, "the AI alarm", this::aiDownPayload));
+        } catch (RejectedExecutionException e) {
+            log.warn("The AI alarm's push dropped: the queue is full");
+        }
+    }
+
+    private void sendToDevices(String ownerId, String what, Function<PushSubscriptionEntity, String> payload) {
         try {
             List<PushSubscriptionEntity> devices = repository.findTop20ByOwnerIdOrderByCreatedAtDesc(ownerId);
             for (PushSubscriptionEntity device : devices) {
-                send(device, payload(device, partyCode, songName));
+                send(device, payload.apply(device));
             }
         } catch (RuntimeException e) {
-            log.warn("Push notifications for party {} not sent: {}", partyCode, e.toString());
+            log.warn("Push notifications for {} not sent: {}", what, e.toString());
+        }
+    }
+
+    /** The AI alarm's message: one tag of its own (a second one replaces the first), a tap opens the panel. */
+    String aiDownPayload(PushSubscriptionEntity device) {
+        Locale locale = localeOf(device);
+        Map<String, String> message = new LinkedHashMap<>();
+        message.put("title", messageSource.getMessage("push.ai_down.title", null, locale));
+        message.put("body", messageSource.getMessage("push.ai_down.body", null, locale));
+        message.put("tag", "s2p-ai");
+        message.put("url", DASHBOARD_URL);
+        return json(message);
+    }
+
+    // a device subscribed before its language was kept: Polish, as a page with no language (WebConfig; review 2026-10-14)
+    private static Locale localeOf(PushSubscriptionEntity device) {
+        return device.getLocale() == null ? Locale.forLanguageTag("pl") : Locale.forLanguageTag(device.getLocale());
+    }
+
+    private String json(Map<String, String> message) {
+        try {
+            return objectMapper.writeValueAsString(message);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
         }
     }
 
     /** What the service worker shows: the texts in the device's language, the song, how to fold and where a tap leads. */
     String payload(PushSubscriptionEntity device, String partyCode, String songName) {
-        // a device subscribed before its language was kept: Polish, as a page with no language (WebConfig; review 2026-10-14)
-        Locale locale = device.getLocale() == null ? Locale.forLanguageTag("pl") : Locale.forLanguageTag(device.getLocale());
+        Locale locale = localeOf(device);
         Map<String, String> message = new LinkedHashMap<>();
         message.put("title", messageSource.getMessage("push.new_request.title", null, locale));
         // "{0}" stays in the text: the service worker puts the count in (no arguments → no MessageFormat here)
@@ -226,11 +269,7 @@ public class PushNotificationService {
         message.put("tag", "s2p-" + partyCode);
         // the panel of this party: one of two staffs (or an organiser at another party too) is not the default one (review 2026-10-14)
         message.put("url", DASHBOARD_URL + "?party=" + URLEncoder.encode(partyCode, StandardCharsets.UTF_8));
-        try {
-            return objectMapper.writeValueAsString(message);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException(e);
-        }
+        return json(message);
     }
 
     private void send(PushSubscriptionEntity device, String payload) {

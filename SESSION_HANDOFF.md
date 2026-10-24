@@ -37,12 +37,16 @@ The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U,
 
 A. **The review of 2026-10-21 — what is left**, one PR per group. The owner's order (2026-10-24): this file and PROJECT_CONTEXT →
    S2 + P1 → O2 → U2 + U3; the rest after.
-   - **S2 + P1:** done in the PR after #140 (2026-10-24): the landing page's invitation form is `GET /join?link=` → `/join/{token}`,
+   - **S2 + P1:** done in #141 (2026-10-24): the landing page's invitation form is `GET /join?link=` → `/join/{token}`,
      no CSRF token, no session (`LandingPageSessionWebTest`: no `SESSION` cookie); `/webjars/**`, `/images/**`, `/favicon.ico`
      kept a day (`VersionedAssetCacheFilter`; after changing a picture purge Cloudflare's cache); `DemoParty.reset` starts the
      demos' daily limit again (`DemoPartyTest`). After the release: curl `/` without cookies — no `Set-Cookie`, the whole page —
      and the headers of `/webjars/bootstrap/css/bootstrap.min.css` and `/images/logo.svg`.
-   - **O2:** an alarm when the AI stops judging (a push to the owner after N unchecked in a row, or a bar in the panel).
+   - **O2:** done in the PR after #141 (2026-10-24; the owner's picks: both, after 3): 3 unchecked requests in a row → one push
+     "⚠ AI nie ocenia próśb" to the devices of `ADMIN_GOOGLE_ID` (at most every 6 h) and a red bar above the queue of every
+     panel (`X-Guest-Limits: ai-down`) until the AI answers. **For the owner:** switch the notifications on in your own panel
+     ("To urządzenie" → Powiadomienia) on the phone that should get the alarm — the push goes only to devices subscribed by
+     that account.
    - **U2 + U3:** impersonal forms for the guests ("Wykorzystałeś limit", "Zagrałeś ją", "Gotowy na…"); the dedication comes back
      after an expired page (`GuestFormExpiredHandler`).
    - **C1:** the nightly cleanups also after a start (less urgent: the sleep is off).
