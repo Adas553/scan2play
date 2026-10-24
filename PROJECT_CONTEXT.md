@@ -1,8 +1,8 @@
 # Scan2Play — Project Context
 
-> The application as it is on branch `dev` (2026-10-15). Read it before an architectural change; `AGENTS.md` says how to work,
+> The application as it is on branch `dev` (2026-10-24). Read it before an architectural change; `AGENTS.md` says how to work,
 > `SESSION_HANDOFF.md` what is going on now; the reviews and what was fixed: `docs/history/review-2026-09-30.md`,
-> `docs/history/review-2026-10-14.md`.
+> `docs/history/review-2026-10-14.md`, `docs/history/review-2026-10-21.md`.
 > **History** — the decisions, the owner's reports, what was tried and measured, how every stage was verified — is in
 > `docs/history/project-context-2026-10-01.md` (this file word for word before it was cut down, review 7.1; it still describes the
 > YouTube player, Auto-Pilot and the background playlist) and `docs/history/session-handoff-2026-09.md`. The full application with
@@ -21,6 +21,10 @@ mode only, and its policy forbids this use; YouTube: 100 API searches a day shar
 personal use) — migrations V18 and V19.
 
 **Production URL:** `https://www.scan2play.com.pl` (Railway, behind Cloudflare; `main` is live since 2026-10-06, Section 10).
+
+**The repository** `Adas553/scan2play` is public since 2026-10-24, for viewing only: `LICENSE` says "All rights reserved" (no
+permission to use, copy or build on the code). Nothing secret may be committed — every key and password comes from the environment
+(Section 10).
 
 ---
 
@@ -602,6 +606,23 @@ follow every poll's headers).
 The old migrations V2–V9 and the browser tests' history refer here: the description is in `docs/history/project-context-2026-10-01.md`,
 Section 5.4, and the code in the tag `full-player-2026-10-04`.
 
+### 5.5 The demo (`/demo`) — what it keeps and how it is cleared
+
+The demo (`DemoController`, `DemoParty`, Section 6) lets anyone look at a party's panel without a login: `/demo` opens the Polish
+party `DEMO` or, for any other language, the English `DEME`; their guest pages `/p/DEMO` and `/p/DEME` take requests without asking
+the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved unchecked, so only that visitor's session sees it.
+
+- **The two parties stay for good:** their rows in `party_settings` (owners `scan2play-demo` / `scan2play-demo-en`, no Google
+  accounts) are found by their code at each reset (`DemoParty.reset`, `findByPartyCode`) and only made when missing — never a new
+  one per reset.
+- **Their requests do not:** at every start of the app (`ApplicationReadyEvent`) and every night at 04:55 Polish time (after the
+  queues' cleanup at 04:40 and the 30-day purge at 04:45, Section 4.1) every request of both parties — the examples and the visitors'
+  ones, with their dedications (`ON DELETE CASCADE`) — is deleted and the ten examples are saved again, timed from now. A visitor's
+  request lasts until the next night at most. The general nightly jobs apply to the demo as to any party.
+- **What else stays:** only numbers in `site_counter` (V40, no personal data).
+- **Limitation:** the party's daily limit (300 per 24 h, `GuestRequestLimiter`, in memory) is shared by every visitor of a demo party,
+  and the reset does not clear it: a script that floods `/p/DEMO` blocks the demo's guest page until a restart or the next 24 h.
+
 ---
 
 ## 6. File Inventory
@@ -617,7 +638,7 @@ Section 5.4, and the code in the tag `full-player-2026-10-04`.
 | `DjSongController` | mark played, skip, clear the queue, count a tip ("💸", V28) |
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
 | `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
-| `DemoController` | the demo (2026-10-24, on the branch `claude/demo` until November): `/demo` — the panel of the demo party of the visitor's language (`DemoParty.codeFor`: Polish `DEMO`, any other English `DEME`), the real `dashboard.html` with `demo`, to anyone without a login, only to look at (`js/dashboard/demo.js` stops every form and link to `/dj/…` and says "start your own party"); `/demo/updates` and `/demo/history` — its poll and History tab, as the panel's (`partyCode` a demo's, else 404). Each visitor sees the examples and their own requests (their session's), never another visitor's |
+| `DemoController` | the demo (2026-10-24, live since #137; Section 5.5): `/demo` — the panel of the demo party of the visitor's language (`DemoParty.codeFor`: Polish `DEMO`, any other English `DEME`), the real `dashboard.html` with `demo`, to anyone without a login, only to look at (`js/dashboard/demo.js` stops every form and link to `/dj/…` and says "start your own party"); `/demo/updates` and `/demo/history` — its poll and History tab, as the panel's (`partyCode` a demo's, else 404). Each visitor sees the examples and their own requests (their session's), never another visitor's |
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
@@ -971,11 +992,13 @@ Cloudflare) and the service `Postgres` (`postgres-ssl:18`, PostgreSQL 18.6, a 50
 passing, the app up in ~10 s. V18 / V19 deleted every party of April (only the owner's and friends' tests; no backup was taken, by
 the owner's choice). Variables now: `GOOGLE_AI_API_KEY`, `GOOGLE_CLIENT_ID` / `_SECRET`, `GUEST_CLIENT_IP_HEADER`, the five `PG*`,
 `DATABASE_URL` (unused); `SCAN2PLAY_GUEST_URL` is not set (the default is the production URL); `YOUTUBE_API_KEY`, `SPOTIFY_*` and
-`SPRING_JPA_HIBERNATE_DDL_AUTO` removed. No `TZ`: the JVM is UTC. **Both services sleep** after ~10 minutes without traffic
-(Railway's serverless, kept on purpose while only friends use it): the first request wakes the app (~6 s), an app that wakes
-before its database fails once and Railway restarts it, and a database that falls asleep under a running app breaks the request
-that holds the dropped connection (seen once, 2026-10-06 16:04). A sleeping app also runs no `@Scheduled` job — the nightly
-clearing and purges (Section 4.1) did not run — so the owner decided (2026-10-18) to switch the sleep off for both services. Later deploys: 2026-10-06 the notifications (PR #9, V21) and the
+`SPRING_JPA_HIBERNATE_DDL_AUTO` removed. Since: `VAPID_*`, `CSP_ENFORCE`, `ADMIN_GOOGLE_ID` (2026-10-24). No `TZ`: the JVM is UTC.
+**Neither service sleeps** (Railway's serverless switched off for `scan2play` and `Postgres`, checked 2026-10-24): a sleeping app
+ran no `@Scheduled` job — the nightly clearing and purges (Section 4.1) and the demo's reset (5.5) — and an app that woke before
+its database failed once at start. **No Healthcheck Path** is set yet (2026-10-24): Railway switches traffic to a new deploy when
+its process is up, not when the app answers. **The database** is reachable only on Railway's private network (its public TCP
+proxy removed 2026-10-21). After the incident Railway reported on 2026-10-21 the owner replaced the Gemini key, the Google OAuth
+secret and the database's password. The workspace has a spending limit of 15 USD a month (an alert at 10 USD). Later deploys: 2026-10-06 the notifications (PR #9, V21) and the
 versioned script addresses (PR #10); 2026-10-07 PR #11 via #12 (`a06e4be`: clear the history, the comment style, V22 and V23
 applied in 0.05 s, "Push notifications on"). Since:
 `CSP_ENFORCE=true` (2026-10-15), Dependabot alerts and security updates on, Railway waits for the CI before it deploys `main`
@@ -1083,6 +1106,7 @@ GuestQueueService          → DjService
 ### Architecture
 - No user table: the DJ is the `owner_id` of the party; one party per DJ. Old parties are never cleaned up (their requests are,
   after 30 days).
+- **The demo's daily limit** is one for all its visitors and survives its nightly reset (Section 5.5).
 - **Single instance:** the caches and the guest limits are in memory — a second instance would need them shared. The HTTP sessions
   are in the database (review 2.3); each request with a session reads it and writes its last access time (the dashboard: one request
   per shown window every 3 s).

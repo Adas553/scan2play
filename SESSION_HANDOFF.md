@@ -1,35 +1,32 @@
-# Session Handoff — 2026-10-21
+# Session Handoff — 2026-10-24
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`
 (2026-10-02 … 04: the phone dashboard, votes, the vibe note, "Kto gra", the removal of Spotify and YouTube, package by package),
 `session-handoff-2026-10-16.md` (2026-10-05 … 16: the staff, the plans, the review of 2026-10-14 and its fixes),
 `session-handoff-2026-10-18.md` (2026-10-16 … 18: the artist and the title, the hosts' lists, the site's icon, the DJ's contact,
-the dedications, the landing page, the TV screen, the language switch, the landing page's cut-off).
+the dedications, the landing page, the TV screen, the language switch, the landing page's cut-off),
+`session-handoff-2026-10-21.md` (2026-10-19 … 21: release #125, the CSP's week, Railway's sleep and its effects, word for word).
 Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. The review of 2026-09-30: `docs/history/review-2026-09-30.md` (done; 2.3, one instance, left open).
 The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the order of PRs, "Status poprawek").
+The review of 2026-10-21: `docs/history/review-2026-10-21.md` (S, C, P, R, T, U, O; the order of PRs) — what is done and left: "Next", item A.
 
 ## Start here
 
-- **2026-10-21 — the state.** `main` = `dev` in content. Release #125 (#124: nothing on the landing page sticks out sideways on a
-  phone; #123: this file) deployed 2026-10-19 20:52 UTC, SUCCESS (Railway shows it SLEEPING now: asleep, not failed). The releases
-  before it (#108 … #122: the dedications, the landing page, the TV screen, the language switch, the landing page's cut-off and its
-  fix): `docs/history/session-handoff-2026-10-18.md`. Checked live on 2026-10-21 with curl, no cookies: the home page whole to
-  `</html>` in Polish and with `?lang=en`, the footer, "Polski · English" at the top, "Masz link z zaproszeniem od DJ-a? Wklej go
-  tutaj" under the last "Zbieraj prośby gości"; `/p/{code}/tv` 200 (an unknown code 404). No "Cannot create a session after the
-  response has been committed" since 2026-10-18 19:12 UTC (the fix #121 was deployed at 19:42). Search Console: the owner has
-  requested the home page's indexing (done by 2026-10-21).
-- **The CSP's week (2026-10-15 … 21): not one "CSP violation"** in Railway's log — `CSP_ENFORCE=true` stays. No AI error either
-  ("AI evaluation failed", "the AI could not be asked", 402): 10 requests asked that week (9 on 2026-10-16, 1 on 10-18), each
-  answered by `gemini-3.6-flash`. The plans are not enforced (`PLANS_ENFORCE` unset), the notifications on.
-- **Railway's sleep is still on** for both `scan2play` and `Postgres` (2026-10-21). The app started ~213 times in the week (~30 a
-  day: any visit after a quiet spell wakes it, crawlers too). A sleeping app runs no `@Scheduled` job; the nightly ones left one
-  line — "Queue cleanup: 15 request(s) waiting more than 24 h cleared from the queues" on 2026-10-20 02:40 UTC (the app happened to
-  be awake) — and no "Song request cleanup" / "Staff invitation cleanup" (they log only when they deleted something, so that proves
-  nothing). Waking shows the app starting before its database, "Connection to postgres.railway.internal:5432 refused" (Flyway, at
-  start; Railway restarts the app and it is up a moment later): 2026-10-15 16:45, 10-16 10:55, 10-18 02:19, 10-19 02:24, 20:53 (the
-  deploy of #125), 22:39 and 22:40, 10-20 15:01 and 18:44 UTC. Decided (the owner, 2026-10-18): switch the sleep off rather than
-  change the code; with both awake these should stop.
+- **2026-10-24 — the state.** `main` = `dev` = `7ff26ed` (#139), deployed on Railway 2026-10-24 08:54 UTC, SUCCESS. Since the
+  review of 2026-10-21: #131 (S1: an unchecked request stays off the TV and the guests' list, V39), #132 (C2: a DJ whose session
+  expired comes back through Google's login to the panel; C3: an unknown party or address is a 404), #134 (the QR poster and the
+  TV screen in the DJ panel's language), #136 (the site's counter `/dj/stats`, V40; `ADMIN_GOOGLE_ID` set on Railway), #137 (the
+  demo `/demo`: the parties `DEMO` in Polish and `DEME` in English, no Gemini, a visitor's request seen only by that visitor; the
+  logo links to the home page on the public pages), #138 (`LICENSE`, "All rights reserved").
+- **The repository is public** since 2026-10-24 (`LICENSE`: viewing only). GitHub Actions have no minute limit now, so O3 (CI
+  running twice) is not urgent. Nothing secret in the repo, the docs or a commit — ever.
+- **Railway (checked 2026-10-24, read only):** the sleep is off for `scan2play` and `Postgres` (the nightly jobs and the demo's
+  04:55 reset run now; C1 is less urgent); a spending limit of 15 USD (an alert at 10 USD); no Healthcheck Path yet (item B).
+  After Railway's incident of 2026-10-21 the owner replaced the Gemini key, the Google OAuth secret and the database's password,
+  and removed the database's public TCP proxy.
+- **The market:** after the posts on Facebook ~15 visits, 2 clicks on "Zacznij", 1 login — watch `/dj/stats`. Ideas: a short film
+  for the posts; talks with 3–5 DJs (the questions: item 1).
 - **Mind (the lessons of 2026-10-18 … 19):** (1) the `@WebMvcTest`s have no Spring Session filter: a form with a CSRF token rendered
   after the first 8 KB of a public page, for a visitor without a session, fails only in a test with `SessionRepositoryFilter`
   (`LandingPageSessionWebTest`) — such a form gets its token loaded in the controller and such a test. (2) A browser scenario that
@@ -37,6 +34,25 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
   `innerWidth` by what sticks out). (3) After a release, curl production without cookies to the page's end, not only for a 200.
 
 ## Next (the owner picks)
+
+A. **The review of 2026-10-21 — what is left**, one PR per group. The owner's order (2026-10-24): this file and PROJECT_CONTEXT →
+   S2 + P1 → O2 → U2 + U3; the rest after.
+   - **S2 + P1:** the home page without a session in the database (the invitation's form as `GET /join?link=`), a cache for
+     `/webjars` and `/images` (today `no-store`); tests: no `Set-Cookie: SESSION`, the `Cache-Control` headers. With it (the owner,
+     2026-10-24: yes): `DemoParty.reset` also clears the daily limit of `DEMO` and `DEME` (`GuestRequestLimiter.resetParty`), with a
+     test — today a script that floods the demo blocks it until a restart or the next 24 h (PROJECT_CONTEXT 5.5).
+   - **O2:** an alarm when the AI stops judging (a push to the owner after N unchecked in a row, or a bar in the panel).
+   - **U2 + U3:** impersonal forms for the guests ("Wykorzystałeś limit", "Zagrałeś ją", "Gotowy na…"); the dedication comes back
+     after an expired page (`GuestFormExpiredHandler`).
+   - **C1:** the nightly cleanups also after a start (less urgent: the sleep is off).
+   - **O3:** CI without double runs (not urgent: the repo is public).
+   - **R1** (`PromptBuilder` out of `SongEvaluationService`), **R2** (a rule on comments in `AGENTS.md`), **O4** (Tomcat 11.0.27,
+     google-genai 1.78 — the latter with a try on the real Gemini, with the owner's yes), **T2**, **U4**.
+   - **S1 b:** a step in the prompt that rejects an offensive "title" — first `GeminiComparison` with the real key (the owner's
+     yes; the key only from IntelliJ's run configuration, never in the repo).
+B. **Railway: a Healthcheck Path** (e.g. `/robots.txt`), so a deploy takes the traffic only once the app answers.
+C. **The branch `claude/for-whom-pages`** (`/dj-weselny`, `/kluby`, `/puby`): waits for the owner's yes to its texts; to fix: "Co
+   zagrałeś" (an impersonal form) and Pro features promised as free; bring `dev` in before its PR.
 
 0. **"⚠ Sprawdź"** — built 2026-10-07 (live). Still a case for the Gemini comparison (item 4).
 
@@ -95,9 +111,9 @@ The review of 2026-10-14: `docs/history/review-2026-10-14.md` (K1, W1–W15, the
 
 ## Waiting for the owner (not code)
 
-- **Railway's sleep:** still on (2026-10-21) — switch `sleepApplication` off for `scan2play` and `Postgres` (Settings → Deploy →
-  Serverless). Next morning: the log after 04:40 / 04:45 Polish time (02:40 / 02:45 UTC until 2026-10-25, then 03:40 / 03:45) — a
-  "Queue cleanup" line only if a request had waited more than a day.
+- **Railway's Healthcheck Path** (item B): Settings → Deploy → Healthcheck Path, e.g. `/robots.txt`.
+- **The nightly jobs now that the sleep is off:** a morning's log after 04:40 / 04:45 / 04:55 Polish time (02:40 … UTC until
+  2026-10-25, then 03:40 …) — "Queue cleanup" only if a request had waited more than a day; the demo's reset every night.
 - **Old PRs to `main`:** #2 and #7 (April) — close them.
 - **Gemini's prepaid credits:** top up or turn on auto-reload (at zero the API answers 402 and every request goes to the DJ
   unchecked); a spending limit for the project in AI Studio.
