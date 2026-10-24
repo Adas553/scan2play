@@ -501,8 +501,10 @@ nie działa — organizator mógł utworzyć nowy". A link pasted in the app (an
 another's party: she has joined it already, it read as if she still had to (the owner, 2026-10-10) —, `POST /dj/join`) leads to that invitation; a guests' link
 (`…/p/…`) is told apart ("To link dla gości…, nie zaproszenie"). On the landing page, under the last "Zbieraj prośby gości", "Masz link z zaproszeniem od
 DJ-a? Wklej go tutaj" (2026-10-18; it was "Masz zaproszenie do obsługi imprezy? Dołącz →" between the hero and the steps — a `<details>`,
-`POST /join`, public): a party's link goes to Google's login, anything else back to `/?staffLink=invalid#staffLogin` (or `guests`) —
-at the field and its note — before any login.
+`GET /join?link=`, public): a party's link opens its invitation (`/join/{token}`: the party, the role, the login from there),
+anything else back to `/?staffLink=invalid#staffLogin` (or `guests`) — at the field and its note — before any login. A GET, so
+the form carries no CSRF token and the landing page makes no session (the review of 2026-10-21, S2; until then every visitor of
+`/` was a row in `spring_session`).
 **Which party a request works on** (`DjSessionHelper`, V32): **the page names it** — every form and fetch of the panel sends
 `partyCode` (hidden inputs; `forms.js` adds it to what it sends, the "Cofnij" bar too), the pages' links carry `?party=`, and the
 server checks the person's access to *that* party on every request (the owner without a query, a person of the staff by their row —
@@ -620,8 +622,9 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
   ones, with their dedications (`ON DELETE CASCADE`) — is deleted and the ten examples are saved again, timed from now. A visitor's
   request lasts until the next night at most. The general nightly jobs apply to the demo as to any party.
 - **What else stays:** only numbers in `site_counter` (V40, no personal data).
-- **Limitation:** the party's daily limit (300 per 24 h, `GuestRequestLimiter`, in memory) is shared by every visitor of a demo party,
-  and the reset does not clear it: a script that floods `/p/DEMO` blocks the demo's guest page until a restart or the next 24 h.
+- **The daily limit:** the party's limit (300 per 24 h, `GuestRequestLimiter`, in memory) is shared by every visitor of a demo
+  party, so the reset starts it again too (`GuestRequestLimiter.resetParty`, `DemoPartyTest`): a script that floods `/p/DEMO`
+  blocks the demo's guest page until the next night at most. The addresses keep their windows (30 per 10 min).
 
 ---
 
@@ -631,7 +634,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 
 | Class | Purpose |
 |-------|---------|
-| `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ; `/start` → Google's login. The landing page's CSRF token (the invitation form at the page's end) is loaded before rendering: rendered at the end, after the first 8 KB had gone, it could make no session and a first visit got the page cut off (production, 2026-10-18; `LandingPageSessionWebTest` — with Spring Session's filter, which the other `@WebMvcTest`s lack) |
+| `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ; `/start` → Google's login. The landing page makes no session: its invitation form is a GET, without a CSRF token (review 2026-10-21, S2). A form that posts there would need its token loaded before rendering — after the first 8 KB no session can be made and a first visit got the page cut off (production, 2026-10-18); `LandingPageSessionWebTest` — with Spring Session's filter, which the other `@WebMvcTest`s lack — checks the whole page and no `SESSION` cookie |
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `StaffController` | the staff's invitation `/join/{token}` (public; "Dołącz" a POST), the panel switcher `POST /dj/panel`, leaving a staff, a pasted link (V30); the owner's page "Obsługa" `/dj/staff`: permissions, the link and its role (V33), removing (V32), invitations by e-mail and their answer `/dj/invitation` (V34) |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
@@ -672,7 +675,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `PushSubscriptionService` / `PushNotificationService` | the DJ's devices of the notifications (checked addresses, ≤ 10 per DJ) / sending a new request to them (Web Push, `zerodep-web-push-java`, off the request thread) |
 | `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …" |
 | `SiteCounter` | the site's counter (V40, 2026-10-24): per day (Polish time) the landing page seen (PL / EN), "Zacznij", logins, new DJs, guests' requests — numbers only, no address, browser or account; a robot's browser (search engines, Facebook's link previews, scanners, curl) is not counted; one atomic `INSERT … ON CONFLICT` per event, a failure only a WARN (`SiteCounterIT`) |
-| `DemoParty` | the demo parties, one per language (the owner, 2026-10-24): `DEMO` Polish, `DEME` English — four characters, never a real party's; owners `scan2play-demo` / `scan2play-demo-en`, no Google accounts. Each with its own vibe note, ⭐ and ten example requests with their comments (waiting ones with votes, dedications, a "⚠ Sprawdź", a ⭐ of the hosts; played, rejected, skipped), put back at every start and every night (04:55), the visitors' requests dropped. Their guest pages `/p/DEMO`, `/p/DEME` work, but no AI is asked: `SongEvaluationService.demoAnswer` — accepted, a ready comment (`demo.ai.comment.*`, "(demo: no AI check)"), saved unchecked, so only the visitor who sent it sees it (`DemoPartyIT`) |
+| `DemoParty` | the demo parties, one per language (the owner, 2026-10-24): `DEMO` Polish, `DEME` English — four characters, never a real party's; owners `scan2play-demo` / `scan2play-demo-en`, no Google accounts. Each with its own vibe note, ⭐ and ten example requests with their comments (waiting ones with votes, dedications, a "⚠ Sprawdź", a ⭐ of the hosts; played, rejected, skipped), put back at every start and every night (04:55), the visitors' requests dropped, the party's daily limit started again. Their guest pages `/p/DEMO`, `/p/DEME` work, but no AI is asked: `SongEvaluationService.demoAnswer` — accepted, a ready comment (`demo.ai.comment.*`, "(demo: no AI check)"), saved unchecked, so only the visitor who sent it sees it (`DemoPartyIT`) |
 | `PlanService` | the plans (V35, Section 4.1 "Plans"): the organiser's `Plan` (the switch `scan2play.plans.enforce`, `pro-owners`, the row of `dj_plan`, cached), `require(party, PlanFeature)` (a 403), `asPlanned` (the party as its plan lets it work: for the guests, the AI, the queue's marks, the print — never saved), `view` (what the pages show: `plan.allows(…)`, `plan.pro(…)`), the staff's places, the trial |
 
 ### 6.3 Configuration
@@ -684,8 +687,11 @@ script's and style's address and no cache on the way keeps an old one; the dashb
 in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy). `VersionedAssetCacheFilter` lets the
 browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
 deploy's version always gives the same file (an old version is a 404). An answer that is not the file (a 404, a 500) is
-set back to `no-store` — a missing file must not be kept for a year. Only for a commit's version, never `dev` (devtools changes the
-files under it); everything else keeps Spring Security's `no-store`,
+set back to `no-store` — a missing file must not be kept for a year. Bootstrap (`/webjars/**`), `/images/**` and `/favicon.ico`
+have no version in their addresses: a day (`public, max-age=86400`; the review of 2026-10-21, P1 — every phone fetched Bootstrap's
+31 KB and the logo again on every page), so a changed one reaches everyone by the next day; Cloudflare keeps them too — purge its
+cache after changing one. Only for a commit's version, never `dev` (devtools changes the files under it); everything else keeps
+Spring Security's `no-store`,
 `GeminiConfig` (the Gemini client, 15 s timeout, one try — `GeminiConfigTest` checks both through the real SDK against a Gemini
 stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
 the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an empty header), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
@@ -1047,7 +1053,7 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one, or one made more than 30 days ago (V37) |
-| POST | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's goes to Google's login, else `/?staffLink=invalid#staffLogin` |
+| GET | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's → its invitation `/join/{token}`, else `/?staffLink=invalid#staffLogin` (`guests` for a guests' link); keeps nothing, no session (review 2026-10-21, S2) |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
 | POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |
 | POST | `/h/{token}` | `blocked`, `wanted`: the hosts save their lists (`SongList.tidy`), back to the page with "✓ Zapisane" (a list over 100: the first 100 kept, `hostDropped` says so) |
@@ -1106,7 +1112,7 @@ GuestQueueService          → DjService
 ### Architecture
 - No user table: the DJ is the `owner_id` of the party; one party per DJ. Old parties are never cleaned up (their requests are,
   after 30 days).
-- **The demo's daily limit** is one for all its visitors and survives its nightly reset (Section 5.5).
+- **The demo's daily limit** is one for all its visitors: a flood blocks its guest page until the nightly reset (Section 5.5).
 - **Single instance:** the caches and the guest limits are in memory — a second instance would need them shared. The HTTP sessions
   are in the database (review 2.3); each request with a session reads it and writes its last access time (the dashboard: one request
   per shown window every 3 s).

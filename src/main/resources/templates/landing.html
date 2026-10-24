@@ -161,13 +161,14 @@
             <a href="/start" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
             <p class="s2p-landing-free mt-3" th:text="#{landing.hero.free}">Free. No card, nothing to install.</p>
             <!--/* The party's staff (V30, the owner 2026-10-09): a bartender pastes the owner's invitation link here — the installed
-                 app starts on this page, and a link from an e-mail would open in the browser, with a login of its own. POST /join: a
-                 link of a party goes straight to Google's login (StaffController), anything else comes back with ?staffLink=invalid
-                 #staffLogin. A <details>: it opens without a script (CSP). Quiet, under the last start — the DJs are who the page is
-                 for (the owner, 2026-10-18: it floated between the hero and the steps, and "obsługa" is our word, not a newcomer's). */-->
+                 app starts on this page, and a link from an e-mail would open in the browser, with a login of its own. GET /join: a
+                 link of a party opens its invitation (StaffController), anything else comes back with ?staffLink=invalid#staffLogin;
+                 a GET, so no CSRF token and no session for the landing page (review 2026-10-21, S2). A <details>: it opens without
+                 a script (CSP). Quiet, under the last start — the DJs are who the page is for (the owner, 2026-10-18: it
+                 floated between the hero and the steps, and "obsługa" is our word, not a newcomer's). */-->
             <details class="s2p-staff-login s2p-mw-500 mx-auto mt-4 text-start" id="staffLogin" th:open="${param.staffLink != null}">
                 <summary class="text-center small text-secondary" th:text="#{landing.staff.summary}">Got an invite link from a DJ? Paste it here</summary>
-                <form th:action="@{/join}" method="post" class="mt-3" id="staffLoginForm">
+                <form th:action="@{/join}" method="get" class="mt-3" id="staffLoginForm">
                     <label for="staffLinkPaste" class="form-label small" th:text="#{landing.staff.label}">Paste the invitation link you got from the owner</label>
                     <input type="text" id="staffLinkPaste" name="link" maxlength="300" autocomplete="off" required
                            class="form-control mb-2" th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
