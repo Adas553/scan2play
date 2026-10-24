@@ -32,8 +32,8 @@
                 }).map(function (w) { return w.getAttribute('data-guest-limit'); });
             };
             t.step('no limit is reached: no warning', shown(), []);
-            t.check('the YouTube searches have no warning any more (one warning: the party limit)',
-                !warning('search-spent') && document.querySelectorAll('#guestLimitWarnings [data-guest-limit]').length === 1);
+            t.check('the YouTube searches have no warning any more (two warnings: the party limit, the AI not judging)',
+                !warning('search-spent') && document.querySelectorAll('#guestLimitWarnings [data-guest-limit]').length === 2);
 
             await t.stand.config({ guestLimits: 'party-full' });
             await afterPolls(t);
@@ -49,6 +49,34 @@
             await t.stand.config({ guestLimits: 'none' });
             await afterPolls(t);
             t.step('the limits reset: the warnings go', shown(), []);
+        }
+    });
+
+    // The AI not judging (the review of 2026-10-21, O2; the owner, 2026-10-24): three requests in a row it did not judge — every
+    // panel says so above the queue, from the flag ai-down of the same header (AiHealthMonitor), and stops saying it once it answers.
+    S2P.scenario({
+        name: 'ai-down-bar-follows-the-poll',
+        title: 'the AI not judging: a red bar above the queue comes and goes with the flag ai-down of the queue poll, beside a reached limit',
+        setup: { guestLimits: 'none' },
+        run: async function (t) {
+            const bar = document.querySelector('#guestLimitWarnings [data-guest-limit="ai-down"]');
+            const showing = function (element) { return !!element && !element.classList.contains('d-none'); };
+            t.step('the AI answers: no bar', showing(bar), false);
+
+            await t.stand.config({ guestLimits: 'ai-down' });
+            await afterPolls(t);
+            t.step('the AI down: the bar shows (the poll answered 304)', showing(bar), true);
+            t.step('…says what to do', bar.textContent.trim(),
+                '⚠ AI chwilowo nie ocenia próśb: nowe trafiają na listę z plakietką „bez oceny AI” — przejrzyj je przed zagraniem.');
+
+            await t.stand.config({ guestLimits: 'party-full,ai-down' });
+            await afterPolls(t);
+            t.step('with the party limit reached: both', [showing(bar),
+                showing(document.querySelector('#guestLimitWarnings [data-guest-limit="party-full"]'))], [true, true]);
+
+            await t.stand.config({ guestLimits: 'none' });
+            await afterPolls(t);
+            t.step('the AI answers again: the bar goes', showing(bar), false);
         }
     });
 
