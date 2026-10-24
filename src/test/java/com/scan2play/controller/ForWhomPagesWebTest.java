@@ -92,6 +92,8 @@ class ForWhomPagesWebTest {
             assertThat(html).as(path + ": no Pro").doesNotContainPattern("(?U)\\bPro\\b").doesNotContain("/pro\"", "s2p-pro");
             writeForTheBrowserTests("for-whom-" + path.substring(1) + "-pl.html", html);
         }
+        // the pubs' first step (the owner, 2026-10-24: "Raz" read oddly as a heading)
+        assertThat(section(page("/puby", null), "forWhomSteps")).contains("<h3>Na start\n").doesNotContain("<h3>Raz");
     }
 
     @Test
