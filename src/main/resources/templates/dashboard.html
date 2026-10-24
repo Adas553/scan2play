@@ -301,8 +301,15 @@
                             th:text="#{dashboard.queue.clear}">🧹 Clear the queue</button>
                 </form>
             </div>
-            <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
-                   th:placeholder="#{dashboard.list.search}" autocomplete="off">
+            <div class="d-flex align-items-center gap-2 s2p-list-tools">
+                <!--/* "Tylko mam" (V42): hides the requests the DJ's library has no song of ("✗"); "?" and unmarked ones stay — for a
+                     party with a library its plan marks by (list-tools.js, again after each poll) */-->
+                <button th:if="${libraryOn == true}" type="button" id="libraryOnly" class="btn btn-sm btn-outline-light text-nowrap"
+                        data-list-library aria-pressed="false" th:title="#{dashboard.library.only.title}"
+                        th:text="#{dashboard.library.only}">Only mine</button>
+                <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
+                       th:placeholder="#{dashboard.list.search}" autocomplete="off">
+            </div>
         </div>
         <!--/* A server limit that stops guest songs now, or the AI not judging: shown from the page's model, then shown / hidden by
              polling.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
@@ -369,14 +376,15 @@
                             <span th:if="${wantedSongs != null and wantedSongs.matches(req.songName)}"
                                   class="badge text-bg-info align-self-start s2p-host-wanted"
                                   th:title="#{dashboard.host.wanted.title}" th:text="#{dashboard.host.wanted}">⭐ The hosts want it</span>
-                            <!--/* the DJ's library (V41, Pro): "✓" the DJ has the song, "✗" not under this name — none without a library */-->
+                            <!--/* the DJ's library (V41, V42, Pro): "✓" the same title with an artist in common, "?" the title alone, "✗"
+                                 no song of the title — none without a library ("Tylko mam" hides the "✗" ones, list-tools.js) */-->
                             <span th:if="${libraryMarks != null and libraryMarks.containsKey(req.id)}"
-                                  th:with="have=${libraryMarks.get(req.id)}"
+                                  th:with="mark=${#strings.toLowerCase(libraryMarks.get(req.id).name())}"
                                   class="badge align-self-start s2p-library"
-                                  th:classappend="${have} ? 'text-bg-success' : 'text-bg-dark border border-secondary'"
-                                  th:attr="data-library=${have} ? 'have' : 'missing'"
-                                  th:title="${have} ? #{dashboard.library.have.title} : #{dashboard.library.missing.title}"
-                                  th:text="${have} ? #{dashboard.library.have} : #{dashboard.library.missing}">✓ You have it</span>
+                                  th:classappend="${mark == 'have'} ? 'text-bg-success' : (${mark == 'similar'} ? 'text-bg-dark border border-warning text-warning' : 'text-bg-dark border border-secondary')"
+                                  th:attr="data-library=${mark}"
+                                  th:title="#{${'dashboard.library.' + mark + '.title'}}"
+                                  th:text="#{${'dashboard.library.' + mark}}">✓ You have it</span>
                             <!--/* none of the guest's words in the AI's song: maybe another song in place of the one asked for */-->
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>

@@ -10,7 +10,6 @@ import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.Plans;
-import com.scan2play.util.SongNames;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -93,7 +92,7 @@ class DjLibraryControllerTest {
         ArgumentCaptor<Library> saved = ArgumentCaptor.forClass(Library.class);
         verify(libraries).replace(eq(PUB), saved.capture());
         assertThat(saved.getValue().tracks()).isEqualTo(2);
-        assertThat(saved.getValue().keys()).contains(SongNames.libraryKey("Wilki - Baśka"), SongNames.libraryKey("ABBA - Dancing Queen"));
+        assertThat(saved.getValue().keys()).contains(com.scan2play.util.LibraryKey.of("Wilki - Baśka"), com.scan2play.util.LibraryKey.of("ABBA - Dancing Queen"));
         assertThat(answer).isEqualTo("settings.library.uploaded");
     }
 

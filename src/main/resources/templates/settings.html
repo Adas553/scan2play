@@ -219,7 +219,9 @@
             <th:block th:unless="${plan.pro('LIBRARY')}">
             <p class="small text-secondary mb-2" th:text="#{settings.library.help}">Upload your rekordbox collection…</p>
             <p class="small text-light mb-2" id="libraryState"
-               th:text="${libraryTracks != null} ? #{settings.library.state(${libraryTracks}, ${libraryUploaded})} : #{settings.library.none}">No library uploaded yet.</p>
+               th:text="${libraryTracks == null} ? #{settings.library.none} : (${libraryPlaylist != null}
+                        ? #{settings.library.state.playlist(${libraryTracks}, ${libraryUploaded}, ${libraryPlaylist})}
+                        : #{settings.library.state(${libraryTracks}, ${libraryUploaded})})">No library uploaded yet.</p>
             <form th:action="@{/dj/library}" method="POST" class="m-0" id="libraryForm"
                   th:attr="data-sending=#{settings.library.sending},data-refused=#{settings.library.error.other}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">

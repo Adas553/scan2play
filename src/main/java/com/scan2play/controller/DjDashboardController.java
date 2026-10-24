@@ -15,6 +15,7 @@ import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
+import com.scan2play.model.LibraryMark;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.util.SongList;
@@ -178,14 +179,16 @@ public class DjDashboardController {
         List<SongRequestEntity> queue = djService.getDashboardQueue(partyCode);
         model.addAttribute(HISTORY, queue);
         model.addAttribute(DEDICATIONS, djService.dedicationsOf(queue));   // the guests' dedications under their songs (V38)
-        model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, queue));   // "✓" / "✗" by the DJ's library (V41)
+        model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, queue));   // "✓" / "?" / "✗" by the DJ's library (V41, V42)
+        // "Tylko mam" beside the search: for anyone of the panel, while the party has a library its plan marks by
+        model.addAttribute(LIBRARY_ON, planService.allows(settings, PlanFeature.LIBRARY) && djService.libraryOf(partyCode).isPresent());
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
 
         return "dashboard";
     }
 
     /** The queue's marks of the DJ's library (V41): only with the plan that has it — without Pro the library waits, unmarked. */
-    private Map<Long, Boolean> libraryMarks(PartySettingsEntity settings, List<SongRequestEntity> songs) {
+    private Map<Long, LibraryMark> libraryMarks(PartySettingsEntity settings, List<SongRequestEntity> songs) {
         return planService.allows(settings, PlanFeature.LIBRARY) ? djService.libraryMarksOf(settings.getPartyCode(), songs) : Map.of();
     }
 
@@ -218,6 +221,7 @@ public class DjDashboardController {
             Optional<DjLibraryService.Info> library = djService.libraryOf(partyCode);
             model.addAttribute(LIBRARY_TRACKS, library.map(DjLibraryService.Info::tracks).orElse(null));
             model.addAttribute(LIBRARY_UPLOADED, library.map(info -> Times.day(info.uploadedAt())).orElse(null));
+            model.addAttribute(LIBRARY_PLAYLIST, library.map(DjLibraryService.Info::playlist).orElse(null));
         }
         // what the organiser's plan has (V35): the cards of a feature without Pro say so to the organiser, in place of their form;
         // what the party works with — the comment style, the guests' limits — is the plan's (the saved values wait for Pro)
