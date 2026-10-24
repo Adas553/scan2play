@@ -9,6 +9,7 @@ import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
+import com.scan2play.service.SiteCounter;
 import com.scan2play.service.SongEvaluationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,7 @@ public class GuestController {
     private final GuestRequestLimiter guestRequestLimiter;
     private final MessageSource messageSource;
     private final PlanService planService;
+    private final SiteCounter siteCounter;
 
     /**
      * The party page. It takes no {@code HttpSession} of its own (review 2026-10-14 W3): a parameter of that type made a session — a
@@ -203,6 +205,7 @@ public class GuestController {
                 if (SongEvaluationService.asTyped(songName).isEmpty()) {
                     return refuse(redirectAttributes, partyCode, "guest.error.empty");
                 }
+                siteCounter.count(SiteCounter.Event.GUEST_REQUEST);   // a guest's request sent, whatever comes of it (V40)
                 // The guest's own limit first (the DJ's setting), then the server's limits that do not need the cookie.
                 // Both count the request before the evaluation.
                 Optional<Long> waitTimeSeconds = guestSessionService.tryAcquire(session, partyCode, settings);

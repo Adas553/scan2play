@@ -61,6 +61,8 @@ class GuestControllerTest {
     private GuestVoteService guestVoteService;
     @Mock
     private MessageSource messageSource;
+    @Mock
+    private com.scan2play.service.SiteCounter siteCounter;
 
     /** The plans not enforced (as in production today): the party as it is (V35). */
     @Spy
@@ -105,6 +107,7 @@ class GuestControllerTest {
         assertThat(request()).isEqualTo("result");
         // the guest's request is remembered, so the party page can say where it waits
         verify(guestSessionService).rememberRequest(session, PARTY, 42L);
+        verify(siteCounter).count(com.scan2play.service.SiteCounter.Event.GUEST_REQUEST);   // the site's counter (V40)
     }
 
     @Test
@@ -474,7 +477,7 @@ class GuestControllerTest {
         settings.setInstagramUrl("https://www.instagram.com/dj/");
         settings.setTipUrl("https://buycoffee.to/dj");
         GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
-                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced());
+                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter);
 
         ExtendedModelMap model = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, model, request)).isEqualTo("index");
@@ -521,7 +524,7 @@ class GuestControllerTest {
         }
 
         GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
-                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced());
+                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter);
         ExtendedModelMap freeEnded = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, freeEnded, request)).isEqualTo("party_ended");
         assertThat(freeEnded.get("instagramUrl")).isNull();
