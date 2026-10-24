@@ -25,12 +25,14 @@
          12 px each side and the page moved left and right (the owner, 2026-10-19); the wide gutter from lg up */-->
     <div class="row align-items-center gx-4 gy-5 gx-lg-5">
         <div class="col-lg-5 text-center text-lg-start">
-            <div class="fs-3 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
+            <div class="fs-3 fw-bold"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></div>
             <h1 class="s2p-landing-title" th:text="#{landing.hero.title}">Guests request songs. AI keeps the vibe. You play.</h1>
             <p class="s2p-landing-lede" th:text="#{landing.hero.subtitle}">Guests scan a QR code and type a song on their phone…</p>
             <!--/* For DJs: no player — the DJ plays from their own software, Scan2Play collects the guests' requests (Google login) */-->
             <div class="s2p-landing-cta">
-                <a href="/start" id="landingStart" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
+                <!--/* a logged-in DJ (the panel's logo leads here, 2026-10-24): the way back to the panel instead of the login */-->
+                <a href="/start" th:href="${loggedIn} ? '/dj/dashboard' : '/start'" id="landingStart" class="btn btn-action btn-lg px-4"
+                   th:text="${loggedIn} ? #{landing.btn.panel} : #{landing.btn.start.requests}">Collect guest requests</a>
                 <!--/* The demo, without a login (the owner, 2026-10-24: people who saw a post left at Google's login) */-->
                 <a href="/demo" id="landingDemo" class="btn btn-outline-light btn-lg" th:text="#{landing.demo}">👀 See the demo</a>
                 <!--/* The guide for DJs, public (the owner, 2026-10-12): read before the first login */-->
@@ -163,7 +165,8 @@
         <div class="container text-center">
             <h2 th:text="#{landing.final.title}">Ready for your next party?</h2>
             <p class="s2p-landing-lede mx-auto" th:text="#{landing.final.text}">You start a party in a minute…</p>
-            <a href="/start" class="btn btn-action btn-lg px-4" th:text="#{landing.btn.start.requests}">Collect guest requests</a>
+            <a href="/start" th:href="${loggedIn} ? '/dj/dashboard' : '/start'" class="btn btn-action btn-lg px-4"
+               th:text="${loggedIn} ? #{landing.btn.panel} : #{landing.btn.start.requests}">Collect guest requests</a>
             <p class="s2p-landing-free mt-3" th:text="#{landing.hero.free}">Free. No card, nothing to install.</p>
             <!--/* The party's staff (V30, the owner 2026-10-09): a bartender pastes the owner's invitation link here — the installed
                  app starts on this page, and a link from an e-mail would open in the browser, with a login of its own. GET /join: a

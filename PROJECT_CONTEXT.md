@@ -649,7 +649,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 
 | Class | Purpose |
 |-------|---------|
-| `HomeController` | `/`: the landing page, or the dashboard for a logged-in DJ; `/start` → Google's login. The landing page makes no session: its invitation form is a GET, without a CSRF token (review 2026-10-21, S2). A form that posts there would need its token loaded before rendering — after the first 8 KB no session can be made and a first visit got the page cut off (production, 2026-10-18); `LandingPageSessionWebTest` — with Spring Session's filter, which the other `@WebMvcTest`s lack — checks the whole page and no `SESSION` cookie |
+| `HomeController` | `/`: the landing page, for everyone — a logged-in DJ too (the owner, 2026-10-24: the panel's logo leads here; it sent them back to the panel and seemed dead), their start buttons "Przejdź do panelu" (`/dj/dashboard`), their visit not counted; `/start` → Google's login. The landing page makes no session: its invitation form is a GET, without a CSRF token (review 2026-10-21, S2). A form that posts there would need its token loaded before rendering — after the first 8 KB no session can be made and a first visit got the page cut off (production, 2026-10-18); `LandingPageSessionWebTest` — with Spring Session's filter, which the other `@WebMvcTest`s lack — checks the whole page and no `SESSION` cookie |
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `StaffController` | the staff's invitation `/join/{token}` (public; "Dołącz" a POST), the panel switcher `POST /dj/panel`, leaving a staff, a pasted link (V30); the owner's page "Obsługa" `/dj/staff`: permissions, the link and its role (V33), removing (V32), invitations by e-mail and their answer `/dj/invitation` (V34) |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
@@ -770,6 +770,9 @@ What every page shares, so a new screen looks like the others:
   (`btn-outline-light` / `-secondary`, the picked one of a group filled light): "Pomiń", "Zapisz" in the settings, "Podejrzyj", the
   tip (`btn-outline-warning`: money); the text one — `btn-link` ("↻ Odśwież", "−1"). What deletes is an outline in `--s2p-danger-text`,
   never filled red. Green (`btn-success`, dark text) and yellow are statuses — "Twoja", a given 👍, ⚠, 💸 — not actions.
+  Under a pointer that hovers the action rises 2 px with a cyan glow (`--s2p-action-glow`; none on a phone, none with
+  `prefers-reduced-motion`), and the logo that leads home (`.s2p-home-logo`) turns the accent, its mark ringed in it (the owner,
+  2026-10-24; `AppCssHoverTest`).
 - **Colours** as tokens on `:root`, nowhere else in `app.css` (`AppCssColoursTest`; 2026-10-15 every colour written in a rule became a
   token, 2026-10-16 the near-identical tones merged — the owner: three light texts `--s2p-white` / `--s2p-light` / `--s2p-text`, one
   panel background `--s2p-bg-elevated`, two edges, one yellow; `--s2p-<colour>-<n>` is that colour at an alpha of n %): `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under
