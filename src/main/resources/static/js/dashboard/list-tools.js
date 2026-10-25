@@ -21,6 +21,9 @@
  * applyListFilters(list) is called again after each refresh. The listeners are delegated, so a list that arrives by AJAX (the
  * History tab) needs no set-up.
  *
+ * "TYLKO MAM" — the queue's button [data-list-library] (V42, a party with a library its plan marks by): pressed (aria-pressed),
+ * the rows whose request the DJ's library has no song of ([data-library="missing"]) are hidden too; "?" and unmarked rows stay.
+ *
  * DAY HEADINGS — the history's tr[data-day-heading] (history.html), one where a new day starts. The search hides a heading with
  * no row left under it; a sort by a column hides them all (the table gets .s2p-sorted), undoing it brings them back in place.
  */
@@ -204,21 +207,25 @@ function normalize(text) {
 
 /**
  * The search box: hides the rows (of what is loaded) whose name does not contain the text — or, for a number ("27" or "#27"), the
- * row of the song with that number (data-song-number, V28: a tip titled "#27" came in). The filter buttons are the server's job.
+ * row of the song with that number (data-song-number, V28: a tip titled "#27" came in) — and, with "Ukryj „Nie masz”" pressed, the rows the
+ * DJ's library has no song of. The filter buttons are the server's job.
  */
 export function applyListFilters(list) {
     if (!list) return;
     const searchInput = list.querySelector('[data-list-search]');
     const needle = normalize(searchInput ? searchInput.value.trim() : '');
-    const filtering = needle !== '';
+    const libraryButton = list.querySelector('[data-list-library]');
+    const libraryOnly = !!libraryButton && libraryButton.getAttribute('aria-pressed') === 'true';
+    const filtering = needle !== '' || libraryOnly;
     const number = /^#?\d+$/.test(needle) ? needle.replace('#', '') : null;
 
     const rows = list.querySelectorAll('tbody tr[data-song-name]');
     let shown = 0;
     for (let i = 0; i < rows.length; i++) {
-        const visible = needle === '' || (number !== null
+        const visible = (needle === '' || (number !== null
             ? rows[i].getAttribute('data-song-number') === number
-            : normalize(rows[i].getAttribute('data-song-name')).indexOf(needle) >= 0);
+            : normalize(rows[i].getAttribute('data-song-name')).indexOf(needle) >= 0))
+            && !(libraryOnly && rows[i].querySelector('[data-library="missing"]'));
         rows[i].classList.toggle('d-none', !visible);
         if (visible) shown++;
     }
@@ -344,6 +351,16 @@ document.addEventListener('input', function(e) {
 });
 
 document.addEventListener('click', function(e) {
+    // "Ukryj „Nie masz”" (V42): pressed or not, then the list filtered again
+    const library = e.target.closest('[data-list-library]');
+    if (library) {
+        const pressed = library.getAttribute('aria-pressed') !== 'true';
+        library.setAttribute('aria-pressed', String(pressed));
+        library.classList.toggle('active', pressed);
+        applyListFilters(library.closest('[data-list]'));
+        return;
+    }
+
     // A filter button (the history): the server reads the entries of that kind, so the list is asked for again — in
     // place in the History tab (the button lights at once, and goes back if the answer does not come), by a page
     // load on the standalone page.

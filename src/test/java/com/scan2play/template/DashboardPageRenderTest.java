@@ -401,7 +401,7 @@ class DashboardPageRenderTest {
     /** The guests' dedications the dashboard's queue shows (V38), by the song's id: none, unless a test gives them. */
     private static Map<Long, List<com.scan2play.entity.SongRequestDedicationEntity>> dedications = Map.of();
     /** The queue's marks of the DJ's library (V41), by the song's id: none, unless a test gives them. */
-    private static Map<Long, Boolean> libraryMarks = Map.of();
+    private static Map<Long, com.scan2play.model.LibraryMark> libraryMarks = Map.of();
     /** The party's library (V41): none, unless a test gives one. */
     private static java.util.Optional<com.scan2play.service.DjLibraryService.Info> library = java.util.Optional.empty();
 
@@ -893,28 +893,38 @@ class DashboardPageRenderTest {
     }
 
     /**
-     * The DJ's library (V41): each waiting song "✓ Masz" or "✗ Nie masz" under its name, with what it means on hover; a song the
-     * service has no mark for (no library) none. Written for the browser tests as {@code dashboard-library.html}.
+     * The DJ's library (V41, V42): each waiting song "✓ Masz", "? Podobny" or "✗ Nie masz" under its name, with what it means on
+     * hover; a song the service has no mark for (no library) none. Written for the browser tests as {@code dashboard-library.html}.
      */
     @Test
     void theLibrary_marksEachSong() throws IOException {
-        libraryMarks = Map.of(1L, true, 2L, false);
+        libraryMarks = Map.of(1L, com.scan2play.model.LibraryMark.HAVE, 2L, com.scan2play.model.LibraryMark.MISSING,
+                4L, com.scan2play.model.LibraryMark.SIMILAR);
+        library = java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(3,
+                com.scan2play.service.DjLibraryParser.Format.M3U, java.time.Instant.now(), null));
         try {
-            String html = renderDashboard(party(), List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan"), song(3, "ABBA - SOS")), PL);
+            String html = renderDashboard(party(), List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan"), song(3, "ABBA - SOS"),
+                    song(4, "Dżem - Baśka")), PL);
 
             assertWhatTheScriptsNeed(html);
             assertThat(rowFor(html, 1)).contains("data-library=\"have\"", "text-bg-success", ">✓ Masz<", "title=\"Ten utwór jest w Twojej bibliotece\"");
             assertThat(rowFor(html, 2)).contains("data-library=\"missing\"", ">✗ Nie masz<", "title=\"Tego utworu nie ma w Twojej bibliotece");
             assertThat(rowFor(html, 3)).doesNotContain("data-library", "s2p-library");
+            assertThat(rowFor(html, 4)).contains("data-library=\"similar\"", ">? Podobny<",
+                    "title=\"Masz utwór o tym tytule, ale innego wykonawcy albo zapisany inaczej — sprawdź\"");
+            assertThat(html).as("the switch \"Ukryj „Nie masz”\" beside the search, for a party with marks: it says the mark it hides")
+                    .contains("id=\"libraryOnly\"", ">Ukryj „Nie masz”<", "aria-pressed=\"false\"");
             write("dashboard-library.html", html);
         } finally {
             libraryMarks = Map.of();
+            library = java.util.Optional.empty();
         }
     }
 
     @Test
     void withoutALibrary_noSongIsMarked() {
-        assertThat(renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL)).doesNotContain("data-library", "s2p-library");
+        assertThat(renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL)).doesNotContain("data-library", "s2p-library",
+                "id=\"libraryOnly\"");
     }
 
     /** The row of the song {@code id} in the queue, up to the next row. */
@@ -931,7 +941,7 @@ class DashboardPageRenderTest {
                 .contains("href=\"/dj/settings?party=" + PARTY + "#libraryCard\"", ">Twoja biblioteka<", ">Niewgrana<");
 
         library = java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(1234,
-                com.scan2play.service.DjLibraryParser.Format.REKORDBOX, java.time.Instant.now()));
+                com.scan2play.service.DjLibraryParser.Format.REKORDBOX, java.time.Instant.now(), null));
         try {
             assertThat(rowOf(renderDashboard(party(), List.of(), PL), "library")).contains(">Utworów: 1\u00A0234<");
             assertThat(rowOf(renderDashboard(party(), List.of(), Locale.ENGLISH), "library")).contains(">Songs: 1,234<");

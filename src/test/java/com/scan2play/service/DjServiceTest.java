@@ -251,15 +251,18 @@ class DjServiceTest {
 
     @Test
     void libraryMarks_sayForEachSong_whetherTheDjHasIt_inOneLookup() {
-        when(libraryService.info(PARTY_CODE)).thenReturn(Optional.of(new DjLibraryService.Info(2, DjLibraryParser.Format.M3U, Instant.now())));
-        when(libraryService.found(eq(PARTY_CODE), anyCollection()))
-                .thenReturn(java.util.Set.of(com.scan2play.util.SongNames.libraryKey("Daft Punk - One More Time")));
+        when(libraryService.info(PARTY_CODE)).thenReturn(Optional.of(new DjLibraryService.Info(2, DjLibraryParser.Format.M3U, Instant.now(), null)));
+        var have = com.scan2play.util.LibraryKey.of("Daft Punk - One More Time");
+        var similar = com.scan2play.util.LibraryKey.of("Dżem - Baśka");
+        when(libraryService.marks(eq(PARTY_CODE), anyCollection())).thenReturn(java.util.Map.of(have, com.scan2play.model.LibraryMark.HAVE,
+                similar, com.scan2play.model.LibraryMark.SIMILAR));
 
         var marks = djService.libraryMarksOf(PARTY_CODE, List.of(waiting(1, "Daft Punk - One More Time"), waiting(2, "Wilki - Baśka"),
-                waiting(3, "Daft Punk - One More Time (Radio Edit)")));
+                waiting(3, "Daft Punk - One More Time (Radio Edit)"), waiting(4, "Dżem - Baśka")));
 
-        assertThat(marks).containsEntry(1L, true).containsEntry(2L, false).containsEntry(3L, true).hasSize(3);
-        verify(libraryService, times(1)).found(eq(PARTY_CODE), anyCollection());
+        assertThat(marks).containsEntry(1L, com.scan2play.model.LibraryMark.HAVE).containsEntry(2L, com.scan2play.model.LibraryMark.MISSING)
+                .containsEntry(3L, com.scan2play.model.LibraryMark.HAVE).containsEntry(4L, com.scan2play.model.LibraryMark.SIMILAR).hasSize(4);
+        verify(libraryService, times(1)).marks(eq(PARTY_CODE), anyCollection());
     }
 
     @Test
@@ -268,6 +271,6 @@ class DjServiceTest {
 
         assertThat(djService.libraryMarksOf(PARTY_CODE, List.of(waiting(1, "Wilki - Baśka")))).isEmpty();
         assertThat(djService.libraryMarksOf(PARTY_CODE, List.of())).isEmpty();
-        verify(libraryService, never()).found(anyString(), anyCollection());
+        verify(libraryService, never()).marks(anyString(), anyCollection());
     }
 }

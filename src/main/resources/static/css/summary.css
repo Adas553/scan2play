@@ -231,6 +231,18 @@ h2 {
     font-weight: 600;
 }
 
+/* the DJ's library (V42): a song of its title by another artist */
+.songs .library-similar {
+    flex: none;
+    color: #b8860b;
+    white-space: nowrap;
+}
+
+/* what "Nie masz w bibliotece" counts by: always said, not an icons' legend */
+.legend.library-legend {
+    display: block;
+}
+
 /* the legend of the status icons: needed only where the icons stand alone */
 .legend {
     display: none;

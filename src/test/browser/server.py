@@ -52,7 +52,8 @@ def default_state():
         # Seconds to wait before answering a path, e.g. {'/dj/dashboard/updates': 2.5}: an answer that arrives late.
         # (The request is logged at once, and the answer says what the state was when the request came.)
         'delays': {},
-        # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the song's link) — and,
+        # The rows of the queue table that poll answers with: [{id, name, url}] (accepted songs; url = the song's link) — {library:
+        # 'have' | 'similar' | 'missing'} the mark of the DJ's library (V42) — and,
         # optional, the song's number and the DJ's tips (V28): {number, tips} make the row's data-song-number and its "💸" form;
         # {card: true} adds what a phone's card folds (cards.js): the guest's words, the AI's comment, the votes and the "▾".
         # The rendered page itself has two rows, but the first poll replaces them with these.
@@ -293,10 +294,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(304, headers=dict(limits, ETag=etag))
             # a row has the song cell that the column sort reads (data-sort-value / data-val) and, after the rows, the real
             # "nothing matches" row that the search box shows and hides
-            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"%s><td class="song-cell" data-sort-value="song" data-val="%s"><span class="song-title">%s</span>%s</td>%s%s</tr>'
+            rows = ''.join('<tr data-song-id="%d" data-song-name="%s" data-track-url="%s"%s><td class="song-cell" data-sort-value="song" data-val="%s"><span class="song-title">%s</span>%s%s</td>%s%s</tr>'
                            % (r['id'], html.escape(r['name'], True), html.escape(r['url'], True),
                               ' data-song-number="%d"' % r['number'] if 'number' in r else '',
                               html.escape(r['name'], True), html.escape(r['name']),
+                              # library: the mark of the DJ's library (V41, V42) — 'have', 'similar' or 'missing'
+                              '<span class="badge s2p-library" data-library="%s">%s</span>' % (r['library'], r['library'])
+                              if r.get('library') else '',
                               # card: what a phone's card folds (cards.js) — the guest's words, the AI's comment, the "▾"
                               ('<span class="guest-text">Gość: „%s”</span><span class="s2p-queue-comment">AI: ok</span>'
                                % html.escape(r['name'])) if r.get('card') else '',

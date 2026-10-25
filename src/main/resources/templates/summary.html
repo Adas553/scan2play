@@ -102,6 +102,21 @@
         </ol>
     </section>
 
+    <!--/* the DJ's library (V42): what the AI let through and the library has not ("?" only by another artist) — by the library as it
+         is now, the most wanted first: what to get before the next party */-->
+    <section th:if="${libraryGaps != null}" id="libraryGaps">
+        <h2 th:text="#{summary.library}">Not in your library</h2>
+        <p class="legend library-legend" th:text="#{summary.library.legend}">Songs the AI let through that are not in your library</p>
+        <p th:if="${#lists.isEmpty(libraryGaps)}" th:text="#{summary.library.none}">Everything asked for is in your library.</p>
+        <ol th:unless="${#lists.isEmpty(libraryGaps)}" class="songs">
+            <li th:each="gap : ${libraryGaps}">
+                <span class="song" th:text="${gap.name}">Artist - Title</span>
+                <span th:if="${gap.mark.name() == 'SIMILAR'}" class="library-similar" th:text="#{summary.library.similar}">? similar</span>
+                <span class="votes" th:text="${'👍 ' + gap.votes}">👍 3</span>
+            </li>
+        </ol>
+    </section>
+
     <section th:unless="${#lists.isEmpty(summary.artists)}" id="artists">
         <h2 th:text="#{summary.artists}">Most wanted artists</h2>
         <ol class="songs">

@@ -19,11 +19,18 @@
     <TRACK TrackID="12" Name="Intro (DJ Tool)" Artist="" Album="" Genre="" Kind="WAV File" TotalTime="16" AverageBpm="120.00" Location="file://localhost/C:/Users/dj/Music/intro.wav"/>
   </COLLECTION>
   <PLAYLISTS>
-    <NODE Type="0" Name="ROOT" Count="1">
+    <NODE Type="0" Name="ROOT" Count="2">
       <NODE Name="Wesele" Type="1" KeyType="0" Entries="3">
         <TRACK Key="2"/>
         <TRACK Key="3"/>
         <TRACK Key="7"/>
+      </NODE>
+      <NODE Type="0" Name="Kluby" Count="2">
+        <NODE Name="Piątek" Type="1" KeyType="0" Entries="2">
+          <TRACK Key="1"/>
+          <TRACK Key="8"/>
+        </NODE>
+        <NODE Name="Pusta" Type="1" KeyType="0" Entries="0"/>
       </NODE>
     </NODE>
   </PLAYLISTS>

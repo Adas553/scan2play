@@ -248,17 +248,26 @@ same address again changes the role and gives it 30 days again —, index by `em
 `StaffInvitationEntity.MAX_AGE_DAYS` = 30 days: an older one counts for nothing (every read takes `invited_at` after now − 30 days) and
 `StaffInvitationService.purgeOldInvitations` deletes it at 04:50 (Polish time) and after every start. Gone when answered ("Dołącz": it becomes a row of `party_staff`,
 without the address; "Nie, dziękuję"), cancelled by the organiser, or with the party.
-**The DJ's library → `dj_library`, `dj_library_track`** (V41, plan Pro; plain SQL in `DjLibraryService`, no entity) — the songs of the
-organiser's own collection, so the queue marks each waiting request "✓ Masz" or "✗ Nie masz". `dj_library`: one row per party
-(`party_code` PK, FK ON DELETE CASCADE), `track_count`, `format` (`M3U` / `REKORDBOX`), `uploaded_at` (part of the panel's ETag:
-a new upload marks the same queue anew). `dj_library_track`: (`party_code` FK to `dj_library` ON DELETE CASCADE, `match_key` ≤ 200),
-PK of both — the queue's lookup, its few keys at once (`match_key = ANY(?)`). Only keys are kept: `SongNames.libraryKey` — the
-`comparable` name without a version in brackets ("(Radio Edit)", "[Extended Mix]", "(feat. X)") and without "feat. / ft. / featuring
-X" — no title as written, no path. The file (`DjLibraryParser`, streamed: StAX with no DTD and no entities for a rekordbox
-collection — its `COLLECTION`'s `TRACK`s by `Artist` + `Name`; an M3U's `#EXTINF` titles or its files' names, line by line in UTF-8 or else Windows-1250 (an old
-Windows playlist), a name with one " - " kept both ways round) of at most `DjLibraryService.MAX_TRACKS` = 50 000 tracks and 64 MB replaces the whole library in one
-transaction under the party row's lock (`DjLibraryIT`: two uploads at once end as one of them). Goes when deleted ("Usuń bibliotekę",
-whatever the plan), with a new upload, or with the party.
+**The DJ's library → `dj_library`, `dj_library_track`** (V41, V42, plan Pro; plain SQL in `DjLibraryService`, no entity) — the
+songs of the organiser's own collection, so the queue marks each waiting request "✓ Masz", "? Podobny" or "✗ Nie masz".
+`dj_library`: one row per party (`party_code` PK, FK ON DELETE CASCADE), `track_count`, `format` (`M3U` / `REKORDBOX`), `uploaded_at`
+(part of the panel's ETag: a new upload marks the same queue anew), `playlist` (V42: the rekordbox playlist it is, by its folders —
+"Kluby / Piątek"; null for a whole collection or an M3U). `dj_library_track` (V42): (`party_code` FK to `dj_library` ON DELETE
+CASCADE, `title_key` ≤ 200, `artists` ≤ 200), PK of the three — the queue's lookup, its titles at once (`title_key = ANY(?)`). Only
+keys are kept (`util/LibraryKey`): the title without a version in brackets or after a dash with a version's word ("- Original Mix",
+"- 2011 Remaster", "- Live") and without "feat. X"; the artists a sorted set (split at "," "&" "x" "and" "i" "feat." "vs" …, no
+leading "The") — no title as written, no path. The mark (`LibraryKey.markIn`, `LibraryMark`): the same title with an artist in common
+"✓"; the same title alone (a title of at least 4 letters) "?"; else "✗". The file (`DjLibraryParser`, streamed: StAX with no DTD and
+no entities for a rekordbox collection — its `COLLECTION`'s `TRACK`s by `Artist` + `Name`, or with `playlist` only the tracks that
+playlist's `TRACK Key`s point at, the `PLAYLISTS` tree read as rekordbox shows it; an M3U's `#EXTINF` titles or its files' names,
+line by line in UTF-8 or else Windows-1250 (an old Windows playlist), a name with one " - " kept both ways round) of at most
+`DjLibraryService.MAX_TRACKS` = 50 000 tracks kept and 64 MB replaces the whole library in one transaction under the party row's lock
+(`DjLibraryIT`: two uploads at once end as one of them). Goes when deleted ("Usuń bibliotekę", whatever the plan), with a new upload,
+or with the party; V42 deleted the libraries of V41 (their single key could not be made into a title and artists —
+`LibraryTitlesMigrationIT`). The playlists to choose from are read from the chosen file in the browser (`js/dashboard/library.js`,
+`playlistsOf`: the same paths as the parser). Where the marks show: the queue (with "Ukryj „Nie masz”" beside the search, `list-tools.js`:
+the "✗" rows hidden), and "Podsumowanie wieczoru" — "Nie masz w bibliotece" (the songs the AI let through with "✗" or "?", each once,
+the most wanted first) and the CSV's column "W bibliotece" — by the library as it is now.
 **`DjPlanEntity` → `dj_plan`** (V35, the owner 2026-10-14) — a DJ's plan, one row per organiser: `ownerId` (the primary key, the Google
 subject as `party_settings.owner_id`), `plan` (`Plan`: FREE / PRO), `source` (`PlanSource`: TRIAL / PAID / GIFT), `validUntil` (null = no
 end; after it the row reads as FREE, `planAt`), `updatedAt`. **Empty at first: no row is Free.** Deleted with the account. Read only by
@@ -694,7 +703,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `PromptBuilder` | the prompt of a request (`src/main/resources/prompts`, per language): the request, the genre, the DJ's note, the songs played lately, the comment style, the dedication — pure text, out of `SongEvaluationService` since the review of 2026-10-21 (R1); `GeminiComparison` builds the same prompts, or a proposed rewrite of them |
 | `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
-| `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1) |
+| `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1); with a library (V42, Pro) "Nie masz w bibliotece" and the CSV's column "W bibliotece" |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes — but a request the AI did not judge, V39, only to the guest who sent it); `mostWanted`: the first ten of that order, for the screen for a TV, only requests the AI judged |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); evicts `dashboardQueue` after the commit |
@@ -709,7 +718,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `AiHealthMonitor` | counts the requests the AI answered and the ones that went to the DJ unchecked; every 5 min with any unchecked, one ERROR line "AI check: N of M guest requests …"; 3 unchecked in a row: the AI is down — a push to the site's owner (`PushNotificationService.notifyAiDown`, at most every 6 h) and the panels' bar `ai-down` (Section 7.1) |
 | `SiteCounter` | the site's counter (V40, 2026-10-24): per day (Polish time) the landing page seen (PL / EN), "Zacznij", logins, new DJs, guests' requests — numbers only, no address, browser or account; a robot's browser (search engines, Facebook's link previews, scanners, curl) is not counted; one atomic `INSERT … ON CONFLICT` per event, a failure only a WARN (`SiteCounterIT`) |
 | `DemoParty` | the demo parties, one per language (the owner, 2026-10-24): `DEMO` Polish, `DEME` English — four characters, never a real party's; owners `scan2play-demo` / `scan2play-demo-en`, no Google accounts. Each with its own vibe note, ⭐ and ten example requests with their comments (waiting ones with votes, dedications, a "⚠ Sprawdź", a ⭐ of the hosts; played, rejected, skipped), put back at every start and every night (04:55), the visitors' requests dropped, the party's daily limit started again. Their guest pages `/p/DEMO`, `/p/DEME` work, but no AI is asked: `SongEvaluationService.demoAnswer` — accepted, a ready comment (`demo.ai.comment.*`, "(demo: no AI check)"), saved unchecked, so only the visitor who sent it sees it (`DemoPartyIT`) |
-| `DjLibraryParser` / `DjLibraryService` | the DJ's library (V41): the file read into song keys (a rekordbox collection, an M3U / M3U8 playlist; a binary file or another XML refused) / the keys saved whole, under the party row's lock, and looked up a queue at a time (`DjLibraryIT`); `DjService.libraryMarksOf` gives the queue's marks |
+| `DjLibraryParser` / `DjLibraryService` | the DJ's library (V41, V42): the file read into `LibraryKey`s (a rekordbox collection whole or one playlist of it, an M3U / M3U8 playlist; a binary file or another XML refused) / the keys saved whole, under the party row's lock, and the marks of a queue's or an evening's songs in one lookup (`marks`, `DjLibraryIT`); `DjService.libraryMarksOf` gives the queue's marks, `EveningSummaryService.libraryGaps` the summary's |
 | `PlanService` | the plans (V35, Section 4.1 "Plans"): the organiser's `Plan` (the switch `scan2play.plans.enforce`, `pro-owners`, the row of `dj_plan`, cached), `require(party, PlanFeature)` (a 403), `asPlanned` (the party as its plan lets it work: for the guests, the AI, the queue's marks, the print — never saved), `view` (what the pages show: `plan.allows(…)`, `plan.pro(…)`), the staff's places, the trial |
 
 ### 6.3 Configuration
@@ -1036,6 +1045,7 @@ schema behind Flyway's back.
 | V39 | `song_requests.checked` boolean NOT NULL DEFAULT true; the requests whose comment is the app's note "AI jest chwilowo niedostępne…" / "The AI is unavailable right now…" (the text of `ai.unavailable.to_dj` since 2026-10-01) set to false: a request the AI did not judge stays off the guests' list and the TV screen (`RequestCheckedMigrationIT` reads the note from the bundles) |
 | V40 | table `site_counter` (`day` date, `event` varchar(20), `count` integer, PK (day, event)): the site's counter — numbers per day, no personal data (`SiteCounter`, `/dj/stats`) |
 | V41 | tables `dj_library` (`party_code` PK, FK ON DELETE CASCADE, `track_count`, `format` varchar(10), `uploaded_at`) and `dj_library_track` (`party_code` FK to `dj_library` ON DELETE CASCADE, `match_key` varchar(200), PK both): the DJ's library — song keys only (`DjLibraryService`) |
+| V42 | the DJ's library by title and artists: `dj_library_track` made again (`party_code` FK to `dj_library` ON DELETE CASCADE, `title_key`, `artists` varchar(200), PK all three), `dj_library.playlist` varchar(200); the libraries of V41 deleted (`LibraryTitlesMigrationIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1155,7 +1165,7 @@ GuestQueueService          → DjService
 | GET | `/dj/qr-print` | `layout` = poster / cards; what is printed speaks the panel's language (Polish: Polish and English; any other: English) |
 | GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days; only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
-| POST | `/dj/library` | `partyCode`; the body is the file (`application/octet-stream`): the DJ's library (V41, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks |
+| POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"); the body is the file (`application/octet-stream`): the DJ's library (V41, V42, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / no such playlist |
 | POST | `/dj/library/delete` | `partyCode`: the library deleted (the organiser, any plan); back to `/dj/settings#libraryCard` |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |

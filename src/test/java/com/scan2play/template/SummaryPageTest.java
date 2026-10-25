@@ -98,6 +98,26 @@ class SummaryPageTest {
         return requests;
     }
 
+    /** The party's library (V42): none, unless a test gives one. */
+    private static com.scan2play.service.DjLibraryService libraries = mock(com.scan2play.service.DjLibraryService.class);
+
+    /** A library that has "Sanah - Szampan" and a "Biała armia" of another artist; nothing else of the wedding's. */
+    private static com.scan2play.service.DjLibraryService aLibrary() {
+        com.scan2play.service.DjLibraryService library = mock(com.scan2play.service.DjLibraryService.class);
+        when(library.info(PARTY)).thenReturn(java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(2,
+                com.scan2play.service.DjLibraryParser.Format.M3U, java.time.Instant.now(), null)));
+        when(library.marks(eq(PARTY), org.mockito.ArgumentMatchers.anyCollection())).thenAnswer(call -> {
+            java.util.Map<com.scan2play.util.LibraryKey, com.scan2play.model.LibraryMark> marks = new java.util.HashMap<>();
+            for (Object key : (java.util.Collection<?>) call.getArgument(1)) {
+                com.scan2play.util.LibraryKey asked = (com.scan2play.util.LibraryKey) key;
+                marks.put(asked, asked.equals(com.scan2play.util.LibraryKey.of("Sanah - Szampan")) ? com.scan2play.model.LibraryMark.HAVE
+                        : asked.title().equals("bialaarmia") ? com.scan2play.model.LibraryMark.SIMILAR : com.scan2play.model.LibraryMark.MISSING);
+            }
+            return marks;
+        });
+        return library;
+    }
+
     private static String render(Locale locale, String evening, List<EveningSummaryService.Evening> evenings,
                                  List<SongRequestEntity> requests, String file) throws IOException {
         SongRequestRepository repository = mock(SongRequestRepository.class);
@@ -107,7 +127,7 @@ class SummaryPageTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any()))
                 .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages, com.scan2play.service.Plans.off());
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries), sessionHelper, messages, com.scan2play.service.Plans.off());
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.summary(evening, null, model, null, new MockHttpSession());
@@ -204,7 +224,7 @@ class SummaryPageTest {
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(wedding());
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository), sessionHelper, messages, com.scan2play.service.Plans.off());
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries), sessionHelper, messages, com.scan2play.service.Plans.off());
 
         ResponseEntity<byte[]> csv = controller.csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
 
@@ -218,5 +238,46 @@ class SummaryPageTest {
 
         when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(List.of());
         assertThat(controller.csv(null, null, Locale.ENGLISH, null, new MockHttpSession()).getStatusCode().value()).isEqualTo(404);
+    }
+
+    /**
+     * The DJ's library (V42): "Nie masz w bibliotece" — what the AI let through and the library has not ("✗") or has only by another
+     * artist ("?"), the most wanted first; what the DJ has and what the AI rejected not there. By the library as it is now.
+     */
+    @Test
+    void theSongsNotInTheLibrary_whenThereIsOne() throws IOException {
+        libraries = aLibrary();
+        try {
+            String html = render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "wedding-library-pl");
+            String gaps = html.substring(html.indexOf("id=\"libraryGaps\""), html.indexOf("</section>", html.indexOf("id=\"libraryGaps\"")));
+
+            assertThat(gaps).contains(">Nie masz w bibliotece<", "według biblioteki wgranej teraz", ">Zenek Martyniuk - Przekorny los<",
+                    ">Bajm - Biała armia<", "class=\"library-similar\"").doesNotContain("Sanah - Szampan", "Nirvana");
+            assertThat(gaps.indexOf("Zenek Martyniuk")).as("the most wanted first").isLessThan(gaps.indexOf("Varius Manx"));
+
+            ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries),
+                    sessionHelperOf(), messages, com.scan2play.service.Plans.off()).csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
+            assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0]).endsWith(";AI comment;In your library");
+        } finally {
+            libraries = mock(com.scan2play.service.DjLibraryService.class);
+        }
+    }
+
+    @Test
+    void withoutALibrary_noSuchSection() throws IOException {
+        assertThat(render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "wedding-pl")).doesNotContain("id=\"libraryGaps\"");
+    }
+
+    private static SongRequestRepository repositoryOf(List<SongRequestEntity> requests) {
+        SongRequestRepository repository = mock(SongRequestRepository.class);
+        when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(List.<Object[]>of(new Object[]{"2026-10-03", 8L}));
+        when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(requests);
+        return repository;
+    }
+
+    private static DjSessionHelper sessionHelperOf() {
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
+        return sessionHelper;
     }
 }

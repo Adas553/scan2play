@@ -83,13 +83,17 @@ C. **Search Console (2026-10-24, the owner's screenshots):** a 404 for `/oauth2/
    **DJ's branding on the guest page**: the profiles are built (2026-10-07, the history 2026-10-16); left: **the DJ's logo** (small,
    re-encoded on the server to PNG, kept in the database, served from our address — the CSP needs no change; the privacy policy
    to update). A candidate "premium" feature.
-3. **The DJ's library — built 2026-10-24 (V41, Pro; the owner: M3U and rekordbox XML, the ✓ / ✗ mark only):** "Twoja biblioteka" in
-   the settings (the organiser alone) takes a rekordbox collection (File → Export Collection in xml format) or an M3U / M3U8 playlist
-   (≤ 50 000 tracks, ≤ 64 MB); each waiting request then shows "✓ Masz" or "✗ Nie masz" (`SongNames.libraryKey`: no case, accents,
-   punctuation, "(Radio Edit)", "feat. X"). To try it without a library of your own: the files of `src/test/resources/library/`
-   (`rekordbox.xml`, `playlist.m3u8`) — upload one, ask a guest's request for "Wilki - Baśka" (✓) and one not there (✗); or a free
-   rekordbox / Mixxx with a few mp3 files, exported. Left, if DJs ask: Serato's CSV, Traktor's NML, a looser match (`pg_trgm`), "the
-   DJ does not have it" to the guest, a list of what was asked and is missing.
+3. **The DJ's library — built 2026-10-24 (V41, released #161; improved in V42, the PR after #162).** "Twoja biblioteka" in the
+   settings (the organiser alone) takes a rekordbox collection (File → Export Collection in xml format) — whole or one of its
+   playlists ("Co wgrać", read from the file in the browser) — or an M3U / M3U8 playlist (≤ 50 000 tracks, ≤ 64 MB). Each waiting
+   request shows "✓ Masz" (the title and an artist in common), "? Podobny" (the title alone) or "✗ Nie masz" (`util/LibraryKey`: no
+   case, accents, punctuation, versions in brackets or after a dash, "feat. X", the order of the artists, a "The"). "Ukryj „Nie masz”" beside
+   the queue's search hides the "✗" ones; "Podsumowanie wieczoru" lists "Nie masz w bibliotece" and its CSV has "W bibliotece".
+   **V42 deleted the libraries uploaded under V41** (only a key was kept, the new ones cannot be made from it): upload the file again.
+   To try it without a library of your own: the files of `src/test/resources/library/` (`rekordbox.xml` with the playlists
+   "Wesele" and "Kluby / Piątek", `playlist.m3u8`) — ask for "Wilki - Baśka" (✓), "Dżem - Baśka" (?), "Eminem - Mockingbird" (✗); or a
+   free rekordbox / Mixxx with a few mp3 files, exported. Left, if DJs ask: Serato's CSV, Traktor's NML, typos (`pg_trgm`), BPM and
+   key at "✓", "the DJ does not have it" to the guest.
    **Ideas, only if the DJs ask:** a lyric matched to the version the DJ has (by the library);
    (notifications on the DJ's phone: built 2026-10-06, see the history 2026-10-16 — a store app only if Web Push is not enough). Other
    ideas raised: a "do not play" list of the couple / the DJ checked before the AI; a link for the couple to fill in their
