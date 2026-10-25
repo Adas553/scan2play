@@ -4,13 +4,16 @@ import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PlanService;
+import com.scan2play.service.SongRequestCommandService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
 
@@ -22,6 +25,7 @@ import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
  * <p>
  * Handles:
  * <ul>
+ *     <li>Adding a song the DJ was asked for at the booth</li>
  *     <li>Marking songs as played</li>
  *     <li>Skipping a song, clearing the queue</li>
  * </ul>
@@ -36,6 +40,25 @@ public class DjSongController {
     private final DjService djService;
     private final DjSessionHelper sessionHelper;
     private final PlanService planService;
+    private final SongRequestCommandService songRequestCommandService;
+
+    /**
+     * Adds a song to the queue by hand ("Dodaj piosenkę", V44): a guest asked at the booth. For whom may work the queue; no AI,
+     * no guest's limit ({@link SongRequestCommandService#addByTheDj}). Nothing typed: 400 — the page's field asks for a song first.
+     *
+     * @param song the song as typed or picked from the suggestions ("Artist – Title")
+     * @return Redirects back to the dashboard.
+     */
+    @PostMapping("/dashboard/add-song")
+    public String addSong(@RequestParam(defaultValue = "") String song, @RequestParam(required = false) String partyCode,
+                          OAuth2AuthenticationToken authentication, HttpSession session) {
+        String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session).getPartyCode();
+        if (song.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        songRequestCommandService.addByTheDj(ownerPartyCode, song);
+        return REDIRECT_DASHBOARD;
+    }
 
     /**
      * Marks a specific song request as "played".

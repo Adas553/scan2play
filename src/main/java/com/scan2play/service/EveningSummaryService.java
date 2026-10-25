@@ -86,11 +86,13 @@ public class EveningSummaryService {
      * by the AI. {@code votes} adds up the votes of the songs the AI let through (each one's first request is a vote too).
      * {@code missed}: the wanted songs that did not play (waiting, skipped, cleared). The waits are the played requests' minutes
      * from the request to "played" — null when no request was marked as played. {@code tips}: the tips the DJ counted (V28, "💸").
+     * {@code addedByDj}: how many of the requests the DJ added in the panel (V44) — counted in {@code requests}, but their first vote
+     * is the DJ's, not a guest's, so {@code votes} leaves it out.
      */
     public record Summary(LocalDate evening, int requests, int played, int waiting, int skipped, int cleared, int rejectedByAi,
                           int votes, int tips, Instant first, Instant last, List<SongRequestEntity> top, List<SongRequestEntity> missed,
                           List<ArtistCount> artists, List<SongRequestEntity> setlist, List<TimeSlot> slots,
-                          Long averageWaitMinutes, Long longestWaitMinutes, boolean truncated) {
+                          Long averageWaitMinutes, Long longestWaitMinutes, boolean truncated, int addedByDj) {
 
         /** How the request ended, "WAITING" — the page's text of it is {@code summary.csv.status.<this>}. */
         public String status(SongRequestEntity request) {
@@ -151,6 +153,7 @@ public class EveningSummaryService {
         int rejectedByAi = 0;
         int votes = 0;
         int tips = 0;
+        int addedByDj = 0;
         List<SongRequestEntity> letThrough = new ArrayList<>();
         List<SongRequestEntity> missed = new ArrayList<>();
         List<SongRequestEntity> setlist = new ArrayList<>();
@@ -176,11 +179,15 @@ public class EveningSummaryService {
             }
             if (status != Status.REJECTED_BY_AI) {
                 letThrough.add(request);
-                votes += request.getVotes();
+                // a song the DJ added (V44): its first vote is the DJ's; the guests' 👍 on it count
+                votes += request.isAddedByDj() ? request.getVotes() - 1 : request.getVotes();
                 tips += request.getTips();
                 if (status != Status.PLAYED) {
                     missed.add(request);
                 }
+            }
+            if (request.isAddedByDj()) {
+                addedByDj++;
             }
             Instant at = request.getRequestedAt();
             if (at != null) {
@@ -202,7 +209,7 @@ public class EveningSummaryService {
                 slots(perSlot, first),
                 waits.isEmpty() ? null : Math.round(waits.stream().mapToLong(Long::longValue).average().orElse(0)),
                 waits.isEmpty() ? null : waits.stream().mapToLong(Long::longValue).max().orElse(0),
-                requests.size() >= MAX_REQUESTS);
+                requests.size() >= MAX_REQUESTS, addedByDj);
     }
 
     /**
@@ -362,7 +369,8 @@ public class EveningSummaryService {
                     String.valueOf(request.getVotes()),
                     String.valueOf(request.getTips()),
                     cell(status),
-                    cell(request.getDjComment())));
+                    cell(request.getDjComment()),
+                    request.isAddedByDj() ? cell(messages.getMessage("summary.csv.added_by_dj.yes", null, locale)) : ""));
             if (!marks.isEmpty()) {
                 LibraryMark mark = marks.getOrDefault(request.getId(), LibraryMark.MISSING);
                 csv.append(';').append(cell(messages.getMessage("summary.csv.library." + mark.name(), null, locale)));

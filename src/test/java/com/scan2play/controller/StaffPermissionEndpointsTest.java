@@ -57,6 +57,7 @@ class StaffPermissionEndpointsTest {
 
     private final PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PUB).ownerId("pub-owner").active(true).build();
     private PartyStaffService staff;
+    private final com.scan2play.service.SongRequestCommandService songCommands = mock(com.scan2play.service.SongRequestCommandService.class);
     private MockMvc mockMvc;
     private final OAuth2AuthenticationToken kasia = new OAuth2AuthenticationToken(new DefaultOAuth2User(
             AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "kasia"), "sub"), AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
@@ -78,7 +79,7 @@ class StaffPermissionEndpointsTest {
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off()),
+                        new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off(), songCommands),
                         new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), helper, com.scan2play.service.Plans.off()),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), com.scan2play.service.Plans.off()),
@@ -104,6 +105,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/play").param("id", "1").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/dismiss").param("id", "1").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/restore").param("id", "1").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/add-song").param("song", "Wilki - Baśka").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.TIPS, post("/dj/dashboard/tip-count").param("id", "1").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.CLEAR_QUEUE, post("/dj/dashboard/clear-queue").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.OPEN_CLOSE, post("/dj/end-party").param("partyCode", PUB)),
@@ -134,6 +136,18 @@ class StaffPermissionEndpointsTest {
 
         kasiaMay(EnumSet.of(needed));
         assertThat(perform(request)).as("let through, and answered").isLessThan(400);
+    }
+
+    /** "Dodaj piosenkę" (V44): the song goes to the party the page names, the person's; nothing typed is a 400, nothing added. */
+    @org.junit.jupiter.api.Test
+    void addingASong_addsItToTheNamedParty_andNothingTypedIsRefused() throws Exception {
+        kasiaMay(EnumSet.of(StaffPermission.QUEUE));
+
+        assertThat(perform(post("/dj/dashboard/add-song").param("song", "Wilki – Baśka").param("partyCode", PUB))).isEqualTo(302);
+        org.mockito.Mockito.verify(songCommands).addByTheDj(PUB, "Wilki – Baśka");
+        assertThat(perform(post("/dj/dashboard/add-song").param("song", "   ").param("partyCode", PUB))).isEqualTo(400);
+        assertThat(perform(post("/dj/dashboard/add-song").param("partyCode", PUB))).isEqualTo(400);
+        org.mockito.Mockito.verifyNoMoreInteractions(songCommands);
     }
 
     /**

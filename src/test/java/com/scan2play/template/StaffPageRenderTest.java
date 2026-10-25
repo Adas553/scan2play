@@ -132,7 +132,7 @@ class StaffPageRenderTest {
                 "action=\"/dj/staff/permissions\"", "name=\"partyCode\" value=\"HARN1\"", "name=\"id\" value=\"7\"",
                 ">Podgląd<", ">Obsługa kolejki<", ">Współorganizator<", ">Własne<",
                 "data-permissions=\"QUEUE,TIPS,CLEAR_QUEUE,OPEN_CLOSE,HISTORY\"",
-                ">Zagrane, Pomiń, Cofnij, Przywróć<", ">Podsumowanie wieczoru<",
+                ">Zagrane, Pomiń, Cofnij, Przywróć, Dodaj piosenkę<", ">Podsumowanie wieczoru<",
                 "data-staff-saved", ">✓ Zapisano<",
                 "action=\"/dj/staff/remove\"", "data-confirm=\"Usunąć dostęp: Kasia?\"",
                 // the invitation follows the panel's address (Google's login works only there)

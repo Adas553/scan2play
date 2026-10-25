@@ -307,10 +307,31 @@
                 <button th:if="${libraryOn == true}" type="button" id="libraryOnly" class="btn btn-sm btn-outline-light text-nowrap"
                         data-list-library aria-pressed="false" th:title="#{dashboard.library.only.title}"
                         th:text="#{dashboard.library.only}">Hide “Not in library”</button>
+                <!--/* "Dodaj piosenkę" (V44): a song a guest asked for at the booth — into the queue without the AI, for whom may work
+                     the queue; the form folds out under this row (add-song.js). Beside the search: on a phone they share its line. */-->
+                <button th:if="${access == null or access.may('QUEUE')}" type="button" id="addSongToggle"
+                        class="btn btn-sm btn-outline-light text-nowrap" aria-expanded="false" aria-controls="addSongForm"
+                        th:text="#{dashboard.add_song}">+ Add a song</button>
                 <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
                        th:placeholder="#{dashboard.list.search}" autocomplete="off">
             </div>
         </div>
+        <!--/* The song as typed or picked from the suggestions (song-autocomplete.js, the guests' "Artist – Title"); sent in the
+             background, the field emptied for the next one (forms.js). It waits as a guest's request, marked "🎧" in the row. */-->
+        <form th:if="${access == null or access.may('QUEUE')}" th:action="@{/dj/dashboard/add-song}" method="post"
+              id="addSongForm" class="mb-3 s2p-add-song" hidden>
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <label for="addSongInput" class="form-label small text-light mb-1" th:text="#{dashboard.add_song.label}">Add a song</label>
+            <div class="d-flex gap-2">
+                <div class="song-autocomplete-wrapper flex-grow-1">
+                    <input type="text" id="addSongInput" name="song" required maxlength="150" autocomplete="off" data-autocomplete="songs"
+                           class="form-control form-control-sm bg-black text-light border-secondary"
+                           th:placeholder="#{home.form.input.placeholder}">
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{dashboard.add_song.submit}">Add</button>
+            </div>
+            <p class="small text-secondary mt-1 mb-0" th:text="#{dashboard.add_song.help}">It goes straight into the queue, without the AI.</p>
+        </form>
         <!--/* A server limit that stops guest songs now, or the AI not judging: shown from the page's model, then shown / hidden by
              polling.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
         <!--/* Polls that keep failing (the DJ's Wi-Fi gone): the list on the screen may be old — polling.js shows this after a few
@@ -372,6 +393,14 @@
                         <!--/* Under the song, always, the guest's own words: the DJ checks that the AI understood them */-->
                         <span class="d-flex flex-column">
                             <span class="fw-bold song-title" th:text="${req.songName}">Song</span>
+                            <!--/* added in the panel (V44): a guest asked at the booth — no guest's words, no AI's comment */-->
+                            <span th:if="${req.addedByDj}" class="badge text-bg-dark border border-info text-info align-self-start s2p-added-by-dj"
+                                  th:title="#{dashboard.added_by_dj.title}" th:text="#{dashboard.added_by_dj}">🎧 Added by the DJ</span>
+                            <!--/* on the hosts' "nie grać" list: only a song the DJ added anyway (the guests' are refused), or one asked
+                                 for before the list said so — marked, not stopped: the DJ decides */-->
+                            <span th:if="${blockedSongs != null and blockedSongs.matches(req.songName)}"
+                                  class="badge text-bg-danger align-self-start s2p-host-blocked"
+                                  th:title="#{dashboard.host.blocked.title}" th:text="#{dashboard.host.blocked}">🚫 Hosts: do not play</span>
                             <!--/* on the hosts' "koniecznie zagrać" list (V29) */-->
                             <span th:if="${wantedSongs != null and wantedSongs.matches(req.songName)}"
                                   class="badge text-bg-info align-self-start s2p-host-wanted"
@@ -521,6 +550,8 @@
 
 <!-- Dashboard core JS (polling, AJAX forms, tabs, lists) — ES modules, js/dashboard/main.js imports the rest -->
 <script type="module" src="/js/dashboard/main.js" th:src="@{/js/dashboard/main.js}"></script>
+<!--/* the suggestions of "Dodaj piosenkę" (V44): the guests' own script, a plain one */-->
+<script src="/js/song-autocomplete.js" th:src="@{/js/song-autocomplete.js}"></script>
 
 <div th:replace="~{fragments/components :: footer}"></div>
 

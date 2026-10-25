@@ -11,6 +11,7 @@
  *   settings-rows.js   the rows of "Więcej" in the settings: whether this browser gets the notifications
  *   cards.js           on a phone: the requests of the queue and the history folded, a tap unfolds one
  *   queue-keys.js      "Kopiuj" of a request and the queue's keys (↑ ↓, C, Enter, S, Esc)
+ *   add-song.js        "Dodaj piosenkę": the form of a song asked for at the booth folded out over the queue
  *
  * "Zainstaluj aplikację" (install.js) and the notifications' switch (push.js) are on the page "Ustawienia imprezy" since 2026-10-10
  * (settings-page.js loads them with forms.js).
@@ -27,3 +28,4 @@ import './settings-toggle.js';
 import './settings-rows.js';
 import './cards.js';
 import './queue-keys.js';
+import './add-song.js';

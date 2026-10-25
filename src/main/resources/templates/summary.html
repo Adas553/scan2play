@@ -67,6 +67,9 @@
         <!--/* the tips the DJ counted (V28) — only when there were some */-->
         <div th:if="${summary.tips > 0}" class="stat" id="tipsStat"><strong th:text="${summary.tips}">4</strong>
             <span th:text="#{summary.stat.tips}">Tips</span><small th:text="#{summary.stat.tips.hint}">counted by you</small></div>
+        <!--/* the songs the DJ added in the panel (V44), counted in the requests — only when there were some */-->
+        <div th:if="${summary.addedByDj > 0}" class="stat" id="addedByDjStat"><strong th:text="${summary.addedByDj}">2</strong>
+            <span th:text="#{summary.stat.added_by_dj}">Added by you</span><small th:text="#{summary.stat.added_by_dj.hint}">counted in the requests</small></div>
     </section>
     <!--/* how long the played requests waited — only when the DJ marked some as played */-->
     <p th:if="${summary.averageWaitMinutes != null}" class="wait" id="wait"

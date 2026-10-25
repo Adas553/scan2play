@@ -347,6 +347,11 @@ class DashboardPageRenderTest {
         // "Wyczyść kolejkę": the DJ's own queue (no party code in the form), asks first
         assertThat(html).contains("action=\"/dj/dashboard/clear-queue\"", "id=\"clearQueueBtn\"", ">Wyczyść kolejkę<",
                 "data-confirm=\"Usunąć wszystkie czekające prośby z kolejki?");
+        // "Dodaj piosenkę" (V44): a button over the queue, its form folded (add-song.js) with the guests' suggestions
+        assertThat(html).contains("id=\"addSongToggle\"", "aria-controls=\"addSongForm\"", ">+ Dodaj piosenkę<",
+                        "action=\"/dj/dashboard/add-song\"", "name=\"song\" required maxlength=\"150\"", "data-autocomplete=\"songs\"",
+                        "src=\"/js/song-autocomplete.js\"")
+                .containsPattern("<form[^>]*id=\"addSongForm\"[^>]*hidden");
         assertThat(html).contains("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", ">⏭ Pomiń<", ">Podejrzyj<",
                 "href=\"https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka\"");
         // the request's buttons: "▶ Zagrane" filled and short (one line), "⏭ Pomiń" outlined but readable (the owner, 2026-10-07)
@@ -481,6 +486,7 @@ class DashboardPageRenderTest {
                 "id=\"panelBar\"", ">Klub Ola<", "id=\"panelRole\"", ">Obsługa kolejki<", "id=\"panelCan\"",
                 "data-permission=\"QUEUE\"", "Zagrane, Pomiń, Cofnij, Przywróć", "data-permission=\"CLEAR_QUEUE\"",
                 "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "data-settings-row=\"device\"",
+                "action=\"/dj/dashboard/add-song\"",
                 "action=\"/dj/end-party\"", "Zakończyć imprezę: Klub Ola?",
                 "id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"", "Opuścić obsługę tej imprezy?",
                 // no party of her own: made on purpose from the menu, never by a click on "Mój panel"
@@ -508,7 +514,8 @@ class DashboardPageRenderTest {
 
         assertThat(html).contains(">Podgląd<", "id=\"song-list\"", ">Wilki - Baśka<", "data-dj-tab=\"history\"")
                 .doesNotContain("action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"",
-                        "action=\"/dj/end-party\"", "action=\"/dj/start-party\"", "s2p-tip-count", "data-permission=\"QUEUE\"");
+                        "action=\"/dj/end-party\"", "action=\"/dj/start-party\"", "s2p-tip-count", "data-permission=\"QUEUE\"",
+                        "id=\"addSongToggle\"", "action=\"/dj/dashboard/add-song\"");
     }
 
     /** "Współorganizator" (V32): the party's settings cards too — still not the staff, the profiles or the tip link. */
