@@ -11,8 +11,9 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account, the hosts' link, the panel switcher, a pasted invitation, leaving a staff (V30) and deleting the
-// DJ's library (V41) — a page reload / redirect is expected: the new link, the list or the other party's panel is shown at once.
+// Excluded: logout, delete-account, the hosts' link, the panel switcher, a pasted invitation, leaving a staff (V30) — a page reload /
+// redirect is expected: the new link, the list or the other party's panel is shown at once — and deleting the DJ's library (V41):
+// library.js sends it and brings its card again; should that script be missing, the page loads.
 //
 // What a form does is chosen by its path, the whole of it (review 2026-10-14: a part of the address was looked for — "/staff-link"
 // and "/staff-remove" matched no form at all, and a new path holding an old one would have taken its behaviour).

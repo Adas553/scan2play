@@ -241,7 +241,7 @@
                 <p class="small mt-2 mb-0" id="libraryAnswer" role="status" hidden></p>
             </form>
             </th:block>
-            <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0 mt-3">
+            <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0 mt-3" id="libraryDeleteForm">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.library.delete}">Delete library</button>
             </form>

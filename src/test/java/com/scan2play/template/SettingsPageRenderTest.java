@@ -219,9 +219,9 @@ class SettingsPageRenderTest {
         write("settings.html", html);
     }
 
-    /** A library uploaded: how many tracks and when, and the way to delete it. */
+    /** A library uploaded: how many tracks and when, and the way to delete it (written as {@code settings-library.html}). */
     @Test
-    void theOwnersLibrary_saysItsTracksAndDay_andCanBeDeleted() {
+    void theOwnersLibrary_saysItsTracksAndDay_andCanBeDeleted() throws IOException {
         DjService djService = mock(DjService.class);
         Instant uploaded = Instant.now();
         when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(
@@ -230,7 +230,8 @@ class SettingsPageRenderTest {
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), djService);
 
         assertThat(html).contains("id=\"libraryState\"", ">Utwory w bibliotece: 1\u00A0234 · playlista „Kluby / Piątek” · wgrano " + com.scan2play.util.Times.day(uploaded) + "<",
-                "id=\"libraryForm\"", "action=\"/dj/library/delete\"", ">Usuń bibliotekę<");
+                "id=\"libraryForm\"", "action=\"/dj/library/delete\"", "id=\"libraryDeleteForm\"", ">Usuń bibliotekę<");
+        write("settings-library.html", html);
     }
 
     /** The use of each server limit is a badge the DJ notices: grey, yellow from 80 %, red at the limit. */
