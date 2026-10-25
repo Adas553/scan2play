@@ -143,7 +143,7 @@ class SummaryPageTest {
         Files.writeString(OUT.resolve(file + ".html"), html
                 .replace("/css/summary.css", "../../src/main/resources/static/css/summary.css")
                 .replace("/js/summary.js", "../../src/main/resources/static/js/summary.js")
-                .replace("/images/logo.svg", "../../src/main/resources/static/images/logo.svg"), StandardCharsets.UTF_8);
+                .replace("/images/logo-small.svg", "../../src/main/resources/static/images/logo-small.svg"), StandardCharsets.UTF_8);
         return html;
     }
 
