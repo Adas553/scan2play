@@ -127,6 +127,45 @@
         }
     });
 
+    /** A card's buttons on a computer: each as wide as its words, all of one height — the card's action ("Wgraj", "Zaproś") too. */
+    function buttonsOfTheirWords(t) {
+        const buttons = [];
+        folds().concat(Array.from(document.querySelectorAll('details.s2p-staff-member'))).forEach(function (fold) {
+            fold.querySelectorAll('.s2p-fold-body form .btn, .s2p-staff-body form .btn').forEach(function (button) {
+                if (button.checkVisibility() && !button.closest('.input-group') && !button.classList.contains('btn-link')) buttons.push(button);
+            });
+        });
+        const heights = buttons.map(function (button) { return Math.round(button.getBoundingClientRect().height); });
+        t.step('no button of a card as wide as the card', buttons.filter(function (button) {
+            return button.getBoundingClientRect().width > 300;
+        }).map(function (button) { return button.textContent.trim(); }), []);
+        t.step('every button of a card of one height', heights.every(function (h) { return h === heights[0]; }), true);
+    }
+
+    S2P.scenario({
+        name: 'settings-buttons-wide',
+        title: 'the page "Ustawienia imprezy" on a computer, every card unfolded: each button as wide as its words, all of one height, "Wgraj" too',
+        page: 'settings',
+        viewport: '1280,900',
+        run: async function (t) {
+            folds().forEach(function (fold) { fold.querySelector('summary').click(); });
+            buttonsOfTheirWords(t);
+            const row = Array.from(document.querySelectorAll('#hostLinkBox .s2p-btn-row .btn'));
+            t.step('"Nowy link" and "Wyłącz" side by side', Math.abs(row[0].getBoundingClientRect().top - row[1].getBoundingClientRect().top) < 1, true);
+        }
+    });
+
+    S2P.scenario({
+        name: 'staff-buttons-wide',
+        title: 'the page "Obsługa" on a computer, everything unfolded: each button as wide as its words, all of one height, "Zaproś" too',
+        page: 'staff',
+        viewport: '1280,900',
+        run: async function (t) {
+            document.querySelectorAll('details.s2p-fold, details.s2p-staff-member').forEach(function (fold) { fold.open = true; });
+            buttonsOfTheirWords(t);
+        }
+    });
+
     S2P.scenario({
         name: 'staff-folded',
         title: 'the page "Obsługa": "Zaproś" and the link folded, each with its state; the link unfolds by its address (#staffLinkCard)',

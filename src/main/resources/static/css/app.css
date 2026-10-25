@@ -1080,7 +1080,8 @@ th[data-sort].sort-desc::after {
 /* The buttons of a card on "Ustawienia imprezy" and "Obsługa" on a phone: one under another, all of the card's width (as the
    landing page's: three widths looked untidy) — "Zapisz" under the fields, a row of two (.s2p-btn-row: "Nowy link", "Wyłącz") each
    half of it. A field's own button ("Kopiuj", "Dołącz") stays beside its field; a text button ("Usuń" in the library's box) stays
-   small. On a wider screen each button is as wide as its words. */
+   small. On a wider screen each button is as wide as its words and of one height — the card's action ("Wgraj", "Zaproś") too, told
+   apart by its cyan alone. */
 .s2p-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 @media (max-width: 575.98px) {
     .s2p-fold-body form > .btn:not(.btn-link),
