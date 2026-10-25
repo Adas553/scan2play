@@ -429,6 +429,9 @@ public class DjDashboardController {
         PlayHistoryService.Page page = playHistoryService.getHistory(settings.getPartyCode(), limit, filter);
         model.addAttribute(HISTORY_FILTER, filter.param());
         model.addAttribute(HISTORY, page.entries());
+        // an empty filter asks once more, for one entry of any kind (a bounded read, only then)
+        model.addAttribute(HISTORY_ANY, !page.entries().isEmpty() || (filter != HistoryFilter.ALL
+                && !playHistoryService.getHistory(settings.getPartyCode(), 1, HistoryFilter.ALL).entries().isEmpty()));
         model.addAttribute(HISTORY_HAS_MORE, page.hasMore() && limit < HISTORY_MAX_LIMIT);
         model.addAttribute(HISTORY_NEXT_LIMIT, Math.min(limit + HISTORY_PAGE_SIZE, HISTORY_MAX_LIMIT));
     }
