@@ -236,7 +236,12 @@ class SettingsPageRenderTest {
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), djService);
 
         assertThat(html).contains("id=\"libraryState\"", ">Utwory w bibliotece: 1\u00A0234 · playlista „Kluby / Piątek” · wgrano " + com.scan2play.util.Times.day(uploaded) + "<",
-                "id=\"libraryForm\"", "action=\"/dj/library/delete\"", "id=\"libraryDeleteForm\"", ">Usuń bibliotekę<");
+                "id=\"libraryForm\"", "action=\"/dj/library/delete\"", "id=\"libraryDeleteForm\"",
+                // "Usuń" small in the state's box (it asks first), our own file field, "Wgraj" disabled until a file is chosen
+                "class=\"btn btn-sm btn-link text-danger s2p-library-delete\">Usuń<",
+                "data-confirm=\"Usunąć bibliotekę? Znaczniki znikną z kolejki",
+                "<label for=\"libraryFile\" class=\"s2p-file-drop\" id=\"libraryDrop\">", ">Wybierz plik<", ">XML, M3U lub M3U8 · do 64 MB<",
+                "id=\"libraryUpload\" disabled", ">Jak przygotować plik?<");
         write("settings-library.html", html);
     }
 

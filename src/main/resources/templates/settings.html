@@ -233,42 +233,58 @@
                       th:text="${libraryTracks != null} ? #{settings.row.library(${libraryTracks})} : #{settings.row.library.none}">Songs: 1,234</span>
             </summary>
             <div class="s2p-fold-body">
-            <th:block th:if="${plan.pro('LIBRARY')}"><div
-                 th:replace="~{fragments/components :: proOffer(${libraryTracks != null} ? #{plan.library.kept} : #{plan.library.offer})}"></div></th:block>
+            <!--/* Without Pro: the offer, and a library uploaded before can still be deleted (the organiser's own data) */-->
+            <th:block th:if="${plan.pro('LIBRARY')}">
+            <div th:replace="~{fragments/components :: proOffer(${libraryTracks != null} ? #{plan.library.kept} : #{plan.library.offer})}"></div>
+            <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0 mt-3" id="libraryDeleteForm"
+                  th:attr="data-confirm=#{settings.library.delete.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.library.delete}">Delete library</button>
+            </form>
+            </th:block>
+            <!--/* One line of what it does; how to make the file folded under it. What the party has now in a box, its "Usuń" small at its
+                 end — a deletion is no action to compete with "Wgraj" (it asks first: data-confirm, dj-nav.js). Then the file: our own
+                 field — the browser's file input is hidden (its button never fills a 44 px field on a phone), the label is the tap
+                 target, a file can be dropped on it too (library.js) —, and "Wgraj", the card's one action, enabled by a file chosen. */-->
             <th:block th:unless="${plan.pro('LIBRARY')}">
-            <p class="small text-secondary mb-2" th:text="#{settings.library.help}">Upload your rekordbox collection…</p>
-            <p class="small text-light mb-2" id="libraryState"
-               th:text="${libraryTracks == null} ? #{settings.library.none} : (${libraryPlaylist != null}
-                        ? #{settings.library.state.playlist(${libraryTracks}, ${libraryUploaded}, ${libraryPlaylist})}
-                        : #{settings.library.state(${libraryTracks}, ${libraryUploaded})})">No library uploaded yet.</p>
+            <p class="small text-secondary mb-2" th:text="#{settings.library.help}">Each request in the queue then shows whether you have the song.</p>
+            <details class="small mb-3 s2p-library-how">
+                <summary class="text-secondary" th:text="#{settings.library.how}">How to make the file?</summary>
+                <p class="text-secondary mt-1 mb-0" th:text="#{settings.library.how.text}">rekordbox: File → Export Collection in xml format…</p>
+            </details>
+            <div class="s2p-library-state mb-3" th:classappend="${libraryTracks == null} ? 's2p-library-state-none'">
+                <span id="libraryState"
+                      th:text="${libraryTracks == null} ? #{settings.library.none} : (${libraryPlaylist != null}
+                               ? #{settings.library.state.playlist(${libraryTracks}, ${libraryUploaded}, ${libraryPlaylist})}
+                               : #{settings.library.state(${libraryTracks}, ${libraryUploaded})})">No library uploaded yet.</span>
+                <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0" id="libraryDeleteForm"
+                      th:attr="data-confirm=#{settings.library.delete.confirm}">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <button type="submit" class="btn btn-sm btn-link text-danger s2p-library-delete" th:text="#{settings.library.delete.short}">Delete</button>
+                </form>
+            </div>
             <!--/* data-max-bytes / data-too-large: a larger file is refused here, before the browser reads or sends it */-->
             <form th:action="@{/dj/library}" method="POST" class="m-0" id="libraryForm"
                   th:attr="data-sending=#{settings.library.sending},data-refused=#{settings.library.error.other},
                            data-max-bytes=${libraryMaxBytes},data-too-large=#{settings.library.error.TOO_LARGE(0, ${libraryMaxMb})}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <label for="libraryFile" class="form-label small text-light mb-1" th:text="#{settings.library.file}">File (XML, M3U, M3U8)</label>
-                <!--/* the field and "Wgraj" in one row from a tablet's width; on a phone one under the other, both the card's width */-->
-                <div class="s2p-library-pick">
-                    <input type="file" id="libraryFile" name="file" accept=".xml,.m3u,.m3u8" required
-                           class="form-control form-control-sm bg-black text-light border-secondary s2p-library-file">
-                    <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{settings.library.upload}">Upload</button>
-                </div>
+                <input type="file" id="libraryFile" name="file" accept=".xml,.m3u,.m3u8" required class="s2p-file-input">
+                <label for="libraryFile" class="s2p-file-drop" id="libraryDrop">
+                    <span class="s2p-file-drop-title" data-file-name th:attr="data-empty=#{settings.library.choose}"
+                          th:text="#{settings.library.choose}">Choose a file</span>
+                    <span class="s2p-file-drop-hint" th:text="#{settings.library.choose.hint(${libraryMaxMb})}">XML, M3U or M3U8 · up to 64 MB</span>
+                </label>
                 <!--/* a rekordbox collection's playlists (V42), read from the chosen file by library.js — the whole collection or one */-->
-                <div class="mt-2" id="libraryPlaylistField" hidden>
+                <div class="mt-3" id="libraryPlaylistField" hidden>
                     <label for="libraryPlaylist" class="form-label small text-light mb-1" th:text="#{settings.library.playlist}">What to upload</label>
                     <select id="libraryPlaylist" class="form-select form-select-sm bg-black text-light border-secondary">
                         <option value="" th:text="#{settings.library.playlist.all}">The whole collection</option>
                     </select>
                 </div>
+                <button type="submit" class="btn btn-action w-100 mt-3 s2p-library-upload" id="libraryUpload" disabled th:text="#{settings.library.upload}">Upload</button>
                 <p class="small mt-2 mb-0" id="libraryAnswer" role="status" hidden></p>
             </form>
             </th:block>
-            <!--/* asks first (data-confirm, dj-nav.js): the marks go at once, and only the file brings them back */-->
-            <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0 mt-3 s2p-library-delete"
-                  id="libraryDeleteForm" th:attr="data-confirm=#{settings.library.delete.confirm}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.library.delete}">Delete library</button>
-            </form>
             </div>
         </details>
 
