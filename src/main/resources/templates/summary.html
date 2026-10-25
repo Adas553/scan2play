@@ -36,7 +36,7 @@
 
 <main>
     <header class="head">
-        <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+        <p class="logo"><img src="/images/logo-small.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
         <h1 th:text="#{summary.title}">Evening summary</h1>
         <p th:if="${evening != null}" class="when">
             <span th:text="${#temporals.format(evening, 'EEEE, dd.MM.yyyy', #locale)}">sobota, 03.10.2026</span>

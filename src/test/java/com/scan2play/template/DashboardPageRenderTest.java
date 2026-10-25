@@ -326,7 +326,7 @@ class DashboardPageRenderTest {
         assertThat(html).as("the time of a request: the clock, the day under it, the full moment in the title")
                 .contains("title=\"29.09.2026 20:00:01\"", ">20:00</span>", ">29.09</span>").doesNotContain(">29.09.2026 20:00:01<");
         assertThat(html).as("our logo above the page's heading").contains(
-                "<span class=\"s2p-logo\"><img src=\"/images/logo.svg\" alt=\"\" class=\"s2p-logo-mark\"><span>Scan<span class=\"s2p-logo-two\">2</span>Play</span></span>",
+                "<span class=\"s2p-logo\"><img src=\"/images/logo-small.svg\" alt=\"\" class=\"s2p-logo-mark\"><span>Scan<span class=\"s2p-logo-two\">2</span>Play</span></span>",
                 "<h1 class=\"visually-hidden\">Panel DJ-a</h1>");
         assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe

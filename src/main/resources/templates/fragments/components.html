@@ -213,8 +213,9 @@
           th:text="${ago == 0} ? #{time.today} : (${ago == 1} ? #{time.yesterday} : ${T(com.scan2play.util.Times).day(at)})">today</span>
 </th:block>
 
-<!--/* Our logo: the mark (static/images/logo.svg — QR corners and a play triangle) and the name with a cyan "2". Sized by the
-     font of the element it replaces (the mark is 1.15em); the name is one span, so the flex gap stays between mark and name. */-->
+<!--/* Our logo: the mark (a play triangle of a QR code's modules) and the name with a cyan "2". Sized by the font of the element it
+     replaces (the mark is 1.15em, mostly 20–30 px): static/images/logo-small.svg, whose fewer, larger modules stay apart at that size
+     (logo.svg's run together); the name is one span, so the flex gap stays between mark and name. */-->
 <!--/* The way back to the DJ's own dashboard from a guest's page — shown only in the installed app (app.css,
      display-mode: standalone). The app takes every address of the site, so the DJ testing their QR code landed on the guest page
      inside it with no address bar and no "back" (the owner, 2026-10-08). Only a DJ has the app: the manifest is on the dashboard
@@ -345,7 +346,7 @@
     </th:block>
 </th:block>
 
-<span th:fragment="logo" class="s2p-logo"><img src="/images/logo.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
+<span th:fragment="logo" class="s2p-logo"><img src="/images/logo-small.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
 <!--/* Our logo as the way home, on the public pages (the guide, Pro, the demo, the home page itself; the panel; the owner, 2026-10-24): a link that looks like the logo
      and says it is one — a hand, the accent (app.css) and "Scan2Play — strona główna" on hover, a ring on the keyboard's focus. The pages
