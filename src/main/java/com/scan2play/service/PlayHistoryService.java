@@ -75,6 +75,6 @@ public class PlayHistoryService {
                 .filter(Objects::nonNull).findFirst().orElse(null);
         return new HistoryEntry(song.getId(), at, song.getSongName(), song.getTrackUrl(), song.getStyle(), song.getDecision(),
                 song.getDjComment(), song.getGuestText(), song.getVotes(), song.getSkippedAt(),
-                song.getClearedAt(), song.getRequestNumber(), song.getTips());
+                song.getClearedAt(), song.getRequestNumber(), song.getTips(), song.isAddedByDj());
     }
 }

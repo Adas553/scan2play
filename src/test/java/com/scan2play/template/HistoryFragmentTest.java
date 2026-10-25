@@ -110,6 +110,18 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("V44: a song the DJ added is marked 🎧 — no guest's words, no vibe, no AI's comment under it")
+    void shouldMarkASongTheDjAdded() {
+        HistoryEntry added = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Kult - Arahja", null, null, "played", null, null,
+                1, null, null, 3, 0, true);
+
+        String html = render(List.of(added, guest(2, "Alpha", "played")), false, PL);
+        assertThat(html).containsOnlyOnce("s2p-added-by-dj").contains(">🎧 Dodana przez DJ-a<").doesNotContain("??");
+        String first = html.substring(html.indexOf("data-history-id=\"1\""), html.indexOf("data-history-id=\"2\""));
+        assertThat(first).doesNotContain("guest-text", "s2p-history-sub", "Klimat:");
+    }
+
+    @Test
     @DisplayName("the vibe the AI judged by is the decision's title — \"Dowolny\" / \"Any\" for no genre, never the raw ANY; no column \"Klimat\" (the same in every row, the review of 2026-10-10)")
     void shouldNameTheVibeInTheDecisionsTitle() {
         HistoryEntry any = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "ANY", "played", null, null);
@@ -166,6 +178,21 @@ class HistoryFragmentTest {
                 "Najpierw otwórz podsumowanie wieczoru.");
         assertThat(html.indexOf("id=\"summaryLink\"")).isLessThan(html.indexOf("id=\"clearHistoryBtn\""));
         assertThat(render(List.of(), false, PL)).doesNotContain("summaryLink");
+    }
+
+    @Test
+    @DisplayName("a filter with nothing in it (\"Zagrane\" before a song played) keeps the summary and \"Wyczyść historię\" while the party has history")
+    void anEmptyFilter_keepsTheSummaryAndTheClearing_whileThePartyHasHistory() {
+        Context context = new Context(PL);
+        context.setVariable("history", List.of());
+        context.setVariable("historyHasMore", false);
+        context.setVariable("historyAny", true);
+        context.setVariable("activeFilter", "played");
+        String html = engine.process("history", Set.of("historyTableContent"), context);
+        assertThat(html).contains("id=\"summaryLink\"", "id=\"clearHistoryBtn\"", ">Brak historii.<");
+
+        context.setVariable("historyAny", false);
+        assertThat(engine.process("history", Set.of("historyTableContent"), context)).doesNotContain("summaryLink", "clearHistoryBtn");
     }
 
     private static String renderWithFilter(String filter) {

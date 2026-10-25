@@ -22,10 +22,17 @@ import java.time.Instant;
  * @param clearedAt   when the DJ cleared it with the whole queue ("Wyczyść kolejkę", V25); {@code null} for every other entry
  * @param requestNumber the song's number at the party (V28, "#27"); {@code null} for one the AI rejected
  * @param tips        how many tips the DJ counted for it (V28, "💸")
+ * @param addedByDj   whether the DJ or the staff added it in the panel (V44): no guest's words, no AI's verdict
  */
 public record HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
                            String guestText, Integer votes, Instant skippedAt, Instant clearedAt,
-                           Integer requestNumber, int tips) {
+                           Integer requestNumber, int tips, boolean addedByDj) {
+
+    /** An entry a guest asked for (not one the DJ added). */
+    public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
+                        String guestText, Integer votes, Instant skippedAt, Instant clearedAt, Integer requestNumber, int tips) {
+        this(id, at, title, trackUrl, style, decision, djComment, guestText, votes, skippedAt, clearedAt, requestNumber, tips, false);
+    }
 
     /** An entry without a number or tips (from before V28, a test). */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,

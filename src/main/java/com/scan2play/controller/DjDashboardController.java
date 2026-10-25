@@ -183,6 +183,7 @@ public class DjDashboardController {
         // "Ukryj „Nie masz”" beside the search: for anyone of the panel, while the party has a library its plan marks by
         model.addAttribute(LIBRARY_ON, planService.allows(settings, PlanFeature.LIBRARY) && djService.libraryOf(partyCode).isPresent());
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
+        model.addAttribute(BLOCKED_SONGS, SongList.of(planService.asPlanned(settings).getHostBlocked()));
 
         return "dashboard";
     }
@@ -294,6 +295,7 @@ public class DjDashboardController {
         model.addAttribute(HISTORY, queue);
         model.addAttribute(DEDICATIONS, djService.dedicationsOf(queue));
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
+        model.addAttribute(BLOCKED_SONGS, SongList.of(planService.asPlanned(settings).getHostBlocked()));
     }
 
     /** The demo's History tab: the fragment the panel's tab shows ({@code history :: historyTableContent}). */
@@ -427,6 +429,9 @@ public class DjDashboardController {
         PlayHistoryService.Page page = playHistoryService.getHistory(settings.getPartyCode(), limit, filter);
         model.addAttribute(HISTORY_FILTER, filter.param());
         model.addAttribute(HISTORY, page.entries());
+        // an empty filter asks once more, for one entry of any kind (a bounded read, only then)
+        model.addAttribute(HISTORY_ANY, !page.entries().isEmpty() || (filter != HistoryFilter.ALL
+                && !playHistoryService.getHistory(settings.getPartyCode(), 1, HistoryFilter.ALL).entries().isEmpty()));
         model.addAttribute(HISTORY_HAS_MORE, page.hasMore() && limit < HISTORY_MAX_LIMIT);
         model.addAttribute(HISTORY_NEXT_LIMIT, Math.min(limit + HISTORY_PAGE_SIZE, HISTORY_MAX_LIMIT));
     }
@@ -454,7 +459,7 @@ public class DjDashboardController {
         response.setHeader(PARTY_ACTIVE_HEADER, String.valueOf(settings.isActive()));
 
         // --- Lightweight fingerprint check (avoids full query + render) ---
-        // the hosts' wishes too: a song becomes ⭐ when they add it, with the queue as it was
+        // the hosts' lists too: a song becomes ⭐ when they add it, with the queue as it was (or 🚫, one the DJ added, V44)
         // the hosts' wishes and the tips as the organiser's plan has them (V35): a change of the plan sends the rows again
         PartySettingsEntity planned = planService.asPlanned(settings);
         PlanService.View plan = planService.view(settings, access.owner());
@@ -463,6 +468,7 @@ public class DjDashboardController {
         String library = plan.allows("LIBRARY") ? djService.libraryOf(partyCode)
                 .map(info -> "-l" + Long.toHexString(info.uploadedAt().toEpochMilli())).orElse("") : "";
         String wanted = (planned.getHostWanted() == null ? "" : "-w" + Integer.toHexString(planned.getHostWanted().hashCode()))
+                + (planned.getHostBlocked() == null ? "" : "-b" + Integer.toHexString(planned.getHostBlocked().hashCode()))
                 + (plan.allows("TIPS") ? "" : "-f") + library;
         String etag = "\"q-" + fingerprint + wanted + "\"";
 
@@ -482,6 +488,7 @@ public class DjDashboardController {
         model.addAttribute(DEDICATIONS, djService.dedicationsOf(waiting));
         model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, waiting));
         model.addAttribute(WANTED_SONGS, SongList.of(planned.getHostWanted()));
+        model.addAttribute(BLOCKED_SONGS, SongList.of(planned.getHostBlocked()));
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
         model.addAttribute(PLAN, plan);       // and by the organiser's plan (V35): no 💸 without Pro

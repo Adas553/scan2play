@@ -115,7 +115,7 @@ guest's "–" back as a backspace; the AI is given the guest's words with "-" to
 (150, V14: what the guest typed, as typed — one line, what the AI is given; null for older requests; the queue and the history always show
 it under the song — the DJ checks the AI, 2026-10-04; when the AI's song has none of the guest's words — `SongNames.sharesNoWord`: a
 word of 3+ letters, its stem — the first max(3, length − 2) letters — looked for in the `comparable` name — the queue and the history mark it
-"⚠ Sprawdź", `needsCheck()`, computed when shown; 2026-10-07 "orła cień" became another song by its mood), `checked` (V39, NOT NULL, default true: false when the AI could not be asked and the request went to the DJ with the guest's own words — the guests' list shows it only to the guest who sent it, the TV screen never, the DJ's row says "bez oceny AI"; an accepted request of the same name counted on it marks it checked, `SongRequestRepository.markChecked` — the review of 2026-10-21, S1), `votes` (V15, ≥ 1: how many guests asked for it — see below), `dedications` (V38: how many guests' dedications it has —
+"⚠ Sprawdź", `needsCheck()`, computed when shown; 2026-10-07 "orła cień" became another song by its mood), `checked` (V39, NOT NULL, default true: false when the AI could not be asked and the request went to the DJ with the guest's own words — the guests' list shows it only to the guest who sent it, the TV screen never, the DJ's row says "bez oceny AI"; an accepted request of the same name counted on it marks it checked, `SongRequestRepository.markChecked` — the review of 2026-10-21, S1), `addedByDj` (V44, NOT NULL, default false: the DJ or the staff added it in the panel — "Dodaj piosenkę", below), `votes` (V15, ≥ 1: how many guests asked for it — see below), `dedications` (V38: how many guests' dedications it has —
 `SongRequestDedicationEntity`),
 `requestNumber` (V28: the song's number at its party, "#27" — given to a request that reaches the queue, from the party's
 `request_counter` raised in the same statement under the party's advisory lock (`UPDATE … RETURNING`; `SongRequestVotesIT`: 16 new
@@ -182,6 +182,17 @@ matches `data-song-number` exactly, words match names). The number is the song's
 own place numbers ("4.", a CSS counter before the title) stay on a wide screen only — on a phone the card shows the ID alone (the
 owner, 2026-10-08). A tip only marks the song ("💸 2"); it does not move it up (the owner's choice for now).
 The evening summary counts them ("Napiwki", "💸 N" at the songs) and the CSV has "Numer" and "Napiwki".
+
+**A song the DJ adds** (V44, "Dodaj piosenkę"): a guest asked at the booth. A button beside the queue's heading folds out one field
+with the guests' suggestions (`song-autocomplete.js`) and "Dodaj" (`add-song.js`; sent in the background by `forms.js`, the field
+emptied, the queue fetched at once) → `POST /dj/dashboard/add-song`, for whom has QUEUE (`SongRequestCommandService.addByTheDj`).
+The song (one line, ≤ 150, `SongNames.tidy`) goes into the queue as an accepted request under the party's lock: the next number, a
+"Podejrzyj" link, `checked` (the guests' list and the TV show it, the guests 👍 it), no guest's words, no AI's comment, no style; the
+same song waiting is a vote on it (the row stays the guest's; `SongRequestVotesIT`). No AI, no guest's limit, no notification; a song
+the DJ skipped lately comes back (the DJ asks for it — the guests still hear "not now"); the hosts' "🚫 nie grać" does not stop it:
+the queue marks a song on that list "🚫 Gospodarze: nie grać" (computed when shown, the list's hash in the ETag,
+as ⭐). The queue and the history mark the song "🎧 Dodana przez DJ-a"; the evening summary counts it in the requests and apart
+("Dodane przez Ciebie"), its first vote left out of the guests' votes; the CSV's column "Dodana przez DJ-a" says "tak".
 
 **The hosts' lists** (V29, the owner 2026-10-09: the couple at a wedding — or the host of a party, the pub's owner — usually send
 the DJ a "do not play" and a "must play" list): "🚫 Nie grać" and "⭐ Koniecznie zagrać" in `party_settings`, one song or artist per
@@ -323,7 +334,7 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 
 ### 4.2 Enums
 
-`StaffPermission` (V32) QUEUE ("Zagrane", "Pomiń", "Cofnij", "↩ Przywróć"), TIPS (💸), CLEAR_QUEUE, OPEN_CLOSE (end / resume the
+`StaffPermission` (V32) QUEUE ("Zagrane", "Pomiń", "Cofnij", "↩ Przywróć", "Dodaj piosenkę" — V44), TIPS (💸), CLEAR_QUEUE, OPEN_CLOSE (end / resume the
 party), HISTORY, VIBE (the card "Impreza"), LIMITS, HOST_LISTS (the lists and their link), SUMMARY (the evening summary and its CSV) ·
 `StaffRole` (V32, ready sets by what the person does, not by their job) VIEWER "Podgląd" (HISTORY), QUEUE "Obsługa kolejki" (QUEUE,
 TIPS, CLEAR_QUEUE, OPEN_CLOSE, HISTORY — what every person of the staff could do before V32; `DEFAULT`: the role picked first for a new link and for "Zaproś", and what a link made before V33 gives), CO_ORGANISER
@@ -697,7 +708,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `StaffController` | the staff's invitation `/join/{token}` (public; "Dołącz" a POST), the panel switcher `POST /dj/panel`, leaving a staff, a pasted link (V30); the owner's page "Obsługa" `/dj/staff`: permissions, the link and its role (V33), removing (V32), invitations by e-mail and their answer `/dj/invitation` (V34) |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
-| `DjSongController` | mark played, skip, clear the queue, count a tip ("💸", V28) |
+| `DjSongController` | add a song by hand ("Dodaj piosenkę", V44), mark played, skip, clear the queue, count a tip ("💸", V28) |
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
 | `DjLibraryController` | the DJ's library (V41, Pro, the organiser alone): `POST /dj/library` — the file as the request's body (`application/octet-stream`, `js/dashboard/library.js`; not a form's upload: Spring Security reads a form's body for the CSRF token before anything checks the login, so a large upload would be anyone's to send), read up to 64 MB, one file at a time on the server, answered with one sentence (200 saved, 413 too large, 422 not a library / no song / too many / a collection too large for one playlist, 503 another file being read); `POST /dj/library/delete` (no plan needed) |
 | `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
@@ -726,7 +737,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1); with a library (V42, Pro) "Nie masz w bibliotece" and the CSV's column "W bibliotece" |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes — but a request the AI did not judge, V39, only to the guest who sent it); `mostWanted`: the first ten of that order, for the screen for a TV, only requests the AI judged |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
-| `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); evicts `dashboardQueue` after the commit |
+| `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); a song the DJ adds (`addByTheDj`, V44) under the same lock; evicts `dashboardQueue` after the commit |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `QrCodeService` | QR codes (ZXing, cached) |
@@ -1068,6 +1079,7 @@ schema behind Flyway's back.
 | V41 | tables `dj_library` (`party_code` PK, FK ON DELETE CASCADE, `track_count`, `format` varchar(10), `uploaded_at`) and `dj_library_track` (`party_code` FK to `dj_library` ON DELETE CASCADE, `match_key` varchar(200), PK both): the DJ's library — song keys only (`DjLibraryService`) |
 | V42 | the DJ's library by title and artists: `dj_library_track` made again (`party_code` FK to `dj_library` ON DELETE CASCADE, `title_key`, `artists` varchar(200), PK all three), `dj_library.playlist` varchar(200); the libraries of V41 deleted (`LibraryTitlesMigrationIT`) |
 | V43 | `dj_library_track.swapped` boolean NOT NULL DEFAULT false: the key of an M3U's name read the other way round — "✓" only, never "?" (`DjLibraryIT`) |
+| V44 | `song_requests.added_by_dj` boolean NOT NULL DEFAULT false: a song the DJ or the staff added in the panel ("Dodaj piosenkę"; `SongRequestVotesIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1159,6 +1171,7 @@ GuestQueueService          → DjService
 | POST | `/dj/invitation/accept` | `id`: joins with the invitation's role (V34; only the verified address it names) → that party's panel; gone / too old → the panel with a note; 409 full — and the invitation goes too (kept, it asked "Dołączyć?" on every opening of the panel for 30 days) |
 | POST | `/dj/invitation/decline` | `id`: the invitation goes (V34; only the verified address it names) → the panel with a note |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
+| POST | `/dj/dashboard/add-song` | `song`: a song the DJ adds to the queue by hand (V44; QUEUE; nothing typed: 400) |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped or marked played → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own, not one the AI rejected or cleared with the queue, not when the same song waits) |

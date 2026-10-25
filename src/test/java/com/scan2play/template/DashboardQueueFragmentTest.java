@@ -63,6 +63,11 @@ class DashboardQueueFragmentTest {
     }
 
     private static String render(List<SongRequestEntity> queue, Locale locale, com.scan2play.util.SongList wanted) {
+        return render(queue, locale, wanted, null);
+    }
+
+    private static String render(List<SongRequestEntity> queue, Locale locale, com.scan2play.util.SongList wanted,
+                                 com.scan2play.util.SongList blocked) {
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(
                 JakartaServletWebApplication.buildApplication(servletContext)
@@ -70,6 +75,7 @@ class DashboardQueueFragmentTest {
                 locale);
         context.setVariable("history", queue);
         context.setVariable("wantedSongs", wanted);
+        context.setVariable("blockedSongs", blocked);
         return engine.process("dashboard", Set.of("songTableBody"), context);
     }
 
@@ -82,6 +88,22 @@ class DashboardQueueFragmentTest {
         assertThat(html).containsOnlyOnce("s2p-host-wanted").contains("⭐ Życzenie gospodarzy").doesNotContain("??");
         assertThat(html.indexOf("s2p-host-wanted")).isLessThan(html.indexOf(">Beta<"));
         assertThat(render(List.of(accepted(1, "Hej sokoły")), PL)).as("no list, no mark").doesNotContain("s2p-host-wanted");
+    }
+
+    @Test
+    @DisplayName("V44: a song the DJ added is marked 🎧, with no guest's words; one on the hosts' \"nie grać\" is marked 🚫, not left out")
+    void shouldMarkTheSongsTheDjAdded_andTheHostsDoNotWant() {
+        SongRequestEntity added = accepted(1, "Kult - Arahja");
+        added.setAddedByDj(true);
+        added.setDjComment(null);
+        String html = render(List.of(added, accepted(2, "Beta")), PL, null, com.scan2play.util.SongList.of("Kult"));
+
+        assertThat(html).containsOnlyOnce("s2p-added-by-dj").contains(">🎧 Dodana przez DJ-a<")
+                .containsOnlyOnce("s2p-host-blocked").contains(">🚫 Gospodarze: nie grać<").doesNotContain("??");
+        String first = html.substring(html.indexOf("data-song-id=\"1\""), html.indexOf("data-song-id=\"2\""));
+        assertThat(first).contains("s2p-added-by-dj", "s2p-host-blocked", "/dj/dashboard/play").doesNotContain("guest-text");
+        assertThat(render(List.of(accepted(1, "Kult - Arahja")), PL)).as("no list, no mark; a guest's song, no 🎧")
+                .doesNotContain("s2p-host-blocked", "s2p-added-by-dj");
     }
 
     @Test

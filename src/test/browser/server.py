@@ -235,7 +235,8 @@ class Handler(BaseHTTPRequestHandler):
             for part in message.iter_parts():
                 field = part.get_param('name', header='content-disposition')
                 if field and part.get_filename() is None:
-                    fields[field] = part.get_content()
+                    # the browser sends a field's text as UTF-8 with no charset of its part: read as such ("Wilki – Baśka")
+                    fields[field] = part.get_payload(decode=True).decode('utf-8')
         return fields
 
     # ---- GET ----
@@ -386,6 +387,11 @@ class Handler(BaseHTTPRequestHandler):
                 state['skipped'] = [r for r in state.get('skipped', []) if str(r['id']) != str(fields.get('id'))]
                 state['queue'] = sorted(state['queue'] + back, key=lambda r: int(r['id']))
             return self._json({})
+        if path == '/dj/dashboard/add-song':          # a song the DJ added (V44): at the end of the queue, and a redirect, as the real server
+            with stand.lock:
+                taken = [int(r['id']) for r in state['queue'] + state.get('skipped', [])]
+                state['queue'].append({'id': max(taken + [900]) + 1, 'name': fields.get('song', ''), 'url': ''})
+            return self._send(302, headers={'Location': '/dj/dashboard'})
         if path == '/dj/dashboard/clear-queue':       # every waiting request leaves the queue (as rejected, on the real server)
             with stand.lock:
                 state['queue'] = []

@@ -733,6 +733,13 @@ th[data-sort].sort-desc::after {
 .s2p-z-toast         { z-index: 1090 !important; }
 .s2p-dashboard-qr    { max-width: 200px !important; height: auto !important; }
 .s2p-list-search     { max-width: 16rem !important; }
+/* "Dodaj piosenkę" (V44): the form as wide as a song needs, not the queue's width on a computer; on a phone the button and the
+   search share one line (the search takes what is left), so the queue comes no lower than before */
+.s2p-add-song { max-width: 36rem; }
+@media (max-width: 575.98px) {
+    #queueList .s2p-list-tools { flex: 1 1 100%; flex-wrap: wrap; }
+    #queueList .s2p-list-tools .s2p-list-search { flex: 1 1 8rem; max-width: none !important; }
+}
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }
@@ -1303,3 +1310,14 @@ th[data-sort].sort-desc::after {
 .s2p-undo-toast[hidden] { display: none; }
 /* a form not saved (forms.js, components :: formRefused): the same toast, red-edged, above the "Cofnij" one when both show */
 .s2p-refused-toast { border-color: var(--bs-danger); bottom: 5rem; }
+/* A screen without a pointer that hovers (a phone): a tap leaves the button hovered until the next tap elsewhere, so an outline
+   button stayed filled white — "Ukryj „Nie masz”" switched off looked on, "+ Dodaj piosenkę" looked pressed. There hover changes
+   nothing; the tap itself (:active) and a button that is on (.active, aria-pressed) keep their fill. Last in the file and with
+   .btn, so it holds over the buttons' own hover colours ("Pomiń"'s amber). */
+@media (hover: none) {
+    .btn[class*="btn-outline-"] {
+        --bs-btn-hover-color: var(--bs-btn-color);
+        --bs-btn-hover-bg: transparent;
+        --bs-btn-hover-border-color: var(--bs-btn-border-color);
+    }
+}

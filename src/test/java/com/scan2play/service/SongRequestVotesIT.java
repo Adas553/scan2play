@@ -129,6 +129,70 @@ class SongRequestVotesIT extends PostgresIntegrationTest {
                 .containsExactly("played 4", "rejected 1", "accepted 1");
     }
 
+    /**
+     * "Dodaj piosenkę" (V44): the DJ's song waits as a guest's would — the party's next number, a guest's request for it a vote —,
+     * marked; the DJ adding a song that waits is a vote on it, the row stays the guest's; a song the DJ skipped lately comes back
+     * when the DJ adds it (guests still hear "not now").
+     */
+    @Test
+    void aSongTheDjAdds_waitsWithANumber_takesVotes_andComesBackAfterASkip() {
+        String party = newParty();
+        SongRequestCommandService.Saved added = commands.addByTheDj(party, "  Wilki – Baśka ");
+        assertThat(added.outcome()).isEqualTo(Outcome.NEW);
+        assertThat(jdbc.queryForMap("SELECT song_name, decision, added_by_dj, request_number, guest_text, checked, track_url"
+                + " FROM song_requests WHERE id = ?", added.request().getId()))
+                .containsEntry("song_name", "Wilki - Baśka").containsEntry("decision", "accepted").containsEntry("added_by_dj", true)
+                .containsEntry("request_number", 1).containsEntry("guest_text", null).containsEntry("checked", true)
+                .containsEntry("track_url", LINK);
+        assertThat(commands.saveOrVote(request(party, "wilki baśka", "accepted", LINK), Set.of()).outcome()).isEqualTo(Outcome.VOTE);
+
+        SongRequestEntity guests = commands.saveOrVote(request(party, "Kult - Arahja", "accepted", null), Set.of()).request();
+        assertThat(commands.addByTheDj(party, "Kult – Arahja").outcome()).isEqualTo(Outcome.VOTE);
+        assertThat(jdbc.queryForMap("SELECT votes, added_by_dj FROM song_requests WHERE id = ?", guests.getId()))
+                .containsEntry("votes", 2).containsEntry("added_by_dj", false);
+
+        dj.dismissSong(guests.getId(), party);
+        assertThat(commands.saveOrVote(request(party, "Kult - Arahja", "accepted", null), Set.of()).outcome())
+                .as("a guest: the DJ skipped it lately").isEqualTo(Outcome.SKIPPED_BY_DJ);
+        SongRequestCommandService.Saved back = commands.addByTheDj(party, "Kult - Arahja");
+        assertThat(back.outcome()).as("the DJ: it comes back").isEqualTo(Outcome.NEW);
+        assertThat(back.request().getRequestNumber()).isEqualTo(3);
+        assertThat(rows(party)).extracting(row -> row.get("song_name") + " " + row.get("decision") + " " + row.get("votes"))
+                .containsExactly("Wilki - Baśka accepted 2", "Kult - Arahja rejected 2", "Kult - Arahja accepted 1");
+    }
+
+    /** The DJ adds a song while guests ask for it: one row, every vote on it — the DJ's add takes the same lock. */
+    @Test
+    void theDjAddingASongWhileGuestsAskForIt_makesOneRow() throws Exception {
+        int guests = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(guests + 1);
+        try {
+            for (int round = 0; round < ROUNDS; round++) {
+                String party = newParty();
+                CountDownLatch start = new CountDownLatch(1);
+                List<Future<Outcome>> asks = new ArrayList<>();
+                asks.add(pool.submit(() -> {
+                    start.await();
+                    return commands.addByTheDj(party, "Wilki – Baśka").outcome();
+                }));
+                for (int i = 0; i < guests; i++) {
+                    asks.add(pool.submit(() -> {
+                        start.await();
+                        return commands.saveOrVote(request(party, "Wilki - Baśka", "accepted", LINK), Set.of()).outcome();
+                    }));
+                }
+                start.countDown();
+                for (Future<Outcome> ask : asks) {
+                    ask.get(30, TimeUnit.SECONDS);
+                }
+                assertThat(rows(party)).as("round " + round).hasSize(1);
+                assertThat(rows(party).getFirst()).containsEntry("votes", guests + 1);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
     /** A party with a settings row, as every real one has: the count of its numbers is there (V28). */
     private String newParty() {
         String party = newPartyCode();

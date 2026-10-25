@@ -93,6 +93,21 @@ class DjDashboardControllerHistoryTest {
     }
 
     @Test
+    @DisplayName("a filter with nothing in it (\"Zagrane\" before a song played) keeps the summary and \"Wyczyść historię\": the party has history")
+    void anEmptyFilter_stillSaysThePartyHasHistory() throws Exception {
+        givenHistory(50, HistoryFilter.PLAYED, 0, false);
+        when(historyService.getHistory(PARTY, 1, HistoryFilter.ALL)).thenReturn(new Page(entries(1), true));
+
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", "played").principal(token).session(session))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("historyAny", true));
+
+        when(historyService.getHistory(PARTY, 1, HistoryFilter.ALL)).thenReturn(new Page(List.of(), false));
+        mockMvc.perform(get("/dj/history-view/fragment").param("partyCode", PARTY).param("filter", "played").principal(token).session(session))
+                .andExpect(model().attribute("historyAny", false));
+    }
+
+    @Test
     @DisplayName("the fragment shows the last 50 entries by default, and offers 100 when there are older ones")
     void shouldShowTheFirstPage_andOfferMore() throws Exception {
         List<HistoryEntry> entries = givenHistory(50, 50, true);

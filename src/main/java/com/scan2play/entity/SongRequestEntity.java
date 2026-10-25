@@ -94,6 +94,14 @@ public class SongRequestEntity {
     @Builder.Default
     private boolean checked = true;
 
+    /**
+     * Whether the DJ or the staff added the song in the panel (V44, {@code SongRequestCommandService.addByTheDj}): a guest asked
+     * at the booth. No guest's words, no AI's verdict; the queue and the history mark it, the evening summary counts it apart.
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean addedByDj = false;
+
     private String style;
     private String decision;
 

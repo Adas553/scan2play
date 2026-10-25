@@ -7,6 +7,8 @@ import com.scan2play.repository.SongRequestDedicationRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.SongNames;
+import com.scan2play.util.Texts;
+import com.scan2play.util.YouTubeSearchLinks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -71,6 +73,9 @@ public class SongRequestCommandService {
      */
     static final Duration SKIP_REMEMBERED = Duration.ofHours(2);
 
+    /** The longest song the DJ adds in the panel: as long as a guest's words may be. */
+    public static final int DJ_SONG_MAX = 150;
+
     /** The most of the DJ's skips a request is compared with (a bounded read; two hours have far fewer). */
     private static final int SKIPS_READ = 100;
 
@@ -126,7 +131,39 @@ public class SongRequestCommandService {
         return new Saved(saved.outcome(), song, true);
     }
 
+    /**
+     * A song the DJ or the staff add in the panel (V44): a guest asked at the booth. It goes into the queue as the AI's accepted
+     * request would — under the same lock, with the party's next number, a vote on the same song when it waits already — but no
+     * AI judges it, no guest's limit counts it, and a song skipped lately comes back: the DJ asks for it. The hosts' "🚫 nie grać"
+     * does not stop it either; the queue marks it ({@code DjDashboardController}), the DJ decides.
+     *
+     * @param typed the song as the DJ typed or picked it ("Artist – Title"), cut to one line of {@value #DJ_SONG_MAX} characters
+     * @throws IllegalArgumentException when nothing is typed, or the party is gone
+     */
+    @Transactional
+    public Saved addByTheDj(String partyCode, String typed) {
+        String name = SongNames.tidy(Texts.oneLine(typed, DJ_SONG_MAX));
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("No song to add");
+        }
+        SongRequestEntity request = SongRequestEntity.builder()
+                .partyCode(partyCode)
+                .songName(name)
+                .decision(DECISION_ACCEPTED)
+                .trackUrl(YouTubeSearchLinks.forQuery(name))
+                .addedByDj(true)
+                .requestedAt(Instant.now())
+                .build();
+        Saved saved = save(request, Set.of(), true);
+        log.info("Party [{}]: the DJ added '{}' ({})", partyCode, saved.request().getSongName(), saved.outcome());
+        return saved;
+    }
+
     private Saved save(SongRequestEntity request, Set<Long> guestsOwnIds) {
+        return save(request, guestsOwnIds, false);
+    }
+
+    private Saved save(SongRequestEntity request, Set<Long> guestsOwnIds, boolean byTheDj) {
         songRequestRepository.lockRequests(lockKey(request.getPartyCode()));
         if (!partySettingsRepository.existsByPartyCode(request.getPartyCode())) {
             throw new IllegalArgumentException("Party not found: " + request.getPartyCode());
@@ -151,7 +188,7 @@ public class SongRequestCommandService {
             }
             // The DJ played or skipped it since it was read (that does not take this lock): as if it had not been waiting
         }
-        Optional<SongRequestEntity> skipped = sameSongSkippedByTheDj(request);
+        Optional<SongRequestEntity> skipped = byTheDj ? Optional.empty() : sameSongSkippedByTheDj(request);
         if (skipped.isPresent()) {
             log.info("Party [{}]: '{}' was skipped by the DJ lately — not back in the queue", request.getPartyCode(),
                     request.getSongName());
