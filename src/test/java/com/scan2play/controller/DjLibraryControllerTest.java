@@ -141,6 +141,34 @@ class DjLibraryControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN));
     }
 
+    /**
+     * One file is read at a time on the server; a refused one — too large, not a library — lets the next one in at once (were it held,
+     * the next would wait half a minute and hear "try again").
+     */
+    @Test
+    void aRefusedFile_letsTheNextOneIn() throws Exception {
+        upload(ORGANISER, ("#EXTM3U\n" + "Wilki - Baśka.mp3\n".repeat(1000)).getBytes(StandardCharsets.UTF_8), 413);
+        upload(ORGANISER, "<html></html>".getBytes(StandardCharsets.UTF_8), 422);
+        long start = System.nanoTime();
+        upload(ORGANISER, "#EXTM3U\nWilki - Baśka.mp3\n".getBytes(StandardCharsets.UTF_8), 200);
+        assertThat(java.time.Duration.ofNanos(System.nanoTime() - start)).isLessThan(java.time.Duration.ofSeconds(5));
+    }
+
+    /** The second playlist of a name is asked for by its occurrence (library.js: "Wesele (2)"). */
+    @Test
+    void theOccurrence_ofAPlaylistsName() throws Exception {
+        String twins = "<DJ_PLAYLISTS><COLLECTION><TRACK TrackID=\"1\" Name=\"Baśka\" Artist=\"Wilki\"/><TRACK TrackID=\"2\" Name=\"SOS\""
+                + " Artist=\"ABBA\"/></COLLECTION><PLAYLISTS><NODE Type=\"0\" Name=\"ROOT\"><NODE Name=\"Wesele\" Type=\"1\"><TRACK Key=\"1\"/>"
+                + "</NODE><NODE Name=\"Wesele\" Type=\"1\"><TRACK Key=\"2\"/></NODE></NODE></PLAYLISTS></DJ_PLAYLISTS>";
+        mvc.perform(post("/dj/library").param("partyCode", PUB).param("playlist", "Wesele").param("occurrence", "2")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM).content(twins.getBytes(StandardCharsets.UTF_8))
+                        .principal(user(ORGANISER)).session(new MockHttpSession()))
+                .andExpect(status().isOk());
+        ArgumentCaptor<Library> saved = ArgumentCaptor.forClass(Library.class);
+        verify(libraries).replace(eq(PUB), saved.capture());
+        assertThat(saved.getValue().keys()).containsExactly(com.scan2play.util.LibraryKey.of("ABBA - SOS"));
+    }
+
     /** One playlist of a rekordbox collection (V42): named in the address, its tracks alone kept; one not in the file is said so. */
     @Test
     void onePlaylist_ofACollection() throws Exception {

@@ -1,6 +1,7 @@
 package com.scan2play.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
@@ -32,6 +33,8 @@ public class AppConfig {
      *     <li>{@code qr-codes} — long-lived</li>
      *     <li>{@code dashboardQueue} — 3s TTL, auto-expires to keep polling data fresh (the guest page reads it too)</li>
      *     <li>{@code accountPlan} — the organisers' plans (V35), 10 min; read only while the plans are enforced</li>
+     *     <li>{@code djLibrary} — what the parties' libraries are (V41), the panel's poll's ETag; evicted after an upload or a
+     *         deletion ({@code DjLibraryService})</li>
      * </ul>
      */
     @Bean
@@ -41,7 +44,8 @@ public class AppConfig {
                 buildCache(PartySettingsQueryService.CACHE, Duration.ofHours(24), 500),
                 buildCache(QrCodeService.QR_CODE_CACHE, Duration.ofHours(24), 1000),
                 buildCache(DjService.QUEUE_CACHE, Duration.ofSeconds(3), 200),
-                buildCache(PlanService.CACHE, PlanService.CACHE_TTL, 2000)
+                buildCache(PlanService.CACHE, PlanService.CACHE_TTL, 2000),
+                buildCache(DjLibraryService.CACHE, Duration.ofHours(24), 500)
         ));
         return cacheManager;
     }

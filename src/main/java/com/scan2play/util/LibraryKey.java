@@ -73,17 +73,38 @@ public record LibraryKey(String title, String artists) {
      * has (and the title is long enough to say so), "✗" when there is no track of the title.
      */
     public LibraryMark markIn(Collection<LibraryKey> library) {
+        return markIn(library, Set.of());
+    }
+
+    /**
+     * The same with the {@code swapped} keys of an M3U's names read the other way round ({@code DjLibraryParser.Library}): one of them
+     * with an artist in common is "✓" too, but the same title alone is never "? Podobny" — its title is an artist's name, and "Ed
+     * Sheeran - Perfect" is no song like the band Perfect's.
+     */
+    public LibraryMark markIn(Collection<LibraryKey> library, Collection<LibraryKey> swapped) {
+        if (isEmpty()) {
+            return LibraryMark.MISSING;
+        }
         Set<String> mine = artists.isEmpty() ? Set.of() : new HashSet<>(Arrays.asList(artists.split("\\+")));
         boolean sameTitle = false;
         for (LibraryKey track : library) {
-            if (!isEmpty() && title.equals(track.title)) {
+            if (title.equals(track.title)) {
                 sameTitle = true;
-                if (!track.artists.isEmpty() && Arrays.stream(track.artists.split("\\+")).anyMatch(mine::contains)) {
+                if (track.sharesAnArtistWith(mine)) {
                     return LibraryMark.HAVE;
                 }
             }
         }
+        for (LibraryKey track : swapped) {
+            if (title.equals(track.title) && track.sharesAnArtistWith(mine)) {
+                return LibraryMark.HAVE;
+            }
+        }
         return sameTitle && title.length() >= SHORTEST_TITLE ? LibraryMark.SIMILAR : LibraryMark.MISSING;
+    }
+
+    private boolean sharesAnArtistWith(Set<String> theirs) {
+        return !artists.isEmpty() && Arrays.stream(artists.split("\\+")).anyMatch(theirs::contains);
     }
 
     private static String cut(String key) {

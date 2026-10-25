@@ -35,16 +35,23 @@ public final class DjLibraryParser {
     public enum Format { M3U, REKORDBOX }
 
     /**
-     * The tracks read and their keys (fewer than the tracks: the same song in two versions is one key); {@code playlist} the
+     * The tracks read and their keys (fewer than the tracks: the same song in two versions is one key); {@code swapped} the keys of an
+     * M3U's names read the other way round ("Baśka - Wilki" for "Wilki - Baśka"), none of them among {@code keys}: such a key has an
+     * artist's name for its title, so it may only say "✓", never "? Podobny" ({@link LibraryKey#markIn}); {@code playlist} the
      * rekordbox playlist they are, by its folders ("Kluby / Piątek"), null for the whole collection or an M3U.
      */
-    public record Library(Format format, int tracks, Set<LibraryKey> keys, String playlist) {
+    public record Library(Format format, int tracks, Set<LibraryKey> keys, Set<LibraryKey> swapped, String playlist) {
+
+        /** A library without swapped keys: a rekordbox collection, whose artist and title are fields of their own. */
+        public Library(Format format, int tracks, Set<LibraryKey> keys, String playlist) {
+            this(format, tracks, keys, Set.of(), playlist);
+        }
     }
 
     /** A file that is not a library this app reads, one with no song, or one with more than the most tracks. */
     public static final class UnreadableLibraryException extends RuntimeException {
 
-        public enum Reason { UNKNOWN_FORMAT, EMPTY, TOO_MANY, NO_PLAYLIST }
+        public enum Reason { UNKNOWN_FORMAT, EMPTY, TOO_MANY, COLLECTION_TOO_LARGE, NO_PLAYLIST }
 
         private final Reason reason;
 
@@ -58,6 +65,20 @@ public final class DjLibraryParser {
         }
     }
 
+    /**
+     * The most tracks of a rekordbox collection one playlist of which is read: each is held in memory until the playlists, after the
+     * collection, say which of them to keep — a large DJ's collection, with room. Unlimited, the 64 MB of an upload would hold 1.6
+     * million tiny tracks: half a gigabyte of the server's memory.
+     */
+    public static final int MAX_COLLECTION = 100_000;
+
+    /**
+     * The deepest folder of a rekordbox collection's playlists: a DJ's tree is a few folders deep. Each playlist is named by its
+     * folders, so a tree without a limit — a million folders, one in another, and a million playlists at the bottom — would take
+     * hours of the server's time for a file of a few megabytes.
+     */
+    static final int MAX_DEPTH = 32;
+
     /** The longest line of a playlist: a title and a path, with room. */
     static final int LONGEST_LINE = 8192;
 
@@ -69,14 +90,22 @@ public final class DjLibraryParser {
     private DjLibraryParser() {
     }
 
+    /** The library in {@code in}, the first playlist of the name when one is named: {@link #parse(InputStream, int, int, String, int)}. */
+    public static Library parse(InputStream in, int maxTracks, String playlist) throws IOException {
+        return parse(in, maxTracks, MAX_COLLECTION, playlist, 1);
+    }
+
     /**
      * The library in {@code in}: XML when its first character is "<", else M3U. At most {@code maxTracks} tracks kept. {@code playlist}
-     * (a rekordbox collection's, by its folders; null: the whole collection) keeps only its tracks; an M3U is one playlist already.
+     * (a rekordbox collection's, by its folders; null: the whole collection) keeps only its tracks — the {@code occurrence}th playlist
+     * of that name, as rekordbox lets two of a folder have one name — out of a collection of at most {@code maxCollection} tracks; an
+     * M3U is one playlist already.
      */
-    public static Library parse(InputStream in, int maxTracks, String playlist) throws IOException {
+    public static Library parse(InputStream in, int maxTracks, int maxCollection, String playlist, int occurrence) throws IOException {
         BufferedInputStream buffered = new BufferedInputStream(in);
         String chosen = playlist == null || playlist.isBlank() ? null : playlist.strip();
-        Library library = startsLikeXml(buffered) ? rekordbox(buffered, maxTracks, chosen) : m3u(buffered, maxTracks);
+        Library library = startsLikeXml(buffered)
+                ? rekordbox(buffered, maxTracks, maxCollection, chosen, Math.max(1, occurrence)) : m3u(buffered, maxTracks);
         if (library.keys().isEmpty()) {
             throw new UnreadableLibraryException(UnreadableLibraryException.Reason.EMPTY);
         }
@@ -104,10 +133,11 @@ public final class DjLibraryParser {
     /**
      * An M3U playlist: a track is the title of its {@code #EXTINF} line ("#EXTINF:245,Wilki - Baśka"), or its file's name without
      * the folder and the extension when there is none. The order of the artist and the title is not fixed among the programs, so a
-     * name with one " - " is kept both ways round.
+     * name with one " - " is kept the other way round too, as a swapped key.
      */
     private static Library m3u(InputStream in, int maxTracks) throws IOException {
         Set<LibraryKey> keys = new HashSet<>();
+        Set<LibraryKey> swapped = new HashSet<>();
         int tracks = 0;
         String title = null;
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -135,10 +165,11 @@ public final class DjLibraryParser {
             add(keys, LibraryKey.of(name));
             String[] halves = name.split(" - ");
             if (halves.length == 2) {
-                add(keys, LibraryKey.of(halves[1] + " - " + halves[0]));
+                add(swapped, LibraryKey.of(halves[1] + " - " + halves[0]));
             }
         }
-        return new Library(Format.M3U, tracks, keys, null);
+        swapped.removeAll(keys);   // a song the playlist has both ways round is one the DJ has as it is
+        return new Library(Format.M3U, tracks, keys, swapped, null);
     }
 
     /**
@@ -178,16 +209,20 @@ public final class DjLibraryParser {
      * A rekordbox collection: the {@code TRACK}s of its {@code COLLECTION}, by their {@code Artist} and {@code Name}; or, with a
      * playlist, the tracks its {@code TRACK Key}s point at — the {@code PLAYLISTS} after the collection are a tree of {@code NODE}s,
      * folders ({@code Type="0"}, the tree's own "ROOT" not named) and playlists ({@code Type="1"}), named as rekordbox shows them:
-     * "Kluby / Piątek". The DTD and the entities of the file are never read (XXE): the file is the DJ's, not ours.
+     * "Kluby / Piątek". The DTD and the entities of the file are never read (XXE): the file is the DJ's, not ours. The JDK's own StAX,
+     * whatever else a library on the class path offers: its limits (the elements' depth, an attribute's length) refuse a file built to
+     * use up the memory.
      */
-    private static Library rekordbox(InputStream in, int maxTracks, String playlist) throws IOException {
-        XMLInputFactory factory = XMLInputFactory.newFactory();
+    private static Library rekordbox(InputStream in, int maxTracks, int maxCollection, String playlist, int occurrence)
+            throws IOException {
+        XMLInputFactory factory = XMLInputFactory.newDefaultFactory();
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
         Set<LibraryKey> keys = new HashSet<>();
-        Map<String, LibraryKey> byId = new HashMap<>();   // the collection by TrackID, when a playlist is chosen
+        Map<Integer, LibraryKey> byId = new HashMap<>();   // the collection by TrackID, when a playlist is chosen
         Deque<String> folders = new ArrayDeque<>();        // the NODEs open: their names, "" for the ROOT and the playlists
         int tracks = 0;
+        int named = 0;   // the playlists of the chosen name so far
         boolean found = false;
         try {
             XMLStreamReader xml = factory.createXMLStreamReader(in);
@@ -211,7 +246,14 @@ public final class DjLibraryParser {
                             continue;
                         }
                         if (playlist != null) {
-                            byId.put(xml.getAttributeValue(null, "TrackID"), key);
+                            Integer id = trackId(xml.getAttributeValue(null, "TrackID"));
+                            if (id == null) {
+                                continue;   // no playlist can point at it
+                            }
+                            if (byId.size() >= maxCollection) {
+                                throw new UnreadableLibraryException(UnreadableLibraryException.Reason.COLLECTION_TOO_LARGE);
+                            }
+                            byId.put(id, key);
                         } else {
                             if (++tracks > maxTracks) {
                                 throw new UnreadableLibraryException(UnreadableLibraryException.Reason.TOO_MANY);
@@ -222,12 +264,16 @@ public final class DjLibraryParser {
                         String name = xml.getAttributeValue(null, "Name");
                         boolean isPlaylist = "1".equals(xml.getAttributeValue(null, "Type"));
                         boolean isRoot = folders.isEmpty() && "ROOT".equals(name);
-                        if (isPlaylist && !found && playlist.equals(pathOf(folders, name))) {
+                        if (isPlaylist && !found && playlist.equals(pathOf(folders, name)) && ++named == occurrence) {
                             inChosen = found = true;
+                        }
+                        if (folders.size() >= MAX_DEPTH) {
+                            throw new UnreadableLibraryException(UnreadableLibraryException.Reason.UNKNOWN_FORMAT);
                         }
                         folders.push(isPlaylist || isRoot || name == null ? "" : name);
                     } else if (inChosen && "TRACK".equals(element)) {
-                        LibraryKey key = byId.get(xml.getAttributeValue(null, "Key"));
+                        Integer id = trackId(xml.getAttributeValue(null, "Key"));
+                        LibraryKey key = id == null ? null : byId.get(id);
                         if (key != null) {
                             if (++tracks > maxTracks) {
                                 throw new UnreadableLibraryException(UnreadableLibraryException.Reason.TOO_MANY);
@@ -274,6 +320,15 @@ public final class DjLibraryParser {
             }
         });
         return path.append(name == null ? "" : name).toString();
+    }
+
+    /** A track's number in the collection ({@code TrackID}, a playlist's {@code Key}); null when it is none. */
+    private static Integer trackId(String value) {
+        try {
+            return value == null ? null : Integer.valueOf(value.strip());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /** StAX keeps the failure of the reading as its "nested exception", not always as its cause. */
