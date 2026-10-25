@@ -248,6 +248,33 @@
         }
     });
 
+    // The panel's card "Impreza": its "Zapisz" the card's width on a phone, as the buttons of "Ustawienia imprezy" and of the QR
+    // code's card beside it; as wide as its words on a computer
+    function partySave() {
+        document.getElementById('settingsToggle').click();
+        return document.getElementById('partyWordsForm').querySelector('button[type="submit"]').getBoundingClientRect();
+    }
+
+    S2P.scenario({
+        name: 'panel-party-save-phone',
+        title: 'the panel\'s card "Impreza" on a phone: "Zapisz" the card\'s width, as the fields above it',
+        viewport: '390,844',
+        run: async function (t) {
+            const save = partySave();
+            t.step('"Zapisz" as wide as the field above it',
+                Math.abs(save.width - document.getElementById('djNameInput').getBoundingClientRect().width) < 1, true);
+        }
+    });
+
+    S2P.scenario({
+        name: 'panel-party-save-wide',
+        title: 'the panel\'s card "Impreza" on a computer: "Zapisz" as wide as its words',
+        viewport: '1280,900',
+        run: async function (t) {
+            t.step('"Zapisz" much narrower than the fields', partySave().width < 150, true);
+        }
+    });
+
     S2P.scenario({
         name: 'settings-page-touch-targets',
         title: 'the page "Ustawienia imprezy" on a phone: every folded line, and unfolded every button, field and the server limits\' line, at least 44 px high; no sideways scroll',
