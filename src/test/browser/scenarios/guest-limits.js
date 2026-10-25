@@ -146,6 +146,7 @@
         page: 'settings',
         viewport: '390,844',
         run: async function (t) {
+            document.querySelector('#limitsCard > summary').click();   // the card unfolded, as the DJ does (folded cards)
             const box = document.getElementById('serverLimitsInfo');
             const summary = box.querySelector('summary');
             t.step('one line, with each limit\'s window (the owner: "30 na 10 min", "300 na 24 h")', summary.textContent.replace(/\s+/g, ' ').trim(),

@@ -118,6 +118,12 @@ class StaffPageRenderTest {
         write("staff.html", html);
 
         assertThat(html).doesNotContain("??");
+        assertThat(html).as("\"Zaproś\" and the link folded, each with its state: the places free, the link's role and how long it works")
+                .contains("<details class=\"card bg-dark border-secondary mb-3 s2p-fold\" id=\"staffInviteCard\">",
+                        "<details class=\"card bg-dark border-secondary mb-4 s2p-fold\" id=\"staffLinkCard\">",
+                        "class=\"s2p-fold-state\">Wolne miejsca: 7 z 10<",
+                        "class=\"s2p-fold-state\">Podgląd · do " + com.scan2play.util.Times.day(Instant.now().plus(java.time.Duration.ofDays(30))) + "<",
+                        "<script src=\"/js/folds.js\">");
         assertThat(html).as("back to the settings (a row of which led here) and to the panel, of the same party (the owner, 2026-10-10)")
                 .contains("href=\"/dj/settings?party=HARN1\" id=\"backToSettings\"", ">← Ustawienia<",
                         "href=\"/dj/dashboard?party=HARN1\" id=\"backToPanel\"", ">Panel<");
@@ -135,9 +141,10 @@ class StaffPageRenderTest {
                 "id=\"staffLinkUntil\"", ">Działa do " + com.scan2play.util.Times.day(Instant.now().plus(java.time.Duration.ofDays(30))) + ".<",
                 "action=\"/dj/staff/link\"", ">Wyłącz link (osoby z listy zostają)<",
                 "href=\"/dj/dashboard?party=HARN1\"", "/js/staff.js", "/js/dj-nav.js",
-                // the invitation by e-mail waiting: the address, since when, the role, "Cofnij zaproszenie" (asks first)
-                "data-invitation-id=\"3\"", ">ola.kowalska@gmail.com<", ">zaproszono 10.10 · czeka na zalogowanie<",
-                ">Rola: Współorganizator<", "action=\"/dj/staff/invitation/cancel\"",
+                // the invitation by e-mail waiting, folded like a person: the address, the role, since when; unfolded, what it waits for
+                // and "Cofnij zaproszenie" (asks first)
+                "data-invitation-id=\"3\"", ">ola.kowalska<wbr>@gmail.com<", ">Współorganizator<", ">czeka od 10.10<",
+                ">zaproszono 10.10 · czeka na zalogowanie<", "action=\"/dj/staff/invitation/cancel\"",
                 "data-confirm=\"Cofnąć zaproszenie: ola.kowalska@gmail.com?\"", ">Cofnij zaproszenie<",
                 // "Zaproś": the address and the role (Obsługa kolejki, as a joiner had it), one action button on the page
                 "action=\"/dj/staff/invite\"", "type=\"email\"", "name=\"email\"", "id=\"role-invite\"", ">Zaproś<",
@@ -182,6 +189,9 @@ class StaffPageRenderTest {
         write("staff-invite-problem.html", html);
 
         assertThat(html).doesNotContain("??", "id=\"staffLinkInput\"", "id=\"staffLinkRole\"", "id=\"staffList\"");
+        assertThat(html).as("\"Zaproś\" unfolded with what came of it; every place taken said in its line; no link yet")
+                .contains("id=\"staffInviteCard\" open=\"open\"", "class=\"s2p-fold-state s2p-row-warn\">Miejsca zajęte: 10 z 10<",
+                        "class=\"s2p-fold-state\">Brak linku<");
         assertThat(html).contains("id=\"staffEmpty\"", "To nie wygląda na adres e-mail: ola@gmail", "alert alert-warning",
                 "value=\"ola@gmail\"", "id=\"staffFull\"", "Zajęte 10 z 10 miejsc", ">Utwórz link zaproszenia<",
                 ">Co może osoba, która dołączy przez link<");

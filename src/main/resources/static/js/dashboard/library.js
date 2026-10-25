@@ -7,10 +7,12 @@
  * collection or one playlist, named by its folders as the server names it (DjLibraryParser: "Kluby / Piątek"); a second playlist of the
  * same name is offered as "Kluby / Piątek (2)" and sent with its occurrence. A file larger than the server reads (data-max-bytes) is
  * refused here, before it is read or sent: a film picked by mistake would fill a phone's memory as text; only an .xml is read for its
- * playlists.
+ * playlists. The browser's file input is hidden: its label (#libraryDrop) is the field — "Wybierz plik", then the chosen file's
+ * name and size —, a file can be dropped on it, and "Wgraj" is enabled only with a file the server would read.
  *
- * Dependencies (DOM): <section id="libraryCard"> with <form id="libraryForm"> (the party code, a file input, data-sending /
- * data-refused), <p id="libraryAnswer"> and, with a library, <form id="libraryDeleteForm">;
+ * Dependencies (DOM): <details id="libraryCard"> with <form id="libraryForm"> (the party code, a file input, <label id="libraryDrop">
+ * with [data-file-name data-empty], a submit button, data-sending / data-refused / data-max-bytes / data-too-large),
+ * <p id="libraryAnswer"> and, with a library, <form id="libraryDeleteForm">;
  * <div id="libraryPlaylistField" hidden> with <select id="libraryPlaylist"> (its first option the whole collection).
  */
 import { csrfHeaders } from './common.js';
@@ -86,6 +88,7 @@ async function refreshCard(sentence) {
             location.reload();
             return;
         }
+        fresh.open = card.open;   // folded cards (settings.html): the server's card comes folded, the DJ's is open
         card.replaceWith(fresh);
         initLibraryCard(fresh);
         if (sentence) say(fresh, sentence, false);
@@ -102,6 +105,14 @@ function say(card, text, refused) {
     answer.classList.toggle('text-danger', refused);
     answer.classList.toggle('text-success', !refused);
     answer.hidden = false;
+}
+
+/** "kolekcja.xml · 18,7 MB" — the size in the page's language. */
+function nameAndSize(file) {
+    const format = new Intl.NumberFormat(document.documentElement.lang || undefined, { maximumFractionDigits: 1 });
+    const size = file.size < 1024 * 1024 ? format.format(Math.max(1, Math.round(file.size / 1024))) + ' KB'
+        : format.format(file.size / (1024 * 1024)) + ' MB';
+    return file.name + ' · ' + size;
 }
 
 function initLibraryCard(card) {
@@ -127,6 +138,35 @@ function initLibraryCard(card) {
     const select = card.querySelector('#libraryPlaylist');
     const input = form.querySelector('input[type="file"]');
     const maxBytes = Number(form.dataset.maxBytes) || Infinity;
+    const drop = card.querySelector('#libraryDrop');
+    const fileName = drop ? drop.querySelector('[data-file-name]') : null;
+    const upload = form.querySelector('button[type="submit"]');
+
+    /** The field says the file chosen (or "Wybierz plik" again), and "Wgraj" is enabled only with one the server would read. */
+    function showChosen(file) {
+        if (fileName) fileName.textContent = file ? nameAndSize(file) : fileName.dataset.empty;
+        if (drop) drop.classList.toggle('is-chosen', !!file);
+        upload.disabled = !file || file.size > maxBytes;
+    }
+
+    // a file dropped on the field (a computer): as if it had been chosen
+    if (drop) {
+        ['dragenter', 'dragover'].forEach(function (type) {
+            drop.addEventListener(type, function (e) {
+                e.preventDefault();
+                drop.classList.add('is-dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (type) {
+            drop.addEventListener(type, function () { drop.classList.remove('is-dragover'); });
+        });
+        drop.addEventListener('drop', function (e) {
+            e.preventDefault();
+            if (!e.dataTransfer || e.dataTransfer.files.length === 0) return;
+            input.files = e.dataTransfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
 
     // a file chosen: its playlists offered when it is a rekordbox collection, else nothing to choose
     input.addEventListener('change', async function () {
@@ -136,6 +176,7 @@ function initLibraryCard(card) {
         field.hidden = true;
         const answer = card.querySelector('#libraryAnswer');
         if (answer) answer.hidden = true;
+        showChosen(file);
         if (!file) return;
         if (file.size > maxBytes) {
             say(card, form.dataset.tooLarge, true);
@@ -162,7 +203,7 @@ function initLibraryCard(card) {
             say(card, form.dataset.tooLarge, true);
             return;
         }
-        const button = form.querySelector('button[type="submit"]');
+        const button = upload;
         const partyCode = form.querySelector('input[name="partyCode"]').value;
         button.disabled = true;
         say(card, form.dataset.sending, false);

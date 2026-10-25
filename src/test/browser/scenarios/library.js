@@ -4,11 +4,13 @@
 // "Twoja biblioteka" again from the server, in place — the page neither loads again nor moves (the owner, 2026-10-25: the screen
 // jumped from the top to the card).
 (function () {
-    /** Puts a file in the input as if the DJ had chosen it. */
+    /** Puts a file in the input as if the DJ had chosen it: the browser says so with a "change". */
     function choose(text, name) {
         const files = new DataTransfer();
         files.items.add(new File([text], name));
-        document.getElementById('libraryFile').files = files.files;
+        const input = document.getElementById('libraryFile');
+        input.files = files.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     S2P.scenario({
@@ -58,6 +60,46 @@
         }
     });
 
+    // The file's field: the browser's input is hidden, its label is the field — "Wybierz plik", then the file's name and size —, a file
+    // dropped on it is chosen too, and "Wgraj" (the card's one action) is enabled only with a file. On a phone it fills the card.
+    S2P.scenario({
+        name: 'library-file-field',
+        page: 'settings',
+        viewport: '390,844',
+        title: 'the DJ\'s library: our own file field — "Wybierz plik", then the name and size; a dropped file chosen too; "Wgraj" only with a file',
+        run: async function (t) {
+            document.querySelector('#libraryCard > summary').click();   // unfolded, as the DJ does
+            const input = document.getElementById('libraryFile');
+            const drop = document.getElementById('libraryDrop');
+            const upload = document.getElementById('libraryUpload');
+            const name = drop.querySelector('[data-file-name]');
+            t.step('at first: "Wybierz plik", "Wgraj" disabled, the browser\'s own input not drawn',
+                [name.textContent.trim(), upload.disabled, input.getBoundingClientRect().width <= 1], ['Wybierz plik', true, true]);
+            const card = document.getElementById('libraryCard').getBoundingClientRect();
+            t.step('the field and "Wgraj" as wide as the card\'s content, the field a finger\'s target', [
+                Math.abs(drop.getBoundingClientRect().width - upload.getBoundingClientRect().width) < 1,
+                drop.getBoundingClientRect().width > card.width - 40, drop.getBoundingClientRect().height >= 44], [true, true, true]);
+
+            choose('#EXTM3U\nWilki - Baśka.mp3\n', 'wesele.m3u8');
+            t.step('chosen: its name and size in the field, "Wgraj" enabled',
+                [name.textContent.trim(), drop.classList.contains('is-chosen'), upload.disabled], ['wesele.m3u8 · 1 KB', true, false]);
+
+            const dropped = new DataTransfer();
+            dropped.items.add(new File(['#EXTM3U\nABBA - SOS.mp3\n'], 'disco.m3u'));
+            drop.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dropped }));
+            t.step('a file dragged over: the field lights', drop.classList.contains('is-dragover'), true);
+            drop.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dropped }));
+            t.step('dropped: it is the chosen file, the field says so', [input.files[0] && input.files[0].name, name.textContent.trim(),
+                drop.classList.contains('is-dragover')], ['disco.m3u', 'disco.m3u · 1 KB', false]);
+            upload.click();
+            await t.waitFor(function () { return document.getElementById('libraryUpload') !== upload; }, 'the card again', 4000);
+            const sent = (await t.stand.requests('POST /dj/library'))[0].q;
+            t.step('the dropped file sent; the new card: "Wybierz plik", "Wgraj" disabled again', [sent.__body,
+                document.querySelector('#libraryDrop [data-file-name]').textContent.trim(), document.getElementById('libraryUpload').disabled],
+                ['#EXTM3U\nABBA - SOS.mp3\n', 'Wybierz plik', true]);
+        }
+    });
+
     // One playlist of a rekordbox collection (V42): library.js reads the playlists' names from the chosen file in the browser — the
     // file is not sent for it — and offers them with their folders, as rekordbox shows the tree; the one chosen goes in the address.
     // An M3U is one playlist already: nothing to choose.
@@ -83,7 +125,6 @@
             t.step('at first nothing to choose', field.hidden, true);
 
             choose(COLLECTION, 'collection.xml');
-            input.dispatchEvent(new Event('change', { bubbles: true }));
             await t.waitFor(function () { return !field.hidden; }, 'the playlists offered', 4000);
             t.step('the whole collection first, then each playlist by its folders', Array.from(select.options).map(function (o) {
                 return [o.value, o.textContent];
@@ -127,7 +168,6 @@
             const field = document.getElementById('libraryPlaylistField');
             const select = document.getElementById('libraryPlaylist');
             choose(TWINS, 'collection.xml');
-            document.getElementById('libraryFile').dispatchEvent(new Event('change', { bubbles: true }));
             await t.waitFor(function () { return !field.hidden; }, 'the playlists offered', 4000);
             t.step('both offered, the second with its number', Array.from(select.options).slice(1).map(function (o) {
                 return [o.value, o.textContent];
@@ -174,7 +214,6 @@
             Blob.prototype.text = text;
 
             choose('#EXTM3U\nWilki - Baśka.mp3\n', 'wesele.m3u8');
-            input.dispatchEvent(new Event('change', { bubbles: true }));
             t.step('another file chosen: the old sentence gone', answer.hidden, true);
             form.querySelector('button[type="submit"]').click();
             await t.waitFor(function () { return answer.classList.contains('text-danger'); }, 'the refusal', 4000);

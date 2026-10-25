@@ -6,7 +6,8 @@
     const tooSmall = function (root) {
         return Array.from(root.querySelectorAll('a.btn, button, input:not([type="hidden"]):not([type="checkbox"]), select, textarea, summary, '
             + '.s2p-row, .s2p-chips a'))
-            .filter(shows)
+            // drawn: not in a folded card (laid out, not drawn) nor transparent (the file input under its label, which is the target)
+            .filter(function (el) { return el.checkVisibility({ opacityProperty: true, visibilityProperty: true }); })
             .filter(function (el) { return el.getBoundingClientRect().height < 44 - 0.5; })
             .map(function (el) {
                 return (el.id || el.getAttribute('name') || el.textContent.trim().slice(0, 20) || el.tagName) + ' ' + Math.round(el.getBoundingClientRect().height) + 'px';
@@ -247,19 +248,44 @@
         }
     });
 
+    // The panel's card "Impreza": its "Zapisz" the card's width on a phone, as the buttons of "Ustawienia imprezy" and of the QR
+    // code's card beside it; as wide as its words on a computer
+    function partySave() {
+        document.getElementById('settingsToggle').click();
+        return document.getElementById('partyWordsForm').querySelector('button[type="submit"]').getBoundingClientRect();
+    }
+
+    S2P.scenario({
+        name: 'panel-party-save-phone',
+        title: 'the panel\'s card "Impreza" on a phone: "Zapisz" the card\'s width, as the fields above it',
+        viewport: '390,844',
+        run: async function (t) {
+            const save = partySave();
+            t.step('"Zapisz" as wide as the field above it',
+                Math.abs(save.width - document.getElementById('djNameInput').getBoundingClientRect().width) < 1, true);
+        }
+    });
+
+    S2P.scenario({
+        name: 'panel-party-save-wide',
+        title: 'the panel\'s card "Impreza" on a computer: "Zapisz" as wide as its words',
+        viewport: '1280,900',
+        run: async function (t) {
+            t.step('"Zapisz" much narrower than the fields', partySave().width < 150, true);
+        }
+    });
+
     S2P.scenario({
         name: 'settings-page-touch-targets',
-        title: 'the page "Ustawienia imprezy" on a phone: every button, field, jump and the server limits\' line at least 44 px high; no sideways scroll',
+        title: 'the page "Ustawienia imprezy" on a phone: every folded line, and unfolded every button, field and the server limits\' line, at least 44 px high; no sideways scroll',
         page: 'settings',
         viewport: '390,844',
         run: async function (t) {
-            t.step('nothing to tap is lower than 44 px', tooSmall(document.body), []);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
-            const jumps = Array.from(document.querySelectorAll('#settingsJump a'));
-            t.step('every jump to a card whole on the screen (wrapped, not cut at the edge)', jumps.filter(function (a) {
-                const box = a.getBoundingClientRect();
-                return box.left < 0 || box.right > document.documentElement.clientWidth;
-            }).map(function (a) { return a.textContent.trim(); }), []);
+            t.step('folded: nothing to tap is lower than 44 px', tooSmall(document.body), []);
+            t.check('folded: nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+            document.querySelectorAll('details.s2p-fold > summary').forEach(function (summary) { summary.click(); });
+            t.step('every card unfolded: nothing to tap is lower than 44 px', tooSmall(document.body), []);
+            t.check('unfolded: nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             t.check('"← Panel" leads to the panel of the same party', document.getElementById('backToPanel').getAttribute('href') === '/dj/dashboard?party=HARN1');
         }
     });

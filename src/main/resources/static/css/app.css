@@ -1077,15 +1077,57 @@ th[data-sort].sort-desc::after {
 @media (min-width: 992px) {
     .s2p-row { min-height: 44px; padding-top: 0.4rem; padding-bottom: 0.4rem; }
 }
-/* "Twoja biblioteka" (settings.html): the file and "Wgraj" in one row, "Wgraj" as tall as the field; on a phone one under the other
-   and, with "Usuń bibliotekę", all of the card's width — buttons of one width, as the landing page's */
-.s2p-library-pick { display: flex; gap: 0.5rem; align-items: stretch; }
-.s2p-library-pick .s2p-library-file { flex: 1 1 auto; min-width: 0; }
-.s2p-library-pick .btn { flex: none; }
+/* The buttons of a card on "Ustawienia imprezy", "Obsługa" and the panel's "Impreza" on a phone: one under another, all of the
+   card's width (as the landing page's: three widths looked untidy) — "Zapisz" under the fields, a row of two (.s2p-btn-row:
+   "Nowy link", "Wyłącz") each half of it. A field's own button ("Kopiuj", "Dołącz") stays beside its field; a text button ("Usuń"
+   in the library's box) stays small. On a wider screen each button is as wide as its words and of one height — the card's action
+   ("Wgraj", "Zaproś") too, told apart by its cyan alone. */
+.s2p-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 @media (max-width: 575.98px) {
-    .s2p-library-pick { flex-direction: column; }
-    .s2p-library-pick .btn,
-    .s2p-library-delete .btn { width: 100%; }
+    .s2p-fold-body form > .btn:not(.btn-link),
+    #partyCard form > .btn,
+    .s2p-staff-body form > .btn,
+    .s2p-staff-body form > .d-flex > .btn,
+    #installApp .btn { width: 100%; }
+    .s2p-btn-row > form { flex: 1 1 0; }
+    .s2p-btn-row > form > .btn { width: 100%; }
+}
+
+/* "Twoja biblioteka" (settings.html). What the party has now: a quiet box, its "Usuń" a small link at its end — a deletion does not
+   compete with "Wgraj". */
+.s2p-library-state {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 0.75rem;
+    padding: 0.6rem 0.85rem; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius); background: var(--s2p-white-05);
+    color: var(--s2p-light); font-size: 0.875rem;
+}
+.s2p-library-state-none { color: var(--s2p-text-muted); }
+.s2p-library-delete { padding: 0.25rem 0; text-decoration: none; }
+.s2p-library-delete:hover { text-decoration: underline; }
+.s2p-library-how > summary { cursor: pointer; width: max-content; max-width: 100%; }
+@media (max-width: 767.98px), (pointer: coarse) {
+    .s2p-library-how > summary { min-height: 44px; padding: 0.7rem 0; }
+}
+.s2p-library-how > summary:hover { color: var(--s2p-light) !important; }
+/* The file: the browser's own input is hidden (its button never fills a 44 px field on a phone, and its words are the browser's
+   language, not the page's) but stays the form's field and takes the keyboard's focus; its label is the tap target — a dashed
+   field, "Wybierz plik" and what it takes, then the file's name and size; a file can be dropped on it (library.js). */
+.s2p-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); }
+.s2p-file-drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; min-height: 88px;
+    padding: 1rem; margin: 0; text-align: center; cursor: pointer;
+    border: 1px dashed var(--s2p-border-strong); border-radius: var(--s2p-radius-card); background: var(--s2p-white-05);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.s2p-file-drop-title { color: var(--s2p-light); font-weight: 600; overflow-wrap: anywhere; }
+.s2p-file-drop-hint { color: var(--s2p-text-muted); font-size: 0.85rem; }
+.s2p-file-drop:hover,
+.s2p-file-drop.is-dragover { border-color: var(--s2p-action); background: var(--s2p-action-12); }
+.s2p-file-drop.is-chosen { border-style: solid; border-color: var(--s2p-action-45); }
+.s2p-file-input:focus-visible + .s2p-file-drop { outline: 2px solid var(--s2p-action); outline-offset: 2px; }
+/* "Wgraj" before a file is chosen: plainly not yet a button to press (a dimmed cyan still read as one), the cyan with the file */
+.s2p-library-upload:disabled {
+    --bs-btn-disabled-bg: var(--s2p-white-05); --bs-btn-disabled-border-color: var(--s2p-border);
+    --bs-btn-disabled-color: var(--s2p-text-muted); --bs-btn-disabled-opacity: 1;
 }
 /* the QR code small beside the guests' link and the print: the card was 440 px of a phone */
 .s2p-qr-compact { display: flex; gap: 1rem; align-items: center; }
@@ -1184,6 +1226,33 @@ th[data-sort].sort-desc::after {
 @media (max-width: 767.98px), (pointer: coarse) {
     .s2p-server-limits > summary { min-height: 44px; }
     .s2p-switch-row { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
+}
+
+/* "Ustawienia imprezy" and "Obsługa": a card folded to one line — its heading, and on the right its state (as the panel's row:
+   "Utworów: 1 234", "2 na gościa · 3 min") and "▾"; a tap unfolds it to fill it. Unfolded, the state goes: the fields say it, and
+   after a "Zapisz" the line would be the old one. As tall as a person's line below (.s2p-staff-summary), a finger's target. A row
+   that leads to a page of its own (.s2p-fold-link, "Obsługa ›") looks the same with "›". */
+.s2p-fold-summary,
+.s2p-fold-link {
+    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.75rem 1rem;
+}
+.s2p-fold-summary::-webkit-details-marker { display: none; }
+.s2p-fold-summary::after { content: "▾"; color: var(--s2p-text-muted); flex: none; }
+.s2p-fold[open] > .s2p-fold-summary::after { content: "▴"; }
+.s2p-fold-summary:focus-visible,
+.s2p-fold-link:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; border-radius: var(--s2p-radius-card); }
+.s2p-fold-name { margin: 0 auto 0 0 !important; min-width: 0; line-height: 1.3; }
+.s2p-fold-state { color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
+.s2p-fold[open] > .s2p-fold-summary > .s2p-fold-state { display: none; }
+.s2p-fold-body { padding: 0 1rem 1rem; }
+.s2p-fold-link { flex-direction: row; color: inherit; text-decoration: none; }
+.s2p-fold-link::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; flex: none; }
+.s2p-fold-link:hover { color: inherit; }
+@media (hover: hover) {
+    .s2p-fold-summary:hover::after,
+    .s2p-fold-link:hover::after { color: var(--s2p-light); }
+    .s2p-fold:not([open]):hover,
+    .s2p-fold-link:hover { border-color: var(--s2p-border-strong) !important; }
 }
 
 /* the owner's page "Obsługa": a person folded to one line (the name, the role, since when), a tap unfolds what they may do */
