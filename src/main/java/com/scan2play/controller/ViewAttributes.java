@@ -83,7 +83,7 @@ public final class ViewAttributes {
     public static final String LIBRARY_UPLOADED = "libraryUploaded";
     /** The rekordbox playlist the library is (V42), null for a whole collection or an M3U. */
     public static final String LIBRARY_PLAYLIST = "libraryPlaylist";
-    /** The party has a library its plan marks the queue by: the panel offers "Tylko mam" beside the search. */
+    /** The party has a library its plan marks the queue by: the panel offers "Ukryj „Nie masz”" beside the search. */
     public static final String LIBRARY_ON = "libraryOn";
     /** The evening summary's songs not in the DJ's library (V42); null without a library or without the plan. */
     public static final String LIBRARY_GAPS = "libraryGaps";
