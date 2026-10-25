@@ -84,6 +84,49 @@
         }
     });
 
+    /** A card's buttons on a phone (app.css): its width, or half of it in a row of two; a field's own button and a text one aside. */
+    function buttonsOfOneWidth(t, label) {
+        const odd = [];
+        folds().concat(Array.from(document.querySelectorAll('details.s2p-staff-member'))).forEach(function (fold) {
+            const body = fold.querySelector('.s2p-fold-body, .s2p-staff-body');
+            const width = body.getBoundingClientRect().width - parseFloat(getComputedStyle(body).paddingLeft)
+                - parseFloat(getComputedStyle(body).paddingRight);
+            body.querySelectorAll('form .btn').forEach(function (button) {
+                if (!button.checkVisibility() || button.closest('.input-group') || button.classList.contains('btn-link')
+                    || button.parentElement.classList.contains('d-flex') && button.parentElement.querySelector('input')) return;
+                const share = button.closest('.s2p-btn-row') ? (width - 8) / button.closest('.s2p-btn-row').children.length : width;
+                if (Math.abs(button.getBoundingClientRect().width - share) > 1.5) odd.push(button.textContent.trim());
+            });
+        });
+        t.step(label, odd, []);
+    }
+
+    S2P.scenario({
+        name: 'settings-buttons-one-width',
+        title: 'the page "Ustawienia imprezy" on a phone, every card unfolded: each "Zapisz" and "Wgraj" the card\'s width, "Nowy link" / "Wyłącz" half each',
+        page: 'settings',
+        viewport: '390,844',
+        run: async function (t) {
+            folds().forEach(function (fold) { fold.querySelector('summary').click(); });
+            buttonsOfOneWidth(t, 'every button of a card as wide as the card (a row of two: half each)');
+            const row = Array.from(document.querySelectorAll('#hostLinkBox .s2p-btn-row .btn'));
+            t.step('"Nowy link" and "Wyłącz" side by side, of one width', [row.length, row.length === 2
+                && Math.abs(row[0].getBoundingClientRect().top - row[1].getBoundingClientRect().top) < 1
+                && Math.abs(row[0].getBoundingClientRect().width - row[1].getBoundingClientRect().width) < 1], [2, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'staff-buttons-one-width',
+        title: 'the page "Obsługa" on a phone, everything unfolded: each "Zapisz", "Usuń dostęp", "Cofnij zaproszenie", "Nowy link" the card\'s width',
+        page: 'staff',
+        viewport: '390,844',
+        run: async function (t) {
+            document.querySelectorAll('details.s2p-fold, details.s2p-staff-member').forEach(function (fold) { fold.open = true; });
+            buttonsOfOneWidth(t, 'every button of a card as wide as the card');
+        }
+    });
+
     S2P.scenario({
         name: 'staff-folded',
         title: 'the page "Obsługa": "Zaproś" and the link folded, each with its state; the link unfolds by its address (#staffLinkCard)',

@@ -1077,6 +1077,20 @@ th[data-sort].sort-desc::after {
 @media (min-width: 992px) {
     .s2p-row { min-height: 44px; padding-top: 0.4rem; padding-bottom: 0.4rem; }
 }
+/* The buttons of a card on "Ustawienia imprezy" and "Obsługa" on a phone: one under another, all of the card's width (as the
+   landing page's: three widths looked untidy) — "Zapisz" under the fields, a row of two (.s2p-btn-row: "Nowy link", "Wyłącz") each
+   half of it. A field's own button ("Kopiuj", "Dołącz") stays beside its field; a text button ("Usuń" in the library's box) stays
+   small. On a wider screen each button is as wide as its words. */
+.s2p-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+@media (max-width: 575.98px) {
+    .s2p-fold-body form > .btn:not(.btn-link),
+    .s2p-staff-body form > .btn,
+    .s2p-staff-body form > .d-flex > .btn,
+    #installApp .btn { width: 100%; }
+    .s2p-btn-row > form { flex: 1 1 0; }
+    .s2p-btn-row > form > .btn { width: 100%; }
+}
+
 /* "Twoja biblioteka" (settings.html). What the party has now: a quiet box, its "Usuń" a small link at its end — a deletion does not
    compete with "Wgraj". */
 .s2p-library-state {

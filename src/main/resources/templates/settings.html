@@ -83,17 +83,18 @@
                              th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{dashboard.vibe.note.save}">Save</button>
+                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
             </form>
             <div class="mt-3 pt-3 border-top border-secondary" id="hostLinkBox">
                 <span class="d-block text-light small mb-1" th:text="#{dashboard.host.link.label}">Link for the hosts</span>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <div th:if="${hostLink != null}" class="input-group input-group-sm flex-grow-1 s2p-host-link">
-                        <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${hostLink}" id="hostLinkInput" readonly
-                               th:attr="aria-label=#{dashboard.host.link.label}">
-                        <button class="btn btn-outline-secondary" type="button" data-copy-target="hostLinkInput" th:text="#{dashboard.qr.copy}"
-                                th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
-                    </div>
+                <div th:if="${hostLink != null}" class="input-group input-group-sm mb-2 s2p-host-link">
+                    <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${hostLink}" id="hostLinkInput" readonly
+                           th:attr="aria-label=#{dashboard.host.link.label}">
+                    <button class="btn btn-outline-secondary" type="button" data-copy-target="hostLinkInput" th:text="#{dashboard.qr.copy}"
+                            th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
+                </div>
+                <!--/* the link's two buttons in a row of their own: on a phone each half of it */-->
+                <div class="s2p-btn-row">
                     <!--/* a full reload (forms.js leaves /host-link alone): the new link is shown at once, here again. The field is "link",
                          not "action": an input named "action" hides the form's own form.action from the scripts */-->
                     <form th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0"
@@ -144,19 +145,18 @@
                            class="form-control form-control-sm bg-black text-light border-secondary" aria-label="TikTok"
                            th:value="${tiktokUrl}" th:placeholder="#{dashboard.dj.links.tiktok}">
                 </div>
-                <button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{dashboard.vibe.note.save}">Save</button>
+                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
                 <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.dj.links.invalid}">Not a profile</div>
             </form>
             <form th:action="@{/dj/dashboard/tip-link}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="tipLinkForm">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <label for="tipInput" class="form-label d-block text-light small mb-1" th:text="#{dashboard.tip.label}">Tip link</label>
-                <div class="d-flex gap-2">
-                    <input type="text" id="tipInput" name="tip" maxlength="200" autocomplete="off"
-                           class="form-control form-control-sm bg-black text-light border-secondary"
-                           th:value="${tipUrl}" th:placeholder="#{dashboard.tip.placeholder}">
-                    <button type="submit" class="btn btn-sm btn-outline-light" th:text="#{dashboard.vibe.note.save}">Save</button>
-                </div>
+                <input type="text" id="tipInput" name="tip" maxlength="200" autocomplete="off"
+                       class="form-control form-control-sm bg-black text-light border-secondary"
+                       th:value="${tipUrl}" th:placeholder="#{dashboard.tip.placeholder}">
                 <div class="small text-secondary mt-1" th:text="#{dashboard.tip.help}">The money goes straight to you.</div>
+                <!--/* "Zapisz" under the field, as the profiles' above: one card, one way */-->
+                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
                 <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.tip.invalid}">Not a tip link</div>
             </form>
             </th:block>

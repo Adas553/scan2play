@@ -85,7 +85,12 @@
                  th:attr="data-invitation-id=${invitation.id}">
             <summary class="s2p-staff-summary">
                 <span class="s2p-staff-who">
-                    <span class="s2p-card-title mb-0 text-break" th:text="${invitation.email}">ola.kowalska@gmail.com</span>
+                    <!--/* a long address may wrap only before its "@" ("ola.kowalska" / "@gmail.com"), never inside the domain */-->
+                    <span class="s2p-card-title mb-0 text-break" th:if="${#strings.contains(invitation.email, '@')}"><th:block
+                          th:text="${#strings.substringBefore(invitation.email, '@')}">ola.kowalska</th:block><wbr><th:block
+                          th:text="${'@' + #strings.substringAfter(invitation.email, '@')}">@gmail.com</th:block></span>
+                    <span class="s2p-card-title mb-0 text-break" th:unless="${#strings.contains(invitation.email, '@')}"
+                          th:text="${invitation.email}">ola.kowalska</span>
                     <span class="small text-secondary" th:text="${roleName}">Co-organiser</span>
                 </span>
                 <span class="small text-secondary text-nowrap" th:text="#{staff.invited.waiting(${day})}">waiting since 10.10</span>
