@@ -1,6 +1,7 @@
 /**
- * THE ROWS OF "WIĘCEJ" in the panel's settings (the design review, 2026-10-10): the row "To urządzenie" says whether this browser
- * gets the notifications of new requests — "Powiadomienia wł." / "wył." — the way push.js finds it: a subscription of the service
+ * THE ROWS OF "WIĘCEJ" in the panel's settings (the design review, 2026-10-10), and the folded card of the page "Ustawienia imprezy"
+ * (settings-page.js): "To urządzenie" says whether this browser gets the notifications of new requests — "Powiadomienia wł." /
+ * "wył." — the way push.js finds it: a subscription of the service
  * worker of /dj/ (scope /dj/) with notifications allowed. Shown only when the server has the keys (the template renders the state's
  * element with them); a browser without push says nothing.
  *

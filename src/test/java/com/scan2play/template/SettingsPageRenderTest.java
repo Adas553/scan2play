@@ -175,9 +175,15 @@ class SettingsPageRenderTest {
                         "<script src=\"/js/dj-nav.js\">", "rel=\"manifest\"");
         assertThat(html).contains("<title>Ustawienia imprezy - Scan2Play</title>", ">Ustawienia imprezy<",
                 "id=\"backToPanel\"", "href=\"/dj/dashboard?party=HARN1\"", ">← Panel<");
-        assertThat(html).as("a row of jumps to the cards, the staff's own page among them")
-                .contains("id=\"settingsJump\"", "href=\"#hostListsCard\"", "href=\"#linksCard\"", "href=\"#limitsCard\"",
-                        "href=\"#deviceCard\"", "href=\"/dj/staff?party=HARN1\"", ">Obsługa ›<");
+        assertThat(html).as("every card folded to its heading and its state (the panel's rows'), the card the address names unfolded by folds.js")
+                .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\">",
+                        "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\">",
+                        "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"deviceCard\">",
+                        "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · napiwki<",
+                        "class=\"s2p-fold-state\">Nie wgrano<", "<script src=\"/js/folds.js\">")
+                .doesNotContain("id=\"settingsJump\"", "s2p-fold\" id=\"hostListsCard\" open");
+        assertThat(html).as("\"Obsługa\" a row like a folded card, with its state, leading to its page")
+                .contains("id=\"staffRow\"", "href=\"/dj/staff?party=HARN1\"", ">Obsługa<");
         assertThat(html).as("the hosts' lists (V29): both in one form, the hosts' link to copy, a new one asks first")
                 .contains("id=\"hostListsCard\"", "action=\"/dj/dashboard/host-lists\"", "id=\"hostBlockedInput\"", "name=\"blocked\"",
                         ">Hej sokoły</textarea>", ">Lista gospodarzy<", "Jeden utwór lub wykonawca w linii.",
@@ -211,7 +217,7 @@ class SettingsPageRenderTest {
                         ">Powiadomienia o prośbach<", "id=\"installApp\"", "id=\"installAppBtn\"", "id=\"joinStaffForm\"", "action=\"/dj/join\"",
                         ">Zaproszenie do obsługi? Wklej link<");
         assertThat(html).as("the DJ's library (V41): a file sent by library.js, what it does, none uploaded yet")
-                .contains("href=\"#libraryCard\"", "id=\"libraryCard\"", ">Twoja biblioteka<", "id=\"libraryForm\"",
+                .contains("id=\"libraryCard\"", ">Twoja biblioteka<", "id=\"libraryForm\"",
                         "action=\"/dj/library\"", "id=\"libraryFile\"", "accept=\".xml,.m3u,.m3u8\"", "data-sending=\"Wgrywanie…\"",
                         "data-refused=\"Nie udało się wgrać pliku.", "id=\"libraryAnswer\" role=\"status\" hidden",
                         "Plik → Eksportuj kolekcję w formacie XML", ">Nie masz jeszcze wgranej biblioteki.<")
@@ -265,9 +271,9 @@ class SettingsPageRenderTest {
     void aCoOrganiser_seesWhatSheWasGiven_notTheMoneyOrTheStaff() throws IOException {
         String html = render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL);
 
-        assertThat(html).contains("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"pushToggle\"", "id=\"settingsJump\"")
+        assertThat(html).contains("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"pushToggle\"", "s2p-fold-state")
                 .doesNotContain("id=\"linksCard\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
-                        "href=\"/dj/staff", "id=\"joinStaffForm\"", "id=\"libraryCard\"", "href=\"#libraryCard\"");
+                        "href=\"/dj/staff", "id=\"staffRow\"", "id=\"joinStaffForm\"", "id=\"libraryCard\"");
         write("settings-staff.html", html);
     }
 
@@ -307,11 +313,9 @@ class SettingsPageRenderTest {
         String html = render(new PartyStaffService.Access(saved, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
                 PL, com.scan2play.service.Plans.enforced());
 
-        assertThat(html).as("the jumps keep the cards, without \"PRO\": the card's title says it just below")
-                .contains("id=\"settingsJump\"", "href=\"#hostListsCard\"", "href=\"#linksCard\"", "href=\"#limitsCard\"",
-                        "class=\"s2p-pro\">PRO<");
-        String jumps = html.substring(html.indexOf("id=\"settingsJump\""), html.indexOf("</nav>", html.indexOf("id=\"settingsJump\"")));
-        assertThat(jumps).doesNotContain("s2p-pro");
+        String hosts = html.substring(html.indexOf("id=\"hostListsCard\""), html.indexOf("</summary>", html.indexOf("id=\"hostListsCard\"")));
+        assertThat(hosts).as("a folded card of a Pro feature: \"PRO\" by its heading, said once — no state beside it")
+                .contains("class=\"s2p-pro\">PRO<").doesNotContain("s2p-fold-state");
         assertThat(html).as("the hosts' lists: kept (⭐ 1), not editable here, the link not shown")
                 .contains("id=\"hostListsCard\"", "Twoje listy są zachowane: 🚫 0 · ⭐ 1. Wrócą, gdy włączysz Pro",
                         "href=\"/pro\"", ">Zobacz, co daje Pro<")
@@ -347,7 +351,7 @@ class SettingsPageRenderTest {
         String html = render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL,
                 com.scan2play.service.Plans.enforced());
         assertThat(html).contains("id=\"deviceCard\"")
-                .doesNotContain("id=\"hostListsCard\"", "id=\"limitsCard\"", "s2p-pro", "id=\"settingsJump\"");
+                .doesNotContain("id=\"hostListsCard\"", "id=\"limitsCard\"", "s2p-pro", "id=\"staffRow\"");
     }
 
     /** A library uploaded under Pro, the plan gone: it waits, unmarked — and it can still be deleted (the organiser's own data). */

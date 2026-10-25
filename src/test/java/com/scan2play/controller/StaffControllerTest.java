@@ -376,7 +376,7 @@ class StaffControllerTest {
     void theInvitationLink_isANewSecretEachTime_offTakesItAway() throws Exception {
         for (String link : new String[]{"new", "off"}) {
             mockMvc.perform(post("/dj/staff/link").param("partyCode", PUB).param("link", link).principal(user("pub-owner"))
-                    .session(new MockHttpSession())).andExpect(redirectedUrl("/dj/staff?party=PUB01"));
+                    .session(new MockHttpSession())).andExpect(redirectedUrl("/dj/staff?party=PUB01#staffLinkCard"));
         }
         mockMvc.perform(post("/dj/staff/link").param("partyCode", PUB).param("link", "x").principal(user("pub-owner"))
                 .session(new MockHttpSession())).andExpect(status().isBadRequest());
@@ -423,7 +423,7 @@ class StaffControllerTest {
         MockHttpSession session = new MockHttpSession();
         mockMvc.perform(post("/dj/staff/invite").param("partyCode", PUB).param("email", " Ola@Gmail.com ").param("role", "CUSTOM")
                         .param("permissions", "HISTORY", "SUMMARY").principal(user("pub-owner")).session(session))
-                .andExpect(redirectedUrl("/dj/staff?party=PUB01"));
+                .andExpect(redirectedUrl("/dj/staff?party=PUB01#staffInviteCard"));
         verify(invitations).invite(PUB, " Ola@Gmail.com ", EnumSet.of(StaffPermission.HISTORY, StaffPermission.SUMMARY), null);
         assertThat(session.getAttribute(StaffController.SESSION_STAFF_INVITED))
                 .isEqualTo(new StaffController.InviteResult("INVITED", "Ola@Gmail.com", false));

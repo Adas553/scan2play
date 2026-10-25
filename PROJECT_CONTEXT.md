@@ -423,9 +423,14 @@ page "Ustawienia imprezy". Each card and row only for whom may change it (V32: h
 "Lista gospodarzy" and "Limity gości" by their permissions, never the profiles, the money or the staff; the rest of the staff the QR code
 and "To urządzenie". No switches for the hosts' lists and the tips: unused is what nothing typed means, said by the row.
 **The page "Ustawienia imprezy"** (`GET /dj/settings?party=`, `settings.html`, `DjDashboardController.settingsPage`; anyone with
-access to the party — a 403 for another): our logo, "← Panel" (the same party), jumps to its cards (and "Obsługa ›"; wrapped onto a
-second line on a phone — cut at the edge they read as broken; a row of the panel lands right at its card), then the
-cards of 6.7 — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are page loads that come
+access to the party — a 403 for another): our logo, "← Panel" (the same party), then the cards of 6.7, **each folded to one line**
+(2026-10-25; `details.s2p-fold`): its heading and on the right its state — the same as the panel's row ("🚫 0 · ⭐ 1 · link",
+"Instagram · napiwki", "2 na gościa · 3 min" or a server limit near, "Utworów: 1 234", "Powiadomienia wł."), none beside "PRO" —
+and "▾"; a tap unfolds it, and unfolded its state goes (the fields say it). The folded page is one screen of a phone and the list of
+what can be set (no row of jumps above it); "Obsługa" is a line of the same look with "›", leading to its page (`#staffRow`). The card
+the address names unfolds by itself (`js/folds.js`: a row of the panel → `#libraryCard`, "Nowy link" → `#hostListsCard`, an element
+inside a card too), the others stay folded; a form saved in the background leaves its card unfolded, and the library's card brought
+again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are page loads that come
 back here, at the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
 one line with their windows, "Limity serwera: sieć 4/30 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
 network is: "Jedna sieć to np. Wi-Fi lokalu — wszyscy goście w nim liczą się razem."), **"To urządzenie"** (everyone's:
@@ -505,11 +510,14 @@ gets an apostrophe — a guest's text is never a formula).
 **The party's staff** (V30, the owner 2026-10-09; roles and permissions V32, 2026-10-10 after the review of the staff's flows,
 https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx): a bartender, a second DJ, the venue's manager works the owner's party with their
 own Google account, **as far as the owner allows**. The owner's page **"Obsługa"** (`/dj/staff`, `staff.html`; from the row "Obsługa ·
-Osób: 1" of the settings and the jumps of "Ustawienia imprezy" — not the menu "Konto", which is about the person, 2026-10-10; the card in
+Osób: 1" of the panel and its line on "Ustawienia imprezy" — not the menu "Konto", which is about the person, 2026-10-10; the card in
 the settings was 1750 px down a phone and 990 px tall with ten people; its heading leads back to "← Ustawienia" and to "Panel" of the
 same party — the one row of the settings with a page of its own, 2026-10-10): a card per person, **folded to one line** — the name, the role,
 "w obsłudze od 10.10" (a `<details>`; the owner, 2026-10-10: ten unfolded cards repeated the same picker; the one just saved comes back
-unfolded with "Zapisano"); unfolded, **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
+unfolded with "Zapisano"; an invitation by e-mail waiting is folded the same way — the address, the role, "czeka od 10.10" —, and so
+are "Zaproś osobę" and "Albo wyślij link" (2026-10-25, `details.s2p-fold`: their lines say "Wolne miejsca: 7 z 10" and "Podgląd ·
+do 24.11"; "Zaproś" unfolded when it has an answer to show or nobody helps yet, the link after "Nowy link" / "Wyłącz" —
+`#staffLinkCard`, `js/folds.js`)); unfolded, **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
 kolejki", "Współorganizator", "Własne") and, under "Uprawnienia po kolei", a checkbox per `StaffPermission` (`js/staff.js`: a role
 ticks its set, a tick changed picks the role it makes — "Własne" when none; the server decides the same way), "Zapisz" (`POST
 /dj/staff/permissions`, "✓ Zapisano") and "Usuń dostęp" (asks first, `POST /dj/staff/remove`); under the people, **the invitations by
@@ -777,6 +785,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 |------|---------|
 | `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, chosen by the form's whole path: `RELOADS`, `CHANGE_THE_QUEUE`, …; `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place; Enter on a link, a button or a `<summary>` is theirs, never "Zagrane"), `polling.js` (the queue every 3 s and its headers — the keyboard's focus kept on the same button of the same request when the rows are replaced, `common.js` `focusSpot` — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"); they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`), the feedback form, and "Kopiuj" of every DJ page: `button[data-copy-target]` (a field: the party link, the hosts' and the staff's link), `button[data-copy-text]` ("Pomoc i kontakt", "Kopiuj adres" of `/pro`); the clipboard, else the old way from a field of its own, else the text shown selected (the field, `data-copy-select`) — "Skopiowano" only when it was copied (scenarios `copy-the-*`). `queue-keys.js` keeps its own copy of a song (the keyboard's) |
+| `js/folds.js` | the folded cards of "Ustawienia imprezy" and "Obsługa" (`details.s2p-fold`, 2026-10-25): the card the address names (`#libraryCard`, an element inside a card) is unfolded on load and on a change of the address; a plain script, as `dj-nav.js` |
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes ("Kopiuj" of the link: `dj-nav.js`) |
 | `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`; a browser that refuses the session storage gets the page at once, without the memory) |
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
@@ -843,8 +852,7 @@ What every page shares, so a new screen looks like the others:
   without it, while the plans are enforced: **visible, marked** — the row and the card keep their place with "PRO" by the name, **said
   once** (`components :: proMark`, `.s2p-pro`: a **tag** in the logo's cyan on a 12 % tint of it, 4 px radius — neither a pill like the
   jumps nor a button, never filled: it is not a control and does not compete with the screen's one action; 6.2–7.5 : 1). No state
-  beside it in the row (the limits' row the limits that hold, "2 na gościa · 3 min", one line on a phone), no "PRO" in the jumps (the
-  card's title says it just below); in place of the card's form one sentence — what was saved and waits, or what holds — with "Zobacz,
+  beside it in the row nor in the folded card's line (the limits' the limits that hold, "2 na gościa · 3 min", one line on a phone); in place of the card's form one sentence — what was saved and waits, or what holds — with "Zobacz,
   co daje Pro" → `/pro` (`components :: proOffer`, `.s2p-pro-box`: a box tinted with the cyan, a solid line — never dashed, that reads
   as an empty place; on a wide screen the sentence and its outline button on one line); a fact is said once (the staff's places: the
   offer, not the help line again); the other choices of a list are there but not to pick, under the list's own heading (`<optgroup label="W planie Pro">`, quieter —

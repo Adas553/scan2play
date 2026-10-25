@@ -1186,6 +1186,33 @@ th[data-sort].sort-desc::after {
     .s2p-switch-row { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
 }
 
+/* "Ustawienia imprezy" and "Obsługa": a card folded to one line — its heading, and on the right its state (as the panel's row:
+   "Utworów: 1 234", "2 na gościa · 3 min") and "▾"; a tap unfolds it to fill it. Unfolded, the state goes: the fields say it, and
+   after a "Zapisz" the line would be the old one. As tall as a person's line below (.s2p-staff-summary), a finger's target. A row
+   that leads to a page of its own (.s2p-fold-link, "Obsługa ›") looks the same with "›". */
+.s2p-fold-summary,
+.s2p-fold-link {
+    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.75rem 1rem;
+}
+.s2p-fold-summary::-webkit-details-marker { display: none; }
+.s2p-fold-summary::after { content: "▾"; color: var(--s2p-text-muted); flex: none; }
+.s2p-fold[open] > .s2p-fold-summary::after { content: "▴"; }
+.s2p-fold-summary:focus-visible,
+.s2p-fold-link:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; border-radius: var(--s2p-radius-card); }
+.s2p-fold-name { margin: 0 auto 0 0 !important; min-width: 0; line-height: 1.3; }
+.s2p-fold-state { color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
+.s2p-fold[open] > .s2p-fold-summary > .s2p-fold-state { display: none; }
+.s2p-fold-body { padding: 0 1rem 1rem; }
+.s2p-fold-link { flex-direction: row; color: inherit; text-decoration: none; }
+.s2p-fold-link::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; flex: none; }
+.s2p-fold-link:hover { color: inherit; }
+@media (hover: hover) {
+    .s2p-fold-summary:hover::after,
+    .s2p-fold-link:hover::after { color: var(--s2p-light); }
+    .s2p-fold:not([open]):hover,
+    .s2p-fold-link:hover { border-color: var(--s2p-border-strong) !important; }
+}
+
 /* the owner's page "Obsługa": a person folded to one line (the name, the role, since when), a tap unfolds what they may do */
 .s2p-staff-summary {
     list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.75rem 1rem;

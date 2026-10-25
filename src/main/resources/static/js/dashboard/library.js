@@ -86,6 +86,7 @@ async function refreshCard(sentence) {
             location.reload();
             return;
         }
+        fresh.open = card.open;   // folded cards (settings.html): the server's card comes folded, the DJ's is open
         card.replaceWith(fresh);
         initLibraryCard(fresh);
         if (sentence) say(fresh, sentence, false);

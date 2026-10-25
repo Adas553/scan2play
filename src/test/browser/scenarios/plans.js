@@ -79,7 +79,10 @@
             const cards = ['hostListsCard', 'linksCard', 'limitsCard'].map(function (id) { return document.getElementById(id); });
             t.step('"PRO" by each card\'s title', cards.map(function (card) { return markOf(card.querySelector('.s2p-card-title')); }),
                 [MARK, MARK, MARK]);
-            t.step('the jumps without "PRO" (the card says it, just below)', document.querySelectorAll('#settingsJump .s2p-pro').length, 0);
+            t.step('folded: "PRO" said once — no state beside it (the profiles\', the lists\'); the limits say what holds',
+                cards.map(function (card) { return card.querySelector('summary .s2p-fold-state') ? text(card.querySelector('summary .s2p-fold-state')) : null; }),
+                [null, null, '2 na gościa · 3 min']);
+            cards.forEach(function (card) { card.querySelector('summary').click(); });   // unfolded, as the DJ does
             t.step('in place of the form: what waits, or what holds, and the way to what Pro adds', cards.map(function (card) {
                 const offer = card.querySelector('[data-pro-offer]');
                 return shows(offer) && [getComputedStyle(offer).borderTopStyle, offer.querySelector('a').getAttribute('href'),
@@ -91,10 +94,6 @@
             t.step('the lists wait — said, not lost', text(cards[0].querySelector('[data-pro-offer] p')).indexOf('Twoje listy są zachowane') === 0, true);
             t.step('nothing to tap is lower than 44 px', tooSmall(document.body), []);
             t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
-            t.step('every jump whole on the screen', Array.from(document.querySelectorAll('#settingsJump a')).filter(function (a) {
-                const box = a.getBoundingClientRect();
-                return box.left < 0 || box.right > document.documentElement.clientWidth;
-            }).map(text), []);
         }
     });
 
@@ -104,6 +103,7 @@
         page: 'settings-free',
         viewport: '1280,900',
         run: async function (t) {
+            document.querySelectorAll('details.s2p-fold').forEach(function (fold) { fold.querySelector('summary').click(); });
             const card = document.getElementById('hostListsCard');
             const offer = card.querySelector('[data-pro-offer]');
             const inside = function (inner, outer) {
