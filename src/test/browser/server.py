@@ -353,7 +353,7 @@ class Handler(BaseHTTPRequestHandler):
             stand.event(name).set()
             return self._json({})
         fields = self._fields(query, body, self.headers.get('Content-Type'))
-        if path == '/dj/library':   # a fetch() with the CSRF token in its header, not in a form field
+        if path in ('/dj/library', '/dj/library/delete'):   # a fetch() with the CSRF token in its header, not in a form field
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and path.endswith('/vote'):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
