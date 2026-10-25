@@ -1,11 +1,13 @@
 /**
  * "Twoja biblioteka" on the page "Ustawienia imprezy" (settings.html, V41): the chosen file is sent as it is, as the request's body
  * (DjLibraryController — not a form's upload, which the server would read before it checks who sent it). The server answers in one
- * sentence: shown under the form; after a library was saved the page loads again, so its state and "Usuń bibliotekę" are the server's.
+ * sentence: shown under the form; after a library was saved — or deleted ("Usuń bibliotekę", sent here too) — the card is brought
+ * again from the server and put in place (refreshCard), so its state is the server's and the page does not move.
  * A rekordbox collection's playlists (V42) are read from the chosen file here, in the browser, and offered as "Co wgrać": the whole
  * collection or one playlist, named by its folders as the server names it (DjLibraryParser: "Kluby / Piątek").
  *
- * Dependencies (DOM): <form id="libraryForm"> with the party code, a file input and data-sending / data-refused; <p id="libraryAnswer">;
+ * Dependencies (DOM): <section id="libraryCard"> with <form id="libraryForm"> (the party code, a file input, data-sending /
+ * data-refused), <p id="libraryAnswer"> and, with a library, <form id="libraryDeleteForm">;
  * <div id="libraryPlaylistField" hidden> with <select id="libraryPlaylist"> (its first option the whole collection).
  */
 import { csrfHeaders } from './common.js';
@@ -57,12 +59,60 @@ export function playlistsOf(text) {
     return names;
 }
 
-(function initLibraryUpload() {
-    const form = document.getElementById('libraryForm');
+/**
+ * The card "Twoja biblioteka" as the server has it now — after an upload or "Usuń bibliotekę" — put in place of the one on the screen,
+ * its listeners bound again: the page neither loads again nor moves (a page load drew the page from the top and the browser then
+ * scrolled back down to the card). The server's sentence is said in the new card. No card in the answer: the page is loaded again.
+ */
+async function refreshCard(sentence) {
+    const card = document.getElementById('libraryCard');
+    try {
+        const response = await fetch(location.href, { headers: { Accept: 'text/html' } });
+        const fresh = response.ok
+            ? new DOMParser().parseFromString(await response.text(), 'text/html').getElementById('libraryCard') : null;
+        if (!card || !fresh) {
+            location.reload();
+            return;
+        }
+        card.replaceWith(fresh);
+        initLibraryCard(fresh);
+        if (sentence) say(fresh, sentence, false);
+    } catch (err) {
+        location.reload();
+    }
+}
+
+/** The card's one sentence under the form: the server's answer, or why nothing was saved. */
+function say(card, text, refused) {
+    const answer = card.querySelector('#libraryAnswer');
+    if (!answer) return;
+    answer.textContent = text;
+    answer.classList.toggle('text-danger', refused);
+    answer.classList.toggle('text-success', !refused);
+    answer.hidden = false;
+}
+
+function initLibraryCard(card) {
+    const form = card.querySelector('#libraryForm');
+    const remove = card.querySelector('#libraryDeleteForm');
+
+    // "Usuń bibliotekę": the form sent in the background (forms.js leaves it: its submit is taken here), then the card again
+    if (remove) {
+        remove.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            remove.querySelector('button[type="submit"]').disabled = true;
+            try {
+                // the answer is a redirect to the settings page: the card is asked for on its own
+                await fetch(remove.action, { method: 'POST', headers: csrfHeaders(), body: new URLSearchParams(new FormData(remove)),
+                    redirect: 'manual' });
+            } finally {
+                await refreshCard(null);
+            }
+        });
+    }
     if (!form) return;
-    const answer = document.getElementById('libraryAnswer');
-    const field = document.getElementById('libraryPlaylistField');
-    const select = document.getElementById('libraryPlaylist');
+    const field = card.querySelector('#libraryPlaylistField');
+    const select = card.querySelector('#libraryPlaylist');
     const input = form.querySelector('input[type="file"]');
 
     // a file chosen: its playlists offered when it is a rekordbox collection, else nothing to choose
@@ -80,21 +130,14 @@ export function playlistsOf(text) {
         field.hidden = false;
     });
 
-    function say(text, refused) {
-        answer.textContent = text;
-        answer.classList.toggle('text-danger', refused);
-        answer.classList.toggle('text-success', !refused);
-        answer.hidden = false;
-    }
-
     form.addEventListener('submit', async function (e) {
         e.preventDefault();   // forms.js leaves a form whose submit was taken here
-        const file = form.querySelector('input[type="file"]').files[0];
+        const file = input.files[0];
         if (!file) return;
         const button = form.querySelector('button[type="submit"]');
         const partyCode = form.querySelector('input[name="partyCode"]').value;
         button.disabled = true;
-        say(form.dataset.sending, false);
+        say(card, form.dataset.sending, false);
         try {
             const playlist = field.hidden ? '' : select.value;
             const response = await fetch(form.action + '?partyCode=' + encodeURIComponent(partyCode)
@@ -105,14 +148,16 @@ export function playlistsOf(text) {
             });
             const text = SENTENCES.has(response.status) ? await response.text() : '';
             if (response.ok) {
-                say(text, false);
-                location.reload();
+                await refreshCard(text);
                 return;
             }
-            say(text || form.dataset.refused, true);
+            say(card, text || form.dataset.refused, true);
         } catch (err) {
-            say(form.dataset.refused, true);
+            say(card, form.dataset.refused, true);
         }
         button.disabled = false;
     });
-})();
+}
+
+const libraryCard = document.getElementById('libraryCard');
+if (libraryCard) initLibraryCard(libraryCard);
