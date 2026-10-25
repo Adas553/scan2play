@@ -938,7 +938,7 @@ class DashboardPageRenderTest {
     @Test
     void theRowOfTheLibrary_saysItsSongs() {
         assertThat(rowOf(renderDashboard(party(), List.of(), PL), "library"))
-                .contains("href=\"/dj/settings?party=" + PARTY + "#libraryCard\"", ">Twoja biblioteka<", ">Niewgrana<");
+                .contains("href=\"/dj/settings?party=" + PARTY + "#libraryCard\"", ">Twoja biblioteka<", ">Nie wgrano<");
 
         library = java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(1234,
                 com.scan2play.service.DjLibraryParser.Format.REKORDBOX, java.time.Instant.now(), null));
@@ -958,6 +958,6 @@ class DashboardPageRenderTest {
                 mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
                 null, com.scan2play.service.Plans.enforced());
         assertThat(rowOf(html, "library")).contains("class=\"s2p-pro\">PRO<", "class=\"s2p-row-state\"></span>")
-                .doesNotContain("Niewgrana");
+                .doesNotContain("Nie wgrano");
     }
 }
