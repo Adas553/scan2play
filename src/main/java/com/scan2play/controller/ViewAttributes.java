@@ -76,11 +76,17 @@ public final class ViewAttributes {
     public static final String DEDICATIONS_ON = "dedicationsOn";
     /** The newest dedications of the queue's songs (V38), by the song's id ({@code DjService.dedicationsOf}). */
     public static final String DEDICATIONS = "dedications";
-    /** The queue's marks of the DJ's library (V41): song id → in it or not; none without a library or without Pro. */
+    /** The queue's marks of the DJ's library (V41, V42): song id → "✓" / "?" / "✗"; none without a library or without Pro. */
     public static final String LIBRARY_MARKS = "libraryMarks";
     /** The settings' card of the DJ's library (V41): how many tracks (null: none uploaded) and the day of the upload. */
     public static final String LIBRARY_TRACKS = "libraryTracks";
     public static final String LIBRARY_UPLOADED = "libraryUploaded";
+    /** The rekordbox playlist the library is (V42), null for a whole collection or an M3U. */
+    public static final String LIBRARY_PLAYLIST = "libraryPlaylist";
+    /** The party has a library its plan marks the queue by: the panel offers "Tylko mam" beside the search. */
+    public static final String LIBRARY_ON = "libraryOn";
+    /** The evening summary's songs not in the DJ's library (V42); null without a library or without the plan. */
+    public static final String LIBRARY_GAPS = "libraryGaps";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";

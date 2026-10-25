@@ -10,7 +10,6 @@ import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.Plans;
-import com.scan2play.util.SongNames;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -76,7 +75,7 @@ class DjLibraryControllerTest {
         StaticMessageSource messages = new StaticMessageSource();
         messages.setUseCodeAsDefaultMessage(true);
         libraries = mock(DjLibraryService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new DjLibraryController(libraries, helper, Plans.off(), messages, 1024)).build();
+        mvc = MockMvcBuilders.standaloneSetup(new DjLibraryController(libraries, helper, Plans.off(), messages, 8192)).build();
     }
 
     private String upload(String who, byte[] file, int status) throws Exception {
@@ -93,7 +92,7 @@ class DjLibraryControllerTest {
         ArgumentCaptor<Library> saved = ArgumentCaptor.forClass(Library.class);
         verify(libraries).replace(eq(PUB), saved.capture());
         assertThat(saved.getValue().tracks()).isEqualTo(2);
-        assertThat(saved.getValue().keys()).contains(SongNames.libraryKey("Wilki - Baśka"), SongNames.libraryKey("ABBA - Dancing Queen"));
+        assertThat(saved.getValue().keys()).contains(com.scan2play.util.LibraryKey.of("Wilki - Baśka"), com.scan2play.util.LibraryKey.of("ABBA - Dancing Queen"));
         assertThat(answer).isEqualTo("settings.library.uploaded");
     }
 
@@ -107,10 +106,10 @@ class DjLibraryControllerTest {
     /** Past the most bytes the reading stops: nothing is saved, whatever the file says it is (here: a body of no declared size). */
     @Test
     void aFileTooLarge_isRefused() throws Exception {
-        assertThat(upload(ORGANISER, ("#EXTM3U\n" + "Wilki - Baśka.mp3\n".repeat(100)).getBytes(StandardCharsets.UTF_8), 413))
+        assertThat(upload(ORGANISER, ("#EXTM3U\n" + "Wilki - Baśka.mp3\n".repeat(1000)).getBytes(StandardCharsets.UTF_8), 413))
                 .isEqualTo("settings.library.error.TOO_LARGE");
         StringBuilder collection = new StringBuilder("<DJ_PLAYLISTS><COLLECTION>");
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 500; i++) {
             collection.append("<TRACK Name=\"Song ").append(i).append("\" Artist=\"Artist\"/>");
         }
         assertThat(upload(ORGANISER, collection.append("</COLLECTION></DJ_PLAYLISTS>").toString().getBytes(StandardCharsets.UTF_8), 413))
@@ -140,5 +139,23 @@ class DjLibraryControllerTest {
         mvc.perform(post("/dj/library").param("partyCode", PUB).contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .content("#EXTM3U\nA - B.mp3\n".getBytes(StandardCharsets.UTF_8)).principal(user(ORGANISER)).session(new MockHttpSession()))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN));
+    }
+
+    /** One playlist of a rekordbox collection (V42): named in the address, its tracks alone kept; one not in the file is said so. */
+    @Test
+    void onePlaylist_ofACollection() throws Exception {
+        byte[] collection = new org.springframework.core.io.ClassPathResource("library/rekordbox.xml").getContentAsByteArray();
+        mvc.perform(post("/dj/library").param("partyCode", PUB).param("playlist", "Kluby / Piątek")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM).content(collection).principal(user(ORGANISER)).session(new MockHttpSession()))
+                .andExpect(status().isOk());
+        ArgumentCaptor<Library> saved = ArgumentCaptor.forClass(Library.class);
+        verify(libraries).replace(eq(PUB), saved.capture());
+        assertThat(saved.getValue().playlist()).isEqualTo("Kluby / Piątek");
+        assertThat(saved.getValue().tracks()).isEqualTo(2);
+
+        String answer = mvc.perform(post("/dj/library").param("partyCode", PUB).param("playlist", "Sylwester")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM).content(collection).principal(user(ORGANISER)).session(new MockHttpSession()))
+                .andExpect(status().is(422)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(answer).isEqualTo("settings.library.error.NO_PLAYLIST");
     }
 }

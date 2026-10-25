@@ -46,4 +46,53 @@
             t.step('sent once each, never as the panel\'s form', await t.stand.count('POST /dj/library'), 2);
         }
     });
+
+    // One playlist of a rekordbox collection (V42): library.js reads the playlists' names from the chosen file in the browser — the
+    // file is not sent for it — and offers them with their folders, as rekordbox shows the tree; the one chosen goes in the address.
+    // An M3U is one playlist already: nothing to choose.
+    const COLLECTION = '<?xml version="1.0" encoding="UTF-8"?>\n<DJ_PLAYLISTS Version="1.0.0"><COLLECTION Entries="1">'
+        + '<TRACK TrackID="1" Name="Baśka" Artist="Wilki"/></COLLECTION><PLAYLISTS><NODE Type="0" Name="ROOT" Count="2">'
+        + '<NODE Name="Wesele &amp; poprawiny" Type="1" KeyType="0" Entries="1"><TRACK Key="1"/></NODE>'
+        + '<NODE Type="0" Name="Kluby" Count="2"><NODE Name="Piątek" Type="1" KeyType="0" Entries="1"><TRACK Key="1"/></NODE>'
+        + '<NODE Name="Pusta" Type="1" KeyType="0" Entries="0"/></NODE></NODE></PLAYLISTS></DJ_PLAYLISTS>';
+
+    S2P.scenario({
+        name: 'library-playlist',
+        page: 'settings',
+        title: 'the DJ\'s library: a rekordbox collection\'s playlists offered with their folders; the chosen one sent; an M3U offers none',
+        run: async function (t) {
+            const loads = [];
+            navigation.addEventListener('navigate', function (e) {
+                loads.push(e.navigationType);
+                e.preventDefault();
+            });
+            const field = document.getElementById('libraryPlaylistField');
+            const select = document.getElementById('libraryPlaylist');
+            const input = document.getElementById('libraryFile');
+            t.step('at first nothing to choose', field.hidden, true);
+
+            choose(COLLECTION, 'collection.xml');
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            await t.waitFor(function () { return !field.hidden; }, 'the playlists offered', 4000);
+            t.step('the whole collection first, then each playlist by its folders', Array.from(select.options).map(function (o) {
+                return [o.value, o.textContent];
+            }), [['', 'Cała kolekcja'], ['Wesele & poprawiny', 'Wesele & poprawiny'], ['Kluby / Piątek', 'Kluby / Piątek'],
+                ['Kluby / Pusta', 'Kluby / Pusta']]);
+
+            select.value = 'Kluby / Piątek';
+            document.querySelector('#libraryForm button[type="submit"]').click();
+            await t.waitFor(function () { return loads.length > 0; }, 'saved', 4000);
+            const sent = (await t.stand.requests('POST /dj/library'))[0].q;
+            t.step('the playlist in the address, the whole file as the body', [sent.playlist, sent.__body.length], ['Kluby / Piątek', COLLECTION.length]);
+
+            document.querySelector('#libraryForm button[type="submit"]').disabled = false;   // the page would have loaded again
+            choose('#EXTM3U\nWilki - Baśka.mp3\n', 'wesele.m3u8');
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            await t.sleep(300);
+            t.step('an M3U: nothing to choose', field.hidden, true);
+            document.querySelector('#libraryForm button[type="submit"]').click();
+            await t.waitFor(function () { return loads.length > 1; }, 'saved again', 4000);
+            t.step('and no playlist sent', (await t.stand.requests('POST /dj/library'))[1].q.playlist, undefined);
+        }
+    });
 })();

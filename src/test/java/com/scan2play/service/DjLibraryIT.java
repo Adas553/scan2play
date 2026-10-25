@@ -5,7 +5,8 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.service.DjLibraryParser.Format;
 import com.scan2play.service.DjLibraryParser.Library;
-import com.scan2play.util.SongNames;
+import com.scan2play.model.LibraryMark;
+import com.scan2play.util.LibraryKey;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -22,7 +23,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The DJ's library (V41) on a real PostgreSQL: an upload replaces the whole library, two at the same moment end as one of them
+ * The DJ's library (V41, V42) on a real PostgreSQL: an upload replaces the whole library, two at the same moment end as one of them
  * (never a mix, never an error), the queue asks for its few keys at once, and the library goes with the party.
  */
 class DjLibraryIT extends PostgresIntegrationTest {
@@ -38,11 +39,15 @@ class DjLibraryIT extends PostgresIntegrationTest {
     }
 
     private static Library library(String... songs) {
-        Set<String> keys = new HashSet<>();
+        Set<LibraryKey> keys = new HashSet<>();
         for (String song : songs) {
-            keys.add(SongNames.libraryKey(song));
+            keys.add(LibraryKey.of(song));
         }
-        return new Library(Format.M3U, songs.length, keys);
+        return new Library(Format.M3U, songs.length, keys, null);
+    }
+
+    private static LibraryKey key(String song) {
+        return LibraryKey.of(song);
     }
 
     private int rows(String partyCode) {
@@ -57,23 +62,28 @@ class DjLibraryIT extends PostgresIntegrationTest {
 
         assertThat(libraries.info(code)).hasValueSatisfying(info -> assertThat(info.tracks()).isEqualTo(3));
         assertThat(rows(code)).isEqualTo(3);
-        assertThat(libraries.found(code, List.of(SongNames.libraryKey("Daft Punk - One More Time (Radio Edit)"),
-                SongNames.libraryKey("Wilki - Baśka"), SongNames.libraryKey("Dzem - Sen o Victorii"))))
-                .containsExactlyInAnyOrder(SongNames.libraryKey("Daft Punk - One More Time"), SongNames.libraryKey("Dżem - Sen o Victorii"));
-        assertThat(libraries.found(code, List.of())).isEmpty();
+        assertThat(libraries.marks(code, List.of(key("Daft Punk - One More Time (Radio Edit)"), key("Wilki - Baśka"),
+                key("Dzem - Sen o Victorii"), key("Lady Pank - Sen o Victorii"))))
+                .containsEntry(key("Daft Punk - One More Time (Radio Edit)"), LibraryMark.HAVE)
+                .containsEntry(key("Wilki - Baśka"), LibraryMark.MISSING)
+                .containsEntry(key("Dzem - Sen o Victorii"), LibraryMark.HAVE)
+                .containsEntry(key("Lady Pank - Sen o Victorii"), LibraryMark.SIMILAR);
+        assertThat(libraries.marks(code, List.of())).isEmpty();
     }
 
     @Test
     void aBigLibrary_isSavedWhole() {
         String code = party();
-        Set<String> keys = new HashSet<>();
+        Set<LibraryKey> keys = new HashSet<>();
         for (int i = 0; i < 12_345; i++) {
-            keys.add("artist" + i + "title" + i);
+            keys.add(LibraryKey.of("Artist " + i, "Title " + i));
         }
-        libraries.replace(code, new Library(Format.REKORDBOX, keys.size(), keys));
+        libraries.replace(code, new Library(Format.REKORDBOX, keys.size(), keys, "Kluby / Piątek"));
 
         assertThat(rows(code)).isEqualTo(12_345);
-        assertThat(libraries.found(code, List.of("artist12344title12344", "nothere"))).containsExactly("artist12344title12344");
+        assertThat(libraries.info(code)).hasValueSatisfying(info -> assertThat(info.playlist()).isEqualTo("Kluby / Piątek"));
+        assertThat(libraries.marks(code, List.of(key("Artist 12344 - Title 12344"), key("Nobody - Nothing there"))).values())
+                .containsExactlyInAnyOrder(LibraryMark.HAVE, LibraryMark.MISSING);
     }
 
     /** Two uploads at once (two windows, a double click): one of them stands whole, the other waited for it under the party's lock. */
@@ -97,7 +107,7 @@ class DjLibraryIT extends PostgresIntegrationTest {
         }
         int tracks = libraries.info(code).orElseThrow().tracks();
         assertThat(rows(code)).isEqualTo(tracks);
-        assertThat(libraries.found(code, (tracks == 2 ? first : second).keys())).hasSize(tracks);
+        assertThat(libraries.marks(code, (tracks == 2 ? first : second).keys()).values()).containsOnly(LibraryMark.HAVE);
     }
 
     @Test

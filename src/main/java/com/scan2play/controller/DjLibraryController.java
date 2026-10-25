@@ -57,10 +57,14 @@ public class DjLibraryController {
         this.maxBytes = maxBytes;
     }
 
-    /** The party's library is now the file: the answer is one sentence for the page — how many tracks, or why not. */
+    /**
+     * The party's library is now the file — of a rekordbox collection, one {@code playlist} of it when named ("Kluby / Piątek",
+     * library.js lists them): the answer is one sentence for the page — how many tracks, or why not.
+     */
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     @ResponseBody
-    public ResponseEntity<String> upload(@RequestParam String partyCode, HttpServletRequest request, Locale locale,
+    public ResponseEntity<String> upload(@RequestParam String partyCode, @RequestParam(required = false) String playlist,
+                                         HttpServletRequest request, Locale locale,
                                          OAuth2AuthenticationToken authentication, HttpSession session) throws IOException {
         PartySettingsEntity party = planService.require(sessionHelper.requireOwner(partyCode, authentication, session),
                 PlanFeature.LIBRARY);
@@ -69,7 +73,7 @@ public class DjLibraryController {
         }
         Library library;
         try (InputStream in = new Bounded(request.getInputStream(), maxBytes)) {
-            library = DjLibraryParser.parse(in, DjLibraryService.MAX_TRACKS);
+            library = DjLibraryParser.parse(in, DjLibraryService.MAX_TRACKS, playlist);
         } catch (TooLarge e) {
             return answer(HttpStatus.PAYLOAD_TOO_LARGE, "settings.library.error.TOO_LARGE", locale);
         } catch (UnreadableLibraryException e) {

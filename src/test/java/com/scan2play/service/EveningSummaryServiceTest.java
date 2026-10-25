@@ -75,7 +75,7 @@ class EveningSummaryServiceTest {
     @Test
     void theRequestsOfAnEvening_areReadFromSixToSix_bounded() {
         SongRequestRepository repository = mock(SongRequestRepository.class);
-        new EveningSummaryService(repository).requests("SUMM1", EVENING);
+        new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class)).requests("SUMM1", EVENING);
 
         verify(repository).findRequestedBetween(eq("SUMM1"), eq(at("06:00")), eq(at("05:59").plusSeconds(60)),
                 eq(Pageable.ofSize(EveningSummaryService.MAX_REQUESTS)));
@@ -87,7 +87,7 @@ class EveningSummaryServiceTest {
         when(repository.findEvenings("SUMM1", EveningSummaryService.MAX_EVENINGS))
                 .thenReturn(List.of(new Object[]{"2026-10-03", 42L}, new Object[]{"2026-09-26", 7L}));
 
-        assertThat(new EveningSummaryService(repository).evenings("SUMM1")).containsExactly(
+        assertThat(new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class)).evenings("SUMM1")).containsExactly(
                 new EveningSummaryService.Evening(EVENING, 42), new EveningSummaryService.Evening(LocalDate.of(2026, 9, 26), 7));
     }
 
@@ -231,5 +231,56 @@ class EveningSummaryServiceTest {
                 .isEqualTo(EveningSummaryService.Status.PLAYED);
         assertThat(EveningSummaryService.statusOf(request("x", "rejected", "20:00", null, 1)))
                 .isEqualTo(EveningSummaryService.Status.REJECTED_BY_AI);
+    }
+
+    // ---- the DJ's library (V42) ----
+
+    /**
+     * "Nie masz w bibliotece": the songs the AI let through that the library has no song of ("✗") or only a similar one ("?"), each
+     * once (two requests of one song are one line, their votes added), the most wanted first; what the DJ has and what the AI
+     * rejected are not there.
+     */
+    @Test
+    void theSongsNotInTheLibrary_mostWantedFirst_eachOnce() {
+        SongRequestEntity wilki = request("Wilki - Baśka", "played", "20:00", "20:10", 3);
+        SongRequestEntity wilkiAgain = request("Wilki - Baska", "accepted", "23:00", null, 2);
+        SongRequestEntity have = request("Daft Punk - One More Time", "accepted", "21:00", null, 9);
+        SongRequestEntity similar = request("Dżem - Baśka", "accepted", "21:30", null, 1);
+        SongRequestEntity rejected = request("Zenek - Przez twe oczy", "rejected", "22:00", null, 7);
+        java.util.Map<com.scan2play.util.LibraryKey, com.scan2play.model.LibraryMark> marks = java.util.Map.of(
+                com.scan2play.util.LibraryKey.of("Wilki - Baśka"), com.scan2play.model.LibraryMark.MISSING,
+                com.scan2play.util.LibraryKey.of("Daft Punk - One More Time"), com.scan2play.model.LibraryMark.HAVE,
+                com.scan2play.util.LibraryKey.of("Dżem - Baśka"), com.scan2play.model.LibraryMark.SIMILAR,
+                com.scan2play.util.LibraryKey.of("Zenek - Przez twe oczy"), com.scan2play.model.LibraryMark.MISSING);
+
+        List<EveningSummaryService.LibraryGap> gaps = EveningSummaryService.libraryGaps(List.of(wilki, wilkiAgain, have, similar, rejected), marks);
+
+        assertThat(gaps).containsExactly(
+                new EveningSummaryService.LibraryGap("Wilki - Baśka", 5, 2, com.scan2play.model.LibraryMark.MISSING),
+                new EveningSummaryService.LibraryGap("Dżem - Baśka", 1, 1, com.scan2play.model.LibraryMark.SIMILAR));
+    }
+
+    /** The CSV of a party with a library: one more column, how each request stands against the library now. */
+    @Test
+    void theCsv_saysTheLibrary_whenThereIsOne() {
+        org.springframework.context.support.ResourceBundleMessageSource messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+        SongRequestEntity have = request("Wilki - Baśka", "played", "21:00", "21:30", 1);
+        have.setId(1L);
+        SongRequestEntity similar = request("Dżem - Baśka", "accepted", "21:10", null, 1);
+        similar.setId(2L);
+        SongRequestEntity missing = request("sanah - Szampan", "accepted", "21:20", null, 1);
+        missing.setId(3L);
+
+        String[] lines = EveningSummaryService.toCsv(List.of(have, similar, missing), java.util.Map.of(1L, com.scan2play.model.LibraryMark.HAVE,
+                2L, com.scan2play.model.LibraryMark.SIMILAR, 3L, com.scan2play.model.LibraryMark.MISSING), messages,
+                Locale.forLanguageTag("pl")).split("\r\n");
+
+        assertThat(lines[0]).endsWith(";Komentarz AI;W bibliotece");
+        assertThat(lines[1]).endsWith(";\"tak\"");
+        assertThat(lines[2]).endsWith(";\"podobny\"");
+        assertThat(lines[3]).endsWith(";\"nie\"");
     }
 }

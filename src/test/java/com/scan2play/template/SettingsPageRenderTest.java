@@ -225,11 +225,11 @@ class SettingsPageRenderTest {
         DjService djService = mock(DjService.class);
         Instant uploaded = Instant.now();
         when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(
-                new com.scan2play.service.DjLibraryService.Info(1234, com.scan2play.service.DjLibraryParser.Format.REKORDBOX, uploaded)));
+                new com.scan2play.service.DjLibraryService.Info(1234, com.scan2play.service.DjLibraryParser.Format.REKORDBOX, uploaded, "Kluby / Piątek")));
 
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), djService);
 
-        assertThat(html).contains("id=\"libraryState\"", ">Utwory w bibliotece: 1\u00A0234 · wgrano " + com.scan2play.util.Times.day(uploaded) + "<",
+        assertThat(html).contains("id=\"libraryState\"", ">Utwory w bibliotece: 1\u00A0234 · playlista „Kluby / Piątek” · wgrano " + com.scan2play.util.Times.day(uploaded) + "<",
                 "id=\"libraryForm\"", "action=\"/dj/library/delete\"", ">Usuń bibliotekę<");
     }
 
@@ -354,7 +354,7 @@ class SettingsPageRenderTest {
     void aFreeOrganisersLibrary_waits_andCanBeDeleted() {
         DjService djService = mock(DjService.class);
         when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(
-                new com.scan2play.service.DjLibraryService.Info(10, com.scan2play.service.DjLibraryParser.Format.M3U, Instant.now())));
+                new com.scan2play.service.DjLibraryService.Info(10, com.scan2play.service.DjLibraryParser.Format.M3U, Instant.now(), null)));
 
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.enforced(), djService);
 

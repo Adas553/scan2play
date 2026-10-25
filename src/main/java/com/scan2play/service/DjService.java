@@ -5,6 +5,8 @@ import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestDedicationRepository;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.model.LibraryMark;
+import com.scan2play.util.LibraryKey;
 import com.scan2play.util.SongNames;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -114,18 +116,18 @@ public class DjService {
     }
 
     /**
-     * For each of the songs, by its id: whether it is in the party's library (V41) by {@link SongNames#libraryKey} — "✓" or "✗" in
-     * the queue. One lookup for all of them (the queue is at most its 300); none, and no marks, when the party has no library.
+     * For each of the songs, by its id: "✓", "?" or "✗" by the party's library (V41, V42; {@link LibraryKey#markIn}). One lookup
+     * for all of them (the queue is at most its 300); none, and no marks, when the party has no library.
      */
-    public Map<Long, Boolean> libraryMarksOf(String partyCode, List<SongRequestEntity> songs) {
+    public Map<Long, LibraryMark> libraryMarksOf(String partyCode, List<SongRequestEntity> songs) {
         if (songs.isEmpty() || libraryService.info(partyCode).isEmpty()) {
             return Map.of();
         }
-        Map<Long, String> keys = new LinkedHashMap<>();
-        songs.forEach(song -> keys.put(song.getId(), SongNames.libraryKey(song.getSongName())));
-        Set<String> found = libraryService.found(partyCode, new HashSet<>(keys.values()));
-        Map<Long, Boolean> marks = new LinkedHashMap<>();
-        keys.forEach((id, key) -> marks.put(id, found.contains(key)));
+        Map<Long, LibraryKey> keys = new LinkedHashMap<>();
+        songs.forEach(song -> keys.put(song.getId(), LibraryKey.of(song.getSongName())));
+        Map<LibraryKey, LibraryMark> found = libraryService.marks(partyCode, new HashSet<>(keys.values()));
+        Map<Long, LibraryMark> marks = new LinkedHashMap<>();
+        keys.forEach((id, key) -> marks.put(id, found.getOrDefault(key, LibraryMark.MISSING)));
         return marks;
     }
 
