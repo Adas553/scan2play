@@ -110,6 +110,41 @@ class DjLibraryIT extends PostgresIntegrationTest {
         assertThat(libraries.marks(code, (tracks == 2 ? first : second).keys()).values()).containsOnly(LibraryMark.HAVE);
     }
 
+    /** An M3U's names read the other way round (V43): saved apart, "✓" by their title and artist, never "?" by the title alone. */
+    @Test
+    void theSwappedKeys_sayHave_neverSimilar() {
+        String code = party();
+        libraries.replace(code, new Library(Format.M3U, 1, Set.of(key("Perfect - Autobiografia")), Set.of(key("Autobiografia - Perfect")), null));
+
+        assertThat(rows(code)).isEqualTo(2);
+        assertThat(libraries.marks(code, List.of(key("Ed Sheeran - Perfect"), key("Autobiografia - Perfect"), key("Perfect - Autobiografia"))))
+                .containsEntry(key("Ed Sheeran - Perfect"), LibraryMark.MISSING)
+                .containsEntry(key("Autobiografia - Perfect"), LibraryMark.HAVE)
+                .containsEntry(key("Perfect - Autobiografia"), LibraryMark.HAVE);
+    }
+
+    /** A playlist's name is only shown: one longer than its column is cut, never an error of the upload. */
+    @Test
+    void aLongPlaylistName_isCut() {
+        String code = party();
+        String name = "Wesela / ".repeat(30) + "Kowalscy";
+        libraries.replace(code, new Library(Format.REKORDBOX, 1, Set.of(key("Wilki - Baśka")), name));
+        assertThat(libraries.info(code)).hasValueSatisfying(info -> assertThat(info.playlist()).isEqualTo(name.substring(0, 200)));
+    }
+
+    /** The panel's poll reads the library from memory (DjLibraryService.CACHE): an upload and a deletion are seen at once all the same. */
+    @Test
+    void theCachedLibrary_followsAnUploadAndADeletion() {
+        String code = party();
+        assertThat(libraries.info(code)).isEmpty();
+        libraries.replace(code, library("Wilki - Baśka"));
+        assertThat(libraries.info(code)).hasValueSatisfying(info -> assertThat(info.tracks()).isEqualTo(1));
+        libraries.replace(code, library("Wilki - Baśka", "ABBA - SOS"));
+        assertThat(libraries.info(code)).hasValueSatisfying(info -> assertThat(info.tracks()).isEqualTo(2));
+        libraries.delete(code);
+        assertThat(libraries.info(code)).isEmpty();
+    }
+
     @Test
     void theLibrary_goesWhenDeleted_andWithTheParty() {
         String code = party();

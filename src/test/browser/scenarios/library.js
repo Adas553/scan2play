@@ -113,20 +113,98 @@
         }
     });
 
-    // "Usuń bibliotekę": sent in the background too, the card brought again in place — no page load, no jump to the card.
+    // Two playlists of one name in one folder (rekordbox lets them be): the second offered as "Wesele (2)" and sent with its
+    // occurrence, so the server reads that one, not the first.
+    const TWINS = '<DJ_PLAYLISTS><COLLECTION><TRACK TrackID="1" Name="Baśka" Artist="Wilki"/><TRACK TrackID="2" Name="SOS" Artist="ABBA"/>'
+        + '</COLLECTION><PLAYLISTS><NODE Type="0" Name="ROOT"><NODE Name="Wesele" Type="1"><TRACK Key="1"/></NODE>'
+        + '<NODE Name="Wesele" Type="1"><TRACK Key="2"/></NODE></NODE></PLAYLISTS></DJ_PLAYLISTS>';
+
+    S2P.scenario({
+        name: 'library-playlist-twins',
+        page: 'settings',
+        title: 'the DJ\'s library: a second playlist of the same name offered as "Wesele (2)" and sent with its occurrence',
+        run: async function (t) {
+            const field = document.getElementById('libraryPlaylistField');
+            const select = document.getElementById('libraryPlaylist');
+            choose(TWINS, 'collection.xml');
+            document.getElementById('libraryFile').dispatchEvent(new Event('change', { bubbles: true }));
+            await t.waitFor(function () { return !field.hidden; }, 'the playlists offered', 4000);
+            t.step('both offered, the second with its number', Array.from(select.options).slice(1).map(function (o) {
+                return [o.value, o.textContent];
+            }), [['Wesele', 'Wesele'], ['Wesele', 'Wesele (2)']]);
+
+            const form = document.getElementById('libraryForm');
+            select.selectedIndex = 2;
+            form.querySelector('button[type="submit"]').click();
+            await t.waitFor(function () { return document.getElementById('libraryForm') !== form; }, 'saved', 4000);
+            const sent = (await t.stand.requests('POST /dj/library'))[0].q;
+            t.step('the name and the occurrence in the address', [sent.playlist, sent.occurrence], ['Wesele', '2']);
+        }
+    });
+
+    // A file larger than the server reads is refused in the browser: neither read for its playlists (a film picked by mistake would
+    // fill a phone's memory as text) nor sent. And an answer that is no sentence of ours — a proxy's HTML page — is never shown as one.
+    S2P.scenario({
+        name: 'library-too-large',
+        page: 'settings',
+        title: 'the DJ\'s library: a file over the limit refused before it is read or sent; a proxy\'s HTML answer never shown as the sentence',
+        setup: { libraryStatus: 413, libraryType: 'text/html; charset=utf-8',
+                 libraryAnswer: '<html><head><title>413 Request Entity Too Large</title></head><body>cloudflare</body></html>' },
+        run: async function (t) {
+            const form = document.getElementById('libraryForm');
+            const answer = document.getElementById('libraryAnswer');
+            const input = document.getElementById('libraryFile');
+            const limit = Number(form.dataset.maxBytes);
+            t.step('the page knows the limit: 64 MB', limit, 64 * 1024 * 1024);
+
+            let read = false;
+            const text = Blob.prototype.text;
+            Blob.prototype.text = function () { read = true; return text.call(this); };
+            const big = new File([new Uint8Array(limit + 1)], 'film.xml');
+            const files = new DataTransfer();
+            files.items.add(big);
+            input.files = files.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            await t.sleep(200);
+            t.step('chosen: "too large" said at once, the file not read', [answer.hidden, answer.textContent, read],
+                [false, 'Plik jest za duży: najwyżej 64 MB.', false]);
+            form.querySelector('button[type="submit"]').click();
+            await t.sleep(300);
+            t.step('"Wgraj": nothing sent', await t.stand.count('POST /dj/library'), 0);
+            Blob.prototype.text = text;
+
+            choose('#EXTM3U\nWilki - Baśka.mp3\n', 'wesele.m3u8');
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('another file chosen: the old sentence gone', answer.hidden, true);
+            form.querySelector('button[type="submit"]').click();
+            await t.waitFor(function () { return answer.classList.contains('text-danger'); }, 'the refusal', 4000);
+            t.step('a proxy\'s HTML page: the page\'s own sentence, not the HTML', answer.textContent, form.dataset.refused);
+        }
+    });
+
+    // "Usuń bibliotekę": asks first (data-confirm, dj-nav.js) — the marks go at once and only the file brings them back; then sent in
+    // the background, the card brought again in place — no page load, no jump to the card.
     S2P.scenario({
         name: 'library-delete',
         page: 'settings-library',
-        title: 'the DJ\'s library: "Usuń bibliotekę" sent in the background, the card again in place — no reload, no jump',
+        title: 'the DJ\'s library: "Usuń bibliotekę" asks first; then sent in the background, the card again in place — no reload, no jump',
         run: async function (t) {
             const loads = [];
             navigation.addEventListener('navigate', function (e) {
                 loads.push(e.navigationType);
                 e.preventDefault();
             });
+            const asked = [];
+            let answer = false;
+            window.confirm = function (text) { asked.push(text); return answer; };
             const card = document.getElementById('libraryCard');
             window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 100, behavior: 'instant' });
             const scrolled = window.scrollY;
+            document.querySelector('#libraryDeleteForm button[type="submit"]').click();
+            await t.sleep(300);
+            t.step('asked first; "Anuluj": nothing sent, the card as it was', [asked.length, asked[0] && asked[0].indexOf('Usunąć bibliotekę?') === 0,
+                await t.stand.count('POST /dj/library/delete'), document.getElementById('libraryCard') === card], [1, true, 0, true]);
+            answer = true;
             document.querySelector('#libraryDeleteForm button[type="submit"]').click();
             await t.waitFor(function () { return document.getElementById('libraryCard') !== card; }, 'the card again', 4000);
             const sent = (await t.stand.requests('POST /dj/library/delete'))[0].q;

@@ -212,7 +212,7 @@ class SettingsPageRenderTest {
                         ">Zaproszenie do obsługi? Wklej link<");
         assertThat(html).as("the DJ's library (V41): a file sent by library.js, what it does, none uploaded yet")
                 .contains("href=\"#libraryCard\"", "id=\"libraryCard\"", ">Twoja biblioteka<", "id=\"libraryForm\"",
-                        "action=\"/dj/library\"", "id=\"libraryFile\"", "accept=\".xml,.m3u,.m3u8\"", "data-sending=\"Wgrywam…\"",
+                        "action=\"/dj/library\"", "id=\"libraryFile\"", "accept=\".xml,.m3u,.m3u8\"", "data-sending=\"Wgrywanie…\"",
                         "data-refused=\"Nie udało się wgrać pliku.", "id=\"libraryAnswer\" role=\"status\" hidden",
                         "Plik → Eksportuj kolekcję w formacie XML", ">Nie masz jeszcze wgranej biblioteki.<")
                 .doesNotContain("action=\"/dj/library/delete\"");

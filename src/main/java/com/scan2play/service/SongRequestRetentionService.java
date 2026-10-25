@@ -71,9 +71,8 @@ public class SongRequestRetentionService {
     public void clearOldWaitingRequests() {
         Instant now = Instant.now();
         int cleared = songRequestRepository.clearWaitingRequestedBefore(now.minus(WAITING_KEPT), now);
-        if (cleared > 0) {
-            log.info("Queue cleanup: {} request(s) waiting more than {} h cleared from the queues", cleared, WAITING_KEPT.toHours());
-        }
+        // a line also for none: the log shows that the cleanup ran (the privacy policy promises it)
+        log.info("Queue cleanup: {} request(s) waiting more than {} h cleared from the queues", cleared, WAITING_KEPT.toHours());
     }
 
     /** Runs daily at 04:45. */
@@ -96,9 +95,8 @@ public class SongRequestRetentionService {
                 break;   // nothing older is left
             }
         }
-        if (deleted > 0) {
-            log.info("Song request cleanup: deleted {} request(s) made more than {} days ago", deleted, SongRequestEntity.MAX_AGE_DAYS);
-        }
+        // a line also for none: the log shows that the 30-day purge the privacy policy promises ran
+        log.info("Song request cleanup: deleted {} request(s) made more than {} days ago", deleted, SongRequestEntity.MAX_AGE_DAYS);
         return deleted;
     }
 }

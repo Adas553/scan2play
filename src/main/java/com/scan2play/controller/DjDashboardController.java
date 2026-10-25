@@ -222,6 +222,8 @@ public class DjDashboardController {
             model.addAttribute(LIBRARY_TRACKS, library.map(DjLibraryService.Info::tracks).orElse(null));
             model.addAttribute(LIBRARY_UPLOADED, library.map(info -> Times.day(info.uploadedAt())).orElse(null));
             model.addAttribute(LIBRARY_PLAYLIST, library.map(DjLibraryService.Info::playlist).orElse(null));
+            model.addAttribute(LIBRARY_MAX_BYTES, DjLibraryController.MAX_BYTES);
+            model.addAttribute(LIBRARY_MAX_MB, DjLibraryController.MAX_BYTES / (1024 * 1024));
         }
         // what the organiser's plan has (V35): the cards of a feature without Pro say so to the organiser, in place of their form;
         // what the party works with — the comment style, the guests' limits — is the plan's (the saved values wait for Pro)

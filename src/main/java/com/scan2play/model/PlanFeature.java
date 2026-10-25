@@ -19,8 +19,8 @@ public enum PlanFeature {
     /** "Podsumowanie wieczoru" and its CSV. */
     SUMMARY,
     /**
-     * The DJ's library (V41): the queue marks each request "✓" or "✗" by the DJ's own collection. Without Pro the uploaded library is
-     * kept but marks nothing; deleting it needs no plan.
+     * The DJ's library (V41): the queue marks each request "✓", "?" or "✗" by the DJ's own collection. Without Pro the uploaded library
+     * is kept but marks nothing; deleting it needs no plan.
      */
     LIBRARY
 }

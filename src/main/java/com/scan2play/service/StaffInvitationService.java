@@ -201,8 +201,7 @@ public class StaffInvitationService {
     @Scheduled(cron = "0 50 4 * * *", zone = Times.SCHEDULE_ZONE)
     public void purgeOldInvitations() {
         int deleted = invitationRepository.deleteMadeBefore(waitingSince());
-        if (deleted > 0) {
-            log.info("Staff invitation cleanup: deleted {} invitation(s) older than {} days", deleted, StaffInvitationEntity.MAX_AGE_DAYS);
-        }
+        // a line also for none, as the requests' cleanups: the log shows that it ran
+        log.info("Staff invitation cleanup: deleted {} invitation(s) older than {} days", deleted, StaffInvitationEntity.MAX_AGE_DAYS);
     }
 }

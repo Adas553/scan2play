@@ -74,7 +74,9 @@ class DjLibraryParserTest {
     void anM3uLine_mayNameTheTitleFirst() throws IOException {
         Library library = parse("#EXTM3U\n#EXTINF:200,One More Time - Daft Punk\nC:\\a.mp3\n", 10);
 
-        assertThat(library.keys()).contains(key("Daft Punk - One More Time"));
+        assertThat(library.swapped()).contains(key("Daft Punk - One More Time"));
+        assertThat(key("Daft Punk - One More Time").markIn(library.keys(), library.swapped()))
+                .isEqualTo(com.scan2play.model.LibraryMark.HAVE);
     }
 
     /** An old Windows playlist (Winamp, VirtualDJ) is in Windows-1250, not UTF-8: its Polish letters are read all the same. */
@@ -164,6 +166,69 @@ class DjLibraryParserTest {
             assertThatThrownBy(() -> DjLibraryParser.parse(in, 3, null)).isInstanceOfSatisfying(UnreadableLibraryException.class,
                     e -> assertThat(e.reason()).isEqualTo(UnreadableLibraryException.Reason.TOO_MANY));
         }
+    }
+
+    /**
+     * The collection is held in memory until its playlists say which tracks to keep, so it has a limit of its own: 64 MB of tiny
+     * tracks would be half a gigabyte of the server's memory, and the server stops when its memory runs out.
+     */
+    @Test
+    void aCollectionTooLarge_withAPlaylist_isRefused() throws IOException {
+        try (InputStream in = new ClassPathResource("library/rekordbox.xml").getInputStream()) {
+            assertThatThrownBy(() -> DjLibraryParser.parse(in, 1000, 11, "Wesele", 1)).isInstanceOfSatisfying(UnreadableLibraryException.class,
+                    e -> assertThat(e.reason()).isEqualTo(UnreadableLibraryException.Reason.COLLECTION_TOO_LARGE));
+        }
+        try (InputStream in = new ClassPathResource("library/rekordbox.xml").getInputStream()) {
+            assertThat(DjLibraryParser.parse(in, 1000, 12, "Wesele", 1).tracks()).as("its 12 are allowed").isEqualTo(3);
+        }
+        try (InputStream in = new ClassPathResource("library/rekordbox.xml").getInputStream()) {
+            assertThat(DjLibraryParser.parse(in, 1000, 1, null, 1).tracks()).as("the whole collection is counted by its tracks")
+                    .isEqualTo(12);
+        }
+    }
+
+    /** A playlist's tree deeper than any DJ's: refused, not walked (each playlist is named by all its folders). */
+    @Test
+    void aTreeTooDeep_isRefused() throws IOException {
+        String folders = "<NODE Type=\"0\" Name=\"f\">";
+        String file = "<DJ_PLAYLISTS><COLLECTION><TRACK TrackID=\"1\" Name=\"Baśka\" Artist=\"Wilki\"/></COLLECTION><PLAYLISTS>"
+                + folders.repeat(DjLibraryParser.MAX_DEPTH) + "<NODE Type=\"1\" Name=\"x\"><TRACK Key=\"1\"/></NODE>"
+                + "</NODE>".repeat(DjLibraryParser.MAX_DEPTH) + "</PLAYLISTS></DJ_PLAYLISTS>";
+        assertThatThrownBy(() -> DjLibraryParser.parse(new ByteArrayInputStream(file.getBytes(StandardCharsets.UTF_8)), 10, "f / x"))
+                .isInstanceOfSatisfying(UnreadableLibraryException.class,
+                        e -> assertThat(e.reason()).isEqualTo(UnreadableLibraryException.Reason.UNKNOWN_FORMAT));
+        String shallower = file.replaceFirst(java.util.regex.Pattern.quote(folders), "").replaceFirst("</NODE>", "");
+        String path = String.join(" / ", java.util.Collections.nCopies(DjLibraryParser.MAX_DEPTH - 1, "f")) + " / x";
+        assertThat(DjLibraryParser.parse(new ByteArrayInputStream(shallower.getBytes(StandardCharsets.UTF_8)), 10, path).tracks())
+                .as("as deep as allowed: read").isEqualTo(1);
+    }
+
+    /** Two playlists of one name in one folder (rekordbox allows it): the occurrence asked for, not always the first. */
+    @Test
+    void theSecondPlaylistOfAName_isRead() throws IOException {
+        String file = "<DJ_PLAYLISTS><COLLECTION><TRACK TrackID=\"1\" Name=\"Baśka\" Artist=\"Wilki\"/>"
+                + "<TRACK TrackID=\"2\" Name=\"SOS\" Artist=\"ABBA\"/><TRACK TrackID=\"x\" Name=\"Sen\" Artist=\"Dżem\"/></COLLECTION>"
+                + "<PLAYLISTS><NODE Type=\"0\" Name=\"ROOT\"><NODE Name=\"Wesele\" Type=\"1\"><TRACK Key=\"1\"/></NODE>"
+                + "<NODE Name=\"Wesele\" Type=\"1\"><TRACK Key=\"2\"/><TRACK Key=\"x\"/></NODE></NODE></PLAYLISTS></DJ_PLAYLISTS>";
+        byte[] bytes = file.getBytes(StandardCharsets.UTF_8);
+        assertThat(DjLibraryParser.parse(new ByteArrayInputStream(bytes), 10, "Wesele").keys()).containsExactly(key("Wilki - Baśka"));
+        assertThat(DjLibraryParser.parse(new ByteArrayInputStream(bytes), 10, DjLibraryParser.MAX_COLLECTION, "Wesele", 2).keys())
+                .as("the second; a track whose number is none is no playlist's").containsExactly(key("ABBA - SOS"));
+        assertThatThrownBy(() -> DjLibraryParser.parse(new ByteArrayInputStream(bytes), 10, DjLibraryParser.MAX_COLLECTION, "Wesele", 3))
+                .isInstanceOfSatisfying(UnreadableLibraryException.class,
+                        e -> assertThat(e.reason()).isEqualTo(UnreadableLibraryException.Reason.NO_PLAYLIST));
+    }
+
+    /** An M3U's "A - B" is kept the other way round too, apart: read that way an artist's name is the title. */
+    @Test
+    void anM3uName_theOtherWayRound_isASwappedKey() throws IOException {
+        Library library = parse("#EXTM3U\n#EXTINF:300,Perfect - Autobiografia\nC:\\m\\a.mp3\n"
+                + "#EXTINF:200,Kombi - Słodkiego miłego życia\nC:\\m\\b.mp3\n#EXTINF:200,Słodkiego miłego życia - Kombi\nC:\\m\\c.mp3\n", 10);
+        assertThat(library.keys()).contains(key("Perfect - Autobiografia")).doesNotContain(key("Autobiografia - Perfect"));
+        assertThat(library.swapped()).contains(key("Autobiografia - Perfect"))
+                .as("a name the playlist has both ways round is a key as it is, not a swapped one")
+                .doesNotContain(key("Kombi - Słodkiego miłego życia"), key("Słodkiego miłego życia - Kombi"));
+        assertThat(parse("rekordbox.xml").swapped()).as("a collection's artist and title are fields of their own").isEmpty();
     }
 
     @Test
