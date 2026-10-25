@@ -16,8 +16,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ImpersonalPolishTextsTest {
 
-    /** "-łeś" / "-łaś" (you did, by gender) and "Gotowy" / "Gotowa" (ready, by gender), as whole words. */
-    private static final Pattern GENDERED = Pattern.compile("\\p{L}+(łeś|łaś)\\b|\\bGotow[ya]\\b", Pattern.UNICODE_CHARACTER_CLASS);
+    /**
+     * "-łeś" / "-łaś" (you did, by gender), "-łbyś" / "-łabyś" (you would) and "gotowy" / "gotowa" (ready, by gender), as whole words,
+     * in any case.
+     */
+    private static final Pattern GENDERED = Pattern.compile("\\p{L}+(łeś|łaś|łbyś|łabyś)\\b|\\bgotow[ya]\\b",
+            Pattern.UNICODE_CHARACTER_CLASS | Pattern.CASE_INSENSITIVE);
 
     private static Properties polish() throws IOException {
         Properties texts = new Properties();
