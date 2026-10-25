@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Scan2Play">
+  <!-- The Scan2Play mark for the smallest sizes (favicon.ico, 16 px): logo.svg with fewer, larger modules, which stay apart there. -->
+  <rect width="64" height="64" rx="14" fill="#1a1a1a"/>
+  <g fill="#0dcaf0">
+    <rect x="16.10" y="10.40" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="16.10" y="17.80" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="16.10" y="25.20" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="16.10" y="32.60" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="16.10" y="40.00" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="16.10" y="47.40" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="23.50" y="14.10" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="23.50" y="28.90" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="23.50" y="36.30" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="23.50" y="43.70" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="30.90" y="17.80" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="30.90" y="25.20" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="30.90" y="32.60" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="30.90" y="40.00" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="38.30" y="21.50" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="38.30" y="28.90" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="38.30" y="36.30" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="45.70" y="25.20" width="6.2" height="6.2" rx="1.4"/>
+    <rect x="45.70" y="32.60" width="6.2" height="6.2" rx="1.4"/>
+  </g>
+</svg>
