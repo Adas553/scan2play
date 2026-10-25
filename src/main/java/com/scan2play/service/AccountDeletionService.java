@@ -32,7 +32,7 @@ public class AccountDeletionService {
      * The caches that hold a party's data under its code (AppConfig). Without evicting them the deleted party lived on in
      * memory — its settings for up to 24 h — and guests could still send requests to it.
      */
-    static final List<String> PARTY_CACHES = List.of(PartySettingsQueryService.CACHE, DjService.QUEUE_CACHE);
+    static final List<String> PARTY_CACHES = List.of(PartySettingsQueryService.CACHE, DjService.QUEUE_CACHE, DjLibraryService.CACHE);
 
     private final PartySettingsRepository partySettingsRepository;
     private final SongRequestRepository songRequestRepository;

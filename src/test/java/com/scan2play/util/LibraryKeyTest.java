@@ -68,6 +68,20 @@ class LibraryKeyTest {
     }
 
     @Test
+    @DisplayName("an M3U's name read the other way round: \"✓\" with an artist in common, never \"? Podobny\" by its title alone")
+    void aSwappedKey_isHaveOrNothing() {
+        List<LibraryKey> none = List.of();
+        List<LibraryKey> swapped = List.of(LibraryKey.of("Autobiografia - Perfect"), LibraryKey.of("Bohemian Rhapsody - Queen"));
+        assertThat(LibraryKey.of("Ed Sheeran - Perfect").markIn(none, swapped)).as("the band's name is no song of that title")
+                .isEqualTo(LibraryMark.MISSING);
+        assertThat(LibraryKey.of("Jessie J - Queen").markIn(none, swapped)).isEqualTo(LibraryMark.MISSING);
+        assertThat(LibraryKey.of("Autobiografia - Perfect").markIn(none, swapped)).as("the AI wrote it the other way round too")
+                .isEqualTo(LibraryMark.HAVE);
+        assertThat(LibraryKey.of("Ed Sheeran - Perfect").markIn(List.of(LibraryKey.of("Ed Sheeran - Perfect (Acoustic)")), swapped))
+                .isEqualTo(LibraryMark.HAVE);
+    }
+
+    @Test
     @DisplayName("nothing to compare is empty; a long name is cut to the columns")
     void emptyAndLong() {
         assertThat(LibraryKey.of(null).isEmpty()).isTrue();

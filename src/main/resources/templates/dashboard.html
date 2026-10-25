@@ -306,7 +306,7 @@
                      party with a library its plan marks by (list-tools.js, again after each poll) */-->
                 <button th:if="${libraryOn == true}" type="button" id="libraryOnly" class="btn btn-sm btn-outline-light text-nowrap"
                         data-list-library aria-pressed="false" th:title="#{dashboard.library.only.title}"
-                        th:text="#{dashboard.library.only}">Only mine</button>
+                        th:text="#{dashboard.library.only}">Hide “Not in library”</button>
                 <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
                        th:placeholder="#{dashboard.list.search}" autocomplete="off">
             </div>
@@ -384,7 +384,7 @@
                                   th:classappend="${mark == 'have'} ? 'text-bg-success' : (${mark == 'similar'} ? 'text-bg-dark border border-warning text-warning' : 'text-bg-dark border border-secondary')"
                                   th:attr="data-library=${mark}"
                                   th:title="#{${'dashboard.library.' + mark + '.title'}}"
-                                  th:text="#{${'dashboard.library.' + mark}}">✓ You have it</span>
+                                  th:text="#{${'dashboard.library.' + mark}}">✓ In library</span>
                             <!--/* none of the guest's words in the AI's song: maybe another song in place of the one asked for */-->
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>

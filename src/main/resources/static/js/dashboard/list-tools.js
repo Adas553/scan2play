@@ -21,8 +21,9 @@
  * applyListFilters(list) is called again after each refresh. The listeners are delegated, so a list that arrives by AJAX (the
  * History tab) needs no set-up.
  *
- * "TYLKO MAM" — the queue's button [data-list-library] (V42, a party with a library its plan marks by): pressed (aria-pressed),
- * the rows whose request the DJ's library has no song of ([data-library="missing"]) are hidden too; "?" and unmarked rows stay.
+ * "UKRYJ „NIE MASZ”" — the queue's button [data-list-library] (V42, a party with a library its plan marks by): pressed
+ * (aria-pressed), the rows whose request the DJ's library has no song of ([data-library="missing"]) are hidden too; "?" and unmarked
+ * rows stay.
  *
  * DAY HEADINGS — the history's tr[data-day-heading] (history.html), one where a new day starts. The search hides a heading with
  * no row left under it; a sort by a column hides them all (the table gets .s2p-sorted), undoing it brings them back in place.

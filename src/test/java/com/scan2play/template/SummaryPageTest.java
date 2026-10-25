@@ -251,7 +251,7 @@ class SummaryPageTest {
             String html = render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "wedding-library-pl");
             String gaps = html.substring(html.indexOf("id=\"libraryGaps\""), html.indexOf("</section>", html.indexOf("id=\"libraryGaps\"")));
 
-            assertThat(gaps).contains(">Nie masz w bibliotece<", "według biblioteki wgranej teraz", ">Zenek Martyniuk - Przekorny los<",
+            assertThat(gaps).contains(">Nie masz w bibliotece<", "według obecnej biblioteki", ">Zenek Martyniuk - Przekorny los<",
                     ">Bajm - Biała armia<", "class=\"library-similar\"").doesNotContain("Sanah - Szampan", "Nirvana");
             assertThat(gaps.indexOf("Zenek Martyniuk")).as("the most wanted first").isLessThan(gaps.indexOf("Varius Manx"));
 

@@ -78,6 +78,8 @@ def default_state():
         # What POST /dj/library answers (V41): its status and the server's one sentence (422: not a library, 413: too large)
         'libraryStatus': 200,
         'libraryAnswer': 'Gotowe — utwory w bibliotece: 3.',
+        # ... and its type: a proxy's own page (Cloudflare's 413 for more than 100 MB) is 'text/html'
+        'libraryType': 'text/plain; charset=utf-8',
         # The status a POST path answers with instead of its usual answer, e.g. {'/dj/dashboard/host-lists': 403}: the server
         # refused it (the session ran out — CSRF —, the plan, the access); null = the usual answer again
         'postStatus': {},
@@ -407,7 +409,7 @@ class Handler(BaseHTTPRequestHandler):
             # the owner's page "Obsługa" (V32, V34): back to it
             return self._send(302, headers={'Location': '/dj/staff'})
         if path == '/dj/library':                     # the DJ's library (V41): the server's sentence, plain text
-            return self._send(state['libraryStatus'], state['libraryAnswer'].encode('utf-8'), 'text/plain; charset=utf-8')
+            return self._send(state['libraryStatus'], state['libraryAnswer'].encode('utf-8'), state['libraryType'])
         if path == '/dj/library/delete':              # back to the settings, as the real server
             return self._send(302, headers={'Location': '/dj/settings'})
         if path == '/dj/push/unsubscribe':
