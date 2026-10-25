@@ -67,8 +67,9 @@
                             th:text="#{history.filter.rejected}">Rejected</button>
                 </div>
                 <!--/* One evening of the party to print, save as PDF or download as CSV (DjSummaryController) — before the history is
-                     cleared, which takes it too */-->
-                <a th:unless="${#lists.isEmpty(history) or (access != null ? !access.may('SUMMARY') : isOwner == false)
+                     cleared, which takes it too. It and "Wyczyść historię" are about the whole history: shown while the party has any
+                     (historyAny), whatever the filter shows */-->
+                <a th:unless="${(historyAny != null ? !historyAny : #lists.isEmpty(history)) or (access != null ? !access.may('SUMMARY') : isOwner == false)
                                 or (plan != null and !plan.allows('SUMMARY') and !plan.pro('SUMMARY'))}"
                    th:href="${plan != null and plan.pro('SUMMARY')} ? '/pro' : (${partyCode != null} ? ${'/dj/summary?party=' + partyCode} : '/dj/summary')"
                    href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
@@ -78,7 +79,7 @@
                 <!--/* The party's played and rejected requests deleted (DjService.clearHistory: not the waiting ones, not a skip that
                      still keeps its song out); asks first (data-confirm, dj-nav.js). In the History tab forms.js sends it in the
                      background and loads the tab again; on the standalone page the server sends it back to itself. */-->
-                <form th:unless="${#lists.isEmpty(history) or isOwner == false}" action="/dj/dashboard/clear-history" method="post" class="m-0"
+                <form th:unless="${(historyAny != null ? !historyAny : #lists.isEmpty(history)) or isOwner == false}" action="/dj/dashboard/clear-history" method="post" class="m-0"
                       th:attr="data-confirm=#{history.clear.confirm}">
                     <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                     <input type="hidden" name="partyCode" th:value="${partyCode}" />

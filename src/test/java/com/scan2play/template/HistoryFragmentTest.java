@@ -180,6 +180,21 @@ class HistoryFragmentTest {
         assertThat(render(List.of(), false, PL)).doesNotContain("summaryLink");
     }
 
+    @Test
+    @DisplayName("a filter with nothing in it (\"Zagrane\" before a song played) keeps the summary and \"Wyczyść historię\" while the party has history")
+    void anEmptyFilter_keepsTheSummaryAndTheClearing_whileThePartyHasHistory() {
+        Context context = new Context(PL);
+        context.setVariable("history", List.of());
+        context.setVariable("historyHasMore", false);
+        context.setVariable("historyAny", true);
+        context.setVariable("activeFilter", "played");
+        String html = engine.process("history", Set.of("historyTableContent"), context);
+        assertThat(html).contains("id=\"summaryLink\"", "id=\"clearHistoryBtn\"", ">Brak historii.<");
+
+        context.setVariable("historyAny", false);
+        assertThat(engine.process("history", Set.of("historyTableContent"), context)).doesNotContain("summaryLink", "clearHistoryBtn");
+    }
+
     private static String renderWithFilter(String filter) {
         Context context = new Context(Locale.ENGLISH);
         context.setVariable("history", List.of(guest(1, "Alpha", "played")));

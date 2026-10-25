@@ -33,6 +33,11 @@ public final class ViewAttributes {
     // --- Dashboard Attributes ---
     public static final String HISTORY = "history";
     public static final String HISTORY_HAS_MORE = "historyHasMore";
+    /**
+     * Whether the party has any history, whatever the filter shows: "Podsumowanie wieczoru" and "Wyczyść historię" are about all
+     * of it, so a filter with nothing in it ("Zagrane" before a song played) does not take them away.
+     */
+    public static final String HISTORY_ANY = "historyAny";
     public static final String HISTORY_NEXT_LIMIT = "historyNextLimit";
     public static final String HISTORY_HEADING = "historyHeading";
     /** The demo's panel (DemoController): only to look at — the page says so, its script sends nothing. */
