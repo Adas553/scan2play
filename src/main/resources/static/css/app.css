@@ -733,6 +733,13 @@ th[data-sort].sort-desc::after {
 .s2p-z-toast         { z-index: 1090 !important; }
 .s2p-dashboard-qr    { max-width: 200px !important; height: auto !important; }
 .s2p-list-search     { max-width: 16rem !important; }
+/* "Dodaj piosenkę" (V44): the form as wide as a song needs, not the queue's width on a computer; on a phone the button and the
+   search share one line (the search takes what is left), so the queue comes no lower than before */
+.s2p-add-song { max-width: 36rem; }
+@media (max-width: 575.98px) {
+    #queueList .s2p-list-tools { flex: 1 1 100%; flex-wrap: wrap; }
+    #queueList .s2p-list-tools .s2p-list-search { flex: 1 1 8rem; max-width: none !important; }
+}
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }

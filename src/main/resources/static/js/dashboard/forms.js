@@ -24,7 +24,7 @@ const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host
     '/dj/library/delete']);
 /** The forms after which the queue is fetched at once (a song played, skipped, put back; the hosts' lists; a tip; ...). */
 const CHANGE_THE_QUEUE = new Set(['/dj/dashboard/play', '/dj/dashboard/dismiss', '/dj/dashboard/clear-queue', '/dj/dashboard/restore',
-    '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count']);
+    '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count', '/dj/dashboard/add-song']);
 /** The forms after which the history is fetched again. */
 const CHANGE_THE_HISTORY = new Set(['/dj/dashboard/restore', '/dj/dashboard/clear-history']);
 /** The forms whose button does not say ✓: what follows shows it (the history fetched again, the new count, the party's state). */
@@ -81,8 +81,11 @@ function pathOf(form) {
 
             // The queue fetched now, so the change shows at once: a song played, skipped or put back from the history, the queue
             // cleared, the hosts' lists saved (V29: a song on the wish list gets its ⭐), the party's day of guest requests started
-            // again (W4: the poll says so at once, X-Guest-Limits — the warning goes), a tip counted or taken back (V28)
+            // again (W4: the poll says so at once, X-Guest-Limits — the warning goes), a tip counted or taken back (V28), a song the
+            // DJ added (V44)
             if (CHANGE_THE_QUEUE.has(path)) emit(EVENTS.GUEST_QUEUE_CHANGED);
+            // A song added: the field empty for the next one (it stays open, the cursor in it)
+            if (path === '/dj/dashboard/add-song') form.reset();
             // A request put back (it is no longer in the history) or the history cleared (what is left of it: a skip that still
             // keeps its song out): the history fetched again
             if (CHANGE_THE_HISTORY.has(path)) emit(EVENTS.HISTORY_CHANGED);

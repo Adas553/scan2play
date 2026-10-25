@@ -273,7 +273,7 @@ class GuestPageRenderTest {
             if (locale == PL) {
                 writePreview("join.html", html);
                 assertThat(html).contains(">Ola Kowalska zaprasza Cię do obsługi imprezy: Klub Ola<",
-                        "Zaczynasz z rolą „Obsługa kolejki”. Możesz:", ">Zagrane, Pomiń, Cofnij, Przywróć<", ">Historia<",
+                        "Zaczynasz z rolą „Obsługa kolejki”. Możesz:", ">Zagrane, Pomiń, Cofnij, Przywróć, Dodaj piosenkę<", ">Historia<",
                         ">Zaloguj się przez Google i dołącz<");
             }
 
