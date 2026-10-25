@@ -1,4 +1,4 @@
-// "Tylko mam" beside the queue's search (V42, list-tools.js): it hides the requests the DJ's library has no song of ("✗"); the
+// "Ukryj „Nie masz”" beside the queue's search (V42, list-tools.js): it hides the requests the DJ's library has no song of ("✗"); the
 // "? Podobny" ones and those without a mark stay. It holds over the polls that replace the rows and works with the search: the count
 // says how many of all are shown.
 (function () {
@@ -13,7 +13,7 @@
     S2P.scenario({
         name: 'library-only',
         page: 'dashboard-library',
-        title: '"Tylko mam": the requests without a song in the DJ\'s library hidden, "?" and unmarked kept — over the polls, with the search',
+        title: '"Ukryj „Nie masz”": the requests without a song in the DJ\'s library hidden, "?" and unmarked kept — over the polls, with the search',
         setup: {
             queue: [{ id: 11, name: 'Wilki - Baśka', url: URL, library: 'have' },
                 { id: 12, name: 'sanah - Szampan', url: URL, library: 'missing' },

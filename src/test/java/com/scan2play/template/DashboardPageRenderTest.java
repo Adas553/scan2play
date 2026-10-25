@@ -912,8 +912,8 @@ class DashboardPageRenderTest {
             assertThat(rowFor(html, 3)).doesNotContain("data-library", "s2p-library");
             assertThat(rowFor(html, 4)).contains("data-library=\"similar\"", ">? Podobny<",
                     "title=\"Masz utwór o tym tytule, ale innego wykonawcy albo zapisany inaczej — sprawdź\"");
-            assertThat(html).as("the switch \"Tylko mam\" beside the search, for a party with marks")
-                    .contains("id=\"libraryOnly\"", ">Tylko mam<", "aria-pressed=\"false\"");
+            assertThat(html).as("the switch \"Ukryj „Nie masz”\" beside the search, for a party with marks: it says the mark it hides")
+                    .contains("id=\"libraryOnly\"", ">Ukryj „Nie masz”<", "aria-pressed=\"false\"");
             write("dashboard-library.html", html);
         } finally {
             libraryMarks = Map.of();

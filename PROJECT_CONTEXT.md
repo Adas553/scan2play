@@ -265,7 +265,7 @@ line by line in UTF-8 or else Windows-1250 (an old Windows playlist), a name wit
 (`DjLibraryIT`: two uploads at once end as one of them). Goes when deleted ("Usuń bibliotekę", whatever the plan), with a new upload,
 or with the party; V42 deleted the libraries of V41 (their single key could not be made into a title and artists —
 `LibraryTitlesMigrationIT`). The playlists to choose from are read from the chosen file in the browser (`js/dashboard/library.js`,
-`playlistsOf`: the same paths as the parser). Where the marks show: the queue (with "Tylko mam" beside the search, `list-tools.js`:
+`playlistsOf`: the same paths as the parser). Where the marks show: the queue (with "Ukryj „Nie masz”" beside the search, `list-tools.js`:
 the "✗" rows hidden), and "Podsumowanie wieczoru" — "Nie masz w bibliotece" (the songs the AI let through with "✗" or "?", each once,
 the most wanted first) and the CSV's column "W bibliotece" — by the library as it is now.
 **`DjPlanEntity` → `dj_plan`** (V35, the owner 2026-10-14) — a DJ's plan, one row per organiser: `ownerId` (the primary key, the Google

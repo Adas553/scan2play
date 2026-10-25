@@ -87,7 +87,7 @@ C. **Search Console (2026-10-24, the owner's screenshots):** a 404 for `/oauth2/
    settings (the organiser alone) takes a rekordbox collection (File → Export Collection in xml format) — whole or one of its
    playlists ("Co wgrać", read from the file in the browser) — or an M3U / M3U8 playlist (≤ 50 000 tracks, ≤ 64 MB). Each waiting
    request shows "✓ Masz" (the title and an artist in common), "? Podobny" (the title alone) or "✗ Nie masz" (`util/LibraryKey`: no
-   case, accents, punctuation, versions in brackets or after a dash, "feat. X", the order of the artists, a "The"). "Tylko mam" beside
+   case, accents, punctuation, versions in brackets or after a dash, "feat. X", the order of the artists, a "The"). "Ukryj „Nie masz”" beside
    the queue's search hides the "✗" ones; "Podsumowanie wieczoru" lists "Nie masz w bibliotece" and its CSV has "W bibliotece".
    **V42 deleted the libraries uploaded under V41** (only a key was kept, the new ones cannot be made from it): upload the file again.
    To try it without a library of your own: the files of `src/test/resources/library/` (`rekordbox.xml` with the playlists

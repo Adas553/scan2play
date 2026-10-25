@@ -180,7 +180,7 @@ public class DjDashboardController {
         model.addAttribute(HISTORY, queue);
         model.addAttribute(DEDICATIONS, djService.dedicationsOf(queue));   // the guests' dedications under their songs (V38)
         model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, queue));   // "✓" / "?" / "✗" by the DJ's library (V41, V42)
-        // "Tylko mam" beside the search: for anyone of the panel, while the party has a library its plan marks by
+        // "Ukryj „Nie masz”" beside the search: for anyone of the panel, while the party has a library its plan marks by
         model.addAttribute(LIBRARY_ON, planService.allows(settings, PlanFeature.LIBRARY) && djService.libraryOf(partyCode).isPresent());
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
 

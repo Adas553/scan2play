@@ -207,7 +207,7 @@ function normalize(text) {
 
 /**
  * The search box: hides the rows (of what is loaded) whose name does not contain the text — or, for a number ("27" or "#27"), the
- * row of the song with that number (data-song-number, V28: a tip titled "#27" came in) — and, with "Tylko mam" pressed, the rows the
+ * row of the song with that number (data-song-number, V28: a tip titled "#27" came in) — and, with "Ukryj „Nie masz”" pressed, the rows the
  * DJ's library has no song of. The filter buttons are the server's job.
  */
 export function applyListFilters(list) {
@@ -351,7 +351,7 @@ document.addEventListener('input', function(e) {
 });
 
 document.addEventListener('click', function(e) {
-    // "Tylko mam" (V42): pressed or not, then the list filtered again
+    // "Ukryj „Nie masz”" (V42): pressed or not, then the list filtered again
     const library = e.target.closest('[data-list-library]');
     if (library) {
         const pressed = library.getAttribute('aria-pressed') !== 'true';
