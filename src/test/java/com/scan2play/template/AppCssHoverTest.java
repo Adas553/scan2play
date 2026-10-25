@@ -35,4 +35,12 @@ class AppCssHoverTest {
                 + "transform:\\s*translateY\\(-2px\\)[^}]*box-shadow:\\s*0 6px 16px var\\(--s2p-action-glow\\)");
         assertThat(css).containsPattern("@media \\(prefers-reduced-motion: reduce\\)\\s*\\{[^@]*\\.btn-action[^{]*\\{[^}]*transform:\\s*none");
     }
+
+    /** A phone: a tap must not leave an outline button filled, as if it were on — hover changes nothing there. */
+    @Test
+    void anOutlineButton_onAScreenWithoutHover_staysAsItIs() throws IOException {
+        assertThat(css()).containsPattern("@media \\(hover: none\\)\\s*\\{\\s*\\.btn\\[class\\*=\"btn-outline-\"\\]\\s*\\{[^}]*"
+                + "--bs-btn-hover-color:\\s*var\\(--bs-btn-color\\);[^}]*--bs-btn-hover-bg:\\s*transparent;[^}]*"
+                + "--bs-btn-hover-border-color:\\s*var\\(--bs-btn-border-color\\)");
+    }
 }
