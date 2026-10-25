@@ -14,7 +14,10 @@
 <!--/* The owner's page "Obsługa" (V32, the review of 2026-10-10: the card in the settings was 1750 px down a phone and 990 px tall
      with ten people): who helps, what each may do — a role, or permissions ticked one by one —, the invitations by e-mail waiting
      (V34), "Zaproś" by the address of a Google account, and the invitation link with its role (V33) as the other way. Full page loads
-     (StaffController); js/staff.js keeps each form's role and ticks in step; js/dj-nav.js copies the link. */-->
+     (StaffController); js/staff.js keeps each form's role and ticks in step; js/dj-nav.js copies the link.
+     "Zaproś" and the link are folded like the people (details.s2p-fold, as on "Ustawienia imprezy"), each with its state in the line:
+     the places free, the link's role and how long it works. Unfolded by itself: "Zaproś" when it has an answer to show or nobody
+     helps yet (the first thing to do), the link after it was made or turned off (#staffLinkCard, folds.js). */-->
 <body class="page-dj">
 
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800">
@@ -75,27 +78,43 @@
             </div>
         </details>
 
-        <section th:each="invitation : ${staffInvitations}" class="card bg-dark border-secondary p-3 s2p-staff-invited"
+        <!--/* An invitation waiting, folded like a person: the address, the role it gives, since when it waits; unfolded, what it waits
+             for and "Cofnij zaproszenie" */-->
+        <details th:each="invitation : ${staffInvitations}" class="card bg-dark border-secondary s2p-staff-member s2p-staff-invited"
+                 th:with="day=${T(com.scan2play.util.Times).day(invitation.invitedAt)}, roleName=#{__${'staff.role.' + invitation.role()}__}"
                  th:attr="data-invitation-id=${invitation.id}">
-            <h2 class="s2p-card-title mb-1 text-break" th:text="${invitation.email}">ola.kowalska@gmail.com</h2>
-            <p class="small text-light mb-1" data-invitation-status
-               th:text="#{staff.invited.status(${T(com.scan2play.util.Times).day(invitation.invitedAt)})}">invited 10.10 · waiting for them to log in</p>
-            <p class="small text-secondary mb-2" th:with="roleName=#{__${'staff.role.' + invitation.role()}__}"
-               th:text="#{staff.invited.role(${roleName})}">Role: Queue</p>
-            <form th:action="@{/dj/staff/invitation/cancel}" method="POST" class="m-0"
-                  th:attr="data-confirm=#{staff.invited.cancel.confirm(${invitation.email})}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <input type="hidden" name="id" th:value="${invitation.id}">
-                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{staff.invited.cancel}">Cancel the invitation</button>
-            </form>
-        </section>
+            <summary class="s2p-staff-summary">
+                <span class="s2p-staff-who">
+                    <span class="s2p-card-title mb-0 text-break" th:text="${invitation.email}">ola.kowalska@gmail.com</span>
+                    <span class="small text-secondary" th:text="${roleName}">Co-organiser</span>
+                </span>
+                <span class="small text-secondary text-nowrap" th:text="#{staff.invited.waiting(${day})}">waiting since 10.10</span>
+            </summary>
+            <div class="s2p-staff-body">
+                <p class="small text-light mb-2" data-invitation-status
+                   th:text="#{staff.invited.status(${day})}">invited 10.10 · waiting for them to log in</p>
+                <form th:action="@{/dj/staff/invitation/cancel}" method="POST" class="m-0"
+                      th:attr="data-confirm=#{staff.invited.cancel.confirm(${invitation.email})}">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <input type="hidden" name="id" th:value="${invitation.id}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{staff.invited.cancel}">Cancel the invitation</button>
+                </form>
+            </div>
+        </details>
     </div>
 
     <!--/* "Zaproś" by e-mail (V34): the address of the person's Google account and the role. Nothing is sent: they see the invitation
          when they log in with that account. The same address again changes the role and gives it 30 days again. The staff and
          the invitations waiting take 10 places together. */-->
-    <section class="card bg-dark border-secondary p-3 mb-4" id="staffInviteCard">
-        <h2 class="s2p-card-title" th:text="#{staff.link.title}">Invite someone</h2>
+    <details class="card bg-dark border-secondary mb-3 s2p-fold" id="staffInviteCard"
+             th:open="${staffInviteResult != null or (#lists.isEmpty(staff) and #lists.isEmpty(staffInvitations))}">
+        <summary class="s2p-fold-summary">
+            <h2 class="s2p-card-title s2p-fold-name" th:text="#{staff.link.title}">Invite someone</h2>
+            <span class="s2p-fold-state" th:classappend="${staffPlacesLeft == 0} ? 's2p-row-warn'"
+                  th:text="${staffPlacesLeft == 0} ? #{staff.invite.state.full(${plan.staffPlaces()})}
+                           : #{staff.invite.state(${staffPlacesLeft}, ${plan.staffPlaces()})}">Places free: 9 of 10</span>
+        </summary>
+        <div class="s2p-fold-body">
         <!--/* the places in the help line — or, without Pro, in the offer below: said once (the review of the look, 2026-10-14) */-->
         <p class="s2p-card-help" th:text="${plan.proStaff()} ? #{staff.invite.help.short} : #{staff.invite.help(${plan.staffPlaces()})}">Type the address of their Google account.</p>
         <!--/* without the Pro plan (V35): one place; leaving Pro takes nobody's access away, only no one new joins */-->
@@ -116,13 +135,19 @@
             <th:block th:replace="~{fragments/staff-role :: rolePicker('invite', ${staffDefaultRole}, ${staffDefaultRole.permissions()}, #{staff.invite.role})}"></th:block>
             <button type="submit" id="staffInviteBtn" class="btn btn-action w-100" th:text="#{staff.invite.button}">Invite</button>
         </form>
-    </section>
+        </div>
+    </details>
 
     <!--/* The invitation link, the other way (a person whose address the organiser does not know): made with the role picked here
          (V33) — whoever joins by it gets that. A new role is a new link: "Nowy link" makes the old one dead (asks first), so a link
          sent as "Podgląd" never starts to give more. "Wyłącz link" takes it away; the people on the list stay either way. */-->
-    <section class="card bg-dark border-secondary p-3 mb-4" id="staffLinkCard">
-        <h2 class="s2p-card-title" th:text="#{staff.link.other_way}">Or send a link</h2>
+    <details class="card bg-dark border-secondary mb-4 s2p-fold" id="staffLinkCard">
+        <summary class="s2p-fold-summary">
+            <h2 class="s2p-card-title s2p-fold-name" th:text="#{staff.link.other_way}">Or send a link</h2>
+            <span class="s2p-fold-state" th:with="roleName=#{__${'staff.role.' + staffLinkRole}__}"
+                  th:text="${staffLink != null} ? #{staff.link.state(${roleName}, ${staffLinkUntil})} : #{staff.link.state.none}">Queue · works until 14.11.</span>
+        </summary>
+        <div class="s2p-fold-body">
         <p class="s2p-card-help" th:text="#{dashboard.staff.link.help}">Send the link to the person you invite.</p>
         <th:block th:if="${staffLink != null}">
             <p class="small text-light mb-1" id="staffLinkRole" th:with="roleName=#{__${'staff.role.' + staffLinkRole}__}"
@@ -153,12 +178,14 @@
             <button type="submit" id="staffLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap"
                     th:text="#{staff.link.off}">Turn the link off</button>
         </form>
-    </section>
+        </div>
+    </details>
 
     <p class="small text-secondary" th:text="#{staff.page.owner_only}">Only you: the staff, the profiles and the tip link, clearing the history.</p>
 </div>
 
 <script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
+<script src="/js/folds.js" th:src="@{/js/folds.js}"></script>
 <script src="/js/staff.js" th:src="@{/js/staff.js}"></script>
 <div th:replace="~{fragments/components :: footer}"></div>
 </body>

@@ -343,7 +343,7 @@ public class StaffController {
         String typed = email == null ? "" : email.strip();
         session.setAttribute(SESSION_STAFF_INVITED, new InviteResult(outcome.name(),
                 typed.length() > 254 ? typed.substring(0, 254) : typed, problem));
-        return backToStaffPage(partyCode);
+        return backToStaffPage(partyCode) + "#staffInviteCard";   // at the card that says what came of it (unfolded: staff.html)
     }
 
     /** "Cofnij zaproszenie": only an invitation of the owner's own party. */
@@ -401,7 +401,7 @@ public class StaffController {
             s.setStaffTokenMadeAt(make ? Instant.now() : null);   // it works 30 days (V37)
             s.setStaffLinkPermissions(grants);
         });
-        return backToStaffPage(partyCode);
+        return backToStaffPage(partyCode) + "#staffLinkCard";   // the folded card of the link unfolded again (folds.js)
     }
 
     /** Takes one person's access away: their next request says so. Only a person of the owner's own party. */

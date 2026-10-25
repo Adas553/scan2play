@@ -78,6 +78,7 @@
         title: '"Kopiuj" of the hosts\' link on "Ustawienia imprezy": copied, or said it was not',
         page: 'settings',
         run: async function (t) {
+            document.querySelector('#hostListsCard > summary').click();   // the card unfolded, as the DJ does (folded cards)
             const button = document.querySelector('[data-copy-target="hostLinkInput"]');
             t.step('the hosts\' link shows', !!button, true);
             if (button) await tapEachWay(t, 'the hosts\' link', button, document.getElementById('hostLinkInput').value, true);
@@ -89,6 +90,7 @@
         title: '"Kopiuj" of the staff\'s link on "Obsługa": copied, or said it was not',
         page: 'staff',
         run: async function (t) {
+            document.querySelector('#staffLinkCard > summary').click();   // the card unfolded, as the DJ does (folded cards)
             const button = document.querySelector('[data-copy-target="staffLinkInput"]');
             t.step('the staff\'s link shows', !!button, true);
             if (button) await tapEachWay(t, 'the staff\'s link', button, document.getElementById('staffLinkInput').value, true);

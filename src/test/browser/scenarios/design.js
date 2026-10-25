@@ -249,17 +249,15 @@
 
     S2P.scenario({
         name: 'settings-page-touch-targets',
-        title: 'the page "Ustawienia imprezy" on a phone: every button, field, jump and the server limits\' line at least 44 px high; no sideways scroll',
+        title: 'the page "Ustawienia imprezy" on a phone: every folded line, and unfolded every button, field and the server limits\' line, at least 44 px high; no sideways scroll',
         page: 'settings',
         viewport: '390,844',
         run: async function (t) {
-            t.step('nothing to tap is lower than 44 px', tooSmall(document.body), []);
-            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
-            const jumps = Array.from(document.querySelectorAll('#settingsJump a'));
-            t.step('every jump to a card whole on the screen (wrapped, not cut at the edge)', jumps.filter(function (a) {
-                const box = a.getBoundingClientRect();
-                return box.left < 0 || box.right > document.documentElement.clientWidth;
-            }).map(function (a) { return a.textContent.trim(); }), []);
+            t.step('folded: nothing to tap is lower than 44 px', tooSmall(document.body), []);
+            t.check('folded: nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+            document.querySelectorAll('details.s2p-fold > summary').forEach(function (summary) { summary.click(); });
+            t.step('every card unfolded: nothing to tap is lower than 44 px', tooSmall(document.body), []);
+            t.check('unfolded: nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             t.check('"← Panel" leads to the panel of the same party', document.getElementById('backToPanel').getAttribute('href') === '/dj/dashboard?party=HARN1');
         }
     });
