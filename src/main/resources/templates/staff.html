@@ -85,7 +85,12 @@
                  th:attr="data-invitation-id=${invitation.id}">
             <summary class="s2p-staff-summary">
                 <span class="s2p-staff-who">
-                    <span class="s2p-card-title mb-0 text-break" th:text="${invitation.email}">ola.kowalska@gmail.com</span>
+                    <!--/* a long address may wrap only before its "@" ("ola.kowalska" / "@gmail.com"), never inside the domain */-->
+                    <span class="s2p-card-title mb-0 text-break" th:if="${#strings.contains(invitation.email, '@')}"><th:block
+                          th:text="${#strings.substringBefore(invitation.email, '@')}">ola.kowalska</th:block><wbr><th:block
+                          th:text="${'@' + #strings.substringAfter(invitation.email, '@')}">@gmail.com</th:block></span>
+                    <span class="s2p-card-title mb-0 text-break" th:unless="${#strings.contains(invitation.email, '@')}"
+                          th:text="${invitation.email}">ola.kowalska</span>
                     <span class="small text-secondary" th:text="${roleName}">Co-organiser</span>
                 </span>
                 <span class="small text-secondary text-nowrap" th:text="#{staff.invited.waiting(${day})}">waiting since 10.10</span>
@@ -128,12 +133,12 @@
         <form th:action="@{/dj/staff/invite}" method="POST" class="m-0" id="staffInviteForm" data-staff-form>
             <input type="hidden" name="partyCode" th:value="${partyCode}">
             <label class="form-label small text-light mb-1" for="staffInviteEmail" th:text="#{staff.invite.email}">The address of their Google account</label>
-            <input type="email" class="form-control bg-black text-light border-secondary mb-2" id="staffInviteEmail" name="email"
+            <input type="email" class="form-control form-control-sm bg-black text-light border-secondary mb-2" id="staffInviteEmail" name="email"
                    maxlength="254" required autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="email"
                    placeholder="ola.kowalska@gmail.com"
                    th:value="${staffInviteResult != null and staffInviteResult.problem()} ? ${staffInviteResult.address()} : ''">
             <th:block th:replace="~{fragments/staff-role :: rolePicker('invite', ${staffDefaultRole}, ${staffDefaultRole.permissions()}, #{staff.invite.role})}"></th:block>
-            <button type="submit" id="staffInviteBtn" class="btn btn-action w-100" th:text="#{staff.invite.button}">Invite</button>
+            <button type="submit" id="staffInviteBtn" class="btn btn-sm btn-action" th:text="#{staff.invite.button}">Invite</button>
         </form>
         </div>
     </details>
@@ -155,13 +160,13 @@
             <ul th:if="${staffLinkRole.name() == 'CUSTOM'}" class="small text-secondary mb-2" id="staffLinkPermissions">
                 <li th:each="p : ${staffPermissions}" th:if="${staffLinkPermissions.contains(p)}" th:text="#{__${'staff.permission.' + p}__}">Played, Skip</li>
             </ul>
-            <div class="input-group input-group-sm mb-3">
+            <div class="input-group input-group-sm mb-1">
                 <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${staffLink}" id="staffLinkInput" readonly
                        th:attr="aria-label=#{dashboard.staff.link.label}">
                 <button class="btn btn-outline-secondary" type="button" data-copy-target="staffLinkInput" th:text="#{dashboard.qr.copy}"
                         th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
             </div>
-            <p class="small text-secondary mt-n2 mb-3" id="staffLinkUntil" th:text="#{link.works_until(${staffLinkUntil})}">Works until 14.11.</p>
+            <p class="small text-secondary mb-3" id="staffLinkUntil" th:text="#{link.works_until(${staffLinkUntil})}">Works until 14.11.</p>
         </th:block>
         <form th:action="@{/dj/staff/link}" method="POST" class="m-0" id="staffLinkForm" data-staff-form
               th:attr="data-confirm=${staffLink != null} ? #{dashboard.staff.link.renew.confirm} : null">

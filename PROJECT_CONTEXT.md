@@ -277,7 +277,7 @@ or with the party; V42 deleted the libraries of V41 (their single key could not 
 `LibraryTitlesMigrationIT`). The playlists to choose from are read from the chosen file in the browser (`js/dashboard/library.js`,
 `playlistsOf`: the same paths as the parser; a second playlist of a name offered as "Wesele (2)"); a file over 64 MB is refused in the
 browser before it is read or sent, only an `.xml` is read for its playlists, and only a plain-text answer is shown as the server's
-sentence (a proxy's HTML page for a status never is). "Usuń bibliotekę" asks first (`data-confirm`). Where the marks show: the queue (with "Ukryj „Nie masz”" beside the search, `list-tools.js`:
+sentence (a proxy's HTML page for a status never is). "Usuń bibliotekę" asks first (`data-confirm`). The card (2026-10-25): one line of what it does and "Jak przygotować plik?" folded under it; what the party has in a quiet box with a small "Usuń" at its end; the file's field is our own — the browser's input hidden (its button never filled a 44 px field on a phone), the label `#libraryDrop` the tap target, "Wybierz plik", then the file's name and size, a file dropped on it chosen too — and "Wgraj" the card's one action, enabled only with a file the server would read. Where the marks show: the queue (with "Ukryj „Nie masz”" beside the search, `list-tools.js`:
 the "✗" rows hidden), and "Podsumowanie wieczoru" — "Nie masz w bibliotece" (the songs the AI let through with "✗" or "?", each once,
 the most wanted first) and the CSV's column "W bibliotece" — by the library as it is now.
 **`DjPlanEntity` → `dj_plan`** (V35, the owner 2026-10-14) — a DJ's plan, one row per organiser: `ownerId` (the primary key, the Google

@@ -143,7 +143,7 @@ class StaffPageRenderTest {
                 "href=\"/dj/dashboard?party=HARN1\"", "/js/staff.js", "/js/dj-nav.js",
                 // the invitation by e-mail waiting, folded like a person: the address, the role, since when; unfolded, what it waits for
                 // and "Cofnij zaproszenie" (asks first)
-                "data-invitation-id=\"3\"", ">ola.kowalska@gmail.com<", ">Współorganizator<", ">czeka od 10.10<",
+                "data-invitation-id=\"3\"", ">ola.kowalska<wbr>@gmail.com<", ">Współorganizator<", ">czeka od 10.10<",
                 ">zaproszono 10.10 · czeka na zalogowanie<", "action=\"/dj/staff/invitation/cancel\"",
                 "data-confirm=\"Cofnąć zaproszenie: ola.kowalska@gmail.com?\"", ">Cofnij zaproszenie<",
                 // "Zaproś": the address and the role (Obsługa kolejki, as a joiner had it), one action button on the page

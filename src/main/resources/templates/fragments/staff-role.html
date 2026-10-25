@@ -6,7 +6,7 @@
      `prefix` makes the fields' ids unique, `granted` are the permissions shown ticked, `label` the field's label. */-->
 <th:block th:fragment="rolePicker(prefix, role, granted, label)">
     <label class="form-label small text-light mb-1" th:for="${'role-' + prefix}" th:text="${label}">What they can do</label>
-    <select class="form-select bg-black text-light border-secondary mb-1" name="role" th:id="${'role-' + prefix}" data-role-select>
+    <select class="form-select form-select-sm bg-black text-light border-secondary mb-1" name="role" th:id="${'role-' + prefix}" data-role-select>
         <option th:each="r : ${staffRoles}" th:value="${r}" th:selected="${r == role}"
                 th:attr="data-permissions=${r.permissionNames()},data-help=#{__${'staff.role.' + r + '.help'}__}"
                 th:text="#{__${'staff.role.' + r}__}">Queue</option>

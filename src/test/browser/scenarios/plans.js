@@ -12,7 +12,8 @@
     const tooSmall = function (root) {
         return Array.from(root.querySelectorAll('a.btn, button, input:not([type="hidden"]):not([type="checkbox"]), select, textarea, summary, '
             + '.s2p-row, .s2p-chips a'))
-            .filter(shows)
+            // drawn: not in a folded card (laid out, not drawn) nor transparent (the file input under its label, which is the target)
+            .filter(function (el) { return el.checkVisibility({ opacityProperty: true, visibilityProperty: true }); })
             .filter(function (el) { return el.getBoundingClientRect().height < 44 - 0.5; })
             .map(function (el) { return (el.id || text(el).slice(0, 20) || el.tagName) + ' ' + Math.round(el.getBoundingClientRect().height) + 'px'; });
     };
