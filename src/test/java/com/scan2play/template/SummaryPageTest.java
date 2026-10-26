@@ -118,6 +118,14 @@ class SummaryPageTest {
         return library;
     }
 
+    /** The DJ's logo (V45, Pro) heads the summary, above ours. */
+    @Test
+    void theDjsLogo_headsTheSummary() throws IOException {
+        String html = render(Locale.forLanguageTag("pl"), null, List.of(), List.of(), "summary-logo");
+        assertThat(html).contains("class=\"dj-logo\"", "src=\"/p/" + PARTY + "/logo.png?v=0123456789abcdef\"");
+        assertThat(html.indexOf("class=\"dj-logo\"")).isLessThan(html.indexOf("class=\"logo\""));
+    }
+
     private static String render(Locale locale, String evening, List<EveningSummaryService.Evening> evenings,
                                  List<SongRequestEntity> requests, String file) throws IOException {
         SongRequestRepository repository = mock(SongRequestRepository.class);
@@ -126,7 +134,7 @@ class SummaryPageTest {
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(requests);
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any()))
-                .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").build());
+                .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").logoVersion("0123456789abcdef".repeat(4)).build());
         DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries), sessionHelper, messages, com.scan2play.service.Plans.off());
 
         ConcurrentModel model = new ConcurrentModel();

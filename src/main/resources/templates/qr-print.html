@@ -27,13 +27,15 @@
     <p class="hint" th:text="#{qr.print.hint}">This bar is not printed.</p>
 </nav>
 
-<main th:if="${qrLayout == 'poster'}" class="poster">
+<main th:if="${qrLayout == 'poster'}" class="poster" th:classappend="${djLogo != null} ? 'with-logo'">
+    <!--/* the DJ's logo (V45, Pro) heads the poster, the code a little smaller to keep one A4 page; ours then a quiet line at the foot */-->
+    <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" alt="DJ">
     <h1>
         <span th:if="${#locale.language == 'pl'}" lang="pl">Zeskanuj i poproś o piosenkę</span>
         <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan to request a song</span>
     </h1>
     <!--/* our logo (static/images/logo.svg and the name), right above the code it belongs to */-->
-    <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+    <p th:if="${djLogo == null}" class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
     <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR" th:alt="${#locale.language == 'pl' ? 'QR code / kod QR' : 'QR code'}">
     <ol class="steps">
         <li><span th:if="${#locale.language == 'pl'}" lang="pl">Zeskanuj kod aparatem telefonu</span> <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan the code with your phone camera</span></li>
@@ -61,13 +63,17 @@
         <th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Napiwek</span> / </th:block><span lang="en">Tip</span>:
         <strong th:text="${T(com.scan2play.util.TipLinks).display(tipUrl)}">revolut.me/djkoko</strong>
     </p>
+    <p th:if="${djLogo != null}" class="powered"><span><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Działa na</span> / </th:block><span
+            lang="en">Powered by</span></span><span class="logo ours"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></span></p>
 </main>
 
 <main th:if="${qrLayout == 'cards'}" class="cards">
     <section class="card" th:each="card : ${#numbers.sequence(1, 8)}">
         <!--/* the code's column: our logo above the code, the DJ's profiles under it (the owner, 2026-10-07); the texts beside */-->
         <div class="side">
-            <p class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+            <!--/* the DJ's logo (V45) in place of ours: two marks stacked on a card this small were clutter, and its address names us */-->
+            <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" alt="DJ">
+            <p th:if="${djLogo == null}" class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
             <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR" th:alt="${#locale.language == 'pl' ? 'QR code / kod QR' : 'QR code'}">
             <th:block th:replace="~{qr-print :: djLinks}"></th:block>
         </div>

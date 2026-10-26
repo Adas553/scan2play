@@ -15,7 +15,9 @@
         <div class="col-12 col-md-8 col-lg-6">
             <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
             <div class="card p-4 p-sm-5">
-                <h1 class="display-1 mb-3">👋</h1>
+                <!--/* the DJ's logo (V45) in place of the wave */-->
+                <th:block th:replace="~{fragments/components :: djLogo}"></th:block>
+                <h1 th:if="${djLogo == null}" class="display-1 mb-3">👋</h1>
                 <h2 class="mb-4 fw-bold text-light-custom" th:text="#{party.ended.title}">This party has ended</h2>
                 <p class="lead text-secondary-bright" th:text="#{party.ended.subtitle}">Thanks for partying with Scan2Play!</p>
                 <p class="text-secondary-bright mt-3" th:text="#{party.ended.see_you}">See you at the next event.</p>

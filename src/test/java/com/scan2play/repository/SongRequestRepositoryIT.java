@@ -204,15 +204,16 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
     @Test
     void thePurgeDeletesOldRequestsInBatches() {
         String party = newPartyCode();
-        Instant old = Instant.now().minus(40, ChronoUnit.DAYS);
+        // the cutoff long before any date another test writes (they share the database, and some write fixed dates, which a cutoff
+        // of "now − 30 days" passes in time): so every deleted row is one of these
+        Instant old = Instant.parse("2000-01-01T00:00:00Z");
         for (int i = 0; i < 5; i++) {
             save(party, "old " + i, "played", old, old);
         }
         save(party, "fresh", "played", Instant.now(), Instant.now());
         save(party, "no age", "accepted", null, null);
-        Instant cutoff = Instant.now().minus(30, ChronoUnit.DAYS);
+        Instant cutoff = Instant.parse("2000-06-01T00:00:00Z");
 
-        // other tests' requests are all younger than the cutoff, so every deleted row is one of these
         assertThat(requests.deleteRequestedBefore(cutoff, 2)).isEqualTo(2);
         assertThat(requests.deleteRequestedBefore(cutoff, 2)).isEqualTo(2);
         assertThat(requests.deleteRequestedBefore(cutoff, 2)).isEqualTo(1);

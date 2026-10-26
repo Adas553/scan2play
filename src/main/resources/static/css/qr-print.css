@@ -302,3 +302,56 @@ body {
         padding: 6mm 16px;
     }
 }
+
+/* The DJ's logo (V45, Pro): at the poster's top and above a card's code, within a box — any proportions fit; ours then smaller */
+.dj-logo {
+    display: block;
+    margin: 0 auto;
+    object-fit: contain;
+}
+
+.poster .dj-logo {
+    max-width: 120mm;
+    max-height: 30mm;
+    margin-bottom: 4mm;
+}
+
+.poster.with-logo h1 {
+    margin-bottom: 4mm;
+}
+
+.poster.with-logo .qr {
+    width: 96mm;
+    height: 96mm;
+}
+
+/* "Działa na / Powered by Scan2Play" at the foot of a poster with the DJ's logo: ours, quiet */
+/* one row, the words and our mark on one centre line */
+.poster .powered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5mm;
+    margin: 4mm 0 0;
+    color: #666;
+    font-size: 9pt;
+    line-height: 1;
+}
+
+.poster .powered .logo.ours {
+    gap: 1mm;
+    color: #222;
+    font-size: 10pt;
+    line-height: 1;
+}
+
+.poster .powered .logo.ours img {
+    width: 4mm;
+    height: 4mm;
+}
+
+.card .dj-logo {
+    max-width: 40mm;
+    max-height: 10mm;
+    margin-bottom: 1mm;
+}

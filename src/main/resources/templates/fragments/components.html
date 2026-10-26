@@ -346,6 +346,12 @@
     </th:block>
 </th:block>
 
+<!--/* The DJ's logo (V45, Pro): the head of the guests' pages in place of ours — the party is the DJ's; ours goes to a quiet
+     "Działa na Scan2Play" over the footer (poweredBy). On a light badge: a dark logo with a transparent background would vanish on
+     our dark pages. Only with a logo the organiser's plan shows (djLogo, PartySettingsEntity.logoPath). */-->
+<img th:fragment="djLogo" th:if="${djLogo != null}" th:src="@{${djLogo}}" class="s2p-logo-tile s2p-dj-logo" id="djLogo"
+     th:alt="#{logo.dj.alt}" alt="The DJ's logo">
+
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo-small.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
 <!--/* Our logo as the way home, on the public pages (the guide, Pro, the demo, the home page itself; the panel; the owner, 2026-10-24): a link that looks like the logo
@@ -370,6 +376,9 @@
      ====================================================================== -->
 <footer th:fragment="footer" class="text-center py-4 mt-5 border-top border-secondary s2p-footer">
     <div class="container">
+        <!--/* under a DJ's logo (V45) our own name, quiet: the party's pages are the DJ's */-->
+        <p th:if="${djLogo != null}" class="s2p-powered mb-3" id="poweredBy"><span th:text="#{powered.by}">Powered by</span>
+            <th:block th:replace="~{fragments/components :: logo}"></th:block></p>
         <p class="mb-2">
             <a href="/privacy" class="text-secondary me-3" th:text="#{footer.privacy}">Privacy Policy</a>
             <a href="/terms" class="text-secondary me-3" th:text="#{footer.terms}">Terms of Service</a>

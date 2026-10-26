@@ -178,6 +178,18 @@ public class PartySettingsEntity {
     @Column(nullable = false)
     private int duplicateCheckWindow = DEFAULT_DUPLICATE_CHECK_WINDOW;
 
+    /**
+     * The version of the DJ's logo (V45, {@code PartyLogoService}), null = none: written only by that service's SQL with the logo's
+     * row, so a save of the settings never overwrites it.
+     */
+    @Column(insertable = false, updatable = false)
+    private String logoVersion;
+
+    /** The address of the DJ's logo, its version in it (a new logo is a new address), or null without one. */
+    public String logoPath() {
+        return logoVersion == null ? null : "/p/" + partyCode + "/logo.png?v=" + logoVersion.substring(0, Math.min(16, logoVersion.length()));
+    }
+
     /** The hosts' link opens their lists: there is one, and it was made less than {@value #LINK_DAYS} days ago. */
     public boolean hostLinkWorks(Instant now) {
         return hostToken != null && linkWorks(hostTokenMadeAt, now);

@@ -22,5 +22,10 @@ public enum PlanFeature {
      * The DJ's library (V41): the queue marks each request "✓", "?" or "✗" by the DJ's own collection. Without Pro the uploaded library
      * is kept but marks nothing; deleting it needs no plan.
      */
-    LIBRARY
+    LIBRARY,
+    /**
+     * The DJ's logo (V45) on the guest pages, the TV screen, the print and the summary. Without Pro the uploaded logo is kept but not
+     * shown; deleting it needs no plan.
+     */
+    LOGO
 }

@@ -41,6 +41,25 @@ from email.policy import HTTP
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
+
+def png(width, height):
+    """A real PNG of one colour, width × height: the DJ's logo the pages show."""
+    def chunk(kind, data):
+        return len(data).to_bytes(4, 'big') + kind + data + zlib.crc32(kind + data).to_bytes(4, 'big')
+    rows = b''.join(b'\x00' + b'\x20\x60\xc0\xff' * width for _ in range(height))
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', width.to_bytes(4, 'big') + height.to_bytes(4, 'big') + b'\x08\x06\x00\x00\x00')
+            + chunk(b'IDAT', zlib.compress(rows)) + chunk(b'IEND', b''))
+
+
+def png_size(body):
+    """[width, height] of a PNG body, or None for anything else."""
+    if body[:8] != b'\x89PNG\r\n\x1a\n' or len(body) < 24:
+        return None
+    return [int.from_bytes(body[16:20], 'big'), int.from_bytes(body[20:24], 'big')]
+
+
+LOGO_PNG = png(400, 100)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 TYPES = {'.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
          '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml'}
@@ -80,6 +99,9 @@ def default_state():
         'libraryAnswer': 'Gotowe — utwory w bibliotece: 3.',
         # ... and its type: a proxy's own page (Cloudflare's 413 for more than 100 MB) is 'text/html'
         'libraryType': 'text/plain; charset=utf-8',
+        # What POST /dj/logo answers (V45): its status and the server's one sentence (422: not an image, 413: too large)
+        'logoStatus': 200,
+        'logoAnswer': 'Gotowe — logo zapisane.',
         # The status a POST path answers with instead of its usual answer, e.g. {'/dj/dashboard/host-lists': 403}: the server
         # refused it (the session ran out — CSRF —, the plan, the access); null = the usual answer again
         'postStatus': {},
@@ -227,9 +249,11 @@ class Handler(BaseHTTPRequestHandler):
             fields.update({k: v[-1] for k, v in parse_qs(body.decode('utf-8')).items()})
         elif body and 'application/json' in content_type:   # the switch of notifications sends the browser's subscription as JSON
             fields.update(json.loads(body.decode('utf-8')))
-        elif body and 'application/octet-stream' in content_type:   # a file sent as it is (library.js, V41)
+        elif body and 'application/octet-stream' in content_type:   # a file sent as it is (library.js, V41; logo.js, V45)
             fields['__contentType'] = content_type
             fields['__body'] = body.decode('utf-8', 'replace')
+            fields['__head'] = body[:8].hex()   # a picture's first bytes: a PNG starts 89504e470d0a1a0a
+            fields['__size'] = png_size(body)
         elif body and 'multipart/form-data' in content_type:
             message = BytesParser(policy=HTTP).parsebytes(b'Content-Type: ' + content_type.encode('ascii') + b'\r\n\r\n' + body)
             for part in message.iter_parts():
@@ -267,6 +291,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(stand.state)
         self._note('GET', path, self._fields(query, b'', ''))
         state = stand.state
+        if path.startswith('/p/') and path.endswith('/logo.png'):   # the DJ's logo (V45): a wide one, 400 × 100, as a real PNG
+            return self._send(200, LOGO_PNG, 'image/png')
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
@@ -356,7 +382,7 @@ class Handler(BaseHTTPRequestHandler):
             stand.event(name).set()
             return self._json({})
         fields = self._fields(query, body, self.headers.get('Content-Type'))
-        if path in ('/dj/library', '/dj/library/delete'):   # a fetch() with the CSRF token in its header, not in a form field
+        if path in ('/dj/library', '/dj/library/delete', '/dj/logo', '/dj/logo/delete'):   # a fetch() with the CSRF token in its header
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and path.endswith('/vote'):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
@@ -416,6 +442,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(302, headers={'Location': '/dj/staff'})
         if path == '/dj/library':                     # the DJ's library (V41): the server's sentence, plain text
             return self._send(state['libraryStatus'], state['libraryAnswer'].encode('utf-8'), state['libraryType'])
+        if path == '/dj/logo':                        # the DJ's logo (V45): the server's sentence, plain text
+            return self._send(state['logoStatus'], state['logoAnswer'].encode('utf-8'), 'text/plain; charset=utf-8')
+        if path == '/dj/logo/delete':                 # back to the settings, as the real server
+            return self._send(302, headers={'Location': '/dj/settings'})
         if path == '/dj/library/delete':              # back to the settings, as the real server
             return self._send(302, headers={'Location': '/dj/settings'})
         if path == '/dj/push/unsubscribe':

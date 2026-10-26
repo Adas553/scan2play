@@ -20,6 +20,12 @@ public final class ViewAttributes {
     public static final String GLOBAL_VIBE = "globalVibe";
     public static final String VIBE_NOTE = "vibeNote";
     public static final String DJ_NAME = "djName";
+    /** The address of the DJ's logo (V45, {@code PartySettingsEntity.logoPath}) as the organiser's plan shows it, or null. */
+    public static final String DJ_LOGO = "djLogo";
+    /** The card "Twoje logo": the largest file, in bytes and MB, and the longest side kept (V45, {@code LogoImage}). */
+    public static final String LOGO_MAX_BYTES = "logoMaxBytes";
+    public static final String LOGO_MAX_MB = "logoMaxMb";
+    public static final String LOGO_MAX_SIDE = "logoMaxSide";
     /** The DJ's profiles (V24): https addresses on Instagram, Facebook, TikTok, or null. */
     public static final String INSTAGRAM_URL = "instagramUrl";
     public static final String FACEBOOK_URL = "facebookUrl";

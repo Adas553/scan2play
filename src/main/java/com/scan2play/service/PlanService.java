@@ -161,7 +161,7 @@ public class PlanService {
 
     /**
      * The party as its plan lets it work — for the guests, the AI and the queue's marks, never for saving: a copy without what the
-     * plan does not have (the hosts' lists and link, the profiles, the tip link) and with the defaults for what it does not let the
+     * plan does not have (the hosts' lists and link, the profiles, the tip link, the logo) and with the defaults for what it does not let the
      * DJ change (the comment style "Klasyczne", the guests' limits of a new party). With every feature, the party as it is.
      */
     public PartySettingsEntity asPlanned(PartySettingsEntity party) {
@@ -182,6 +182,9 @@ public class PlanService {
         }
         if (!plan.includes(PlanFeature.TIPS)) {
             planned.setTipUrl(null);
+        }
+        if (!plan.includes(PlanFeature.LOGO)) {
+            planned.setLogoVersion(null);
         }
         if (!plan.includes(PlanFeature.COMMENT_STYLES)) {
             planned.setCommentStyle(CommentStyle.CLASSIC);
