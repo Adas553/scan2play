@@ -7,6 +7,7 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.service.AiHealthMonitor;
 import com.scan2play.service.DemoParty;
 import com.scan2play.service.DjService;
+import com.scan2play.service.LogoImage;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlayHistoryService;
@@ -225,6 +226,11 @@ public class DjDashboardController {
             model.addAttribute(LIBRARY_PLAYLIST, library.map(DjLibraryService.Info::playlist).orElse(null));
             model.addAttribute(LIBRARY_MAX_BYTES, DjLibraryController.MAX_BYTES);
             model.addAttribute(LIBRARY_MAX_MB, DjLibraryController.MAX_BYTES / (1024 * 1024));
+            // the DJ's logo (V45): the organiser's card shows the one saved, whatever the plan shows the guests
+            model.addAttribute(DJ_LOGO, settings.logoPath());
+            model.addAttribute(LOGO_MAX_BYTES, LogoImage.MAX_BYTES);
+            model.addAttribute(LOGO_MAX_MB, LogoImage.MAX_BYTES / (1024 * 1024));
+            model.addAttribute(LOGO_MAX_SIDE, LogoImage.MAX_SIDE);
         }
         // what the organiser's plan has (V35): the cards of a feature without Pro say so to the organiser, in place of their form;
         // what the party works with — the comment style, the guests' limits — is the plan's (the saved values wait for Pro)
@@ -358,6 +364,7 @@ public class DjDashboardController {
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
         model.addAttribute(TIP_URL, settings.getTipUrl());
+        model.addAttribute(DJ_LOGO, settings.logoPath());
         model.addAttribute(PERMANENT_LINK, guestUrl);
         model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_PRINT_SIZE, QR_PRINT_SIZE));
         model.addAttribute(QR_LAYOUT, "cards".equals(layout) ? "cards" : "poster");

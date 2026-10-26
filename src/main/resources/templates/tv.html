@@ -19,7 +19,8 @@
 <body>
 <main class="tv">
     <section class="tv-code">
-        <p class="tv-logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+        <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="tv-dj-logo" id="djLogo" alt="DJ">
+        <p class="tv-logo" th:classappend="${djLogo != null} ? 'tv-logo-small'"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
         <h1><span th:if="${#locale.language == 'pl'}" lang="pl">Zeskanuj i poproś o piosenkę</span>
             <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan to request a song</span></h1>
         <img th:if="${qrCodeBase64}" class="tv-qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR" th:alt="${#locale.language == 'pl' ? 'QR code / kod QR' : 'QR code'}">

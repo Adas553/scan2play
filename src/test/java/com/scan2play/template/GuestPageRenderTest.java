@@ -138,6 +138,29 @@ class GuestPageRenderTest {
         return SongRequestEntity.builder().id(id).songName(name).requestNumber(number).build();
     }
 
+    /**
+     * The DJ's logo (V45, Pro): above our own, from our address, with its words for a screen reader; our name then smaller. Without one,
+     * the page as before (written as {@code guest-logo.html}, {@code result-logo.html}, {@code party-ended-logo.html}).
+     */
+    @Test
+    void theDjsLogo_standsAboveOurs_onTheGuestsPages() {
+        Map<String, Object> dj = Map.of("djName", "DJ Koko", "djLogo", "/p/ABC12/logo.png?v=0123456789abcdef");
+        String html = render(PL, dj);
+        writeForTheBrowserTests("guest-logo.html", html);
+        assertThat(tag(html, "djLogo")).contains("src=\"/p/ABC12/logo.png?v=0123456789abcdef\"", "class=\"s2p-logo-tile s2p-dj-logo\"", "alt=\"Logo DJ-a\"");
+        assertThat(html.indexOf("id=\"djLogo\"")).isLessThan(html.indexOf("class=\"s2p-logo\""));
+        assertThat(html).contains("class=\"display-5 fw-bold mb-2 fs-4\"");
+        assertThat(render(Locale.ENGLISH, dj)).contains("alt=\"The DJ&#39;s logo\"");
+        assertThat(render(PL, Map.of("djName", "DJ Koko"))).doesNotContain("djLogo", "fs-4");
+
+        String ended = renderEnded(PL, dj);
+        writeForTheBrowserTests("party-ended-logo.html", ended);
+        assertThat(ended).contains("id=\"djLogo\"", "src=\"/p/ABC12/logo.png?v=0123456789abcdef\"");
+        String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title"), dj);
+        writeForTheBrowserTests("result-logo.html", accepted);
+        assertThat(accepted.indexOf("id=\"djLogo\"")).isNotNegative().isLessThan(accepted.indexOf("class=\"s2p-logo\""));
+    }
+
     /** No order to tell (the DJ plays from their own software): the guests' requests, unnumbered, and the guest's own "waits". */
     @Test
     void theGuestsRequests_areListed_andTheGuestsOwnWaitsForTheDj() {

@@ -346,6 +346,11 @@
     </th:block>
 </th:block>
 
+<!--/* The DJ's logo (V45, Pro): above our own on the guests' pages, on a light tile — a dark logo with a transparent background
+     would vanish on our dark pages. Only with a logo the organiser's plan shows (djLogo, PartySettingsEntity.logoPath). */-->
+<img th:fragment="djLogo" th:if="${djLogo != null}" th:src="@{${djLogo}}" class="s2p-logo-tile s2p-dj-logo" id="djLogo"
+     th:alt="#{logo.dj.alt}" alt="The DJ's logo">
+
 <span th:fragment="logo" class="s2p-logo"><img src="/images/logo-small.svg" alt="" class="s2p-logo-mark"><span>Scan<span class="s2p-logo-two">2</span>Play</span></span>
 
 <!--/* Our logo as the way home, on the public pages (the guide, Pro, the demo, the home page itself; the panel; the owner, 2026-10-24): a link that looks like the logo

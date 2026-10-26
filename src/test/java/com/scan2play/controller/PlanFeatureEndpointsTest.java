@@ -97,7 +97,8 @@ class PlanFeatureEndpointsTest {
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans),
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),
-                                DjLibraryController.MAX_BYTES))
+                                DjLibraryController.MAX_BYTES),
+                        new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -119,7 +120,10 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary").param("party", PUB)),
                 Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary/csv").param("party", PUB)),
                 Arguments.of(PlanFeature.LIBRARY, false, post("/dj/library").param("partyCode", PUB)
-                        .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM).content("#EXTM3U\nA - B.mp3\n")));
+                        .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM).content("#EXTM3U\nA - B.mp3\n")),
+                Arguments.of(PlanFeature.LOGO, false, post("/dj/logo").param("partyCode", PUB)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                        .content(com.scan2play.service.TestImages.png(40, 20))));
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -166,7 +170,9 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(get("/dj/settings").param("party", PUB)),
                 Arguments.of(get("/dj/qr-print").param("party", PUB)),
                 // deleting the library needs no Pro: the organiser's own data goes whatever the plan
-                Arguments.of(post("/dj/library/delete").param("partyCode", PUB)));
+                Arguments.of(post("/dj/library/delete").param("partyCode", PUB)),
+                // nor deleting the logo (V45)
+                Arguments.of(post("/dj/logo/delete").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{0}")

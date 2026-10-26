@@ -36,6 +36,7 @@
 
 <main>
     <header class="head">
+        <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" id="djLogo" alt="DJ">
         <p class="logo"><img src="/images/logo-small.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
         <h1 th:text="#{summary.title}">Evening summary</h1>
         <p th:if="${evening != null}" class="when">

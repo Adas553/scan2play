@@ -25,7 +25,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Now (the owner's priorities, 2026-10-26)
 
-1. **The DJ's logo** (Pro, `PlanFeature.LOGO`) — in progress on `claude/sleepy-feynman-kxaj43`. The owner's picks: shown on all five
+1. **The DJ's logo** (Pro, `PlanFeature.LOGO`, V45) — built on `claude/sleepy-feynman-kxaj43`, the PR to `dev` waits for the owner's
+   review (then a release; V45 on production: check Flyway's line once). The owner's picks: shown on all five
    places (the guest page and the result page, the TV screen, the QR poster and cards, "Podsumowanie wieczoru", "impreza zakończona");
    the browser scales any image it reads to ≤ 512 px and sends a PNG, the server takes only PNG / JPEG (its magic bytes), reads the
    size before decoding, re-encodes to PNG without metadata; our mark stays small at the bottom; the privacy policy says it.

@@ -302,3 +302,43 @@ body {
         padding: 6mm 16px;
     }
 }
+
+/* The DJ's logo (V45, Pro): at the poster's top and above a card's code, within a box — any proportions fit; ours then smaller */
+.dj-logo {
+    display: block;
+    margin: 0 auto;
+    object-fit: contain;
+}
+
+.poster .dj-logo {
+    max-width: 80mm;
+    max-height: 16mm;
+    margin-bottom: 1mm;
+}
+
+.poster .logo.ours {
+    display: inline-flex;
+    vertical-align: middle;
+    gap: 1mm;
+    font-size: inherit;
+}
+
+.poster .logo.ours img {
+    width: 1.2em;
+    height: 1.2em;
+}
+
+.card .dj-logo {
+    max-width: 36mm;
+    max-height: 7mm;
+}
+
+.card .logo.ours {
+    gap: 1mm;
+    font-size: 6.5pt;
+}
+
+.card .logo.ours img {
+    width: 3mm;
+    height: 3mm;
+}

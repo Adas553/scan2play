@@ -18,7 +18,8 @@
          tip): who plays, the vibe in one quiet line, the field and "Wyślij prośbę", the list — and the DJ's profiles and tip under it. */-->
     <div class="card p-4 shadow-lg w-100 text-white mb-4">
         <div class="text-center mb-3">
-            <h1 class="display-5 fw-bold mb-2"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
+            <th:block th:replace="~{fragments/components :: djLogo}"></th:block>
+            <h1 class="display-5 fw-bold mb-2" th:classappend="${djLogo != null} ? 'fs-4'"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
             <!--/* Who plays, as the DJ wrote it (V17) */-->
             <p th:if="${djName != null}" id="djName" class="fs-5 fw-bold mb-1" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</p>
             <!--/* The party's vibe as the DJ set it: the vibe of the list (when not "any") and the DJ's own words (V16) — a line of

@@ -109,7 +109,8 @@ class QrPrintPageTest {
                 StandardCharsets.UTF_8);
         // as served, for the browser tests (src/test/browser, page 'qr-print-<layout>'): the real script under the real CSP
         Files.createDirectories(BROWSER_HARNESS);
-        Files.writeString(BROWSER_HARNESS.resolve("qr-print-" + layout + ".html"), html, StandardCharsets.UTF_8);
+        Files.writeString(BROWSER_HARNESS.resolve("qr-print-" + layout + (party.getLogoVersion() != null ? "-logo" : "") + ".html"), html,
+                StandardCharsets.UTF_8);
         return html;
     }
 
@@ -160,6 +161,27 @@ class QrPrintPageTest {
             assertThat(html).as(locale.toString()).doesNotContain("lang=\"pl\"", "class=\"second\"", "Zeskanuj", "Kod imprezy",
                     "Napiwek", "kod QR");
         }
+    }
+
+    /**
+     * The DJ's logo (V45, Pro): at the poster's top, above the code on every card; ours stays, smaller (written as
+     * {@code qr-print-poster-logo.html} / {@code qr-print-cards-logo.html}: the browser tests check both still fit their paper).
+     */
+    @Test
+    void theDjsLogo_isAtThePostersTop_andOnEveryCard() throws IOException {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).logoVersion("0123456789abcdef".repeat(4))
+                .instagramUrl("https://www.instagram.com/dj.koko/").tiktokUrl("https://www.tiktok.com/@dj_koko")
+                .facebookUrl("https://www.facebook.com/djkoko").tipUrl("https://revolut.me/djkoko").build();
+        String logo = "src=\"/p/" + PARTY + "/logo.png?v=0123456789abcdef\"";
+
+        String poster = render("poster", Locale.forLanguageTag("pl"), party);
+        assertThat(poster).containsOnlyOnce(logo).containsOnlyOnce("class=\"logo ours\"").doesNotContain("<p class=\"logo\"");
+        assertThat(poster.indexOf("class=\"logo ours\"")).as("ours at the end of the code's line").isGreaterThan(poster.indexOf("class=\"code\""));
+        assertThat(poster.indexOf(logo)).isLessThan(poster.indexOf("<h1>"));
+        String cards = render("cards", Locale.forLanguageTag("pl"), party);
+        assertThat(cards.split(java.util.regex.Pattern.quote(logo), -1)).as("on every card").hasSize(9);
+
+        assertThat(render("poster", Locale.ENGLISH)).doesNotContain("logo.png", "logo ours");
     }
 
     @Test
