@@ -67,7 +67,8 @@ S2P.scenario({
         // under "Kod QR": the QR code and one row, "To urządzenie" (the page "Ustawienia imprezy" has its card — without "Wklej link" on
         // another's party: she has joined already, the owner 2026-10-10; SettingsPageRenderTest)
         document.getElementById('settingsToggle').click();
-        const rows = Array.from(document.querySelectorAll('#settingsMore [data-settings-row]')).filter(function (row) { return row.getClientRects().length > 0; });
+        document.getElementById('settingsMoreFold').open = true;
+        const rows = Array.from(document.querySelectorAll('#settingsMore [data-settings-row]')).filter(function (row) { return row.checkVisibility(); });
         t.step('"Więcej" has this device alone, leading to its card', rows.map(function (row) {
             return [row.dataset.settingsRow, row.getAttribute('href')];
         }), [['device', '/dj/settings?party=HARN1#deviceCard']]);

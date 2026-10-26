@@ -3,6 +3,7 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.PlanService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.util.Texts;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class TvScreenController {
     private final PartySettingsQueryService partySettingsQueryService;
     private final GuestQueueService guestQueueService;
     private final QrCodeService qrCodeService;
+    private final PlanService planService;
 
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
@@ -45,6 +47,7 @@ public class TvScreenController {
         String guestUrl = Texts.withoutTrailingSlash(rawBaseUrl) + "/p/" + partyCode;
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(DJ_NAME, settings.getDjName());
+        model.addAttribute(DJ_LOGO, planService.asPlanned(settings).logoPath());
         model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_SIZE, QR_SIZE));
         model.addAttribute(PERMANENT_LINK, guestUrl.replaceFirst("^https?://", ""));   // to read and type: the code holds the rest
         addList(model, settings);

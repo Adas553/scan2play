@@ -86,6 +86,19 @@ class TvScreenWebTest {
         return result.getResponse().getContentAsString(StandardCharsets.UTF_8);
     }
 
+    /** The DJ's logo (V45, Pro) above our name, from our address; ours then smaller. None without one. */
+    @Test
+    void theDjsLogo_standsAboveOurs() throws Exception {
+        doReturn(PartySettingsEntity.builder().partyCode("LOGO1").active(true).logoVersion("0123456789abcdef".repeat(4)).build())
+                .when(partySettingsQueryService).getSettings("LOGO1");
+        when(guestQueueService.mostWanted("LOGO1")).thenReturn(List.of());
+        String html = mockMvc.perform(get("/p/LOGO1/tv")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("class=\"tv-dj-logo\"", "src=\"/p/LOGO1/logo.png?v=0123456789abcdef\"", "tv-logo tv-logo-small");
+        assertThat(html.indexOf("tv-dj-logo")).isLessThan(html.indexOf("class=\"tv-logo"));
+        assertThat(mockMvc.perform(get("/p/ABC12/tv")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .doesNotContain("tv-dj-logo", "tv-logo-small");
+    }
+
     /** A page of the browser tests: the stand-in serves the files at /js/, /css/ — not under the deploy's version ("/dev/js/"). */
     private static void write(String name, String html) throws IOException {
         Path out = Path.of("target", "browser-harness", name);

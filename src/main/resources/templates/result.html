@@ -15,7 +15,12 @@
     <div class="card p-4 p-sm-5 shadow-lg text-white">
 
         <!--/* the same party as the page the guest came from: our logo and who plays, small (the design review, 2026-10-09) */-->
-        <p class="fw-bold mb-3"><th:block th:replace="~{fragments/components :: logo}"></th:block><th:block th:if="${djName != null}"><span
+        <!--/* with the DJ's logo (V45) the head is theirs: the logo, who plays under it; ours over the footer */-->
+        <th:block th:if="${djLogo != null}">
+        <th:block th:replace="~{fragments/components :: djLogo}"></th:block>
+        <p th:if="${djName != null}" class="fw-bold mb-3"><span id="djName" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</span></p>
+        </th:block>
+        <p th:if="${djLogo == null}" class="fw-bold mb-3"><th:block th:replace="~{fragments/components :: logo}"></th:block><th:block th:if="${djName != null}"><span
                 class="text-secondary fw-normal"> · </span><span id="djName" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</span></th:block></p>
 
         <h2 class="mb-3 text-white" th:text="${response.songName}">Song Name</h2>

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static com.scan2play.controller.ViewAttributes.DJ_LOGO;
 import static com.scan2play.controller.ViewAttributes.DJ_NAME;
 import static com.scan2play.controller.ViewAttributes.EVENING;
 import static com.scan2play.controller.ViewAttributes.EVENINGS;
@@ -59,6 +60,7 @@ public class DjSummaryController {
         LocalDate shown = pick(evening, evenings);
         model.addAttribute(PARTY_CODE, settings.getPartyCode());
         model.addAttribute(DJ_NAME, settings.getDjName());
+        model.addAttribute(DJ_LOGO, planService.asPlanned(settings).logoPath());
         model.addAttribute(EVENINGS, evenings);
         model.addAttribute(EVENING, shown);
         List<SongRequestEntity> requests = shown == null ? List.of() : eveningSummaryService.requests(settings.getPartyCode(), shown);

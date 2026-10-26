@@ -163,6 +163,61 @@
             </div>
         </details>
 
+        <!--/* The DJ's logo (V45, Pro): any image the browser can read, drawn by logo.js at most 512 px a side and sent as a PNG (the
+             request's body, as the library: PartyLogoController); the server makes its own PNG of it. Shown on the guest pages, the
+             TV, the print and the summary. The organiser's alone; without Pro the offer, and a logo saved before can be deleted. */-->
+        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="logoCard">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.logo.title}">Your logo</span><th:block th:if="${plan.pro('LOGO')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+                <span class="s2p-fold-state" th:unless="${plan.pro('LOGO')}" id="logoState"
+                      th:text="${djLogo != null} ? #{settings.row.logo} : #{settings.row.logo.none}">Uploaded</span>
+            </summary>
+            <div class="s2p-fold-body">
+            <th:block th:if="${plan.pro('LOGO')}">
+            <div th:replace="~{fragments/components :: proOffer(${djLogo != null} ? #{plan.logo.kept} : #{plan.logo.offer})}"></div>
+            <form th:if="${djLogo != null}" th:action="@{/dj/logo/delete}" method="POST" class="m-0 mt-3" id="logoDeleteForm"
+                  th:attr="data-confirm=#{settings.logo.delete.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.logo.delete}">Delete the logo</button>
+            </form>
+            </th:block>
+            <th:block th:unless="${plan.pro('LOGO')}">
+            <p class="small text-secondary mb-2" th:text="#{settings.logo.help}">Your guests see your logo on the party page…</p>
+            <div class="s2p-library-state mb-3" th:classappend="${djLogo == null} ? 's2p-library-state-none'">
+                <span th:if="${djLogo == null}" th:text="#{settings.logo.none}">No logo yet.</span>
+                <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="s2p-logo-tile s2p-logo-current" id="logoCurrent"
+                     th:alt="#{logo.dj.alt}" alt="The DJ's logo">
+                <form th:if="${djLogo != null}" th:action="@{/dj/logo/delete}" method="POST" class="m-0" id="logoDeleteForm"
+                      th:attr="data-confirm=#{settings.logo.delete.confirm}">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <button type="submit" class="btn btn-sm btn-link text-danger s2p-library-delete" th:text="#{settings.library.delete.short}">Delete</button>
+                </form>
+            </div>
+            <!--/* data-max-bytes / data-too-large: a larger file is refused here, before it is read */-->
+            <form th:action="@{/dj/logo}" method="POST" class="m-0" id="logoForm"
+                  th:attr="data-sending=#{settings.logo.sending},data-refused=#{settings.logo.error.other},data-unreadable=#{settings.logo.error.UNREADABLE},
+                           data-not-image=#{settings.logo.error.NOT_AN_IMAGE},
+                           data-max-bytes=${logoMaxBytes},data-max-side=${logoMaxSide},
+                           data-too-large=#{settings.logo.error.TOO_LARGE(${logoMaxMb})}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="file" id="logoFile" name="file" accept="image/png,image/jpeg,image/webp" required class="s2p-file-input">
+                <label for="logoFile" class="s2p-file-drop" id="logoDrop">
+                    <span class="s2p-file-drop-title" data-file-name th:attr="data-empty=#{settings.logo.choose}"
+                          th:text="#{settings.logo.choose}">Choose an image</span>
+                    <span class="s2p-file-drop-hint" th:text="#{settings.logo.choose.hint(${logoMaxMb})}">PNG, JPEG or WebP · up to 2 MB</span>
+                </label>
+                <!--/* what will be sent, as the guests will see it: drawn by logo.js on the tile the pages put under a logo */-->
+                <div class="mt-3" id="logoPreview" hidden>
+                    <p class="small text-light mb-1" th:text="#{settings.logo.preview}">Preview</p>
+                    <canvas class="s2p-logo-tile s2p-logo-current" id="logoCanvas"></canvas>
+                </div>
+                <button type="submit" class="btn btn-sm btn-action mt-3 s2p-library-upload" id="logoUpload" disabled th:text="#{settings.logo.upload}">Upload</button>
+                <p class="small mt-2 mb-0" id="logoAnswer" role="status" hidden></p>
+            </form>
+            </th:block>
+            </div>
+        </details>
+
         <!--/* The guests' limits, and the use of the server's own in one line with their windows (the design review: three lines
              explained limits the DJ does not set; the owner: the line must say "30 na 10 min", "300 na 24 h") — what a network is,
              unfolded. The badges: grey, yellow from 80 %, red at the limit. */-->

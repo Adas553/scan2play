@@ -222,11 +222,14 @@
             </section>
 
             <!--/* "Więcej": the rare settings, one row each with its state, leading to the page "Ustawienia imprezy" at its card (the
-                 staff: their own page). The row of the limits turns yellow from 80 % of a server limit (polling.js keeps it current
-                 from X-Guest-Limits-Use); the device's state is this browser's (settings-rows.js). */-->
+                 staff: their own page) — folded to one line, as the cards of that page: seven rows pushed the queue down; opened, it
+                 stays open for the tab (settings-toggle.js). The row of the limits turns yellow from 80 % of a server limit (polling.js
+                 keeps it current from X-Guest-Limits-Use; the bar above the queue says it too); the device's state is this browser's
+                 (settings-rows.js). */-->
             <nav id="settingsMore" th:attr="aria-label=#{settings.more}"
                  th:with="settingsUrl=@{/dj/settings(party=${partyCode})}">
-                <p class="s2p-rows-title" th:text="#{settings.more}">More</p>
+                <details class="card bg-dark border-secondary s2p-fold s2p-more" id="settingsMoreFold">
+                <summary class="s2p-fold-summary"><span class="s2p-card-title s2p-fold-name" th:text="#{settings.more}">More</span></summary>
                 <div class="s2p-rows">
                     <!--/* a feature of the Pro plan the party has not (V35): the row stays for the organiser with "PRO" by its name, said once — no
                          state beside it (the review of the look, 2026-10-14); the limits' row keeps the limits that hold */-->
@@ -243,6 +246,11 @@
                         <span class="s2p-row-state"
                               th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
                               th:text="${plan.pro('PROFILES')} ? '' : (${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named})">Instagram · tips</span>
+                    </a>
+                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="logo" th:href="${settingsUrl + '#logoCard'}">
+                        <span class="s2p-row-name"><span th:text="#{settings.logo.title}">Your logo</span><th:block th:if="${plan.pro('LOGO')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
+                        <span class="s2p-row-state"
+                              th:text="${plan.pro('LOGO')} ? '' : (${djLogo != null} ? #{settings.row.logo} : #{settings.row.logo.none})">Uploaded</span>
                     </a>
                     <a th:if="${isOwner}" class="s2p-row" data-settings-row="library" th:href="${settingsUrl + '#libraryCard'}">
                         <span class="s2p-row-name"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
@@ -274,6 +282,7 @@
                               th:attr="data-on=#{settings.row.device.on},data-off=#{settings.row.device.off}"></span>
                     </a>
                 </div>
+                </details>
             </nav>
         </div>
     </div>

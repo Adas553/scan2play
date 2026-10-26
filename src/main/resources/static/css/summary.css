@@ -313,3 +313,12 @@ h2 {
         padding: 0;
     }
 }
+
+/* The DJ's logo (V45, Pro) above ours */
+.dj-logo {
+    display: block;
+    max-width: 240px;
+    max-height: 96px;
+    margin: 0 auto 8px;
+    object-fit: contain;
+}

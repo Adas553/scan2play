@@ -245,6 +245,28 @@ class SettingsPageRenderTest {
         write("settings-library.html", html);
     }
 
+    /**
+     * "Twoje logo" (V45): without one the field to choose an image (any the browser reads, at most 2 MB), the preview hidden, "Wgraj"
+     * disabled; with one the logo from our address and a small "Usuń" that asks first (written as {@code settings-logo.html}).
+     */
+    @Test
+    void theOwnersLogo_canBeUploaded_shown_andDeleted() throws IOException {
+        String none = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        assertThat(none).contains("id=\"logoCard\"", "id=\"logoForm\"", "action=\"/dj/logo\"", ">Nie masz jeszcze logo.<",
+                        "accept=\"image/png,image/jpeg,image/webp\"", ">PNG, JPEG lub WebP · do 2 MB<", "data-max-bytes=\"2097152\"",
+                        "data-max-side=\"512\"", "id=\"logoPreview\" hidden", "id=\"logoUpload\" disabled", ">Brak<")
+                .doesNotContain("id=\"logoDeleteForm\"", "id=\"logoCurrent\"");
+
+        PartySettingsEntity withLogo = party().toBuilder().logoVersion("0123456789abcdef".repeat(4)).build();
+        String html = render(new PartyStaffService.Access(withLogo, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        assertThat(html).contains("src=\"/p/" + PARTY + "/logo.png?v=0123456789abcdef\"", "id=\"logoCurrent\"", "id=\"logoDeleteForm\"",
+                "action=\"/dj/logo/delete\"", "data-confirm=\"Usunąć logo? Zniknie ze strony gości", ">Wgrane<");
+        write("settings-logo.html", html);
+
+        assertThat(render(staff(StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL)).as("the organiser's alone")
+                .doesNotContain("logoCard");
+    }
+
     /** The use of each server limit is a badge the DJ notices: grey, yellow from 80 %, red at the limit. */
     @Test
     void theUseOfTheServerLimits_standsOut_andTurnsYellowThenRed() {
