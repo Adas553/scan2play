@@ -326,18 +326,23 @@ body {
 }
 
 /* "Działa na / Powered by Scan2Play" at the foot of a poster with the DJ's logo: ours, quiet */
+/* one row, the words and our mark on one centre line */
 .poster .powered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5mm;
     margin: 4mm 0 0;
     color: #666;
     font-size: 9pt;
+    line-height: 1;
 }
 
 .poster .powered .logo.ours {
-    display: inline-flex;
-    vertical-align: middle;
     gap: 1mm;
     color: #222;
     font-size: 10pt;
+    line-height: 1;
 }
 
 .poster .powered .logo.ours img {

@@ -230,6 +230,9 @@
             const ours = document.querySelector('.poster .powered');
             t.check('ours a quiet line at the foot', !!ours && ours.getBoundingClientRect().height < 30
                 && ours.getBoundingClientRect().top > document.querySelector('.poster .tip').getBoundingClientRect().bottom);
+            const words = ours.firstElementChild.getBoundingClientRect(), mark = ours.querySelector('.logo img').getBoundingClientRect();
+            const apart = Math.abs((words.top + words.bottom) / 2 - (mark.top + mark.bottom) / 2);
+            t.check('ours: the words and the mark on one centre line (' + Math.round(apart * 10) / 10 + ' px apart)', apart <= 1);
             const box = logo.getBoundingClientRect();
             t.check('the logo heads the poster: at least 25 mm high (' + Math.round(box.height * 25.4 / 96) + ' mm)', box.height >= 25 * 96 / 25.4);
             const poster = document.querySelector('.poster').getBoundingClientRect();

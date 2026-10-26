@@ -63,8 +63,8 @@
         <th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Napiwek</span> / </th:block><span lang="en">Tip</span>:
         <strong th:text="${T(com.scan2play.util.TipLinks).display(tipUrl)}">revolut.me/djkoko</strong>
     </p>
-    <p th:if="${djLogo != null}" class="powered"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Działa na</span> / </th:block><span
-            lang="en">Powered by</span> <span class="logo ours"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></span></p>
+    <p th:if="${djLogo != null}" class="powered"><span><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Działa na</span> / </th:block><span
+            lang="en">Powered by</span></span><span class="logo ours"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></span></p>
 </main>
 
 <main th:if="${qrLayout == 'cards'}" class="cards">
