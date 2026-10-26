@@ -177,23 +177,35 @@
 
     S2P.scenario({
         name: 'settings-more-rows',
-        title: 'the unfolded settings: two cards ("Impreza", the QR code) and a row with its state for each rare setting, leading to its page',
+        title: 'the unfolded settings: two cards ("Impreza", the QR code), then "Więcej" folded to one line; a tap shows a row with its state for each rare setting, leading to its page, and the tab remembers it',
         run: async function (t) {
+            try { sessionStorage.removeItem('scan2play.settingsMoreOpen'); } catch (e) { /* none */ }
             document.getElementById('settingsToggle').click();
             const cards = Array.from(document.querySelectorAll('.s2p-settings section.card')).filter(shows).map(function (c) { return c.id; });
             t.step('two cards', cards, ['partyCard', 'qrCard']);
+            const more = document.getElementById('settingsMoreFold');
+            const line = more.querySelector('summary');
+            t.step('"Więcej" folded to one line, its rows not shown', [more.open, line.textContent.trim(),
+                document.querySelector('#settingsMore [data-settings-row]').checkVisibility()], [false, 'Więcej', false]);
+            t.check('the line a thumb\'s target (' + Math.round(line.getBoundingClientRect().height) + ' px)', line.getBoundingClientRect().height >= 44);
+            line.click();
+            await t.sleep(50);
+            t.step('a tap unfolds it, and the tab remembers', [more.open, sessionStorage.getItem('scan2play.settingsMoreOpen')], [true, '1']);
             const rows = Array.from(document.querySelectorAll('#settingsMore [data-settings-row]')).filter(shows);
             t.step('a row per rare setting, each to its card on the page "Ustawienia imprezy" (the staff: their own page)', rows.map(function (row) {
                 return [row.dataset.settingsRow, row.getAttribute('href')];
             }), [['hosts', '/dj/settings?party=HARN1#hostListsCard'], ['links', '/dj/settings?party=HARN1#linksCard'],
-                ['library', '/dj/settings?party=HARN1#libraryCard'], ['limits', '/dj/settings?party=HARN1#limitsCard'], ['staff', '/dj/staff?party=HARN1'], ['device', '/dj/settings?party=HARN1#deviceCard']]);
+                ['logo', '/dj/settings?party=HARN1#logoCard'], ['library', '/dj/settings?party=HARN1#libraryCard'], ['limits', '/dj/settings?party=HARN1#limitsCard'], ['staff', '/dj/staff?party=HARN1'], ['device', '/dj/settings?party=HARN1#deviceCard']]);
             const stateOf = function (row) {   // what shows of it (the row of the limits has its states near a limit hidden)
                 const state = row.querySelector('.s2p-row-state');
                 const parts = state.children.length ? Array.from(state.children).filter(shows) : [state];
                 return parts.map(function (p) { return p.textContent.replace(/\s+/g, ' ').trim(); }).join(' ');
             };
-            t.step('each says its state', rows.slice(0, 5).map(stateOf),
-                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Nie wgrano', '2 na gościa · 3 min', 'Osób: 1']);
+            t.step('each says its state', rows.slice(0, 6).map(stateOf),
+                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', 'Nie wgrano', '2 na gościa · 3 min', 'Osób: 1']);
+            line.click();
+            await t.sleep(50);
+            t.step('folded again: forgotten', sessionStorage.getItem('scan2play.settingsMoreOpen'), null);
             t.step('each a thumb\'s target', rows.filter(function (row) { return row.getBoundingClientRect().height < 44; }).length, 0);
             t.check('the queue starts in the first screen with them unfolded', document.getElementById('queueList').getBoundingClientRect().top < window.innerHeight);
         }

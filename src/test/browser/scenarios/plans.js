@@ -37,12 +37,13 @@
         viewport: '390,844',
         run: async function (t) {
             document.getElementById('settingsToggle').click();
+            document.getElementById('settingsMoreFold').open = true;
             const row = function (name) { return document.querySelector('#settingsMore [data-settings-row="' + name + '"]'); };
             t.step('the rows stay, each where it was', Array.from(document.querySelectorAll('#settingsMore [data-settings-row]'))
-                .filter(shows).map(function (r) { return r.dataset.settingsRow; }), ['hosts', 'links', 'library', 'limits', 'staff', 'device']);
+                .filter(shows).map(function (r) { return r.dataset.settingsRow; }), ['hosts', 'links', 'logo', 'library', 'limits', 'staff', 'device']);
             t.step('"PRO" by the name of each Pro feature: a cyan tag on the name\'s line',
-                ['hosts', 'links', 'library', 'limits'].map(function (name) { return markOf(row(name).querySelector('.s2p-row-name')); }),
-                [MARK, MARK, MARK, MARK]);
+                ['hosts', 'links', 'logo', 'library', 'limits'].map(function (name) { return markOf(row(name).querySelector('.s2p-row-name')); }),
+                [MARK, MARK, MARK, MARK, MARK]);
             t.step('what each says', ['hosts', 'links', 'limits'].map(function (name) {
                 const state = row(name).querySelector('.s2p-row-state');
                 const parts = state.children.length ? Array.from(state.children).filter(shows) : [state];

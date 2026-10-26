@@ -1252,6 +1252,9 @@ th[data-sort].sort-desc::after {
 .s2p-fold-state { color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
 .s2p-fold[open] > .s2p-fold-summary > .s2p-fold-state { display: none; }
 .s2p-fold-body { padding: 0 1rem 1rem; }
+/* the panel's "Więcej" folded as a card: unfolded, its rows inside it, one border */
+.s2p-more { overflow: hidden; }
+.s2p-more > .s2p-rows { border: 0; border-top: 1px solid var(--s2p-border); border-radius: 0; }
 .s2p-fold-link { flex-direction: row; color: inherit; text-decoration: none; }
 .s2p-fold-link::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; flex: none; }
 .s2p-fold-link:hover { color: inherit; }
