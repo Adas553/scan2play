@@ -27,8 +27,8 @@
     <p class="hint" th:text="#{qr.print.hint}">This bar is not printed.</p>
 </nav>
 
-<main th:if="${qrLayout == 'poster'}" class="poster">
-    <!--/* the DJ's logo (V45, Pro) at the top; ours then small at the end of the code's line — a row of its own pushed the poster past A4 */-->
+<main th:if="${qrLayout == 'poster'}" class="poster" th:classappend="${djLogo != null} ? 'with-logo'">
+    <!--/* the DJ's logo (V45, Pro) heads the poster, the code a little smaller to keep one A4 page; ours then a quiet line at the foot */-->
     <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" alt="DJ">
     <h1>
         <span th:if="${#locale.language == 'pl'}" lang="pl">Zeskanuj i poproś o piosenkę</span>
@@ -46,8 +46,7 @@
         <span th:if="${#locale.language == 'pl'}" lang="pl">Nie możesz zeskanować? Wejdź na:</span> <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Can't scan? Open:</span><br>
         <strong th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</strong>
     </p>
-    <p class="code"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Kod imprezy</span> / </th:block><span lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong><th:block
-            th:if="${djLogo != null}"> · <span class="logo ours"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></span></th:block></p>
+    <p class="code"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Kod imprezy</span> / </th:block><span lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
     <!--/* The DJ's profiles (V24), as a guest reads them on paper: "Instagram @djkoko"; a Facebook page known only by its number
          has nothing to read, so it is left out here */-->
     <th:block th:fragment="djLinks" th:with="links=${T(com.scan2play.util.SocialLinks)},
@@ -64,14 +63,17 @@
         <th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Napiwek</span> / </th:block><span lang="en">Tip</span>:
         <strong th:text="${T(com.scan2play.util.TipLinks).display(tipUrl)}">revolut.me/djkoko</strong>
     </p>
+    <p th:if="${djLogo != null}" class="powered"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Działa na</span> / </th:block><span
+            lang="en">Powered by</span> <span class="logo ours"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></span></p>
 </main>
 
 <main th:if="${qrLayout == 'cards'}" class="cards">
     <section class="card" th:each="card : ${#numbers.sequence(1, 8)}">
         <!--/* the code's column: our logo above the code, the DJ's profiles under it (the owner, 2026-10-07); the texts beside */-->
         <div class="side">
+            <!--/* the DJ's logo (V45) in place of ours: two marks stacked on a card this small were clutter, and its address names us */-->
             <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" alt="DJ">
-            <p class="logo" th:classappend="${djLogo != null} ? 'ours'"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+            <p th:if="${djLogo == null}" class="logo"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
             <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR" th:alt="${#locale.language == 'pl' ? 'QR code / kod QR' : 'QR code'}">
             <th:block th:replace="~{qr-print :: djLinks}"></th:block>
         </div>

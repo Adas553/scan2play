@@ -1322,26 +1322,45 @@ th[data-sort].sort-desc::after {
     }
 }
 
-/* The DJ's logo (V45, Pro), on a light tile: a dark logo with a transparent background vanishes on our dark pages. On the guests'
-   pages above our own (components :: djLogo), in "Twoje logo" the one saved and the preview of the one chosen (logo.js). */
+/* The DJ's logo (V45, Pro), on a light badge: a dark logo with a transparent background vanishes on our dark pages. The head of
+   the guests' pages (components :: djLogo); in "Twoje logo" the one saved and the preview of the one chosen (logo.js). The picture is
+   trimmed of its empty margins when chosen, so the badge's own padding is its only margin. */
 .s2p-logo-tile {
     display: block;
     width: auto;
     height: auto;
     max-width: 100%;
-    padding: 6px;
-    border-radius: 10px;
+    padding: 10px 16px;
+    border-radius: 14px;
     background: var(--s2p-white);
+    box-shadow: 0 6px 20px var(--s2p-black-50);
     object-fit: contain;
 }
 
 .s2p-dj-logo {
-    max-width: min(70%, 260px);
-    max-height: 110px;
-    margin: 0 auto 12px;
+    max-width: min(80%, 300px);
+    max-height: 96px;
+    margin: 0 auto 14px;
 }
 
 .s2p-logo-current {
     max-height: 72px;
     max-width: 60%;
+    box-shadow: none;
+}
+
+/* "Działa na Scan2Play" over the footer of a page with the DJ's logo: ours, quiet */
+.s2p-powered {
+    font-size: 0.85rem;
+    color: var(--s2p-text-muted);
+}
+
+.s2p-powered .s2p-logo {
+    font-weight: 700;
+    color: var(--s2p-text);
+}
+
+.s2p-powered .s2p-logo-mark {
+    width: 18px;
+    height: 18px;
 }

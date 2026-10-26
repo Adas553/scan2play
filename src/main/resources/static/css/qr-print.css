@@ -311,34 +311,42 @@ body {
 }
 
 .poster .dj-logo {
-    max-width: 80mm;
-    max-height: 16mm;
-    margin-bottom: 1mm;
+    max-width: 120mm;
+    max-height: 30mm;
+    margin-bottom: 4mm;
 }
 
-.poster .logo.ours {
+.poster.with-logo h1 {
+    margin-bottom: 4mm;
+}
+
+.poster.with-logo .qr {
+    width: 96mm;
+    height: 96mm;
+}
+
+/* "Działa na / Powered by Scan2Play" at the foot of a poster with the DJ's logo: ours, quiet */
+.poster .powered {
+    margin: 4mm 0 0;
+    color: #666;
+    font-size: 9pt;
+}
+
+.poster .powered .logo.ours {
     display: inline-flex;
     vertical-align: middle;
     gap: 1mm;
-    font-size: inherit;
+    color: #222;
+    font-size: 10pt;
 }
 
-.poster .logo.ours img {
-    width: 1.2em;
-    height: 1.2em;
+.poster .powered .logo.ours img {
+    width: 4mm;
+    height: 4mm;
 }
 
 .card .dj-logo {
-    max-width: 36mm;
-    max-height: 7mm;
-}
-
-.card .logo.ours {
-    gap: 1mm;
-    font-size: 6.5pt;
-}
-
-.card .logo.ours img {
-    width: 3mm;
-    height: 3mm;
+    max-width: 40mm;
+    max-height: 10mm;
+    margin-bottom: 1mm;
 }

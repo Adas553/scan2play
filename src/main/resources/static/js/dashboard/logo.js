@@ -1,7 +1,8 @@
 /**
  * "Twoje logo" on the page "Ustawienia imprezy" (settings.html, V45): the chosen image is read here, in the browser — a PNG, a JPEG
  * or a WebP (the server reads no WebP) —, drawn at most data-max-side px a side on the preview's canvas and sent as that PNG, the
- * request's body (PartyLogoController); the server checks it again and makes its own PNG. A file larger than data-max-bytes, or of
+ * request's body (PartyLogoController); the server checks it again and makes its own PNG. Its empty margins are cut off first
+ * (contentBox): a logo saved in the middle of a large square would show as a dot. A file larger than data-max-bytes, or of
  * another kind (an SVG among them), is refused here before it is read. After a save or "Usuń" the card is brought again from the
  * server and put in place, as the library's (library.js).
  *
@@ -52,17 +53,69 @@ async function refreshCard(sentence) {
     }
 }
 
-/** The image drawn on the canvas at most maxSide px a side, its proportions kept; never enlarged. */
+/** How far a pixel's colour may be from the background's and still be background (a JPEG's noise, a faint shadow). */
+const BACKGROUND_DISTANCE = 40;
+
+/**
+ * The part of the picture that is the logo: its empty margins cut off — transparent ones, or ones of the colour all four corners
+ * share (a logo saved on a white or grey square) — with a margin of 4 % left.
+ * The whole picture when its corners differ (a photo) or nothing stands out. Read from a copy at most 1024 px a side: enough to find
+ * an edge, and fast on a phone.
+ */
+function contentBox(bitmap) {
+    const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const whole = { x: 0, y: 0, width: bitmap.width, height: bitmap.height };
+    const sample = document.createElement('canvas');
+    sample.width = width;
+    sample.height = height;
+    const context = sample.getContext('2d', { willReadFrequently: true });
+    context.drawImage(bitmap, 0, 0, width, height);
+    const data = context.getImageData(0, 0, width, height).data;
+    const at = function (x, y) { const i = (y * width + x) * 4; return [data[i], data[i + 1], data[i + 2], data[i + 3]]; };
+    const corners = [at(0, 0), at(width - 1, 0), at(0, height - 1), at(width - 1, height - 1)];
+    const distance = function (a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]); };
+    const transparent = corners.every(function (c) { return c[3] < 16; });
+    const background = [0, 1, 2].map(function (k) { return corners.reduce(function (sum, c) { return sum + c[k]; }, 0) / 4; });
+    if (!transparent && !corners.every(function (c) { return c[3] > 240 && distance(c, background) <= BACKGROUND_DISTANCE; })) {
+        return whole;
+    }
+    let left = width, top = height, right = -1, bottom = -1;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            const content = data[i + 3] >= 16
+                && (transparent || distance([data[i], data[i + 1], data[i + 2]], background) > BACKGROUND_DISTANCE);
+            if (content) {
+                if (x < left) left = x;
+                if (x > right) right = x;
+                if (y < top) top = y;
+                if (y > bottom) bottom = y;
+            }
+        }
+    }
+    if (right < 0) return whole;
+    const margin = Math.round(Math.max(right - left + 1, bottom - top + 1) * 0.04);
+    left = Math.max(0, left - margin);
+    top = Math.max(0, top - margin);
+    right = Math.min(width - 1, right + margin);
+    bottom = Math.min(height - 1, bottom + margin);
+    return { x: left / scale, y: top / scale, width: (right - left + 1) / scale, height: (bottom - top + 1) / scale };
+}
+
+/** The logo — the picture without its empty margins — drawn on the canvas at most maxSide px a side; never enlarged. */
 async function draw(file, canvas, maxSide) {
     const bitmap = await createImageBitmap(file);
     try {
-        const factor = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-        canvas.width = Math.max(1, Math.round(bitmap.width * factor));
-        canvas.height = Math.max(1, Math.round(bitmap.height * factor));
+        const box = contentBox(bitmap);
+        const factor = Math.min(1, maxSide / Math.max(box.width, box.height));
+        canvas.width = Math.max(1, Math.round(box.width * factor));
+        canvas.height = Math.max(1, Math.round(box.height * factor));
         const context = canvas.getContext('2d');
         context.imageSmoothingQuality = 'high';
         context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        context.drawImage(bitmap, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height);
     } finally {
         bitmap.close();
     }

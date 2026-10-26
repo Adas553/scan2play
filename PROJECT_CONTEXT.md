@@ -299,17 +299,21 @@ learns from the cached settings whether there is a logo and its address — `Par
 hex>` — with no query of its own; `replace` / `delete` write both under the party row's lock and evict `partySettings` after the commit
 (two uploads at once end as one of them). **Made safe** (`LogoImage`): the browser (`js/dashboard/logo.js`) reads the chosen image — PNG,
 JPEG or WebP, ≤ 2 MB, an SVG refused — draws it at most 512 px a side on the preview's canvas and sends that PNG as the request's body
-(as the library: no form's upload); the server checks it again as a stranger's file — ≤ 2 MB, the format by its first bytes (PNG or
+(as the library: no form's upload) — its empty margins cut off first (`contentBox`: transparent ones, or ones of the colour all
+four corners share, 4 % left; a logo saved in the middle of a large square would show as a dot; browser scenario
+`logo-trims-margins`); the server checks it again as a stranger's file — ≤ 2 MB, the format by its first bytes (PNG or
 JPEG only: the JDK reads no WebP, and nothing else is tried), the size read from the header before a pixel is decoded (≤ 4096 a side,
 ≤ 16 megapixels: an image "bomb" is refused unread), a large one read every n-th pixel, scaled to ≤ 512 px and written again as a new
 PNG (no EXIF, no text chunks, no second frame), two decodes at a time on the server. **Served** from our address, `GET
 /p/{code}/logo.png` (`PartyLogoController`, public as the party page): the ETag is the version (a 304 never reads the row),
 `Cache-Control: public, max-age=3600` (a new logo is a new address; a deleted one may live an hour in a browser or Cloudflare — the
 privacy policy says so), a 404 without one or while the organiser's plan has no `LOGO` — the CSP needs no change. **Shown** (`djLogo`,
-as `PlanService.asPlanned` leaves it): the guest page, the result page and "party ended" above our name on a white tile (a dark logo
-vanishes on the dark pages; our name then smaller), the TV screen above ours, the QR poster at its top (ours then small at the end of
-the code's line — a row of its own pushed the poster past A4: browser scenario `logo-poster-fits-a4`) and every card above the code
-(`logo-cards-fit`), the evening summary above ours. Set on "Ustawienia imprezy", the card **"Twoje logo"** (the organiser's; its state
+as `PlanService.asPlanned` leaves it) as a white-label head — the party is the DJ's: on the guest page, the result page and "party
+ended" the logo **in place of ours** on a white badge (a dark logo vanishes on the dark pages; "party ended" loses its 👋), ours a
+quiet "Działa na Scan2Play" over the footer (`components :: footer`, `#poweredBy`); the QR poster headed by it (≤ 30 mm, the code
+96 mm instead of 115 to keep one A4 page — browser scenario `logo-poster-fits-a4`), ours a quiet "Działa na / Powered by Scan2Play"
+at its foot; every card with it above the code in place of ours (two marks stacked were clutter; the address names us —
+`logo-cards-fit`); the TV screen and the evening summary above ours. Set on "Ustawienia imprezy", the card **"Twoje logo"** (the organiser's; its state
 "Wgrane" / "Brak"): the saved logo with a small "Usuń" (asks first), the file's field, the preview "Tak zobaczą je goście:", "Wgraj";
 the card is brought again in place after a save or a deletion, as the library's.
 **`DjPlanEntity` → `dj_plan`** (V35, the owner 2026-10-14) — a DJ's plan, one row per organiser: `ownerId` (the primary key, the Google

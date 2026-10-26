@@ -164,7 +164,7 @@ class QrPrintPageTest {
     }
 
     /**
-     * The DJ's logo (V45, Pro): at the poster's top, above the code on every card; ours stays, smaller (written as
+     * The DJ's logo (V45, Pro): the poster's head, above the code on every card in place of ours; ours then a quiet line at the poster's foot (written as
      * {@code qr-print-poster-logo.html} / {@code qr-print-cards-logo.html}: the browser tests check both still fit their paper).
      */
     @Test
@@ -176,10 +176,12 @@ class QrPrintPageTest {
 
         String poster = render("poster", Locale.forLanguageTag("pl"), party);
         assertThat(poster).containsOnlyOnce(logo).containsOnlyOnce("class=\"logo ours\"").doesNotContain("<p class=\"logo\"");
-        assertThat(poster.indexOf("class=\"logo ours\"")).as("ours at the end of the code's line").isGreaterThan(poster.indexOf("class=\"code\""));
+        assertThat(poster).contains("<main class=\"poster with-logo\">", "class=\"powered\"");
+        assertThat(poster.indexOf("class=\"powered\"")).as("ours at the foot").isGreaterThan(poster.indexOf("class=\"tip\""));
         assertThat(poster.indexOf(logo)).isLessThan(poster.indexOf("<h1>"));
         String cards = render("cards", Locale.forLanguageTag("pl"), party);
         assertThat(cards.split(java.util.regex.Pattern.quote(logo), -1)).as("on every card").hasSize(9);
+        assertThat(cards).as("ours not on a card beside the DJ's").doesNotContain("<p class=\"logo\"");
 
         assertThat(render("poster", Locale.ENGLISH)).doesNotContain("logo.png", "logo ours");
     }

@@ -3,14 +3,16 @@
 // file over 2 MB is refused here, nothing sent; the server's refusal is its own sentence; a saved logo brings the card again in place.
 // The guests' pages, the TV and the print show it from our address under the real CSP, and the print still fits its paper.
 (function () {
-    /** A real picture of width × height as a File of that type: what the DJ would choose. */
+    /** A real picture of width × height as a File of that type, its halves of two colours — no margin to cut off, as a photo. */
     async function picture(width, height, type, name) {
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const context = canvas.getContext('2d');
         context.fillStyle = '#e07000';
-        context.fillRect(0, 0, width, height);
+        context.fillRect(0, 0, width / 2, height);
+        context.fillStyle = '#20a040';
+        context.fillRect(width / 2, 0, width / 2, height);
         context.fillStyle = '#1040c0';
         context.fillRect(width / 4, height / 4, width / 2, height / 2);
         const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, type); });
@@ -83,6 +85,43 @@
             t.step('saved: the card from the server in place, open, with the server\'s sentence',
                 [fresh.textContent, fresh.hidden, document.getElementById('logoCard').open], ['Gotowe — logo zapisane.', false, true]);
             t.step('nothing loaded', loads, []);
+        }
+    });
+
+    /** A logo in the middle of a large white square, as many are saved: what is sent is the logo, its margins cut off. */
+    S2P.scenario({
+        name: 'logo-trims-margins',
+        page: 'settings',
+        title: 'the DJ\'s logo: a logo in the middle of a large white (or transparent) square is sent without the empty margins',
+        run: async function (t) {
+            document.getElementById('logoCard').open = true;
+            const canvas = document.getElementById('logoCanvas');
+            async function framed(background, type) {
+                const square = document.createElement('canvas');
+                square.width = 1000;
+                square.height = 1000;
+                const context = square.getContext('2d');
+                if (background) {
+                    context.fillStyle = background;
+                    context.fillRect(0, 0, 1000, 1000);
+                }
+                context.fillStyle = '#1040c0';
+                context.fillRect(300, 450, 400, 100);
+                const blob = await new Promise(function (resolve) { square.toBlob(resolve, type, 0.95); });
+                return new File([blob], 'logo', { type: type });
+            }
+            choose(await framed('#ffffff', 'image/jpeg'));
+            await t.waitFor(function () { return !document.getElementById('logoPreview').hidden; }, 'the preview', 3000);
+            t.check('on white: the logo with a thin margin (' + canvas.width + ' × ' + canvas.height + ')',
+                canvas.width >= 410 && canvas.width <= 450 && canvas.height >= 110 && canvas.height <= 150);
+            document.getElementById('logoPreview').hidden = true;
+            choose(await framed(null, 'image/png'));
+            await t.waitFor(function () { return !document.getElementById('logoPreview').hidden; }, 'the preview', 3000);
+            t.check('transparent: the same (' + canvas.width + ' × ' + canvas.height + ')',
+                canvas.width >= 410 && canvas.width <= 450 && canvas.height >= 110 && canvas.height <= 150);
+            choose(await picture(1600, 400, 'image/png', 'photo.png'));
+            await t.waitFor(function () { return canvas.width === 512; }, 'a picture whose corners differ', 3000).catch(function () {});
+            t.step('a picture whose corners differ: whole', [canvas.width, canvas.height], [512, 128]);
         }
     });
 
@@ -182,15 +221,17 @@
     S2P.scenario({
         name: 'logo-poster-fits-a4',
         page: 'qr-print-poster-logo',
-        title: 'the QR poster with the DJ\'s logo and every profile and the tip: the logo at the top, ours small in the code\'s line, all on one A4 page',
+        title: 'the QR poster with the DJ\'s logo and every profile and the tip: the logo heads it, ours a quiet line at the foot, all on one A4 page',
         run: async function (t) {
             const logo = document.querySelector('.poster .dj-logo');
             await t.waitFor(function () { return logo && logo.complete; }, 'the logo', 3000);
             t.check('the DJ\'s logo shows', logo.naturalWidth > 0);
             t.check('at the top, above the heading', logo.getBoundingClientRect().bottom <= document.querySelector('.poster h1').getBoundingClientRect().top + 0.5);
-            const ours = document.querySelector('.poster .code .logo');
-            t.check('ours small, in the code\'s line at the bottom', !!ours && ours.getBoundingClientRect().height < 30
-                && ours.getBoundingClientRect().top > document.querySelector('.poster .qr').getBoundingClientRect().bottom);
+            const ours = document.querySelector('.poster .powered');
+            t.check('ours a quiet line at the foot', !!ours && ours.getBoundingClientRect().height < 30
+                && ours.getBoundingClientRect().top > document.querySelector('.poster .tip').getBoundingClientRect().bottom);
+            const box = logo.getBoundingClientRect();
+            t.check('the logo heads the poster: at least 25 mm high (' + Math.round(box.height * 25.4 / 96) + ' mm)', box.height >= 25 * 96 / 25.4);
             const poster = document.querySelector('.poster').getBoundingClientRect();
             t.check('one A4 page: ' + Math.round(poster.height) + ' ≤ ' + Math.round(A4_PRINTABLE) + ' px', poster.height <= A4_PRINTABLE);
         }
@@ -199,7 +240,7 @@
     S2P.scenario({
         name: 'logo-cards-fit',
         page: 'qr-print-cards-logo',
-        title: 'the QR cards with the DJ\'s logo, the three profiles and the tip: the logo above the code, nothing cut off any card',
+        title: 'the QR cards with the DJ\'s logo, the three profiles and the tip: the logo above the code in place of ours, nothing cut off any card',
         run: async function (t) {
             const logos = Array.from(document.querySelectorAll('.card .dj-logo'));
             await t.waitFor(function () { return logos.length === 8 && logos.every(function (img) { return img.complete; }); }, 'the logos', 3000);
@@ -211,6 +252,7 @@
             const links = card.querySelector('.side .dj-links').getBoundingClientRect();
             const tip = card.querySelector('.text .tip').getBoundingClientRect();
             t.check('the logo above the code', logo.bottom <= qr.top + 0.5);
+            t.check('in place of ours: one mark on a card', card.querySelector('.logo') === null);
             t.check('the profiles end inside the card (' + Math.round(whole.bottom - links.bottom) + ' px to spare)', links.bottom <= whole.bottom - 2);
             t.check('the tip ends inside the card', tip.bottom <= whole.bottom - 2 && tip.right <= whole.right - 2);
         }
