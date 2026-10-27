@@ -214,24 +214,52 @@ body {
     padding: 6mm 0;
 }
 
+/* A card is a grid: the code's column — a logo above the code, the DJ's profiles under it — and the texts beside the code itself,
+   centred on it (centred on the whole column they sat higher or lower than the code, by the logo's and the profiles' heights) */
 .card {
-    display: flex;
-    align-items: center;
-    gap: 3mm;
+    display: grid;
+    grid-template-columns: 40mm 1fr;
+    /* the code's row as high as the code: a longer text (three profiles, a tip) reaches above and below it evenly, beside the
+       logo and the profiles, and never moves the code */
+    grid-template-rows: auto 40mm auto;
+    align-content: center;
+    gap: 1.5mm 3mm;
     padding: 4mm;
     border: 1px dashed #999999;
     overflow: hidden;
     break-inside: avoid;
 }
 
-/* The code's column of a card: our logo above the code, the DJ's profiles under it */
 .card .side {
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5mm;
-    width: 40mm;
+    display: contents;
+}
+
+.card .side > * {
+    grid-column: 1;
+    justify-self: center;
+}
+
+.card .side > .logo,
+.card .side > .dj-logo {
+    grid-row: 1;
+}
+
+.card .side > .qr {
+    grid-row: 2;
+}
+
+.card .side > .dj-links {
+    grid-row: 3;
+}
+
+.card .text {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+}
+
+.card .text p:last-child {
+    margin-bottom: 0;
 }
 
 .card .side p {
@@ -339,4 +367,8 @@ body {
 .card.with-logo .qr {
     width: 36mm;
     height: 36mm;
+}
+
+.card.with-logo {
+    grid-template-rows: auto 36mm auto;
 }

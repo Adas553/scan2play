@@ -255,6 +255,9 @@
             const links = card.querySelector('.side .dj-links').getBoundingClientRect();
             const tip = card.querySelector('.text .tip').getBoundingClientRect();
             t.check('the logo above the code', logo.bottom <= qr.top + 0.5);
+            const text = card.querySelector('.text').getBoundingClientRect();
+            const off = Math.abs((text.top + text.bottom) / 2 - (qr.top + qr.bottom) / 2);
+            t.check('the texts centred on the code (' + Math.round(off * 10) / 10 + ' px off)', off <= 2);
             t.check('a square logo at least 13 mm high (' + Math.round(logo.height * 25.4 / 96) + ' mm)', logo.height >= 13 * 96 / 25.4);
             t.check('in place of ours: one mark on a card', card.querySelector('.logo') === null);
             t.check('the profiles end inside the card (' + Math.round(whole.bottom - links.bottom) + ' px to spare)', links.bottom <= whole.bottom - 2);
