@@ -297,7 +297,7 @@ body {
 
 .poster .dj-logo {
     max-width: 120mm;
-    max-height: 30mm;
+    max-height: 45mm;
     margin-bottom: 4mm;
 }
 
@@ -332,6 +332,11 @@ body {
 
 .card .dj-logo {
     max-width: 40mm;
-    max-height: 10mm;
-    margin-bottom: 1mm;
+    max-height: 14mm;
+}
+
+/* a card with the DJ's logo: the code 4 mm smaller, so the logo, the code and three profiles still fit its 60 mm */
+.card.with-logo .qr {
+    width: 36mm;
+    height: 36mm;
 }

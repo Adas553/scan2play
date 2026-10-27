@@ -234,7 +234,7 @@
             const apart = Math.abs((words.top + words.bottom) / 2 - (mark.top + mark.bottom) / 2);
             t.check('ours: the words and the mark on one centre line (' + Math.round(apart * 10) / 10 + ' px apart)', apart <= 1);
             const box = logo.getBoundingClientRect();
-            t.check('the logo heads the poster: at least 25 mm high (' + Math.round(box.height * 25.4 / 96) + ' mm)', box.height >= 25 * 96 / 25.4);
+            t.check('the logo heads the poster: at least 40 mm high (' + Math.round(box.height * 25.4 / 96) + ' mm)', box.height >= 40 * 96 / 25.4);
             const poster = document.querySelector('.poster').getBoundingClientRect();
             t.check('one A4 page: ' + Math.round(poster.height) + ' ≤ ' + Math.round(A4_PRINTABLE) + ' px', poster.height <= A4_PRINTABLE);
         }
@@ -255,6 +255,7 @@
             const links = card.querySelector('.side .dj-links').getBoundingClientRect();
             const tip = card.querySelector('.text .tip').getBoundingClientRect();
             t.check('the logo above the code', logo.bottom <= qr.top + 0.5);
+            t.check('a square logo at least 13 mm high (' + Math.round(logo.height * 25.4 / 96) + ' mm)', logo.height >= 13 * 96 / 25.4);
             t.check('in place of ours: one mark on a card', card.querySelector('.logo') === null);
             t.check('the profiles end inside the card (' + Math.round(whole.bottom - links.bottom) + ' px to spare)', links.bottom <= whole.bottom - 2);
             t.check('the tip ends inside the card', tip.bottom <= whole.bottom - 2 && tip.right <= whole.right - 2);

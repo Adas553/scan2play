@@ -181,6 +181,7 @@ class QrPrintPageTest {
         assertThat(poster.indexOf(logo)).isLessThan(poster.indexOf("<h1>"));
         String cards = render("cards", Locale.forLanguageTag("pl"), party);
         assertThat(cards.split(java.util.regex.Pattern.quote(logo), -1)).as("on every card").hasSize(9);
+        assertThat(cards.split("<section class=\"card with-logo\">", -1)).as("the code made room on every card").hasSize(9);
         assertThat(cards).as("ours not on a card beside the DJ's").doesNotContain("<p class=\"logo\"");
 
         assertThat(render("poster", Locale.ENGLISH)).doesNotContain("logo.png", "logo ours");
