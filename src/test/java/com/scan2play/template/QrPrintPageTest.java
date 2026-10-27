@@ -140,10 +140,11 @@ class QrPrintPageTest {
         assertThat(html.split("<section class=\"card\">", -1)).hasSize(9);
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
-        assertThat(html).contains("Scan to request a song", "The artist and the title").doesNotContain("??", "lyrics");
+        // the heading alone says what to do, as on the poster: the guest page asks for the artist and the title
+        assertThat(html).contains("Scan to request a song").doesNotContain("??", "lyrics", "The artist and the title");
         assertThat(html).as("an English panel: English alone").doesNotContain("lang=\"pl\"", "Zeskanuj", "Wykonawca", "Kod", "class=\"second\"");
-        assertThat(render("cards", Locale.forLanguageTag("pl"))).contains("Zeskanuj i poproś o piosenkę", "Wykonawca i tytuł",
-                "<span lang=\"en\" class=\"second\">Scan to request a song</span>");
+        assertThat(render("cards", Locale.forLanguageTag("pl"))).contains("Zeskanuj i poproś o piosenkę",
+                "<span lang=\"en\" class=\"second\">Scan to request a song</span>").doesNotContain("Wykonawca i tytuł");
     }
 
     /**

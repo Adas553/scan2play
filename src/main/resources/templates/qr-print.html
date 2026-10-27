@@ -75,8 +75,6 @@
         <div class="text">
             <p class="title"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Zeskanuj i poproś o piosenkę</span><br></th:block>
                 <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan to request a song</span></p>
-            <p class="small"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Wykonawca i tytuł</span><br></th:block>
-                <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">The artist and the title</span></p>
             <p class="small link" th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</p>
             <p class="small"><th:block th:if="${#locale.language == 'pl'}"><span lang="pl">Kod</span> / </th:block><span lang="en">Code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
             <p th:replace="~{qr-print :: tipLink}" class="small"></p>
