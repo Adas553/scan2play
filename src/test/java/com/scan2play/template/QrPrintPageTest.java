@@ -128,8 +128,8 @@ class QrPrintPageTest {
         assertThat(html.indexOf("</h1>")).isLessThan(html.indexOf("class=\"logo\""));
         assertThat(html.indexOf("class=\"logo\"")).isLessThan(html.indexOf("class=\"qr\""));
         assertThat(html).doesNotContain("class=\"cards\"", "??");
-        // the artist and the title, not a line of the lyrics (the owner, 2026-10-16: the AI does not always find a song by it)
-        assertThat(html).contains("Wpisz wykonawcę i tytuł", "Type the artist and the title").doesNotContain("tekstu", "lyrics");
+        // no numbered steps under the code: the heading says what to do, and the guest page asks for the artist and the title
+        assertThat(html).doesNotContain("class=\"steps\"", "Zeskanuj kod aparatem", "DJ zagra Twoją piosenkę", "tekstu", "lyrics");
     }
 
     @Test
@@ -140,10 +140,11 @@ class QrPrintPageTest {
         assertThat(html.split("<section class=\"card\">", -1)).hasSize(9);
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
-        assertThat(html).contains("Scan to request a song", "The artist and the title").doesNotContain("??", "lyrics");
+        // the heading alone says what to do, as on the poster: the guest page asks for the artist and the title
+        assertThat(html).contains("Scan to request a song").doesNotContain("??", "lyrics", "The artist and the title");
         assertThat(html).as("an English panel: English alone").doesNotContain("lang=\"pl\"", "Zeskanuj", "Wykonawca", "Kod", "class=\"second\"");
-        assertThat(render("cards", Locale.forLanguageTag("pl"))).contains("Zeskanuj i poproś o piosenkę", "Wykonawca i tytuł",
-                "<span lang=\"en\" class=\"second\">Scan to request a song</span>");
+        assertThat(render("cards", Locale.forLanguageTag("pl"))).contains("Zeskanuj i poproś o piosenkę",
+                "<span lang=\"en\" class=\"second\">Scan to request a song</span>").doesNotContain("Wykonawca i tytuł");
     }
 
     /**
@@ -155,7 +156,7 @@ class QrPrintPageTest {
         for (Locale locale : List.of(Locale.ENGLISH, Locale.GERMAN)) {
             String html = render("poster", locale).replaceAll("\\s+", " ");
             assertThat(html).as(locale.toString()).contains("<span lang=\"en\">Scan to request a song</span>",
-                    "<span lang=\"en\">Scan the code with your phone camera</span>", "<span lang=\"en\">Can't scan? Open:</span>",
+                    "<span lang=\"en\">Can't scan? Open:</span>",
                     "<span lang=\"en\">Party code</span>: <strong>" + PARTY + "</strong>", "<span lang=\"en\">Tip</span>: <strong>",
                     "alt=\"QR code\"");
             assertThat(html).as(locale.toString()).doesNotContain("lang=\"pl\"", "class=\"second\"", "Zeskanuj", "Kod imprezy",
@@ -181,6 +182,7 @@ class QrPrintPageTest {
         assertThat(poster.indexOf(logo)).isLessThan(poster.indexOf("<h1>"));
         String cards = render("cards", Locale.forLanguageTag("pl"), party);
         assertThat(cards.split(java.util.regex.Pattern.quote(logo), -1)).as("on every card").hasSize(9);
+        assertThat(cards.split("<section class=\"card with-logo\">", -1)).as("the code made room on every card").hasSize(9);
         assertThat(cards).as("ours not on a card beside the DJ's").doesNotContain("<p class=\"logo\"");
 
         assertThat(render("poster", Locale.ENGLISH)).doesNotContain("logo.png", "logo ours");

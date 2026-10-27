@@ -110,5 +110,7 @@ S2P.scenario({
         t.check('nothing cut off: the tip link ends inside the card (' + Math.round(whole.bottom - tip.bottom) + ' px to spare)',
             tip.bottom <= whole.bottom - 2 && tip.right <= whole.right - 2);
         t.check('the texts beside the code, not under it', text.left >= qr.right);
+        const off = Math.abs((text.top + text.bottom) / 2 - (qr.top + qr.bottom) / 2);
+        t.check('the texts centred on the code (' + Math.round(off * 10) / 10 + ' px off)', off <= 2);
     }
 });

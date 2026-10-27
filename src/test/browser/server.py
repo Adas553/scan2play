@@ -58,7 +58,7 @@ def png_size(body):
     return [int.from_bytes(body[16:20], 'big'), int.from_bytes(body[20:24], 'big')]
 
 
-LOGO_PNG = png(400, 100)
+LOGO_PNG = png(240, 240)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TYPES = {'.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -291,7 +291,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(stand.state)
         self._note('GET', path, self._fields(query, b'', ''))
         state = stand.state
-        if path.startswith('/p/') and path.endswith('/logo.png'):   # the DJ's logo (V45): a wide one, 400 × 100, as a real PNG
+        if path.startswith('/p/') and path.endswith('/logo.png'):   # the DJ's logo (V45): a square one — the tallest a box lets it be —, as a real PNG
             return self._send(200, LOGO_PNG, 'image/png')
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
