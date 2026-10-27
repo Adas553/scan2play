@@ -128,8 +128,8 @@ class QrPrintPageTest {
         assertThat(html.indexOf("</h1>")).isLessThan(html.indexOf("class=\"logo\""));
         assertThat(html.indexOf("class=\"logo\"")).isLessThan(html.indexOf("class=\"qr\""));
         assertThat(html).doesNotContain("class=\"cards\"", "??");
-        // the artist and the title, not a line of the lyrics (the owner, 2026-10-16: the AI does not always find a song by it)
-        assertThat(html).contains("Wpisz wykonawcę i tytuł", "Type the artist and the title").doesNotContain("tekstu", "lyrics");
+        // no numbered steps under the code: the heading says what to do, and the guest page asks for the artist and the title
+        assertThat(html).doesNotContain("class=\"steps\"", "Zeskanuj kod aparatem", "DJ zagra Twoją piosenkę", "tekstu", "lyrics");
     }
 
     @Test
@@ -155,7 +155,7 @@ class QrPrintPageTest {
         for (Locale locale : List.of(Locale.ENGLISH, Locale.GERMAN)) {
             String html = render("poster", locale).replaceAll("\\s+", " ");
             assertThat(html).as(locale.toString()).contains("<span lang=\"en\">Scan to request a song</span>",
-                    "<span lang=\"en\">Scan the code with your phone camera</span>", "<span lang=\"en\">Can't scan? Open:</span>",
+                    "<span lang=\"en\">Can't scan? Open:</span>",
                     "<span lang=\"en\">Party code</span>: <strong>" + PARTY + "</strong>", "<span lang=\"en\">Tip</span>: <strong>",
                     "alt=\"QR code\"");
             assertThat(html).as(locale.toString()).doesNotContain("lang=\"pl\"", "class=\"second\"", "Zeskanuj", "Kod imprezy",

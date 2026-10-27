@@ -106,27 +106,12 @@ body {
     font-weight: 600;
 }
 
+/* the heading says what to do; the code then the address, no numbered steps repeating it */
 .poster .qr {
     width: 115mm;
     height: 115mm;
+    margin-bottom: 5mm;
     image-rendering: pixelated;
-}
-
-.poster .steps {
-    margin: 6mm 0 4mm;
-    padding-left: 8mm;
-    text-align: left;
-    font-size: 15pt;
-    line-height: 1.35;
-}
-
-.poster .steps li {
-    margin-bottom: 2.5mm;
-}
-
-.poster .steps .second {
-    display: block;
-    font-size: 12pt;
 }
 
 .poster .link {
@@ -318,11 +303,6 @@ body {
 
 .poster.with-logo h1 {
     margin-bottom: 4mm;
-}
-
-.poster.with-logo .qr {
-    width: 96mm;
-    height: 96mm;
 }
 
 /* "Działa na / Powered by Scan2Play" at the foot of a poster with the DJ's logo: ours, quiet */

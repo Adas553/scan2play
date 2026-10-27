@@ -1,6 +1,6 @@
 # Scan2Play — Project Context
 
-> The application as it is on branch `dev` (2026-10-26). Read it before an architectural change; `AGENTS.md` says how to work,
+> The application as it is on branch `dev` (2026-10-27). Read it before an architectural change; `AGENTS.md` says how to work,
 > `SESSION_HANDOFF.md` what is going on now; the reviews and what was fixed: `docs/history/review-2026-09-30.md`,
 > `docs/history/review-2026-10-14.md`, `docs/history/review-2026-10-21.md`.
 > **History** — the decisions, the owner's reports, what was tried and measured, how every stage was verified — is in
@@ -310,8 +310,8 @@ PNG (no EXIF, no text chunks, no second frame), two decodes at a time on the ser
 privacy policy says so), a 404 without one or while the organiser's plan has no `LOGO` — the CSP needs no change. **Shown** (`djLogo`,
 as `PlanService.asPlanned` leaves it) as a white-label head — the party is the DJ's: on the guest page, the result page and "party
 ended" the logo **in place of ours** on a white badge (a dark logo vanishes on the dark pages; "party ended" loses its 👋), ours a
-quiet "Działa na Scan2Play" over the footer (`components :: footer`, `#poweredBy`); the QR poster headed by it (≤ 30 mm, the code
-96 mm instead of 115 to keep one A4 page — browser scenario `logo-poster-fits-a4`), ours a quiet "Działa na / Powered by Scan2Play"
+quiet "Działa na Scan2Play" over the footer (`components :: footer`, `#poweredBy`); the QR poster headed by it (≤ 30 mm; still one A4 page —
+browser scenario `logo-poster-fits-a4`), ours a quiet "Działa na / Powered by Scan2Play"
 at its foot; every card with it above the code in place of ours (two marks stacked were clutter; the address names us —
 `logo-cards-fit`); the TV screen and the evening summary above ours. Set on "Ustawienia imprezy", the card **"Twoje logo"** (the organiser's; its state
 "Wgrane" / "Brak"): the saved logo with a small "Usuń" (asks first), the file's field, the preview "Tak zobaczą je goście:", "Wgraj";
@@ -1228,7 +1228,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/guest-limit-reset` | the party's 24 h limit of guest requests starts again ("Odblokuj prośby gości" in the warning above the queue; `LIMITS`, not a plan's feature — review 2026-10-14 W4) |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
-| GET | `/dj/qr-print` | `layout` = poster / cards; what is printed speaks the panel's language (Polish: Polish and English; any other: English) |
+| GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards; what is printed speaks the panel's language (Polish: Polish and English; any other: English) |
 | GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days; only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s) |
