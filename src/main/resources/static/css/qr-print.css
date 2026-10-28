@@ -451,6 +451,11 @@ body:not(.theme-classic) .qr {
     background: #ffffff;
 }
 
+/* the tile's edge is seen on a theme's paper: our mark above it keeps a little air (on white the code's own margin gives it) */
+body:not(.theme-classic) .poster .logo {
+    margin-bottom: 4mm;
+}
+
 /* on the dark club paper the DJ's logo on a white badge: a dark logo with a transparent background would vanish */
 body.theme-club .dj-logo {
     padding: 1.5mm 2.5mm;
