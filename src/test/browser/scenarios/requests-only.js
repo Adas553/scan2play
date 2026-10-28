@@ -60,8 +60,8 @@ S2P.scenario({
             [getComputedStyle(box).display !== 'none', getComputedStyle(document.getElementById('queue-content')).display !== 'none'],
             [true, false]);
 
-        document.querySelector('[data-dj-tab="queue"]').click();
-        t.step('the Queue tab brings the queue back',
+        document.querySelector('[data-dj-tab="panel"]').click();
+        t.step('the Panel tab brings the queue back',
             [getComputedStyle(box).display !== 'none', getComputedStyle(document.getElementById('queue-content')).display !== 'none'],
             [false, true]);
     }

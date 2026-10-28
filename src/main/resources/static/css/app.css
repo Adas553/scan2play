@@ -45,7 +45,9 @@
     --s2p-action-ink:    #062c33;
     --s2p-radius:        8px;       /* buttons and fields */
     --s2p-radius-card:   12px;      /* cards */
-    --s2p-font:          'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* the device's own font (San Francisco, Segoe UI, Roboto): the list that began with Segoe UI fell to Verdana on an iPhone and
+       to Geneva on a Mac — the same panel in three looks. The TV, the print and the summary use the same list. */
+    --s2p-font:          system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     /* Every other colour of this file, by what it is for (review 2026-10-14: 111 colours were written where they were used,
        50 values). 2026-10-16 the near-identical tones merged (the owner): white, light and --s2p-text for the light texts (five
        near-whites were), one dim text, --s2p-bg-elevated for the panels (three were), two edges, one yellow. A colour of a rule is
@@ -107,9 +109,10 @@ body {
 /* --- THE LOOK (the design review, 2026-10-09) — what every page shares. Three kinds of button: the action (filled cyan, one per
        screen: .btn-action), the second kind (an outline, light text: .btn-outline-light / -secondary), the text one (.btn-link);
        red only as an outline, for what deletes. Green says "accepted", yellow money and "check" — statuses, not actions. --- */
-/* One action per view (6.7): a closed party's is "Wznów imprezę" in its banner — the empty queue's "Drukuj" is an outline (the
-   second kind) while the banner shows it; once the party is resumed (the banner goes, a reload or a poll) the action again. */
-.page-dj:has(#party-closed-banner:not(.d-none) .btn-action) #queueEmpty .btn-action {
+/* One action per view (6.7): a closed party's is "Wznów imprezę" in its banner — the empty queue's "Drukuj" and the action of a
+   card of "Ustawienia imprezy" or "Obsługa" (.s2p-dj-page-body: "Wgraj", "Zaproś") are an outline (the second kind) while the
+   banner shows it; once the party is resumed (the banner goes, a reload or a poll) the action again. */
+.page-dj:has(#party-closed-banner:not(.d-none) .btn-action) :is(#queueEmpty, .s2p-dj-page-body) .btn-action {
     --bs-btn-color: var(--s2p-light);
     --bs-btn-bg: transparent;
     --bs-btn-border-color: var(--s2p-light);
@@ -145,6 +148,13 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
     .btn-action, .btn-action:hover { transition: none; transform: none; }
+}
+/* The text button in the action's cyan: Bootstrap's blue (#0d6efd) was 3.6 : 1 on a card, under WCAG AA, and the only blue of the
+   page. A grey or red one (.text-secondary, .text-danger) keeps its own colour. */
+.btn-link {
+    --bs-btn-color: var(--s2p-action);
+    --bs-btn-hover-color: var(--s2p-action-hover);
+    --bs-btn-active-color: var(--s2p-action-active);
 }
 .btn { --bs-btn-border-radius: var(--s2p-radius); --bs-btn-border-radius-sm: var(--s2p-radius); }
 .form-control,
@@ -235,16 +245,20 @@ body {
 /* --- DJ Navigation tabs --- */
 .nav-link        { color: var(--s2p-text-muted); font-weight: 600; }
 .nav-link:hover  { color: var(--s2p-white); }
-.nav-link.active {
-    color: var(--s2p-green) !important;
+/* the lit tab: its words and the line under it in the action's cyan, a quiet edge around it. .nav-tabs in the selector: Bootstrap's
+   own .nav-tabs .nav-link.active outweighed a plain .nav-link.active, and its light edge and white bottom hid the line */
+.nav-link.active,
+.nav-tabs .nav-link.active {
+    color: var(--s2p-action) !important;
     background-color: var(--s2p-bg-row) !important;
-    border-bottom: 2px solid var(--s2p-green);
+    border-color: var(--s2p-border) var(--s2p-border) var(--s2p-action);
+    border-bottom: 2px solid var(--s2p-action);
     border-radius: 8px 8px 0 0;
 }
 
 /* --- DJ tab bar: stays at the top of the screen while the page scrolls, so that from anywhere on a long page the DJ can
-       jump to the top of the page, the queue or the history. Opaque (the page must not show through) and above the sticky
-       headers of the lists (z-index 2). tabs.js lights the tab of the part of the page in view. --- */
+       go to the queue, the history or the settings. Opaque (the page must not show through) and above the sticky
+       headers of the lists (z-index 2). On the panel tabs.js lights the tab of the list that shows. --- */
 .dj-tabbar {
     position: sticky;
     top: 0;
@@ -256,7 +270,7 @@ body {
 @media (max-width: 400px) {
     .dj-tabbar .nav-link { padding-left: 0.6rem; padding-right: 0.6rem; }
 }
-/* A jump to an anchor (the "Queue" link of another page) must not leave the top of the target under the bar. */
+/* A jump to an anchor (a link to a part of the panel) must not leave the top of the target under the bar. */
 #queue-content,
 #history-content,
 #partyCard { scroll-margin-top: 4rem; }
@@ -267,7 +281,7 @@ body {
 /* --- Table header — distinct background so it doesn't blend with rows (especially on mobile) --- */
 .page-dj .table-dark thead th {
     background-color: var(--s2p-bg-thead);
-    border-bottom: 2px solid var(--s2p-green);
+    border-bottom: 2px solid var(--s2p-action);
     color: var(--s2p-white);
     font-weight: 700;
     font-size: 0.85rem;
@@ -297,7 +311,7 @@ th[data-sort] {
     padding-right: 1.2em !important;
 }
 th[data-sort]:hover {
-    color: var(--s2p-green) !important;
+    color: var(--s2p-action) !important;
 }
 th[data-sort]::after {
     content: '⇅';
@@ -309,12 +323,12 @@ th[data-sort]::after {
 th[data-sort].sort-asc::after {
     content: '▲';
     opacity: 0.9;
-    color: var(--s2p-green);
+    color: var(--s2p-action);
 }
 th[data-sort].sort-desc::after {
     content: '▼';
     opacity: 0.9;
-    color: var(--s2p-green);
+    color: var(--s2p-action);
 }
 
 /* ==========================================================================
@@ -610,7 +624,7 @@ th[data-sort].sort-desc::after {
 }
 .song-autocomplete-item:hover,
 .song-autocomplete-item.is-active {
-    background: var(--s2p-green-12);  /* subtle green tint */
+    background: var(--s2p-action-12);
     color: var(--s2p-white);
 }
 .song-autocomplete-item .ac-artist {
@@ -627,7 +641,7 @@ th[data-sort].sort-desc::after {
 }
 .song-autocomplete-item:hover .ac-artist,
 .song-autocomplete-item.is-active .ac-artist {
-    color: var(--s2p-green);
+    color: var(--s2p-action);
 }
 
 /* --- Mobile overrides: larger touch targets & wrapping text --- */

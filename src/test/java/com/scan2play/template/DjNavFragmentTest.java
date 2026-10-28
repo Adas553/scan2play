@@ -69,20 +69,20 @@ class DjNavFragmentTest {
     }
 
     @Test
-    @DisplayName("three tabs, in the order Panel, Queue, History, each with the hook the script looks for and a link that works without it")
+    @DisplayName("three tabs, in the order Panel, History, Settings, each with the hook the script looks for and a link that works without it")
     void shouldRenderTheThreeTabs() {
         String html = render("panel", Locale.ENGLISH);
 
         assertThat(html.indexOf("data-dj-tab=\"panel\"")).isPositive()
-                .isLessThan(html.indexOf("data-dj-tab=\"queue\""))
-                .isLessThan(html.indexOf("data-dj-tab=\"history\""));
-        assertThat(html.indexOf("data-dj-tab=\"queue\"")).isLessThan(html.indexOf("data-dj-tab=\"history\""));
+                .isLessThan(html.indexOf("data-dj-tab=\"history\""))
+                .isLessThan(html.indexOf("data-dj-tab=\"settings\""));
+        assertThat(html.indexOf("data-dj-tab=\"history\"")).isLessThan(html.indexOf("data-dj-tab=\"settings\""));
         // the party the page shows (V32): a tab of another party's panel stays on it
-        assertThat(tabLink(html, "panel")).contains("href=\"/dj/dashboard?party=ABC12#top\"");
-        assertThat(tabLink(html, "queue")).contains("href=\"/dj/dashboard?party=ABC12#queue-content\"");
+        assertThat(tabLink(html, "panel")).contains("href=\"/dj/dashboard?party=ABC12\"");
         assertThat(tabLink(html, "history")).contains("href=\"/dj/history-view?party=ABC12\"");
-        assertThat(html).contains(">DJ Panel</a>", ">Queue</a>", ">History</a>");
-        assertThat(html).doesNotContain("Queue (Dashboard)", "??", "<html", "<body");
+        assertThat(tabLink(html, "settings")).contains("href=\"/dj/settings?party=ABC12\"");
+        assertThat(html).contains(">DJ Panel</a>", ">History</a>", ">Settings</a>");
+        assertThat(html).doesNotContain("data-dj-tab=\"queue\"", "??", "<html", "<body");
     }
 
     /**
@@ -103,17 +103,17 @@ class DjNavFragmentTest {
     void shouldRenderInPolish() {
         String html = render("panel", PL);
 
-        assertThat(html).contains(">Panel DJ-a</a>", ">Kolejka</a>", ">Historia</a>");
-        assertThat(html).doesNotContain("Kolejka (Panel DJ-a)", "??");
+        assertThat(html).contains(">Panel DJ-a</a>", ">Historia</a>", ">Ustawienia</a>");
+        assertThat(html).doesNotContain(">Kolejka</a>", "??");
     }
 
     @Test
     @DisplayName("only the tab of activeTab is lit and marked as the current one")
     void shouldLightOnlyTheActiveTab() {
-        for (String tab : new String[] {"panel", "queue", "history"}) {
+        for (String tab : new String[] {"panel", "history", "settings"}) {
             String html = render(tab, Locale.ENGLISH);
 
-            for (String other : new String[] {"panel", "queue", "history"}) {
+            for (String other : new String[] {"panel", "history", "settings"}) {
                 String link = tabLink(html, other);
                 if (other.equals(tab)) {
                     assertThat(link).as("%s lit when activeTab=%s", other, tab).contains("active").contains("aria-current=\"page\"");

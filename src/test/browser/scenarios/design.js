@@ -239,24 +239,59 @@
         }
     });
 
-    // The owner (2026-10-10): "Obsługa" is the one row of the settings that leads to a page of its own, and it led only "back to the
-    // panel". It goes back to "Ustawienia imprezy" as well, in the heading's one row.
+    // The heading and the tabs of every DJ's page (the review of 2026-10-28: the panel, the history, "Ustawienia imprezy", "Obsługa" and
+    // the print had a top each, and three ways back). "Obsługa" is a page of the settings: their tab is lit, the way back to them is the
+    // line above the heading.
+    function oneHeading(t, tab) {
+        const bar = document.getElementById('djTabBar');
+        t.check('the tab bar and the heading row ("Zakończ imprezę", "Konto")',
+            !!bar && !!document.getElementById('end-party-form') && !!document.getElementById('accountMenuBtn'));
+        t.step('the tabs, each of the same party, and the lit one',
+            Array.from(bar.querySelectorAll('[data-dj-tab]')).map(function (a) {
+                return [a.getAttribute('data-dj-tab'), a.getAttribute('href'), a.classList.contains('active')];
+            }),
+            [['panel', '/dj/dashboard?party=HARN1', tab === 'panel'], ['history', '/dj/history-view?party=HARN1', tab === 'history'],
+             ['settings', '/dj/settings?party=HARN1', tab === 'settings']]);
+        t.step('no button back to the panel beside it', document.getElementById('backToPanel'), null);
+    }
+
     S2P.scenario({
         name: 'staff-page-way-back',
-        title: 'the owner\'s page "Obsługa" on a phone: "← Ustawienia" and "Panel" (the same party) beside the logo, in one row, 44 px high',
+        title: 'the owner\'s page "Obsługa" on a phone: the heading and the tabs of every DJ\'s page, "Ustawienia" lit, "← Ustawienia imprezy" above the heading, 44 px high',
         page: 'staff',
         viewport: '390,844',
         run: async function (t) {
+            oneHeading(t, 'settings');
             const settings = document.getElementById('backToSettings');
-            const panel = document.getElementById('backToPanel');
-            t.step('back to the settings and to the panel of the same party',
-                [settings && settings.getAttribute('href'), panel && panel.getAttribute('href')],
-                ['/dj/settings?party=HARN1', '/dj/dashboard?party=HARN1']);
-            const middle = function (el) { const box = el.getBoundingClientRect(); return box.top + box.height / 2; };
-            const logo = document.querySelector('.s2p-logo');
-            t.check('in the logo\'s row', !!settings && Math.abs(middle(settings) - middle(logo)) < 8 && Math.abs(middle(panel) - middle(logo)) < 8);
-            t.step('nothing to tap is lower than 44 px, nothing wider than the screen',
-                [tooSmall(settings.parentElement), document.documentElement.scrollWidth <= document.documentElement.clientWidth], [[], true]);
+            t.step('back to the settings of the same party', settings && settings.getAttribute('href'), '/dj/settings?party=HARN1');
+            t.step('the heading, its tabs and the way back: nothing to tap lower than 44 px; nothing wider than the screen',
+                [tooSmall(document.querySelector('.s2p-account-bar')).concat(tooSmall(document.getElementById('djTabBar')),
+                    settings.getBoundingClientRect().height < 44 - 0.5 ? ['backToSettings'] : []),
+                 document.documentElement.scrollWidth <= document.documentElement.clientWidth], [[], true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'settings-page-one-heading',
+        title: 'the page "Ustawienia imprezy": the heading and the tabs of every DJ\'s page, "Ustawienia" lit, where the panel has them',
+        page: 'settings',
+        run: async function (t) {
+            oneHeading(t, 'settings');
+            const box = document.getElementById('djTabBar').getBoundingClientRect();
+            // the panel's container: the bar as wide as the panel's (1280 px window: the container's 1140 less its padding)
+            t.check('the bar as wide as the panel\'s (not the cards\' 800 px)', box.width > 1000);
+            t.check('the cards stay 800 px', document.getElementById('settingsCards').getBoundingClientRect().width <= 800);
+        }
+    });
+
+    S2P.scenario({
+        name: 'history-page-one-heading',
+        title: 'the history\'s own page: the heading and the tabs of every DJ\'s page, "Historia" lit, no second way back to the panel',
+        page: 'history-page',
+        run: async function (t) {
+            oneHeading(t, 'history');
+            t.step('no "Powrót do panelu DJ-a" under the list',
+                Array.from(document.querySelectorAll('a.btn')).filter(function (a) { return /Powrót do panelu/.test(a.textContent); }).length, 0);
         }
     });
 
@@ -287,6 +322,48 @@
         }
     });
 
+    // The review of 2026-10-28: in the card "Impreza" a label stood on the field above it — each form is a column of the row, and its
+    // m-0 took the row's gap away (the gap is the column's margin-top)
+    S2P.scenario({
+        name: 'panel-party-card-spacing',
+        title: 'the panel\'s card "Impreza": a row of fields keeps its gap from the row above it (no label standing on a field)',
+        viewport: '1280,900',
+        run: async function (t) {
+            document.getElementById('settingsToggle').click();
+            const bottom = function (id) { return document.getElementById(id).getBoundingClientRect().bottom; };
+            const labelTop = function (id) { return document.querySelector('label[for="' + id + '"]').getBoundingClientRect().top; };
+            t.step('"Dedykacje gości" at least 12 px under the vibe\'s field', labelTop('dedicationsSelect') - bottom('vibeSelect') >= 12, true);
+            t.step('"Opis klimatu" at least 12 px under the dedications\' field', labelTop('vibeNoteInput') - bottom('dedicationsSelect') >= 12, true);
+        }
+    });
+
+    // The review of 2026-10-28: one colour of ours for what is picked and what is done — the cyan of the action. The lit tab and the
+    // line under the tables' head were the green of a status (left from Spotify).
+    S2P.scenario({
+        name: 'one-accent',
+        title: 'the dashboard: the lit tab and the line under the queue\'s head in the action\'s cyan, not the green of a status',
+        run: async function (t) {
+            const action = getComputedStyle(document.querySelector('.btn-action')).backgroundColor;
+            const tab = getComputedStyle(document.querySelector('[data-dj-tab].active'));
+            const head = getComputedStyle(document.querySelector('#queueList thead th'));
+            t.step('the action is the cyan', action, 'rgb(13, 202, 240)');
+            t.step('the lit tab\'s words and line, the line under the head', [tab.color, tab.borderBottomColor, head.borderBottomColor],
+                [action, action, action]);
+        }
+    });
+
+    // The review of 2026-10-28: the panel's font was 'Segoe UI', Tahoma, Geneva, Verdana — Verdana on an iPhone, Geneva on a Mac, three
+    // looks of one panel. The device's own font, as the TV and the print.
+    S2P.scenario({
+        name: 'one-font',
+        title: 'the DJ\'s pages in the device\'s own font (system-ui), never a list that falls to Verdana',
+        run: async function (t) {
+            const font = getComputedStyle(document.body).fontFamily;
+            t.step('the first font is the device\'s own', font.split(',')[0].trim(), 'system-ui');
+            t.step('no Verdana, Tahoma or Geneva in the list', /Verdana|Tahoma|Geneva/.test(font), false);
+        }
+    });
+
     S2P.scenario({
         name: 'settings-page-touch-targets',
         title: 'the page "Ustawienia imprezy" on a phone: every folded line, and unfolded every button, field and the server limits\' line, at least 44 px high; no sideways scroll',
@@ -298,7 +375,7 @@
             document.querySelectorAll('details.s2p-fold > summary').forEach(function (summary) { summary.click(); });
             t.step('every card unfolded: nothing to tap is lower than 44 px', tooSmall(document.body), []);
             t.check('unfolded: nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
-            t.check('"← Panel" leads to the panel of the same party', document.getElementById('backToPanel').getAttribute('href') === '/dj/dashboard?party=HARN1');
+            t.check('the Panel tab leads to the panel of the same party', document.querySelector('[data-dj-tab="panel"]').getAttribute('href') === '/dj/dashboard?party=HARN1');
         }
     });
 
@@ -318,6 +395,19 @@
             empty.querySelector('[data-open-settings]').click();
             await t.sleep(200);
             t.step('"Ustaw klimat" opens them, the vibe in view', shows(document.getElementById('vibeSelect')), true);
+        }
+    });
+    // The review of 2026-10-28: "Pierwszy raz? Zobacz, jak to działa" was Bootstrap's blue on the card, 3.6 : 1 — under the 4.5 : 1 a text
+    // needs, and the only blue of the page. contrast() is the helper of dj-booking.js (the scenarios' scripts share the page).
+    S2P.scenario({
+        name: 'queue-empty-guide-readable',
+        title: 'the empty queue: "Pierwszy raz? Zobacz, jak to działa" readable on its card (at least 4.5 : 1), in the action\'s cyan',
+        setup: { queue: [] },
+        run: async function (t) {
+            const guide = document.getElementById('queueEmptyGuide');
+            await t.waitFor(function () { return shows(guide); }, 'the empty queue', 8000);
+            t.step('readable', contrast(guide) >= 4.5, true);
+            t.step('the cyan of the action', getComputedStyle(guide).color, 'rgb(13, 202, 240)');
         }
     });
     // PROJECT_CONTEXT 6.7, one action per view (the owner, 2026-10-16): a closed party with nothing waiting showed two —

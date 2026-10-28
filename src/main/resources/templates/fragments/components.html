@@ -16,7 +16,7 @@
     DJ Navigation Panel Fragment. The root is a th:block (no element of its own) on purpose: the tab bar below sticks to
     the top of the screen (position: sticky), which works only inside a parent as tall as the page — so the bar has to be
     a direct child of the page's container, not of a wrapper that ends right after the navigation.
-    activeTab: 'panel' (the dashboard, at the top), 'queue', or 'history' (the standalone history page).
+    activeTab: 'panel' (the dashboard), 'history' (the standalone history page) or 'settings' ("Ustawienia imprezy", "Obsługa").
 */-->
 <th:block th:fragment="dj-nav(activeTab, isActive, partyCode)">
 
@@ -113,27 +113,27 @@
         </div>
     </div>
 
-    <!--/* The tab bar: three tabs that stay in view (position: sticky, .dj-tabbar in app.css) so that from anywhere on a long
-         page the DJ can jump to the top (Panel: the settings, the QR code), to the queue or to the history.
-         tabs.js scrolls and swaps the lists without leaving the page (the DJ keeps their place) and lights the
-         tab of the part of the page in view; the hrefs are what works without it — and on the standalone history page, where
-         History is a page of its own. data-dj-tab is how the script finds the tabs. */-->
+    <!--/* The tab bar, the same on every page of the DJ's (the panel, the history, "Ustawienia imprezy", "Obsługa"), so the way
+         around is one: the panel (the queue), the history, the settings. It stays in view (position: sticky, .dj-tabbar in app.css).
+         On the panel tabs.js swaps the queue and the history without leaving the page (the DJ keeps their place) and the lit tab
+         says which of them shows; the hrefs are what works without it — and on the other pages, where each tab is a page of its
+         own. "Obsługa" is a page of the settings: its tab is lit there. data-dj-tab is how the script finds the tabs. */-->
     <nav id="djTabBar" class="dj-tabbar border-bottom border-secondary mb-4">
         <ul class="nav nav-tabs border-bottom-0 flex-nowrap">
             <li class="nav-item">
                 <a class="nav-link" data-dj-tab="panel" th:classappend="${activeTab == 'panel' ? 'active' : ''}"
                    th:aria-current="${activeTab == 'panel' ? 'page' : null}"
-                   href="/dj/dashboard#top" th:href="@{/dj/dashboard(party=${partyCode})} + '#top'" th:text="#{dashboard.nav.panel}">DJ Panel</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-dj-tab="queue" th:classappend="${activeTab == 'queue' ? 'active' : ''}"
-                   th:aria-current="${activeTab == 'queue' ? 'page' : null}"
-                   href="/dj/dashboard#queue-content" th:href="@{/dj/dashboard(party=${partyCode})} + '#queue-content'" th:text="#{dashboard.nav.queue}">Queue</a>
+                   href="/dj/dashboard" th:href="@{/dj/dashboard(party=${partyCode})}" th:text="#{dashboard.nav.panel}">DJ Panel</a>
             </li>
             <li class="nav-item" th:if="${access == null or access.may('HISTORY')}">
                 <a class="nav-link" data-dj-tab="history" th:classappend="${activeTab == 'history' ? 'active' : ''}"
                    th:aria-current="${activeTab == 'history' ? 'page' : null}"
                    href="/dj/history-view" th:href="@{/dj/history-view(party=${partyCode})}" th:text="#{dashboard.nav.history}">History</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-dj-tab="settings" th:classappend="${activeTab == 'settings' ? 'active' : ''}"
+                   th:aria-current="${activeTab == 'settings' ? 'page' : null}"
+                   href="/dj/settings" th:href="@{/dj/settings(party=${partyCode})}" th:text="#{dashboard.nav.settings}">Settings</a>
             </li>
         </ul>
     </nav>

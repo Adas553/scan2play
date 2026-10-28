@@ -261,7 +261,7 @@ class DashboardPageRenderTest {
         assertThat(html).contains("id=\"song-list\"");
         // the lists and the tabs (dashboard.js): the queue's search box, count and "nothing matches" row, the tab bar, the two panels
         assertThat(html).contains("id=\"queueList\"", "data-list-search", "data-list-count", "data-nomatch", "id=\"queue-content\"",
-                "id=\"history-content\"", "data-poll-offline", "data-form-refused", "data-form-refused-reload", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"queue\"", "data-dj-tab=\"history\"");
+                "id=\"history-content\"", "data-poll-offline", "data-form-refused", "data-form-refused-reload", "id=\"djTabBar\"", "data-dj-tab=\"panel\"", "data-dj-tab=\"history\"", "data-dj-tab=\"settings\"");
         // the warnings of the server's guest limits (dashboard.js, applyGuestLimits) and the line with the limits
         assertThat(html).contains("id=\"guestLimitWarnings\"", "data-guest-limit=\"party-full\"", "data-limit-near=\"party\"");
         // the AI not judging (review 2026-10-21, O2): the bar is there, hidden while the AI answers (polling.js shows it by the flag)
@@ -340,8 +340,9 @@ class DashboardPageRenderTest {
         assertThat(html).contains(">Dowolny<").doesNotContain("Goście wybierają", "ocenia AI");
         assertThat(html).contains("Gość: „ta o Baśce, co ją Wilki grają”");
         assertThat(html.split(">⚠ Sprawdź<", -1)).as("only the song with none of the guest's words").hasSize(2);
-        // on a phone the settings, the vibe and the QR code fold under one button, so the queue comes first (app.css)
-        assertThat(html).contains("id=\"settingsToggle\"", ">Ustawienia<");
+        // the vibe and the QR code fold under one button, so the queue comes first (app.css); it names what it holds —
+        // "Ustawienia" is the tab of the page "Ustawienia imprezy"
+        assertThat(html).contains("id=\"settingsToggle\"", ">Impreza i kod QR<", "data-dj-tab=\"settings\"", ">Ustawienia</a>");
         // the class alone, not the button's s2p-settings-toggle
         assertThat(html.split("s2p-settings(?![-\\w])", -1).length - 1).as("the folded parts: the row of the settings' cards and its two columns").isEqualTo(3);
         // "Wyczyść kolejkę": the DJ's own queue (no party code in the form), asks first
@@ -493,7 +494,7 @@ class DashboardPageRenderTest {
                 "id=\"makeOwnPartyBtn\"", ">Załóż własną imprezę<",
                 "id=\"panelAccess\" value=\"QUEUE,TIPS,CLEAR_QUEUE,OPEN_CLOSE,HISTORY\"");
         assertThat(html).as("one panel only: nothing to switch to").doesNotContain("id=\"panelSwitcher\"", "Mój panel");
-        assertThat(html).as("the staff's button opens the QR code only").contains(">Kod QR<").doesNotContain(">Ustawienia<");
+        assertThat(html).as("the staff's button opens the QR code only").contains(">Kod QR<").doesNotContain(">Impreza i kod QR<");
         assertThat(html).doesNotContain("action=\"/dj/delete-account\"", "id=\"staffMenuLink\"");
         assertThat(html).as("no \"Wklej link\" on another's party: she has joined already (the owner, 2026-10-10)")
                 .doesNotContain("id=\"joinStaffForm\"", "action=\"/dj/join\"");

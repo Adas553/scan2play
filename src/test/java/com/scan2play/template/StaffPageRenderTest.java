@@ -124,9 +124,11 @@ class StaffPageRenderTest {
                         "class=\"s2p-fold-state\">Wolne miejsca: 7 z 10<",
                         "class=\"s2p-fold-state\">Podgląd · do " + com.scan2play.util.Times.day(Instant.now().plus(java.time.Duration.ofDays(30))) + "<",
                         "<script src=\"/js/folds.js\">");
-        assertThat(html).as("back to the settings (a row of which led here) and to the panel, of the same party (the owner, 2026-10-10)")
-                .contains("href=\"/dj/settings?party=HARN1\" id=\"backToSettings\"", ">← Ustawienia<",
-                        "href=\"/dj/dashboard?party=HARN1\" id=\"backToPanel\"", ">Panel<");
+        assertThat(html).as("the heading and the tabs of every DJ's page, the settings' tab lit; above the heading the way back to the settings, a row of which led here")
+                .contains("id=\"djTabBar\"", "href=\"/dj/dashboard?party=HARN1\">Panel DJ-a</a>",
+                        "href=\"/dj/settings?party=HARN1\" id=\"backToSettings\"", ">← Ustawienia imprezy<")
+                .doesNotContain("id=\"backToPanel\"");
+        assertThat(html.split("<script src=\"/js/dj-nav.js\">", -1)).as("dj-nav.js once").hasSize(2);
         assertThat(html).contains("<h1 class=\"h3 text-white mb-1\">Obsługa imprezy</h1>", "Osoby, które pomagają Ci przy imprezie. Każdej wybierasz, co może",
                 ">Kasia<", "w obsłudze od 10.10", ">Bez imienia<", "w obsłudze od 09.10",
                 "action=\"/dj/staff/permissions\"", "name=\"partyCode\" value=\"HARN1\"", "name=\"id\" value=\"7\"",
@@ -150,7 +152,9 @@ class StaffPageRenderTest {
                 "action=\"/dj/staff/invite\"", "type=\"email\"", "name=\"email\"", "id=\"role-invite\"", ">Zaproś<",
                 // the link says its role, and a new one is made with the role picked beside it
                 ">Ten link: Podgląd<", "id=\"role-link\"", ">Rola nowego linku (stary przestanie działać)<");
-        assertThat(html.split("btn-action", -1)).as("one action button on the page").hasSize(2);
+        // the heading has its own views: the closed party's banner ("Wznów imprezę"; while it shows the page's is an outline — app.css)
+        // and the window "Pomoc i kontakt"
+        assertThat(html.substring(html.indexOf("s2p-dj-page-body")).split("btn-action", -1)).as("one action button on the page").hasSize(2);
         String invite = html.substring(html.indexOf("id=\"staffInviteForm\""), html.indexOf("id=\"staffLinkCard\""));
         assertThat(invite).containsPattern("<option value=\"QUEUE\"[^>]*selected");
         String link = html.substring(html.indexOf("id=\"staffLinkForm\""));

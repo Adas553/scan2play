@@ -463,8 +463,11 @@ never offered).
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
 
 **The heading** (the panel's clean-up, 2026-10-10, https://claude.ai/artifact/9ZzSG3LjggMreBg45UNvde — the owner picked variant B):
-one row with our logo, "Zakończ imprezę" and "Konto" (`dj-nav` in `components.html`; the history page has it too), the tabs, then the
-button "Ustawienia" (the staff without a settings card: "Kod QR"); the page's h1 "Panel DJ-a" is for screen readers — the first request
+one row with our logo, "Zakończ imprezę" and "Konto" (`dj-nav` in `components.html`; the history, "Ustawienia imprezy" and "Obsługa"
+have the same — one heading for every DJ's page, 2026-10-28), the tabs **"Panel DJ-a | Historia | Ustawienia"** (on the panel the first two swap
+the queue and the history in place, `tabs.js`, the lit tab is the list that shows; "Ustawienia" is the page "Ustawienia imprezy", lit on "Obsługa"
+too — the old "Kolejka" led where "Panel DJ-a" did), then the
+button "Impreza i kod QR" (named for what it holds, not "Ustawienia" — that is the tab; the staff without a settings card: "Kod QR"); the page's h1 "Panel DJ-a" is for screen readers — the first request
 of a phone is at 316 px (was 382). **The settings fold** under that button on every screen (`.s2p-settings`; folded by `app.css` alone,
 `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`) and hold only what the DJ uses during a party
 (they were seven cards, 4900 px of a phone): the card **"Impreza"** (the vibe and the AI's comments saved as soon as picked, the vibe
@@ -480,7 +483,8 @@ page "Ustawienia imprezy". Each card and row only for whom may change it (V32: h
 "Lista gospodarzy" and "Limity gości" by their permissions, never the profiles, the money or the staff; the rest of the staff the QR code
 and "To urządzenie". No switches for the hosts' lists and the tips: unused is what nothing typed means, said by the row.
 **The page "Ustawienia imprezy"** (`GET /dj/settings?party=`, `settings.html`, `DjDashboardController.settingsPage`; anyone with
-access to the party — a 403 for another): our logo, "← Panel" (the same party), then the cards of 6.7, **each folded to one line**
+access to the party — a 403 for another): the heading and the tabs of the panel ("Ustawienia" lit, the panel's width; the cards 800 px),
+then the cards of 6.7, **each folded to one line**
 (2026-10-25; `details.s2p-fold`): its heading and on the right its state — the same as the panel's row ("🚫 0 · ⭐ 1 · link",
 "Instagram · napiwki", "2 na gościa · 3 min" or a server limit near, "Utworów: 1 234", "Powiadomienia wł."), none beside "PRO" —
 and "▾"; a tap unfolds it, and unfolded its state goes (the fields say it). The folded page is one screen of a phone and the list of
@@ -638,7 +642,7 @@ unfolded, "Co możesz na tej imprezie" (the permissions given) and, with more th
 the guests see it, "DJ Kuba (Twoja impreza)" — "Mój panel" was gone: for a bartender a click made a DJ's party); a note above it once
 ("Dołączono…", "Organizator usunął Twój dostęp do imprezy: …" — `DjSessionHelper.Note`, kept in the session until shown). The page
 shows the buttons of the permissions given (hidden, not greyed; the poll's rows too) and refuses the rest on the server; a
-co-organiser gets the settings' cards and rows they were given (the button says "Ustawienia" then, else "Kod QR"). The QR card
+co-organiser gets the settings' cards and rows they were given (the button says "Impreza i kod QR" then, else "Kod QR"). The QR card
 says "Link dla gości" (it said "Twój link do imprezy" to the staff). "Zakończyć imprezę: Klub Ola?" names the party. The menu
 "Konto": "Opuść obsługę" (`POST /dj/staff/leave`, the party the page shows; another panel opens, or "no-panel") in place of "Usuń
 konto"; "Załóż własną imprezę" for someone without one. **Every poll** says what the person may do (`X-Panel-Access`: "owner" or the
@@ -833,7 +837,7 @@ and `images/icon-192.png`, `apple-touch-icon` (Google Search shows the icon besi
 `terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32), `pro[_pl].html` ("Scan2Play Pro", V35: a page of the product — the one action, the plans Free and Pro, what Pro gives, "Dobrze wiedzieć"; keep it true to `PlanFeature`; `ProPageRenderTest`), `tv.html` (the screen for a TV, 2026-10-18: Polish and English at once like the QR poster, written in the
 template; its fragment `tvList`) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
 `HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
-tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel / Kolejka / Historia, the
+tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel DJ-a / Historia / Ustawienia, the
 feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
 dashboard and the guest page; `footer`), `guest-queue.html`. Texts the scripts need travel in `data-*`
 attributes. **No inline script, no `on…=` handler and no `style="…"`** on any page (`NoInlineCodeInTemplatesTest`).
@@ -882,7 +886,11 @@ What every page shares, so a new screen looks like the others:
 - **Colours** as tokens on `:root`, nowhere else in `app.css` (`AppCssColoursTest`; 2026-10-15 every colour written in a rule became a
   token, 2026-10-16 the near-identical tones merged — the owner: three light texts `--s2p-white` / `--s2p-light` / `--s2p-text`, one
   panel background `--s2p-bg-elevated`, two edges, one yellow; `--s2p-<colour>-<n>` is that colour at an alpha of n %): `--s2p-action`, `--s2p-text-muted` (#a3acb6, 7 : 1 — Bootstrap's grey text was 3.3–4.2 : 1, under
-  WCAG AA; `.text-secondary` / `.text-muted` use it), `--s2p-danger-text`, `--s2p-green-ink`. Messages (`.alert-*`) are a tint of their
+  WCAG AA; `.text-secondary` / `.text-muted` use it), `--s2p-danger-text`, `--s2p-green-ink`. **One accent**: what is picked or
+  done (the lit tab and its line, the line under a table's head, a sorted column, a suggestion under the pointer, a text button
+  `.btn-link`) is the action's cyan; green is only the status "accepted" / "Twoja" (2026-10-28; browser scenario `one-accent`,
+  `queue-empty-guide-readable`). **One font**: `--s2p-font` is the device's own (`system-ui`, then Segoe UI, Roboto …), as the TV, the
+  print and the summary — the old list fell to Verdana on an iPhone (`one-font`). Messages (`.alert-*`) are a tint of their
   colour with a coloured edge and light text — Bootstrap's pale boxes were the brightest things on a dark page.
 - **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
   field, tab and menu item is **at least 44 px high** (browser scenarios `guest-touch-targets`, `dashboard-touch-targets`).
@@ -891,7 +899,11 @@ What every page shares, so a new screen looks like the others:
   goście)" after each. Nothing explains what the DJ does not set (the server's limits: one line, what they are unfolded).
 - **What goes where** (the panel's clean-up, 2026-10-10): the panel holds what the DJ uses during a party (the queue, the vibe, "Kto gra",
   the QR code); what is set before it is a row with its state ("Lista gospodarzy · Nieużywana", `.s2p-rows` / `.s2p-row`, 52 px) leading
-  to a page of its own ("Ustawienia imprezy", "Obsługa") — never a card more on the panel. "Konto" is about the person and their help (the guide, "Pomoc i kontakt", logout,
+  to a page of its own ("Ustawienia imprezy", "Obsługa") — never a card more on the panel. **Every page of the DJ's** (the panel, the
+  history, "Ustawienia imprezy", "Obsługa") has the same heading and tabs (`dj-nav`, the panel's width) — no "← Panel" of its own; a page
+  under another (for now "Obsługa" under the settings) lights its parent's tab and has one "← <parent>" line above its heading (2026-10-28;
+  `settings-page-one-heading`, `history-page-one-heading`, `staff-page-way-back`). While a closed party's banner shows, the page's own
+  action is an outline (`.s2p-dj-page-body`, as the empty queue's "Drukuj"). "Konto" is about the person and their help (the guide, "Pomoc i kontakt", logout,
   the account), not the party. A state that needs attention shows on the panel only when it does (a limit from 80 %, yellow). What a person
   may not do is hidden, not greyed. A list of alike things with the same fields (the people of "Obsługa") is folded to one line each —
   what tells them apart (the name, the role) — and unfolds on a tap. Browser scenarios: `settings-more-rows`, `dashboard-heading-one-row`,
