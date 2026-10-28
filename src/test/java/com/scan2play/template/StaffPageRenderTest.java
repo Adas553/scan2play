@@ -125,7 +125,7 @@ class StaffPageRenderTest {
                         "class=\"s2p-fold-state\">Podgląd · do " + com.scan2play.util.Times.day(Instant.now().plus(java.time.Duration.ofDays(30))) + "<",
                         "<script src=\"/js/folds.js\">");
         assertThat(html).as("the heading and the tabs of every DJ's page, the settings' tab lit; above the heading the way back to the settings, a row of which led here")
-                .contains("id=\"djTabBar\"", "href=\"/dj/dashboard?party=HARN1\">Panel DJ-a</a>",
+                .contains("id=\"djTabBar\"", "href=\"/dj/dashboard?party=HARN1#top\">Panel DJ-a</a>",
                         "href=\"/dj/settings?party=HARN1\" id=\"backToSettings\"", ">← Ustawienia imprezy<")
                 .doesNotContain("id=\"backToPanel\"");
         assertThat(html.split("<script src=\"/js/dj-nav.js\">", -1)).as("dj-nav.js once").hasSize(2);
@@ -142,7 +142,7 @@ class StaffPageRenderTest {
                 // it works 30 days (V37)
                 "id=\"staffLinkUntil\"", ">Działa do " + com.scan2play.util.Times.day(Instant.now().plus(java.time.Duration.ofDays(30))) + ".<",
                 "action=\"/dj/staff/link\"", ">Wyłącz link (osoby z listy zostają)<",
-                "href=\"/dj/dashboard?party=HARN1\"", "/js/staff.js", "/js/dj-nav.js",
+                "href=\"/dj/dashboard?party=HARN1#top\"", "/js/staff.js", "/js/dj-nav.js",
                 // the invitation by e-mail waiting, folded like a person: the address, the role, since when; unfolded, what it waits for
                 // and "Cofnij zaproszenie" (asks first)
                 "data-invitation-id=\"3\"", ">ola.kowalska<wbr>@gmail.com<", ">Współorganizator<", ">czeka od 10.10<",

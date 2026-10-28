@@ -117,18 +117,20 @@
          around is one: the panel (the queue), the history, the settings. It stays in view (position: sticky, .dj-tabbar in app.css).
          On the panel tabs.js swaps the queue and the history without leaving the page (the DJ keeps their place) and the lit tab
          says which of them shows; the hrefs are what works without it — and on the other pages, where each tab is a page of its
-         own. "Obsługa" is a page of the settings: its tab is lit there. data-dj-tab is how the script finds the tabs. */-->
+         own. "Obsługa" is a page of the settings: its tab is lit there. data-dj-tab is how the script finds the tabs.
+         "#top" on the panel's and the history's: a tab opens its page at the top, as "Ustawienia" (which keeps no scroll) — without it
+         scroll-restore.js put the panel back where it was left (a page loaded again after a form, or "Wstecz", still is). */-->
     <nav id="djTabBar" class="dj-tabbar border-bottom border-secondary mb-4">
         <ul class="nav nav-tabs border-bottom-0 flex-nowrap">
             <li class="nav-item">
                 <a class="nav-link" data-dj-tab="panel" th:classappend="${activeTab == 'panel' ? 'active' : ''}"
                    th:aria-current="${activeTab == 'panel' ? 'page' : null}"
-                   href="/dj/dashboard" th:href="@{/dj/dashboard(party=${partyCode})}" th:text="#{dashboard.nav.panel}">DJ Panel</a>
+                   href="/dj/dashboard#top" th:href="@{/dj/dashboard(party=${partyCode})} + '#top'" th:text="#{dashboard.nav.panel}">DJ Panel</a>
             </li>
             <li class="nav-item" th:if="${access == null or access.may('HISTORY')}">
                 <a class="nav-link" data-dj-tab="history" th:classappend="${activeTab == 'history' ? 'active' : ''}"
                    th:aria-current="${activeTab == 'history' ? 'page' : null}"
-                   href="/dj/history-view" th:href="@{/dj/history-view(party=${partyCode})}" th:text="#{dashboard.nav.history}">History</a>
+                   href="/dj/history-view#top" th:href="@{/dj/history-view(party=${partyCode})} + '#top'" th:text="#{dashboard.nav.history}">History</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" data-dj-tab="settings" th:classappend="${activeTab == 'settings' ? 'active' : ''}"

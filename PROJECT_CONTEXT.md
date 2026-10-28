@@ -474,7 +474,8 @@ never offered). On a phone or a tablet (narrower than 992 px), **under an empty 
 one row with our logo, "Zakończ imprezę" and "Konto" (`dj-nav` in `components.html`; the history, "Ustawienia imprezy" and "Obsługa"
 have the same — one heading for every DJ's page, 2026-10-28), the tabs **"Panel DJ-a | Historia | Ustawienia"** (on the panel the first two swap
 the queue and the history in place, `tabs.js`, the lit tab is the list that shows; "Ustawienia" is the page "Ustawienia imprezy", lit on "Obsługa"
-too — the old "Kolejka" led where "Panel DJ-a" did), then the
+too — the old "Kolejka" led where "Panel DJ-a" did; from another page a tab opens its page at the top — `#top` on the panel's and
+the history's link, so `scroll-restore.js` keeps a page's scroll only for a reload after a form or "Wstecz"), then the
 button "Impreza i kod QR" (named for what it holds, not "Ustawienia" — that is the tab; the staff without a settings card: "Kod QR"); the page's h1 "Panel DJ-a" is for screen readers — the first request
 of a phone is at 316 px (was 382). **The settings fold** under that button on every screen (`.s2p-settings`; folded by `app.css` alone,
 `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`) and hold only what the DJ uses during a party

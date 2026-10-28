@@ -230,7 +230,7 @@
             Array.from(bar.querySelectorAll('[data-dj-tab]')).map(function (a) {
                 return [a.getAttribute('data-dj-tab'), a.getAttribute('href'), a.classList.contains('active')];
             }),
-            [['panel', '/dj/dashboard?party=HARN1', tab === 'panel'], ['history', '/dj/history-view?party=HARN1', tab === 'history'],
+            [['panel', '/dj/dashboard?party=HARN1#top', tab === 'panel'], ['history', '/dj/history-view?party=HARN1#top', tab === 'history'],
              ['settings', '/dj/settings?party=HARN1', tab === 'settings']]);
         t.step('no button back to the panel beside it', document.getElementById('backToPanel'), null);
     }
@@ -410,7 +410,7 @@
             document.querySelectorAll('details.s2p-fold > summary').forEach(function (summary) { summary.click(); });
             t.step('every card unfolded: nothing to tap is lower than 44 px', tooSmall(document.body), []);
             t.check('unfolded: nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
-            t.check('the Panel tab leads to the panel of the same party', document.querySelector('[data-dj-tab="panel"]').getAttribute('href') === '/dj/dashboard?party=HARN1');
+            t.check('the Panel tab leads to the panel of the same party', document.querySelector('[data-dj-tab="panel"]').getAttribute('href') === '/dj/dashboard?party=HARN1#top');
         }
     });
 

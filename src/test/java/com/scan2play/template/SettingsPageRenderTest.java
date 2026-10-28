@@ -176,7 +176,7 @@ class SettingsPageRenderTest {
         assertThat(html).contains("<title>Ustawienia imprezy - Scan2Play</title>", ">Ustawienia imprezy<");
         assertThat(html).as("the heading and the tabs of every DJ's page, the tab of the settings lit, the others of the same party")
                 .contains("id=\"djTabBar\"", "id=\"end-party-form\"", "id=\"accountMenuBtn\"",
-                        "href=\"/dj/dashboard?party=HARN1\">Panel DJ-a</a>", "href=\"/dj/settings?party=HARN1\">Ustawienia</a>",
+                        "href=\"/dj/dashboard?party=HARN1#top\">Panel DJ-a</a>", "href=\"/dj/settings?party=HARN1\">Ustawienia</a>",
                         "<script src=\"/webjars/bootstrap/js/bootstrap.bundle.min.js\" defer>")
                 .doesNotContain("id=\"backToPanel\"");
         assertThat(html.split("<script src=\"/js/dj-nav.js\">", -1)).as("dj-nav.js once: a second copy would ask every question twice").hasSize(2);
