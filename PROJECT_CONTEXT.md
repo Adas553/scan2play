@@ -416,8 +416,9 @@ box of the DJ's software) and "Podejrzyj" on every waiting request, and on a com
 Esc); the vibe, the vibe note, "Kto gra";
 the QR code (`/dj/qr-print`: an A4 poster or eight table cards; **the print as the DJ sets it** (V46) — an editor over the paper, for
 whom may change the card "Impreza" (VIBE), any plan: the DJ's own heading (≤ 40) in place of "Zeskanuj i poproś o piosenkę / Scan to
-request a song", one line of the DJ's own (≤ 60, "Osiemnastka Dawida"), the language — "Jak panel" (a Polish panel Polish and
-English at once, any other English alone), "Polski + English", "Polski", "English" — and boxes for what of the DJ's it shows (the
+request a song", one line of the DJ's own (≤ 60, "Osiemnastka Dawida"), the language — "Polski + English", "Polski", "English";
+until the DJ picks one (`AUTO`, the default) the panel's is printed and picked: a Polish panel Polish and English at once, any other
+English alone — and boxes for what of the DJ's it shows (the
 logo, the profiles, the tip, the address with the party's code; a box only for what the party has) and **the look** (V47): a theme —
 "Klasyczny" (white, as before), "Elegancki" (cream, for a wedding, a serif heading, a double frame), "Klubowy" (dark, the DJ's logo on a
 white badge), "Pastelowy" (soft pink, rounded) — and the colour of the heading and the frame: the theme's, one of eight, or the

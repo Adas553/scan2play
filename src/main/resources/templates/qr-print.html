@@ -59,10 +59,9 @@
         <div class="editor-field">
             <label for="posterLanguage" th:text="#{qr.edit.language}">Language</label>
             <select id="posterLanguage" name="language">
-                <option value="AUTO" th:selected="${poster.posterLanguage.name() == 'AUTO'}" th:text="#{qr.edit.language.auto}">As the panel</option>
-                <option value="BOTH" th:selected="${poster.posterLanguage.name() == 'BOTH'}">Polski + English</option>
-                <option value="PL" th:selected="${poster.posterLanguage.name() == 'PL'}">Polski</option>
-                <option value="EN" th:selected="${poster.posterLanguage.name() == 'EN'}">English</option>
+                <option value="BOTH" th:selected="${printLang == 'both'}">Polski + English</option>
+                <option value="PL" th:selected="${printLang == 'pl'}">Polski</option>
+                <option value="EN" th:selected="${printLang == 'en'}">English</option>
             </select>
         </div>
     </section>

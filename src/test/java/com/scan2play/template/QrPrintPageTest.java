@@ -286,8 +286,9 @@ class QrPrintPageTest {
         String html = render("poster", Locale.forLanguageTag("pl"), party);
         assertThat(html).contains("id=\"posterForm\"", "action=\"/dj/qr-print/settings\"",
                 "maxlength=\"" + PartySettingsEntity.POSTER_HEADING_MAX + "\"", "maxlength=\"" + PartySettingsEntity.POSTER_LINE_MAX + "\"",
-                "value=\"Osiemnastka Dawida\"", "<option value=\"AUTO\" selected=\"selected\">Jak panel</option>",
+                "value=\"Osiemnastka Dawida\"", "<option value=\"BOTH\" selected=\"selected\">Polski + English</option>",
                 "name=\"showAddress\" value=\"true\" data-poster-toggle=\"address\" checked=\"checked\"");
+        assertThat(html).as("no \"as the panel\": the panel's language picked until the DJ picks another").doesNotContain("value=\"AUTO\"");
         assertThat(html).as("no logo, no profiles, no tip: no box for them, what was saved sent as it is")
                 .doesNotContain("data-poster-toggle=\"logo\"", "data-poster-toggle=\"tip\"")
                 .contains("<input type=\"hidden\" name=\"showLogo\" value=\"true\">");
