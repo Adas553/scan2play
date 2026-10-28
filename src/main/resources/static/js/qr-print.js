@@ -5,6 +5,7 @@
 // cards at once — the DJ's own heading in place of ours, the DJ's line, the parts of the DJ's shown or left off (data-poster-part;
 // the DJ's logo left off brings ours back, and the cards' code its full size). "Zapisz" keeps it with the party in the background
 // (POST /dj/qr-print/settings, 204); the print's language is written by the server, so a new one is saved and the page loads again.
+// What is changed and not saved yet says so, and goes along to the other layout (sessionStorage, for this tab), to compare the two.
 //
 // The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
 // theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
@@ -88,6 +89,7 @@
 
     function say(text, refused) {
         answer.textContent = text;
+        answer.classList.remove('unsaved');
         answer.classList.toggle('refused', !!refused);
     }
 
@@ -129,6 +131,58 @@
         box.addEventListener('change', function () { showPart(box); });
     });
 
+    // Changes not saved yet go with the DJ to the other layout (poster ↔ cards), so the two can be compared before "Zapisz": kept in
+    // this tab only, for the next page, and gone once it has them.
+    const stashKey = 's2p-poster-' + form.elements.partyCode.value;
+
+    function stash() {
+        const state = { heading: form.elements.heading.value, line: form.elements.line.value, theme: form.elements.theme.value,
+            accent: chosenAccent(), picker: picker ? picker.value : '', parts: {} };
+        all('[data-poster-toggle]').forEach(function (box) { state.parts[box.dataset.posterToggle] = box.checked; });
+        try { sessionStorage.setItem(stashKey, JSON.stringify(state)); } catch (e) { /* no storage: the switch loses them, as before */ }
+    }
+
+    function unstash() {
+        let state = null;
+        try {
+            state = JSON.parse(sessionStorage.getItem(stashKey) || 'null');
+            sessionStorage.removeItem(stashKey);
+        } catch (e) { return; }
+        if (!state) return;
+        form.elements.heading.value = state.heading || '';
+        form.elements.line.value = state.line || '';
+        if (form.querySelector('#posterTheme option[value="' + state.theme + '"]')) form.elements.theme.value = state.theme;
+        if (picker && state.picker) picker.value = state.picker;
+        const swatch = Array.prototype.find.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
+            return radio !== own && radio.value === state.accent;
+        });
+        if (swatch) swatch.checked = true;
+        else if (own && state.accent) { own.value = state.accent; own.checked = true; }
+        all('[data-poster-toggle]').forEach(function (box) {
+            if (typeof state.parts[box.dataset.posterToggle] === 'boolean') box.checked = state.parts[box.dataset.posterToggle];
+            showPart(box);
+        });
+        showHeading();
+        showLine();
+        changeLook();
+        markUnsaved();
+    }
+
+    let unsaved = false;
+
+    function markUnsaved() {
+        unsaved = true;
+        say(form.dataset.unsaved, false);
+        answer.classList.add('unsaved');
+    }
+
+    form.addEventListener('input', function (e) { if (e.target.name !== 'language') markUnsaved(); });
+    form.addEventListener('change', function (e) { if (e.target.name !== 'language') markUnsaved(); });
+    all('[data-layout-switch]').forEach(function (link) {
+        link.addEventListener('click', function () { if (unsaved) stash(); });
+    });
+    unstash();
+
     form.elements.language.addEventListener('change', async function () {
         say(form.dataset.sending, false);
         try {
@@ -145,6 +199,7 @@
         say(form.dataset.sending, false);
         try {
             await send();
+            unsaved = false;
             say(form.dataset.saved, false);
         } catch (err) {
             say(form.dataset.refused, true);

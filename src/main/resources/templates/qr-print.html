@@ -19,72 +19,86 @@
     (data-poster-part), so the editor's preview (qr-print.js) shows it again at once.
 */-->
 <body th:class="${(qrLayout == 'cards' ? 'layout-cards ' : 'layout-poster ') + poster.posterTheme.cssClass()}"
-      th:attr="data-accent=${poster.posterAccent}"
+      th:attr="data-accent=${poster.posterAccent}" th:classappend="${posterEdit} ? 'has-editor'"
       th:with="pl=${printLang != 'en'}, en=${printLang != 'pl'}, both=${printLang == 'both'},
                logoShown=${djLogo != null and poster.posterShowLogo}">
 
 <nav class="toolbar no-print">
-    <strong th:text="#{qr.print.title}">Print the QR code</strong>
-    <a th:href="@{/dj/qr-print(layout='poster',party=${partyCode})}" th:classappend="${qrLayout == 'poster'} ? 'active'"
-       th:text="#{qr.print.layout.poster}">A4 poster</a>
-    <a th:href="@{/dj/qr-print(layout='cards',party=${partyCode})}" th:classappend="${qrLayout == 'cards'} ? 'active'"
-       th:text="#{qr.print.layout.cards}">Table cards</a>
+    <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" class="toolbar-back" th:text="#{qr.print.back}">Back to the dashboard</a>
+    <strong class="toolbar-title" th:text="#{qr.print.title}">Print the QR code</strong>
+    <!--/* the two layouts as one switch; the editor's unsaved changes go along (qr-print.js keeps them for the tab) */-->
+    <div class="segmented" role="group" th:attr="aria-label=#{qr.print.title}">
+        <a th:href="@{/dj/qr-print(layout='poster',party=${partyCode})}" th:classappend="${qrLayout == 'poster'} ? 'active'" data-layout-switch
+           th:attr="aria-current=${qrLayout == 'poster'} ? 'page'" th:text="#{qr.print.layout.poster}">A4 poster</a>
+        <a th:href="@{/dj/qr-print(layout='cards',party=${partyCode})}" th:classappend="${qrLayout == 'cards'} ? 'active'" data-layout-switch
+           th:attr="aria-current=${qrLayout == 'cards'} ? 'page'" th:text="#{qr.print.layout.cards}">Table cards</a>
+    </div>
     <button type="button" id="printBtn" th:text="#{qr.print.print}">Print</button>
-    <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" th:text="#{qr.print.back}">Back to the dashboard</a>
     <p class="hint" th:text="#{qr.print.hint}">This bar is not printed.</p>
 </nav>
 
-<!--/* The editor (V46), for whom may change the party's card "Impreza": what is typed or ticked shows on the page at once; "Zapisz"
-     keeps it with the party (POST /dj/qr-print/settings, in the background); a new language is saved and the page loads again */-->
+<!--/* The editor (V46, V47), for whom may change the party's card "Impreza": what is typed or ticked shows on the page at once;
+     "Zapisz" keeps it with the party (POST /dj/qr-print/settings, in the background); a new language is saved and the page loads
+     again. On a computer a panel beside the paper (the preview), on a phone above it. */-->
 <form th:if="${posterEdit}" id="posterForm" class="editor no-print" th:action="@{/dj/qr-print/settings}" method="post"
-      th:attr="data-saved=#{qr.edit.saved},data-refused=#{qr.edit.refused},data-sending=#{qr.edit.sending}">
+      th:attr="data-saved=#{qr.edit.saved},data-refused=#{qr.edit.refused},data-sending=#{qr.edit.sending},data-unsaved=#{qr.edit.unsaved}">
     <input type="hidden" name="partyCode" th:value="${partyCode}">
-    <div class="editor-field">
-        <label for="posterHeading" th:text="#{qr.edit.heading}">Your heading</label>
-        <!--/* maxlength: PartySettingsEntity.POSTER_HEADING_MAX / POSTER_LINE_MAX (QrPrintPageTest compares them) */-->
-        <input type="text" id="posterHeading" name="heading" th:value="${poster.posterHeading}" maxlength="40"
-               th:attr="placeholder=${both ? 'Zeskanuj i poproś o piosenkę / Scan to request a song' : (pl ? 'Zeskanuj i poproś o piosenkę' : 'Scan to request a song')}">
-    </div>
-    <div class="editor-field">
-        <label for="posterLine" th:text="#{qr.edit.line}">A line of your own</label>
-        <input type="text" id="posterLine" name="line" th:value="${poster.posterLine}" maxlength="60"
-               th:placeholder="#{qr.edit.line.placeholder}">
-    </div>
-    <div class="editor-field">
-        <label for="posterLanguage" th:text="#{qr.edit.language}">Language</label>
-        <select id="posterLanguage" name="language">
-            <option value="AUTO" th:selected="${poster.posterLanguage.name() == 'AUTO'}" th:text="#{qr.edit.language.auto}">As the panel</option>
-            <option value="BOTH" th:selected="${poster.posterLanguage.name() == 'BOTH'}">Polski + English</option>
-            <option value="PL" th:selected="${poster.posterLanguage.name() == 'PL'}">Polski</option>
-            <option value="EN" th:selected="${poster.posterLanguage.name() == 'EN'}">English</option>
-        </select>
-    </div>
+    <section class="editor-group">
+        <h2 th:text="#{qr.edit.group.content}">Text</h2>
+        <div class="editor-field">
+            <label for="posterHeading" th:text="#{qr.edit.heading}">Your heading</label>
+            <!--/* maxlength: PartySettingsEntity.POSTER_HEADING_MAX / POSTER_LINE_MAX (QrPrintPageTest compares them) */-->
+            <input type="text" id="posterHeading" name="heading" th:value="${poster.posterHeading}" maxlength="40"
+                   th:attr="placeholder=${both ? 'Zeskanuj i poproś o piosenkę / Scan to request a song' : (pl ? 'Zeskanuj i poproś o piosenkę' : 'Scan to request a song')}">
+        </div>
+        <div class="editor-field">
+            <label for="posterLine" th:text="#{qr.edit.line}">A line of your own</label>
+            <input type="text" id="posterLine" name="line" th:value="${poster.posterLine}" maxlength="60"
+                   th:placeholder="#{qr.edit.line.placeholder}">
+        </div>
+        <div class="editor-field">
+            <label for="posterLanguage" th:text="#{qr.edit.language}">Language</label>
+            <select id="posterLanguage" name="language">
+                <option value="AUTO" th:selected="${poster.posterLanguage.name() == 'AUTO'}" th:text="#{qr.edit.language.auto}">As the panel</option>
+                <option value="BOTH" th:selected="${poster.posterLanguage.name() == 'BOTH'}">Polski + English</option>
+                <option value="PL" th:selected="${poster.posterLanguage.name() == 'PL'}">Polski</option>
+                <option value="EN" th:selected="${poster.posterLanguage.name() == 'EN'}">English</option>
+            </select>
+        </div>
+    </section>
     <!--/* the look (V47): the theme, and the DJ's colour for the heading and the frame — one of the palette's, the theme's own, or the
-         DJ's own picked in the browser's colour field; the page makes any of them readable on the theme's paper (qr-print.js) */-->
-    <div class="editor-field">
-        <label for="posterTheme" th:text="#{qr.edit.theme}">Theme</label>
-        <select id="posterTheme" name="theme">
-            <option th:each="t : ${posterThemes}" th:value="${t.name()}"
-                    th:selected="${t == poster.posterTheme}" th:text="#{'qr.edit.theme.' + ${t.name().toLowerCase()}}">Classic</option>
-        </select>
-    </div>
-    <fieldset class="editor-colors" th:with="palette=${ {'#1565c0', '#2e7d32', '#c2185b', '#d84315', '#6a1b9a', '#b08a3e', '#00bcd4', '#111111'} },
-              own=${poster.posterAccent != null and !#lists.contains(palette, poster.posterAccent)}">
-        <legend th:text="#{qr.edit.accent}">Colour</legend>
-        <label class="swatch-theme"><input type="radio" name="accent" value="" th:checked="${poster.posterAccent == null}"> <span th:text="#{qr.edit.accent.theme}">The theme's</span></label>
-        <label th:each="c : ${palette}" class="swatch" th:attr="title=${c}"><input type="radio" name="accent" th:value="${c}" th:checked="${c == poster.posterAccent}"
-               th:attr="aria-label=${c}"><span class="swatch-dot" th:classappend="${'swatch-' + c.substring(1)}"></span></label>
-        <label class="swatch-own"><input type="radio" name="accent" id="posterAccentOwn" th:value="${own ? poster.posterAccent : '#ff4081'}" th:checked="${own}">
-            <span th:text="#{qr.edit.accent.own}">Your own</span>
-            <input type="color" id="posterAccentPicker" th:value="${own ? poster.posterAccent : '#ff4081'}" th:attr="aria-label=#{qr.edit.accent.own}"></label>
-    </fieldset>
-    <fieldset class="editor-checks">
-        <legend th:text="#{qr.edit.show}">Show</legend>
-        <label th:if="${djLogo != null}"><input type="checkbox" name="showLogo" value="true" data-poster-toggle="logo" th:checked="${poster.posterShowLogo}"> <span th:text="#{qr.edit.show.logo}">Your logo</span></label>
-        <label th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null}"><input type="checkbox" name="showLinks" value="true" data-poster-toggle="links" th:checked="${poster.posterShowLinks}"> <span th:text="#{qr.edit.show.links}">Profiles</span></label>
-        <label th:if="${tipUrl != null}"><input type="checkbox" name="showTip" value="true" data-poster-toggle="tip" th:checked="${poster.posterShowTip}"> <span th:text="#{qr.edit.show.tip}">Tip</span></label>
-        <label><input type="checkbox" name="showAddress" value="true" data-poster-toggle="address" th:checked="${poster.posterShowAddress}"> <span th:text="#{qr.edit.show.address}">Address and party code</span></label>
-    </fieldset>
+         DJ's own picked in the browser's colour field; the page makes any of them readable on the theme's paper (qr-print.js). Each
+         colour is its own button: the radio hidden, the dot ringed when picked. */-->
+    <section class="editor-group">
+        <h2 th:text="#{qr.edit.group.look}">Look</h2>
+        <div class="editor-field">
+            <label for="posterTheme" th:text="#{qr.edit.theme}">Theme</label>
+            <select id="posterTheme" name="theme">
+                <option th:each="t : ${posterThemes}" th:value="${t.name()}"
+                        th:selected="${t == poster.posterTheme}" th:text="#{'qr.edit.theme.' + ${t.name().toLowerCase()}}">Classic</option>
+            </select>
+        </div>
+        <fieldset class="editor-colors" th:with="palette=${ {'#1565c0', '#2e7d32', '#c2185b', '#d84315', '#6a1b9a', '#b08a3e', '#00bcd4', '#111111'} },
+                  own=${poster.posterAccent != null and !#lists.contains(palette, poster.posterAccent)}">
+            <legend th:text="#{qr.edit.accent}">Colour</legend>
+            <label class="swatch swatch-text"><input type="radio" name="accent" value="" th:checked="${poster.posterAccent == null}"><span
+                    class="swatch-chip" th:text="#{qr.edit.accent.theme}">The theme's</span></label>
+            <label th:each="c : ${palette}" class="swatch" th:attr="title=${c}"><input type="radio" name="accent" th:value="${c}" th:checked="${c == poster.posterAccent}"
+                   th:attr="aria-label=${c}"><span class="swatch-dot" th:classappend="${'swatch-' + c.substring(1)}"></span></label>
+            <label class="swatch swatch-text"><input type="radio" name="accent" id="posterAccentOwn" th:value="${own ? poster.posterAccent : '#ff4081'}" th:checked="${own}"><span
+                    class="swatch-chip"><span th:text="#{qr.edit.accent.own}">Your own</span><input type="color" id="posterAccentPicker"
+                    th:value="${own ? poster.posterAccent : '#ff4081'}" th:attr="aria-label=#{qr.edit.accent.own}"></span></label>
+        </fieldset>
+    </section>
+    <section class="editor-group">
+        <h2 th:text="#{qr.edit.show}">Show</h2>
+        <div class="editor-checks">
+            <label th:if="${djLogo != null}"><input type="checkbox" name="showLogo" value="true" data-poster-toggle="logo" th:checked="${poster.posterShowLogo}"> <span th:text="#{qr.edit.show.logo}">Your logo</span></label>
+            <label th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null}"><input type="checkbox" name="showLinks" value="true" data-poster-toggle="links" th:checked="${poster.posterShowLinks}"> <span th:text="#{qr.edit.show.links}">Profiles</span></label>
+            <label th:if="${tipUrl != null}"><input type="checkbox" name="showTip" value="true" data-poster-toggle="tip" th:checked="${poster.posterShowTip}"> <span th:text="#{qr.edit.show.tip}">Tip</span></label>
+            <label><input type="checkbox" name="showAddress" value="true" data-poster-toggle="address" th:checked="${poster.posterShowAddress}"> <span th:text="#{qr.edit.show.address}">Address and party code</span></label>
+        </div>
+    </section>
     <!--/* a part the party has none of (no logo, no tip) keeps what was saved: sent as it is */-->
     <input th:if="${djLogo == null}" type="hidden" name="showLogo" th:value="${poster.posterShowLogo}">
     <input th:if="${instagramUrl == null and facebookUrl == null and tiktokUrl == null}" type="hidden" name="showLinks" th:value="${poster.posterShowLinks}">

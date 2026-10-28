@@ -18,22 +18,24 @@ body {
     print-color-adjust: exact;
 }
 
-/* ---- The bar on the screen (not printed) ---- */
+/* ---- The bar on the screen (not printed): back, the title, the layout as one switch, "Drukuj" ---- */
 
 .toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
-    padding: 12px 16px;
-    background: #212529;
+    padding: 10px 16px;
+    background: #1b1f24;
     color: #f8f9fa;
+    border-bottom: 1px solid #343a40;
 }
 
 .toolbar a,
 .toolbar button {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 44px;
     padding: 6px 14px;
     border: 1px solid #6c757d;
@@ -45,9 +47,38 @@ body {
     cursor: pointer;
 }
 
-/* the layout shown: filled light, like a picked tab — not green, which means "accepted" elsewhere */
-.toolbar a.active {
-    border-color: #f8f9fa;
+.toolbar .toolbar-back {
+    border-color: transparent;
+    color: #adb5bd;
+}
+
+.toolbar .toolbar-back::before {
+    content: "←";
+    margin-right: 6px;
+}
+
+.toolbar-title {
+    margin-right: auto;
+}
+
+/* the two layouts as one control: the one shown filled light — not green, which means "accepted" elsewhere */
+.segmented {
+    display: inline-flex;
+    border: 1px solid #6c757d;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.toolbar .segmented a {
+    border: 0;
+    border-radius: 0;
+}
+
+.toolbar .segmented a + a {
+    border-left: 1px solid #6c757d;
+}
+
+.toolbar .segmented a.active {
     background: #f8f9fa;
     color: #212529;
     font-weight: 600;
@@ -73,126 +104,146 @@ body {
     display: none !important;
 }
 
-/* ---- The editor (V46, not printed): the DJ's heading and line, the language, what is shown; the page under it is the preview ---- */
+/* ---- The editor (V46, V47; not printed): grouped — the text, the look, what is shown —, "Zapisz" and its state at the end. On a
+   computer a panel beside the paper (the page under it is the preview, as in a design tool); on a phone above it. ---- */
 
 .editor {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 10px 16px;
-    padding: 12px 16px 16px;
-    background: #2b3035;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    background: #24292f;
     color: #f8f9fa;
     font-size: 0.95rem;
+}
+
+.editor-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #3a4148;
+    border-radius: 12px;
+    background: #2b3138;
+}
+
+.editor-group h2 {
+    margin: 0;
+    color: #adb5bd;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .editor-field {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    flex: 1 1 220px;
+}
+
+.editor-field label,
+.editor-colors legend {
+    color: #dee2e6;
+    font-size: 0.88rem;
 }
 
 .editor input[type="text"],
 .editor select {
+    width: 100%;
     min-height: 44px;
     padding: 6px 10px;
-    border: 1px solid #6c757d;
+    border: 1px solid #495057;
     border-radius: 8px;
     background: #ffffff;
     color: #111111;
     font: inherit;
 }
 
-.editor-checks {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 14px;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    flex: 1 1 100%;
+.editor input[type="text"]:focus-visible,
+.editor select:focus-visible {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 1px;
 }
 
-.editor-checks legend {
-    padding: 0;
-    margin-bottom: 4px;
-}
-
-.editor-checks label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 44px;
-}
-
-.editor-checks input {
-    width: 20px;
-    height: 20px;
-}
-
-.editor-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.editor button {
-    min-height: 44px;
-    padding: 6px 18px;
-    border: 1px solid #0dcaf0;
-    border-radius: 8px;
-    background: #0dcaf0;
-    color: #062c33;
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-}
-
+/* the colours: each its own button — the radio hidden, the dot (or the word) ringed when picked */
 .editor-colors {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 12px;
+    gap: 6px;
     margin: 0;
     padding: 0;
     border: 0;
-    flex: 1 1 100%;
 }
 
 .editor-colors legend {
     padding: 0;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
-.editor-colors label {
+.swatch {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    min-width: 44px;
     min-height: 44px;
     cursor: pointer;
 }
 
-.editor-colors input[type="radio"] {
-    width: 20px;
-    height: 20px;
+.swatch input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
 }
 
 .swatch-dot {
-    display: inline-block;
-    width: 26px;
-    height: 26px;
-    border: 2px solid #f8f9fa;
+    display: block;
+    width: 28px;
+    height: 28px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
     border-radius: 50%;
 }
 
-.editor-colors input[type="color"] {
-    width: 44px;
-    height: 36px;
+.swatch-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 4px 12px;
+    border: 1px solid #495057;
+    border-radius: 999px;
+    color: #dee2e6;
+    font-size: 0.88rem;
+}
+
+.swatch:has(input:checked) .swatch-dot {
+    box-shadow: 0 0 0 2px #2b3138, 0 0 0 4px #f8f9fa;
+}
+
+.swatch:has(input:checked) .swatch-chip {
+    border-color: #f8f9fa;
+    background: #f8f9fa;
+    color: #212529;
+    font-weight: 600;
+}
+
+.swatch:has(input:focus-visible) .swatch-dot,
+.swatch:has(input:focus-visible) .swatch-chip {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 3px;
+}
+
+.swatch-chip input[type="color"] {
+    width: 28px;
+    height: 24px;
     padding: 0;
     border: 1px solid #6c757d;
-    border-radius: 6px;
+    border-radius: 4px;
     background: transparent;
+    cursor: pointer;
 }
 
 .swatch-1565c0 { background: #1565c0; }
@@ -204,17 +255,115 @@ body {
 .swatch-00bcd4 { background: #00bcd4; }
 .swatch-111111 { background: #111111; }
 
+.editor-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+}
+
+.editor-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.editor-checks input {
+    width: 20px;
+    height: 20px;
+    accent-color: #0dcaf0;
+}
+
+.editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.editor button {
+    min-height: 44px;
+    padding: 6px 22px;
+    border: 1px solid #0dcaf0;
+    border-radius: 8px;
+    background: #0dcaf0;
+    color: #062c33;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.editor button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 #posterAnswer {
     color: #75e0a7;
+    font-size: 0.9rem;
+}
+
+#posterAnswer.unsaved {
+    color: #ffd166;
 }
 
 #posterAnswer.refused {
     color: #ff8a8a;
 }
 
+/* a computer: the editor a panel on the left, held in view while the page scrolls; the paper beside it on a grey desk */
+@media screen and (min-width: 1100px) {
+    body.has-editor {
+        display: grid;
+        grid-template-columns: 380px minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        /* the panel's colour down the whole left column, also below a panel shorter than the page */
+        background: linear-gradient(to right, #24292f 380px, #e9ecef 380px);
+    }
+
+    body.has-editor .toolbar {
+        grid-column: 1 / -1;
+    }
+
+    body.has-editor .editor {
+        grid-column: 1;
+        grid-row: 2;
+        position: sticky;
+        top: 0;
+        align-self: start;
+        max-height: 100vh;
+        overflow-y: auto;
+        border-right: 1px solid #343a40;
+    }
+
+    body.has-editor > main {
+        grid-column: 2;
+        grid-row: 2;
+        align-self: start;
+        margin-top: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    /* the cards on the sheet they are printed on */
+    body.has-editor > main.cards {
+        background: #fff;
+    }
+
+    body.has-editor > main.cards {
+        box-shadow: none;
+    }
+}
+
 @media print {
     .no-print {
         display: none !important;
+    }
+
+    body,
+    body.has-editor {
+        display: block;
+        background: #ffffff;
     }
 }
 

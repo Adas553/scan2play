@@ -419,7 +419,7 @@ whom may change the card "Impreza" (VIBE), any plan: the DJ's own heading (≤ 4
 request a song", one line of the DJ's own (≤ 60, "Osiemnastka Dawida"), the language — "Jak panel" (a Polish panel Polish and
 English at once, any other English alone), "Polski + English", "Polski", "English" — and boxes for what of the DJ's it shows (the
 logo, the profiles, the tip, the address with the party's code; a box only for what the party has) and **the look** (V47): a theme —
-"Klasyczny" (white, as before), "Elegancki (wesele)" (cream, a serif heading, a double frame), "Klubowy" (dark, the DJ's logo on a
+"Klasyczny" (white, as before), "Elegancki" (cream, for a wedding, a serif heading, a double frame), "Klubowy" (dark, the DJ's logo on a
 white badge), "Pastelowy" (soft pink, rounded) — and the colour of the heading and the frame: the theme's, one of eight, or the
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
@@ -428,7 +428,9 @@ stays black on white (its own white margin is its tile) in every theme; every th
 (`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font). What is typed or ticked shows at
 once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`; the DJ's logo left off brings ours back);
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads
-again (the server writes it). The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
+again (the server writes it). Changes not saved say "Niezapisane zmiany" and go along to the other layout (the switch "Plakat A4 |
+Kartki na stoliki" keeps them in `sessionStorage` for the tab, the next page takes them — scenarios `poster-switch-keeps`, `…-takes`).
+On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a grey desk. The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
