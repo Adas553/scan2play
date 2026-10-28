@@ -528,6 +528,30 @@
         }
     });
 
+    // The owner's screenshot (2026-10-28): the folded lines looked untidy — the votes and the signs moved with each "↩", "🎧" / "⚠"
+    // stuck to the title, "⚠" higher than the line. The votes, the decision, "↩" and "▾" stand in columns; a sign keeps a gap.
+    S2P.scenario({
+        name: 'history-line-columns-phone',
+        title: 'the history on a phone: the votes, the decision and "▾" one under another down the list; "🎧" / "⚠" a gap from the title, centred on its line',
+        page: 'history-page',
+        viewport: '390,844',
+        run: async function (t) {
+            const rows = Array.from(document.querySelectorAll('[data-list] tbody tr[data-decision]'));
+            // the middles: ▶ and ✖ are not as wide, each centred in its column
+            const columns = function (sel) { return new Set(rows.map(function (r) {
+                const box = r.querySelector(sel).getBoundingClientRect(); return Math.round((box.left + box.right) / 2); })).size; };
+            t.step('one column each: the votes, the decision, "▾"',
+                [columns('td[data-sort-value="votes"] .badge'), columns('.s2p-decision-icon'), columns('.s2p-card-toggle')], [1, 1, 1]);
+            const signs = Array.from(document.querySelectorAll('[data-list] tbody tr[data-decision] :is(.s2p-added-by-dj, .s2p-check-song)'));
+            t.check('the rows have signs', signs.length >= 2);
+            t.step('each sign a gap from its title, centred on the line', signs.filter(function (sign) {
+                const title = sign.closest('td').querySelector('.fw-bold').getBoundingClientRect();
+                const box = sign.getBoundingClientRect();
+                return box.left - title.right < 4 || Math.abs((box.top + box.bottom) / 2 - (title.top + title.bottom) / 2) > 2;
+            }).map(function (sign) { return sign.className; }), []);
+        }
+    });
+
     S2P.scenario({
         name: 'history-actions-row-wide',
         title: 'the history on a computer: "Podsumowanie wieczoru" and "Wyczyść historię" in the filters\' row as before, no "⋯"',
