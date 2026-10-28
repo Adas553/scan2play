@@ -18,22 +18,24 @@ body {
     print-color-adjust: exact;
 }
 
-/* ---- The bar on the screen (not printed) ---- */
+/* ---- The bar on the screen (not printed): back, the title, the layout as one switch, "Drukuj" ---- */
 
 .toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
-    padding: 12px 16px;
-    background: #212529;
+    padding: 10px 16px;
+    background: #1b1f24;
     color: #f8f9fa;
+    border-bottom: 1px solid #343a40;
 }
 
 .toolbar a,
 .toolbar button {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 44px;
     padding: 6px 14px;
     border: 1px solid #6c757d;
@@ -45,9 +47,38 @@ body {
     cursor: pointer;
 }
 
-/* the layout shown: filled light, like a picked tab — not green, which means "accepted" elsewhere */
-.toolbar a.active {
-    border-color: #f8f9fa;
+.toolbar .toolbar-back {
+    border-color: transparent;
+    color: #adb5bd;
+}
+
+.toolbar .toolbar-back::before {
+    content: "←";
+    margin-right: 6px;
+}
+
+.toolbar-title {
+    margin-right: auto;
+}
+
+/* the two layouts as one control: the one shown filled light — not green, which means "accepted" elsewhere */
+.segmented {
+    display: inline-flex;
+    border: 1px solid #6c757d;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.toolbar .segmented a {
+    border: 0;
+    border-radius: 0;
+}
+
+.toolbar .segmented a + a {
+    border-left: 1px solid #6c757d;
+}
+
+.toolbar .segmented a.active {
     background: #f8f9fa;
     color: #212529;
     font-weight: 600;
@@ -68,15 +99,372 @@ body {
     font-size: 0.85rem;
 }
 
+/* a part the DJ left off the print (V46): the editor's preview shows it again by taking the attribute away */
+[hidden] {
+    display: none !important;
+}
+
+/* ---- The editor (V46, V47; not printed): grouped — the text, the look, what is shown —, "Zapisz" and its state at the end. On a
+   computer a panel beside the paper (the page under it is the preview, as in a design tool); on a phone above it. ---- */
+
+.editor {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    background: #24292f;
+    color: #f8f9fa;
+    font-size: 0.95rem;
+}
+
+.editor-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #3a4148;
+    border-radius: 12px;
+    background: #2b3138;
+}
+
+.editor-group h2 {
+    margin: 0;
+    color: #adb5bd;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.editor-field label,
+.editor-colors legend {
+    color: #dee2e6;
+    font-size: 0.88rem;
+}
+
+.editor input[type="text"],
+.editor select {
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #495057;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111111;
+    font: inherit;
+}
+
+.editor input[type="text"]:focus-visible,
+.editor select:focus-visible {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 1px;
+}
+
+/* the colours: each its own button — the radio hidden, the dot (or the word) ringed when picked */
+.editor-colors {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.editor-colors legend {
+    padding: 0;
+    margin-bottom: 6px;
+}
+
+.swatch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.swatch input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.swatch-dot {
+    display: block;
+    width: 28px;
+    height: 28px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+}
+
+.swatch-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 4px 12px;
+    border: 1px solid #495057;
+    border-radius: 999px;
+    color: #dee2e6;
+    font-size: 0.88rem;
+}
+
+.swatch:has(input:checked) .swatch-dot {
+    box-shadow: 0 0 0 2px #2b3138, 0 0 0 4px #f8f9fa;
+}
+
+.swatch:has(input:checked) .swatch-chip {
+    border-color: #f8f9fa;
+    background: #f8f9fa;
+    color: #212529;
+    font-weight: 600;
+}
+
+.swatch:has(input:focus-visible) .swatch-dot,
+.swatch:has(input:focus-visible) .swatch-chip {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 3px;
+}
+
+.swatch-chip input[type="color"] {
+    width: 28px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid #6c757d;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.swatch-1565c0 { background: #1565c0; }
+.swatch-2e7d32 { background: #2e7d32; }
+.swatch-c2185b { background: #c2185b; }
+.swatch-d84315 { background: #d84315; }
+.swatch-6a1b9a { background: #6a1b9a; }
+.swatch-b08a3e { background: #b08a3e; }
+.swatch-00bcd4 { background: #00bcd4; }
+.swatch-111111 { background: #111111; }
+
+.editor-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+}
+
+.editor-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.editor-checks input {
+    width: 20px;
+    height: 20px;
+    accent-color: #0dcaf0;
+}
+
+.editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.editor button {
+    min-height: 44px;
+    padding: 6px 22px;
+    border: 1px solid #0dcaf0;
+    border-radius: 8px;
+    background: #0dcaf0;
+    color: #062c33;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.editor button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+#posterAnswer {
+    color: #75e0a7;
+    font-size: 0.9rem;
+}
+
+#posterAnswer.unsaved {
+    color: #ffd166;
+}
+
+#posterAnswer.refused {
+    color: #ff8a8a;
+}
+
+/* a computer: the editor a panel on the left, held in view while the page scrolls; the paper beside it on a grey desk */
+@media screen and (min-width: 1100px) {
+    body.has-editor {
+        display: grid;
+        grid-template-columns: 380px minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        /* the panel's colour down the whole left column, also below a panel shorter than the page */
+        background: linear-gradient(to right, #24292f 380px, #e9ecef 380px);
+    }
+
+    body.has-editor .toolbar {
+        grid-column: 1 / -1;
+    }
+
+    body.has-editor .editor {
+        grid-column: 1;
+        grid-row: 2;
+        position: sticky;
+        top: 0;
+        align-self: start;
+        max-height: 100vh;
+        overflow-y: auto;
+        border-right: 1px solid #343a40;
+    }
+
+    body.has-editor > main {
+        grid-column: 2;
+        grid-row: 2;
+        align-self: start;
+        /* the sheet as it comes out of the printer: the page's margin (@page, 12 mm) stays white paper around what is printed */
+        margin-top: calc(24px + 12mm);
+        margin-bottom: calc(24px + 12mm);
+        box-shadow: 0 0 0 12mm #fff, 0 4px 24px 12mm rgba(0, 0, 0, 0.12);
+    }
+
+    /* the cards on the sheet they are printed on */
+    body.has-editor > main.cards {
+        background: #fff;
+    }
+
+    body.has-editor > main.cards {
+        box-shadow: none;
+    }
+}
+
 @media print {
     .no-print {
         display: none !important;
     }
+
+    body,
+    body.has-editor {
+        display: block;
+        background: #ffffff;
+    }
+}
+
+/* ---- The themes (V47): the printed part's paper, ink and the heading's colour — the DJ's accent (qr-print.js sets --accent, made
+   readable on the paper) or the theme's own. The code stays black on white in every one. ---- */
+
+body {
+    --paper: #ffffff;
+    --ink: #111111;
+    --muted: #555555;
+    --accent-base: #111111;
+    --frame: transparent;
+}
+
+body.theme-elegant {
+    --paper: #fbf7ef;
+    --ink: #1f2a44;
+    --muted: #5b6275;
+    --accent-base: #8a6a2a;
+    --frame: var(--accent, var(--accent-base));
+}
+
+body.theme-club {
+    --paper: #14141c;
+    --ink: #f5f5f7;
+    --muted: #b9bcc8;
+    --accent-base: #00e5ff;
+    --frame: var(--accent, var(--accent-base));
+}
+
+body.theme-pastel {
+    --paper: #fdf0f5;
+    --ink: #3b2a3a;
+    --muted: #6e5a6c;
+    --accent-base: #b0164f;
+    --frame: var(--accent, var(--accent-base));
+}
+
+.poster,
+.card {
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.poster h1,
+.card .title {
+    color: var(--accent, var(--accent-base));
 }
 
 /* The second language of a pair: the same text, a little quieter */
-.second {
-    color: #555555;
+.second,
+.poster h1 .second,
+.card .title .second {
+    color: var(--muted);
+}
+
+/* a theme with a paper of its own: the poster a framed sheet; the code on a white tile, as a phone reads it best */
+body:not(.theme-classic) .poster {
+    padding: 6mm 8mm;
+    border: 0.8mm solid var(--frame);
+}
+
+body.theme-elegant .poster {
+    border: 1.6mm double var(--frame);
+}
+
+body.theme-elegant .poster h1,
+body.theme-elegant .card .title,
+body.theme-elegant .own-line {
+    font-family: Georgia, "Times New Roman", "DejaVu Serif", serif;
+}
+
+body.theme-pastel .poster {
+    border-radius: 8mm;
+}
+
+body.theme-club .poster {
+    border-radius: 4mm;
+}
+
+/* the code's own white margin is its tile: rounded, never on the theme's paper */
+body:not(.theme-classic) .qr {
+    border-radius: 2mm;
+    background: #ffffff;
+}
+
+/* the tile's edge is seen on a theme's paper: our mark above it keeps a little air (on white the code's own margin gives it) */
+body:not(.theme-classic) .poster > .logo {
+    margin-bottom: 4mm;
+}
+
+/* on the dark club paper the DJ's logo on a white badge: a dark logo with a transparent background would vanish */
+body.theme-club .dj-logo {
+    padding: 1.5mm 2.5mm;
+    border-radius: 2mm;
+    background: #ffffff;
+}
+
+body:not(.theme-classic) .card {
+    border-top: 1.2mm solid var(--frame);
 }
 
 /* ---- The poster: one A4 sheet ---- */
@@ -107,6 +495,27 @@ body {
 }
 
 /* the heading says what to do; the code then the address, no numbered steps repeating it */
+/* the DJ's line under the heading (V46): "Osiemnastka Dawida" */
+.poster .own-line {
+    margin: -2mm 0 4mm;
+    font-size: 15pt;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+/* the DJ's own heading a little smaller than ours: 40 characters still two lines, the poster still one A4 page */
+.poster h1 .own {
+    font-size: 26pt;
+    overflow-wrap: anywhere;
+}
+
+/* with the DJ's line the code gives it the room (still large across a hall) */
+.poster:has(.own-line:not([hidden])) .qr {
+    width: 100mm;
+    height: 100mm;
+}
+
 .poster .qr {
     width: 115mm;
     height: 115mm;
@@ -282,6 +691,22 @@ body {
     line-height: 1.2;
 }
 
+/* the DJ's heading and line on a card (V46): three lines at most whatever the font, so the longest words never leave the card — a
+   real 40 / 60 characters take two */
+.card .own-line,
+.card .title .own {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.card .own-line {
+    font-weight: 600;
+}
+
 .card .small {
     font-size: 8pt;
     line-height: 1.25;
@@ -341,14 +766,14 @@ body {
     justify-content: center;
     gap: 1.5mm;
     margin: 4mm 0 0;
-    color: #666;
+    color: var(--muted);
     font-size: 9pt;
     line-height: 1;
 }
 
 .poster .powered .logo.ours {
     gap: 1mm;
-    color: #222;
+    color: var(--ink);
     font-size: 10pt;
     line-height: 1;
 }

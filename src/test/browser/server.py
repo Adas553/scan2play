@@ -382,7 +382,7 @@ class Handler(BaseHTTPRequestHandler):
             stand.event(name).set()
             return self._json({})
         fields = self._fields(query, body, self.headers.get('Content-Type'))
-        if path in ('/dj/library', '/dj/library/delete', '/dj/logo', '/dj/logo/delete'):   # a fetch() with the CSRF token in its header
+        if path in ('/dj/library', '/dj/library/delete', '/dj/logo', '/dj/logo/delete', '/dj/qr-print/settings'):   # a fetch() with the CSRF token in its header
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and path.endswith('/vote'):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
@@ -442,6 +442,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(302, headers={'Location': '/dj/staff'})
         if path == '/dj/library':                     # the DJ's library (V41): the server's sentence, plain text
             return self._send(state['libraryStatus'], state['libraryAnswer'].encode('utf-8'), state['libraryType'])
+        if path == '/dj/qr-print/settings':           # the QR print as the DJ sets it (V46): saved, nothing to say
+            return self._send(state['postStatus'].get(path) or 204)
         if path == '/dj/logo':                        # the DJ's logo (V45): the server's sentence, plain text
             return self._send(state['logoStatus'], state['logoAnswer'].encode('utf-8'), 'text/plain; charset=utf-8')
         if path == '/dj/logo/delete':                 # back to the settings, as the real server

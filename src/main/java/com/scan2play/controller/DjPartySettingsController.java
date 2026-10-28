@@ -3,6 +3,8 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.PlanFeature;
+import com.scan2play.model.PosterLanguage;
+import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
@@ -17,11 +19,13 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -136,6 +140,40 @@ public class DjPartySettingsController {
             s.setDjName(name.isEmpty() ? null : name);
         });
         return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The QR print as the DJ sets it (V46, V47), from the print page (qr-print.js, in the background — 204): the DJ's own heading and
+     * line (one line each, cut to {@value PartySettingsEntity#POSTER_HEADING_MAX} / {@value PartySettingsEntity#POSTER_LINE_MAX}; empty =
+     * ours / none), the language, the look (the theme; the DJ's colour "#rrggbb", anything else the theme's own) and what of the DJ's
+     * it shows. Whoever may change the party's card "Impreza" (VIBE), any plan: the words on paper are the party's, as its vibe note;
+     * the logo shown stays the plan's (PlanService.asPlanned).
+     */
+    @PostMapping("/qr-print/settings")
+    @ResponseBody
+    public ResponseEntity<Void> updatePoster(@RequestParam String partyCode, @RequestParam(required = false) String heading,
+                                             @RequestParam(required = false) String line, @RequestParam(required = false) String language,
+                                             @RequestParam(required = false) String theme, @RequestParam(required = false) String accent,
+                                             @RequestParam(defaultValue = "false") boolean showLogo,
+                                             @RequestParam(defaultValue = "false") boolean showLinks,
+                                             @RequestParam(defaultValue = "false") boolean showTip,
+                                             @RequestParam(defaultValue = "false") boolean showAddress,
+                                             OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
+        String ownHeading = Texts.oneLine(heading, PartySettingsEntity.POSTER_HEADING_MAX);
+        String ownLine = Texts.oneLine(line, PartySettingsEntity.POSTER_LINE_MAX);
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setPosterHeading(ownHeading.isEmpty() ? null : ownHeading);
+            s.setPosterLine(ownLine.isEmpty() ? null : ownLine);
+            s.setPosterLanguage(PosterLanguage.of(language));
+            s.setPosterTheme(PosterTheme.of(theme));
+            s.setPosterAccent(PosterTheme.accent(accent));
+            s.setPosterShowLogo(showLogo);
+            s.setPosterShowLinks(showLinks);
+            s.setPosterShowTip(showTip);
+            s.setPosterShowAddress(showAddress);
+        });
+        return ResponseEntity.noContent().build();
     }
 
     /**

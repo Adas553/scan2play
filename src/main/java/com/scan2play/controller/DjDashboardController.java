@@ -40,6 +40,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -352,10 +353,11 @@ public class DjDashboardController {
      */
     @GetMapping("/qr-print")
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, @RequestParam(required = false) String party,
-                          Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
+                          Model model, OAuth2AuthenticationToken authentication, HttpSession session, Locale locale) {
         // the staff's too (V30): the code is on the tables anyway, a bartender prints a new one
         // the profiles and the tip link as the organiser's plan has them (V35)
-        PartySettingsEntity settings = planService.asPlanned(sessionHelper.access(party, authentication, session).party());
+        PartyStaffService.Access access = sessionHelper.access(party, authentication, session);
+        PartySettingsEntity settings = planService.asPlanned(access.party());
         String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
         model.addAttribute(PARTY_CODE, partyCode);
@@ -368,6 +370,12 @@ public class DjDashboardController {
         model.addAttribute(PERMANENT_LINK, guestUrl);
         model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_PRINT_SIZE, QR_PRINT_SIZE));
         model.addAttribute(QR_LAYOUT, "cards".equals(layout) ? "cards" : "poster");
+        // the print as the DJ set it (V46): the words, the language, what of the DJ's it shows — and the editor for whom may change
+        // the party's card "Impreza"; the parts left off are rendered hidden, so the editor's preview shows them again at once
+        model.addAttribute(POSTER, settings);
+        model.addAttribute(PRINT_LANG, settings.getPosterLanguage().printed(locale.getLanguage()));
+        model.addAttribute(POSTER_EDIT, access.may(StaffPermission.VIBE));
+        model.addAttribute(POSTER_THEMES, com.scan2play.model.PosterTheme.values());
         return "qr-print";
     }
 

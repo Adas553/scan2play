@@ -1,6 +1,8 @@
 package com.scan2play.entity;
 
 import com.scan2play.model.CommentStyle;
+import com.scan2play.model.PosterLanguage;
+import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
 import com.scan2play.model.VibeType;
@@ -184,6 +186,47 @@ public class PartySettingsEntity {
      */
     @Column(insertable = false, updatable = false)
     private String logoVersion;
+
+    /** The longest heading and line of the DJ's own on the QR print (the columns, V46): kept to one A4 poster and a card. */
+    public static final int POSTER_HEADING_MAX = 40;
+    public static final int POSTER_LINE_MAX = 60;
+
+    /** The QR print as the DJ sets it (V46): the DJ's own heading in place of ours, null = ours. */
+    @Column(length = POSTER_HEADING_MAX)
+    private String posterHeading;
+
+    /** One line of the DJ's own text under the heading ("Osiemnastka Dawida"), null = none. */
+    @Column(length = POSTER_LINE_MAX)
+    private String posterLine;
+
+    /** The print's language; {@link PosterLanguage#AUTO} = the panel's. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 4)
+    private PosterLanguage posterLanguage = PosterLanguage.AUTO;
+
+    /** The print's look (V47): its theme, and the DJ's colour for the heading and the frame ("#rrggbb"; null = the theme's). */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private PosterTheme posterTheme = PosterTheme.CLASSIC;
+
+    @Column(length = 7)
+    private String posterAccent;
+
+    /** What the print shows of the DJ's: the logo, the profiles, the tip link, and the address with the party's code. */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean posterShowLogo = true;
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean posterShowLinks = true;
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean posterShowTip = true;
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean posterShowAddress = true;
 
     /** The address of the DJ's logo, its version in it (a new logo is a new address), or null without one. */
     public String logoPath() {
