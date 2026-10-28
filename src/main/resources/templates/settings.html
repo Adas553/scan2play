@@ -14,6 +14,8 @@
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <!--/* the menu "Konto" and the window "Pomoc i kontakt" of the heading (dj-nav) */-->
+    <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
     <!--/* the app on the Home Screen: "Zainstaluj aplikację" is here (install.js), and a browser offers it only on a page with the manifest */-->
     <link rel="manifest" href="/manifest.webmanifest">
@@ -29,14 +31,12 @@
      of what can be set, one screen of a phone, and a tap unfolds the card to fill it. The card the address names (#libraryCard — a row
      of the panel, the page again after a form that reloads it) unfolds by itself (folds.js); a saved card stays unfolded. */-->
 <body class="page-dj">
-<div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800">
+<div class="container mt-3 mt-md-5 p-3 p-md-4">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <div class="fs-4 fw-bold text-white"><th:block th:replace="~{fragments/components :: logo}"></th:block></div>
-        <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" id="backToPanel" class="btn btn-sm btn-outline-light"
-           th:text="#{settings.back}">← Panel</a>
-    </div>
+    <!--/* the heading and the tabs of every DJ's page (the panel's width, so they stay where they were); the cards keep 800 px */-->
+    <div th:replace="~{fragments/components :: dj-nav(activeTab='settings', isActive=${isActive}, partyCode=${partyCode})}"></div>
 
+    <div class="s2p-mw-800 s2p-dj-page-body">
     <h1 class="h3 text-white mb-3" th:text="#{settings.title}">Party settings</h1>
     <!--/* the party's code for the scripts (forms.js sends it with every form, V32) */-->
     <input type="hidden" id="partyCode" th:value="${partyCode}">
@@ -401,10 +401,10 @@
             </div>
         </details>
     </div>
+    </div>
 </div>
 <div th:replace="~{fragments/components :: formRefused}"></div>
 
-<script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 <!--/* the card the address names unfolded (#libraryCard) */-->
 <script src="/js/folds.js" th:src="@{/js/folds.js}"></script>
 <!--/* the lines each hosts' list holds, and a warning over the limit (SongList.MAX_LINES) */-->

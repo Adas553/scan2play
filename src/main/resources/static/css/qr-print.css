@@ -18,7 +18,9 @@ body {
     print-color-adjust: exact;
 }
 
-/* ---- The bar on the screen (not printed): back, the title, the layout as one switch, "Drukuj" ---- */
+/* ---- The bar on the screen (not printed): back, the title, the layout as one switch, "Drukuj". The bar and the editor in the
+   colours of the DJ's panel (app.css: the page #0b0b0b, a card #161616, a panel #1e1e1e, edges #333, black fields) — the review of
+   2026-10-28: a blue-grey of their own and white fields read as another app. Only the paper is light. ---- */
 
 .toolbar {
     display: flex;
@@ -26,9 +28,9 @@ body {
     align-items: center;
     gap: 8px 12px;
     padding: 10px 16px;
-    background: #1b1f24;
+    background: #161616;
     color: #f8f9fa;
-    border-bottom: 1px solid #343a40;
+    border-bottom: 1px solid #333333;
 }
 
 .toolbar a,
@@ -112,7 +114,7 @@ body {
     flex-direction: column;
     gap: 14px;
     padding: 16px;
-    background: #24292f;
+    background: #161616;
     color: #f8f9fa;
     font-size: 0.95rem;
 }
@@ -122,9 +124,9 @@ body {
     flex-direction: column;
     gap: 10px;
     padding: 14px;
-    border: 1px solid #3a4148;
+    border: 1px solid #333333;
     border-radius: 12px;
-    background: #2b3138;
+    background: #1e1e1e;
 }
 
 .editor-group h2 {
@@ -153,11 +155,17 @@ body {
     width: 100%;
     min-height: 44px;
     padding: 6px 10px;
-    border: 1px solid #495057;
+    border: 1px solid #6c757d;
     border-radius: 8px;
-    background: #ffffff;
-    color: #111111;
+    background: #000000;
+    color: #e0e0e0;
     font: inherit;
+    /* the page is "only light" for the print: the fields' own arrow and the colour picker drawn for a dark field */
+    color-scheme: dark;
+}
+
+.editor input[type="text"]::placeholder {
+    color: #a3acb6;
 }
 
 .editor input[type="text"]:focus-visible,
@@ -220,7 +228,7 @@ body {
 }
 
 .swatch:has(input:checked) .swatch-dot {
-    box-shadow: 0 0 0 2px #2b3138, 0 0 0 4px #f8f9fa;
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #f8f9fa;
 }
 
 .swatch:has(input:checked) .swatch-chip {
@@ -317,8 +325,9 @@ body {
         display: grid;
         grid-template-columns: 380px minmax(0, 1fr);
         grid-template-rows: auto 1fr;
-        /* the panel's colour down the whole left column, also below a panel shorter than the page */
-        background: linear-gradient(to right, #24292f 380px, #e9ecef 380px);
+        /* the panel's colour down the whole left column, also below a panel shorter than the page; the desk dark, as the
+           panel's page — the paper is what stands out */
+        background: linear-gradient(to right, #161616 380px, #0b0b0b 380px);
     }
 
     body.has-editor .toolbar {
@@ -333,7 +342,7 @@ body {
         align-self: start;
         max-height: 100vh;
         overflow-y: auto;
-        border-right: 1px solid #343a40;
+        border-right: 1px solid #333333;
     }
 
     body.has-editor > main {
@@ -343,7 +352,7 @@ body {
         /* the sheet as it comes out of the printer: the page's margin (@page, 12 mm) stays white paper around what is printed */
         margin-top: calc(24px + 12mm);
         margin-bottom: calc(24px + 12mm);
-        box-shadow: 0 0 0 12mm #fff, 0 4px 24px 12mm rgba(0, 0, 0, 0.12);
+        box-shadow: 0 0 0 12mm #fff, 0 4px 24px 12mm rgba(0, 0, 0, 0.5);
     }
 
     /* the cards on the sheet they are printed on */

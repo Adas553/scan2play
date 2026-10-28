@@ -208,6 +208,7 @@ public class DjDashboardController {
         PartyStaffService.Access access = sessionHelper.access(party, authentication, session);
         PartySettingsEntity settings = access.party();
         model.addAttribute(PARTY_CODE, settings.getPartyCode());
+        model.addAttribute(IS_ACTIVE, settings.isActive());   // the heading of every DJ's page (dj-nav)
         model.addAttribute(IS_OWNER, access.owner());
         model.addAttribute(ACCESS, access);
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));

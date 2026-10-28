@@ -35,6 +35,14 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    with the party; the DJ's heading ≤ 40 and line ≤ 60, the language, boxes for the logo / profiles / tip / address; the organiser and
    the staff with VIBE, any plan). Released before it: the DJ's logo (#179 / #180, V45), the poster without its numbered steps, a
    larger logo, the cards' texts centred on the code (#181 / #182).
+3. **The DJ's panel against TipTunes and Rekwest** (the review of 2026-10-28, on `claude/scan2play-dj-panel-review-m9yrpb`):
+   items 1–7 (`61b3de3`, the owner tested it: "fajnie wygląda") — the device's own font, one accent, one heading and tabs "Panel DJ-a |
+   Historia | Ustawienia", "Impreza i kod QR", the card's gaps; then items 8–10 and 12 and the owner's own: the rows of "Więcej" off the
+   panel (the settings were in two places; the network's limit near is now a warning above the queue), the print's editor in the
+   panel's colours, from 1400 px the unfolded settings beside the queue, "Kopiuj" / "Podejrzyj" quiet on a wide screen, "Panel jako
+   aplikacja" under an empty queue on a phone. Then "Uprawnienia po kolei" on "Obsługa" 44 px on a phone and the landing page's
+   pictures made again (`screenshots.py`). Item 11 "Moje imprezy": not now (the owner, 2026-10-28 — a party is one per organiser and the
+   history is purged after 30 days; a list of past evenings would need a model of its own, worth it once DJs ask).
 
 ## Later (not now)
 
@@ -42,7 +50,7 @@ A. **The library for guests:** first suggestions from the DJ's library before iT
    after talks with DJs. `dj_library_track` keeps keys only — names need a migration and a new upload; server-side search (`pg_trgm`,
    a rate limit); the DJ's consent to a public list.
 B. "Opis klimatu" → "Opis imprezy" with a note that the AI reads it.
-C. A phone with a library: "Ukryj „Nie masz”" and "+ Dodaj piosenkę" in one row with shorter labels.
+C. (Done 2026-10-28: on a phone "Ukryj ✗", "+ Dodaj" and the search on one line.)
 D. GitHub Actions' minutes: no limit while the repository is public; estimate the use from the workflows' history if it goes
    private (2 000 minutes, budgets at $0 — the tests would stop and Railway might hold `main`'s deploy).
 E. From the history (`session-handoff-2026-10-24.md`): talks with DJs (its item 1), Gemini + Google Search for lyrics (item 6), the

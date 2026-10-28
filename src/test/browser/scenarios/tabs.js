@@ -1,13 +1,13 @@
-// THE THREE TABS Panel DJ-a / Kolejka / Historia in the bar that stays in view (js/dashboard/tabs.js; fragment dj-nav; PROJECT_CONTEXT.md
-// Section 6.4). A click lights the tab at once and brings the part of the page it stands for
-// into view — just under the bar, unless it is in the upper part of the screen already; the History tab loads its content by AJAX and
-// shows it in place of the queue (the page is not left); and the lit tab follows the part of the page in view when the DJ scrolls.
+// THE TABS Panel DJ-a / Historia / Ustawienia in the bar that stays in view (js/dashboard/tabs.js; fragment dj-nav; PROJECT_CONTEXT.md
+// Section 6.4). On the panel the first two swap the queue and the history without leaving the page — the History tab loads its
+// content by AJAX and shows it in place of the queue — and a click brings the list into view, just under the bar, unless it is in the
+// upper part of the screen already. The lit tab is the list that shows, wherever the page is scrolled. Ustawienia is a page of its own.
 //
 // The page of the harness has the real Bootstrap (from its webjar), the real app.css and the real layout engine, so positions and
 // scrolling are real. The page is made taller first: with a short page the browser could not scroll as far as a tab asks.
 (function () {
     const link = function (name) { return document.querySelector('[data-dj-tab="' + name + '"]'); };
-    const lit = function () { return ['panel', 'queue', 'history'].filter(function (n) { return link(n).classList.contains('active'); }); };
+    const lit = function () { return ['panel', 'history', 'settings'].filter(function (n) { return link(n).classList.contains('active'); }); };
     const bar = function () { return document.getElementById('djTabBar'); };
     const top = function (id) { return document.getElementById(id).getBoundingClientRect().top; };
     const shown = function (id) { return getComputedStyle(document.getElementById(id)).display !== 'none'; };   // what the DJ sees
@@ -25,7 +25,6 @@
             last = window.scrollY;
         }
     }
-    // A scroll that is not a click's: at once, and the lit tab follows (the smooth scroll of a click keeps it locked for ~1 s)
     async function scrollTo(t, y) {
         window.scrollTo({ top: y, behavior: 'instant' });
         await t.sleep(150);
@@ -33,7 +32,7 @@
 
     S2P.scenario({
         name: 'tabs',
-        title: 'the tabs: a click lights the tab and brings its part of the page under the bar; History loads in place of the queue; the lit tab follows the scroll',
+        title: 'the tabs: Panel and History swap the lists in place and bring them under the bar; the lit tab is the list that shows; Settings is a page',
         setup: {},
         run: async function (t) {
             document.body.style.paddingBottom = '2500px';
@@ -46,17 +45,10 @@
             // path — the one the DJ gets — so a browser that asks for reduced motion would test the other one without saying so.
             t.step('the browser does not ask for reduced motion: a click scrolls smoothly', window.matchMedia('(prefers-reduced-motion: reduce)').matches, false);
             t.step('at the start the Panel tab is lit and the page is at its top', [lit(), window.scrollY], [['panel'], 0]);
-            t.check('the tab bar has three tabs and its own place in the page', bar().querySelectorAll('[data-dj-tab]').length === 3);
-
-            // ---- Queue ----
-            link('queue').click();
-            t.step('the Queue tab lights at once, before the page has moved', lit(), ['queue']);
-            await settle(t);
-            t.check('the top of the queue was brought into the upper part of the screen, just under the bar', inUpperPart('queue-content') && window.scrollY > 0);
-            t.step('and the Queue tab is still the lit one (the scroll did not light another tab on its way)', lit(), ['queue']);
+            t.step('three tabs: Panel, History and the page "Ustawienia imprezy" of the same party',
+                [bar().querySelectorAll('[data-dj-tab]').length, link('settings').getAttribute('href')], [3, '/dj/settings?party=HARN1']);
 
             // ---- History: loaded in place of the queue ----
-            await t.sleep(1000);
             link('history').click();
             await t.waitFor(function () { return document.querySelector('#history-content [data-list]'); }, 'the history to arrive', 5000);
             t.step('the History tab loaded the history (one request), the history shows and the queue is hidden', [await fetches(), shown('history-content'), shown('queue-content')], [1, true, false]);
@@ -68,28 +60,20 @@
             t.step('a second click on History while it shows loads nothing again', [await fetches(), lit()], [1, ['history']]);
             await settle(t);
 
-            // ---- the lit tab follows the scroll ----
-            await t.sleep(1000);
+            // ---- the lit tab is the list that shows, wherever the page is ----
             await scrollTo(t, 0);
-            t.step('scrolled to the top: Panel is lit', lit(), ['panel']);
-            await scrollTo(t, window.scrollY + top('history-content') - 100);
-            t.step('scrolled until the history is near the top of the screen: History is lit (the list that shows)', lit(), ['history']);
-            await scrollTo(t, window.scrollY + top('history-content') - window.innerHeight * 0.8);
-            t.step('scrolled back until the history is in the lower part of the screen: Panel is lit again', lit(), ['panel']);
+            t.step('scrolled to the top (the settings): History is still lit — the history shows', lit(), ['history']);
 
-            // ---- Panel: the top of the page; the list that shows stays ----
+            // ---- Panel: the queue again, brought into view ----
             link('panel').click();
             t.step('the Panel tab lights at once', lit(), ['panel']);
             await settle(t);
-            t.step('the page is at its top, and the history still shows (Panel changes only where the page is)', [window.scrollY, shown('history-content'), shown('queue-content')], [0, true, false]);
-
-            // ---- back to the queue: the history goes away ----
-            link('queue').click();
-            await settle(t);
-            t.step('the queue shows again and the history is hidden; the Queue tab is lit', [shown('queue-content'), shown('history-content'), lit()], [true, false, ['queue']]);
-            await t.sleep(1000);
-            await scrollTo(t, window.scrollY + top('queue-content') - 100);
-            t.step('now the queue is the list that shows: scrolled to it, Queue is lit (not History)', lit(), ['queue']);
+            t.step('the queue shows again and the history is hidden', [shown('queue-content'), shown('history-content')], [true, false]);
+            t.check('the top of the queue was brought into the upper part of the screen, just under the bar', inUpperPart('queue-content') && window.scrollY > 0);
+            await scrollTo(t, 0);
+            t.step('scrolled to the top: Panel stays lit', lit(), ['panel']);
+            await scrollTo(t, window.scrollY + top('queue-content') + 400);
+            t.step('scrolled deep into the queue: Panel stays lit', lit(), ['panel']);
         }
     });
 })();
