@@ -32,15 +32,22 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Next (the owner's ideas, 2026-10-28)
 
-1. **A welcome e-mail to a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać"). The app
-   sends no mail today (V34's invitations are answered by logging in; no mail server). Before code, the owner's picks:
-   (a) the sender — a transactional service (Resend, Postmark, Brevo…) or SMTP of a Google Workspace box; its key a Railway secret,
-   never in the repo; the domain's SPF / DKIM / DMARC records at the DNS (Cloudflare); (b) from which address and the reply-to
-   (`scan2playcontact@gmail.com`?); (c) when — the first login only (a column `welcome_sent_at`, a migration; sent once, after the
-   commit, off the request thread, a failure logged and retried by the nightly job, never blocking the login); (d) Polish or English
-   by the browser's language at the login; (e) the words — who we are, "Pierwszy raz?" the guide, "Pomoc i kontakt", the address to
-   write to; no marketing (a transactional mail needs no consent, a newsletter would); (f) the privacy policy says the address is used
-   for it. Tests: the sending behind an interface (a fake in the tests), one IT for "once only" under two logins at once.
+1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać"). Agreed
+   the same day, in this order — no automatic mail yet:
+   (a) **keep the organiser's e-mail.** Today only `owner_id` (Google's `sub`) and `owner_name` are kept; the address from Google is used
+   at the login only (V34's invitations) and saved nowhere, so there is nobody to write to. A column `owner_email` in `party_settings`
+   (a migration), filled and kept current at the login where `keepOwnerName` keeps the name (Google's verified `email`; the organiser
+   only, never the staff), gone with the account ("Usuń konto", `AccountDeletionService`; an IT that it goes). The privacy policy
+   (PL and EN) says it: why (a contact about the account and help — no advertising), how long (until the account is deleted). The
+   accounts of before fill it at their next login. A read-only query for the owner — the organisers new in the last 7 days, with their
+   e-mail — and a short personal mail template he sends himself from `scan2playcontact@gmail.com` (Polish and English).
+   (b) **a welcome card in the panel** at the first login: "Pierwszy raz? Napisz do nas" leading to "Pomoc i kontakt" (and the guide);
+   dismissed for good (on the server, a column, not the browser's storage — the DJ logs in on a phone and a laptop); one action per
+   view kept; a browser scenario, seen red first.
+   (c) **an automatic welcome e-mail — later**, when new accounts come several a day or the plans are enforced. Its choices then: the
+   sender (Resend, Postmark, Brevo… or Google Workspace SMTP; its key a Railway secret; SPF / DKIM / DMARC at Cloudflare), the
+   reply-to, once only (`welcome_sent_at`, sent after the commit off the login's thread, retried by the nightly job, never blocking the
+   login), the language, no marketing; the sending behind an interface (a fake in the tests), an IT for "once only" under two logins.
 2. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
    on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.
 
