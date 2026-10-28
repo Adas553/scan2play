@@ -452,7 +452,7 @@ body:not(.theme-classic) .qr {
 }
 
 /* the tile's edge is seen on a theme's paper: our mark above it keeps a little air (on white the code's own margin gives it) */
-body:not(.theme-classic) .poster .logo {
+body:not(.theme-classic) .poster > .logo {
     margin-bottom: 4mm;
 }
 

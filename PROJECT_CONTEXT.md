@@ -426,7 +426,8 @@ DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.
 `--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
 with a margin) — browser scenario `poster-themes-readable`: every theme with white, a pale yellow, black and a light cyan. The code
 stays black on white (its own white margin is its tile) in every theme; every theme fits A4 and the cards with the longest words
-(`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font). What is typed or ticked shows at
+(`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font); "Działa na" and our small mark on one
+line, our big mark apart from the code's tile in every theme (`poster-themes-powered-aligned`). What is typed or ticked shows at
 once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`; the DJ's logo left off brings ours back);
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads
 again (the server writes it). Changes not saved say "Niezapisane zmiany" and go along to the other layout (the switch "Plakat A4 |

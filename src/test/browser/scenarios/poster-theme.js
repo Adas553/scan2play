@@ -116,6 +116,32 @@
     });
 
     S2P.scenario({
+        name: 'poster-themes-powered-aligned',
+        page: 'qr-print-poster-logo',
+        title: 'every theme with the DJ\'s logo: "Działa na" and our small mark at the foot on one centre line; our big mark (no DJ\'s logo) apart from the code\'s tile',
+        run: async function (t) {
+            const ours = document.querySelector('.poster .powered');
+            const off = [];
+            THEMES.forEach(function (theme) {
+                pickTheme(theme);
+                const words = ours.firstElementChild.getBoundingClientRect(), mark = ours.querySelector('.logo img').getBoundingClientRect();
+                const apart = Math.abs((words.top + words.bottom) / 2 - (mark.top + mark.bottom) / 2);
+                if (apart > 1) off.push(theme + ' ' + Math.round(apart * 10) / 10 + ' px');
+            });
+            t.step('the words and the mark on one centre line in every theme', off, []);
+            const box = document.querySelector('[data-poster-toggle="logo"]');
+            box.checked = false;
+            box.dispatchEvent(new Event('change', { bubbles: true }));
+            const gaps = THEMES.filter(function (theme) { return theme !== 'CLASSIC'; }).map(function (theme) {
+                pickTheme(theme);
+                const big = document.querySelector('.poster > .logo').getBoundingClientRect();
+                return document.querySelector('.poster .qr').getBoundingClientRect().top - big.bottom >= 3 * 96 / 25.4;
+            });
+            t.step('our big mark at least 3 mm above the code\'s tile', gaps, [true, true, true]);
+        }
+    });
+
+    S2P.scenario({
         name: 'poster-themes-cards-fit',
         page: 'qr-print-cards-logo',
         title: 'every theme on the cards with the DJ\'s logo, three profiles, the tip and the longest words: nothing leaves a card',
