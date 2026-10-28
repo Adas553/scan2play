@@ -415,7 +415,7 @@
                 <a th:href="@{/dj/qr-print(party=${codeChanged})}" target="_blank" rel="noopener" class="alert-link text-nowrap"
                    th:text="#{settings.code.print}">Print the poster and cards</a>
             </div>
-            <p class="s2p-card-help" th:text="#{settings.code.help}">Someone outside the party has your code…</p>
+            <p class="s2p-card-help" th:text="#{settings.code.help}">After the change you get a new QR code…</p>
             <form th:action="@{/dj/dashboard/party-code}" method="POST" class="m-0" id="partyCodeForm"
                   th:attr="data-confirm=#{settings.code.change.confirm}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
