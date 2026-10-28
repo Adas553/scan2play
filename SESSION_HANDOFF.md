@@ -56,7 +56,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 A. **The library for guests:** first suggestions from the DJ's library before iTunes; a full "library only" mode (no AI, karaoke) only
    after talks with DJs. `dj_library_track` keeps keys only — names need a migration and a new upload; server-side search (`pg_trgm`,
-   a rate limit); the DJ's consent to a public list.
+   a rate limit); the DJ's consent to a public list. Asked again 2026-10-28 ("gość widzi tylko piosenki z biblioteki?" — and the cheaper
+   "przyjmuj tylko z biblioteki", ✗ refused at once): the owner, "jednak nie warto" — the library stays the DJ's marks only.
 B. "Opis klimatu" → "Opis imprezy" with a note in the panel that the AI reads it (the guide says it since 2026-10-28: optional, counts
    for more than the vibe, adds to it or — with the vibe "Dowolny" — replaces it).
 C. (Done 2026-10-28: on a phone "Ukryj ✗", "+ Dodaj" and the search on one line.)
