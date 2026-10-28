@@ -922,8 +922,10 @@ What every page shares, so a new screen looks like the others:
   the queue keeps its action row ("▶ Zagrane" one tap), the history its one action ("↩"); a state that needs attention stays in the
   folded item (⚠ with the guest's words, ⭐, "💸 2"). A tap on the item unfolds it, "▾" / "▴" (a button with `aria-expanded`) says
   which; a tap on a control is the control's alone; unfolded items survive the list being replaced (remembered by id). Not on a wide
-  screen. Browser scenarios: `queue-cards-folded`, `queue-card-open-survives-poll`, `queue-cards-viewer`, `queue-cards-wide-screen`,
-  `history-lines-phone`.
+  screen. A folded line keeps its signs in fixed columns (the history: the votes, the decision, "↩" — its column empty where there is
+  none — and "▾", a grid), a badge as its sign alone with a gap from the title ("⚠" yellow, "🎧" plain), so the list reads down
+  (2026-10-28). Browser scenarios: `queue-cards-folded`, `queue-card-open-survives-poll`, `queue-cards-viewer`, `queue-cards-wide-screen`,
+  `history-lines-phone`, `history-line-columns-phone`.
 - **A table on a wide screen** gives its width to what identifies a row (the song), never lets a title break inside a word, and puts the
   secondary words (the guest's, the AI's comment) in one muted line under it, the whole in the title; what is the same in every row is
   not a column; colour marks a state only where it tells something apart (a dot at the decision, ⚠, votes above 1) — the words stay
