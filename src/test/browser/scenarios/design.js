@@ -388,13 +388,15 @@
     });
 
     // The review of 2026-10-28: the panel's font was 'Segoe UI', Tahoma, Geneva, Verdana — Verdana on an iPhone, Geneva on a Mac, three
-    // looks of one panel. The device's own font, as the TV and the print.
+    // looks of one panel. The device's own font, named: San Francisco, Segoe UI, Roboto, then Arial (never system-ui first: on a Linux
+    // without them it is the wider DejaVu Sans).
     S2P.scenario({
         name: 'one-font',
-        title: 'the DJ\'s pages in the device\'s own font (system-ui), never a list that falls to Verdana',
+        title: 'the DJ\'s pages in the device\'s own font (San Francisco, Segoe UI, Roboto, then Arial), never a list that falls to Verdana',
         run: async function (t) {
             const font = getComputedStyle(document.body).fontFamily;
-            t.step('the first font is the device\'s own', font.split(',')[0].trim(), 'system-ui');
+            t.step('the device\'s own fonts first, then Arial', font.split(',').slice(0, 6).map(function (f) { return f.trim().replace(/"/g, ''); }),
+                ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial']);
             t.step('no Verdana, Tahoma or Geneva in the list', /Verdana|Tahoma|Geneva/.test(font), false);
         }
     });

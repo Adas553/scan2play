@@ -899,8 +899,9 @@ What every page shares, so a new screen looks like the others:
   WCAG AA; `.text-secondary` / `.text-muted` use it), `--s2p-danger-text`, `--s2p-green-ink`. **One accent**: what is picked or
   done (the lit tab and its line, the line under a table's head, a sorted column, a suggestion under the pointer, a text button
   `.btn-link`) is the action's cyan; green is only the status "accepted" / "Twoja" (2026-10-28; browser scenario `one-accent`,
-  `queue-empty-guide-readable`). **One font**: `--s2p-font` is the device's own (`system-ui`, then Segoe UI, Roboto …), as the TV, the
-  print and the summary — the old list fell to Verdana on an iPhone (`one-font`). Messages (`.alert-*`) are a tint of their
+  `queue-empty-guide-readable`). **One font**: `--s2p-font` is the device's own, named — `-apple-system`, `BlinkMacSystemFont`, Segoe UI,
+  Roboto, Helvetica Neue, then Arial (the TV the same) — the old list fell to Verdana on an iPhone (`one-font`). Not `system-ui` first:
+  on a Linux without those fonts (GitHub's runner) it is DejaVu Sans, a tenth wider than Arial, and three one-line layouts broke. Messages (`.alert-*`) are a tint of their
   colour with a coloured edge and light text — Bootstrap's pale boxes were the brightest things on a dark page.
 - **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
   field, tab and menu item is **at least 44 px high** (browser scenarios `guest-touch-targets`, `dashboard-touch-targets`).
