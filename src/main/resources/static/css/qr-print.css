@@ -392,13 +392,20 @@ body {
     line-height: 1.2;
 }
 
-.card .own-line {
-    font-weight: 600;
+/* the DJ's heading and line on a card (V46): three lines at most whatever the font, so the longest words never leave the card — a
+   real 40 / 60 characters take two */
+.card .own-line,
+.card .title .own {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
     overflow-wrap: anywhere;
 }
 
-.card .title .own {
-    overflow-wrap: anywhere;
+.card .own-line {
+    font-weight: 600;
 }
 
 .card .small {
