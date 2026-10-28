@@ -152,4 +152,18 @@ class AccountDeletionIT extends PostgresIntegrationTest {
         assertThat(count("song_requests", partyCode)).isZero();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM feedback WHERE owner_id = ?", Integer.class, owner)).isZero();
     }
+
+    /** The organiser's address (V48), kept to write to them, goes with the account — nowhere in the database afterwards. */
+    @Test
+    void theOrganisersAddress_goesWithTheAccount() {
+        String owner = "deleted-" + System.nanoTime();
+        String address = owner + "@gmail.com";
+        String partyCode = party(owner).getPartyCode();
+        jdbc.update("UPDATE party_settings SET owner_email = ?, owner_name = 'Ola' WHERE party_code = ?", address, partyCode);
+
+        deletion.deleteAllUserData(owner);
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM party_settings WHERE owner_email = ? OR owner_id = ?", Integer.class,
+                address, owner)).isZero();
+    }
 }

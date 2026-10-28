@@ -43,6 +43,8 @@ public class PartySettingsEntity {
 
     /** The longest organiser's name kept (the column, V32). */
     public static final int OWNER_NAME_MAX = 100;
+    /** The longest organiser's address kept (the column, V48): an e-mail address is at most 320 characters. */
+    public static final int OWNER_EMAIL_MAX = 320;
 
     /** The longest vibe note (the column, V16). */
     public static final int VIBE_NOTE_MAX = 150;
@@ -159,6 +161,21 @@ public class PartySettingsEntity {
      */
     @Column(length = OWNER_NAME_MAX)
     private String ownerName;
+
+    /**
+     * The organiser's verified address from their Google account (V48), kept as {@link #ownerName}: only to write to them about the
+     * account and help (the privacy policy says so). Null until the organiser opens the panel after V48.
+     */
+    @Column(length = OWNER_EMAIL_MAX)
+    @ToString.Exclude   // a person's address: never in a log line
+    private String ownerEmail;
+
+    /** When the party was made (V48, the database's own {@code now()}); null for the parties of before, whose day nobody kept. */
+    @Column(insertable = false, updatable = false)
+    private Instant createdAt;
+
+    /** When the organiser closed the panel's welcome card (V48); null = the card is shown. The parties of before count as closed. */
+    private Instant welcomeDismissedAt;
 
     /** How the AI words its comment to the guest (V22); {@link CommentStyle#CLASSIC} adds nothing to the prompt. */
     @Builder.Default

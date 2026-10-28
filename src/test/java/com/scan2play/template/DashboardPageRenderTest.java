@@ -224,7 +224,39 @@ class DashboardPageRenderTest {
         return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
                 .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko")
                 .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz").hostTokenMadeAt(java.time.Instant.now())
-                .staffToken("Inv_123-xyzInv_123-xyz").staffTokenMadeAt(java.time.Instant.now()).build();
+                .staffToken("Inv_123-xyzInv_123-xyz").staffTokenMadeAt(java.time.Instant.now())
+                .welcomeDismissedAt(java.time.Instant.now()).build();   // a returning organiser: no welcome card (V48)
+    }
+
+    /**
+     * A new organiser's first panel (V48): the welcome card above the queue — "Pierwszy raz? Napisz do nas", leading to "Pomoc i kontakt"
+     * and the guide, closed on the server. {@code dashboard-welcome.html} (an empty queue) and {@code dashboard-welcome-en.html} (two
+     * requests) for the browser tests ({@code scenarios/welcome.js}).
+     */
+    @Test
+    void aNewOrganiser_isWelcomedAboveTheQueue() throws IOException {
+        PartySettingsEntity party = party();
+        party.setWelcomeDismissedAt(null);
+
+        String html = renderDashboard(party, List.of(), PL);
+
+        assertWhatTheScriptsNeed(html);
+        assertThat(html).contains("id=\"welcomeCard\"", ">Pierwszy raz? Napisz do nas<", "id=\"welcomeWrite\"", "data-welcome-close",
+                "data-bs-target=\"#feedbackModal\"", "id=\"welcomeGuide\"", "href=\"/jak-to-dziala\"");
+        assertThat(html.indexOf("id=\"welcomeCard\"")).as("above the queue").isLessThan(html.indexOf("id=\"queueList\""));
+        String card = html.substring(html.indexOf("id=\"welcomeCard\""), html.indexOf("id=\"queueList\""));
+        assertThat(card).as("an outline: the view's one action stays \"Drukuj\"").doesNotContain("btn-action");
+        write("dashboard-welcome.html", html);
+
+        String en = renderDashboard(party, List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan")), Locale.ENGLISH);
+        assertThat(en).contains(">First time? Write to us<", "href=\"/how-it-works\"");
+        write("dashboard-welcome-en.html", en);
+    }
+
+    @Test
+    void aReturningOrganiser_andTheStaff_areNotWelcomed() {
+        assertThat(renderDashboard(party(), List.of(), PL)).doesNotContain("id=\"welcomeCard\"", "Napisz do nas<");
+        assertThat(renderStaffPanel(StaffRole.QUEUE, List.of())).doesNotContain("id=\"welcomeCard\"");
     }
 
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */
@@ -387,6 +419,7 @@ class DashboardPageRenderTest {
     private static String renderStaffPanel(StaffRole role, List<PartyStaffService.Panel> panels) {
         PartySettingsEntity pub = party();
         pub.setDjName("Klub Ola");
+        pub.setWelcomeDismissedAt(null);   // the organiser has not closed the welcome card: the staff never see it anyway (V48)
         PartyStaffService staff = mock(PartyStaffService.class);
         when(staff.panelsOf("kasia")).thenReturn(panels);
         return renderDashboard(pub, List.of(song(1, "Wilki - Baśka")), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(), staff,

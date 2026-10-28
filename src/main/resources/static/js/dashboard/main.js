@@ -12,6 +12,7 @@
  *   queue-keys.js      "Kopiuj" of a request and the queue's keys (↑ ↓, C, Enter, S, Esc)
  *   add-song.js        "Dodaj piosenkę": the form of a song asked for at the booth folded out over the queue
  *   install-hint.js    on a phone, under an empty queue: "Panel jako aplikacja", leading to "Zainstaluj aplikację"
+ *   welcome.js         a new organiser's welcome above the queue, "Pierwszy raz? Napisz do nas", closed on the server
  *
  * "Zainstaluj aplikację" (install.js) and the notifications' switch (push.js) are on the page "Ustawienia imprezy" since 2026-10-10
  * (settings-page.js loads them with forms.js).
@@ -29,3 +30,4 @@ import './cards.js';
 import './queue-keys.js';
 import './add-song.js';
 import './install-hint.js';
+import './welcome.js';

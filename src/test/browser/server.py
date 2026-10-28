@@ -382,7 +382,8 @@ class Handler(BaseHTTPRequestHandler):
             stand.event(name).set()
             return self._json({})
         fields = self._fields(query, body, self.headers.get('Content-Type'))
-        if path in ('/dj/library', '/dj/library/delete', '/dj/logo', '/dj/logo/delete', '/dj/qr-print/settings'):   # a fetch() with the CSRF token in its header
+        if path in ('/dj/library', '/dj/library/delete', '/dj/logo', '/dj/logo/delete', '/dj/qr-print/settings',
+                    '/dj/dashboard/welcome-dismiss'):   # a fetch() with the CSRF token in its header
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and path.endswith('/vote'):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
@@ -451,6 +452,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/library/delete':              # back to the settings, as the real server
             return self._send(302, headers={'Location': '/dj/settings'})
         if path == '/dj/push/unsubscribe':
+            return self._send(204)
+        if path == '/dj/dashboard/welcome-dismiss':   # the welcome card closed for good (V48): nothing to say
             return self._send(204)
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/party-words', '/dj/dashboard/comment-style',
                     '/dj/end-party', '/dj/start-party'):
