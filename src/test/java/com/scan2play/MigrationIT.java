@@ -169,6 +169,31 @@ class MigrationIT extends PostgresIntegrationTest {
         jdbc.update("DELETE FROM dj_plan WHERE owner_id LIKE 'mig-plan-%'");
     }
 
+    /** V48: the organiser's address (as long as an address may be), the account's day by the database, the welcome card's close. */
+    @Test
+    void theOrganisersAddress_theAccountsDay_andTheWelcome_haveTheirColumns() {
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'owner_email' AND is_nullable = 'YES'", Integer.class)).isEqualTo(320);
+        assertThat(jdbc.queryForObject("SELECT column_default FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'created_at' AND is_nullable = 'YES' AND data_type = 'timestamp with time zone'", String.class))
+                .isEqualTo("now()");
+        assertThat(jdbc.queryForObject("SELECT column_default IS NULL FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'welcome_dismissed_at' AND is_nullable = 'YES' AND data_type = 'timestamp with time zone'",
+                Boolean.class)).isTrue();
+    }
+
+    /** V49: every foreign key on a party's code follows a new code (ON UPDATE CASCADE); the retired codes have their table. */
+    @Test
+    void thePartysCode_canChange_andTheOldCodesAreKept() {
+        assertThat(jdbc.queryForList("SELECT conname || ' ' || confupdtype::text FROM pg_constraint WHERE contype = 'f'"
+                + " AND conname IN ('fk_party_logo_party', 'fk_party_staff_party', 'fk_staff_invitation_party', 'fk_dj_library_party',"
+                + " 'fk_dj_library_track_library') ORDER BY conname", String.class))
+                .containsExactly("fk_dj_library_party c", "fk_dj_library_track_library c", "fk_party_logo_party c",
+                        "fk_party_staff_party c", "fk_staff_invitation_party c");
+        assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns WHERE table_name = 'party_code_retired'"
+                + " AND is_nullable = 'NO' ORDER BY column_name", String.class)).containsExactly("party_code", "retired_at");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

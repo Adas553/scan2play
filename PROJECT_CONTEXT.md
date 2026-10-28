@@ -71,7 +71,8 @@ server in UTC; the pages show them in Polish time (`util/Times`: the lists show 
 a fixed-width UTC `sortKey` for the lists' `data-val`).
 
 **`PartySettingsEntity` → `party_settings`** — one party, owned by one DJ (`owner_id` UNIQUE: one party per DJ).
-`partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code), `ownerId` (the OAuth2 subject), `active` (accepting requests),
+`partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code; never one another party has or had, `PartyCodeService.freshCode`; the
+organiser may change it, "Zmień kod imprezy", V49), `ownerId` (the OAuth2 subject), `active` (accepting requests),
 `globalVibe` (`VibeType`; `ANY` = no genre: the AI judges by the DJ's note alone), `vibeNote` (V16, ≤ 150: the DJ's own words about
 the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en}`, the guests see them above the form;
 one line, empty clears), `djName` (V17, ≤ 60: who plays, e.g. "DJ Koko" — the guests see "🎧 Gra: DJ Koko" under the page's title;
@@ -98,6 +99,11 @@ e-mail; `hostLinkWorks` / `staffLinkWorks`; an older one is a 404 / "Ten link za
 stored as `party_staff.permissions`; a link of a version before V33 gives "Obsługa kolejki", `staffLinkGrants()`),
 `ownerName` (V32, ≤ 100: the organiser's name from their Google account, written when they open the panel and it changed — the
 staff and the invitation name a party by "Kto gra", else by it, else by the code: `PartyStaffService.nameOf`),
+`ownerEmail` (V48, ≤ 320: the organiser's address from their Google account — only one Google verified, else null —, kept beside
+`ownerName` by the same write when they open their panel, never the staff's: only to write to them about the account and help, by hand
+from `scan2playcontact@gmail.com` — the privacy policy says so; gone with the row), `createdAt` (V48, the database's `now()`,
+`insertable = false`: when the party was made; null for the parties of before), `welcomeDismissedAt` (V48: when the organiser closed the
+panel's welcome card, null = shown; the parties of before closed by the migration),
 `commentStyle` (V22, `CommentStyle`:
 CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
@@ -467,6 +473,15 @@ never offered). On a phone or a tablet (narrower than 992 px), **under an empty 
 `beforeinstallprompt`), never in the app or the demo (`js/dashboard/install-hint.js`; `install-hint-empty-queue`,
 `install-hint-not-on-a-computer`).
 
+**A new organiser's welcome** (V48): above the queue of the organiser's own panel, until they close it (`welcomeDismissedAt` null;
+never the staff's, never the demo's, not the accounts of before V48) — "Pierwszy raz? Napisz do nas", one line of help, "Napisz do
+nas" (an outline — the view's one action stays "Drukuj"; opens "Pomoc i kontakt") and "Jak to działa →" (the guide). "✕" closes it at
+once, "Napisz do nas" once "Pomoc i kontakt" closes; either way `POST /dj/dashboard/welcome-dismiss` keeps it closed on the server —
+the DJ logs in on a phone and a laptop (`js/dashboard/welcome.js`). While it shows, the empty queue's "Pierwszy raz? Zobacz, jak to
+działa" and "Panel jako aplikacja" wait (`app.css`, `:has`). On a phone up to 400 px the heading stays one line (checked with the CI
+runner's fonts too), "Napisz do nas" the card's width and the guide under it. Browser scenarios `welcome-card-*`. The organisers new in
+the last 7 days with their address are on `/dj/stats` for the site's owner; the message they get, by hand: `docs/welcome-email.md`.
+
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
 
@@ -501,7 +516,16 @@ again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy
 back here, at the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
 one line with their windows, "Limity serwera: sieć 4/30 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
 network is: "Jedna sieć to np. Wi-Fi lokalu — wszyscy goście w nim liczą się razem."), **"To urządzenie"** (everyone's:
-the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"). Its forms are sent in the
+the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"), and last **"Kod imprezy"**
+(V49, the owner's; folded to the code): against a guest who keeps the code and spams every party — "Zmień kod imprezy" (an outline in
+the danger colour) asks first, "Zmienić kod imprezy? Stare plakaty i karty przestaną działać.", and is a page load
+(`POST /dj/dashboard/party-code`, `forms.js` leaves it alone) that comes back to the new code's page with this card unfolded, "Nowy kod
+imprezy: …" and "Drukuj plakat i karty" (the flash `codeChanged`). `PartyCodeService.changeCode` takes the locks as "Usuń konto" (the
+requests' lock, then the row), moves the row — its logo, staff, invitations and library follow (ON UPDATE CASCADE) —, its requests and
+feedback by their own UPDATE, retires the old code (`party_code_retired`: no party gets it again) and evicts both codes from the caches
+after the commit. The old code is then "Ten kod imprezy nie istnieje" (404) on the guest page, the TV and the print; the organiser's
+other devices and the staff's open panels get a 403 at their next poll and load their panel again, the new code's (`DjSessionHelper.panel`
+finds the party by the owner or the staff row). Browser scenarios `party-code-*`; `PartyCodeChangeIT`. Its forms are sent in the
 background as the panel's (`settings-page.js` loads `forms.js`, `push.js`, `install.js`; the page links the manifest, so a browser
 offers the app there). **On a phone**
 (narrower than 768 px) the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); "Podejrzyj" a grey outlined button as in the history (a link in the guest's line was tried
@@ -772,7 +796,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
 | `PartyLogoController` | the DJ's logo (V45, Pro, the organiser alone): `POST /dj/logo` — the picture as the request's body (`js/dashboard/logo.js`), ≤ 2 MB, made our own PNG by `LogoImage`, answered with one sentence (200 saved, 413 too large, 422 not a PNG / JPEG, too many pixels, unreadable, 503 busy); `POST /dj/logo/delete` (no plan needed); `GET /p/{code}/logo.png` (public, ETag, an hour's cache) |
 | `DjLibraryController` | the DJ's library (V41, Pro, the organiser alone): `POST /dj/library` — the file as the request's body (`application/octet-stream`, `js/dashboard/library.js`; not a form's upload: Spring Security reads a form's body for the CSRF token before anything checks the login, so a large upload would be anyone's to send), read up to 64 MB, one file at a time on the server, answered with one sentence (200 saved, 413 too large, 422 not a library / no song / too many / a collection too large for one playlist, 503 another file being read); `POST /dj/library/delete` (no plan needed) |
-| `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
+| `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days, and under it the organisers new in the last 7 days with their address (V48, `PartySettingsRepository.newOrganisers`, at most 50) — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
 | `DemoController` | the demo (2026-10-24, live since #137; Section 5.5): `/demo` — the panel of the demo party of the visitor's language (`DemoParty.codeFor`: Polish `DEMO`, any other English `DEME`), the real `dashboard.html` with `demo`, to anyone without a login, only to look at (`js/dashboard/demo.js` stops every form and link to `/dj/…` and says "start your own party"); `/demo/updates` and `/demo/history` — its poll and History tab, as the panel's (`partyCode` a demo's, else 404). Each visitor sees the examples and their own requests (their session's), never another visitor's |
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍 |
@@ -802,6 +826,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `QrCodeService` | QR codes (ZXing, cached) |
+| `PartyCodeService` | a party's code (V49): `freshCode` — one no party has nor had (`party_code_retired`), for a new party and a new code; `changeCode` — "Zmień kod imprezy": the party and all of it under a new code, the old one retired, the caches evicted after the commit |
 | `AccountDeletionService` | deletes all of a DJ's data (their party's staff and invitations by e-mail, their places on other staffs too) and evicts the caches after the commit; first the party's locks in the app's order — "S2PR", then the party's row (a guest's request and "Dołącz" wait or find nothing, no deadlock) —; the requests and the feedback in one `DELETE` each |
 | `PartyStaffService` | the party's staff (V30, V32): what a person may do at a party (`Access`), joining by the invitation link with its role (under the party's lock, V33), the places shared with the invitations (`placesTaken`), the owner's list, permissions, taking access away, the panels, the party's name |
 | `StaffInvitationService` | invitations by e-mail (V34): "Zaproś" (an address, a role, the places under the party's lock), the login's match, "Dołącz" / "Nie, dziękuję", cancelling, the nightly cleanup after 30 days |
@@ -856,7 +881,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, chosen by the form's whole path: `RELOADS`, `CHANGE_THE_QUEUE`, …; `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `install-hint.js` ("Panel jako aplikacja" under an empty queue on a phone), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place; Enter on a link, a button or a `<summary>` is theirs, never "Zagrane"), `polling.js` (the queue every 3 s and its headers — the keyboard's focus kept on the same button of the same request when the rows are replaced, `common.js` `focusSpot` — the warnings near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"), `settings-rows.js` (the folded "To urządzenie": "Powiadomienia wł. / wył." for this browser), `library.js` (the DJ's library), `logo.js` (the DJ's logo); they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, chosen by the form's whole path: `RELOADS`, `CHANGE_THE_QUEUE`, …; `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `install-hint.js` ("Panel jako aplikacja" under an empty queue on a phone), `welcome.js` (a new organiser's welcome above the queue, closed on the server, V48), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place; Enter on a link, a button or a `<summary>` is theirs, never "Zagrane"), `polling.js` (the queue every 3 s and its headers — the keyboard's focus kept on the same button of the same request when the rows are replaced, `common.js` `focusSpot` — the warnings near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"), `settings-rows.js` (the folded "To urządzenie": "Powiadomienia wł. / wył." for this browser), `library.js` (the DJ's library), `logo.js` (the DJ's logo); they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`), the feedback form, and "Kopiuj" of every DJ page: `button[data-copy-target]` (a field: the party link, the hosts' and the staff's link), `button[data-copy-text]` ("Pomoc i kontakt", "Kopiuj adres" of `/pro`); the clipboard, else the old way from a field of its own, else the text shown selected (the field, `data-copy-select`) — "Skopiowano" only when it was copied (scenarios `copy-the-*`). `queue-keys.js` keeps its own copy of a song (the keyboard's) |
 | `js/folds.js` | the folded cards of "Ustawienia imprezy" and "Obsługa" (`details.s2p-fold`, 2026-10-25): the card the address names (`#libraryCard`, an element inside a card) is unfolded on load and on a change of the address; a plain script, as `dj-nav.js` |
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes ("Kopiuj" of the link: `dj-nav.js`) |
@@ -1054,7 +1079,8 @@ violation` in the log since); the owner watches the log for a week; back: delete
 | `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted after the commit of a trial (`util/AfterCommit`) and with the account; the value is the row's plan with its end (`PlanService.Read`), so a plan ends on time |
 | `djLibrary` | partyCode | 24 h / 500 | `DjLibraryService.info` (V41): what the party's library is — the settings' card and the panel's ETag, read on every poll; the row is read inside the cache's load of the key (as `partySettings`); evicted after the commit of an upload or a deletion, and with the party (`AccountDeletionService.PARTY_CACHES`); the value is an `Optional`, so a party without a library is cached too (`DjLibraryIT`) |
 
-The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit.
+The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit, and so does a
+new party code (V49) — the old code and the new.
 
 ---
 
@@ -1156,6 +1182,8 @@ schema behind Flyway's back.
 | V45 | table `party_logo` (`party_code` PK, FK ON DELETE CASCADE, `png` bytea, `width`, `height`, `version` varchar(64), `updated_at`) and `party_settings.logo_version` varchar(64), nullable: the DJ's logo (`PartyLogoIT`) |
 | V46 | `party_settings.poster_heading` varchar(40), `poster_line` varchar(60), nullable; `poster_language` varchar(4) NOT NULL DEFAULT 'AUTO' (check AUTO / BOTH / PL / EN); `poster_show_logo`, `poster_show_links`, `poster_show_tip`, `poster_show_address` boolean NOT NULL DEFAULT true: the QR print as the DJ sets it (`MigrationIT`) |
 | V47 | `party_settings.poster_theme` varchar(10) NOT NULL DEFAULT 'CLASSIC' (check CLASSIC / ELEGANT / CLUB / PASTEL), `poster_accent` varchar(7), nullable (check `^#[0-9a-f]{6}$`): the QR print's look (`MigrationIT`) |
+| V48 | `party_settings.owner_email` varchar(320), `created_at` timestamptz DEFAULT now() (the parties of before: null), `welcome_dismissed_at` timestamptz (the parties of before: the migration's time — the welcome card is for a new account): the organiser's address and the panel's welcome (`MigrationIT`, `OrganiserContactMigrationIT`) |
+| V49 | the foreign keys on `party_code` (`party_logo`, `party_staff`, `staff_invitation`, `dj_library`, and `dj_library_track` → `dj_library`) recreated with ON UPDATE CASCADE; table `party_code_retired` (`party_code` varchar(5) PK, `retired_at` timestamptz NOT NULL DEFAULT now()): "Zmień kod imprezy" (`MigrationIT`, `PartyCodeChangeIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1273,11 +1301,13 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/host-link` | `link` = `new` (a new secret: the old link dead) / `off` (no link); anything else 400; → `/dj/settings?party=…#hostListsCard` |
 | POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |
 | POST | `/dj/dashboard/guest-limit-reset` | the party's 24 h limit of guest requests starts again ("Odblokuj prośby gości" in the warning above the queue; `LIMITS`, not a plan's feature — review 2026-10-14 W4) |
+| POST | `/dj/dashboard/welcome-dismiss` | `partyCode`: the welcome card closed for good (V48; the owner's alone, 204; a second close keeps the first time) |
+| POST | `/dj/dashboard/party-code` | `partyCode`: "Zmień kod imprezy" (V49; the owner's) — a new code, the old one dead for good → `/dj/settings?party=<new>#partyCodeCard` with the flash `codeChanged` |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards; as the DJ set it (V46: the heading, the line, the language — by default the panel's: Polish prints Polish and English, any other English —, the parts shown); the editor for whom has VIBE |
 | POST | `/dj/qr-print/settings` | `partyCode`, `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL, anything else CLASSIC, V47), `accent` ("#rrggbb", anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
-| GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days; only the account `ADMIN_GOOGLE_ID` names, else 404 |
+| GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days, and the organisers new in the last 7 days with their address (V48); only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s) |
 | POST | `/dj/logo` | `partyCode`; the body is the picture (`application/octet-stream`): the DJ's logo (V45, Pro, the organiser) — text: 200 saved, 413 over 2 MB, 422 not a PNG / JPEG, over 4096 px a side or 16 megapixels, unreadable; 503 two others being decoded |

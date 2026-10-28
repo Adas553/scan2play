@@ -4,7 +4,6 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.util.AfterCommit;
-import com.scan2play.util.CodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -23,6 +22,7 @@ public class PartySettingsCommandService {
     private final CacheManager cacheManager;
     private final PlanService planService;
     private final SiteCounter siteCounter;
+    private final PartyCodeService partyCodeService;
 
     /**
      * Retrieves the existing party for the given DJ (ownerId) or creates a new one if it doesn't exist.
@@ -45,7 +45,7 @@ public class PartySettingsCommandService {
     private PartySettingsEntity createNewParty(String ownerId) {
         PartySettingsEntity party = PartySettingsEntity.builder()
                 .ownerId(ownerId)
-                .partyCode(CodeGenerator.generatePartyCode())
+                .partyCode(partyCodeService.freshCode())   // never a code another party has or had (V49)
                 .globalVibe(VibeType.ANY)
                 .active(true)
                 .build();

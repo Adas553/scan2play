@@ -37,6 +37,9 @@ class PartySettingsCommandServiceTest {
     @Mock
     private SiteCounter siteCounter;
 
+    @Mock
+    private PartyCodeService partyCodeService;
+
     @InjectMocks
     private PartySettingsCommandService service;
 
@@ -62,6 +65,7 @@ class PartySettingsCommandServiceTest {
     @Test
     void getOrCreatePartyForDj_shouldCreateNewParty_whenOwnerHasNone() {
         when(partySettingsRepository.findByOwnerId("new-owner")).thenReturn(Optional.empty());
+        when(partyCodeService.freshCode()).thenReturn("NEW01");   // a code no party has nor had (V49)
         when(partySettingsRepository.save(any(PartySettingsEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -70,7 +74,7 @@ class PartySettingsCommandServiceTest {
         assertThat(result.getOwnerId()).isEqualTo("new-owner");
         assertThat(result.getGlobalVibe()).isEqualTo(VibeType.ANY);
         assertThat(result.isActive()).isTrue();
-        assertThat(result.getPartyCode()).isNotBlank().hasSize(5);
+        assertThat(result.getPartyCode()).isEqualTo("NEW01");
         verify(partySettingsRepository).save(any());
         verify(siteCounter).count(SiteCounter.Event.NEW_DJ);   // the site's counter (V40)
     }

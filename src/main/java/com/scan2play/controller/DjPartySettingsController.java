@@ -8,6 +8,7 @@ import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
+import com.scan2play.service.PartyCodeService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlanService;
 import com.scan2play.util.CodeGenerator;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -58,6 +60,7 @@ public class DjPartySettingsController {
 
     private final PartySettingsCommandService partySettingsCommandService;
     private final AccountDeletionService accountDeletionService;
+    private final PartyCodeService partyCodeService;
     private final DjSessionHelper sessionHelper;
     private final PlanService planService;
 
@@ -293,6 +296,23 @@ public class DjPartySettingsController {
             s.setDuplicateCheckWindow(safeDuplicateCheckWindow);
         });
         return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * "Zmień kod imprezy" (V49, the organiser's alone — it makes their posters and cards dead): the party gets a new code, the old
+     * one stops working for good ({@link PartyCodeService}) — against a guest who keeps the code and spams every party. A full page
+     * load: "Ustawienia imprezy" of the new code, its card unfolded with the new code and the way to print it again. This browser's
+     * panel follows at once; the organiser's other devices and the staff's open panels find the old code gone at their next poll
+     * (a 403) and load their panel again, which is the new code's.
+     */
+    @PostMapping("/dashboard/party-code")
+    public String changePartyCode(@RequestParam String partyCode, OAuth2AuthenticationToken authentication, HttpSession session,
+                                  RedirectAttributes redirectAttributes) {
+        sessionHelper.requireOwner(partyCode, authentication, session);
+        String newCode = partyCodeService.changeCode(partyCode);
+        session.setAttribute(DjSessionHelper.SESSION_PARTY_CODE, newCode);
+        redirectAttributes.addFlashAttribute(CODE_CHANGED, newCode);
+        return REDIRECT_SETTINGS + "?party=" + newCode + "#partyCodeCard";
     }
 
     /**

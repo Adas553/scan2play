@@ -132,10 +132,14 @@ public final class ViewAttributes {
     public static final String HOST_SAVED = "hostSaved";
     /** Flash: a hosts' list was longer than this many entries — the first ones are kept, the page says the rest did not fit. */
     public static final String HOST_DROPPED = "hostDropped";
+    /** Flash: the party's new code after "Zmień kod imprezy" (V49) — its card says it and leads to printing it again. */
+    public static final String CODE_CHANGED = "codeChanged";
 
     // --- The party's staff (V30, V32) ---
     /** Whether the person owns the panel's party (else they are on its staff, {@link #ACCESS}). */
     public static final String IS_OWNER = "isOwner";
+    /** Whether the panel shows the welcome card ("Pierwszy raz? Napisz do nas", V48): to the organiser, until they close it. */
+    public static final String WELCOME = "welcome";
     /** What the person may do at the panel's party ({@code PartyStaffService.Access}: {@code may(…)}, {@code role()}). */
     public static final String ACCESS = "access";
     /** What the person may do, as the queue poll's {@code X-Panel-Access} says it: the page reloads when the poll says otherwise. */
