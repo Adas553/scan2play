@@ -30,7 +30,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    places (the guest page and the result page, the TV screen, the QR poster and cards, "Podsumowanie wieczoru", "impreza zakończona");
    the browser scales any image it reads to ≤ 512 px and sends a PNG, the server takes only PNG / JPEG (its magic bytes), reads the
    size before decoding, re-encodes to PNG without metadata; our mark stays small at the bottom; the privacy policy says it.
-2. **Editing the QR poster** (`/dj/qr-print`, V46) — built on `claude/sleepy-feynman-kxaj43` (the owner's picks, 2026-10-28: saved
+2. **Editing the QR poster** (`/dj/qr-print`, V46, released to `dev` in #183) and **its look** (V47: four themes, a colour made
+   readable; the owner left the choices to Claude, 2026-10-28: all four themes, a palette and the DJ's own colour, any plan) — built on `claude/sleepy-feynman-kxaj43` (the owner's picks, 2026-10-28: saved
    with the party; the DJ's heading ≤ 40 and line ≤ 60, the language, boxes for the logo / profiles / tip / address; the organiser and
    the staff with VIBE, any plan). Released before it: the DJ's logo (#179 / #180, V45), the poster without its numbered steps, a
    larger logo, the cards' texts centred on the code (#181 / #182).

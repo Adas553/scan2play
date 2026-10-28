@@ -59,9 +59,9 @@
             const form = document.getElementById('posterForm');
             await t.waitFor(function () { return document.getElementById('posterAnswer').textContent === form.dataset.saved; }, 'saved', 3000);
             const sent = (await t.stand.requests('POST /dj/qr-print/settings'))[0].q;
-            t.step('sent: the words, the language, the boxes ticked; the party; the CSRF token in the header',
+            t.step('sent: the words, the language (the English panel\'s, picked until the DJ picks another), the boxes ticked; the party; the CSRF token in the header',
                 [sent.heading, sent.line, sent.language, sent.showLinks, sent.showTip, sent.showAddress, sent.partyCode, sent['X-CSRF-TOKEN']],
-                ['Osiemnastka Dawida', 'Sobota, sala Pod Lipami', 'AUTO', 'true', 'true', undefined, 'PRNT1', 'harness-csrf-token']);
+                ['Osiemnastka Dawida', 'Sobota, sala Pod Lipami', 'EN', 'true', 'true', undefined, 'PRNT1', 'harness-csrf-token']);
             t.step('nothing loaded', loads, []);
 
             const select = document.getElementById('posterLanguage');

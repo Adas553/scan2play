@@ -93,6 +93,19 @@ class DjPartySettingsControllerPosterTest {
         assertThat(cleared.getPosterLine()).isNull();
     }
 
+    /** The look (V47): a theme by its name, the DJ's colour as "#rrggbb" in lower case; anything else the classic / the theme's own. */
+    @Test
+    void theThemeAndTheColour_areSaved_aWrongOne_isTheDefault() throws Exception {
+        PartySettingsEntity party = send(post("/dj/qr-print/settings").param("theme", "club").param("accent", "#00BCD4"));
+        assertThat(party.getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CLUB);
+        assertThat(party.getPosterAccent()).isEqualTo("#00bcd4");
+
+        setUp();
+        PartySettingsEntity wrong = send(post("/dj/qr-print/settings").param("theme", "NEON").param("accent", "red; background:url(x)"));
+        assertThat(wrong.getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CLASSIC);
+        assertThat(wrong.getPosterAccent()).isNull();
+    }
+
     @Test
     void theLanguage_printed_followsThePanelOnlyWhenAuto() {
         assertThat(PosterLanguage.AUTO.printed("pl")).isEqualTo("both");

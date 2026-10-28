@@ -5,10 +5,60 @@
 // cards at once — the DJ's own heading in place of ours, the DJ's line, the parts of the DJ's shown or left off (data-poster-part;
 // the DJ's logo left off brings ours back, and the cards' code its full size). "Zapisz" keeps it with the party in the background
 // (POST /dj/qr-print/settings, 204); the print's language is written by the server, so a new one is saved and the page loads again.
+// What is changed and not saved yet says so, and goes along to the other layout (sessionStorage, for this tab), to compare the two.
+//
+// The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
+// theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
+// --accent; none, and the theme's own applies. On every load, for whoever prints, and at once while the editor changes them.
 (function () {
     'use strict';
     const button = document.getElementById('printBtn');
     if (button) button.addEventListener('click', function () { window.print(); });
+
+    function rgb(hex) {
+        const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+        if (!m) return null;
+        const n = parseInt(m[1], 16);
+        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    function luminance(c) {
+        const lin = c.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+    }
+
+    function contrast(a, b) {
+        const x = luminance(a), y = luminance(b);
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    }
+
+    function hex(c) {
+        return '#' + c.map(function (v) { return Math.round(v).toString(16).padStart(2, '0'); }).join('');
+    }
+
+    /** {@code colour} as it reads on {@code paper}: as it is, or mixed towards black / white step by step until 4.5:1 (and a little). */
+    function readable(colour, paper) {
+        const c = rgb(colour), p = rgb(paper);
+        if (!c || !p) return colour;
+        const target = luminance(p) > 0.5 ? [0, 0, 0] : [255, 255, 255];
+        for (let t = 0; t <= 1.0001; t += 0.05) {
+            const mixed = c.map(function (v, i) { return v + (target[i] - v) * t; });
+            if (contrast(mixed, p) >= 4.6) return hex(mixed);   // 4.6: a margin over AA's 4.5 for the rounding to whole values
+        }
+        return hex(target);
+    }
+
+    function showLook(theme, accent) {
+        const body = document.body;
+        if (theme) {
+            body.className = body.className.replace(/\btheme-\w+\b/g, '').trim() + ' theme-' + theme.toLowerCase();
+        }
+        const paper = getComputedStyle(body).getPropertyValue('--paper').trim();
+        if (accent) body.style.setProperty('--accent', readable(accent, paper));
+        else body.style.removeProperty('--accent');
+    }
+
+    showLook(null, document.body.dataset.accent);
 
     const form = document.getElementById('posterForm');
     if (!form) return;
@@ -39,6 +89,7 @@
 
     function say(text, refused) {
         answer.textContent = text;
+        answer.classList.remove('unsaved');
         answer.classList.toggle('refused', !!refused);
     }
 
@@ -52,11 +103,85 @@
         if (response.status !== 204) throw new Error('not saved: ' + response.status);
     }
 
+    const picker = document.getElementById('posterAccentPicker');
+    const own = document.getElementById('posterAccentOwn');
+
+    function chosenAccent() {
+        const checked = form.querySelector('input[name="accent"]:checked');
+        return checked ? checked.value : '';
+    }
+
+    function changeLook() { showLook(form.elements.theme.value, chosenAccent()); }
+
+    form.elements.theme.addEventListener('change', changeLook);
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
+        radio.addEventListener('change', changeLook);
+    });
+    if (picker && own) {
+        picker.addEventListener('input', function () {
+            own.value = picker.value;
+            own.checked = true;
+            changeLook();
+        });
+    }
+
     form.elements.heading.addEventListener('input', showHeading);
     form.elements.line.addEventListener('input', showLine);
     all('[data-poster-toggle]').forEach(function (box) {
         box.addEventListener('change', function () { showPart(box); });
     });
+
+    // Changes not saved yet go with the DJ to the other layout (poster ↔ cards), so the two can be compared before "Zapisz": kept in
+    // this tab only, for the next page, and gone once it has them.
+    const stashKey = 's2p-poster-' + form.elements.partyCode.value;
+
+    function stash() {
+        const state = { heading: form.elements.heading.value, line: form.elements.line.value, theme: form.elements.theme.value,
+            accent: chosenAccent(), picker: picker ? picker.value : '', parts: {} };
+        all('[data-poster-toggle]').forEach(function (box) { state.parts[box.dataset.posterToggle] = box.checked; });
+        try { sessionStorage.setItem(stashKey, JSON.stringify(state)); } catch (e) { /* no storage: the switch loses them, as before */ }
+    }
+
+    function unstash() {
+        let state = null;
+        try {
+            state = JSON.parse(sessionStorage.getItem(stashKey) || 'null');
+            sessionStorage.removeItem(stashKey);
+        } catch (e) { return; }
+        if (!state) return;
+        form.elements.heading.value = state.heading || '';
+        form.elements.line.value = state.line || '';
+        if (form.querySelector('#posterTheme option[value="' + state.theme + '"]')) form.elements.theme.value = state.theme;
+        if (picker && state.picker) picker.value = state.picker;
+        const swatch = Array.prototype.find.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
+            return radio !== own && radio.value === state.accent;
+        });
+        if (swatch) swatch.checked = true;
+        else if (own && state.accent) { own.value = state.accent; own.checked = true; }
+        all('[data-poster-toggle]').forEach(function (box) {
+            if (typeof state.parts[box.dataset.posterToggle] === 'boolean') box.checked = state.parts[box.dataset.posterToggle];
+            showPart(box);
+        });
+        showHeading();
+        showLine();
+        changeLook();
+        markUnsaved();
+    }
+
+    let unsaved = false;
+
+    function markUnsaved() {
+        unsaved = true;
+        say(form.dataset.unsaved, false);
+        answer.classList.add('unsaved');
+    }
+
+    form.addEventListener('input', function (e) { if (e.target.name !== 'language') markUnsaved(); });
+    form.addEventListener('change', function (e) { if (e.target.name !== 'language') markUnsaved(); });
+    all('[data-layout-switch]').forEach(function (link) {
+        link.addEventListener('click', function () { if (unsaved) stash(); });
+    });
+    unstash();
 
     form.elements.language.addEventListener('change', async function () {
         say(form.dataset.sending, false);
@@ -74,6 +199,7 @@
         say(form.dataset.sending, false);
         try {
             await send();
+            unsaved = false;
             say(form.dataset.saved, false);
         } catch (err) {
             say(form.dataset.refused, true);

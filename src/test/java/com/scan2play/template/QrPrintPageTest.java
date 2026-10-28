@@ -127,7 +127,7 @@ class QrPrintPageTest {
     void thePosterHasTheCodeTheLinkAndBothLanguages() throws IOException {
         String html = render("poster", Locale.forLanguageTag("pl"));
 
-        assertThat(html).contains("class=\"layout-poster\"", "<main class=\"poster\">", "data:image/png;base64,");
+        assertThat(html).contains("class=\"layout-poster theme-classic has-editor\"", "<main class=\"poster\">", "data:image/png;base64,");
         assertThat(html).contains("https://www.scan2play.com.pl/p/" + PARTY, ">" + PARTY + "<");
         // a Polish panel: Polish and English at once; "poproś", as the TV screen and the rest of the app ("prośba"), not "zamów"
         assertThat(html).contains("<span lang=\"pl\">Zeskanuj i poproś o piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>")
@@ -145,7 +145,7 @@ class QrPrintPageTest {
     void theCardsAreEightOnAPage() throws IOException {
         String html = render("cards", Locale.ENGLISH);
 
-        assertThat(html).contains("class=\"layout-cards\"", "<main class=\"cards\">");
+        assertThat(html).contains("class=\"layout-cards theme-classic has-editor\"", "<main class=\"cards\">");
         assertThat(html.split("<section class=\"card\">", -1)).hasSize(9);
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\" data-poster-part=\"ours\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
@@ -213,7 +213,8 @@ class QrPrintPageTest {
         // a card: the code's column has our logo above the code and the profiles under it (the owner, 2026-10-07)
         String cards = render("cards", Locale.ENGLISH);
         assertThat(cards.split("class=\"dj-links\"", -1)).as("on every card").hasSize(9);
-        String card = cards.substring(cards.indexOf("<section class=\"card\">"), cards.indexOf("</section>"));
+        int start = cards.indexOf("<section class=\"card\">");
+        String card = cards.substring(start, cards.indexOf("</section>", start));
         String side = card.substring(card.indexOf("<div class=\"side\">"), card.indexOf("<div class=\"text\">"));
         assertThat(side.indexOf("class=\"logo\"")).isNotNegative().isLessThan(side.indexOf("class=\"qr\""));
         assertThat(side.indexOf("class=\"qr\"")).isLessThan(side.indexOf("class=\"dj-links\""));
@@ -258,6 +259,26 @@ class QrPrintPageTest {
                 "<span lang=\"en\" class=\"second\">Can't scan? Open:</span>");
     }
 
+    /**
+     * The look (V47): the theme is the page's class, the DJ's colour its data-accent (qr-print.js makes it readable); the editor offers
+     * the four themes and the palette, the saved one picked — a colour not of the palette is "Własny", in the colour field.
+     */
+    @Test
+    void theLook_isTheThemeAndTheColourTheDjPicked() throws IOException {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY)
+                .posterTheme(com.scan2play.model.PosterTheme.ELEGANT).posterAccent("#123abc").build();
+        String html = render("poster", Locale.forLanguageTag("pl"), party).replaceAll("\\s+", " ");
+        assertThat(html).contains("class=\"layout-poster theme-elegant has-editor\"", "data-accent=\"#123abc\"",
+                "<option value=\"ELEGANT\" selected=\"selected\">Elegancki</option>", "<option value=\"CLUB\">Klubowy</option>",
+                "<option value=\"PASTEL\">Pastelowy</option>", "<option value=\"CLASSIC\">Klasyczny</option>",
+                "value=\"#123abc\" checked=\"checked\"", "id=\"posterAccentPicker\" value=\"#123abc\"", "class=\"swatch-dot swatch-c2185b\"");
+        String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build());
+        assertThat(palette).contains("value=\"#c2185b\" aria-label=\"#c2185b\" checked=\"checked\"").doesNotContain("value=\"#123abc\"");
+        String none = render("poster", Locale.ENGLISH);
+        assertThat(none).contains("class=\"layout-poster theme-classic has-editor\"", "<input type=\"radio\" name=\"accent\" value=\"\" checked=\"checked\">")
+                .doesNotContain("data-accent=");
+    }
+
     /** The editor (V46): its fields as long as the columns, the values saved; only for whom may change the card "Impreza". */
     @Test
     void theEditor_isForWhomMayChangeTheParty() throws IOException {
@@ -265,22 +286,23 @@ class QrPrintPageTest {
         String html = render("poster", Locale.forLanguageTag("pl"), party);
         assertThat(html).contains("id=\"posterForm\"", "action=\"/dj/qr-print/settings\"",
                 "maxlength=\"" + PartySettingsEntity.POSTER_HEADING_MAX + "\"", "maxlength=\"" + PartySettingsEntity.POSTER_LINE_MAX + "\"",
-                "value=\"Osiemnastka Dawida\"", "<option value=\"AUTO\" selected=\"selected\">Jak panel</option>",
+                "value=\"Osiemnastka Dawida\"", "<option value=\"BOTH\" selected=\"selected\">Polski + English</option>",
                 "name=\"showAddress\" value=\"true\" data-poster-toggle=\"address\" checked=\"checked\"");
+        assertThat(html).as("no \"as the panel\": the panel's language picked until the DJ picks another").doesNotContain("value=\"AUTO\"");
         assertThat(html).as("no logo, no profiles, no tip: no box for them, what was saved sent as it is")
                 .doesNotContain("data-poster-toggle=\"logo\"", "data-poster-toggle=\"tip\"")
                 .contains("<input type=\"hidden\" name=\"showLogo\" value=\"true\">");
 
         String viewer = render("poster", Locale.forLanguageTag("pl"), party,
                 new PartyStaffService.Access(party, false, java.util.EnumSet.of(StaffPermission.QUEUE)));
-        assertThat(viewer).as("the staff without VIBE print it, never change it").doesNotContain("posterForm")
+        assertThat(viewer).as("the staff without VIBE print it, never change it").doesNotContain("posterForm", "has-editor")
                 .contains("<span class=\"own\" data-poster-heading>Osiemnastka Dawida</span>");
     }
 
     @Test
     void theBarFollowsTheDjsLanguage_andTheLayoutDefaultsToThePoster() throws IOException {
         String polish = render("whatever", Locale.forLanguageTag("pl"));
-        assertThat(polish).contains("<html lang=\"pl\"", "Wydruk kodu QR", "Plakat A4", "Drukuj", "class=\"layout-poster\"");
+        assertThat(polish).contains("<html lang=\"pl\"", "Wydruk kodu QR", "Plakat A4", "Drukuj", "class=\"layout-poster theme-classic has-editor\"");
 
         String english = render("poster", Locale.ENGLISH);
         assertThat(english).contains("<html lang=\"en\"", "Print the QR code", "Table cards", "Back to the dashboard");
