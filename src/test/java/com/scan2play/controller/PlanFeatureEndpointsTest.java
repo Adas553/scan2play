@@ -93,7 +93,7 @@ class PlanFeatureEndpointsTest {
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
                         new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class)),
-                        new DjPartySettingsController(settings, mock(AccountDeletionService.class), helper, plans),
+                        new DjPartySettingsController(settings, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, plans),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans),
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),

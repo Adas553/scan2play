@@ -124,7 +124,7 @@
         <th:block th:if="${plan.proStaff()}"><div
              th:replace="~{fragments/components :: proOffer(#{plan.staff.free(${plan.proStaffPlaces()})})}"></div></th:block>
         <div th:if="${staffInviteResult != null}" id="staffInviteResult" role="status"
-             th:class="${staffInviteResult.problem()} ? 'alert alert-warning py-2' : 'alert alert-success py-2'"
+             th:class="${staffInviteResult.problem()} ? 'alert alert-warning py-2' : 'alert alert-info py-2'"
              th:text="#{__${'staff.invite.' + staffInviteResult.outcome()}__(${staffInviteResult.address()}, ${plan.staffPlaces()})}">Invited.</div>
         <p th:if="${staffPlacesLeft == 0}" class="small text-warning mb-2" id="staffFull" th:text="#{staff.invite.full_now(${plan.staffPlaces()})}">10 of 10 places taken.</p>
         <form th:action="@{/dj/staff/invite}" method="POST" class="m-0" id="staffInviteForm" data-staff-form>

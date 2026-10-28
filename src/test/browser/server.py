@@ -455,6 +455,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
         if path == '/dj/dashboard/welcome-dismiss':   # the welcome card closed for good (V48): nothing to say
             return self._send(204)
+        if path == '/dj/dashboard/party-code':        # a new party code (V49): the page "Ustawienia imprezy" again, as the real server
+            return self._send(302, headers={'Location': '/dj/settings'})
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/party-words', '/dj/dashboard/comment-style',
                     '/dj/end-party', '/dj/start-party'):
             return self._json({})
