@@ -755,6 +755,22 @@ th[data-sort].sort-desc::after {
     #queueList .s2p-list-tools { flex: 1 1 100%; flex-wrap: wrap; }
     #queueList .s2p-list-tools .s2p-list-search { flex: 1 1 8rem; max-width: none !important; }
 }
+/* The history's "Podsumowanie wieczoru" and "Wyczyść historię" (history.html, .s2p-history-more): on a phone a menu under "⋯" beside
+   the filters, the search the whole width under them — two rows above the first entry, not three; from 768 px the menu is the row
+   itself right after the filters (its "⋯" hidden, never opened), as before. */
+@media (max-width: 767.98px) {
+    [data-list] .s2p-history-more ~ .s2p-list-search { flex: 1 1 100%; max-width: none !important; }
+    .s2p-history-more-menu.show { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; }
+    .s2p-history-more-menu .btn { width: 100%; }
+    .s2p-history-more > .btn { min-width: 44px; font-size: 1.25rem; line-height: 1; }
+}
+@media (min-width: 768px) {
+    .s2p-history-more { margin-right: auto; }
+    .s2p-history-more-menu {
+        display: flex !important; position: static !important; align-items: center; gap: 0.5rem;
+        min-width: 0; margin: 0; padding: 0; border: 0; background: none; transform: none !important;
+    }
+}
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }

@@ -479,6 +479,48 @@
         }
     });
 
+    // The owner's screenshot (2026-10-28): on a phone the history's filters, "Podsumowanie wieczoru" / "Wyczyść historię" and the search
+    // were three rows above the first entry. The two actions about the whole history are a menu under "⋯" beside the filters on a phone;
+    // on a computer the row as before.
+    S2P.scenario({
+        name: 'history-actions-menu-phone',
+        title: 'the history on a phone: "Podsumowanie wieczoru" and "Wyczyść historię" under "⋯" beside the filters, the search the whole width; the first entry higher',
+        page: 'history-page',
+        viewport: '390,844',
+        run: async function (t) {
+            const more = document.getElementById('historyMoreBtn');
+            const summary = document.getElementById('summaryLink');
+            const clear = document.getElementById('clearHistoryBtn');
+            t.step('"⋯" shows, the two actions not until it is tapped', [shows(more), shows(summary), shows(clear)], [true, false, false]);
+            const filter = document.querySelector('[data-list-filter="all"]').getBoundingClientRect();
+            t.check('"⋯" on the filters\' row', Math.abs(more.getBoundingClientRect().top - filter.top) < 4);
+            const search = document.querySelector('[data-list] .s2p-list-search').getBoundingClientRect();
+            t.check('the search the whole width under them', search.top > filter.bottom
+                && search.width >= document.querySelector('[data-list]').getBoundingClientRect().width - 1);
+            const first = document.querySelector('[data-list] tbody tr[data-decision]').getBoundingClientRect().top;
+            t.check('the first entry higher than the 474 px of three rows: at ' + Math.round(first) + ' px', first < 440);
+            more.click();
+            await t.sleep(200);
+            t.step('a tap shows both, each a thumb\'s target', [shows(summary), shows(clear), tooSmall(document.querySelector('.s2p-history-more-menu'))],
+                [true, true, []]);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+        }
+    });
+
+    S2P.scenario({
+        name: 'history-actions-row-wide',
+        title: 'the history on a computer: "Podsumowanie wieczoru" and "Wyczyść historię" in the filters\' row as before, no "⋯"',
+        page: 'history-page',
+        viewport: '1280,900',
+        run: async function (t) {
+            const filter = document.querySelector('[data-list-filter="rejected"]').getBoundingClientRect();
+            const summary = document.getElementById('summaryLink').getBoundingClientRect();
+            t.step('no "⋯", both shown', [shows(document.getElementById('historyMoreBtn')), shows(document.getElementById('summaryLink')),
+                shows(document.getElementById('clearHistoryBtn'))], [false, true, true]);
+            t.check('right after the filters, on their row', summary.left > filter.right && summary.left - filter.right < 24 && Math.abs(summary.top - filter.top) < 4);
+        }
+    });
+
     // PROJECT_CONTEXT 6.7, one action per view (the owner, 2026-10-16): a closed party with nothing waiting showed two —
     // "Wznów imprezę" in the banner and "Drukuj plakat i karty" of the empty queue. The party's own action wins; "Drukuj" is an
     // outline while the party is closed, and the action again once it is resumed (the banner goes without a reload).

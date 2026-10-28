@@ -559,7 +559,9 @@ are **deleted**, the guests' words with them — never a waiting one, and never 
 song out of the queue and stays in the history until that ends). The AI's duplicate rule reads the played songs, so after it the AI no
 longer knows what played. The History tab sends it in the background and loads itself again (`s2p:history-changed`).
 
-**"Podsumowanie wieczoru"** (beside "Wyczyść historię", a new tab; its question points to it): `/dj/summary`
+**"Podsumowanie wieczoru"** (beside "Wyczyść historię", a new tab; its question points to it — on a phone both under one "⋯" beside the
+history's filters, the search the whole width under them: two rows above the first entry, not three, 2026-10-28;
+`.s2p-history-more`, `history-actions-menu-phone`, `history-actions-row-wide`): `/dj/summary`
 (`DjSummaryController`, `EveningSummaryService`, `summary.html`) — one evening of the DJ's own party (no party code asked for) on a
 white page to print or save as PDF ("🖨 Drukuj / PDF", `js/summary.js`, `css/summary.css`): an **evening runs from 6:00 to 6:00 Polish
 time** (`EVENING_STARTS`; a wedding past midnight is one evening); the evenings with requests to pick (≤ 31, latest first, with their
