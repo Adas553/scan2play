@@ -1,48 +1,55 @@
-# Session Handoff — 2026-10-26
+# Session Handoff — 2026-10-28
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`,
 `session-handoff-2026-10-16.md`, `session-handoff-2026-10-18.md`, `session-handoff-2026-10-21.md`, `session-handoff-2026-10-24.md`
-(2026-10-22 … 24: the review of 2026-10-21 and its releases, the DJ's library, the ideas list — items 1–7 — word for word).
+(2026-10-22 … 24: the review of 2026-10-21 and its releases, the DJ's library, the ideas list — items 1–7 — word for word),
+`session-handoff-2026-10-26.md` (2026-10-26 … 28: the DJ's logo, the QR poster's editor and look, the panel's review — word for word).
 Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. Reviews: `docs/history/review-*.md` (the latest
 `review-2026-10-25.md`).
 
 ## Start here
 
-- **2026-10-26 — the state.** `main` = `dev` + the release merge #178 (`161a6a4`), deployed 2026-10-25 19:36 UTC, SUCCESS. Checked
-  2026-10-26 (Railway, read only): Flyway applied V44 once (0.016 s); no 5xx in 48 h (3 016 requests; the 1 414 4xx are scanners
-  asking for `/.env`, `/.git/config`, `/id_rsa` … — all 404); the nightly jobs ran on time (03:40 queues, 03:45 the 30-day purge,
-  03:50 invitations, 03:55 the demo's reset — UTC, Polish winter time since 2026-10-25) and the start's `atStart` cleared 1 request.
-- **Released 2026-10-25:** the review of 2026-10-25 and the library's fixes (#168 / #169, V43), the new mark — a play triangle of QR
-  modules (#170 / #171), folded cards on "Ustawienia imprezy" and "Obsługa", the library's card, the buttons (#172 – #174), "+ Dodaj
-  piosenkę" by the DJ (#175, V44), outline buttons on a phone (#176), the history's filters keep "Podsumowanie wieczoru" (#177).
+- **2026-10-28 — the state.** `main` = `dev` + the release merge #187 (`6318a28`), deployed 2026-10-28 15:53 UTC, SUCCESS. Checked
+  (Railway, read only): started in 5.5 s, Flyway validated 48 migrations and applied none (none in the release), the owner's first
+  minutes on `/dj/dashboard`, the History tab and `/dj/settings` all 200, the new assets under the deploy's version. The public pages
+  were not curled from the cloud session (its network refuses `www.scan2play.com.pl`): curl them without cookies to the page's end.
+- **Released 2026-10-28** (#186 / #187, the review of the DJ's panel against TipTunes and Rekwest, 10 commits): one heading and tabs
+  "Panel DJ-a | Historia | Ustawienia" on every DJ page (a tab opens its page at the top), the devices' own fonts named
+  (`-apple-system` … Arial — never `system-ui` first: DejaVu on GitHub's runner broke three one-line layouts), one accent (cyan; green a
+  status), "Impreza i kod QR", the rows of "Więcej" off the panel (the network's limit near is a warning above the queue), from
+  1400 px the settings beside the queue, quiet "Kopiuj" / "Podejrzyj", the print's editor in the panel's colours, "Panel jako
+  aplikacja" under an empty queue on a phone, the history's "⋯" menu and its folded line in columns, "Ukryj ✗" / "+ Dodaj" on one line.
+  Released before it the same day: the DJ's QR poster and its look (V46, V47; #185).
 - **The repository is public** (`LICENSE`: viewing only) — GitHub Actions have no minute limit. Nothing secret in the repo, the docs
   or a commit — ever.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
 - **Mind:** (1) a form with a CSRF token on a public page for a visitor without a session needs a test with `SessionRepositoryFilter`
   (`LandingPageSessionWebTest`); (2) a browser scenario that checks a page fits measures `document.documentElement.clientWidth`, never
-  `window.innerWidth`; (3) after a release, curl production without cookies to the page's end, not only for a 200.
+  `window.innerWidth`; (3) after a release, curl production without cookies to the page's end, not only for a 200; (4) a layout that
+  must stay on one line: run its scenario with the runner's fonts too — locally take Inter out of fontconfig (`FONTCONFIG_FILE` with a
+  `<rejectfont>` for `*Inter*`), what is left is DejaVu and Liberation, as on GitHub.
 
-## Now (the owner's priorities, 2026-10-26)
+## Next (the owner's ideas, 2026-10-28)
 
-1. **The DJ's logo** (Pro, `PlanFeature.LOGO`, V45) — built on `claude/sleepy-feynman-kxaj43`, the PR to `dev` waits for the owner's
-   review (then a release; V45 on production: check Flyway's line once). The owner's picks: shown on all five
-   places (the guest page and the result page, the TV screen, the QR poster and cards, "Podsumowanie wieczoru", "impreza zakończona");
-   the browser scales any image it reads to ≤ 512 px and sends a PNG, the server takes only PNG / JPEG (its magic bytes), reads the
-   size before decoding, re-encodes to PNG without metadata; our mark stays small at the bottom; the privacy policy says it.
-2. **Editing the QR poster** (`/dj/qr-print`, V46, released to `dev` in #183) and **its look** (V47: four themes, a colour made
-   readable; the owner left the choices to Claude, 2026-10-28: all four themes, a palette and the DJ's own colour, any plan) — built on `claude/sleepy-feynman-kxaj43` (the owner's picks, 2026-10-28: saved
-   with the party; the DJ's heading ≤ 40 and line ≤ 60, the language, boxes for the logo / profiles / tip / address; the organiser and
-   the staff with VIBE, any plan). Released before it: the DJ's logo (#179 / #180, V45), the poster without its numbered steps, a
-   larger logo, the cards' texts centred on the code (#181 / #182).
-3. **The DJ's panel against TipTunes and Rekwest** (the review of 2026-10-28, on `claude/scan2play-dj-panel-review-m9yrpb`):
-   items 1–7 (`61b3de3`, the owner tested it: "fajnie wygląda") — the device's own font, one accent, one heading and tabs "Panel DJ-a |
-   Historia | Ustawienia", "Impreza i kod QR", the card's gaps; then items 8–10 and 12 and the owner's own: the rows of "Więcej" off the
-   panel (the settings were in two places; the network's limit near is now a warning above the queue), the print's editor in the
-   panel's colours, from 1400 px the unfolded settings beside the queue, "Kopiuj" / "Podejrzyj" quiet on a wide screen, "Panel jako
-   aplikacja" under an empty queue on a phone. Then "Uprawnienia po kolei" on "Obsługa" 44 px on a phone and the landing page's
-   pictures made again (`screenshots.py`). Item 11 "Moje imprezy": not now (the owner, 2026-10-28 — a party is one per organiser and the
-   history is purged after 30 days; a list of past evenings would need a model of its own, worth it once DJs ask).
+1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać"). Agreed
+   the same day, in this order — no automatic mail yet:
+   (a) **keep the organiser's e-mail.** Today only `owner_id` (Google's `sub`) and `owner_name` are kept; the address from Google is used
+   at the login only (V34's invitations) and saved nowhere, so there is nobody to write to. A column `owner_email` in `party_settings`
+   (a migration), filled and kept current at the login where `keepOwnerName` keeps the name (Google's verified `email`; the organiser
+   only, never the staff), gone with the account ("Usuń konto", `AccountDeletionService`; an IT that it goes). The privacy policy
+   (PL and EN) says it: why (a contact about the account and help — no advertising), how long (until the account is deleted). The
+   accounts of before fill it at their next login. A read-only query for the owner — the organisers new in the last 7 days, with their
+   e-mail — and a short personal mail template he sends himself from `scan2playcontact@gmail.com` (Polish and English).
+   (b) **a welcome card in the panel** at the first login: "Pierwszy raz? Napisz do nas" leading to "Pomoc i kontakt" (and the guide);
+   dismissed for good (on the server, a column, not the browser's storage — the DJ logs in on a phone and a laptop); one action per
+   view kept; a browser scenario, seen red first.
+   (c) **an automatic welcome e-mail — later**, when new accounts come several a day or the plans are enforced. Its choices then: the
+   sender (Resend, Postmark, Brevo… or Google Workspace SMTP; its key a Railway secret; SPF / DKIM / DMARC at Cloudflare), the
+   reply-to, once only (`welcome_sent_at`, sent after the commit off the login's thread, retried by the nightly job, never blocking the
+   login), the language, no marketing; the sending behind an interface (a fake in the tests), an IT for "once only" under two logins.
+2. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
+   on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.
 
 ## Later (not now)
 
@@ -58,6 +65,8 @@ E. From the history (`session-handoff-2026-10-24.md`): talks with DJs (its item 
 
 ## Waiting for the owner (not code)
 
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` in the `dev` environment (IntelliJ or a dev server): without them "To urządzenie" has no
+  switch of the notifications (the owner's screenshot, 2026-10-28) — the same pair as production, never in the repo or a chat.
 - Gemini's prepaid credits: top up or auto-reload (at zero every request goes to the DJ unchecked); a budget alert in Google Cloud.
 - Old PRs to `main`: #2 and #7 (April) — close them.
 - YouTube key "Klucz API 2" and `YOUTUBE_API_KEY` in IntelliJ, the Spotify app and `SPOTIFY_*` in IntelliJ — delete them; the
