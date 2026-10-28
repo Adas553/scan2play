@@ -64,14 +64,12 @@ S2P.scenario({
         document.getElementById('makeOwnPartyBtn').click();
         t.step('"Załóż własną imprezę" is a page load (not sent in the background)', handled.shift(), ['/dj/panel', false]);
 
-        // under "Kod QR": the QR code and one row, "To urządzenie" (the page "Ustawienia imprezy" has its card — without "Wklej link" on
-        // another's party: she has joined already, the owner 2026-10-10; SettingsPageRenderTest)
+        // under "Kod QR": the QR code; "To urządzenie" is a card of the tab "Ustawienia" (without "Wklej link" on another's party: she
+        // has joined already, the owner 2026-10-10; SettingsPageRenderTest)
         document.getElementById('settingsToggle').click();
-        document.getElementById('settingsMoreFold').open = true;
-        const rows = Array.from(document.querySelectorAll('#settingsMore [data-settings-row]')).filter(function (row) { return row.checkVisibility(); });
-        t.step('"Więcej" has this device alone, leading to its card', rows.map(function (row) {
-            return [row.dataset.settingsRow, row.getAttribute('href')];
-        }), [['device', '/dj/settings?party=HARN1#deviceCard']]);
+        t.step('the QR code under the button, the tab "Ustawienia" of the same party',
+            [document.getElementById('partyLinkInput').checkVisibility(), document.querySelector('[data-dj-tab="settings"]').getAttribute('href')],
+            [true, '/dj/settings?party=HARN1']);
         t.check('no field for an invitation link on the panel', !document.getElementById('joinStaffForm') && !document.getElementById('joinLinkInput'));
 
         // "Opuść obsługę" in place of "Usuń konto" (it read as deleting the party): a page load, another panel comes whole

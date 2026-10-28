@@ -45,7 +45,10 @@
     --s2p-action-ink:    #062c33;
     --s2p-radius:        8px;       /* buttons and fields */
     --s2p-radius-card:   12px;      /* cards */
-    --s2p-font:          'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* the device's own font, named (San Francisco on an iPhone and a Mac, Segoe UI on Windows, Roboto on Android), then Arial: the
+       list that began with Segoe UI fell to Verdana on an iPhone and to Geneva on a Mac. Not system-ui first — on a Linux without
+       these it is DejaVu Sans, a tenth wider than Arial (GitHub's runner: three lines the layout keeps to one broke). The TV uses it too. */
+    --s2p-font:          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     /* Every other colour of this file, by what it is for (review 2026-10-14: 111 colours were written where they were used,
        50 values). 2026-10-16 the near-identical tones merged (the owner): white, light and --s2p-text for the light texts (five
        near-whites were), one dim text, --s2p-bg-elevated for the panels (three were), two edges, one yellow. A colour of a rule is
@@ -107,9 +110,10 @@ body {
 /* --- THE LOOK (the design review, 2026-10-09) — what every page shares. Three kinds of button: the action (filled cyan, one per
        screen: .btn-action), the second kind (an outline, light text: .btn-outline-light / -secondary), the text one (.btn-link);
        red only as an outline, for what deletes. Green says "accepted", yellow money and "check" — statuses, not actions. --- */
-/* One action per view (6.7): a closed party's is "Wznów imprezę" in its banner — the empty queue's "Drukuj" is an outline (the
-   second kind) while the banner shows it; once the party is resumed (the banner goes, a reload or a poll) the action again. */
-.page-dj:has(#party-closed-banner:not(.d-none) .btn-action) #queueEmpty .btn-action {
+/* One action per view (6.7): a closed party's is "Wznów imprezę" in its banner — the empty queue's "Drukuj" and the action of a
+   card of "Ustawienia imprezy" or "Obsługa" (.s2p-dj-page-body: "Wgraj", "Zaproś") are an outline (the second kind) while the
+   banner shows it; once the party is resumed (the banner goes, a reload or a poll) the action again. */
+.page-dj:has(#party-closed-banner:not(.d-none) .btn-action) :is(#queueEmpty, .s2p-dj-page-body) .btn-action {
     --bs-btn-color: var(--s2p-light);
     --bs-btn-bg: transparent;
     --bs-btn-border-color: var(--s2p-light);
@@ -145,6 +149,13 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
     .btn-action, .btn-action:hover { transition: none; transform: none; }
+}
+/* The text button in the action's cyan: Bootstrap's blue (#0d6efd) was 3.6 : 1 on a card, under WCAG AA, and the only blue of the
+   page. A grey or red one (.text-secondary, .text-danger) keeps its own colour. */
+.btn-link {
+    --bs-btn-color: var(--s2p-action);
+    --bs-btn-hover-color: var(--s2p-action-hover);
+    --bs-btn-active-color: var(--s2p-action-active);
 }
 .btn { --bs-btn-border-radius: var(--s2p-radius); --bs-btn-border-radius-sm: var(--s2p-radius); }
 .form-control,
@@ -224,7 +235,8 @@ body {
     .dj-tabbar .nav-link { min-height: 44px; display: flex; align-items: center; }
     .dropdown-item { min-height: 44px; display: flex; align-items: center; }
     /* a line of text one taps: "Masz zaproszenie…? Dołącz →", "Strona główna" on an error page, "Chcesz taką imprezę u siebie?" */
-    .s2p-staff-login > summary { padding-block: 0.75rem; }
+    .s2p-staff-login > summary,
+    .s2p-staff-perms > summary { padding-block: 0.75rem; }
     .s2p-panel-bar > summary { min-height: 44px; }
     .s2p-staff-perms .form-check { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
     .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
@@ -235,16 +247,20 @@ body {
 /* --- DJ Navigation tabs --- */
 .nav-link        { color: var(--s2p-text-muted); font-weight: 600; }
 .nav-link:hover  { color: var(--s2p-white); }
-.nav-link.active {
-    color: var(--s2p-green) !important;
+/* the lit tab: its words and the line under it in the action's cyan, a quiet edge around it. .nav-tabs in the selector: Bootstrap's
+   own .nav-tabs .nav-link.active outweighed a plain .nav-link.active, and its light edge and white bottom hid the line */
+.nav-link.active,
+.nav-tabs .nav-link.active {
+    color: var(--s2p-action) !important;
     background-color: var(--s2p-bg-row) !important;
-    border-bottom: 2px solid var(--s2p-green);
+    border-color: var(--s2p-border) var(--s2p-border) var(--s2p-action);
+    border-bottom: 2px solid var(--s2p-action);
     border-radius: 8px 8px 0 0;
 }
 
 /* --- DJ tab bar: stays at the top of the screen while the page scrolls, so that from anywhere on a long page the DJ can
-       jump to the top of the page, the queue or the history. Opaque (the page must not show through) and above the sticky
-       headers of the lists (z-index 2). tabs.js lights the tab of the part of the page in view. --- */
+       go to the queue, the history or the settings. Opaque (the page must not show through) and above the sticky
+       headers of the lists (z-index 2). On the panel tabs.js lights the tab of the list that shows. --- */
 .dj-tabbar {
     position: sticky;
     top: 0;
@@ -256,7 +272,7 @@ body {
 @media (max-width: 400px) {
     .dj-tabbar .nav-link { padding-left: 0.6rem; padding-right: 0.6rem; }
 }
-/* A jump to an anchor (the "Queue" link of another page) must not leave the top of the target under the bar. */
+/* A jump to an anchor (a link to a part of the panel) must not leave the top of the target under the bar. */
 #queue-content,
 #history-content,
 #partyCard { scroll-margin-top: 4rem; }
@@ -267,7 +283,7 @@ body {
 /* --- Table header — distinct background so it doesn't blend with rows (especially on mobile) --- */
 .page-dj .table-dark thead th {
     background-color: var(--s2p-bg-thead);
-    border-bottom: 2px solid var(--s2p-green);
+    border-bottom: 2px solid var(--s2p-action);
     color: var(--s2p-white);
     font-weight: 700;
     font-size: 0.85rem;
@@ -297,7 +313,7 @@ th[data-sort] {
     padding-right: 1.2em !important;
 }
 th[data-sort]:hover {
-    color: var(--s2p-green) !important;
+    color: var(--s2p-action) !important;
 }
 th[data-sort]::after {
     content: '⇅';
@@ -309,12 +325,12 @@ th[data-sort]::after {
 th[data-sort].sort-asc::after {
     content: '▲';
     opacity: 0.9;
-    color: var(--s2p-green);
+    color: var(--s2p-action);
 }
 th[data-sort].sort-desc::after {
     content: '▼';
     opacity: 0.9;
-    color: var(--s2p-green);
+    color: var(--s2p-action);
 }
 
 /* ==========================================================================
@@ -610,7 +626,7 @@ th[data-sort].sort-desc::after {
 }
 .song-autocomplete-item:hover,
 .song-autocomplete-item.is-active {
-    background: var(--s2p-green-12);  /* subtle green tint */
+    background: var(--s2p-action-12);
     color: var(--s2p-white);
 }
 .song-autocomplete-item .ac-artist {
@@ -627,7 +643,7 @@ th[data-sort].sort-desc::after {
 }
 .song-autocomplete-item:hover .ac-artist,
 .song-autocomplete-item.is-active .ac-artist {
-    color: var(--s2p-green);
+    color: var(--s2p-action);
 }
 
 /* --- Mobile overrides: larger touch targets & wrapping text --- */
@@ -740,6 +756,22 @@ th[data-sort].sort-desc::after {
     #queueList .s2p-list-tools { flex: 1 1 100%; flex-wrap: wrap; }
     #queueList .s2p-list-tools .s2p-list-search { flex: 1 1 8rem; max-width: none !important; }
 }
+/* The history's "Podsumowanie wieczoru" and "Wyczyść historię" (history.html, .s2p-history-more): on a phone a menu under "⋯" beside
+   the filters, the search the whole width under them — two rows above the first entry, not three; from 768 px the menu is the row
+   itself right after the filters (its "⋯" hidden, never opened), as before. */
+@media (max-width: 767.98px) {
+    [data-list] .s2p-history-more ~ .s2p-list-search { flex: 1 1 100%; max-width: none !important; }
+    .s2p-history-more-menu.show { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; }
+    .s2p-history-more-menu .btn { width: 100%; }
+    .s2p-history-more > .btn { min-width: 44px; font-size: 1.25rem; line-height: 1; }
+}
+@media (min-width: 768px) {
+    .s2p-history-more { margin-right: auto; }
+    .s2p-history-more-menu {
+        display: flex !important; position: static !important; align-items: center; gap: 0.5rem;
+        min-width: 0; margin: 0; padding: 0; border: 0; background: none; transform: none !important;
+    }
+}
 .s2p-decision-icon   { font-size: 1.2rem !important; }
 .s2p-comment-cell    { min-width: 200px !important; }
 .s2p-empty-row       { background: var(--s2p-bg-row) !important; }
@@ -807,6 +839,19 @@ th[data-sort].sort-desc::after {
 /* on a wide screen the button is as wide as its words, under the heading row — on a phone the whole width */
 @media (max-width: 767.98px) {
     .page-dj .s2p-settings-toggle { width: 100%; }
+}
+/* A wide screen (≥ 1400 px: the queue keeps ~860 px) puts the unfolded settings beside the list, one card under another, staying in
+   view under the tab bar — above it they pushed the queue a screen down while the DJ set the vibe. Narrower, they stay above. */
+@media (min-width: 1400px) {
+    .page-dj.s2p-settings-open .s2p-panel-body {
+        display: grid; grid-template-columns: minmax(0, 1fr) 24rem; column-gap: 1.5rem; align-items: start;
+    }
+    .page-dj.s2p-settings-open .s2p-panel-body > :is(#queue-content, #history-content) { grid-column: 1; grid-row: 1; }
+    .page-dj.s2p-settings-open .s2p-panel-body > .s2p-settings {
+        grid-column: 2; grid-row: 1; margin: 0; --bs-gutter-x: 0; position: sticky; top: 4rem;
+    }
+    .page-dj.s2p-settings-open .s2p-panel-body > .s2p-settings > * { flex: 0 0 100%; width: 100%; max-width: 100%; margin-left: 0; }
+    .page-dj.s2p-settings-open .s2p-panel-body > .s2p-settings > :first-child { margin-top: 0; }
 }
 @media (max-width: 767.98px) {
 
@@ -971,18 +1016,29 @@ th[data-sort].sort-desc::after {
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) { flex-wrap: nowrap; padding-block: 0.25rem; min-height: 52px; gap: 0.5rem; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) > td[data-sort-value="song"] { flex: 1 1 0; min-width: 0; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[data-sort-value="song"] :is(div, span.d-flex) {
-        flex-direction: row !important; align-items: center !important; min-width: 0; }
+        flex-direction: row !important; align-items: center !important; min-width: 0; gap: 0.375rem; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[data-sort-value="song"] .badge { align-self: center !important; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[data-sort-value="song"] .fw-bold {
         min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.guest-text, td[data-sort-value="song"] a.btn, td.s2p-number-cell, td.s2p-comment-cell) {
         display: none !important; }
-    /* "⚠ Sprawdź" as its sign alone, "↩ Przywróć" as its arrow alone (the words stay for a screen reader) */
-    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.s2p-check-song, form[action$="/restore"] .btn) { font-size: 0; flex: none; }
+    /* "⚠ Sprawdź" and "🎧 Dodana przez DJ-a" as their sign alone, "↩ Przywróć" as its arrow alone (the words stay for a screen reader,
+       the title says them; unfolded they come back) — the owner's screenshot, 2026-10-28: the whole badge cut the song to "sanah …".
+       "⚠" keeps its yellow (a state to look at); "🎧" is a plain sign, as ▶ / ✖ beside it — boxed in cyan it looked heavy. */
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.s2p-check-song, .s2p-added-by-dj, form[action$="/restore"] .btn) { font-size: 0; flex: none; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-check-song { padding: 3px 5px; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-added-by-dj { padding: 0; border: 0 !important; background: none !important; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-check-song::before { content: "\26A0"; font-size: 0.8rem; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-added-by-dj::before { content: "\1F3A7"; font-size: 1rem; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) form[action$="/restore"] .btn { width: 44px; padding: 0; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) form[action$="/restore"] .btn::before { content: "\21A9"; font-size: 1.1rem; }
-    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[class*="status-"] { flex-wrap: nowrap; gap: 0.5rem; }
+    /* the decision, "↩" and "▾" in three fixed columns, "↩"'s empty where there is none: the votes and the signs stand one under
+       another down the list (the owner's screenshot, 2026-10-28: they moved with each "↩") */
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[class*="status-"] {
+        display: grid !important; grid-template-columns: 1.75rem 44px 2.25rem; align-items: center; justify-items: center; gap: 0.5rem; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[class*="status-"] > .s2p-decision-icon { grid-column: 1; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[class*="status-"] > form { grid-column: 2; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[class*="status-"] > .s2p-card-toggle { grid-column: 3; }
 }
 
 /* The "▾" of a folded card on a phone (dashboard.html, history.html; cards.js): it turns to "▴" unfolded; hidden on a wide screen
@@ -1059,31 +1115,26 @@ th[data-sort].sort-desc::after {
     overflow: hidden;
     max-width: 36rem;
 }
+/* "Kopiuj" and "Podejrzyj" of a request on a wide screen: quiet — no edge, muted words — until the pointer, the keyboard's focus or
+   the chosen row brings them out; the row's buttons to see are "▶ Zagrane" and "⏭ Pomiń". A phone's unfolded card keeps them edged. */
+@media (min-width: 768px) {
+    .page-dj #song-list .s2p-song-tools .btn { --bs-btn-border-color: transparent; --bs-btn-color: var(--s2p-text-muted); }
+    .page-dj #song-list > tr:is(:hover, .s2p-chosen) .s2p-song-tools .btn,
+    .page-dj #song-list .s2p-song-tools .btn:focus-visible { --bs-btn-border-color: var(--s2p-grey); --bs-btn-color: var(--s2p-text-dim); }
+}
 
-/* --- The panel's settings since 2026-10-10 (the design review: seven cards, 4900 px of a phone): the card "Impreza", the QR code
-       and "Więcej" — one row per rare setting with its state, leading to the page "Ustawienia imprezy" (settings.html). A row is a
-       link the width of the column, 52 px high (a thumb's target), the state muted on the right, yellow when a limit is near. --- */
-.s2p-rows-title {
-    font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--s2p-text-muted); margin: 0 0 0.4rem 0.25rem;
+/* "Panel jako aplikacja" under an empty queue (install-hint.js shows it where the app can be installed): a phone's or a tablet's
+   only (narrower than a laptop's 992 px — a computer has the browser's own install icon) and never in the installed app */
+.s2p-install-hint {
+    max-width: 28rem; margin: 1rem auto 0; padding: 0.75rem 1rem;
+    border: 1px solid var(--s2p-action-28); border-radius: var(--s2p-radius-card); background: var(--s2p-action-07);
 }
-.s2p-rows { border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); background: var(--s2p-bg-elevated); overflow: hidden; }
-.s2p-row {
-    display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.55rem 0.9rem;
-    color: var(--s2p-light); text-decoration: none; border-top: 1px solid var(--s2p-border);
+@media (min-width: 992px), (display-mode: standalone) {
+    .s2p-install-hint { display: none !important; }
 }
-.s2p-row:first-child { border-top: 0; }
-.s2p-row:hover, .s2p-row:focus-visible { background: var(--s2p-bg-hover); color: var(--s2p-white); }
-.s2p-row:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; }
-.s2p-row-name { font-weight: 600; white-space: nowrap; }
-.s2p-row-state { margin-left: auto; color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
+
+/* a state that needs attention in a folded card's line (a limit near, no places left) */
 .s2p-row-warn { color: var(--s2p-warning); font-weight: 600; }
-.s2p-row::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; }
-/* on a laptop's width 44 px each (still a finger's target, as a tablet's): with "Więcej" unfolded the queue starts in its first
-   screen; a phone keeps 52 px */
-@media (min-width: 992px) {
-    .s2p-row { min-height: 44px; padding-top: 0.4rem; padding-bottom: 0.4rem; }
-}
 /* The buttons of a card on "Ustawienia imprezy", "Obsługa" and the panel's "Impreza" on a phone: one under another, all of the
    card's width (as the landing page's: three widths looked untidy) — "Zapisz" under the fields, a row of two (.s2p-btn-row:
    "Nowy link", "Wyłącz") each half of it. A field's own button ("Kopiuj", "Dołącz") stays beside its field; a text button ("Usuń"
@@ -1252,9 +1303,6 @@ th[data-sort].sort-desc::after {
 .s2p-fold-state { color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
 .s2p-fold[open] > .s2p-fold-summary > .s2p-fold-state { display: none; }
 .s2p-fold-body { padding: 0 1rem 1rem; }
-/* the panel's "Więcej" folded as a card: unfolded, its rows inside it, one border */
-.s2p-more { overflow: hidden; }
-.s2p-more > .s2p-rows { border: 0; border-top: 1px solid var(--s2p-border); border-radius: 0; }
 .s2p-fold-link { flex-direction: row; color: inherit; text-decoration: none; }
 .s2p-fold-link::after { content: "›"; color: var(--s2p-text-muted); font-size: 1.3rem; line-height: 1; flex: none; }
 .s2p-fold-link:hover { color: inherit; }

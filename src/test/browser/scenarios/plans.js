@@ -32,34 +32,12 @@
 
     S2P.scenario({
         name: 'pro-free-panel',
-        title: 'an organiser without Pro, on a phone: the rows of the Pro features say "PRO" once (the limits\' row the limits that hold, on one line), the other comment styles are not to pick, the queue has no "PRO"',
+        title: 'an organiser without Pro, on a phone: the other comment styles are not to pick, the queue has no "PRO"',
         page: 'dashboard-free',
         viewport: '390,844',
         run: async function (t) {
             document.getElementById('settingsToggle').click();
-            document.getElementById('settingsMoreFold').open = true;
-            const row = function (name) { return document.querySelector('#settingsMore [data-settings-row="' + name + '"]'); };
-            t.step('the rows stay, each where it was', Array.from(document.querySelectorAll('#settingsMore [data-settings-row]'))
-                .filter(shows).map(function (r) { return r.dataset.settingsRow; }), ['hosts', 'links', 'logo', 'library', 'limits', 'staff', 'device']);
-            t.step('"PRO" by the name of each Pro feature: a cyan tag on the name\'s line',
-                ['hosts', 'links', 'logo', 'library', 'limits'].map(function (name) { return markOf(row(name).querySelector('.s2p-row-name')); }),
-                [MARK, MARK, MARK, MARK, MARK]);
-            t.step('what each says', ['hosts', 'links', 'limits'].map(function (name) {
-                const state = row(name).querySelector('.s2p-row-state');
-                const parts = state.children.length ? Array.from(state.children).filter(shows) : [state];
-                return parts.map(text).join(' ');
-            }), ['', '', '2 na gościa · 3 min']);
-            t.step('the limits that hold on one line', (function () {
-                // at a phone's 390 px (run.py sets the width); the lines of the text are counted by a Range (one box per line)
-                const range = document.createRange();
-                range.selectNodeContents(row('limits').querySelector('[data-limit-calm]'));
-                return new Set(Array.from(range.getClientRects()).map(function (r) { return Math.round(r.top); })).size;
-            })(), 1);
-            t.step('no "PRO" where nothing is Pro', [markOf(row('staff').querySelector('.s2p-row-name'))], ['no mark']);
-            t.step('each row one line, a thumb\'s target, inside the screen', ['hosts', 'links', 'limits'].filter(function (name) {
-                const box = row(name).getBoundingClientRect();
-                return box.height < 44 - 0.5 || box.height > 60 || box.right > document.documentElement.clientWidth;
-            }), []);
+            t.step('no rows of "Więcej": the Pro features\' "PRO" is on the page "Ustawienia imprezy"', document.querySelectorAll('[data-settings-row]').length, 0);
             // the list of the comment styles (the owner's screenshot, 2026-10-14: "Zabawne · Pro" read as one more choice): "Klasyczne"
             // to pick, the others under a heading of the list itself, "W planie Pro", not to pick and in a quieter colour
             const options = Array.from(document.querySelectorAll('#commentStyleSelect option'));

@@ -1,12 +1,11 @@
 /**
- * TABS — Panel / Queue / History, in a bar that stays in view (fragment dj-nav, .dj-tabbar).
+ * TABS — Panel / History of the bar that stays in view (fragment dj-nav, .dj-tabbar); its third tab, Settings, is a page of its own
+ * (a plain link).
  *
- * Panel scrolls to the top of the page (the settings, the QR code), Queue shows the queue and scrolls to it,
- * History shows the history and scrolls to it, so from anywhere on a long page the DJ can jump to any of them. The tab
- * that is lit follows the part of the page in view.
- * The History tab loads its content via AJAX into #history-content and swaps it with #queue-content, for every kind of party:
- * the page is not reloaded (the DJ keeps their place). The standalone history page does not
- * load this module: its tabs are plain links.
+ * Panel shows the queue, History the history, each brought into view from anywhere on a long page; the lit tab is the list that
+ * shows. The History tab loads its content via AJAX into #history-content and swaps it with #queue-content, for every kind of
+ * party: the page is not reloaded (the DJ keeps their place). The standalone history page does not load this module: its tabs
+ * are plain links.
  */
 import { EVENTS, on } from './events.js';
 import { csrfHeaders, demoMode, hideRefused, partyCode, showRefused } from './common.js';
@@ -17,21 +16,15 @@ import { reopenCards } from './cards.js';
     const bar = document.getElementById('djTabBar');
     const links = {
         panel:   document.querySelector('[data-dj-tab="panel"]'),
-        queue:   document.querySelector('[data-dj-tab="queue"]'),
         history: document.querySelector('[data-dj-tab="history"]')
     };
     const queueContent   = document.getElementById('queue-content');
     const historyContent = document.getElementById('history-content');
-    if (!bar || !links.panel || !links.queue || !links.history || !queueContent || !historyContent) return;
+    if (!bar || !links.panel || !links.history || !queueContent || !historyContent) return;
 
     let activeList = 'queue';   // the list that shows: 'queue' or 'history' (swapped without leaving the page)
-    let lit = 'panel';          // the tab that is lit
-    // A smooth scroll started by a click passes other parts of the page on its way: they must not light their tabs meanwhile.
-    let litLockedUntil = 0;
-    const SMOOTH_SCROLL_MS = 900;
 
     function setLit(name) {
-        lit = name;
         Object.keys(links).forEach(function(key) {
             links[key].classList.toggle('active', key === name);
             if (key === name) links[key].setAttribute('aria-current', 'page');
@@ -39,36 +32,16 @@ import { reopenCards } from './cards.js';
         });
     }
 
-    /** The tab of the part of the page in view: Panel above the list; the list once it has come up to the upper half of the screen. */
-    function tabByPosition() {
-        if (window.scrollY < 2) return 'panel';
-        const list = activeList === 'history' ? historyContent : queueContent;
-        // At the very bottom the list wins even when a short page could not bring it up any higher
-        const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
-        return atBottom || list.getBoundingClientRect().top < window.innerHeight * 0.5 ? activeList : 'panel';
-    }
-
-    function followScroll() {
-        if (Date.now() < litLockedUntil) return;
-        const name = tabByPosition();
-        if (name !== lit) setLit(name);
-    }
-    window.addEventListener('scroll', followScroll, { passive: true });
-    window.addEventListener('resize', followScroll);
-    // Where it exists: when a scroll has ended the lock is over (a long smooth scroll may outlast SMOOTH_SCROLL_MS) and the lit tab is checked once more
-    window.addEventListener('scrollend', function() { litLockedUntil = 0; followScroll(); });
-
     function scrollToPosition(top) {
         const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        litLockedUntil = Date.now() + (reduced ? 0 : SMOOTH_SCROLL_MS);
         // 'instant', not 'auto': Bootstrap sets scroll-behavior: smooth on the page, which 'auto' would inherit
         window.scrollTo({ top: top, behavior: reduced ? 'instant' : 'smooth' });
     }
 
     /**
-     * After a click on a tab the part of the page it stands for may be far away — on a phone the lists sit below the
-     * settings and the QR code — so bring the top of the list into view, just under the tab bar. Unless it
-     * already is in the upper part of the screen (a wide screen shows it without any scrolling).
+     * After a click on a tab its list may be far away — below the unfolded settings, or scrolled past deep in a long list — so bring
+     * the top of the list into view, just under the tab bar. Unless it already is in the upper part of the screen (folded, the
+     * settings leave it there).
      */
     function revealContent(element) {
         const top = element.getBoundingClientRect().top;
@@ -137,27 +110,20 @@ import { reopenCards } from './cards.js';
         if (historyContent.querySelector('[data-list]')) reloadHistory(null, null);
     });
 
-    // Panel: the top of the page. The list that shows stays as it is.
+    // Panel: the queue shows (and the history goes away) and the page brings it into view.
     links.panel.addEventListener('click', function(e) {
-        e.preventDefault();
-        setLit('panel');
-        scrollToPosition(0);
-    });
-
-    // Queue: the queue shows (and the history goes away) and the page scrolls to it.
-    links.queue.addEventListener('click', function(e) {
         e.preventDefault();
         if (activeList === 'history') {
             queueContent.hidden = false;
             historyContent.hidden = true;
             activeList = 'queue';
         }
-        setLit('queue');
+        setLit('panel');
         revealContent(queueContent);
     });
 
     // History: the history is loaded into the page and shown in place of the queue, and the page scrolls to it (also when
-    // it shows already: the DJ may be looking at the panel).
+    // it shows already: the DJ may be deep in it, or looking at the settings above it).
     links.history.addEventListener('click', function(e) {
         e.preventDefault();
         if (activeList === 'history') {

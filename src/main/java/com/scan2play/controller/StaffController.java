@@ -289,6 +289,9 @@ public class StaffController {
         String partyCode = settings.getPartyCode();
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
+        // the heading of every DJ's page (dj-nav): "Zakończ imprezę" or the banner of a closed party; the page is the organiser's
+        model.addAttribute(IS_ACTIVE, settings.isActive());
+        model.addAttribute(IS_OWNER, true);
         model.addAttribute(STAFF, partyStaffService.staffOf(partyCode));
         // the address the owner opened the panel at, not the guests' one: the invitation leads through Google's login, which works
         // only where the panel does — locally the guests' address is the computer's in the local network, and Google refuses a

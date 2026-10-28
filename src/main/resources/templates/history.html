@@ -66,11 +66,21 @@
                             th:classappend="${activeFilter == 'rejected'} ? 'active'" th:attr="aria-pressed=${activeFilter == 'rejected'}"
                             th:text="#{history.filter.rejected}">Rejected</button>
                 </div>
+            </div>
+            <!--/* The two actions about the whole history: on a phone under one "⋯" (a menu: Bootstrap's dropdown) beside the filters —
+                 the review of 2026-10-28: with the filters and the search they were three rows above the first entry; on a wide screen
+                 the menu is the row itself (app.css, .s2p-history-more), no "⋯". Neither for whom has neither. */-->
+            <th:block th:with="showSummary=${!((historyAny != null ? !historyAny : #lists.isEmpty(history)) or (access != null ? !access.may('SUMMARY') : isOwner == false)
+                                or (plan != null and !plan.allows('SUMMARY') and !plan.pro('SUMMARY')))},
+                          showClear=${!((historyAny != null ? !historyAny : #lists.isEmpty(history)) or isOwner == false)}">
+            <div th:if="${showSummary or showClear}" class="dropdown s2p-history-more">
+                <button type="button" id="historyMoreBtn" class="btn btn-sm btn-outline-secondary d-md-none" data-bs-toggle="dropdown"
+                        aria-expanded="false" th:attr="aria-label=#{history.actions},title=#{history.actions}">⋯</button>
+                <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end s2p-history-more-menu">
                 <!--/* One evening of the party to print, save as PDF or download as CSV (DjSummaryController) — before the history is
                      cleared, which takes it too. It and "Wyczyść historię" are about the whole history: shown while the party has any
                      (historyAny), whatever the filter shows */-->
-                <a th:unless="${(historyAny != null ? !historyAny : #lists.isEmpty(history)) or (access != null ? !access.may('SUMMARY') : isOwner == false)
-                                or (plan != null and !plan.allows('SUMMARY') and !plan.pro('SUMMARY'))}"
+                <a th:if="${showSummary}"
                    th:href="${plan != null and plan.pro('SUMMARY')} ? '/pro' : (${partyCode != null} ? ${'/dj/summary?party=' + partyCode} : '/dj/summary')"
                    href="/dj/summary" target="_blank" rel="noopener" id="summaryLink"
                    class="btn btn-sm btn-outline-light"><span th:text="#{summary.open}">Evening summary</span><th:block
@@ -79,14 +89,16 @@
                 <!--/* The party's played and rejected requests deleted (DjService.clearHistory: not the waiting ones, not a skip that
                      still keeps its song out); asks first (data-confirm, dj-nav.js). In the History tab forms.js sends it in the
                      background and loads the tab again; on the standalone page the server sends it back to itself. */-->
-                <form th:unless="${(historyAny != null ? !historyAny : #lists.isEmpty(history)) or isOwner == false}" action="/dj/dashboard/clear-history" method="post" class="m-0"
+                <form th:if="${showClear}" action="/dj/dashboard/clear-history" method="post" class="m-0"
                       th:attr="data-confirm=#{history.clear.confirm}">
                     <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                     <input type="hidden" name="partyCode" th:value="${partyCode}" />
                     <button type="submit" id="clearHistoryBtn" class="btn btn-sm btn-outline-danger"
                             th:text="#{history.clear}">🗑 Clear the history</button>
                 </form>
+                </div>
             </div>
+            </th:block>
             <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
                    th:placeholder="#{dashboard.list.search}" autocomplete="off">
         </div>
@@ -213,9 +225,6 @@
         </div>
     </div>
 
-    <div class="d-flex justify-content-end mb-3">
-        <a th:href="${partyCode != null ? '/dj/dashboard?party=' + partyCode : '/dj/dashboard'}" href="/dj/dashboard" class="btn btn-outline-light" th:text="#{history.back.to.dashboard}">Back to Dashboard</a>
-    </div>
 </div>
 
 <!-- The dashboard's list tools: sorting, search, filters and "Show more" (it sets up the table's headers itself) -->

@@ -14,10 +14,10 @@ S2P.scenario({
         const fold = document.getElementById('settingsToggle');
         const shown = function (id) { return document.getElementById(id).getClientRects().length > 0; };
         t.step('on a wide screen the settings and the QR code are folded, the button that unfolds them shows',
-            [shown('vibeSelect'), shown('partyLinkInput'), shown('settingsMore'), !!fold && fold.getClientRects().length > 0],
-            [false, false, false, true]);
+            [shown('vibeSelect'), shown('partyLinkInput'), !!fold && fold.getClientRects().length > 0],
+            [false, false, true]);
         fold.click();
-        t.step('the button unfolds them', [shown('vibeSelect'), shown('partyLinkInput'), shown('settingsMore')], [true, true, true]);
+        t.step('the button unfolds them', [shown('vibeSelect'), shown('partyLinkInput')], [true, true]);
         fold.click();
         t.step('and folds them again', shown('vibeSelect'), false);
 
@@ -60,8 +60,8 @@ S2P.scenario({
             [getComputedStyle(box).display !== 'none', getComputedStyle(document.getElementById('queue-content')).display !== 'none'],
             [true, false]);
 
-        document.querySelector('[data-dj-tab="queue"]').click();
-        t.step('the Queue tab brings the queue back',
+        document.querySelector('[data-dj-tab="panel"]').click();
+        t.step('the Panel tab brings the queue back',
             [getComputedStyle(box).display !== 'none', getComputedStyle(document.getElementById('queue-content')).display !== 'none'],
             [false, true]);
     }

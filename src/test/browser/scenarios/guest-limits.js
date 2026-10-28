@@ -81,40 +81,37 @@
     });
 
     // The use of the two server limits follows the poll (the owner, 2026-09-30: "liczby się odświeżają dopiero jak odświeżę
-    // przeglądarkę"): the X-Guest-Limits-Use header of every answer, '<busiest network>,<party>', shows the warning near the party's
-    // limit and the state of the row "Limity gości".
+    // przeglądarkę"): the X-Guest-Limits-Use header of every answer, '<busiest network>,<party>', shows the warnings above the queue
+    // near the party's limit and near one network's (since 2026-10-28 the panel's only word of the network: the row "Limity gości" of
+    // "Więcej" is gone).
     S2P.scenario({
         name: 'guest-limit-near-follows-the-poll',
-        title: 'near a server limit (80 %): the warning above the queue and the row "Limity gości" follow X-Guest-Limits-Use, without a reload',
+        title: 'near a server limit (80 %): the warnings above the queue — the party\'s, one network\'s — follow X-Guest-Limits-Use, without a reload',
         setup: { guestLimitsUse: '0,0' },
         run: async function (t) {
-            const near = document.querySelector('#guestLimitWarnings [data-limit-near="party"]');
-            const row = document.querySelector('[data-settings-row="limits"]');
-            document.getElementById('settingsToggle').click();   // the row is in the settings
+            const warnings = document.getElementById('guestLimitWarnings');
             const state = function () {
-                const visible = Array.from(row.querySelectorAll('.s2p-row-state > span')).filter(shows);
-                return [shows(near) ? near.textContent.trim() : null, visible.map(function (s) { return s.textContent.trim(); })];
+                return Array.from(warnings.querySelectorAll('[data-limit-near]')).filter(shows).map(function (w) { return w.textContent.trim(); });
             };
-            t.step('as the page was loaded: no warning, the row says the guests\' own limit', state(), [null, ['2 na gościa · 3 min']]);
+            t.step('as the page was loaded: no warning', state(), []);
 
             await t.stand.config({ guestLimitsUse: '0,250' });
             await afterPolls(t);
-            t.step('250 of the party\'s 300 (80 %): the warning says how much, the row too, in yellow', state(),
-                ['Impreza: 250 z 300 próśb na dobę', ['Impreza 250/300']]);
+            t.step('250 of the party\'s 300 (80 %): the warning says how much', state(), ['Impreza: 250 z 300 próśb na dobę']);
 
             await t.stand.config({ guestLimitsUse: '26,10' });
             await afterPolls(t);
-            t.step('26 of a network\'s 30, the party far from its limit: no warning, the row says the network', state(),
-                [null, ['Sieć 26/30']]);
+            t.step('26 of a network\'s 30, the party far from its limit: the network\'s warning', state(),
+                ['Jedna sieć (np. Wi-Fi lokalu): 26 z 30 próśb w 10 minut']);
 
-            await t.stand.config({ guestLimitsUse: '26,300' });
+            await t.stand.config({ guestLimitsUse: '30,300' });
             await afterPolls(t);
-            t.step('the party at its limit: "wyczerpany" takes over from the warning (X-Guest-Limits), the row says the party first', state(),
-                [null, ['Impreza 300/300']]);
+            t.step('the party at its limit: "wyczerpany" takes over from its warning (X-Guest-Limits); the network at its limit still says it',
+                state(), ['Jedna sieć (np. Wi-Fi lokalu): 30 z 30 próśb w 10 minut']);
 
             await t.stand.config({ guestLimitsUse: '2,5' });
             await afterPolls(t);
-            t.step('both windows over: back to the guests\' own limit', state(), [null, ['2 na gościa · 3 min']]);
+            t.step('both windows over: no warning', state(), []);
         }
     });
 
