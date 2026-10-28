@@ -182,6 +182,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(post("/dj/dashboard/dj-links").param("partyCode", PUB).param("instagram", "@x")),
                 Arguments.of(post("/dj/dashboard/tip-link").param("partyCode", PUB).param("tip", "")),
                 Arguments.of(post("/dj/dashboard/clear-history").param("partyCode", PUB)),
+                Arguments.of(post("/dj/dashboard/welcome-dismiss").param("partyCode", PUB)),
                 // the staff and its invitations (V32, V33, V34)
                 Arguments.of(get("/dj/staff").param("party", PUB)),
                 Arguments.of(post("/dj/staff/permissions").param("partyCode", PUB).param("id", "7").param("role", "VIEWER")),

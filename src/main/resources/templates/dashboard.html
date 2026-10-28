@@ -232,6 +232,22 @@
 
     <div id="queue-content">
 
+    <!--/* A new organiser's welcome (V48): above the queue until they close it — "✕", or "Napisz do nas", which opens "Pomoc i kontakt"
+         (components.html). Closed on the server (welcome.js → /dj/dashboard/welcome-dismiss), not in the browser: the DJ logs in on a
+         phone and a laptop. Its button an outline — the view's one action stays "Drukuj"; while it shows, the empty queue's own
+         "Pierwszy raz?" link and "Panel jako aplikacja" wait (app.css). Never the staff's, never the demo's. */-->
+    <section th:if="${welcome == true}" id="welcomeCard" class="s2p-welcome mb-3" aria-labelledby="welcomeTitle">
+        <h2 id="welcomeTitle" class="s2p-welcome-title" th:text="#{dashboard.welcome.title}">First time? Write to us</h2>
+        <button type="button" class="btn-close btn-close-white" data-welcome-close th:attr="aria-label=#{dashboard.welcome.close}"></button>
+        <p class="text-secondary mb-2" th:text="#{dashboard.welcome.text}">We'll help you set up your first party.</p>
+        <div class="d-flex flex-wrap align-items-center gap-2 s2p-welcome-ways">
+            <button type="button" id="welcomeWrite" class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#feedbackModal"
+                    data-welcome-close th:attr="data-party-code=${partyCode}" th:text="#{dashboard.welcome.write}">Write to us</button>
+            <a th:href="#{help.guide.href}" href="/how-it-works" id="welcomeGuide" class="btn btn-link"
+               th:text="#{dashboard.welcome.guide}">How it works →</a>
+        </div>
+    </section>
+
     <!--/* The active queue: a heading with the number of songs and a search box, and a list of fixed height with its own
          scrollbar (.list-scroll) and a header that stays in view — with many songs the DJ no longer scrolls the whole
          page. list-tools.js (applyListFilters) does the searching; the polled <tbody> below is replaced every 3 s, so

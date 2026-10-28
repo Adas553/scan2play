@@ -35,6 +35,7 @@
             <li>Gdy ktoś dołączy do obsługi imprezy (barman, drugi DJ) przez link zaproszenia albo zaproszenie właściciela: identyfikator jego konta Google, imię z tego konta i to, co właściciel pozwolił mu robić — imię widzi właściciel imprezy na liście obsługi</li>
             <li>Gdy właściciel zaprosi kogoś do obsługi po adresie e-mail jego konta Google: ten adres i to, co ta osoba będzie mogła robić — adres widzi właściciel na liście obsługi, dopóki osoba nie odpowie. Na ten adres nic nie wysyłamy: osoba zobaczy zaproszenie, gdy zaloguje się tym kontem, bo porównujemy go z adresem, który Google potwierdza przy logowaniu</li>
             <li>Imię właściciela imprezy z jego konta Google: widzi je obsługa jego imprezy i osoba, która otworzy jego link zaproszenia (gdy impreza nie ma podanego „Kto gra”)</li>
+            <li>Adres e-mail właściciela imprezy z jego konta Google (tylko potwierdzony przez Google) i dzień założenia konta: tylko po to, żebyśmy mogli napisać do niego w sprawie jego konta i pomocy — nigdy w celach reklamowych ani do newslettera; nie widzi go nikt poza nami i nikomu go nie przekazujemy</li>
         </ul>
         <p><strong>Dla gości (anonimowi użytkownicy):</strong></p>
         <ul>
@@ -51,6 +52,7 @@
             <li>Do przetwarzania zamówień piosenek i oceny muzyki przez AI</li>
             <li>Do liczenia próśb o tę samą piosenkę i 👍 gości jako głosów i pokazywania gościom piosenek z największą liczbą głosów (liczba głosów nie zawiera danych osobowych)</li>
             <li>Do egzekwowania limitów i zapobiegania nadużyciom</li>
+            <li>Do kontaktu z właścicielem imprezy w sprawie jego konta i pomocy (np. krótka wiadomość po pierwszym logowaniu, pisana przez nas z adresu scan2playcontact@gmail.com) — nigdy w celach reklamowych</li>
         </ul>
 
         <h3>4. Linki do innych serwisów</h3>
@@ -74,6 +76,7 @@
             <li>Wybrany język strony: gdy wybierzesz go adresem z <code>?lang=pl</code> albo <code>?lang=en</code>, ciasteczko <code>lang</code> z samym kodem języka zapamiętuje go w Twojej przeglądarce na rok, żeby kolejne strony były w tym języku; nic nie trafia do bazy danych</li>
             <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie lub 👍 z tej sieci</li>
             <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
+            <li>Adres e-mail właściciela imprezy i dzień założenia konta: do usunięcia konta (wiadomości, które sobie wymieniliśmy, zostają w naszej skrzynce pocztowej jak każda korespondencja)</li>
             <li>Subskrypcja powiadomień urządzenia: do wyłączenia powiadomień na nim przez DJ-a, porzucenia jej przez przeglądarkę albo usunięcia konta</li>
             <li>Przynależność do obsługi imprezy: do usunięcia dostępu przez właściciela, usunięcia konta osoby z obsługi albo konta właściciela</li>
             <li>Zaproszenie do obsługi po adresie e-mail, razem z adresem: do dołączenia lub odmowy, cofnięcia zaproszenia albo usunięcia konta przez właściciela — najdłużej 30 dni</li>
@@ -89,7 +92,7 @@
         <ul>
             <li><strong>Railway</strong> (Railway Corporation, USA) — hosting aplikacji i bazy danych: wszystkie dane opisane wyżej są przechowywane na serwerach w regionie us-east4 (Wirginia, USA), czyli poza Europejskim Obszarem Gospodarczym. Railway przetwarza je na podstawie umowy powierzenia przetwarzania danych, a ich przekazanie do USA opiera się na standardowych klauzulach umownych Komisji Europejskiej.</li>
             <li><strong>Cloudflare</strong> (Cloudflare, Inc., USA) — przez Cloudflare przechodzi każde połączenie ze stroną (szyfrowanie, ochrona przed atakami, przyspieszenie); widzi adres IP i adres odwiedzanej strony.</li>
-            <li><strong>Google</strong> — logowanie DJ-a (OAuth) i Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa, bez danych o gościu).</li>
+            <li><strong>Google</strong> — logowanie DJ-a (OAuth), Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa, bez danych o gościu) i poczta Gmail, z której piszemy do właściciela imprezy.</li>
             <li><strong>Apple iTunes Search API</strong> — gdy gość pisze, jego przeglądarka pyta o podpowiedzi piosenek (trafia tam tylko wpisany tekst).</li>
             <li><strong>Usługa powiadomień przeglądarki DJ-a</strong> (Google, Apple, Mozilla albo Microsoft) — gdy DJ włączy powiadomienia na urządzeniu, nowa prośba trafia na nie jako wiadomość zaszyfrowana od końca do końca (nazwa piosenki); usługa ją dostarcza, ale nie może jej odczytać.</li>
         </ul>

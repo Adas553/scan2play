@@ -28,22 +28,23 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (`LandingPageSessionWebTest`); (2) a browser scenario that checks a page fits measures `document.documentElement.clientWidth`, never
   `window.innerWidth`; (3) after a release, curl production without cookies to the page's end, not only for a 200; (4) a layout that
   must stay on one line: run its scenario with the runner's fonts too — locally take Inter out of fontconfig (`FONTCONFIG_FILE` with a
-  `<rejectfont>` for `*Inter*`), what is left is DejaVu and Liberation, as on GitHub.
+  `<rejectfont>` globbing Inter's directory, e.g. `/usr/share/fonts/opentype/inter/*`, before the `<include>` of `/etc/fonts/fonts.conf`
+  — a glob `*Inter*` rejected nothing; check `fc-list | grep -ci inter` is 0), what is left is DejaVu and Liberation, as on GitHub.
 
 ## Next (the owner's ideas, 2026-10-28)
 
-1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać"). Agreed
-   the same day, in this order — no automatic mail yet:
-   (a) **keep the organiser's e-mail.** Today only `owner_id` (Google's `sub`) and `owner_name` are kept; the address from Google is used
-   at the login only (V34's invitations) and saved nowhere, so there is nobody to write to. A column `owner_email` in `party_settings`
-   (a migration), filled and kept current at the login where `keepOwnerName` keeps the name (Google's verified `email`; the organiser
-   only, never the staff), gone with the account ("Usuń konto", `AccountDeletionService`; an IT that it goes). The privacy policy
-   (PL and EN) says it: why (a contact about the account and help — no advertising), how long (until the account is deleted). The
-   accounts of before fill it at their next login. A read-only query for the owner — the organisers new in the last 7 days, with their
-   e-mail — and a short personal mail template he sends himself from `scan2playcontact@gmail.com` (Polish and English).
-   (b) **a welcome card in the panel** at the first login: "Pierwszy raz? Napisz do nas" leading to "Pomoc i kontakt" (and the guide);
-   dismissed for good (on the server, a column, not the browser's storage — the DJ logs in on a phone and a laptop); one action per
-   view kept; a browser scenario, seen red first.
+1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać") — (a) and
+   (b) **built on `claude/affectionate-gauss-iwuhvz`, the PR to `dev` waits for the owner's review** (then a release; V48 on production:
+   check Flyway's line once, and `/dj/stats` shows "New organisers"). The owner's picks (2026-10-28): the card for new accounts only, above
+   the queue until closed, closed by "✕" or "Napisz do nas", the list of new organisers on `/dj/stats`.
+   (a) **The organiser's e-mail** (V48): `party_settings.owner_email` — Google's verified address, kept with the name when the organiser
+   opens their panel (`DjDashboardController.keepOwner`; never the staff's), gone with the account (`AccountDeletionIT`); `created_at`
+   (the parties of before: null — never "new"); the privacy policy PL / EN (sections 2, 3, 5, Google's Gmail in 6). `/dj/stats`: the
+   organisers new in the last 7 days with their address (at most 50, `NewOrganisersIT`). The message, sent by hand from
+   `scan2playcontact@gmail.com`: `docs/welcome-email.md` (PL, EN). The accounts of before fill the address at their next login.
+   (b) **The welcome card** above the queue (`welcome_dismissed_at`; the accounts of before closed by the migration): "Pierwszy raz? Napisz
+   do nas", "Napisz do nas" → "Pomoc i kontakt", "Jak to działa →"; closed on the server (`POST /dj/dashboard/welcome-dismiss`,
+   `welcome.js`); browser scenarios `welcome-card-*`, seen red first, the one-line heading also with the runner's fonts.
    (c) **an automatic welcome e-mail — later**, when new accounts come several a day or the plans are enforced. Its choices then: the
    sender (Resend, Postmark, Brevo… or Google Workspace SMTP; its key a Railway secret; SPF / DKIM / DMARC at Cloudflare), the
    reply-to, once only (`welcome_sent_at`, sent after the commit off the login's thread, retried by the nightly job, never blocking the

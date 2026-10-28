@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -155,11 +156,12 @@ public class DjDashboardController {
 
         log.info("DJ Dashboard access: ownerId={}, partyCode={}, owner={}", authentication.getName(), partyCode, owner);
         if (owner) {
-            keepOwnerName(settings, authentication);
+            keepOwner(settings, authentication);
         }
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
+        model.addAttribute(WELCOME, owner && settings.getWelcomeDismissedAt() == null);
 
         // --- Who works on it (V30, V32): the owner everything, the staff what the owner gave them; the panels to switch between ---
         model.addAttribute(IS_OWNER, owner);
@@ -326,16 +328,46 @@ public class DjDashboardController {
     }
 
     /**
-     * The organiser's name from their Google account, kept for their staff (V32: "Ola Kowalska" where the party has no "Kto gra",
-     * not its code) — written only when it changed.
+     * What the organiser's Google account says of them, kept with the party — written only when it changed: their name for their
+     * staff (V32: "Ola Kowalska" where the party has no "Kto gra", not its code), and their address to write to them about the
+     * account and help (V48). Never the staff's: only the owner's panel calls it.
      */
-    private void keepOwnerName(PartySettingsEntity settings, OAuth2AuthenticationToken authentication) {
+    private void keepOwner(PartySettingsEntity settings, OAuth2AuthenticationToken authentication) {
         Object name = authentication.getPrincipal().getAttribute("name");
         String kept = Texts.oneLine(name == null ? null : name.toString(), PartySettingsEntity.OWNER_NAME_MAX);
-        String value = kept.isEmpty() ? null : kept;
-        if (!Objects.equals(value, settings.getOwnerName())) {
-            partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setOwnerName(value));
+        String ownerName = kept.isEmpty() ? null : kept;
+        String ownerEmail = ownerEmail(authentication);
+        if (!Objects.equals(ownerName, settings.getOwnerName()) || !Objects.equals(ownerEmail, settings.getOwnerEmail())) {
+            partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> {
+                s.setOwnerName(ownerName);
+                s.setOwnerEmail(ownerEmail);
+            });
         }
+    }
+
+    /** The organiser's address as kept: only one Google verified — an unverified one could be anyone's — else null. */
+    static String ownerEmail(OAuth2AuthenticationToken authentication) {
+        String address = StaffController.verifiedAddress(authentication);
+        return address == null || address.strip().length() > PartySettingsEntity.OWNER_EMAIL_MAX ? null : address.strip();
+    }
+
+    /**
+     * "✕" or "Napisz do nas" on the panel's welcome card (V48): closed for good, on every device of the organiser's — the server
+     * keeps it, not the browser. The organiser's alone; the staff never see the card. Written once: a second close keeps the first
+     * time.
+     */
+    @PostMapping("/dashboard/welcome-dismiss")
+    public ResponseEntity<Void> dismissWelcome(@RequestParam String partyCode, OAuth2AuthenticationToken authentication,
+                                               HttpSession session) {
+        PartySettingsEntity settings = sessionHelper.requireOwner(partyCode, authentication, session);
+        if (settings.getWelcomeDismissedAt() == null) {
+            partySettingsCommandService.updateSettings(partyCode, s -> {
+                if (s.getWelcomeDismissedAt() == null) {
+                    s.setWelcomeDismissedAt(Instant.now());
+                }
+            });
+        }
+        return ResponseEntity.noContent().build();
     }
 
     /** The value of {@link #PANEL_ACCESS_HEADER}: "owner", or the permissions' names. */

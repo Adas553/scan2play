@@ -169,6 +169,19 @@ class MigrationIT extends PostgresIntegrationTest {
         jdbc.update("DELETE FROM dj_plan WHERE owner_id LIKE 'mig-plan-%'");
     }
 
+    /** V48: the organiser's address (as long as an address may be), the account's day by the database, the welcome card's close. */
+    @Test
+    void theOrganisersAddress_theAccountsDay_andTheWelcome_haveTheirColumns() {
+        assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'owner_email' AND is_nullable = 'YES'", Integer.class)).isEqualTo(320);
+        assertThat(jdbc.queryForObject("SELECT column_default FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'created_at' AND is_nullable = 'YES' AND data_type = 'timestamp with time zone'", String.class))
+                .isEqualTo("now()");
+        assertThat(jdbc.queryForObject("SELECT column_default IS NULL FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'welcome_dismissed_at' AND is_nullable = 'YES' AND data_type = 'timestamp with time zone'",
+                Boolean.class)).isTrue();
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");
