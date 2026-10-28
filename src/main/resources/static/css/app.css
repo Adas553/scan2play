@@ -1020,10 +1020,12 @@ th[data-sort].sort-desc::after {
         min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.guest-text, td[data-sort-value="song"] a.btn, td.s2p-number-cell, td.s2p-comment-cell) {
         display: none !important; }
-    /* "⚠ Sprawdź" as its sign alone, "↩ Przywróć" as its arrow alone (the words stay for a screen reader) */
-    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.s2p-check-song, form[action$="/restore"] .btn) { font-size: 0; flex: none; }
-    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-check-song { padding: 3px 5px; }
+    /* "⚠ Sprawdź" and "🎧 Dodana przez DJ-a" as their sign alone, "↩ Przywróć" as its arrow alone (the words stay for a screen reader,
+       the title says them; unfolded they come back) — the owner's screenshot, 2026-10-28: the whole badge cut the song to "sanah …" */
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.s2p-check-song, .s2p-added-by-dj, form[action$="/restore"] .btn) { font-size: 0; flex: none; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) :is(.s2p-check-song, .s2p-added-by-dj) { padding: 3px 5px; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-check-song::before { content: "\26A0"; font-size: 0.8rem; }
+    .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) .s2p-added-by-dj::before { content: "\1F3A7"; font-size: 0.8rem; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) form[action$="/restore"] .btn { width: 44px; padding: 0; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) form[action$="/restore"] .btn::before { content: "\21A9"; font-size: 1.1rem; }
     .page-dj .s2p-history-table tbody > tr[data-decision]:not(.s2p-open) td[class*="status-"] { flex-wrap: nowrap; gap: 0.5rem; }

@@ -256,14 +256,18 @@
             <div class="d-flex align-items-center gap-2 s2p-list-tools">
                 <!--/* "Ukryj „Nie masz”" (V42): hides the requests the DJ's library has no song of ("✗"); "?" and unmarked ones stay — for a
                      party with a library its plan marks by (list-tools.js, again after each poll) */-->
+                <!--/* On a phone both buttons say it short ("Ukryj ✗", "+ Dodaj": the sign is the badge's "✗ Nie masz"), so they and the
+                     search share one line above the queue; the whole words for a screen reader (aria-label) and in the title */-->
                 <button th:if="${libraryOn == true}" type="button" id="libraryOnly" class="btn btn-sm btn-outline-light text-nowrap"
                         data-list-library aria-pressed="false" th:title="#{dashboard.library.only.title}"
-                        th:text="#{dashboard.library.only}">Hide “Not in library”</button>
+                        th:attr="aria-label=#{dashboard.library.only}"><span class="d-none d-sm-inline" th:text="#{dashboard.library.only}">Hide “Not in library”</span><span
+                        class="d-sm-none" th:text="#{dashboard.library.only.short}">Hide ✗</span></button>
                 <!--/* "Dodaj piosenkę" (V44): a song a guest asked for at the booth — into the queue without the AI, for whom may work
                      the queue; the form folds out under this row (add-song.js). Beside the search: on a phone they share its line. */-->
                 <button th:if="${access == null or access.may('QUEUE')}" type="button" id="addSongToggle"
                         class="btn btn-sm btn-outline-light text-nowrap" aria-expanded="false" aria-controls="addSongForm"
-                        th:text="#{dashboard.add_song}">+ Add a song</button>
+                        th:attr="aria-label=#{dashboard.add_song.label}"><span class="d-none d-sm-inline" th:text="#{dashboard.add_song}">+ Add a song</span><span
+                        class="d-sm-none" th:text="#{dashboard.add_song.short}">+ Add</span></button>
                 <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
                        th:placeholder="#{dashboard.list.search}" autocomplete="off">
             </div>

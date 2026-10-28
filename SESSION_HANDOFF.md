@@ -50,7 +50,7 @@ A. **The library for guests:** first suggestions from the DJ's library before iT
    after talks with DJs. `dj_library_track` keeps keys only — names need a migration and a new upload; server-side search (`pg_trgm`,
    a rate limit); the DJ's consent to a public list.
 B. "Opis klimatu" → "Opis imprezy" with a note that the AI reads it.
-C. A phone with a library: "Ukryj „Nie masz”" and "+ Dodaj piosenkę" in one row with shorter labels.
+C. (Done 2026-10-28: on a phone "Ukryj ✗", "+ Dodaj" and the search on one line.)
 D. GitHub Actions' minutes: no limit while the repository is public; estimate the use from the workflows' history if it goes
    private (2 000 minutes, budgets at $0 — the tests would stop and Railway might hold `main`'s deploy).
 E. From the history (`session-handoff-2026-10-24.md`): talks with DJs (its item 1), Gemini + Google Search for lyrics (item 6), the

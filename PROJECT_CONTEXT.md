@@ -192,7 +192,8 @@ The song (one line, ≤ 150, `SongNames.tidy`) goes into the queue as an accepte
 same song waiting is a vote on it (the row stays the guest's; `SongRequestVotesIT`). No AI, no guest's limit, no notification; a song
 the DJ skipped lately comes back (the DJ asks for it — the guests still hear "not now"); the hosts' "🚫 nie grać" does not stop it:
 the queue marks a song on that list "🚫 Gospodarze: nie grać" (computed when shown, the list's hash in the ETag,
-as ⭐). The queue and the history mark the song "🎧 Dodana przez DJ-a"; the evening summary counts it in the requests and apart
+as ⭐). The queue and the history mark the song "🎧 Dodana przez DJ-a" (a phone's folded line of the history "🎧" alone, as "⚠" —
+the whole badge cut the song to "sanah …"; 2026-10-28, `history-added-by-dj-phone`); the evening summary counts it in the requests and apart
 ("Dodane przez Ciebie"), its first vote left out of the guests' votes; the CSV's column "Dodana przez DJ-a" says "tak".
 
 **The hosts' lists** (V29, the owner 2026-10-09: the couple at a wedding — or the host of a party, the pub's owner — usually send
@@ -289,7 +290,8 @@ or with the party; V42 deleted the libraries of V41 (their single key could not 
 `LibraryTitlesMigrationIT`). The playlists to choose from are read from the chosen file in the browser (`js/dashboard/library.js`,
 `playlistsOf`: the same paths as the parser; a second playlist of a name offered as "Wesele (2)"); a file over 64 MB is refused in the
 browser before it is read or sent, only an `.xml` is read for its playlists, and only a plain-text answer is shown as the server's
-sentence (a proxy's HTML page for a status never is). "Usuń bibliotekę" asks first (`data-confirm`). The card (2026-10-25): one line of what it does and "Jak przygotować plik?" folded under it; what the party has in a quiet box with a small "Usuń" at its end; the file's field is our own — the browser's input hidden (its button never filled a 44 px field on a phone), the label `#libraryDrop` the tap target, "Wybierz plik", then the file's name and size, a file dropped on it chosen too — and "Wgraj" the card's one action, enabled only with a file the server would read. Where the marks show: the queue (with "Ukryj „Nie masz”" beside the search, `list-tools.js`:
+sentence (a proxy's HTML page for a status never is). "Usuń bibliotekę" asks first (`data-confirm`). The card (2026-10-25): one line of what it does and "Jak przygotować plik?" folded under it; what the party has in a quiet box with a small "Usuń" at its end; the file's field is our own — the browser's input hidden (its button never filled a 44 px field on a phone), the label `#libraryDrop` the tap target, "Wybierz plik", then the file's name and size, a file dropped on it chosen too — and "Wgraj" the card's one action, enabled only with a file the server would read. Where the marks show: the queue (with "Ukryj „Nie masz”" beside the search — on a phone "Ukryj ✗", and "+ Dodaj" for "+ Dodaj piosenkę",
+the whole words their `aria-label`, so the two and the search share one line, 2026-10-28, `library-tools-one-row-phone`, `list-tools.js`:
 the "✗" rows hidden), and "Podsumowanie wieczoru" — "Nie masz w bibliotece" (the songs the AI let through with "✗" or "?", each once,
 the most wanted first) and the CSV's column "W bibliotece" — by the library as it is now.
 **The DJ's logo → `party_logo`** (V45, plan Pro; plain SQL in `PartyLogoService`, no entity) — one row per party (`party_code` PK,

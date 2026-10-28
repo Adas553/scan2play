@@ -53,3 +53,24 @@
         }
     });
 })();
+
+// The owner's list (C, 2026-10-28): on a phone with a library "Ukryj „Nie masz”", "+ Dodaj piosenkę" and the search were two rows above the
+// queue. Said short ("Ukryj ✗", "+ Dodaj"; the whole words their aria-label) they share one line.
+S2P.scenario({
+    name: 'library-tools-one-row-phone',
+    title: 'a phone with the DJ\'s library: "Ukryj ✗", "+ Dodaj" and the search on one line above the queue, each 44 px, the whole words for a screen reader',
+    page: 'dashboard-library',
+    viewport: '390,844',
+    run: async function (t) {
+        const hide = document.getElementById('libraryOnly');
+        const add = document.getElementById('addSongToggle');
+        const search = document.querySelector('#queueList .s2p-list-search');
+        const top = function (el) { return Math.round(el.getBoundingClientRect().top); };
+        t.step('the short words shown', [hide.innerText.trim(), add.innerText.trim()], ['Ukryj ✗', '+ Dodaj']);
+        t.step('the whole words their names', [hide.getAttribute('aria-label'), add.getAttribute('aria-label')], ['Ukryj „Nie masz”', 'Dodaj piosenkę']);
+        t.step('one line', [top(add) === top(hide), top(search) === top(hide)], [true, true]);
+        t.check('the search keeps room to type (' + Math.round(search.getBoundingClientRect().width) + ' px)', search.getBoundingClientRect().width >= 120);
+        t.check('each a thumb\'s target', [hide, add, search].every(function (el) { return el.getBoundingClientRect().height >= 44 - 0.5; }));
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    }
+});

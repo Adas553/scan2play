@@ -651,8 +651,11 @@ class DashboardPageRenderTest {
     @Test
     void shouldRenderTheStandaloneHistoryPageForTheBrowserTests() throws IOException {
         PlayHistoryService history = mock(PlayHistoryService.class);
+        // and one the DJ added (V44) with a long title: on a phone's folded line "🎧" alone, so the song keeps its room
+        HistoryEntry added = new HistoryEntry(11L, historyAt(1), "sanah - Najlepszy dzień w moim życiu",
+                "https://www.youtube.com/results?search_query=sanah", "Pop", "played", null, null, 1, null, null, 9, 0, true);
         when(history.getHistory(PARTY, 50, HistoryFilter.ALL)).thenReturn(new PlayHistoryService.Page(List.of(
-                historyEntry(1, "Played Alpha", "played"), historyEntry(2, "Rejected Beat", "rejected")), true));
+                historyEntry(1, "Played Alpha", "played"), historyEntry(2, "Rejected Beat", "rejected"), added), true));
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         PartyStaffService.Access owner = new PartyStaffService.Access(party(), true, StaffPermission.all());
         when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
@@ -672,7 +675,8 @@ class DashboardPageRenderTest {
         context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         String html = engine.process("history", context);
 
-        assertThat(html).contains("id=\"partyCode\"", "value=\"" + PARTY + "\"", "data-history-more", "data-list-filter=\"played\"")
+        assertThat(html).contains("id=\"partyCode\"", "value=\"" + PARTY + "\"", "data-history-more", "data-list-filter=\"played\"",
+                        "s2p-added-by-dj", ">🎧 Dodana przez DJ-a<")
                 .doesNotContain("??");
         assertNothingInline(html);
         write("history-page.html", html);
@@ -893,7 +897,8 @@ class DashboardPageRenderTest {
             assertThat(rowFor(html, 4)).contains("data-library=\"similar\"", ">? Podobny<",
                     "title=\"Masz utwór o tym tytule, ale innego wykonawcy albo zapisany inaczej — sprawdź\"");
             assertThat(html).as("the switch \"Ukryj „Nie masz”\" beside the search, for a party with marks: it says the mark it hides")
-                    .contains("id=\"libraryOnly\"", ">Ukryj „Nie masz”<", "aria-pressed=\"false\"");
+                    .contains("id=\"libraryOnly\"", ">Ukryj „Nie masz”<", ">Ukryj ✗<", "aria-label=\"Ukryj „Nie masz”\"", "aria-pressed=\"false\"",
+                            ">+ Dodaj<", "aria-label=\"Dodaj piosenkę\"");
             write("dashboard-library.html", html);
         } finally {
             libraryMarks = Map.of();

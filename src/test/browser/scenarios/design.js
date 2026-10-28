@@ -507,6 +507,27 @@
         }
     });
 
+    // The owner's screenshot (2026-10-28): on a phone's folded line of the history "🎧 Dodana przez DJ-a" took the room of the song —
+    // "sanah …", "Emine…". Folded it is its sign alone, as "⚠"; unfolded its words come back.
+    S2P.scenario({
+        name: 'history-added-by-dj-phone',
+        title: 'the history on a phone: a song the DJ added shows "🎧" alone on its folded line, the song keeps its room; unfolded the badge says it',
+        page: 'history-page',
+        viewport: '390,844',
+        run: async function (t) {
+            const badge = document.querySelector('[data-list] tbody tr[data-decision] .s2p-added-by-dj');
+            const row = badge.closest('tr');
+            const title = row.querySelector('td[data-sort-value="song"] .fw-bold');
+            const songCell = row.querySelector('td[data-sort-value="song"]').getBoundingClientRect();
+            t.step('folded: the badge a small sign, the song most of its cell',
+                [badge.getBoundingClientRect().width <= 40, title.getBoundingClientRect().width >= songCell.width - 60], [true, true]);
+            t.step('the words still for a screen reader and in the title', [badge.textContent.trim(), badge.title], ['🎧 Dodana przez DJ-a', 'Dodana w panelu, bez oceny AI']);
+            title.click();
+            await t.sleep(200);
+            t.step('unfolded: the badge says it', badge.getBoundingClientRect().width > 100, true);
+        }
+    });
+
     S2P.scenario({
         name: 'history-actions-row-wide',
         title: 'the history on a computer: "Podsumowanie wieczoru" and "Wyczyść historię" in the filters\' row as before, no "⋯"',
