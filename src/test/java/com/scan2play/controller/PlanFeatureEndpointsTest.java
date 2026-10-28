@@ -169,6 +169,7 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(get("/dj/history-view").param("party", PUB)),
                 Arguments.of(get("/dj/settings").param("party", PUB)),
                 Arguments.of(get("/dj/qr-print").param("party", PUB)),
+                Arguments.of(post("/dj/qr-print/settings").param("partyCode", PUB).param("heading", "Osiemnastka")),
                 // deleting the library needs no Pro: the organiser's own data goes whatever the plan
                 Arguments.of(post("/dj/library/delete").param("partyCode", PUB)),
                 // nor deleting the logo (V45)

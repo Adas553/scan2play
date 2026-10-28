@@ -68,6 +68,95 @@ body {
     font-size: 0.85rem;
 }
 
+/* a part the DJ left off the print (V46): the editor's preview shows it again by taking the attribute away */
+[hidden] {
+    display: none !important;
+}
+
+/* ---- The editor (V46, not printed): the DJ's heading and line, the language, what is shown; the page under it is the preview ---- */
+
+.editor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 16px;
+    padding: 12px 16px 16px;
+    background: #2b3035;
+    color: #f8f9fa;
+    font-size: 0.95rem;
+}
+
+.editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 220px;
+}
+
+.editor input[type="text"],
+.editor select {
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #6c757d;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111111;
+    font: inherit;
+}
+
+.editor-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    flex: 1 1 100%;
+}
+
+.editor-checks legend {
+    padding: 0;
+    margin-bottom: 4px;
+}
+
+.editor-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+}
+
+.editor-checks input {
+    width: 20px;
+    height: 20px;
+}
+
+.editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.editor button {
+    min-height: 44px;
+    padding: 6px 18px;
+    border: 1px solid #0dcaf0;
+    border-radius: 8px;
+    background: #0dcaf0;
+    color: #062c33;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#posterAnswer {
+    color: #75e0a7;
+}
+
+#posterAnswer.refused {
+    color: #ff8a8a;
+}
+
 @media print {
     .no-print {
         display: none !important;
@@ -107,6 +196,27 @@ body {
 }
 
 /* the heading says what to do; the code then the address, no numbered steps repeating it */
+/* the DJ's line under the heading (V46): "Osiemnastka Dawida" */
+.poster .own-line {
+    margin: -2mm 0 4mm;
+    font-size: 15pt;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+/* the DJ's own heading a little smaller than ours: 40 characters still two lines, the poster still one A4 page */
+.poster h1 .own {
+    font-size: 26pt;
+    overflow-wrap: anywhere;
+}
+
+/* with the DJ's line the code gives it the room (still large across a hall) */
+.poster:has(.own-line:not([hidden])) .qr {
+    width: 100mm;
+    height: 100mm;
+}
+
 .poster .qr {
     width: 115mm;
     height: 115mm;
@@ -280,6 +390,15 @@ body {
     font-size: 11pt;
     font-weight: 700;
     line-height: 1.2;
+}
+
+.card .own-line {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.card .title .own {
+    overflow-wrap: anywhere;
 }
 
 .card .small {
