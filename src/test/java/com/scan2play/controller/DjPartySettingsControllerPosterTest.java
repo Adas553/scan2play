@@ -1,0 +1,104 @@
+package com.scan2play.controller;
+
+import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.PosterLanguage;
+import com.scan2play.model.StaffPermission;
+import com.scan2play.service.AccountDeletionService;
+import com.scan2play.service.PartySettingsCommandService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.Map;
+import java.util.function.Consumer;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * The QR print as the DJ sets it ({@code POST /dj/qr-print/settings}, V46): the DJ's heading and line one line each and no longer than
+ * their columns (empty = ours / none), the language (anything else is "as the panel"), what is shown (a box not sent is off) — for whom
+ * may change the card "Impreza", answered 204 for the print page's script.
+ */
+class DjPartySettingsControllerPosterTest {
+
+    private static final String PARTY = "ABC12";
+
+    private PartySettingsCommandService settingsService;
+    private DjSessionHelper sessionHelper;
+    private MockMvc mockMvc;
+    private OAuth2AuthenticationToken token;
+
+    @BeforeEach
+    void setUp() {
+        settingsService = mock(PartySettingsCommandService.class);
+        sessionHelper = mock(DjSessionHelper.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
+                settingsService, mock(AccountDeletionService.class), sessionHelper, com.scan2play.service.Plans.off())).build();
+        token = new OAuth2AuthenticationToken(
+                new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
+                AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
+    }
+
+    /** Sends the editor's form and gives the party after what the controller asked the settings service to change. */
+    @SuppressWarnings("unchecked")
+    private PartySettingsEntity send(MockHttpServletRequestBuilder request) throws Exception {
+        mockMvc.perform(request.param("partyCode", PARTY).principal(token).session(new MockHttpSession()))
+                .andExpect(status().isNoContent());
+        verify(sessionHelper).require(eq(PARTY), eq(StaffPermission.VIBE), any(), any());
+        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
+        verify(settingsService).updateSettings(eq(PARTY), updater.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).posterHeading("old").posterLine("old").build();
+        updater.getValue().accept(party);
+        return party;
+    }
+
+    @Test
+    void theWordsTheLanguageAndTheParts_areSaved() throws Exception {
+        PartySettingsEntity party = send(post("/dj/qr-print/settings").param("heading", "  Osiemnastka\n Dawida ")
+                .param("line", "Sobota, 20:00").param("language", "pl").param("showLogo", "true").param("showTip", "true"));
+
+        assertThat(party.getPosterHeading()).isEqualTo("Osiemnastka Dawida");
+        assertThat(party.getPosterLine()).isEqualTo("Sobota, 20:00");
+        assertThat(party.getPosterLanguage()).isEqualTo(PosterLanguage.PL);
+        assertThat(party.isPosterShowLogo()).isTrue();
+        assertThat(party.isPosterShowTip()).isTrue();
+        assertThat(party.isPosterShowLinks()).as("a box not sent is off").isFalse();
+        assertThat(party.isPosterShowAddress()).isFalse();
+    }
+
+    @Test
+    void longerWords_areCut_emptyOnes_areOurs_andAnUnknownLanguage_isThePanels() throws Exception {
+        PartySettingsEntity party = send(post("/dj/qr-print/settings").param("heading", "W".repeat(100)).param("line", "x".repeat(100))
+                .param("language", "DE"));
+        assertThat(party.getPosterHeading()).hasSize(PartySettingsEntity.POSTER_HEADING_MAX);
+        assertThat(party.getPosterLine()).hasSize(PartySettingsEntity.POSTER_LINE_MAX);
+        assertThat(party.getPosterLanguage()).isEqualTo(PosterLanguage.AUTO);
+
+        setUp();
+        PartySettingsEntity cleared = send(post("/dj/qr-print/settings").param("heading", "   ").param("line", ""));
+        assertThat(cleared.getPosterHeading()).isNull();
+        assertThat(cleared.getPosterLine()).isNull();
+    }
+
+    @Test
+    void theLanguage_printed_followsThePanelOnlyWhenAuto() {
+        assertThat(PosterLanguage.AUTO.printed("pl")).isEqualTo("both");
+        assertThat(PosterLanguage.AUTO.printed("de")).isEqualTo("en");
+        assertThat(PosterLanguage.PL.printed("en")).isEqualTo("pl");
+        assertThat(PosterLanguage.EN.printed("pl")).isEqualTo("en");
+        assertThat(PosterLanguage.BOTH.printed("en")).isEqualTo("both");
+    }
+}

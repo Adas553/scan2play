@@ -119,6 +119,8 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/dedications").param("partyCode", PUB).param("on", "false")),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/party-words").param("partyCode", PUB).param("vibeNote", "x")
                         .param("djName", "x")),
+                // the QR print as the DJ sets it (V46): the party's words, as the vibe note
+                Arguments.of(StaffPermission.VIBE, post("/dj/qr-print/settings").param("partyCode", PUB).param("heading", "x")),
                 Arguments.of(StaffPermission.LIMITS, post("/dj/dashboard/limits").param("partyCode", PUB).param("requestLimit", "2")
                         .param("cooldownMinutes", "3").param("duplicateCheckWindow", "5")),
                 Arguments.of(StaffPermission.LIMITS, post("/dj/dashboard/guest-limit-reset").param("partyCode", PUB)),
