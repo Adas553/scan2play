@@ -71,7 +71,8 @@ server in UTC; the pages show them in Polish time (`util/Times`: the lists show 
 a fixed-width UTC `sortKey` for the lists' `data-val`).
 
 **`PartySettingsEntity` → `party_settings`** — one party, owned by one DJ (`owner_id` UNIQUE: one party per DJ).
-`partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code), `ownerId` (the OAuth2 subject), `active` (accepting requests),
+`partyCode` (5 characters of `[A-Z0-9]`, unique — in the QR code; never one another party has or had, `PartyCodeService.freshCode`; the
+organiser may change it, "Zmień kod imprezy", V49), `ownerId` (the OAuth2 subject), `active` (accepting requests),
 `globalVibe` (`VibeType`; `ANY` = no genre: the AI judges by the DJ's note alone), `vibeNote` (V16, ≤ 150: the DJ's own words about
 the vibe — the AI gets them as a block of the prompt, `prompt-vibe-note_{pl,en}`, the guests see them above the form;
 one line, empty clears), `djName` (V17, ≤ 60: who plays, e.g. "DJ Koko" — the guests see "🎧 Gra: DJ Koko" under the page's title;
@@ -515,7 +516,16 @@ again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy
 back here, at the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
 one line with their windows, "Limity serwera: sieć 4/30 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
 network is: "Jedna sieć to np. Wi-Fi lokalu — wszyscy goście w nim liczą się razem."), **"To urządzenie"** (everyone's:
-the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"). Its forms are sent in the
+the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"), and last **"Kod imprezy"**
+(V49, the owner's; folded to the code): against a guest who keeps the code and spams every party — "Zmień kod imprezy" (an outline in
+the danger colour) asks first, "Zmienić kod imprezy? Stare plakaty i karty przestaną działać.", and is a page load
+(`POST /dj/dashboard/party-code`, `forms.js` leaves it alone) that comes back to the new code's page with this card unfolded, "Nowy kod
+imprezy: …" and "Drukuj plakat i karty" (the flash `codeChanged`). `PartyCodeService.changeCode` takes the locks as "Usuń konto" (the
+requests' lock, then the row), moves the row — its logo, staff, invitations and library follow (ON UPDATE CASCADE) —, its requests and
+feedback by their own UPDATE, retires the old code (`party_code_retired`: no party gets it again) and evicts both codes from the caches
+after the commit. The old code is then "Ten kod imprezy nie istnieje" (404) on the guest page, the TV and the print; the organiser's
+other devices and the staff's open panels get a 403 at their next poll and load their panel again, the new code's (`DjSessionHelper.panel`
+finds the party by the owner or the staff row). Browser scenarios `party-code-*`; `PartyCodeChangeIT`. Its forms are sent in the
 background as the panel's (`settings-page.js` loads `forms.js`, `push.js`, `install.js`; the page links the manifest, so a browser
 offers the app there). **On a phone**
 (narrower than 768 px) the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); "Podejrzyj" a grey outlined button as in the history (a link in the guest's line was tried
@@ -816,6 +826,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `QrCodeService` | QR codes (ZXing, cached) |
+| `PartyCodeService` | a party's code (V49): `freshCode` — one no party has nor had (`party_code_retired`), for a new party and a new code; `changeCode` — "Zmień kod imprezy": the party and all of it under a new code, the old one retired, the caches evicted after the commit |
 | `AccountDeletionService` | deletes all of a DJ's data (their party's staff and invitations by e-mail, their places on other staffs too) and evicts the caches after the commit; first the party's locks in the app's order — "S2PR", then the party's row (a guest's request and "Dołącz" wait or find nothing, no deadlock) —; the requests and the feedback in one `DELETE` each |
 | `PartyStaffService` | the party's staff (V30, V32): what a person may do at a party (`Access`), joining by the invitation link with its role (under the party's lock, V33), the places shared with the invitations (`placesTaken`), the owner's list, permissions, taking access away, the panels, the party's name |
 | `StaffInvitationService` | invitations by e-mail (V34): "Zaproś" (an address, a role, the places under the party's lock), the login's match, "Dołącz" / "Nie, dziękuję", cancelling, the nightly cleanup after 30 days |
@@ -1068,7 +1079,8 @@ violation` in the log since); the owner watches the log for a week; back: delete
 | `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted after the commit of a trial (`util/AfterCommit`) and with the account; the value is the row's plan with its end (`PlanService.Read`), so a plan ends on time |
 | `djLibrary` | partyCode | 24 h / 500 | `DjLibraryService.info` (V41): what the party's library is — the settings' card and the panel's ETag, read on every poll; the row is read inside the cache's load of the key (as `partySettings`); evicted after the commit of an upload or a deletion, and with the party (`AccountDeletionService.PARTY_CACHES`); the value is an `Optional`, so a party without a library is cached too (`DjLibraryIT`) |
 
-The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit.
+The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit, and so does a
+new party code (V49) — the old code and the new.
 
 ---
 
@@ -1171,6 +1183,7 @@ schema behind Flyway's back.
 | V46 | `party_settings.poster_heading` varchar(40), `poster_line` varchar(60), nullable; `poster_language` varchar(4) NOT NULL DEFAULT 'AUTO' (check AUTO / BOTH / PL / EN); `poster_show_logo`, `poster_show_links`, `poster_show_tip`, `poster_show_address` boolean NOT NULL DEFAULT true: the QR print as the DJ sets it (`MigrationIT`) |
 | V47 | `party_settings.poster_theme` varchar(10) NOT NULL DEFAULT 'CLASSIC' (check CLASSIC / ELEGANT / CLUB / PASTEL), `poster_accent` varchar(7), nullable (check `^#[0-9a-f]{6}$`): the QR print's look (`MigrationIT`) |
 | V48 | `party_settings.owner_email` varchar(320), `created_at` timestamptz DEFAULT now() (the parties of before: null), `welcome_dismissed_at` timestamptz (the parties of before: the migration's time — the welcome card is for a new account): the organiser's address and the panel's welcome (`MigrationIT`, `OrganiserContactMigrationIT`) |
+| V49 | the foreign keys on `party_code` (`party_logo`, `party_staff`, `staff_invitation`, `dj_library`, and `dj_library_track` → `dj_library`) recreated with ON UPDATE CASCADE; table `party_code_retired` (`party_code` varchar(5) PK, `retired_at` timestamptz NOT NULL DEFAULT now()): "Zmień kod imprezy" (`MigrationIT`, `PartyCodeChangeIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1289,6 +1302,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |
 | POST | `/dj/dashboard/guest-limit-reset` | the party's 24 h limit of guest requests starts again ("Odblokuj prośby gości" in the warning above the queue; `LIMITS`, not a plan's feature — review 2026-10-14 W4) |
 | POST | `/dj/dashboard/welcome-dismiss` | `partyCode`: the welcome card closed for good (V48; the owner's alone, 204; a second close keeps the first time) |
+| POST | `/dj/dashboard/party-code` | `partyCode`: "Zmień kod imprezy" (V49; the owner's) — a new code, the old one dead for good → `/dj/settings?party=<new>#partyCodeCard` with the flash `codeChanged` |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards; as the DJ set it (V46: the heading, the line, the language — by default the panel's: Polish prints Polish and English, any other English —, the parts shown); the editor for whom has VIBE |

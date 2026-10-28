@@ -17,9 +17,10 @@
         run: async function (t) {
             t.step('every card folded', folds().map(function (fold) { return [fold.id, fold.open]; }),
                 [['hostListsCard', false], ['linksCard', false], ['logoCard', false], ['limitsCard', false], ['libraryCard', false],
-                    ['deviceCard', false]]);
+                    ['deviceCard', false], ['partyCodeCard', false]]);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('hostListsCard'), stateOf('linksCard'), stateOf('logoCard'),
-                stateOf('limitsCard'), stateOf('libraryCard')], ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano']);
+                stateOf('limitsCard'), stateOf('libraryCard'), stateOf('partyCodeCard')],
+                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'HARN1']);
             t.step('"Obsługa" a line like them, leading to its page', [text(document.querySelector('#staffRow .s2p-fold-name')),
                 document.getElementById('staffRow').getAttribute('href')], ['Obsługa', '/dj/staff?party=HARN1']);
             const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat([document.getElementById('staffRow')]);

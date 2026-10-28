@@ -400,6 +400,30 @@
             </div>
             </div>
         </details>
+
+        <!--/* "Zmień kod imprezy" (V49): against a guest who keeps the code and spams every party — the organiser's alone, last (rare,
+             and it makes the posters dead). Asks first (data-confirm, dj-nav.js); a page load (forms.js leaves it alone), which comes
+             back here with this card unfolded, the new code and the way to print it again. */-->
+        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="partyCodeCard" th:attr="open=${codeChanged != null} ? 'open' : null">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name" th:text="#{settings.code.title}">Party code</h2>
+                <span class="s2p-fold-state font-monospace" id="partyCodeState" th:text="${partyCode}">ABC12</span>
+            </summary>
+            <div class="s2p-fold-body">
+            <div th:if="${codeChanged != null}" class="alert alert-success py-2 mb-3" role="status" id="partyCodeChanged">
+                <span th:text="#{settings.code.changed(${codeChanged})}">The new party code: NEW01.</span>
+                <a th:href="@{/dj/qr-print(party=${codeChanged})}" target="_blank" rel="noopener" class="alert-link text-nowrap"
+                   th:text="#{settings.code.print}">Print the poster and cards</a>
+            </div>
+            <p class="s2p-card-help" th:text="#{settings.code.help}">Someone outside the party has your code…</p>
+            <form th:action="@{/dj/dashboard/party-code}" method="POST" class="m-0" id="partyCodeForm"
+                  th:attr="data-confirm=#{settings.code.change.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" id="partyCodeChangeBtn" class="btn btn-sm btn-outline-danger"
+                        th:text="#{settings.code.change}">Change the party code</button>
+            </form>
+            </div>
+        </details>
     </div>
     </div>
 </div>

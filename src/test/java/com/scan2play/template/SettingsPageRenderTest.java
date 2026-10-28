@@ -123,6 +123,12 @@ class SettingsPageRenderTest {
     /** The same with the party's queue and library (V41) as {@code djService} has them. */
     private static String render(PartyStaffService.Access access, GuestRequestLimiter limiter, Locale locale,
                                  com.scan2play.service.PlanService plans, DjService djService) {
+        return render(access, limiter, locale, plans, djService, Map.of());
+    }
+
+    /** The same after a redirect that left {@code flash} for the page (as Spring puts the flash attributes into its model). */
+    private static String render(PartyStaffService.Access access, GuestRequestLimiter limiter, Locale locale,
+                                 com.scan2play.service.PlanService plans, DjService djService, Map<String, Object> flash) {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.access(any(), any(), any())).thenReturn(access);
         PartyStaffService staff = mock(PartyStaffService.class);
@@ -137,6 +143,7 @@ class SettingsPageRenderTest {
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
+        model.addAllAttributes(flash);
         String view = controller.settingsPage(PARTY, model, user(access.owner() ? "owner" : "kasia"), new MockHttpSession());
         assertThat(view).isEqualTo("settings");
 
@@ -307,6 +314,29 @@ class SettingsPageRenderTest {
                 .doesNotContain("id=\"linksCard\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
                         "href=\"/dj/staff", "id=\"staffRow\"", "id=\"joinStaffForm\"", "id=\"libraryCard\"");
         write("settings-staff.html", html);
+    }
+
+    /**
+     * "Zmień kod imprezy" (V49): the organiser's card, last, folded to the code; the form asks first ("Stare plakaty i karty przestaną
+     * działać") and loads the page. After the change ({@code settings-code-changed.html}) the card is open with the new code and the
+     * way to print it. A co-organiser never sees it. For the browser tests ({@code scenarios/party-code.js}).
+     */
+    @Test
+    void theOrganiser_canChangeThePartyCode_aCoOrganiserCannot() throws IOException {
+        String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        assertThat(html).contains("id=\"partyCodeCard\"", ">Kod imprezy<", "id=\"partyCodeState\"", ">" + PARTY + "<",
+                "action=\"/dj/dashboard/party-code\"", "data-confirm=\"Zmienić kod imprezy? Stare plakaty i karty przestaną działać.\"",
+                ">Zmień kod imprezy<").doesNotContain("id=\"partyCodeChanged\"");
+        assertThat(html.indexOf("id=\"partyCodeCard\"")).as("the last card").isGreaterThan(html.indexOf("id=\"deviceCard\""));
+
+        String changed = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(),
+                mock(DjService.class), Map.of(com.scan2play.controller.ViewAttributes.CODE_CHANGED, PARTY));
+        assertThat(changed).contains("id=\"partyCodeChanged\"", "Nowy kod imprezy: " + PARTY + ".",
+                "href=\"/dj/qr-print?party=" + PARTY + "\"").containsPattern("id=\"partyCodeCard\"[^>]*open");
+        write("settings-code-changed.html", changed);
+
+        assertThat(render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .doesNotContain("id=\"partyCodeCard\"", "/dj/dashboard/party-code");
     }
 
     /** Someone of the staff with no settings ("Obsługa kolejki"): this device alone, no row of jumps. */

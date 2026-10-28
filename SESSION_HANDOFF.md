@@ -34,8 +34,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 ## Next (the owner's ideas, 2026-10-28)
 
 1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać") — (a) and
-   (b) **built on `claude/affectionate-gauss-iwuhvz`, the PR to `dev` waits for the owner's review** (then a release; V48 on production:
-   check Flyway's line once, and `/dj/stats` shows "New organisers"). The owner's picks (2026-10-28): the card for new accounts only, above
+   (b) **in `dev` (#189, #190), waiting for a release** (V48 on production: check Flyway's line once, and `/dj/stats` shows "New
+   organisers"). The owner's picks (2026-10-28): the card for new accounts only, above
    the queue until closed, closed by "✕" or "Napisz do nas", the list of new organisers on `/dj/stats`.
    (a) **The organiser's e-mail** (V48): `party_settings.owner_email` — Google's verified address, kept with the name when the organiser
    opens their panel (`DjDashboardController.keepOwner`; never the staff's), gone with the account (`AccountDeletionIT`); `created_at`
@@ -49,7 +49,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    sender (Resend, Postmark, Brevo… or Google Workspace SMTP; its key a Railway secret; SPF / DKIM / DMARC at Cloudflare), the
    reply-to, once only (`welcome_sent_at`, sent after the commit off the login's thread, retried by the nightly job, never blocking the
    login), the language, no marketing; the sending behind an interface (a fake in the tests), an IT for "once only" under two logins.
-2. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
+2. **"Zmień kod imprezy"** (V49; the owner, 2026-10-28: "gość, który ma zawsze jego kod QR i spamuje imprezę DJ-a") — **built on
+   `claude/affectionate-gauss-iwuhvz`, the PR to `dev` waits for the owner's review** (then a release; V49 on production: check Flyway's
+   line once). The owner's picks: a new code (not a ban by address — a venue's Wi-Fi and a mobile network share one), the organiser
+   only, last card of "Ustawienia imprezy", asks "Zmienić kod imprezy? Stare plakaty i karty przestaną działać.". Everything of the party
+   moves (FKs ON UPDATE CASCADE, requests and feedback by UPDATE), the old code is retired for good (`party_code_retired`), the TV
+   screen opened again from the panel. Not done (proposed): closing a party by itself after hours without requests.
+3. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
    on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.
 
 ## Later (not now)

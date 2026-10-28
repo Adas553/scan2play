@@ -80,7 +80,7 @@ class StaffPermissionEndpointsTest {
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off(), songCommands),
-                        new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), helper, com.scan2play.service.Plans.off()),
+                        new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, com.scan2play.service.Plans.off()),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), com.scan2play.service.Plans.off()),
                         new StaffController(staff, mock(PartySettingsCommandService.class), helper,
@@ -183,6 +183,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(post("/dj/dashboard/tip-link").param("partyCode", PUB).param("tip", "")),
                 Arguments.of(post("/dj/dashboard/clear-history").param("partyCode", PUB)),
                 Arguments.of(post("/dj/dashboard/welcome-dismiss").param("partyCode", PUB)),
+                Arguments.of(post("/dj/dashboard/party-code").param("partyCode", PUB)),
                 // the staff and its invitations (V32, V33, V34)
                 Arguments.of(get("/dj/staff").param("party", PUB)),
                 Arguments.of(post("/dj/staff/permissions").param("partyCode", PUB).param("id", "7").param("role", "VIEWER")),
