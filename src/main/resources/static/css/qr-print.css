@@ -340,9 +340,10 @@ body {
         grid-column: 2;
         grid-row: 2;
         align-self: start;
-        margin-top: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+        /* the sheet as it comes out of the printer: the page's margin (@page, 12 mm) stays white paper around what is printed */
+        margin-top: calc(24px + 12mm);
+        margin-bottom: calc(24px + 12mm);
+        box-shadow: 0 0 0 12mm #fff, 0 4px 24px 12mm rgba(0, 0, 0, 0.12);
     }
 
     /* the cards on the sheet they are printed on */
