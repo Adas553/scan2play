@@ -244,10 +244,9 @@
             oneHeading(t, 'settings');
             const settings = document.getElementById('backToSettings');
             t.step('back to the settings of the same party', settings && settings.getAttribute('href'), '/dj/settings?party=HARN1');
-            t.step('the heading, its tabs and the way back: nothing to tap lower than 44 px; nothing wider than the screen',
-                [tooSmall(document.querySelector('.s2p-account-bar')).concat(tooSmall(document.getElementById('djTabBar')),
-                    settings.getBoundingClientRect().height < 44 - 0.5 ? ['backToSettings'] : []),
-                 document.documentElement.scrollWidth <= document.documentElement.clientWidth], [[], true]);
+            // the whole page: "Uprawnienia po kolei" of an unfolded person was 21 px (the review of 2026-10-28)
+            t.step('nothing to tap lower than 44 px, "Uprawnienia po kolei" too; nothing wider than the screen',
+                [tooSmall(document.body), document.documentElement.scrollWidth <= document.documentElement.clientWidth], [[], true]);
         }
     });
 

@@ -40,10 +40,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    Historia | Ustawienia", "Impreza i kod QR", the card's gaps; then items 8–10 and 12 and the owner's own: the rows of "Więcej" off the
    panel (the settings were in two places; the network's limit near is now a warning above the queue), the print's editor in the
    panel's colours, from 1400 px the unfolded settings beside the queue, "Kopiuj" / "Podejrzyj" quiet on a wide screen, "Panel jako
-   aplikacja" under an empty queue on a phone. Waiting for the owner: item 11 "Moje imprezy" (a party is one per organiser and the
-   history is purged after 30 days — a list of past evenings needs a model of its own: a question, not a layout). Found on the way:
-   "Uprawnienia po kolei" on "Obsługa" is 21 px high on a phone. The landing page's pictures (`screenshots.py`) show the old green tab
-   and "Więcej".
+   aplikacja" under an empty queue on a phone. Then "Uprawnienia po kolei" on "Obsługa" 44 px on a phone and the landing page's
+   pictures made again (`screenshots.py`). Item 11 "Moje imprezy": not now (the owner, 2026-10-28 — a party is one per organiser and the
+   history is purged after 30 days; a list of past evenings would need a model of its own, worth it once DJs ask).
 
 ## Later (not now)
 

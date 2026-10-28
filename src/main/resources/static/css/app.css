@@ -234,7 +234,8 @@ body {
     .dj-tabbar .nav-link { min-height: 44px; display: flex; align-items: center; }
     .dropdown-item { min-height: 44px; display: flex; align-items: center; }
     /* a line of text one taps: "Masz zaproszenie…? Dołącz →", "Strona główna" on an error page, "Chcesz taką imprezę u siebie?" */
-    .s2p-staff-login > summary { padding-block: 0.75rem; }
+    .s2p-staff-login > summary,
+    .s2p-staff-perms > summary { padding-block: 0.75rem; }
     .s2p-panel-bar > summary { min-height: 44px; }
     .s2p-staff-perms .form-check { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
     .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
