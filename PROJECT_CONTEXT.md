@@ -432,7 +432,9 @@ once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads
 again (the server writes it). Changes not saved say "Niezapisane zmiany" and go along to the other layout (the switch "Plakat A4 |
 Kartki na stoliki" keeps them in `sessionStorage` for the tab, the next page takes them — scenarios `poster-switch-keeps`, `…-takes`).
-On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a grey desk. The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
+On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
+the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
+the paper light. The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
@@ -445,7 +447,7 @@ the notice says "Nie udało się wczytać…" instead of reloading every 3 s (re
 (`[data-refused-text="load"]`, `common.js` `showRefused('load')`) for a History tab, filter or "Pokaż więcej" that did not load too.
 
 **Notifications on the DJ's devices** (Web Push; only when the server has the VAPID keys — Section 10): the switch "Powiadomienia
-o prośbach" in the card "To urządzenie" of the page "Ustawienia imprezy" (`js/dashboard/push.js`; the panel's row "To urządzenie" says
+o prośbach" in the card "To urządzenie" of the page "Ustawienia imprezy" (`js/dashboard/push.js`; the card's folded line says
 "Powiadomienia wł. / wył." for this browser, `settings-rows.js`), per browser — the permission, the service worker
 `/sw.js` (scope `/dj/`), the subscription with the server's key → `POST /dj/push/subscribe`; off → `/dj/push/unsubscribe`. A **new**
 song on the list (accepted, or unchecked with the AI down; not a vote on a waiting one) → `PushNotificationService` sends
@@ -457,7 +459,11 @@ so in Safari. Delivery is best effort: the dashboard stays the truth.
 and, once dismissed or the app removed, not again for months — the button asks when the DJ wants (Chrome / Edge: the kept
 `beforeinstallprompt` opens the install window — once per offer: closed without installing, the next click says where the browser's
 menu has it; an iPhone's Safari: the steps "Udostępnij → Do ekranu początkowego"; nothing in the installed app or a browser that
-never offered).
+never offered). On a phone or a tablet (narrower than 992 px), **under an empty queue** — before the party, never over its requests —
+"Panel jako aplikacja na telefonie: własna ikona i powiadomienia o nowych prośbach." with "Zainstaluj aplikację" (→ that card) and
+"Nie teraz" (for good on the device, `localStorage`), where the app can be installed (an iPhone, or the browser's
+`beforeinstallprompt`), never in the app or the demo (`js/dashboard/install-hint.js`; `install-hint-empty-queue`,
+`install-hint-not-on-a-computer`).
 
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
@@ -471,25 +477,22 @@ button "Impreza i kod QR" (named for what it holds, not "Ustawienia" — that is
 of a phone is at 316 px (was 382). **The settings fold** under that button on every screen (`.s2p-settings`; folded by `app.css` alone,
 `settings-toggle.js` opens them and keeps the choice for the tab in `sessionStorage`) and hold only what the DJ uses during a party
 (they were seven cards, 4900 px of a phone): the card **"Impreza"** (the vibe and the AI's comments saved as soon as picked, the vibe
-note and "Kto gra" under one "Zapisz") and **"Kod QR"** (small, beside the guests' link, "Kopiuj", "Drukuj plakat i karty", "📺 Ekran na TV"), then
-**"Więcej"** (`#settingsMore`; folded to one line, `#settingsMoreFold`, as the cards of "Ustawienia imprezy" — seven rows pushed the
-queue down; opened, it stays open for the tab, `settings-toggle.js`): a row per rare setting with its state, 52 px each (44 from 992 px wide: the queue
-stays in a laptop's first screen) — "Lista gospodarzy · 🚫 0 · ⭐ 1 · link" (or
-"Nieużywana"), "Profile i napiwki · Instagram · napiwki" (or "Nieustawione"), "Twoje logo · Wgrane" (or "Brak"; the organiser's, V45), "Twoja biblioteka · Utworów: 1 234" (or
-"Nie wgrano"; the organiser's, V41), "Limity gości · 2 na gościa · 3 min" (from 80 %
-of a server limit its use in yellow, "Impreza 250/300" before "Sieć 26/30" — `polling.js` keeps it current from
-`X-Guest-Limits-Use`), "Obsługa · Osób: 1" (→ `/dj/staff`), "To urządzenie · Powiadomienia wył.". Each row leads to its card on the
-page "Ustawienia imprezy". Each card and row only for whom may change it (V32: hidden, not greyed): a co-organiser sees "Impreza",
-"Lista gospodarzy" and "Limity gości" by their permissions, never the profiles, the money or the staff; the rest of the staff the QR code
-and "To urządzenie". No switches for the hosts' lists and the tips: unused is what nothing typed means, said by the row.
+note and "Kto gra" under one "Zapisz") and **"Kod QR"** (small, beside the guests' link, "Kopiuj", "Drukuj plakat i karty", "📺 Ekran na TV").
+The rare settings are the tab "Ustawienia" — the rows of **"Więcej"** that led to the same page were taken off the panel (the owner,
+2026-10-28: the settings were in two places); near a server limit the panel says it above the queue (from 80 %: "Impreza: 250 z 300
+próśb na dobę", "Jedna sieć (np. Wi-Fi lokalu): 26 z 30 próśb w 10 minut" — the network's at its limit too, it passes by itself;
+`polling.js` keeps them current from `X-Guest-Limits-Use`; `guest-limit-near-follows-the-poll`). **From 1400 px wide** the unfolded
+cards stand beside the queue, one under another, held under the tab bar (`.s2p-panel-body`, a grid only then; narrower they stay above
+it, side by side — `settings-beside-queue-wide`, `settings-above-queue-laptop`). Each card only for whom may change it (V32: hidden,
+not greyed): a co-organiser sees "Impreza" by their permissions; the rest of the staff the QR code.
 **The page "Ustawienia imprezy"** (`GET /dj/settings?party=`, `settings.html`, `DjDashboardController.settingsPage`; anyone with
 access to the party — a 403 for another): the heading and the tabs of the panel ("Ustawienia" lit, the panel's width; the cards 800 px),
 then the cards of 6.7, **each folded to one line**
-(2026-10-25; `details.s2p-fold`): its heading and on the right its state — the same as the panel's row ("🚫 0 · ⭐ 1 · link",
+(2026-10-25; `details.s2p-fold`): its heading and on the right its state ("🚫 0 · ⭐ 1 · link",
 "Instagram · napiwki", "2 na gościa · 3 min" or a server limit near, "Utworów: 1 234", "Powiadomienia wł."), none beside "PRO" —
 and "▾"; a tap unfolds it, and unfolded its state goes (the fields say it). The folded page is one screen of a phone and the list of
 what can be set (no row of jumps above it); "Obsługa" is a line of the same look with "›", leading to its page (`#staffRow`). The card
-the address names unfolds by itself (`js/folds.js`: a row of the panel → `#libraryCard`, "Nowy link" → `#hostListsCard`, an element
+the address names unfolds by itself (`js/folds.js`: `#libraryCard`, "Nowy link" → `#hostListsCard`, "Zainstaluj" under an empty queue → `#deviceCard`, an element
 inside a card too), the others stay folded; a form saved in the background leaves its card unfolded, and the library's card brought
 again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are page loads that come
 back here, at the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
@@ -509,7 +512,9 @@ sends anything. Unfolded cards are remembered by the request's id and opened aga
 list is forgotten — a request put back comes back folded). The staff's "Podgląd" (no buttons) sees one line per request. Folded A
 (one line, actions unfolded: two taps for "Zagrane"), a swipe (unseen, accidental, against the poll and the phone's own back gesture)
 and icon buttons ▶ ⏭ ("▶" reads as "play", and a played song has no undo) were measured and turned down. A wide screen is the table as
-before (no "▾", a click on a row does nothing).
+before (no "▾", a click on a row does nothing); its "Kopiuj" and "Podejrzyj" are quiet — no edge, muted words — until the row is under
+the pointer or chosen (↑ ↓) or the button has the keyboard's focus: "▶ Zagrane" and "⏭ Pomiń" are what a row shows (2026-10-28,
+`queue-row-quiet-wide`).
 
 **The active queue** has five columns — ID, the time, the song (under it the guest's words, "AI: …" the AI's comment in one line, ⭐ / ⚠),
 the votes, the buttons (2026-10-09: the vibe, "ZAAKCEPTOWANE" and the AI's energy rating said the same in every row and pushed "Pomiń" and 💸 off a
@@ -846,7 +851,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 
 | File | Purpose |
 |------|---------|
-| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, chosen by the form's whole path: `RELOADS`, `CHANGE_THE_QUEUE`, …; `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `settings-rows.js` (the row "To urządzenie": "Powiadomienia wł. / wył." for this browser), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place; Enter on a link, a button or a `<summary>` is theirs, never "Zagrane"), `polling.js` (the queue every 3 s and its headers — the keyboard's focus kept on the same button of the same request when the rows are replaced, `common.js` `focusSpot` — the warnings and the row "Limity gości" near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"), `library.js` (the DJ's library), `logo.js` (the DJ's logo); they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, chosen by the form's whole path: `RELOADS`, `CHANGE_THE_QUEUE`, …; `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `install-hint.js` ("Panel jako aplikacja" under an empty queue on a phone), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place; Enter on a link, a button or a `<summary>` is theirs, never "Zagrane"), `polling.js` (the queue every 3 s and its headers — the keyboard's focus kept on the same button of the same request when the rows are replaced, `common.js` `focusSpot` — the warnings near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"), `settings-rows.js` (the folded "To urządzenie": "Powiadomienia wł. / wył." for this browser), `library.js` (the DJ's library), `logo.js` (the DJ's logo); they talk only through the `s2p:*` events of `events.js`, never through `window` |
 | `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`), the feedback form, and "Kopiuj" of every DJ page: `button[data-copy-target]` (a field: the party link, the hosts' and the staff's link), `button[data-copy-text]` ("Pomoc i kontakt", "Kopiuj adres" of `/pro`); the clipboard, else the old way from a field of its own, else the text shown selected (the field, `data-copy-select`) — "Skopiowano" only when it was copied (scenarios `copy-the-*`). `queue-keys.js` keeps its own copy of a song (the keyboard's) |
 | `js/folds.js` | the folded cards of "Ustawienia imprezy" and "Obsługa" (`details.s2p-fold`, 2026-10-25): the card the address names (`#libraryCard`, an element inside a card) is unfolded on load and on a change of the address; a plain script, as `dj-nav.js` |
 | `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes ("Kopiuj" of the link: `dj-nav.js`) |
@@ -898,15 +903,15 @@ What every page shares, so a new screen looks like the others:
   says once who sees what ("Goście widzą klimat, opis i to, kto gra.") — the labels are short ("Opis klimatu", "Kto gra"), never "(widzą
   goście)" after each. Nothing explains what the DJ does not set (the server's limits: one line, what they are unfolded).
 - **What goes where** (the panel's clean-up, 2026-10-10): the panel holds what the DJ uses during a party (the queue, the vibe, "Kto gra",
-  the QR code); what is set before it is a row with its state ("Lista gospodarzy · Nieużywana", `.s2p-rows` / `.s2p-row`, 52 px) leading
-  to a page of its own ("Ustawienia imprezy", "Obsługa") — never a card more on the panel. **Every page of the DJ's** (the panel, the
+  the QR code); what is set before it is on the page of the tab "Ustawienia" ("Ustawienia imprezy", "Obsługa") — never a card more on the
+  panel, nor a second way to the same page (the rows of "Więcej", removed 2026-10-28). **Every page of the DJ's** (the panel, the
   history, "Ustawienia imprezy", "Obsługa") has the same heading and tabs (`dj-nav`, the panel's width) — no "← Panel" of its own; a page
   under another (for now "Obsługa" under the settings) lights its parent's tab and has one "← <parent>" line above its heading (2026-10-28;
   `settings-page-one-heading`, `history-page-one-heading`, `staff-page-way-back`). While a closed party's banner shows, the page's own
   action is an outline (`.s2p-dj-page-body`, as the empty queue's "Drukuj"). "Konto" is about the person and their help (the guide, "Pomoc i kontakt", logout,
   the account), not the party. A state that needs attention shows on the panel only when it does (a limit from 80 %, yellow). What a person
   may not do is hidden, not greyed. A list of alike things with the same fields (the people of "Obsługa") is folded to one line each —
-  what tells them apart (the name, the role) — and unfolds on a tap. Browser scenarios: `settings-more-rows`, `dashboard-heading-one-row`,
+  what tells them apart (the name, the role) — and unfolds on a tap. Browser scenarios: `settings-two-cards`, `dashboard-heading-one-row`,
   `settings-page-touch-targets`, `staff-people-folded`.
 - **A list one works through on a phone** (the queue, the history; 2026-10-10) folds each item to what the DJ decides by and does most:
   the queue keeps its action row ("▶ Zagrane" one tap), the history its one action ("↩"); a state that needs attention stays in the

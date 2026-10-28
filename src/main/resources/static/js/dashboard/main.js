@@ -5,13 +5,13 @@
  *
  *   list-tools.js      sorting, search, filters, "Show more" of the lists (the standalone history page loads it alone)
  *   forms.js           AJAX forms, the party link's "copy"
- *   tabs.js            Panel / Queue / History, the History tab loaded in place
+ *   tabs.js            Panel / History, the History tab loaded in place
  *   polling.js         the guest queue every 3 s, the server's guest limits
- *   settings-toggle.js on a phone: the settings folded under one button
- *   settings-rows.js   the rows of "Więcej" in the settings: whether this browser gets the notifications
+ *   settings-toggle.js the card "Impreza" and the QR code folded under one button
  *   cards.js           on a phone: the requests of the queue and the history folded, a tap unfolds one
  *   queue-keys.js      "Kopiuj" of a request and the queue's keys (↑ ↓, C, Enter, S, Esc)
  *   add-song.js        "Dodaj piosenkę": the form of a song asked for at the booth folded out over the queue
+ *   install-hint.js    on a phone, under an empty queue: "Panel jako aplikacja", leading to "Zainstaluj aplikację"
  *
  * "Zainstaluj aplikację" (install.js) and the notifications' switch (push.js) are on the page "Ustawienia imprezy" since 2026-10-10
  * (settings-page.js loads them with forms.js).
@@ -25,7 +25,7 @@ import './forms.js';
 import './tabs.js';
 import './polling.js';
 import './settings-toggle.js';
-import './settings-rows.js';
 import './cards.js';
 import './queue-keys.js';
 import './add-song.js';
+import './install-hint.js';

@@ -133,4 +133,25 @@
             t.check('no sideways scroll (' + document.documentElement.scrollWidth + ' ≤ ' + width + ')', document.documentElement.scrollWidth <= width);
         }
     });
+
+    // The review of 2026-10-28: the editor and its bar were a blue-grey of their own with white fields and a light grey desk — another
+    // app beside the panel. Now the panel's colours; only the paper is light. contrast() is the helper of dj-booking.js.
+    S2P.scenario({
+        name: 'poster-editor-panel-colours',
+        page: 'qr-print-poster',
+        viewport: '1440,900',
+        title: 'the QR print\'s editor in the panel\'s colours: the bar and the editor a card\'s #161616, a group #1e1e1e, black fields, a dark desk; the paper white; every word readable',
+        run: async function (t) {
+            const bg = function (el) { return getComputedStyle(el).backgroundColor; };
+            const editor = document.querySelector('.editor');
+            const field = editor.querySelector('input[type="text"]');
+            t.step('the bar, the editor, a group, a field', [bg(document.querySelector('.toolbar')), bg(editor), bg(editor.querySelector('.editor-group')), bg(field)],
+                ['rgb(22, 22, 22)', 'rgb(22, 22, 22)', 'rgb(30, 30, 30)', 'rgb(0, 0, 0)']);
+            t.step('the desk dark, the paper white', [getComputedStyle(document.body).backgroundImage.indexOf('rgb(11, 11, 11)') >= 0, bg(document.querySelector('.poster'))],
+                [true, 'rgb(255, 255, 255)']);
+            const words = Array.from(editor.querySelectorAll('h2, label, legend, input[type="text"], select'));
+            t.step('every word of the editor readable (4.5 : 1)', words.filter(function (el) { return contrast(el) < 4.5; })
+                .map(function (el) { return el.tagName + ' ' + el.textContent.trim().slice(0, 20); }), []);
+        }
+    });
 })();

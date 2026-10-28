@@ -160,25 +160,23 @@ class DashboardPageRenderTest {
     }
 
     /**
-     * The row "Limity gości" says the guests' own limit — and, from 80 % of a server limit, its use in yellow, the party's before the
-     * network's (the design review, 2026-10-10: the use was three lines in a card of its own); above the queue a warning from 80 % of
-     * the party's limit, under it ("wyczerpany" takes over at the limit).
+     * Above the queue a warning from 80 % of a server limit: the party's day, under it ("wyczerpany" takes over at the limit), and one
+     * network's ten minutes (the review of 2026-10-28: it was said only by the row "Limity gości" of "Więcej", which is gone).
      */
     @Test
-    void nearAServerLimit_theRowOfTheLimitsAndTheQueueSayIt() {
+    void nearAServerLimit_theQueueSaysIt() {
         GuestRequestLimiter limiter = new GuestRequestLimiter(30, 10, 300, "");
         String calm = renderDashboard(party(), List.of(), PL, limiter);
-        assertThat(element(calm, "data-limit-calm")).doesNotContain("hidden").endsWith(">2 na gościa · 3 min");
-        assertThat(element(calm, "data-limit-near=\"network\"")).contains("hidden");
-        assertThat(element(calm, "data-limit-near=\"party\" data-limit")).contains("hidden=\"hidden\"");
+        assertThat(element(calm, "data-limit-near=\"network\"")).contains("hidden=\"hidden\"");
+        assertThat(element(calm, "data-limit-near=\"party\"")).contains("hidden=\"hidden\"");
 
         for (int i = 0; i < 24; i++) {
             limiter.tryAcquire("203.0.113.7", PARTY);
         }
         String network = renderDashboard(party(), List.of(), PL, limiter);
-        assertThat(element(network, "data-limit-calm")).contains("hidden");
-        assertThat(element(network, "data-limit-near=\"network\"")).doesNotContain("hidden").endsWith(">Sieć 24/30")
-                .contains("data-template=\"Sieć {used}/{limit}\"");
+        assertThat(element(network.substring(network.indexOf("id=\"guestLimitWarnings\"")), "data-limit-near=\"network\""))
+                .doesNotContain("hidden", "data-below").endsWith(">Jedna sieć (np. Wi-Fi lokalu): 24 z 30 próśb w 10 minut")
+                .contains("data-template=\"Jedna sieć (np. Wi-Fi lokalu): {used} z {limit} próśb w 10 minut\"");
 
         GuestRequestLimiter busy = new GuestRequestLimiter(0, 10, 300, "");
         for (int i = 0; i < 250; i++) {
@@ -188,8 +186,6 @@ class DashboardPageRenderTest {
         String warning = party.substring(party.indexOf("id=\"guestLimitWarnings\""));
         assertThat(element(warning, "data-limit-near=\"party\"")).doesNotContain("hidden").endsWith(">Impreza: 250 z 300 próśb na dobę")
                 .contains("data-below=\"true\"", "data-template=\"Impreza: {used} z {limit} próśb na dobę\"");
-        String row = party.substring(party.indexOf("data-settings-row=\"limits\""));
-        assertThat(element(row, "data-limit-near=\"party\"")).doesNotContain("hidden").endsWith(">Impreza 250/300");
     }
 
     /** One element, from its opening tag to the end of its text, found by a piece of its opening tag. */
@@ -296,18 +292,13 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html);
         assertThat(html).contains("Wilki - Baśka", "sanah - Szampan");
-        // the settings (the design review, 2026-10-10): the card "Impreza" and the QR code, then a row with its state for each rare
-        // setting — the cards themselves are on the page "Ustawienia imprezy" (SettingsPageRenderTest)
-        assertThat(html).contains("id=\"partyCard\"", ">Impreza<", "id=\"qrCard\"", "id=\"settingsMore\"", ">Więcej<",
-                        "data-settings-row=\"hosts\"", "data-settings-row=\"links\"", "data-settings-row=\"limits\"",
-                        "data-settings-row=\"staff\"", "data-settings-row=\"device\"",
-                        "href=\"/dj/settings?party=HARN1#hostListsCard\"", "href=\"/dj/settings?party=HARN1#deviceCard\"")
-                .doesNotContain("id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"linksCard\"", "id=\"hostListsCard\"", "id=\"staffCard\"",
+        // the settings: the card "Impreza" and the QR code — the rare ones are the tab "Ustawienia", the page "Ustawienia imprezy"
+        // (SettingsPageRenderTest); the rows of "Więcej" that led there said it twice (the owner, 2026-10-28)
+        assertThat(html).contains("id=\"partyCard\"", ">Impreza<", "id=\"qrCard\"", "href=\"/dj/settings?party=HARN1\">Ustawienia</a>")
+                .doesNotContain("id=\"settingsMore\"", ">Więcej<", "data-settings-row", "s2p-row\"",
+"id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"linksCard\"", "id=\"hostListsCard\"", "id=\"staffCard\"",
                         "action=\"/dj/dashboard/limits\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
                         "action=\"/dj/dashboard/host-lists\"", "id=\"pushToggle\"", "id=\"installApp\"", "Źródło odtwarzania");
-        assertThat(html).as("each row's state")
-                .contains(">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">2 na gościa · 3 min<", ">Osób: 1<",
-                        "data-on=\"Powiadomienia wł.\"", "data-off=\"Powiadomienia wył.\"");
         assertThat(html).as("the AI's comment a line under the song, no vibe / verdict / energy columns in the waiting queue")
                 .contains("class=\"small text-secondary s2p-queue-comment\"", ">AI: ok<")
                 .doesNotContain("ZAAKCEPTOWANE", "badge-energy", "data-sort=\"energy\"");
@@ -364,9 +355,8 @@ class DashboardPageRenderTest {
         // "Cofnij" after "Pomiń": a bar forms.js shows for a few seconds after a skip; hidden until then
         assertThat(html).contains("id=\"undoSkip\"", "Pominięto:", "data-undo-button", ">Cofnij<");
         assertThat(html.substring(html.indexOf("id=\"undoSkip\""), html.indexOf("data-undo-song"))).contains("hidden");
-        assertThat(html).as("the staff (V30, V32): how many, and the way to the page \"Obsługa\" — the list and the link are there")
-                .contains("data-settings-row=\"staff\"", ">Obsługa<", ">Osób: 1<", "id=\"staffManageLink\"", "href=\"/dj/staff?party=HARN1\"")
-                .doesNotContain("id=\"staffMenuLink\"", "id=\"staffLinkInput\"", "Inv_123-xyz", "id=\"panelBar\"", "id=\"panelNote\"", "id=\"makeOwnPartyBtn\"");
+        assertThat(html).as("the staff (V30, V32): on the page \"Obsługa\", from \"Ustawienia imprezy\"")
+                .doesNotContain("id=\"staffManageLink\"", "id=\"staffMenuLink\"", "id=\"staffLinkInput\"", "Inv_123-xyz", "id=\"panelBar\"", "id=\"panelNote\"", "id=\"makeOwnPartyBtn\"");
         assertThat(html).as("every form of the queue names the party it shows (V32: two tabs, two parties)")
                 .contains("id=\"panelAccess\" value=\"owner\"");
         String playForm = html.substring(html.indexOf("action=\"/dj/dashboard/play\""));
@@ -486,7 +476,7 @@ class DashboardPageRenderTest {
         assertThat(html).contains("id=\"panelNote\"", "Dołączono do obsługi: Klub Ola.",
                 "id=\"panelBar\"", ">Klub Ola<", "id=\"panelRole\"", ">Obsługa kolejki<", "id=\"panelCan\"",
                 "data-permission=\"QUEUE\"", "Zagrane, Pomiń, Cofnij, Przywróć", "data-permission=\"CLEAR_QUEUE\"",
-                "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "data-settings-row=\"device\"",
+                "action=\"/dj/dashboard/play\"", "action=\"/dj/dashboard/dismiss\"", "id=\"clearQueueBtn\"", "data-dj-tab=\"settings\"",
                 "action=\"/dj/dashboard/add-song\"",
                 "action=\"/dj/end-party\"", "Zakończyć imprezę: Klub Ola?",
                 "id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"", "Opuścić obsługę tej imprezy?",
@@ -503,8 +493,7 @@ class DashboardPageRenderTest {
                         "id=\"tvScreenLink\"");
         assertThat(html).as("the owner's: the settings, the limits, the lists, the profiles, the tip link, the staff")
                 .doesNotContain("action=\"/dj/dashboard/vibe\"", "action=\"/dj/dashboard/limits\"", "id=\"hostListsCard\"",
-                        "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", "data-settings-row=\"links\"",
-                        "data-settings-row=\"staff\"", "action=\"/dj/dashboard/dj-links\"", "action=\"/dj/dashboard/tip-link\"",
+                        "action=\"/dj/dashboard/dj-links\"", "action=\"/dj/dashboard/tip-link\"",
                         "Inv_123-xyz", "id=\"hostLinkInput\"", "/h/", "data-open-settings");
     }
 
@@ -524,10 +513,8 @@ class DashboardPageRenderTest {
     void theStaffsPanel_coOrganiser_hasTheSettingsButNotTheStaffOrTheMoney() {
         String html = renderStaffPanel(StaffRole.CO_ORGANISER, List.of(new PartyStaffService.Panel(PARTY, "Klub Ola", false)));
 
-        assertThat(html).contains(">Współorganizator<", ">Ustawienia<", "id=\"partyCard\"", "data-settings-row=\"limits\"",
-                        "data-settings-row=\"hosts\"", "data-settings-row=\"device\"", "data-open-settings")
-                .doesNotContain("data-settings-row=\"staff\"", "data-settings-row=\"links\"", "data-settings-row=\"library\"",
-                        "action=\"/dj/dashboard/tip-link\"", "id=\"staffMenuLink\"",
+        assertThat(html).contains(">Współorganizator<", ">Impreza i kod QR<", "id=\"partyCard\"", "data-open-settings")
+                .doesNotContain("action=\"/dj/dashboard/tip-link\"", "id=\"staffMenuLink\"",
                         "action=\"/dj/delete-account\"");
     }
 
@@ -697,20 +684,18 @@ class DashboardPageRenderTest {
     @Test
     void withThePlansNotEnforced_nothingSaysPro() {
         String html = renderDashboard(party(), List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL);
-        assertThat(html).contains("data-settings-row=\"hosts\"", ">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">Zabawne<",
-                        "s2p-btn-tip", "s2p-host-wanted")
+        assertThat(html).contains(">Zabawne<", "s2p-btn-tip", "s2p-host-wanted")
                 .doesNotContain("s2p-pro", "data-pro-offer", "· Pro", "W planie Pro", "<optgroup", "disabled=\"disabled\" value=\"FUNNY\"");
     }
 
     /**
-     * An organiser without Pro, the plans enforced (variant B of the review 2026-10-14): the rows of the Pro features stay with a
-     * "PRO" by the name, said once — no "W planie Pro" beside it (the limits' row keeps the limits that hold: 2 / 3, short enough for
-     * one line on a phone; the review of the look, 2026-10-14) —, the AI's other comment styles are there but
-     * not to pick, and the queue changes nothing but what the plan has not: no 💸, no ⭐ of the hosts' list (kept, not applied).
+     * An organiser without Pro, the plans enforced (variant B of the review 2026-10-14): the AI's other comment styles are there but
+     * not to pick, and the queue changes nothing but what the plan has not: no 💸, no ⭐ of the hosts' list (kept, not applied). The
+     * Pro features' cards with "PRO" are on the page "Ustawienia imprezy" (SettingsPageRenderTest).
      * {@code dashboard-free.html} for the browser tests.
      */
     @Test
-    void aFreeOrganiser_seesProByTheRows_neverInTheQueue() throws IOException {
+    void aFreeOrganiser_seesProInTheCommentStyles_neverInTheQueue() throws IOException {
         PartySettingsEntity party = party();
         party.setRequestLimit(5);   // saved while on Pro: kept, but the party works with the defaults
         PartyStaffService staff = mock(PartyStaffService.class);
@@ -719,12 +704,6 @@ class DashboardPageRenderTest {
                 new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced());
 
         assertWhatTheScriptsNeed(html);
-        assertThat(rowOf(html, "hosts")).contains("class=\"s2p-pro\">PRO<", "class=\"s2p-row-state\"></span>")
-                .doesNotContain("🚫", "W planie Pro");
-        assertThat(rowOf(html, "links")).contains("class=\"s2p-pro\">PRO<", "class=\"s2p-row-state\"></span>")
-                .doesNotContain("Instagram", "W planie Pro");
-        assertThat(rowOf(html, "limits")).contains("class=\"s2p-pro\">PRO<", ">2 na gościa · 3 min<");
-        assertThat(rowOf(html, "staff")).doesNotContain("s2p-pro");
         assertThat(html).as("the comment styles: \"Klasyczne\" to pick, the others under \"W planie Pro\" and not")
                 .contains(">Klasyczne<", "<optgroup label=\"W planie Pro\">", ">Zabawne<", ">Sarkastyczne<", ">Krótkie<")
                 .doesNotContain("· Pro<")
@@ -743,7 +722,7 @@ class DashboardPageRenderTest {
                 new PartyStaffService.Access(party(), false, StaffRole.CO_ORGANISER.permissions()), null,
                 com.scan2play.service.Plans.enforced());
         assertThat(html).contains("id=\"partyCard\"", ">Klasyczne<")
-                .doesNotContain("s2p-pro", "· Pro", "<optgroup", "data-settings-row=\"hosts\"", "data-settings-row=\"limits\"", ">Zabawne<");
+                .doesNotContain("s2p-pro", "· Pro", "<optgroup", ">Zabawne<");
     }
 
     /** An organiser with Pro, the plans enforced: the panel as today. */
@@ -753,7 +732,7 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party, List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL,
                 new GuestRequestLimiter(30, 10, 300, ""), ownerToken(), mock(PartyStaffService.class), new MockHttpSession(),
                 new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced("owner"));
-        assertThat(html).contains(">🚫 0 · ⭐ 1 · link<", ">Instagram · napiwki<", ">Zabawne<", "s2p-btn-tip", "s2p-host-wanted")
+        assertThat(html).contains(">Zabawne<", "s2p-btn-tip", "s2p-host-wanted")
                 .doesNotContain("s2p-pro", "· Pro", "<optgroup");
     }
 
@@ -768,13 +747,6 @@ class DashboardPageRenderTest {
                 .doesNotContain("/dj/summary");
         assertThat(renderHistory(HistoryFilter.ALL, 50, one, false, false, com.scan2play.service.Plans.enforced()))
                 .doesNotContain("id=\"summaryLink\"", "s2p-pro");
-    }
-
-    /** One row of "Więcej", from its tag to its end. */
-    private static String rowOf(String html, String row) {
-        int at = html.indexOf("data-settings-row=\"" + row + "\"");
-        assertThat(at).as("the row " + row).isPositive();
-        return html.substring(at, html.indexOf("</a>", at));
     }
 
     /**
@@ -940,32 +912,5 @@ class DashboardPageRenderTest {
         int start = html.indexOf("data-song-id=\"" + id + "\"");
         int end = html.indexOf("</tr>", start);
         return html.substring(start, end);
-    }
-
-    /** "Więcej" has the DJ's library (V41) too: how many songs, or that none was uploaded; the way to its card. */
-    @Test
-    void theRowOfTheLibrary_saysItsSongs() {
-        assertThat(rowOf(renderDashboard(party(), List.of(), PL), "library"))
-                .contains("href=\"/dj/settings?party=" + PARTY + "#libraryCard\"", ">Twoja biblioteka<", ">Nie wgrano<");
-
-        library = java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(1234,
-                com.scan2play.service.DjLibraryParser.Format.REKORDBOX, java.time.Instant.now(), null));
-        try {
-            assertThat(rowOf(renderDashboard(party(), List.of(), PL), "library")).contains(">Utworów: 1\u00A0234<");
-            assertThat(rowOf(renderDashboard(party(), List.of(), Locale.ENGLISH), "library")).contains(">Songs: 1,234<");
-        } finally {
-            library = java.util.Optional.empty();
-        }
-    }
-
-    /** Without Pro (V35): the row stays for the organiser with "PRO" by its name and no state, as the other Pro rows. */
-    @Test
-    void theRowOfTheLibrary_withoutPro_saysPro() {
-        PartySettingsEntity party = party();
-        String html = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
-                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
-                null, com.scan2play.service.Plans.enforced());
-        assertThat(rowOf(html, "library")).contains("class=\"s2p-pro\">PRO<", "class=\"s2p-row-state\"></span>")
-                .doesNotContain("Nie wgrano");
     }
 }

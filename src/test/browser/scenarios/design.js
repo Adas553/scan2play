@@ -155,7 +155,7 @@
     });
 
     // THE PANEL'S CLEAN-UP (2026-10-10, the design review: four rows above a phone's queue, seven cards in the settings): our logo
-    // beside "Zakończ" and "Konto", the settings as two cards and the rows of "Więcej", the rare settings on a page of their own.
+    // beside "Zakończ" and "Konto", the settings as two cards, the rare settings on a page of their own.
     S2P.scenario({
         name: 'dashboard-heading-one-row',
         title: 'the dashboard on a phone: our logo, "Zakończ" and "Konto" in one row — the first request comes higher',
@@ -175,38 +175,18 @@
         }
     });
 
+    // The owner (2026-10-28): the rare settings were twice on the panel — the tab "Ustawienia" and the rows of "Więcej" leading to the
+    // same page. The settings under the button are what a party uses: the card "Impreza" and the QR code.
     S2P.scenario({
-        name: 'settings-more-rows',
-        title: 'the unfolded settings: two cards ("Impreza", the QR code), then "Więcej" folded to one line; a tap shows a row with its state for each rare setting, leading to its page, and the tab remembers it',
+        name: 'settings-two-cards',
+        title: 'the unfolded settings: two cards ("Impreza", the QR code) and no rows of "Więcej" — the rare settings are the tab "Ustawienia"',
         run: async function (t) {
-            try { sessionStorage.removeItem('scan2play.settingsMoreOpen'); } catch (e) { /* none */ }
             document.getElementById('settingsToggle').click();
             const cards = Array.from(document.querySelectorAll('.s2p-settings section.card')).filter(shows).map(function (c) { return c.id; });
             t.step('two cards', cards, ['partyCard', 'qrCard']);
-            const more = document.getElementById('settingsMoreFold');
-            const line = more.querySelector('summary');
-            t.step('"Więcej" folded to one line, its rows not shown', [more.open, line.textContent.trim(),
-                document.querySelector('#settingsMore [data-settings-row]').checkVisibility()], [false, 'Więcej', false]);
-            t.check('the line a thumb\'s target (' + Math.round(line.getBoundingClientRect().height) + ' px)', line.getBoundingClientRect().height >= 44);
-            line.click();
-            await t.sleep(50);
-            t.step('a tap unfolds it, and the tab remembers', [more.open, sessionStorage.getItem('scan2play.settingsMoreOpen')], [true, '1']);
-            const rows = Array.from(document.querySelectorAll('#settingsMore [data-settings-row]')).filter(shows);
-            t.step('a row per rare setting, each to its card on the page "Ustawienia imprezy" (the staff: their own page)', rows.map(function (row) {
-                return [row.dataset.settingsRow, row.getAttribute('href')];
-            }), [['hosts', '/dj/settings?party=HARN1#hostListsCard'], ['links', '/dj/settings?party=HARN1#linksCard'],
-                ['logo', '/dj/settings?party=HARN1#logoCard'], ['library', '/dj/settings?party=HARN1#libraryCard'], ['limits', '/dj/settings?party=HARN1#limitsCard'], ['staff', '/dj/staff?party=HARN1'], ['device', '/dj/settings?party=HARN1#deviceCard']]);
-            const stateOf = function (row) {   // what shows of it (the row of the limits has its states near a limit hidden)
-                const state = row.querySelector('.s2p-row-state');
-                const parts = state.children.length ? Array.from(state.children).filter(shows) : [state];
-                return parts.map(function (p) { return p.textContent.replace(/\s+/g, ' ').trim(); }).join(' ');
-            };
-            t.step('each says its state', rows.slice(0, 6).map(stateOf),
-                ['🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', 'Nie wgrano', '2 na gościa · 3 min', 'Osób: 1']);
-            line.click();
-            await t.sleep(50);
-            t.step('folded again: forgotten', sessionStorage.getItem('scan2play.settingsMoreOpen'), null);
-            t.step('each a thumb\'s target', rows.filter(function (row) { return row.getBoundingClientRect().height < 44; }).length, 0);
+            t.step('no "Więcej", no row leading to the page', [document.getElementById('settingsMore'), document.querySelectorAll('[data-settings-row]').length],
+                [null, 0]);
+            t.step('the tab "Ustawienia" leads there', document.querySelector('[data-dj-tab="settings"]').getAttribute('href'), '/dj/settings?party=HARN1');
             t.check('the queue starts in the first screen with them unfolded', document.getElementById('queueList').getBoundingClientRect().top < window.innerHeight);
         }
     });
@@ -337,6 +317,62 @@
         }
     });
 
+    // The review of 2026-10-28: unfolded above the queue, "Impreza" and the QR code pushed it a screen down on a laptop while the DJ set
+    // the vibe. From 1400 px they stand beside it; narrower they stay above (the queue would be too narrow beside them).
+    function settingsAndQueue() {
+        document.getElementById('settingsToggle').click();
+        const card = document.getElementById('partyCard').getBoundingClientRect();
+        const qr = document.getElementById('qrCard').getBoundingClientRect();
+        const queue = document.getElementById('queueList').getBoundingClientRect();
+        return { card: card, qr: qr, queue: queue };
+    }
+
+    S2P.scenario({
+        name: 'settings-beside-queue-wide',
+        title: 'a wide screen (1440 px): the unfolded settings stand beside the queue, "Impreza" over the QR code; the queue starts where it did',
+        viewport: '1440,900',
+        run: async function (t) {
+            const before = document.getElementById('queueList').getBoundingClientRect().top;
+            const at = settingsAndQueue();
+            t.step('the settings on the right of the queue', at.card.left > at.queue.right, true);
+            t.step('"Impreza" over the QR code, as wide', [at.qr.top > at.card.bottom, Math.round(at.qr.width) === Math.round(at.card.width)], [true, true]);
+            t.step('the queue did not move down', Math.abs(at.queue.top - before) < 2, true);
+            t.check('the queue keeps at least 820 px', at.queue.width >= 820);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+        }
+    });
+
+    S2P.scenario({
+        name: 'settings-above-queue-laptop',
+        title: 'a laptop (1280 px): the unfolded settings stay above the queue, side by side',
+        viewport: '1280,900',
+        run: async function (t) {
+            const at = settingsAndQueue();
+            t.step('above the queue', at.queue.top > at.card.bottom, true);
+            t.step('"Impreza" and the QR code side by side', Math.abs(at.card.top - at.qr.top) < 2, true);
+        }
+    });
+
+    // The review of 2026-10-28: six edged buttons in a request's row were noise — "Kopiuj" and "Podejrzyj" are quiet on a wide screen
+    // until the row is under the pointer or chosen; "▶ Zagrane" and "⏭ Pomiń" are what a row shows
+    S2P.scenario({
+        name: 'queue-row-quiet-wide',
+        title: 'the queue on a computer: "Kopiuj" and "Podejrzyj" without an edge until their row is chosen; "Zagrane" filled, "Pomiń" edged',
+        viewport: '1280,900',
+        run: async function (t) {
+            const row = document.querySelector('#song-list tr[data-song-id]');
+            const edge = function (el) { return getComputedStyle(el).borderTopColor !== 'rgba(0, 0, 0, 0)'; };
+            const copy = row.querySelector('.s2p-btn-copy');
+            const preview = row.querySelector('.s2p-song-tools a.btn');
+            t.step('"Kopiuj", "Podejrzyj" quiet; "Pomiń" edged', [edge(copy), edge(preview), edge(row.querySelector('.s2p-btn-skip'))], [false, false, true]);
+            t.step('"Zagrane" the filled action', getComputedStyle(row.querySelector('.s2p-btn-played')).backgroundColor, 'rgb(13, 202, 240)');
+            t.check('the quiet words still readable (4.5 : 1)', contrast(copy) >= 4.5);
+            row.classList.add('s2p-chosen');   // what ↑ ↓ do (queue-keys.js)
+            await t.sleep(250);
+            t.step('the chosen row brings their edges out', [edge(copy), edge(preview)], [true, true]);
+        }
+    });
+
     // The review of 2026-10-28: one colour of ours for what is picked and what is done — the cyan of the action. The lit tab and the
     // line under the tables' head were the green of a status (left from Spotify).
     S2P.scenario({
@@ -410,6 +446,40 @@
             t.step('the cyan of the action', getComputedStyle(guide).color, 'rgb(13, 202, 240)');
         }
     });
+    // The review of 2026-10-28: "Zainstaluj aplikację" was only in a folded card of "Ustawienia imprezy" (on an iPhone the notifications
+    // need the app). Under an empty queue on a phone, where the browser can install it (here: its beforeinstallprompt, sent by hand);
+    // "Nie teraz" for good; never over the party's requests, never on a computer.
+    S2P.scenario({
+        name: 'install-hint-empty-queue',
+        title: 'a phone, an empty queue: "Panel jako aplikacja" once the browser offers the app, leading to "To urządzenie"; "Nie teraz" hides it for good',
+        viewport: '390,844',
+        setup: { queue: [] },
+        run: async function (t) {
+            const hint = document.getElementById('installHint');
+            t.step('nothing before the browser offers the app', shows(hint), false);
+            window.dispatchEvent(new Event('beforeinstallprompt'));
+            t.step('while requests wait, not over them', shows(hint), false);
+            await t.waitFor(function () { return shows(document.getElementById('queueEmpty')); }, 'the empty queue', 8000);
+            t.step('the queue empty: it shows, leading to the card "To urządzenie"', [shows(hint), document.getElementById('installHintGo').getAttribute('href')],
+                [true, '/dj/settings?party=HARN1#deviceCard']);
+            t.step('its buttons a thumb\'s target', tooSmall(hint), []);
+            hint.querySelector('[data-install-hint-later]').click();
+            t.step('"Nie teraz": gone, and remembered', [shows(hint), localStorage.getItem('scan2play.installHintDismissed')], [false, '1']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'install-hint-not-on-a-computer',
+        title: 'a computer, an empty queue: no "Panel jako aplikacja" even when the browser offers the app (its own icon is in the address bar)',
+        viewport: '1280,900',
+        setup: { queue: [] },
+        run: async function (t) {
+            await t.waitFor(function () { return shows(document.getElementById('queueEmpty')); }, 'the empty queue', 8000);
+            window.dispatchEvent(new Event('beforeinstallprompt'));
+            t.step('not shown', shows(document.getElementById('installHint')), false);
+        }
+    });
+
     // PROJECT_CONTEXT 6.7, one action per view (the owner, 2026-10-16): a closed party with nothing waiting showed two —
     // "Wznów imprezę" in the banner and "Drukuj plakat i karty" of the empty queue. The party's own action wins; "Drukuj" is an
     // outline while the party is closed, and the action again once it is resumed (the banner goes without a reload).

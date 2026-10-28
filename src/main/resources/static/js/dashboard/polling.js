@@ -48,29 +48,17 @@ function applyGuestLimitsUse(value) {
 }
 
 /**
- * Near a server limit (from 80 %, the template's rule): each [data-limit-near] of the limit shows how much is used — the warning
- * above the queue (data-below: only under the limit, where "wyczerpany" takes over) and the row "Limity gości" of the settings,
- * whose state is the guests' limit otherwise (data-limit-calm) and the party's use before the network's.
+ * Near a server limit (from 80 %, the template's rule): each warning [data-limit-near] above the queue shows how much of its limit is
+ * used — the party's day (data-below: only under the limit, where "wyczerpany" takes over) and one network's ten minutes.
  */
 function applyLimitsNear(network, party) {
-    const near = { network: false, party: false };
     document.querySelectorAll('[data-limit-near]').forEach(function (element) {
-        const kind = element.dataset.limitNear;
-        const used = kind === 'party' ? party : network;
+        const used = element.dataset.limitNear === 'party' ? party : network;
         const limit = parseInt(element.dataset.limit, 10);
         if (isNaN(limit) || limit <= 0) return;
-        const isNear = used * 5 >= limit * 4 && (element.dataset.below !== 'true' || used < limit);
-        if (element.dataset.below !== 'true') near[kind] = isNear;
         element.textContent = element.dataset.template.replace('{used}', used).replace('{limit}', limit);
-        element.hidden = !isNear;
+        element.hidden = !(used * 5 >= limit * 4 && (element.dataset.below !== 'true' || used < limit));
     });
-    // the row shows one state: the party's use, else the network's, else the guests' own limit
-    const row = document.querySelector('[data-settings-row="limits"]');
-    if (!row) return;
-    const networkInRow = row.querySelector('[data-limit-near="network"]');
-    if (networkInRow && near.party) networkInRow.hidden = true;
-    const calm = row.querySelector('[data-limit-calm]');
-    if (calm) calm.hidden = near.party || near.network;
 }
 
 /** Whether the poll says other permissions than the page was made with (#panelAccess); a missing header changes nothing. */

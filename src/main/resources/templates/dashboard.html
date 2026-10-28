@@ -117,8 +117,11 @@
     </div>
 
     <!--/* The settings (the design review, 2026-10-10: seven cards, 4900 px of a phone): what the DJ uses during a party — the card
-         "Impreza" and the QR code —, then "Więcej": a row with its state for each of the rare things, which are on the page "Ustawienia
-         imprezy" (/dj/settings, the staff on /dj/staff). Each card and row only for whom may change it (V32: hidden, not greyed). */-->
+         "Impreza" and the QR code; the rare things are on the page "Ustawienia imprezy" (the tab "Ustawienia", /dj/settings).
+         Each card only for whom may change it (V32: hidden, not greyed). */-->
+    <!--/* The settings and the lists: one column, the settings above (folded); on a wide screen (≥ 1400 px) the settings unfolded
+         stand beside the list instead (app.css, .s2p-panel-body) — the queue stays in view while the DJ sets the vibe */-->
+    <div class="s2p-panel-body">
     <div class="row g-4 mb-4 s2p-settings">
         <div th:if="${access.may('VIBE')}" class="col-md-7 d-flex flex-column gap-4 s2p-settings">
 
@@ -194,8 +197,9 @@
             </section>
         </div>
 
-        <!--/* The QR code (everyone's: it is on the tables anyway) and the rows of the rare settings. Beside "Impreza" for whom may
-             set the vibe, else alone in the middle. */-->
+        <!--/* The QR code (everyone's: it is on the tables anyway). Beside "Impreza" for whom may set the vibe, else alone in the
+             middle. The rare settings are the tab "Ustawienia" (the page "Ustawienia imprezy"): the rows of "Więcej" that led there
+             said the same twice (the owner, 2026-10-28). */-->
         <div class="d-flex flex-column gap-4 s2p-settings" th:classappend="${access.may('VIBE')} ? 'col-md-5' : 'col-md-6 mx-auto'">
             <section class="card bg-dark border-secondary p-3" id="qrCard">
                 <h2 class="s2p-card-title" th:text="#{dashboard.qr.title}">QR code</h2>
@@ -223,69 +227,6 @@
                 </div>
             </section>
 
-            <!--/* "Więcej": the rare settings, one row each with its state, leading to the page "Ustawienia imprezy" at its card (the
-                 staff: their own page) — folded to one line, as the cards of that page: seven rows pushed the queue down; opened, it
-                 stays open for the tab (settings-toggle.js). The row of the limits turns yellow from 80 % of a server limit (polling.js
-                 keeps it current from X-Guest-Limits-Use; the bar above the queue says it too); the device's state is this browser's
-                 (settings-rows.js). */-->
-            <nav id="settingsMore" th:attr="aria-label=#{settings.more}"
-                 th:with="settingsUrl=@{/dj/settings(party=${partyCode})}">
-                <details class="card bg-dark border-secondary s2p-fold s2p-more" id="settingsMoreFold">
-                <summary class="s2p-fold-summary"><span class="s2p-card-title s2p-fold-name" th:text="#{settings.more}">More</span></summary>
-                <div class="s2p-rows">
-                    <!--/* a feature of the Pro plan the party has not (V35): the row stays for the organiser with "PRO" by its name, said once — no
-                         state beside it (the review of the look, 2026-10-14); the limits' row keeps the limits that hold */-->
-                    <a th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}" class="s2p-row"
-                       data-settings-row="hosts" th:href="${settingsUrl + '#hostListsCard'}">
-                        <span class="s2p-row-name"><span th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
-                        <span class="s2p-row-state"
-                              th:text="${plan.pro('HOST_LISTS')} ? '' : (${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
-                                     : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? ' · ' + #{settings.row.hosts.link} : ''))">Not used</span>
-                    </a>
-                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="links" th:href="${settingsUrl + '#linksCard'}"
-                       th:with="sites=${ {instagramUrl != null ? 'Instagram' : null, facebookUrl != null ? 'Facebook' : null, tiktokUrl != null ? 'TikTok' : null, tipUrl != null ? #messages.msg('settings.row.links.tips') : null} }">
-                        <span class="s2p-row-name"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
-                        <span class="s2p-row-state"
-                              th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
-                              th:text="${plan.pro('PROFILES')} ? '' : (${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named})">Instagram · tips</span>
-                    </a>
-                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="logo" th:href="${settingsUrl + '#logoCard'}">
-                        <span class="s2p-row-name"><span th:text="#{settings.logo.title}">Your logo</span><th:block th:if="${plan.pro('LOGO')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
-                        <span class="s2p-row-state"
-                              th:text="${plan.pro('LOGO')} ? '' : (${djLogo != null} ? #{settings.row.logo} : #{settings.row.logo.none})">Uploaded</span>
-                    </a>
-                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="library" th:href="${settingsUrl + '#libraryCard'}">
-                        <span class="s2p-row-name"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
-                        <span class="s2p-row-state"
-                              th:text="${plan.pro('LIBRARY')} ? '' : (${libraryTracks != null} ? #{settings.row.library(${libraryTracks})} : #{settings.row.library.none})">Songs: 1,234</span>
-                    </a>
-                    <a th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}" class="s2p-row"
-                       data-settings-row="limits" th:href="${settingsUrl + '#limitsCard'}"
-                       th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
-                                networkNear=${serverLimitPerNetwork > 0 and busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4}">
-                        <span class="s2p-row-name"><span th:text="#{dashboard.limits.title}">Guest limits</span><th:block th:if="${plan.pro('GUEST_LIMITS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
-                        <span class="s2p-row-state">
-                            <span data-limit-calm th:hidden="${partyNear or networkNear}"
-                                  th:text="#{settings.row.limits(${requestLimit}, ${cooldownMinutes})}">2 per guest · 3 min break</span>
-                            <span class="s2p-row-warn" data-limit-near="party" th:attr="data-limit=${serverLimitPerParty},data-template=#{settings.row.limits.party('{used}', '{limit}')}"
-                                  th:hidden="${!partyNear}" th:text="#{settings.row.limits.party(${partyRequestsUsed}, ${serverLimitPerParty})}">Party 250/300</span>
-                            <span class="s2p-row-warn" data-limit-near="network" th:attr="data-limit=${serverLimitPerNetwork},data-template=#{settings.row.limits.network('{used}', '{limit}')}"
-                                  th:hidden="${partyNear or !networkNear}" th:text="#{settings.row.limits.network(${busiestNetworkRequestsUsed}, ${serverLimitPerNetwork})}">Network 26/30</span>
-                        </span>
-                    </a>
-                    <a th:if="${isOwner}" class="s2p-row" data-settings-row="staff" th:href="@{/dj/staff(party=${partyCode})}" id="staffManageLink">
-                        <span class="s2p-row-name" th:text="#{dashboard.staff.title}">Staff</span>
-                        <span class="s2p-row-state"
-                              th:text="${#lists.isEmpty(staff)} ? #{settings.row.staff.none} : #{settings.row.staff(${#lists.size(staff)})}">People: 1</span>
-                    </a>
-                    <a class="s2p-row" data-settings-row="device" th:href="${settingsUrl + '#deviceCard'}">
-                        <span class="s2p-row-name" th:text="#{dashboard.device.title}">This device</span>
-                        <span class="s2p-row-state" data-device-state th:if="${pushPublicKey != null}"
-                              th:attr="data-on=#{settings.row.device.on},data-off=#{settings.row.device.off}"></span>
-                    </a>
-                </div>
-                </details>
-            </nav>
         </div>
     </div>
 
@@ -367,12 +308,19 @@
                  refused; the review of 2026-10-21, O2): every new request reaches the list "bez oceny AI", the DJ looks them over */-->
             <div class="alert alert-danger small py-2 mb-2" role="status" data-guest-limit="ai-down"
                  th:classappend="${aiDown} ? '' : 'd-none'" th:text="#{dashboard.warning.ai_down}">The AI is not judging requests right now</div>
-            <!--/* near the party's limit (from 80 %, under it): how much is used — the DJ sees it coming (polling.js keeps it current) */-->
+            <!--/* near a server limit (from 80 %, under it): how much is used — the DJ sees it coming (polling.js keeps it current);
+                 the party's day (at it, "wyczerpany" above takes over), then one network's ten minutes (a venue's Wi-Fi: its guests
+                 count together; at it too — it has no warning of its own, and it passes by itself) */-->
             <div class="alert alert-warning small py-2 mb-2" role="status" data-limit-near="party"
                  th:if="${serverLimitPerParty > 0}"
                  th:attr="data-limit=${serverLimitPerParty},data-below=true,data-template=#{dashboard.warning.party_near('{used}', '{limit}')}"
                  th:hidden="${partyRequestsUsed * 5 < serverLimitPerParty * 4 or partyRequestsUsed >= serverLimitPerParty}"
                  th:text="#{dashboard.warning.party_near(${partyRequestsUsed}, ${serverLimitPerParty})}">Party: 250 of 300 requests a day</div>
+            <div class="alert alert-warning small py-2 mb-2" role="status" data-limit-near="network"
+                 th:if="${serverLimitPerNetwork > 0}"
+                 th:attr="data-limit=${serverLimitPerNetwork},data-template=#{dashboard.warning.network_near('{used}', '{limit}')}"
+                 th:hidden="${busiestNetworkRequestsUsed * 5 < serverLimitPerNetwork * 4}"
+                 th:text="#{dashboard.warning.network_near(${busiestNetworkRequestsUsed}, ${serverLimitPerNetwork})}">One network: 26 of 30 requests in 10 minutes</div>
         </div>
         <div class="table-responsive list-scroll">
         <table class="table table-dark table-hover table-sm align-middle">
@@ -448,8 +396,9 @@
                         </span>
                         <!--/* "Podejrzyj": the song on YouTube's search results, for the DJ to look at a song they do not know — a page
                              the DJ's browser opens, no YouTube API. A button as in the history (the owner, 2026-10-10: a link in the
-                             guest's line read worse) */-->
-                        <span class="d-flex gap-2 flex-shrink-0">
+                             guest's line read worse). On a wide screen both are quiet (no edge until the pointer is on them, app.css): the
+                             row's buttons to see are "▶ Zagrane" and "⏭ Pomiń" — six edged buttons in a row were noise */-->
+                        <span class="d-flex gap-2 flex-shrink-0 s2p-song-tools">
                             <!--/* "Kopiuj": the artist and the title for the search box of the DJ's own software (queue-keys.js; the key C) */-->
                             <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap s2p-btn-copy"
                                     th:attr="data-copied=#{dashboard.qr.copied}" th:title="#{dashboard.queue.copy.title}"
@@ -536,12 +485,25 @@
             <!--/* where a new DJ lands first: the guide (public, LegalController.guide; the owner, 2026-10-12) */-->
             <a th:href="#{help.guide.href}" href="/how-it-works" id="queueEmptyGuide" class="btn btn-link mt-2"
                th:text="#{dashboard.empty.guide}">First time? See how it works</a>
+            <!--/* on a phone, before the party (here, never over its requests): the panel as an app — its own icon and, on an iPhone the
+                 only way, the notifications of new requests. Shown by install-hint.js where the app can be installed; "Nie teraz" for
+                 good; "Zainstaluj" leads to the card "To urządzenie" (install.js). Not in the demo: nothing of it is the visitor's. */-->
+            <div th:unless="${demo == true}" id="installHint" class="s2p-install-hint" role="note" hidden>
+                <p class="mb-2" th:text="#{dashboard.install.hint}">The panel as an app on your phone: its own icon and notifications of new requests.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a th:href="@{/dj/settings(party=${partyCode})} + '#deviceCard'" href="/dj/settings#deviceCard" id="installHintGo"
+                       class="btn btn-outline-light" th:text="#{dashboard.install.button}">Install the app</a>
+                    <button type="button" class="btn btn-link text-secondary" data-install-hint-later
+                            th:text="#{dashboard.install.hint.later}">Not now</button>
+                </div>
+            </div>
         </div>
     </div>
     </div>
 
     <!-- History content loaded via AJAX (the DJ keeps their place on the page) -->
     <div id="history-content" hidden></div>
+    </div>
 
     <!--/* "Cofnij" after "Pomiń" or "Zagrane": shown by forms.js for a few seconds after either, puts the request back
          (/dj/dashboard/restore). The id stays "undoSkip": the browser scenarios and the CSS know it by it. */-->

@@ -1,11 +1,9 @@
 /**
- * THE ROWS OF "WIĘCEJ" in the panel's settings (the design review, 2026-10-10), and the folded card of the page "Ustawienia imprezy"
- * (settings-page.js): "To urządzenie" says whether this browser gets the notifications of new requests — "Powiadomienia wł." /
+ * The folded card "To urządzenie" of the page "Ustawienia imprezy" (settings-page.js) says whether this browser gets the
+ * notifications of new requests — "Powiadomienia wł." /
  * "wył." — the way push.js finds it: a subscription of the service
  * worker of /dj/ (scope /dj/) with notifications allowed. Shown only when the server has the keys (the template renders the state's
  * element with them); a browser without push says nothing.
- *
- * The state of the row of the limits is kept by polling.js (X-Guest-Limits-Use), the others are the server's.
  *
  * Dependencies (DOM): [data-device-state] with data-on / data-off.
  */

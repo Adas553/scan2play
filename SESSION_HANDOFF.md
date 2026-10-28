@@ -35,13 +35,15 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    with the party; the DJ's heading ≤ 40 and line ≤ 60, the language, boxes for the logo / profiles / tip / address; the organiser and
    the staff with VIBE, any plan). Released before it: the DJ's logo (#179 / #180, V45), the poster without its numbered steps, a
    larger logo, the cards' texts centred on the code (#181 / #182).
-3. **The DJ's panel against TipTunes and Rekwest** (the review of 2026-10-28, items 1–7 of its list, on
-   `claude/scan2play-dj-panel-review-m9yrpb`): the device's own font, one accent (the cyan; green only a status), "Pierwszy raz?"
-   readable, one heading and tabs "Panel DJ-a | Historia | Ustawienia" on the panel, the history, "Ustawienia imprezy" and "Obsługa"
-   (the button over the settings is "Impreza i kod QR"), the card "Impreza"'s gaps. Item 6 (the QR code in the empty queue) was there
-   already — the harness renders no QR image, which misled the review. Next, the owner's picks: the print in the panel's dark (8),
-   two columns on a wide screen (9), a quieter queue row (10), "Moje imprezy" (11), an install banner (12). Found on the way: "Uprawnienia
-   po kolei" on "Obsługa" is 21 px high on a phone. The landing page's pictures (`screenshots.py`) still show the old green tab.
+3. **The DJ's panel against TipTunes and Rekwest** (the review of 2026-10-28, on `claude/scan2play-dj-panel-review-m9yrpb`):
+   items 1–7 (`61b3de3`, the owner tested it: "fajnie wygląda") — the device's own font, one accent, one heading and tabs "Panel DJ-a |
+   Historia | Ustawienia", "Impreza i kod QR", the card's gaps; then items 8–10 and 12 and the owner's own: the rows of "Więcej" off the
+   panel (the settings were in two places; the network's limit near is now a warning above the queue), the print's editor in the
+   panel's colours, from 1400 px the unfolded settings beside the queue, "Kopiuj" / "Podejrzyj" quiet on a wide screen, "Panel jako
+   aplikacja" under an empty queue on a phone. Waiting for the owner: item 11 "Moje imprezy" (a party is one per organiser and the
+   history is purged after 30 days — a list of past evenings needs a model of its own: a question, not a layout). Found on the way:
+   "Uprawnienia po kolei" on "Obsługa" is 21 px high on a phone. The landing page's pictures (`screenshots.py`) show the old green tab
+   and "Więcej".
 
 ## Later (not now)
 
