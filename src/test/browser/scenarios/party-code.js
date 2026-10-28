@@ -49,6 +49,7 @@
             const card = document.getElementById('partyCodeCard');
             const said = document.getElementById('partyCodeChanged');
             t.step('the card open, the news shown', [!!card && card.open, shows(said)], [true, true]);
+            t.step('in the accent\'s tint, not green (green is the status "accepted" alone)', !!said && said.classList.contains('alert-info'), true);
             t.step('the new code in it', !!said && said.textContent.indexOf('Nowy kod imprezy: HARN1.') >= 0, true);
             const print = said && said.querySelector('a');
             t.step('the way to print it', print && [print.getAttribute('href'), print.getAttribute('target')], ['/dj/qr-print?party=HARN1', '_blank']);

@@ -410,7 +410,7 @@
                 <span class="s2p-fold-state font-monospace" id="partyCodeState" th:text="${partyCode}">ABC12</span>
             </summary>
             <div class="s2p-fold-body">
-            <div th:if="${codeChanged != null}" class="alert alert-success py-2 mb-3" role="status" id="partyCodeChanged">
+            <div th:if="${codeChanged != null}" class="alert alert-info py-2 mb-3" role="status" id="partyCodeChanged">
                 <span th:text="#{settings.code.changed(${codeChanged})}">The new party code: NEW01.</span>
                 <a th:href="@{/dj/qr-print(party=${codeChanged})}" target="_blank" rel="noopener" class="alert-link text-nowrap"
                    th:text="#{settings.code.print}">Print the poster and cards</a>
