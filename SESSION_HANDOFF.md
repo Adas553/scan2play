@@ -71,6 +71,12 @@ D. GitHub Actions' minutes: no limit while the repository is public; estimate th
    private (2 000 minutes, budgets at $0 — the tests would stop and Railway might hold `main`'s deploy).
 E. From the history (`session-handoff-2026-10-24.md`): talks with DJs (its item 1), Gemini + Google Search for lyrics (item 6), the
    terms before `PLANS_ENFORCE` (item 5), the Gemini comparison for the next model (item 4).
+F. **A light theme — only when someone asks** (the owner, 2026-10-28: not now). Dark is right where the app is used: a DJ's booth in
+   a dark room (a bright panel dazzles and lights the room; DJ software is dark), guests' phones in the dark; the print is light
+   already (its four themes). The cost: the colours are tokens (`app.css`), but the templates carry dark Bootstrap classes
+   (`text-light` ×71, `btn-outline-light` ×60, `border-secondary` ×58, `bg-dark` ×28, `bg-black` ×24, `text-white` ×23) and
+   `color-scheme: dark` on 22 pages — each moved to a token, then every contrast checked twice. When DJs of daytime outdoor events
+   ask: first the guest page alone, light by the phone's own setting (`prefers-color-scheme`), the panel staying dark.
 
 ## Waiting for the owner (not code)
 
