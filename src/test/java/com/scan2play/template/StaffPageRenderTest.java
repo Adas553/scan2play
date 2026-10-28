@@ -203,6 +203,28 @@ class StaffPageRenderTest {
         assertThat(link).containsPattern("<option value=\"QUEUE\"[^>]*selected").doesNotContain("data-confirm");
     }
 
+    /** "Zaproś" that worked: the page says so in the accent's tint — green is the status "accepted" alone (one accent). */
+    @Test
+    void theStaffPage_afterAnInvitation_saysItInTheAccentsTint() {
+        PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").djName("Klub Ola").build();
+        DjSessionHelper helper = mock(DjSessionHelper.class);
+        when(helper.requireOwner(any(), any(), any())).thenReturn(pub);
+        PartyStaffService staff = mock(PartyStaffService.class);
+        when(staff.placesOf(any())).thenReturn(com.scan2play.model.Plan.PRO.staffPlaces());
+        StaffController controller = new StaffController(staff, mock(PartySettingsCommandService.class), helper,
+                mock(StaffInvitationService.class), com.scan2play.service.Plans.off());
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("staffInvited", new StaffController.InviteResult("INVITED", "ola@gmail.com", false));
+
+        ConcurrentModel model = new ConcurrentModel();
+        controller.staffPage(PARTY, model, null, session, new MockHttpServletRequest());
+        String html = render("staff", model.asMap(), PL);
+
+        String note = html.substring(html.indexOf("id=\"staffInviteResult\""));
+        assertThat(note.substring(0, note.indexOf("</div>"))).contains("alert alert-info", "Zaproszono: ola@gmail.com.")
+                .doesNotContain("alert-success");
+    }
+
     /** No panel at all (the access taken away, no party of their own): what happened, an invitation to paste, a party on purpose. */
     @Test
     void noPanel_saysWhatHappened_andOffersTheWaysOn() throws IOException {
