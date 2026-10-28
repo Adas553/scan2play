@@ -149,6 +149,61 @@ body {
     cursor: pointer;
 }
 
+.editor-colors {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    flex: 1 1 100%;
+}
+
+.editor-colors legend {
+    padding: 0;
+    margin-bottom: 4px;
+}
+
+.editor-colors label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.editor-colors input[type="radio"] {
+    width: 20px;
+    height: 20px;
+}
+
+.swatch-dot {
+    display: inline-block;
+    width: 26px;
+    height: 26px;
+    border: 2px solid #f8f9fa;
+    border-radius: 50%;
+}
+
+.editor-colors input[type="color"] {
+    width: 44px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #6c757d;
+    border-radius: 6px;
+    background: transparent;
+}
+
+.swatch-1565c0 { background: #1565c0; }
+.swatch-2e7d32 { background: #2e7d32; }
+.swatch-c2185b { background: #c2185b; }
+.swatch-d84315 { background: #d84315; }
+.swatch-6a1b9a { background: #6a1b9a; }
+.swatch-b08a3e { background: #b08a3e; }
+.swatch-00bcd4 { background: #00bcd4; }
+.swatch-111111 { background: #111111; }
+
 #posterAnswer {
     color: #75e0a7;
 }
@@ -163,9 +218,98 @@ body {
     }
 }
 
+/* ---- The themes (V47): the printed part's paper, ink and the heading's colour — the DJ's accent (qr-print.js sets --accent, made
+   readable on the paper) or the theme's own. The code stays black on white in every one. ---- */
+
+body {
+    --paper: #ffffff;
+    --ink: #111111;
+    --muted: #555555;
+    --accent-base: #111111;
+    --frame: transparent;
+}
+
+body.theme-elegant {
+    --paper: #fbf7ef;
+    --ink: #1f2a44;
+    --muted: #5b6275;
+    --accent-base: #8a6a2a;
+    --frame: var(--accent, var(--accent-base));
+}
+
+body.theme-club {
+    --paper: #14141c;
+    --ink: #f5f5f7;
+    --muted: #b9bcc8;
+    --accent-base: #00e5ff;
+    --frame: var(--accent, var(--accent-base));
+}
+
+body.theme-pastel {
+    --paper: #fdf0f5;
+    --ink: #3b2a3a;
+    --muted: #6e5a6c;
+    --accent-base: #b0164f;
+    --frame: var(--accent, var(--accent-base));
+}
+
+.poster,
+.card {
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.poster h1,
+.card .title {
+    color: var(--accent, var(--accent-base));
+}
+
 /* The second language of a pair: the same text, a little quieter */
-.second {
-    color: #555555;
+.second,
+.poster h1 .second,
+.card .title .second {
+    color: var(--muted);
+}
+
+/* a theme with a paper of its own: the poster a framed sheet; the code on a white tile, as a phone reads it best */
+body:not(.theme-classic) .poster {
+    padding: 6mm 8mm;
+    border: 0.8mm solid var(--frame);
+}
+
+body.theme-elegant .poster {
+    border: 1.6mm double var(--frame);
+}
+
+body.theme-elegant .poster h1,
+body.theme-elegant .card .title,
+body.theme-elegant .own-line {
+    font-family: Georgia, "Times New Roman", "DejaVu Serif", serif;
+}
+
+body.theme-pastel .poster {
+    border-radius: 8mm;
+}
+
+body.theme-club .poster {
+    border-radius: 4mm;
+}
+
+/* the code's own white margin is its tile: rounded, never on the theme's paper */
+body:not(.theme-classic) .qr {
+    border-radius: 2mm;
+    background: #ffffff;
+}
+
+/* on the dark club paper the DJ's logo on a white badge: a dark logo with a transparent background would vanish */
+body.theme-club .dj-logo {
+    padding: 1.5mm 2.5mm;
+    border-radius: 2mm;
+    background: #ffffff;
+}
+
+body:not(.theme-classic) .card {
+    border-top: 1.2mm solid var(--frame);
 }
 
 /* ---- The poster: one A4 sheet ---- */
@@ -467,14 +611,14 @@ body {
     justify-content: center;
     gap: 1.5mm;
     margin: 4mm 0 0;
-    color: #666;
+    color: var(--muted);
     font-size: 9pt;
     line-height: 1;
 }
 
 .poster .powered .logo.ours {
     gap: 1mm;
-    color: #222;
+    color: var(--ink);
     font-size: 10pt;
     line-height: 1;
 }

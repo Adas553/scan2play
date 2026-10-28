@@ -18,7 +18,8 @@
     The DJ's own heading and line, and what of the DJ's the paper shows, are the party's (V46): a part left off is rendered hidden
     (data-poster-part), so the editor's preview (qr-print.js) shows it again at once.
 */-->
-<body th:class="${qrLayout == 'cards'} ? 'layout-cards' : 'layout-poster'"
+<body th:class="${(qrLayout == 'cards' ? 'layout-cards ' : 'layout-poster ') + poster.posterTheme.cssClass()}"
+      th:attr="data-accent=${poster.posterAccent}"
       th:with="pl=${printLang != 'en'}, en=${printLang != 'pl'}, both=${printLang == 'both'},
                logoShown=${djLogo != null and poster.posterShowLogo}">
 
@@ -58,6 +59,25 @@
             <option value="EN" th:selected="${poster.posterLanguage.name() == 'EN'}">English</option>
         </select>
     </div>
+    <!--/* the look (V47): the theme, and the DJ's colour for the heading and the frame — one of the palette's, the theme's own, or the
+         DJ's own picked in the browser's colour field; the page makes any of them readable on the theme's paper (qr-print.js) */-->
+    <div class="editor-field">
+        <label for="posterTheme" th:text="#{qr.edit.theme}">Theme</label>
+        <select id="posterTheme" name="theme">
+            <option th:each="t : ${posterThemes}" th:value="${t.name()}"
+                    th:selected="${t == poster.posterTheme}" th:text="#{'qr.edit.theme.' + ${t.name().toLowerCase()}}">Classic</option>
+        </select>
+    </div>
+    <fieldset class="editor-colors" th:with="palette=${ {'#1565c0', '#2e7d32', '#c2185b', '#d84315', '#6a1b9a', '#b08a3e', '#00bcd4', '#111111'} },
+              own=${poster.posterAccent != null and !#lists.contains(palette, poster.posterAccent)}">
+        <legend th:text="#{qr.edit.accent}">Colour</legend>
+        <label class="swatch-theme"><input type="radio" name="accent" value="" th:checked="${poster.posterAccent == null}"> <span th:text="#{qr.edit.accent.theme}">The theme's</span></label>
+        <label th:each="c : ${palette}" class="swatch" th:attr="title=${c}"><input type="radio" name="accent" th:value="${c}" th:checked="${c == poster.posterAccent}"
+               th:attr="aria-label=${c}"><span class="swatch-dot" th:classappend="${'swatch-' + c.substring(1)}"></span></label>
+        <label class="swatch-own"><input type="radio" name="accent" id="posterAccentOwn" th:value="${own ? poster.posterAccent : '#ff4081'}" th:checked="${own}">
+            <span th:text="#{qr.edit.accent.own}">Your own</span>
+            <input type="color" id="posterAccentPicker" th:value="${own ? poster.posterAccent : '#ff4081'}" th:attr="aria-label=#{qr.edit.accent.own}"></label>
+    </fieldset>
     <fieldset class="editor-checks">
         <legend th:text="#{qr.edit.show}">Show</legend>
         <label th:if="${djLogo != null}"><input type="checkbox" name="showLogo" value="true" data-poster-toggle="logo" th:checked="${poster.posterShowLogo}"> <span th:text="#{qr.edit.show.logo}">Your logo</span></label>

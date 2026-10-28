@@ -26,6 +26,8 @@ public final class ViewAttributes {
     public static final String POSTER = "poster";
     public static final String PRINT_LANG = "printLang";
     public static final String POSTER_EDIT = "posterEdit";
+    /** The themes the print's editor offers (V47). */
+    public static final String POSTER_THEMES = "posterThemes";
     /** The card "Twoje logo": the largest file, in bytes and MB, and the longest side kept (V45, {@code LogoImage}). */
     public static final String LOGO_MAX_BYTES = "logoMaxBytes";
     public static final String LOGO_MAX_MB = "logoMaxMb";

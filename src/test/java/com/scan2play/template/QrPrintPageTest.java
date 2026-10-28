@@ -127,7 +127,7 @@ class QrPrintPageTest {
     void thePosterHasTheCodeTheLinkAndBothLanguages() throws IOException {
         String html = render("poster", Locale.forLanguageTag("pl"));
 
-        assertThat(html).contains("class=\"layout-poster\"", "<main class=\"poster\">", "data:image/png;base64,");
+        assertThat(html).contains("class=\"layout-poster theme-classic\"", "<main class=\"poster\">", "data:image/png;base64,");
         assertThat(html).contains("https://www.scan2play.com.pl/p/" + PARTY, ">" + PARTY + "<");
         // a Polish panel: Polish and English at once; "poproś", as the TV screen and the rest of the app ("prośba"), not "zamów"
         assertThat(html).contains("<span lang=\"pl\">Zeskanuj i poproś o piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>")
@@ -145,7 +145,7 @@ class QrPrintPageTest {
     void theCardsAreEightOnAPage() throws IOException {
         String html = render("cards", Locale.ENGLISH);
 
-        assertThat(html).contains("class=\"layout-cards\"", "<main class=\"cards\">");
+        assertThat(html).contains("class=\"layout-cards theme-classic\"", "<main class=\"cards\">");
         assertThat(html.split("<section class=\"card\">", -1)).hasSize(9);
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\" data-poster-part=\"ours\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
@@ -258,6 +258,26 @@ class QrPrintPageTest {
                 "<span lang=\"en\" class=\"second\">Can't scan? Open:</span>");
     }
 
+    /**
+     * The look (V47): the theme is the page's class, the DJ's colour its data-accent (qr-print.js makes it readable); the editor offers
+     * the four themes and the palette, the saved one picked — a colour not of the palette is "Własny", in the colour field.
+     */
+    @Test
+    void theLook_isTheThemeAndTheColourTheDjPicked() throws IOException {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY)
+                .posterTheme(com.scan2play.model.PosterTheme.ELEGANT).posterAccent("#123abc").build();
+        String html = render("poster", Locale.forLanguageTag("pl"), party).replaceAll("\\s+", " ");
+        assertThat(html).contains("class=\"layout-poster theme-elegant\"", "data-accent=\"#123abc\"",
+                "<option value=\"ELEGANT\" selected=\"selected\">Elegancki (wesele)</option>", "<option value=\"CLUB\">Klubowy</option>",
+                "<option value=\"PASTEL\">Pastelowy</option>", "<option value=\"CLASSIC\">Klasyczny</option>",
+                "value=\"#123abc\" checked=\"checked\"", "id=\"posterAccentPicker\" value=\"#123abc\"", "class=\"swatch-dot swatch-c2185b\"");
+        String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build());
+        assertThat(palette).contains("value=\"#c2185b\" aria-label=\"#c2185b\" checked=\"checked\"").doesNotContain("value=\"#123abc\"");
+        String none = render("poster", Locale.ENGLISH);
+        assertThat(none).contains("class=\"layout-poster theme-classic\"", "<input type=\"radio\" name=\"accent\" value=\"\" checked=\"checked\">")
+                .doesNotContain("data-accent=");
+    }
+
     /** The editor (V46): its fields as long as the columns, the values saved; only for whom may change the card "Impreza". */
     @Test
     void theEditor_isForWhomMayChangeTheParty() throws IOException {
@@ -280,7 +300,7 @@ class QrPrintPageTest {
     @Test
     void theBarFollowsTheDjsLanguage_andTheLayoutDefaultsToThePoster() throws IOException {
         String polish = render("whatever", Locale.forLanguageTag("pl"));
-        assertThat(polish).contains("<html lang=\"pl\"", "Wydruk kodu QR", "Plakat A4", "Drukuj", "class=\"layout-poster\"");
+        assertThat(polish).contains("<html lang=\"pl\"", "Wydruk kodu QR", "Plakat A4", "Drukuj", "class=\"layout-poster theme-classic\"");
 
         String english = render("poster", Locale.ENGLISH);
         assertThat(english).contains("<html lang=\"en\"", "Print the QR code", "Table cards", "Back to the dashboard");

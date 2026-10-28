@@ -2,6 +2,7 @@ package com.scan2play.entity;
 
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.PosterLanguage;
+import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
 import com.scan2play.model.VibeType;
@@ -203,6 +204,15 @@ public class PartySettingsEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 4)
     private PosterLanguage posterLanguage = PosterLanguage.AUTO;
+
+    /** The print's look (V47): its theme, and the DJ's colour for the heading and the frame ("#rrggbb"; null = the theme's). */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private PosterTheme posterTheme = PosterTheme.CLASSIC;
+
+    @Column(length = 7)
+    private String posterAccent;
 
     /** What the print shows of the DJ's: the logo, the profiles, the tip link, and the address with the party's code. */
     @Builder.Default

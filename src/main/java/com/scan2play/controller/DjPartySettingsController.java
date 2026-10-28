@@ -4,6 +4,7 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.PosterLanguage;
+import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
@@ -142,15 +143,17 @@ public class DjPartySettingsController {
     }
 
     /**
-     * The QR print as the DJ sets it (V46), from the print page (qr-print.js, in the background — 204): the DJ's own heading and line
-     * (one line each, cut to {@value PartySettingsEntity#POSTER_HEADING_MAX} / {@value PartySettingsEntity#POSTER_LINE_MAX}; empty = ours /
-     * none), the language, and what of the DJ's it shows. Whoever may change the party's card "Impreza" (VIBE), any plan: the words on
-     * paper are the party's, as its vibe note; the logo shown stays the plan's (PlanService.asPlanned).
+     * The QR print as the DJ sets it (V46, V47), from the print page (qr-print.js, in the background — 204): the DJ's own heading and
+     * line (one line each, cut to {@value PartySettingsEntity#POSTER_HEADING_MAX} / {@value PartySettingsEntity#POSTER_LINE_MAX}; empty =
+     * ours / none), the language, the look (the theme; the DJ's colour "#rrggbb", anything else the theme's own) and what of the DJ's
+     * it shows. Whoever may change the party's card "Impreza" (VIBE), any plan: the words on paper are the party's, as its vibe note;
+     * the logo shown stays the plan's (PlanService.asPlanned).
      */
     @PostMapping("/qr-print/settings")
     @ResponseBody
     public ResponseEntity<Void> updatePoster(@RequestParam String partyCode, @RequestParam(required = false) String heading,
                                              @RequestParam(required = false) String line, @RequestParam(required = false) String language,
+                                             @RequestParam(required = false) String theme, @RequestParam(required = false) String accent,
                                              @RequestParam(defaultValue = "false") boolean showLogo,
                                              @RequestParam(defaultValue = "false") boolean showLinks,
                                              @RequestParam(defaultValue = "false") boolean showTip,
@@ -163,6 +166,8 @@ public class DjPartySettingsController {
             s.setPosterHeading(ownHeading.isEmpty() ? null : ownHeading);
             s.setPosterLine(ownLine.isEmpty() ? null : ownLine);
             s.setPosterLanguage(PosterLanguage.of(language));
+            s.setPosterTheme(PosterTheme.of(theme));
+            s.setPosterAccent(PosterTheme.accent(accent));
             s.setPosterShowLogo(showLogo);
             s.setPosterShowLinks(showLinks);
             s.setPosterShowTip(showTip);
