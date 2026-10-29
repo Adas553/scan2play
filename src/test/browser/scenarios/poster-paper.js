@@ -1,7 +1,9 @@
 // "Kolor tła" (V53, qr-print.js): the paper as the DJ picks it — the theme's (the default), one of six light tints, or the DJ's own
-// colour made a light tint here (mixed towards white until it is as light as a pale paper: little ink, the words readable) — on the
-// poster, the cards and the tent. On a picked paper the words turn dark (the club's white ink would vanish) and the heading's colour is
-// made readable on it, as on a theme's paper; the code stays on its white tile. "Zapisz" sends it, the switch keeps it.
+// colour: a light one made a light tint here (mixed towards white until it is as light as a pale paper: little ink), a dark one a dark
+// paper (darkened only until light words read on it) — on the poster, the cards and the tent. On a light paper the words turn dark,
+// on a dark one light, and the heading's colour is made readable on it; the code stays on its white tile; a dark paper says it takes a
+// lot of ink, the DJ's logo on a white badge as on the club's paper; the classic paper, coloured, keeps the words off its edges.
+// "Zapisz" sends it, the switch keeps it.
 (function () {
     function rgb(css) { return (css.match(/[\d.]+/g) || []).slice(0, 3).map(Number); }
 
@@ -38,22 +40,26 @@
     S2P.scenario({
         name: 'poster-paper',
         page: 'qr-print-poster',
-        title: '"Kolor tła": a light tint as it is, the DJ\'s own colour made a light tint, the theme\'s again; the words readable on it in every theme, the club\'s words dark; the code on white; "Zapisz" sends it',
+        title: '"Kolor tła": a light tint as it is, the DJ\'s light colour a light tint, a dark one a dark paper; the words readable on it in every theme; the code on white; "Zapisz" sends it',
         run: async function (t) {
             const swatches = Array.from(document.querySelectorAll('#posterForm input[name="paper"]')).map(function (r) { return r.value; });
             t.step('the theme\'s, six tints, your own', [swatches.length, swatches[0]], [8, '']);
             pickPaper('#e8f3fb');
             t.step('a tint: the paper as it is', paper(), 'rgb(232, 243, 251)');
-            pickPaper('#c2185b');
+            pickPaper('#f48fb1');
             const own = rgb(paper());
-            t.check('your own deep pink made a light pink (' + own + ')', luminance(own) >= 0.84 && own[0] > own[1]);
+            t.check('your own pink made a light pink (' + own + ')', luminance(own) >= 0.84 && own[0] > own[1]);
+            pickPaper('#3b0a14');
+            const deep = rgb(paper());
+            t.check('your own dark claret a dark paper, still claret (' + deep + ')', luminance(deep) <= 0.09 && deep[0] > deep[1]);
             const bad = [];
             Array.from(document.querySelectorAll('#posterTheme option')).map(function (o) { return o.value; }).forEach(function (theme) {
                 pick('posterTheme', theme);
-                ['#c2185b', '#111111', '#fbf3e2'].forEach(function (colour) {
+                [['#c2185b', 'dark'], ['#111111', 'dark'], ['#f48fb1', 'light'], ['#fbf3e2', 'light']].forEach(function (pair) {
+                    const colour = pair[0];
                     pickPaper(colour);
-                    const p = paper();
-                    if (luminance(rgb(p)) < 0.84) bad.push(theme + ' ' + colour + ' paper ' + p);
+                    const p = paper(), l = luminance(rgb(p));
+                    if (pair[1] === 'light' ? l < 0.84 : l > 0.09) bad.push(theme + ' ' + colour + ' paper ' + p);
                     [['heading', '.poster h1 .ours > span'], ['English', '.poster h1 .second'], ['text', '.poster .code'], ['quiet', '.poster .link .second']]
                         .forEach(function (pair) {
                             const el = document.querySelector(pair[1]);
@@ -62,7 +68,26 @@
                     if (getComputedStyle(document.querySelector('.poster .qr')).backgroundColor !== 'rgb(255, 255, 255)' && theme !== 'CLASSIC') bad.push(theme + ' code not on white');
                 });
             });
-            t.step('light, readable, the code on white — every theme, a deep, a black and a tint', bad, []);
+            t.step('light or dark as picked, readable, the code on white — every theme, a deep, a black, a pink and a tint', bad, []);
+            pick('posterTheme', 'CLASSIC');
+            pickPaper('#e8f3fb');
+            const field = document.getElementById('posterHeading');
+            field.value = 'W'.repeat(40);
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            const box = document.querySelector('.poster').getBoundingClientRect(), h1 = document.querySelector('.poster h1 .own').getBoundingClientRect();
+            t.check('the classic paper coloured: the heading at least 5 mm off its edges (' + Math.round(h1.left - box.left) + ' px)',
+                h1.left - box.left >= 5 * 96 / 25.4 - 0.5 && box.right - h1.right >= 5 * 96 / 25.4 - 0.5);
+            const hint = document.getElementById('posterInkHint');
+            const hints = [];
+            [['CLASSIC', '#3b0a14'], ['CLASSIC', '#e8f3fb'], ['CLUB', '#e8f3fb'], ['CLUB', '']].forEach(function (pair) {
+                pick('posterTheme', pair[0]);
+                pickPaper(pair[1]);
+                hints.push(pair.join(' ') + ' ' + !hint.hidden);
+            });
+            field.value = '';
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('the ink note: a dark paper, the club\'s own dark one; never a light one', hints,
+                ['CLASSIC #3b0a14 true', 'CLASSIC #e8f3fb false', 'CLUB #e8f3fb false', 'CLUB  true']);
             pick('posterTheme', 'CLUB');
             pickPaper('');
             t.step('the theme\'s again: the club\'s dark paper', paper(), 'rgb(20, 20, 28)');

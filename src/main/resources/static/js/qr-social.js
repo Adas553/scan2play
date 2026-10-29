@@ -51,6 +51,7 @@
             accent: heading.length ? getComputedStyle(heading[0].el).color : '#111111',
             framed: !document.body.classList.contains('theme-classic'),
             club: document.body.classList.contains('theme-club'),
+            badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-dark'),
             font: paperFont,
             headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont,
             // the DJ's line in its own font (the serif on the elegant theme), never the heading's script
@@ -106,7 +107,7 @@
         if (c.logo) {
             const box = { w: (story ? 560 : 440) * s, h: (story ? 220 : 150) * s };
             const ratio = Math.min(box.w / c.logo.naturalWidth, box.h / c.logo.naturalHeight);
-            add({ kind: 'logo', image: c.logo, w: Math.round(c.logo.naturalWidth * ratio), h: Math.round(c.logo.naturalHeight * ratio), badge: c.club });
+            add({ kind: 'logo', image: c.logo, w: Math.round(c.logo.naturalWidth * ratio), h: Math.round(c.logo.naturalHeight * ratio), badge: c.badge });
             add({ kind: 'gap', height: Math.round((story ? 56 : 40) * s) });
         } else {
             add({ kind: 'ours', h: Math.round((story ? 84 : 64) * s), font: '800 ' + Math.round((story ? 64 : 50) * s) + 'px ' + c.font });

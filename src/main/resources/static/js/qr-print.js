@@ -14,8 +14,8 @@
 //
 // The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
 // theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
-// --accent; none, and the theme's own applies. The DJ's paper (V53, data-paper) is made a light tint and set as --paper, the words
-// on it dark, the heading's colour (the theme's too) readable on it. On every load, for whoever prints, and at once while the editor
+// --accent; none, and the theme's own applies. The DJ's paper (V53, data-paper): a light colour made a light tint, a dark one a dark
+// paper, set as --paper — the words on it dark or light, the heading's colour (the theme's too) readable on it. On every load, for whoever prints, and at once while the editor
 // changes them.
 (function () {
     'use strict';
@@ -66,6 +66,19 @@
         return '#ffffff';
     }
 
+    /** {@code colour} as a dark paper (V53): darkened only until light words read on it — the quiet ones at 4.5:1 too. */
+    function deep(colour) {
+        const c = rgb(colour);
+        for (let t = 0; t <= 1.0001; t += 0.02) {
+            const mixed = c.map(function (v) { return v * (1 - t); });
+            if (luminance(mixed) <= 0.09) return hex(mixed);
+        }
+        return '#000000';
+    }
+
+    /** A colour the DJ picks for the paper is a dark paper below this luminance, else a light tint. */
+    const DARK_PAPER = 0.25;
+
     function showLook(theme, accent, font, paperColour) {
         const body = document.body;
         if (theme) {
@@ -74,17 +87,24 @@
         if (font) {   // the heading's font (V51): the theme's has no class
             body.className = body.className.replace(/\bfont-\w+\b/g, '').trim() + (font === 'THEME' ? '' : ' font-' + font.toLowerCase());
         }
-        // the DJ's paper (V53) a light tint, the words on it dark — the club's white ink would vanish on it
-        const tint = paperColour ? light(paperColour) : null;
+        // the DJ's paper (V53): a light colour a light tint, the words on it dark (the club's white ink would vanish); a dark one a
+        // dark paper, the words light — and the classes for the rest: words off the classic paper's edges, the logo on a badge
+        const picked = paperColour ? rgb(paperColour) : null;
+        const dark = !!picked && luminance(picked) < DARK_PAPER;
+        const tint = picked ? (dark ? deep(paperColour) : light(paperColour)) : null;
         ['--paper', '--ink', '--muted'].forEach(function (name) { body.style.removeProperty(name); });
+        body.classList.toggle('paper-own', !!tint);
+        body.classList.toggle('paper-dark', dark);
         if (tint) {
             body.style.setProperty('--paper', tint);
-            body.style.setProperty('--ink', '#1a1a1a');
-            body.style.setProperty('--muted', '#555555');
+            body.style.setProperty('--ink', dark ? '#f5f5f7' : '#1a1a1a');
+            body.style.setProperty('--muted', dark ? '#c9cad3' : '#555555');
         }
         const paper = getComputedStyle(body).getPropertyValue('--paper').trim();
         // the heading's colour readable on the paper: the DJ's, or on a paper of the DJ's the theme's own too (the club's cyan on pale)
-        const base = accent || (tint ? getComputedStyle(body).getPropertyValue('--accent-base').trim() : '');
+        // (a theme's near-black heading on a dark paper: the light words' colour, not a grey made of it)
+        let base = accent || (tint ? getComputedStyle(body).getPropertyValue('--accent-base').trim() : '');
+        if (!accent && dark && rgb(base) && luminance(rgb(base)) < 0.05) base = '#f5f5f7';
         if (base) body.style.setProperty('--accent', readable(base, paper));
         else body.style.removeProperty('--accent');
     }
@@ -240,8 +260,16 @@
     function changeLook() {
         showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper());
         fitTexts();   // another font, another width
-        if (inkHint) inkHint.hidden = form.elements.theme.value !== 'CLUB';
+        inkNote();
     }
+
+    /** A dark paper takes a lot of ink: the club's own, or the DJ's dark one — said under the theme. */
+    function inkNote() {
+        const body = document.body;
+        if (inkHint) inkHint.hidden = !(body.classList.contains('paper-dark') || (form.elements.theme.value === 'CLUB' && !body.classList.contains('paper-own')));
+    }
+
+    inkNote();
 
     form.elements.theme.addEventListener('change', changeLook);
     form.elements.font.addEventListener('change', changeLook);
