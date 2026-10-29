@@ -703,12 +703,14 @@ body.theme-neon .tent .face {
 body.theme-confetti .poster,
 body.theme-confetti .tent .face {
     border: 5mm solid transparent;
+    /* one tile of four dots, all of it repeated: "round" fits a whole number of tiles to the frame, so no dot is cut at an edge and
+       the colours mix along every side (four tiles of their own sizes made stripes of one colour) */
     background:
         linear-gradient(var(--paper), var(--paper)) padding-box,
-        radial-gradient(circle, var(--frame) 0.65mm, transparent 0.75mm) 0 0 / 9mm 8mm border-box,
-        radial-gradient(circle, #0aa2c0 0.65mm, transparent 0.75mm) 3mm 4mm / 11mm 10mm border-box,
-        radial-gradient(circle, #e0a526 0.65mm, transparent 0.75mm) 6mm 1.5mm / 8mm 11mm border-box,
-        radial-gradient(circle, #6f2dbd 0.5mm, transparent 0.6mm) 1.5mm 6mm / 12mm 9mm border-box;
+        radial-gradient(circle at 2mm 2mm, var(--frame) 0.65mm, transparent 0.75mm) 0 0 / 10mm 10mm round border-box,
+        radial-gradient(circle at 7mm 3.5mm, #0aa2c0 0.65mm, transparent 0.75mm) 0 0 / 10mm 10mm round border-box,
+        radial-gradient(circle at 4mm 7.5mm, #e0a526 0.65mm, transparent 0.75mm) 0 0 / 10mm 10mm round border-box,
+        radial-gradient(circle at 8.5mm 8.5mm, #6f2dbd 0.55mm, transparent 0.65mm) 0 0 / 10mm 10mm round border-box;
     /* white under the dots too: the paper's colour as the page reads it (the colours made readable on it) */
     background-color: var(--paper);
     border-radius: 3mm;
