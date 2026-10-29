@@ -118,6 +118,7 @@ class QrPrintPageTest {
         Files.createDirectories(BROWSER_HARNESS);
         String variant = (party.getLogoVersion() != null ? "-logo" : "")
                 + (party.getPosterHeading() != null || party.getPosterLine() != null || party.getPosterLanguage() != com.scan2play.model.PosterLanguage.AUTO ? "-own" : "")
+                + (party.getPosterTables() != null ? "-tables" : "")
                 + (access.owner() ? "" : "-staff");
         Files.writeString(BROWSER_HARNESS.resolve("qr-print-" + layout + variant + ".html"), html, StandardCharsets.UTF_8);
         return html;
@@ -146,7 +147,7 @@ class QrPrintPageTest {
         String html = render("cards", Locale.ENGLISH);
 
         assertThat(html).contains("class=\"layout-cards theme-classic has-editor\"", "<main class=\"cards\">");
-        assertThat(html.split("<section class=\"card\">", -1)).hasSize(9);
+        assertThat(html.split("<section class=\"card\" data-print-item>", -1)).hasSize(9);
         assertThat(html.split("data:image/png;base64,", -1)).as("a code on every card").hasSize(9);
         assertThat(html.split("<p class=\"logo\" data-poster-part=\"ours\"><img src=\"/images/logo.svg\"", -1)).as("our logo on every card").hasSize(9);
         // the heading alone says what to do, as on the poster: the guest page asks for the artist and the title
@@ -193,7 +194,7 @@ class QrPrintPageTest {
         assertThat(poster.indexOf(logo)).isLessThan(poster.indexOf("<h1>"));
         String cards = render("cards", Locale.forLanguageTag("pl"), party);
         assertThat(cards.split(java.util.regex.Pattern.quote(logo), -1)).as("on every card").hasSize(9);
-        assertThat(cards.split("<section class=\"card with-logo\">", -1)).as("the code made room on every card").hasSize(9);
+        assertThat(cards.split("<section class=\"card with-logo\" data-print-item>", -1)).as("the code made room on every card").hasSize(9);
         assertThat(cards).as("ours not shown on a card beside the DJ's").doesNotContain("<p class=\"logo\" data-poster-part=\"ours\">");
 
         assertThat(render("poster", Locale.ENGLISH)).doesNotContain("logo.png", "logo ours");
@@ -213,7 +214,7 @@ class QrPrintPageTest {
         // a card: the code's column has our logo above the code and the profiles under it (the owner, 2026-10-07)
         String cards = render("cards", Locale.ENGLISH);
         assertThat(cards.split("class=\"dj-links\"", -1)).as("on every card").hasSize(9);
-        int start = cards.indexOf("<section class=\"card\">");
+        int start = cards.indexOf("<section class=\"card\" data-print-item>");
         String card = cards.substring(start, cards.indexOf("</section>", start));
         String side = card.substring(card.indexOf("<div class=\"side\">"), card.indexOf("<div class=\"text\">"));
         assertThat(side.indexOf("class=\"logo\"")).isNotNegative().isLessThan(side.indexOf("class=\"qr\""));
@@ -271,6 +272,8 @@ class QrPrintPageTest {
         assertThat(html).contains("class=\"layout-poster theme-elegant has-editor\"", "data-accent=\"#123abc\"",
                 "<option value=\"ELEGANT\" selected=\"selected\">Elegancki</option>", "<option value=\"CLUB\">Klubowy</option>",
                 "<option value=\"PASTEL\">Pastelowy</option>", "<option value=\"CLASSIC\">Klasyczny</option>",
+                "<option value=\"RUSTIC\">Rustykalny</option>", "<option value=\"GALA\">Gala</option>", "<option value=\"NEON\">Neon</option>",
+                "<option value=\"CONFETTI\">Konfetti</option>",
                 "value=\"#123abc\" checked=\"checked\"", "id=\"posterAccentPicker\" value=\"#123abc\"", "class=\"swatch-dot swatch-c2185b\"");
         String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build());
         assertThat(palette).contains("value=\"#c2185b\" aria-label=\"#c2185b\" checked=\"checked\"").doesNotContain("value=\"#123abc\"");
@@ -299,13 +302,119 @@ class QrPrintPageTest {
                 .contains("<span class=\"own\" data-poster-heading>Osiemnastka Dawida</span>");
     }
 
+    /**
+     * The table tent (V50): one A4 sheet folded across its middle, two faces of the same code and words — the upper one turned upside
+     * down by the stylesheet. Written as {@code qr-print-tent.html} / {@code qr-print-tent-logo.html} for the browser tests (a Polish
+     * panel: both languages, the longest words).
+     */
+    @Test
+    void theTent_isOneSheet_withTwoFacesOfTheSameCode() throws IOException {
+        String html = render("tent", Locale.forLanguageTag("pl"));
+
+        assertThat(html).contains("class=\"layout-tent theme-classic has-editor\"", "<main class=\"tents\">", "Namiot na stół");
+        assertThat(html.split("<section class=\"tent\" data-print-item>", -1)).as("one tent without tables").hasSize(2);
+        assertThat(html.split("class=\"face ", -1)).as("two faces").hasSize(3);
+        assertThat(html).contains("class=\"face face-upper\"", "class=\"face face-lower\"", "class=\"fold\"");
+        assertThat(html.split("data:image/png;base64,", -1)).as("the code on both faces").hasSize(3);
+        assertThat(html.split("<span lang=\"pl\">Zeskanuj i poproś o piosenkę</span>", -1)).as("the heading on both faces").hasSize(3);
+        assertThat(html.split("data-table-number hidden=\"hidden\"", -1)).as("no tables: the numbers hidden, for the editor's preview").hasSize(3);
+        assertThat(html).contains("aria-current=\"page\" class=\"active\">Namiot na stół</a>").doesNotContain("class=\"cards\"", "<main class=\"poster", "??");
+
+        PartySettingsEntity withLogo = PartySettingsEntity.builder().partyCode(PARTY).logoVersion("0123456789abcdef".repeat(4))
+                .instagramUrl("https://www.instagram.com/dj.koko/").tiktokUrl("https://www.tiktok.com/@dj_koko")
+                .facebookUrl("https://www.facebook.com/djkoko").tipUrl("https://revolut.me/djkoko").build();
+        String logo = render("tent", Locale.forLanguageTag("pl"), withLogo);
+        assertThat(logo.split("src=\"/p/" + PARTY + "/logo.png", -1)).as("the DJ's logo on both faces").hasSize(3);
+        assertThat(logo.split("class=\"face face-[a-z]+ with-logo\"", -1)).hasSize(3);
+    }
+
+    /**
+     * The number of tables (V50): as many cards and tents as tables, numbered 1 … N — "Stół / Table 5" in the print's language; the
+     * poster has none. Without it eight cards and one tent, the number rendered hidden.
+     */
+    @Test
+    void theTables_numberTheCardsAndTheTents() throws IOException {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).posterTables(12)
+                .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://revolut.me/djkoko").build();
+
+        String cards = render("cards", Locale.forLanguageTag("pl"), party).replaceAll("\\s+", " ");
+        assertThat(cards.split("<section class=\"card\" data-print-item>", -1)).as("a card a table").hasSize(13);
+        assertThat(cards).contains("<span lang=\"pl\">Stół</span> / <span lang=\"en\">Table</span> <b data-table-n>1</b>",
+                "<b data-table-n>12</b>").doesNotContain("<b data-table-n>13</b>", "data-table-number hidden");
+
+        String tents = render("tent", Locale.ENGLISH, party.toBuilder().posterTables(3).build()).replaceAll("\\s+", " ");
+        assertThat(tents.split("<section class=\"tent\" data-print-item>", -1)).as("a tent a table").hasSize(4);
+        assertThat(tents.split("<b data-table-n>3</b>", -1)).as("on both faces").hasSize(3);
+        assertThat(tents).contains("<span lang=\"en\">Table</span> <b data-table-n>1</b>").doesNotContain("Stół");
+
+        assertThat(render("poster", Locale.forLanguageTag("pl"), party)).as("no tables on a poster").doesNotContain("data-table-n");
+        assertThat(render("cards", Locale.ENGLISH).split("<section class=\"card\" data-print-item>", -1)).as("no tables: eight").hasSize(9);
+        String editor = render("cards", Locale.forLanguageTag("pl"), party);
+        assertThat(editor).contains("type=\"number\" id=\"posterTables\" name=\"tables\"", "min=\"1\"",
+                "max=\"" + PartySettingsEntity.POSTER_TABLES_MAX + "\"", "value=\"12\"");
+    }
+
+    /**
+     * "Kolor tła" (V53): the paper the DJ picked is the page's data-paper (qr-print.js makes it a light tint and sets it); the editor
+     * offers the theme's, six tints and the DJ's own, the saved one picked — a colour not of the tints is "Własny", in its colour field.
+     */
+    @Test
+    void thePaper_isTheColourTheDjPicked() throws IOException {
+        String tint = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#e8f3fb").build())
+                .replaceAll("\\s+", " ");
+        assertThat(tint).contains("data-paper=\"#e8f3fb\"", "name=\"paper\" value=\"#e8f3fb\" aria-label=\"#e8f3fb\" checked=\"checked\"", "Kolor tła");
+        String own = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#c2185b").build())
+                .replaceAll("\\s+", " ");
+        assertThat(own).contains("data-paper=\"#c2185b\"", "id=\"posterPaperOwn\" value=\"#c2185b\" checked=\"checked\"",
+                "id=\"posterPaperPicker\" value=\"#c2185b\"");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).doesNotContain("data-paper=")
+                .contains("<input type=\"radio\" name=\"paper\" value=\"\" checked=\"checked\">");
+    }
+
+    /**
+     * "Krój nagłówka" (V51): the font the DJ picked is the page's class ("font-script"; the theme's, none) and picked in the editor; four
+     * fonts offered.
+     */
+    @Test
+    void theHeadingsFont_isTheOneTheDjPicked() throws IOException {
+        String script = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY)
+                .posterFont(com.scan2play.model.PosterFont.SCRIPT).build()).replaceAll("\\s+", " ");
+        assertThat(script).contains("class=\"layout-poster theme-classic font-script has-editor\"",
+                "<option value=\"SCRIPT\" selected=\"selected\">Odręczny</option>", "<option value=\"THEME\">Motywu</option>",
+                "<option value=\"SANS\">Bezszeryfowy</option>", "<option value=\"SERIF\">Szeryfowy</option>");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).contains("class=\"layout-poster theme-classic has-editor\"",
+                "<option value=\"THEME\" selected=\"selected\">The theme&#39;s</option>").doesNotContain("font-");
+    }
+
+    /**
+     * "Nagłówek na okazję": six occasions, each text in the print's language — Polish, English, or both at once — and never longer than
+     * the heading's column (the editor puts it in the heading as if typed).
+     */
+    @Test
+    void theHeadingsForTheOccasion_areInThePrintsLanguage_andFitTheColumn() throws IOException {
+        for (com.scan2play.model.PosterLanguage language : List.of(com.scan2play.model.PosterLanguage.PL,
+                com.scan2play.model.PosterLanguage.EN, com.scan2play.model.PosterLanguage.BOTH)) {
+            String html = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterLanguage(language).build());
+            List<String> headings = java.util.regex.Pattern.compile("data-heading=\"([^\"]*)\"").matcher(html).results()
+                    .map(m -> m.group(1)).toList();
+            assertThat(headings).as(language.name()).hasSize(6).allSatisfy(h -> assertThat(h.length()).as(h)
+                    .isBetween(1, PartySettingsEntity.POSTER_HEADING_MAX));
+            if (language == com.scan2play.model.PosterLanguage.BOTH) {
+                assertThat(headings).as("both languages").allSatisfy(h -> assertThat(h).contains(" / "));
+            } else if (language == com.scan2play.model.PosterLanguage.EN) {
+                assertThat(String.join(" ", headings)).doesNotContainPattern("[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]");
+            }
+        }
+        assertThat(render("poster", Locale.ENGLISH)).contains("<option value=\"WEDDING\"", ">Wedding</option>", ">Company party</option>");
+    }
+
     @Test
     void theBarFollowsTheDjsLanguage_andTheLayoutDefaultsToThePoster() throws IOException {
         String polish = render("whatever", Locale.forLanguageTag("pl"));
         assertThat(polish).contains("<html lang=\"pl\"", "Wydruk kodu QR", "Plakat A4", "Drukuj", "class=\"layout-poster theme-classic has-editor\"");
 
         String english = render("poster", Locale.ENGLISH);
-        assertThat(english).contains("<html lang=\"en\"", "Print the QR code", "Table cards", "Back to the dashboard");
+        assertThat(english).contains("<html lang=\"en\"", "Print the QR code", "Table cards", "Table tent", "Back to the dashboard");
         assertThat(english).contains("id=\"printBtn\"", "src=\"/js/qr-print.js\"").doesNotContain("onclick");
     }
 

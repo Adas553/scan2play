@@ -53,14 +53,17 @@ class DjPartySettingsControllerPosterTest {
     }
 
     /** Sends the editor's form and gives the party after what the controller asked the settings service to change. */
-    @SuppressWarnings("unchecked")
     private PartySettingsEntity send(MockHttpServletRequestBuilder request) throws Exception {
+        return send(request, PartySettingsEntity.builder().partyCode(PARTY).posterHeading("old").posterLine("old").build());
+    }
+
+    @SuppressWarnings("unchecked")
+    private PartySettingsEntity send(MockHttpServletRequestBuilder request, PartySettingsEntity party) throws Exception {
         mockMvc.perform(request.param("partyCode", PARTY).principal(token).session(new MockHttpSession()))
                 .andExpect(status().isNoContent());
         verify(sessionHelper).require(eq(PARTY), eq(StaffPermission.VIBE), any(), any());
         ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
         verify(settingsService).updateSettings(eq(PARTY), updater.capture());
-        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).posterHeading("old").posterLine("old").build();
         updater.getValue().accept(party);
         return party;
     }
@@ -101,9 +104,50 @@ class DjPartySettingsControllerPosterTest {
         assertThat(party.getPosterAccent()).isEqualTo("#00bcd4");
 
         setUp();
-        PartySettingsEntity wrong = send(post("/dj/qr-print/settings").param("theme", "NEON").param("accent", "red; background:url(x)"));
+        assertThat(send(post("/dj/qr-print/settings").param("theme", "confetti")).getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CONFETTI);
+
+        setUp();
+        PartySettingsEntity wrong = send(post("/dj/qr-print/settings").param("theme", "WINTER").param("accent", "red; background:url(x)"));
         assertThat(wrong.getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CLASSIC);
         assertThat(wrong.getPosterAccent()).isNull();
+    }
+
+    /** The number of tables (V50): 1 … 50, more is 50; empty, zero or not a number — none (no numbers on the cards and the tents). */
+    @Test
+    void theTables_areANumberUpTo50_anythingElse_none() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("tables", " 12 ")).getPosterTables()).isEqualTo(12);
+        for (String value : new String[] {"120", "50"}) {
+            setUp();
+            assertThat(send(post("/dj/qr-print/settings").param("tables", value)).getPosterTables()).as(value).isEqualTo(PartySettingsEntity.POSTER_TABLES_MAX);
+        }
+        for (String value : new String[] {"", "0", "-3", "dwanaście", "1e3", "99999999999"}) {
+            setUp();
+            PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).posterTables(7).build();
+            assertThat(send(post("/dj/qr-print/settings").param("tables", value), party).getPosterTables()).as(value).isNull();
+        }
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings"), PartySettingsEntity.builder().partyCode(PARTY).posterTables(7).build())
+                .getPosterTables()).as("not sent: none").isNull();
+    }
+
+    /** The paper's colour (V53): "#rrggbb" in lower case; anything else none — the theme's. */
+    @Test
+    void thePapersColour_isSaved_aWrongOne_isTheThemes() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "#FBF3E2")).getPosterPaper()).isEqualTo("#fbf3e2");
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "url(x)")).getPosterPaper()).isNull();
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "")).getPosterPaper()).isNull();
+    }
+
+    /** The heading's font (V51): by its name; anything else the theme's. */
+    @Test
+    void theHeadingsFont_isSaved_aWrongOne_isTheThemes() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("font", "script")).getPosterFont()).isEqualTo(com.scan2play.model.PosterFont.SCRIPT);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("font", "COMIC")).getPosterFont()).isEqualTo(com.scan2play.model.PosterFont.THEME);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings")).getPosterFont()).as("not sent").isEqualTo(com.scan2play.model.PosterFont.THEME);
     }
 
     @Test

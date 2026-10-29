@@ -1,6 +1,7 @@
 package com.scan2play.entity;
 
 import com.scan2play.model.CommentStyle;
+import com.scan2play.model.PosterFont;
 import com.scan2play.model.PosterLanguage;
 import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
@@ -230,6 +231,22 @@ public class PartySettingsEntity {
 
     @Column(length = 7)
     private String posterAccent;
+
+    /** The paper's colour (V53), "#rrggbb", made a light tint by the page; null = the theme's paper. */
+    @Column(length = 7)
+    private String posterPaper;
+
+    /** The heading's font (V51); {@link PosterFont#THEME} = the theme's own. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 6)
+    private PosterFont posterFont = PosterFont.THEME;
+
+    /** The most tables the print numbers (V50): 50 tents are 50 sheets. */
+    public static final int POSTER_TABLES_MAX = 50;
+
+    /** The number of tables (V50): the cards and the tents numbered 1 … N, as many as there are tables; null = no numbers. */
+    private Integer posterTables;
 
     /** What the print shows of the DJ's: the logo, the profiles, the tip link, and the address with the party's code. */
     @Builder.Default

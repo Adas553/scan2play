@@ -158,7 +158,7 @@ public class SecurityConfig {
                 .requestCache(cache -> cache.requestCache(remembered))
                 .authorizeHttpRequests(auth -> auth
                         // Public resources, landing page, and guest party views
-                        .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()
+                        .requestMatchers("/", "/p/**", "/css/**", "/js/**", "/fonts/**", "/webjars/**", "/images/**", "/favicon.ico", "/error").permitAll()
                         // The landing page's button (and the old tile links /start/{kind}): Google's login (HomeController.start)
                         .requestMatchers("/start/**").permitAll()
                         // The web app's manifest and the service worker of the notifications: a browser fetches them without

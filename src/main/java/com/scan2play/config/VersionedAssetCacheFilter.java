@@ -19,7 +19,8 @@ import java.util.List;
  * address, and Spring serves an address only under the version of the running deploy (an old one is a 404), so what one address
  * gives never changes. Bootstrap ({@code /webjars/}), the images and the site's icon carry no version in their addresses: a day
  * (the review of 2026-10-21, P1 — with {@code no-store} every phone fetched Bootstrap's 31 KB and the logo again on every page), so a
- * changed one reaches everyone by the next day; Cloudflare keeps them too — purge it after such a change. Everything else keeps
+ * changed one reaches everyone by the next day; Cloudflare keeps them too — purge it after such a change. The print's fonts
+ * ({@code /fonts/}) carry their version in their file names — a new font is a new name —, so a year too. Everything else keeps
  * Spring Security's {@code no-store} — it writes its header only when none is set.
  * A file that is not there or fails (a 404, a 500) is not kept: the header is set back to {@code no-store} for any answer but 200, 206
  * and 304 — a missing file cached by Cloudflare for a year would outlive its fix (review 2026-10-14).
@@ -34,6 +35,8 @@ public class VersionedAssetCacheFilter extends OncePerRequestFilter {
     static final String CACHE_FOR_A_DAY = "public, max-age=86400";
     /** The files without a version in their addresses, kept for a day. */
     private static final List<String> UNVERSIONED = List.of("/webjars/", "/images/", "/favicon.ico");
+    /** The print's fonts (qr-print.css), their version in their file names. */
+    private static final String FONTS = "/fonts/";
     /** Spring Security's own value, for an answer that is not the file. */
     static final String NOT_KEPT = "no-cache, no-store, max-age=0, must-revalidate";
     private static final String LOCAL_VERSION = "dev";
@@ -62,7 +65,7 @@ public class VersionedAssetCacheFilter extends OncePerRequestFilter {
 
     /** How long the file at this address may be kept, or null: not at all. */
     private String cacheFor(String path) {
-        if (path.startsWith(jsPrefix) || path.startsWith(cssPrefix)) {
+        if (path.startsWith(jsPrefix) || path.startsWith(cssPrefix) || path.startsWith(FONTS)) {
             return CACHE_FOR_A_YEAR;
         }
         return UNVERSIONED.stream().anyMatch(path::startsWith) ? CACHE_FOR_A_DAY : null;

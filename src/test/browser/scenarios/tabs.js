@@ -11,6 +11,7 @@
     const bar = function () { return document.getElementById('djTabBar'); };
     const top = function (id) { return document.getElementById(id).getBoundingClientRect().top; };
     const shown = function (id) { return getComputedStyle(document.getElementById(id)).display !== 'none'; };   // what the DJ sees
+    const seen = function (id) { return document.getElementById(id).checkVisibility(); };   // drawn, its parents too
     // "just under the bar, in the upper part of the screen": what the DJ needs to see the list without scrolling
     const inUpperPart = function (id) {
         const t = top(id);
@@ -74,6 +75,45 @@
             t.step('scrolled to the top: Panel stays lit', lit(), ['panel']);
             await scrollTo(t, window.scrollY + top('queue-content') + 400);
             t.step('scrolled deep into the queue: Panel stays lit', lit(), ['panel']);
+        }
+    });
+    // The owner (2026-10-29): from the panel the History tab showed "Impreza i kod QR" above the history; from "Ustawienia" (the
+    // standalone page) it did not. The history in place is the page "Historia": the panel's own button and its settings wait.
+    S2P.scenario({
+        name: 'history-tab-like-its-page',
+        title: 'the History tab in place, as the page "Historia": no "Impreza i kod QR" and no settings above it — the Panel tab brings them back as they were',
+        setup: {},
+        run: async function (t) {
+            const toggle = document.getElementById('settingsToggle');
+            t.step('the panel: "Impreza i kod QR" shows', seen('settingsToggle'), true);
+            toggle.click();   // the DJ left the settings unfolded
+            link('history').click();
+            await t.waitFor(function () { return document.querySelector('#history-content [data-list]'); }, 'the history to arrive', 5000);
+            t.step('the history: no "Impreza i kod QR", no settings card', [seen('settingsToggle'), seen('partyCard'), seen('qrCard')],
+                [false, false, false]);
+            link('panel').click();
+            await t.sleep(200);
+            t.step('the Panel tab: the button and the unfolded settings back', [seen('settingsToggle'), seen('partyCard')], [true, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'history-tab-like-its-page-wide',
+        title: 'a wide screen, the settings unfolded beside the queue: the History tab gives the history the whole width, the Panel tab puts the settings back beside the queue',
+        viewport: '1500,900',
+        setup: {},
+        run: async function (t) {
+            document.getElementById('settingsToggle').click();
+            const body = document.querySelector('.s2p-panel-body');
+            const width = function (id) { return Math.round(document.getElementById(id).getBoundingClientRect().width); };
+            t.check('the settings beside the queue', seen('partyCard') && width('queue-content') < body.getBoundingClientRect().width - 200);
+            link('history').click();
+            await t.waitFor(function () { return document.querySelector('#history-content [data-list]'); }, 'the history to arrive', 5000);
+            t.step('the history the whole width, no settings beside it', [Math.abs(width('history-content') - Math.round(body.getBoundingClientRect().width)) <= 1,
+                seen('partyCard')], [true, false]);
+            link('panel').click();
+            await t.sleep(200);
+            t.check('the settings beside the queue again', seen('partyCard') && width('queue-content') < body.getBoundingClientRect().width - 200);
         }
     });
 })();

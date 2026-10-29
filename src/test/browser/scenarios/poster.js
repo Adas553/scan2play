@@ -127,7 +127,7 @@
         title: 'the QR print\'s editor on a phone: every field and box at least 44 px high, nothing wider than the screen',
         run: async function (t) {
             const width = document.documentElement.clientWidth;
-            const small = Array.from(document.querySelectorAll('#posterForm input[type="text"], #posterForm select, #posterForm .editor-checks label, #posterForm button'))
+            const small = Array.from(document.querySelectorAll('#posterForm input[type="text"], #posterForm input[type="number"], #posterForm select, #posterForm .editor-checks label, #posterForm button'))
                 .filter(shown).filter(function (el) { return el.getBoundingClientRect().height < 43.5; });
             t.step('every target at least 44 px', small.map(function (el) { return el.id || el.textContent.trim(); }), []);
             t.check('no sideways scroll (' + document.documentElement.scrollWidth + ' ≤ ' + width + ')', document.documentElement.scrollWidth <= width);

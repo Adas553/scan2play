@@ -2,7 +2,8 @@
 // own) is made readable on the theme's paper — 4.5:1 for the heading whatever the DJ picks, a pale yellow on cream too —, the code
 // stays black on white in every theme, and every theme with the longest words still fits one A4 page and the cards.
 (function () {
-    const THEMES = ['CLASSIC', 'ELEGANT', 'CLUB', 'PASTEL'];
+    /** Every theme the editor offers (V47, V52): a new theme is checked here by itself. */
+    function themes() { return Array.from(document.querySelectorAll('#posterTheme option')).map(function (o) { return o.value; }); }
     /** The theme's own, and the colours that read worst: white, a pale yellow, black (on the dark club), a light cyan. */
     const ACCENTS = ['', '#ffffff', '#ffff66', '#000000', '#00bcd4'];
     const A4_PRINTABLE = (297 - 2 * 12) * 96 / 25.4;
@@ -74,7 +75,7 @@
         run: async function (t) {
             const poster = document.querySelector('.poster');
             const bad = [];
-            THEMES.forEach(function (theme) {
+            themes().forEach(function (theme) {
                 pickTheme(theme);
                 ACCENTS.forEach(function (accent) {
                     pickAccent(accent);
@@ -106,7 +107,7 @@
             document.getElementById('posterHeading').dispatchEvent(new Event('input', { bubbles: true }));
             document.getElementById('posterLine').value = 'W'.repeat(60);
             document.getElementById('posterLine').dispatchEvent(new Event('input', { bubbles: true }));
-            const heights = THEMES.map(function (theme) {
+            const heights = themes().map(function (theme) {
                 pickTheme(theme);
                 return theme + ' ' + Math.round(document.querySelector('.poster').getBoundingClientRect().height);
             });
@@ -122,7 +123,7 @@
         run: async function (t) {
             const ours = document.querySelector('.poster .powered');
             const off = [];
-            THEMES.forEach(function (theme) {
+            themes().forEach(function (theme) {
                 pickTheme(theme);
                 const words = ours.firstElementChild.getBoundingClientRect(), mark = ours.querySelector('.logo img').getBoundingClientRect();
                 const apart = Math.abs((words.top + words.bottom) / 2 - (mark.top + mark.bottom) / 2);
@@ -132,12 +133,12 @@
             const box = document.querySelector('[data-poster-toggle="logo"]');
             box.checked = false;
             box.dispatchEvent(new Event('change', { bubbles: true }));
-            const gaps = THEMES.filter(function (theme) { return theme !== 'CLASSIC'; }).map(function (theme) {
+            const close = themes().filter(function (theme) { return theme !== 'CLASSIC'; }).filter(function (theme) {
                 pickTheme(theme);
                 const big = document.querySelector('.poster > .logo').getBoundingClientRect();
-                return document.querySelector('.poster .qr').getBoundingClientRect().top - big.bottom >= 3 * 96 / 25.4;
+                return document.querySelector('.poster .qr').getBoundingClientRect().top - big.bottom < 3 * 96 / 25.4;
             });
-            t.step('our big mark at least 3 mm above the code\'s tile', gaps, [true, true, true]);
+            t.step('our big mark at least 3 mm above the code\'s tile in every theme with a paper of its own', close, []);
         }
     });
 
@@ -151,7 +152,7 @@
             document.getElementById('posterLine').value = 'W'.repeat(60);
             document.getElementById('posterLine').dispatchEvent(new Event('input', { bubbles: true }));
             const out = [];
-            THEMES.forEach(function (theme) {
+            themes().forEach(function (theme) {
                 pickTheme(theme);
                 const card = document.querySelector('.card');
                 const whole = card.getBoundingClientRect();

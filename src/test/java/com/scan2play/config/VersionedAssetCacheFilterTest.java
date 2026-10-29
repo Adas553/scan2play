@@ -72,6 +72,23 @@ class VersionedAssetCacheFilterTest {
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
     }
 
+    /**
+     * The print's own fonts (qr-print.css): public — no login, as the styles that name them — and kept for a year, their version in
+     * their file names ("source-sans-3-5.3.1-…"): a new font is a new name. Served as a font.
+     */
+    @Test
+    @DisplayName("the print's fonts: public, kept for a year, served as woff2")
+    void thePrintsFonts_arePublic_andKeptForAYear() throws Exception {
+        for (String font : new String[]{"source-sans-3-5.3.1-latin.woff2", "source-sans-3-5.3.1-latin-ext.woff2",
+                "playfair-display-5.3.0-latin.woff2", "playfair-display-5.3.0-latin-ext.woff2"}) {
+            mockMvc.perform(get("/fonts/" + font)).andExpect(status().isOk())
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "public, max-age=31536000, immutable"))
+                    .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "font/woff2"));
+        }
+        mockMvc.perform(get("/fonts/no-such-font.woff2")).andExpect(status().isNotFound())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
+    }
+
     @Test
     @DisplayName("a missing file under the version is not kept for a year: a 404 cached by Cloudflare would outlive the fix (review 2026-10-14)")
     void aMissingFile_isNotKept() throws Exception {

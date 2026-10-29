@@ -380,9 +380,9 @@ public class DjDashboardController {
 
     /**
      * The party's QR code to print and put up: {@code layout=poster} — one A4 poster — or
-     * {@code cards} — eight cards to cut out and put on the tables. The texts of the code are in Polish and English at once
-     * (guests are of both); the bar above it, which is not printed, follows the DJ's language. Anything else than
-     * {@code cards} is the poster.
+     * {@code cards} — eight cards on a sheet to cut out and put on the tables — or {@code tent} — a table tent, one A4 sheet folded
+     * across its middle (V50); the cards and the tents as many as the party's tables, numbered, when the DJ set them. The bar above it,
+     * which is not printed, follows the DJ's language. Anything else is the poster.
      */
     @GetMapping("/qr-print")
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, @RequestParam(required = false) String party,
@@ -402,13 +402,14 @@ public class DjDashboardController {
         model.addAttribute(DJ_LOGO, settings.logoPath());
         model.addAttribute(PERMANENT_LINK, guestUrl);
         model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_PRINT_SIZE, QR_PRINT_SIZE));
-        model.addAttribute(QR_LAYOUT, "cards".equals(layout) ? "cards" : "poster");
+        model.addAttribute(QR_LAYOUT, "cards".equals(layout) || "tent".equals(layout) ? layout : "poster");
         // the print as the DJ set it (V46): the words, the language, what of the DJ's it shows — and the editor for whom may change
         // the party's card "Impreza"; the parts left off are rendered hidden, so the editor's preview shows them again at once
         model.addAttribute(POSTER, settings);
         model.addAttribute(PRINT_LANG, settings.getPosterLanguage().printed(locale.getLanguage()));
         model.addAttribute(POSTER_EDIT, access.may(StaffPermission.VIBE));
         model.addAttribute(POSTER_THEMES, com.scan2play.model.PosterTheme.values());
+        model.addAttribute(POSTER_FONTS, com.scan2play.model.PosterFont.values());
         return "qr-print";
     }
 

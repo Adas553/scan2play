@@ -853,6 +853,10 @@ th[data-sort].sort-desc::after {
     .page-dj.s2p-settings-open .s2p-panel-body > .s2p-settings > * { flex: 0 0 100%; width: 100%; max-width: 100%; margin-left: 0; }
     .page-dj.s2p-settings-open .s2p-panel-body > .s2p-settings > :first-child { margin-top: 0; }
 }
+/* The History tab in place (tabs.js) is the page "Historia", as the standalone one: the panel's "Impreza i kod QR" and its settings
+   wait — the Panel tab brings them back as they were — and the history has the whole width */
+.page-dj.s2p-history-shown :is(.s2p-panel-head, .s2p-panel-body > .s2p-settings) { display: none !important; }
+.page-dj.s2p-history-shown .s2p-panel-body { display: block; }
 @media (max-width: 767.98px) {
 
     /* the list scrolls with the page: a box of its own inside a phone's screen leaves too little to see */

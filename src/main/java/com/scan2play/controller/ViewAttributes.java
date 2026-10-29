@@ -28,6 +28,8 @@ public final class ViewAttributes {
     public static final String POSTER_EDIT = "posterEdit";
     /** The themes the print's editor offers (V47). */
     public static final String POSTER_THEMES = "posterThemes";
+    /** The heading's fonts the print's editor offers (V51). */
+    public static final String POSTER_FONTS = "posterFonts";
     /** The card "Twoje logo": the largest file, in bytes and MB, and the longest side kept (V45, {@code LogoImage}). */
     public static final String LOGO_MAX_BYTES = "logoMaxBytes";
     public static final String LOGO_MAX_MB = "logoMaxMb";
@@ -57,7 +59,7 @@ public final class ViewAttributes {
     public static final String HISTORY_FILTER = "historyFilter";
     public static final String QR_CODE_BASE64 = "qrCodeBase64";
     public static final String PERMANENT_LINK = "permanentLink";
-    /** The page to print the QR code on: "poster" (one A4 poster) or "cards" (eight cards to cut out). */
+    /** The page to print the QR code on: "poster" (one A4 poster), "cards" (eight on a sheet, to cut out) or "tent" (V50, a table tent). */
     public static final String QR_LAYOUT = "qrLayout";
     /** The evening summary: the party's evenings with requests, the one shown, its summary (null when there is none). */
     public static final String EVENINGS = "evenings";

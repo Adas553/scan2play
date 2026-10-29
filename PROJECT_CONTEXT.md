@@ -111,7 +111,7 @@ the person", no profanity and no song's name in an accepted one; the dashboard's
 `POST /dj/dashboard/comment-style`), `dedicationsOn` (V38, NOT NULL, default true — every party there too: whether the guests
 may add a dedication; a select "Dedykacje gości" in the card "Impreza", `POST /dj/dashboard/dedications`, permission VIBE; off, the
 party page has no field and a dedication sent anyway is left out),
-`posterHeading` (V46, ≤ 40) / `posterLine` (≤ 60) / `posterLanguage` (`PosterLanguage`: AUTO — the panel's —, BOTH, PL, EN) / `posterShowLogo`, `posterShowLinks`, `posterShowTip`, `posterShowAddress` (NOT NULL, default true), `posterTheme` (V47, `PosterTheme`: CLASSIC / ELEGANT / CLUB / PASTEL) / `posterAccent` (V47, "#rrggbb", null = the theme's): the QR print as the DJ sets it — see "The QR print" in 5.1;
+`posterHeading` (V46, ≤ 40) / `posterLine` (≤ 60) / `posterLanguage` (`PosterLanguage`: AUTO — the panel's —, BOTH, PL, EN) / `posterShowLogo`, `posterShowLinks`, `posterShowTip`, `posterShowAddress` (NOT NULL, default true), `posterTheme` (V47, V52, `PosterTheme`: CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI) / `posterAccent` (V47, "#rrggbb", null = the theme's) / `posterPaper` (V53, "#rrggbb", null = the theme's paper; printed as a light tint) / `posterFont` (V51, `PosterFont`: THEME — the theme's —, SANS, SERIF, SCRIPT) / `posterTables` (V50, 1 … `POSTER_TABLES_MAX` = 50, null = no numbers): the QR print as the DJ sets it — see "The QR print" in 5.1;
 `requestLimit` / `cooldownMinutes`
 (the guest's own limit, 1–100 / 1–1440), `duplicateCheckWindow` (0–50 recently played songs the AI must not repeat). The column
 `request_counter` (V28, not mapped — written only by `SongRequestRepository.nextRequestNumber`, so a save of the settings never
@@ -422,27 +422,72 @@ box of the DJ's software) and "Podejrzyj" on every waiting request, and on a com
 (`<kbd>`) with one word: ↑ ↓ wybierz · C kopiuj · Enter zagrane · S pomiń · Backspace cofnij · Esc odznacz, under the list (`queue-keys.js`,
 2026-10-12; the legend 2026-10-16; Ctrl+C / Ctrl+Z work too, the guide names them; the staff without the queue's buttons: only ↑ ↓ / C /
 Esc); the vibe, the vibe note, "Kto gra";
-the QR code (`/dj/qr-print`: an A4 poster or eight table cards; **the print as the DJ sets it** (V46) — an editor over the paper, for
+the QR code (`/dj/qr-print`: an A4 poster, table cards (eight on a sheet) or a **table tent** (V50: one A4 sheet folded across its
+middle — the fold printed dashed —, two faces of the same code and words, the upper one turned upside down, so the tent reads from both
+sides of a table; each face as a card larger, the code 78 mm, 72 mm with the DJ's logo; a tent a page); **the number of tables** (V50,
+"Liczba stołów", 1 … 50, empty = none): as many cards and tents as tables, numbered "Stół / Table 5" in the print's language — on a
+card in its top corner, on a tent's face above the heading —, a reprint the same set; without it eight cards and one tent; the poster
+has none; "Numer pierwszego stołu" numbers them from it (22 from 22 — tables 22 … 43; a reprint of one — 1 from 16; at most 999; in
+the page only, of a form of its own so it never holds back "Zapisz", never sent nor saved — it goes along with the layout switch
+(`poster-switch-keeps-first-table`, `…-takes-…`), a reload starts from 1), and a line
+under it says what prints, "Na wydruku: stoły 22–43 · strony: 3" (scenarios `poster-tent-layout`, `poster-tent-longest-fits`, `poster-tables-cards`, `…-tents`, `…-cards-fit`,
+`…-from`, `…-from-tents`, `poster-tent-phone`); **the print as the DJ sets it** (V46) — an editor over the paper, for
 whom may change the card "Impreza" (VIBE), any plan: the DJ's own heading (≤ 40) in place of "Zeskanuj i poproś o piosenkę / Scan to
 request a song", one line of the DJ's own (≤ 60, "Osiemnastka Dawida"), the language — "Polski + English", "Polski", "English";
 until the DJ picks one (`AUTO`, the default) the panel's is printed and picked: a Polish panel Polish and English at once, any other
 English alone — and boxes for what of the DJ's it shows (the
 logo, the profiles, the tip, the address with the party's code; a box only for what the party has) and **the look** (V47): a theme —
 "Klasyczny" (white, as before), "Elegancki" (cream, for a wedding, a serif heading, a double frame), "Klubowy" (dark, the DJ's logo on a
-white badge), "Pastelowy" (soft pink, rounded) — and the colour of the heading and the frame: the theme's, one of eight, or the
+white badge), "Pastelowy" (soft pink, rounded) and, V52, "Rustykalny" (kraft, olive, a stitched frame — a barn wedding), "Gala" (ivory,
+gold, a double frame with diamonds — a ball, New Year's Eve), "Neon" (white, a frame in a gradient from the heading's colour to violet
+and cyan — the club's colours without its ink), "Konfetti" (white, coloured dots in the frame's band only — a birthday); the rustic
+and the gala headings in the serif as the elegant one; the decoration never under the words or the code (`poster-themes-more`); the
+themes' scenarios take every theme of the editor, so a new one is checked by itself; **"Kolor tła"** (V53): the theme's paper, one of six
+light tints or the DJ's own — a light colour made a light tint in the page (`qr-print.js light`: mixed towards white to a luminance
+of 0.85 — little ink), a dark one (luminance under 0.25) a dark paper (`deep`: darkened only to 0.09, so the quiet words read at
+4.5:1) — the words on it dark or light (`body.paper-own`, `.paper-dark`), the heading's colour (the theme's too; a near-black one on a
+dark paper the light words' colour) readable on it, the code on its white tile, the DJ's logo on a white badge on a dark paper, the
+classic paper coloured with the words 8 mm off its edges (`poster-paper`,
+`…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
 with a margin) — browser scenario `poster-themes-readable`: every theme with white, a pale yellow, black and a light cyan. The code
 stays black on white (its own white margin is its tile) in every theme; every theme fits A4 and the cards with the longest words
-(`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font); "Działa na" and our small mark on one
+(`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font). **The print's own fonts** (`static/fonts`,
+the SIL Open Font License beside them, ~150 KB): "S2P Sans" (Source Sans 3) on the paper in every theme, "S2P Serif" (Playfair
+Display) for the elegant headings and the DJ's line on the poster and a tent (on a card the line stays in the sans: 60 letters of
+the serif do not fit its column) — variable fonts, the Latin and the Latin Extended halves apart, `font-display: block`; the bar and
+the editor keep the device's fonts, as the panel. So the paper lays out the same everywhere and the scenarios measure what prints
+(`poster-fonts-ours`). **The DJ's heading and line fitted** (`qr-print.js`): a long one made smaller half a point at a time until
+whole in its lines — two for the poster's heading, three elsewhere —, no smaller than its least (the poster's heading 16 pt, a card's
+7 pt, a tent's 12 pt); a short one keeps the stylesheet's size; measured on the first card or tent, the same size for all; on a phone
+too — **a phone's preview** is the sheet laid out as it prints (186 mm wide) and made smaller to the screen with `zoom`
+(`fitPreview`; laid out again for the narrow screen, the code covered the frame — `poster-phone-preview`, `…-cards`); the line clamp
+stays the last guard (before, the longest words were cut on a card and a tent — `poster-heading-fitted`, `…-tent`, `…-poster`). **"Krój
+nagłówka"** (V51): the theme's (the default), "Bezszeryfowy", "Szeryfowy" or "Odręczny" ("S2P Script", Dancing Script, OFL) whatever the
+theme — the heading only (`body.font-*`), the DJ's line and the code's texts stay in the theme's; the script's small letters brought to
+the sans's height (`font-size-adjust: 0.49`) and its least sizes its own (a card 5.5 pt, a tent 11.5 pt: its letters are wider); every
+font in every theme fits A4, a card and a tent with the longest words (`poster-font-choice`, `poster-font-fits-a4`, `…-cards`,
+`…-tent`); the switch keeps it; the Instagram pictures draw the heading in it. "Działa na" and our small mark on one
 line, our big mark apart from the code's tile in every theme (`poster-themes-powered-aligned`). What is typed or ticked shows at
 once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`; the DJ's logo left off brings ours back);
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads
-again (the server writes it). Changes not saved say "Niezapisane zmiany" and go along to the other layout (the switch "Plakat A4 |
-Kartki na stoliki" keeps them in `sessionStorage` for the tab, the next page takes them — scenarios `poster-switch-keeps`, `…-takes`).
+again (the server writes it). Changes not saved say "Niezapisane zmiany" and go along to the other layouts (the switch "Plakat A4 |
+Kartki na stoliki | Namiot na stół" keeps them in `sessionStorage` for the tab, the next page takes them — scenarios `poster-switch-keeps`,
+`…-takes`; on a phone the switch spans the bar, a long name on two lines).
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
-the paper light. The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
+the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane
+zmiany" by themselves): "Nagłówek na okazję" — six occasions (wesele, osiemnastka, urodziny, klub, pub, impreza firmowa), each text in the
+print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) — fills the
+heading as if typed and goes back to its prompt (`poster-presets`, `…-both`); no note about the ink of a dark sheet (obvious;
+"Kolor tła"'s hint says a dark colour prints dark). **"Do internetu"**
+(`js/qr-social.js`): a PNG story 1080 × 1920 or post 1080 × 1350 drawn on a canvas in the page from what the preview shows, unsaved
+changes too — the logo, the heading, the line, the code on a white tile, the party's code large and the address (nobody scans the screen
+they hold), the profiles (never broken across lines), the tip, "Działa na" with the DJ's logo; the theme's paper, ink, colour and frame,
+the DJ's logo on a white badge on the club paper; too much, and every size shrinks until it fits. A phone that can share files opens its
+share sheet, anything else saves `scan2play-<code>-story.png`; nothing is sent (`poster-social-story`, `…-post`, `…-longest`: every theme
+with the longest words, the DJ's logo, three profiles and the tip inside the picture, the code ≥ 420 / 340 px). The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
@@ -561,7 +606,9 @@ plakietką „bez oceny AI” — przejrzyj je przed zagraniem.", gone with the 
 
 **The history** (`PlayHistoryService`): the party's requests that played or were rejected, by the DJ's moment —
 `COALESCE(played_at, skipped_at, cleared_at, requested_at)`, the time it shows too (a skip was placed by its request time until
-2026-10-12) —, newest first, one bounded query (`limit + 1`). The History tab (in place of the queue) and the standalone page `/dj/history-view`:
+2026-10-12) —, newest first, one bounded query (`limit + 1`). The History tab (in place of the queue — the page then is the page
+"Historia" as the standalone one: `body.s2p-history-shown` hides "Impreza i kod QR" and the settings, the Panel tab brings them back as
+they were; `history-tab-like-its-page`, 2026-10-29) and the standalone page `/dj/history-view`:
 filters All / Played / Rejected applied by the server, "Show more" (50 at a time, ≤ 300); both keep the search text and the sort by a
 column (`captureListState` / `restoreListState` in the tab; on the standalone page, which loads itself again, through
 `sessionStorage` once). A heading row where a new day starts, Polish time (`tr[data-day-heading]`: "dziś — sobota, 03.10",
@@ -848,7 +895,8 @@ script's and style's address and no cache on the way keeps an old one; the dashb
 in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy). `VersionedAssetCacheFilter` lets the
 browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
 deploy's version always gives the same file (an old version is a 404). An answer that is not the file (a 404, a 500) is
-set back to `no-store` — a missing file must not be kept for a year. Bootstrap (`/webjars/**`), `/images/**` and `/favicon.ico`
+set back to `no-store` — a missing file must not be kept for a year. The print's fonts (`/fonts/**`) carry their version in their
+file names (`source-sans-3-5.3.1-…`; a new font is a new name): a year too. Bootstrap (`/webjars/**`), `/images/**` and `/favicon.ico`
 have no version in their addresses: a day (`public, max-age=86400`; the review of 2026-10-21, P1 — every phone fetched Bootstrap's
 31 KB and the logo again on every page), so a changed one reaches everyone by the next day; Cloudflare keeps them too — purge its
 cache after changing one. Only for a commit's version, never `dev` (devtools changes the files under it); everything else keeps
@@ -889,7 +937,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-list-count.js` | the hosts' lists ("Ustawienia imprezy", `/h/…`): the entries each holds of `SongList.MAX_LINES`, a warning over it |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side, the Polish store; iTunes matches whole words only, so a word being typed is completed here — the words before it are asked too, 50 songs kept in memory while the word grows, both asks at once — and the songs whose title, then artist, has a word starting so come first ("shakira da" → "Dai Dai"); each song once; an answer for what the field no longer says is dropped; an ARIA combobox — `aria-expanded`, `aria-controls`, `aria-activedescendant`) |
-| `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles — the look of Section 6.7 |
+| `js/qr-print.js`, `js/qr-social.js`, `css/qr-print.css`, `fonts/*.woff2`, `css/app.css` | the print page (`qr-social.js`: its pictures for Instagram, for whom has the editor; `fonts/`: its own fonts, Source Sans 3, Playfair Display and Dancing Script, OFL — their licences `fonts/OFL-*.txt`); the shared styles — the look of Section 6.7 |
 | `js/tv.js`, `css/tv.css` | the screen for a TV: its list fetched again every 10 s (put in place only when it changed; a failed fetch or an answer that is not the list keeps it), the screen kept awake (Screen Wake Lock); dark, sized by the screen's height, nothing to scroll in landscape |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
@@ -1041,7 +1089,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 ## 8. Security Model
 
 Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/dj-weselny`, `/kluby`, `/puby`, `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
-under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/webjars/**`, `/favicon.ico`,
+under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/fonts/**` (the print's fonts), `/webjars/**`, `/favicon.ico`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`, `GET /demo` and `GET /demo/**` (the demo, `DemoController`). Everything else needs the DJ's login. Without it (`SecurityConfig.loginEntryPoint`, the review of 2026-10-21, C2, C3): a DJ's page opened in the browser (`Sec-Fetch-Mode: navigate`) goes straight to Google's login and, after it, back to that page with its `?party=` (`djPagesRemembered`, `loginSuccess`; only such a page is remembered, never a poll or a fragment) — a DJ whose session expired with the phone in the pocket comes back to the panel, not to the landing page; a fetch of the panel goes to `/` as before (`polling.js` then loads its page again); any other address is a 404 (the error page), not the landing page; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
 `requireOwner` for what is never handed over (the staff, the profiles, the tip link, clearing the history, the account), `access` for
@@ -1184,6 +1232,10 @@ schema behind Flyway's back.
 | V47 | `party_settings.poster_theme` varchar(10) NOT NULL DEFAULT 'CLASSIC' (check CLASSIC / ELEGANT / CLUB / PASTEL), `poster_accent` varchar(7), nullable (check `^#[0-9a-f]{6}$`): the QR print's look (`MigrationIT`) |
 | V48 | `party_settings.owner_email` varchar(320), `created_at` timestamptz DEFAULT now() (the parties of before: null), `welcome_dismissed_at` timestamptz (the parties of before: the migration's time — the welcome card is for a new account): the organiser's address and the panel's welcome (`MigrationIT`, `OrganiserContactMigrationIT`) |
 | V49 | the foreign keys on `party_code` (`party_logo`, `party_staff`, `staff_invitation`, `dj_library`, and `dj_library_track` → `dj_library`) recreated with ON UPDATE CASCADE; table `party_code_retired` (`party_code` varchar(5) PK, `retired_at` timestamptz NOT NULL DEFAULT now()): "Zmień kod imprezy" (`MigrationIT`, `PartyCodeChangeIT`) |
+| V50 | `party_settings.poster_tables` integer, nullable (check 1 … 50): the QR print's number of tables — the cards and the table tents numbered (`MigrationIT`) |
+| V51 | `party_settings.poster_font` varchar(6) NOT NULL DEFAULT 'THEME' (check THEME / SANS / SERIF / SCRIPT): the QR print's heading font (`MigrationIT`) |
+| V52 | `party_settings_poster_theme_check` made again with RUSTIC / GALA / NEON / CONFETTI beside V47's four: the QR print's themes (`MigrationIT`) |
+| V53 | `party_settings.poster_paper` varchar(7), nullable (check `^#[0-9a-f]{6}$`): the QR print's paper colour (`MigrationIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1305,8 +1357,8 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/party-code` | `partyCode`: "Zmień kod imprezy" (V49; the owner's) — a new code, the old one dead for good → `/dj/settings?party=<new>#partyCodeCard` with the flash `codeChanged` |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
-| GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards; as the DJ set it (V46: the heading, the line, the language — by default the panel's: Polish prints Polish and English, any other English —, the parts shown); the editor for whom has VIBE |
-| POST | `/dj/qr-print/settings` | `partyCode`, `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL, anything else CLASSIC, V47), `accent` ("#rrggbb", anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
+| GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards / tent (V50; the cards and the tents a table each, numbered, when the party has tables); as the DJ set it (V46: the heading, the line, the language — by default the panel's: Polish prints Polish and English, any other English —, the parts shown); the editor for whom has VIBE |
+| POST | `/dj/qr-print/settings` | `partyCode`, `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI, anything else CLASSIC, V47, V52), `accent` ("#rrggbb", anything else none), `font` (THEME / SANS / SERIF / SCRIPT, anything else THEME, V51), `paper` ("#rrggbb", anything else none, V53), `tables` (V50: 1 … 50, more is 50, anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
 | GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days, and the organisers new in the last 7 days with their address (V48); only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s) |
