@@ -443,7 +443,16 @@ DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.
 `--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
 with a margin) — browser scenario `poster-themes-readable`: every theme with white, a pale yellow, black and a light cyan. The code
 stays black on white (its own white margin is its tile) in every theme; every theme fits A4 and the cards with the longest words
-(`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font); "Działa na" and our small mark on one
+(`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font). **The print's own fonts** (`static/fonts`,
+the SIL Open Font License beside them, ~150 KB): "S2P Sans" (Source Sans 3) on the paper in every theme, "S2P Serif" (Playfair
+Display) for the elegant headings and the DJ's line on the poster and a tent (on a card the line stays in the sans: 60 letters of
+the serif do not fit its column) — variable fonts, the Latin and the Latin Extended halves apart, `font-display: block`; the bar and
+the editor keep the device's fonts, as the panel. So the paper lays out the same everywhere and the scenarios measure what prints
+(`poster-fonts-ours`). **The DJ's heading and line fitted** (`qr-print.js`): a long one made smaller half a point at a time until
+whole in its lines — two for the poster's heading, three elsewhere —, no smaller than its least (the poster's heading 16 pt, a card's
+7 pt, a tent's 12 pt); a short one keeps the stylesheet's size; measured on the first card or tent, the same size for all; the poster
+on a screen narrower than its paper keeps the stylesheet's sizes (measured there it would print smaller); the line clamp stays the
+last guard (before, the longest words were cut on a card and a tent — `poster-heading-fitted`, `…-tent`, `…-poster`). "Działa na" and our small mark on one
 line, our big mark apart from the code's tile in every theme (`poster-themes-powered-aligned`). What is typed or ticked shows at
 once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`; the DJ's logo left off brings ours back);
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads
@@ -870,7 +879,8 @@ script's and style's address and no cache on the way keeps an old one; the dashb
 in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy). `VersionedAssetCacheFilter` lets the
 browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
 deploy's version always gives the same file (an old version is a 404). An answer that is not the file (a 404, a 500) is
-set back to `no-store` — a missing file must not be kept for a year. Bootstrap (`/webjars/**`), `/images/**` and `/favicon.ico`
+set back to `no-store` — a missing file must not be kept for a year. The print's fonts (`/fonts/**`) carry their version in their
+file names (`source-sans-3-5.3.1-…`; a new font is a new name): a year too. Bootstrap (`/webjars/**`), `/images/**` and `/favicon.ico`
 have no version in their addresses: a day (`public, max-age=86400`; the review of 2026-10-21, P1 — every phone fetched Bootstrap's
 31 KB and the logo again on every page), so a changed one reaches everyone by the next day; Cloudflare keeps them too — purge its
 cache after changing one. Only for a commit's version, never `dev` (devtools changes the files under it); everything else keeps
@@ -911,7 +921,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-list-count.js` | the hosts' lists ("Ustawienia imprezy", `/h/…`): the entries each holds of `SongList.MAX_LINES`, a warning over it |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side, the Polish store; iTunes matches whole words only, so a word being typed is completed here — the words before it are asked too, 50 songs kept in memory while the word grows, both asks at once — and the songs whose title, then artist, has a word starting so come first ("shakira da" → "Dai Dai"); each song once; an answer for what the field no longer says is dropped; an ARIA combobox — `aria-expanded`, `aria-controls`, `aria-activedescendant`) |
-| `js/qr-print.js`, `js/qr-social.js`, `css/qr-print.css`, `css/app.css` | the print page (`qr-social.js`: its pictures for Instagram, for whom has the editor); the shared styles — the look of Section 6.7 |
+| `js/qr-print.js`, `js/qr-social.js`, `css/qr-print.css`, `fonts/*.woff2`, `css/app.css` | the print page (`qr-social.js`: its pictures for Instagram, for whom has the editor; `fonts/`: its own fonts, Source Sans 3 and Playfair Display, OFL — their licences `fonts/OFL-*.txt`); the shared styles — the look of Section 6.7 |
 | `js/tv.js`, `css/tv.css` | the screen for a TV: its list fetched again every 10 s (put in place only when it changed; a failed fetch or an answer that is not the list keeps it), the screen kept awake (Screen Wake Lock); dark, sized by the screen's height, nothing to scroll in landscape |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
@@ -1063,7 +1073,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 ## 8. Security Model
 
 Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/dj-weselny`, `/kluby`, `/puby`, `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
-under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/webjars/**`, `/favicon.ico`,
+under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/fonts/**` (the print's fonts), `/webjars/**`, `/favicon.ico`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`, `GET /demo` and `GET /demo/**` (the demo, `DemoController`). Everything else needs the DJ's login. Without it (`SecurityConfig.loginEntryPoint`, the review of 2026-10-21, C2, C3): a DJ's page opened in the browser (`Sec-Fetch-Mode: navigate`) goes straight to Google's login and, after it, back to that page with its `?party=` (`djPagesRemembered`, `loginSuccess`; only such a page is remembered, never a poll or a fragment) — a DJ whose session expired with the phone in the pocket comes back to the panel, not to the landing page; a fetch of the panel goes to `/` as before (`polling.js` then loads its page again); any other address is a 404 (the error page), not the landing page; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
 `requireOwner` for what is never handed over (the staff, the profiles, the tip link, clearing the history, the account), `access` for

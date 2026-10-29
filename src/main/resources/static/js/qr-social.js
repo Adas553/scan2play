@@ -33,6 +33,7 @@
         const djLogo = root.querySelector('.dj-logo');
         const links = root.querySelector('.dj-links');
         const style = getComputedStyle(document.body);
+        const paperFont = getComputedStyle(root).fontFamily;   // the print's own (qr-print.css: "S2P Sans")
         return {
             code: code,
             heading: heading,
@@ -50,8 +51,8 @@
             accent: heading.length ? getComputedStyle(heading[0].el).color : '#111111',
             framed: !document.body.classList.contains('theme-classic'),
             club: document.body.classList.contains('theme-club'),
-            font: style.fontFamily,
-            headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : style.fontFamily
+            font: paperFont,
+            headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont
         };
     }
 
@@ -244,7 +245,18 @@
         return canvas;
     }
 
-    function save(kind) {
+    // a canvas draws in a font only once it is loaded — Polish letters are in each font's second half, fetched when first needed
+    const FONTS_NEEDED = ['400 40px "S2P Sans"', '700 40px "S2P Sans"', '700 40px "S2P Serif"'];
+
+    async function fontsIn() {
+        if (!document.fonts) return;
+        try {
+            await Promise.all(FONTS_NEEDED.map(function (font) { return document.fonts.load(font, 'Aa ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ'); }));
+        } catch (e) { /* a font that does not load: the canvas draws in the fallback */ }
+    }
+
+    async function save(kind) {
+        await fontsIn();
         const canvas = draw(kind);
         const name = group.dataset.name + '-' + kind + '.png';
         canvas.toBlob(async function (blob) {

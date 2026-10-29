@@ -65,6 +65,41 @@
 
     showLook(null, document.body.dataset.accent);
 
+    // The DJ's own heading and line fitted to their lines, in the print's own font (qr-print.css): a long one made smaller, half a point
+    // at a time, until it takes its lines whole — two for the poster's heading, three elsewhere — and no smaller than its least; a short
+    // one keeps the stylesheet's size. Measured on the first card or tent, the same size given to all (their words are the same). The
+    // poster on a screen narrower than its paper (a phone) keeps the stylesheet's sizes: measured there, a heading would print smaller
+    // than it needs. The line clamp of the stylesheet stays the last guard. For whoever prints, on every load once the fonts are in.
+    const FITS = [['.poster h1 .own', 2, 16], ['.poster .own-line', 3, 11], ['.card .title .own', 3, 7], ['.card .own-line', 3, 6],
+        ['.face .title .own', 3, 12], ['.face .own-line', 3, 9]];
+    const PT = 96 / 72;
+    const narrow = matchMedia('screen and (max-width: 200mm)');
+
+    function tooLong(el, most) {
+        const line = parseFloat(getComputedStyle(el).lineHeight);
+        // a line the clamp hid, not the font's letters reaching a little past their line
+        return el.scrollHeight > el.clientHeight + line / 2 || Math.round(el.clientHeight / line) > most;
+    }
+
+    function fitTexts() {
+        FITS.forEach(function (fit) {
+            const texts = Array.prototype.slice.call(document.querySelectorAll(fit[0]));
+            texts.forEach(function (el) { el.style.removeProperty('font-size'); });
+            const first = texts.find(function (el) { return el.checkVisibility(); });
+            if (!first || (narrow.matches && first.closest('.poster'))) return;
+            let size = parseFloat(getComputedStyle(first).fontSize) / PT;
+            while (size > fit[2] && tooLong(first, fit[1])) {
+                size = Math.max(fit[2], size - 0.5);
+                first.style.fontSize = size + 'pt';
+            }
+            texts.forEach(function (el) { el.style.fontSize = first.style.fontSize; });
+        });
+    }
+
+    fitTexts();
+    if (document.fonts) document.fonts.ready.then(fitTexts);
+    narrow.addEventListener('change', fitTexts);
+
     const form = document.getElementById('posterForm');
     if (!form) return;
     const answer = document.getElementById('posterAnswer');
@@ -76,11 +111,13 @@
         const own = form.elements.heading.value.replace(/\s+/g, ' ').trim();
         all('[data-poster-heading]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
         all('[data-poster-ours-heading]').forEach(function (el) { el.hidden = !!own; });
+        fitTexts();
     }
 
     function showLine() {
         const own = form.elements.line.value.replace(/\s+/g, ' ').trim();
         all('[data-poster-line]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
+        fitTexts();
     }
 
     function showPart(box) {
@@ -165,6 +202,7 @@
 
     function changeLook() {
         showLook(form.elements.theme.value, chosenAccent());
+        fitTexts();   // the elegant heading's serif is wider
         if (inkHint) inkHint.hidden = form.elements.theme.value !== 'CLUB';
     }
 

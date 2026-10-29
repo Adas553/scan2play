@@ -63,8 +63,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    rzeczy z listy") **"Nagłówek na okazję", the club theme's ink note and "Do internetu" (a story / post PNG)** — built on
    `claude/bold-bell-w3epu5` again, no migration. The theme "Oszczędny" was not built: "Klasyczny" is already the white sheet with no
    fills; the club theme says it takes a lot of ink instead. New looks (themes, fonts, ornaments) for every plan; photos on the poster
-   later, as Pro. Next candidates: fonts of our own (`qr-print.css` still has `system-ui` first) with the heading fitted; A5 / A6 for
-   the acrylic stands; the TV screen in the print's look. Open: stickers and business cards against "Zmień kod imprezy" (V49 kills old
+   later, as Pro. **#195 in `dev`.** Then (the owner, 2026-10-29: "zrób na razie 1") **the print's own fonts** ("S2P Sans" = Source
+   Sans 3, "S2P Serif" = Playfair Display, `static/fonts`, OFL, `/fonts/**` public and kept a year) **and the DJ's heading and line
+   fitted** — built on `claude/bold-bell-w3epu5`, no migration (the longest words were cut on a card and a tent before). Next
+   candidates: A5 / A6 for the acrylic stands; the TV screen in the print's look; small ones (A3, the scan distance, a ruler). Open: stickers and business cards against "Zmień kod imprezy" (V49 kills old
    prints). To try on a phone: "Do internetu" opens the share sheet (Instagram) on Android and an iPhone.
 4. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
    on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.
