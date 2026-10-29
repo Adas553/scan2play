@@ -454,6 +454,12 @@ body {
     outline-offset: 3px;
 }
 
+/* a dot's focus outside the picked one's white ring, the dark of the group between: on the turquoise dot the cyan ring was the dot's
+   own colour */
+.swatch:has(input:focus-visible) .swatch-dot {
+    outline-offset: 6px;
+}
+
 .swatch-chip input[type="color"] {
     width: 28px;
     height: 24px;

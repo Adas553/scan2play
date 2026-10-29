@@ -94,7 +94,8 @@
         </div>
     </section>
     <!--/* the look (V47, V51, V53): the theme, and folded under "Więcej wyglądu" the paper, the heading's font and its colour — open when
-         the party has one of them set. Each colour is its own button: the radio hidden, the dot ringed when picked. */-->
+         the party has one of them set. Each colour is its own button: the radio hidden, the dot ringed when picked, its name
+         (PosterColours) for a screen reader. */-->
     <section class="editor-group" th:with="moreLook=${poster.posterPaper != null or poster.posterAccent != null or poster.posterFont.name() != 'THEME'}">
         <h2 th:text="#{qr.edit.group.look}">Look</h2>
         <div class="editor-field">
@@ -108,13 +109,13 @@
             <summary th:text="#{qr.edit.more}">More: paper, font, colour</summary>
             <!--/* the paper's colour (V53): the theme's, one of six light tints, or the DJ's own — printed as picked (qr-print.js), the words
                  on it black or white, whichever reads better */-->
-            <fieldset class="editor-colors" th:with="tints=${ {'#fbf3e2', '#fdeef3', '#e9f6ee', '#e8f3fb', '#f0ecf9', '#f2f2f2'} },
-                      ownPaper=${poster.posterPaper != null and !#lists.contains(tints, poster.posterPaper)}">
+            <fieldset class="editor-colors" th:with="ownPaper=${poster.posterPaper != null and !T(com.scan2play.model.PosterColours).offers(T(com.scan2play.model.PosterColours).PAPERS, poster.posterPaper)}">
                 <legend th:text="#{qr.edit.paper}">Paper colour</legend>
                 <label class="swatch swatch-text"><input type="radio" name="paper" value="" th:checked="${poster.posterPaper == null}"><span
                         class="swatch-chip" th:text="#{qr.edit.paper.theme}">The theme's</span></label>
-                <label th:each="c : ${tints}" class="swatch" th:attr="title=${c}"><input type="radio" name="paper" th:value="${c}" th:checked="${c == poster.posterPaper}"
-                       th:attr="aria-label=${c}"><span class="swatch-dot" th:classappend="${'swatch-' + c.substring(1)}"></span></label>
+                <label th:each="c : ${T(com.scan2play.model.PosterColours).PAPERS}" class="swatch" th:title="#{'qr.colour.' + ${c.name}}"><input type="radio" name="paper"
+                       th:value="${c.hex}" th:checked="${c.hex == poster.posterPaper}" th:attr="aria-label=#{'qr.colour.' + ${c.name}}"><span
+                       class="swatch-dot" th:classappend="${c.swatchClass()}"></span></label>
                 <label class="swatch swatch-text"><input type="radio" name="paper" id="posterPaperOwn" th:value="${ownPaper ? poster.posterPaper : '#f6d7b0'}" th:checked="${ownPaper}"><span
                         class="swatch-chip"><span th:text="#{qr.edit.accent.own}">Your own</span><input type="color" id="posterPaperPicker"
                         th:value="${ownPaper ? poster.posterPaper : '#f6d7b0'}" th:attr="aria-label=#{qr.edit.paper.own}"></span></label>
@@ -128,13 +129,13 @@
                             th:selected="${f == poster.posterFont}" th:text="#{'qr.edit.font.' + ${f.name().toLowerCase()}}">The theme's</option>
                 </select>
             </div>
-            <fieldset class="editor-colors" th:with="palette=${ {'#1565c0', '#2e7d32', '#c2185b', '#d84315', '#6a1b9a', '#b08a3e', '#00bcd4', '#111111'} },
-                      own=${poster.posterAccent != null and !#lists.contains(palette, poster.posterAccent)}">
+            <fieldset class="editor-colors" th:with="own=${poster.posterAccent != null and !T(com.scan2play.model.PosterColours).offers(T(com.scan2play.model.PosterColours).ACCENTS, poster.posterAccent)}">
                 <legend th:text="#{qr.edit.accent}">Colour</legend>
                 <label class="swatch swatch-text"><input type="radio" name="accent" value="" th:checked="${poster.posterAccent == null}"><span
                         class="swatch-chip" th:text="#{qr.edit.accent.theme}">The theme's</span></label>
-                <label th:each="c : ${palette}" class="swatch" th:attr="title=${c}"><input type="radio" name="accent" th:value="${c}" th:checked="${c == poster.posterAccent}"
-                       th:attr="aria-label=${c}"><span class="swatch-dot" th:classappend="${'swatch-' + c.substring(1)}"></span></label>
+                <label th:each="c : ${T(com.scan2play.model.PosterColours).ACCENTS}" class="swatch" th:title="#{'qr.colour.' + ${c.name}}"><input type="radio" name="accent"
+                       th:value="${c.hex}" th:checked="${c.hex == poster.posterAccent}" th:attr="aria-label=#{'qr.colour.' + ${c.name}}"><span
+                       class="swatch-dot" th:classappend="${c.swatchClass()}"></span></label>
                 <label class="swatch swatch-text"><input type="radio" name="accent" id="posterAccentOwn" th:value="${own ? poster.posterAccent : '#ff4081'}" th:checked="${own}"><span
                         class="swatch-chip"><span th:text="#{qr.edit.accent.own}">Your own</span><input type="color" id="posterAccentPicker"
                         th:value="${own ? poster.posterAccent : '#ff4081'}" th:attr="aria-label=#{qr.edit.accent.own}"></span></label>

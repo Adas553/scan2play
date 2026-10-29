@@ -356,6 +356,17 @@
         });
         paperPicker.addEventListener('change', function () { changeLook(); });
     }
+    // "Własny": the whole chip opens the colour field — only its small square did, and a tap on the word picked the colour with no way
+    // to change it. A click on the field itself, or the radio's own click that follows the label's, is left to the browser
+    [[own, picker], [ownPaper, paperPicker]].forEach(function (pair) {
+        if (!pair[0] || !pair[1]) return;
+        pair[0].closest('label').addEventListener('click', function (e) {
+            if (e.target.tagName === 'INPUT' || !pair[1].showPicker) return;
+            try {
+                pair[1].showPicker();
+            } catch (err) { /* not allowed here: the square still opens it */ }
+        });
+    });
 
     form.elements.heading.addEventListener('input', showHeading);
     // "Wzór na okazję": the occasion's text in the heading, as if typed (the preview, "Niezapisane zmiany"), and its look — the theme,

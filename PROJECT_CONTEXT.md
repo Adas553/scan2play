@@ -449,7 +449,9 @@ themes' scenarios take every theme of the editor, so a new one is checked by its
 light tints or the DJ's own — printed as picked (two shades alike print alike), the words on it black or white, whichever reads
 better (always at least 4.5:1; `body.paper-own`), the code on its white tile, the DJ's logo on a white badge on any paper of
 the DJ's (one shape while the DJ tries colours — `poster-paper-logo-steady`), the classic paper coloured with the words 8 mm off its edges (`poster-paper`, `…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
-DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
+DJ's own (the browser's colour field); the editor's colours are `PosterColours` (the paper's six, the heading's eight), each told
+by its name to a screen reader and in its title, never by its code (`poster-colours-named`, `PosterColoursTest`), and "Własny" opens
+the colour field from its whole chip. The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); the DJ's colour prints as picked — the DJ decides; a heading that stands out poorly from its paper (under 3:1, WCAG's
 least for large text) is said under the colours ("Nagłówek słabo odcina się od tła"), never changed (`qr-print.js`;
 `poster-accent-exact`; while the DJ drags in a colour picker the preview follows and the note waits for the colour picked — shown
@@ -897,7 +899,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); a song the DJ adds (`addByTheDj`, V44) under the same lock; evicts `dashboardQueue` after the commit |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
-| `QrCodeService` | QR codes (ZXing, cached) |
+| `QrCodeService` | QR codes (ZXing, cached; error correction M — the same version 3 as L for the guest link, so as large on paper; `QrCodeServiceTest`) |
 | `PartyCodeService` | a party's code (V49): `freshCode` — one no party has nor had (`party_code_retired`), for a new party and a new code; `changeCode` — "Zmień kod imprezy": the party and all of it under a new code, the old one retired, the caches evicted after the commit |
 | `AccountDeletionService` | deletes all of a DJ's data (their party's staff and invitations by e-mail, their places on other staffs too) and evicts the caches after the commit; first the party's locks in the app's order — "S2PR", then the party's row (a guest's request and "Dołącz" wait or find nothing, no deadlock) —; the requests and the feedback in one `DELETE` each |
 | `PartyStaffService` | the party's staff (V30, V32): what a person may do at a party (`Access`), joining by the invitation link with its role (under the party's lock, V33), the places shared with the invitations (`placesTaken`), the owner's list, permissions, taking access away, the panels, the party's name |

@@ -277,8 +277,10 @@ class QrPrintPageTest {
                 "<option value=\"RUSTIC\">Rustykalny</option>", "<option value=\"GALA\">Gala</option>", "<option value=\"NEON\">Neon</option>",
                 "<option value=\"CONFETTI\">Konfetti</option>",
                 "value=\"#123abc\" checked=\"checked\"", "id=\"posterAccentPicker\" value=\"#123abc\"", "class=\"swatch-dot swatch-c2185b\"");
-        String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build());
-        assertThat(palette).contains("value=\"#c2185b\" aria-label=\"#c2185b\" checked=\"checked\"").doesNotContain("value=\"#123abc\"");
+        String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build()).replaceAll("\\s+", " ");
+        // a colour of the palette told by its name (PosterColours), never by its code
+        assertThat(palette).contains("value=\"#c2185b\" aria-label=\"Malinowy\" checked=\"checked\"", "title=\"Malinowy\"")
+                .doesNotContain("value=\"#123abc\"", "aria-label=\"#");
         String none = render("poster", Locale.ENGLISH);
         assertThat(none).contains("class=\"layout-poster theme-classic has-editor\"", "<input type=\"radio\" name=\"accent\" value=\"\" checked=\"checked\">")
                 .doesNotContain("data-accent=");
@@ -364,7 +366,7 @@ class QrPrintPageTest {
     void thePaper_isTheColourTheDjPicked() throws IOException {
         String tint = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#e8f3fb").build())
                 .replaceAll("\\s+", " ");
-        assertThat(tint).contains("data-paper=\"#e8f3fb\"", "name=\"paper\" value=\"#e8f3fb\" aria-label=\"#e8f3fb\" checked=\"checked\"", "Kolor tła");
+        assertThat(tint).contains("data-paper=\"#e8f3fb\"", "name=\"paper\" value=\"#e8f3fb\" aria-label=\"B\u0142\u0119kitny\" checked=\"checked\"", "Kolor tła");
         String own = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#c2185b").build())
                 .replaceAll("\\s+", " ");
         assertThat(own).contains("data-paper=\"#c2185b\"", "id=\"posterPaperOwn\" value=\"#c2185b\" checked=\"checked\"",
@@ -416,7 +418,7 @@ class QrPrintPageTest {
      */
     @Test
     void theLooksForTheOccasion_areTheEditors_andTheMoreLookOpensWhenSet() throws IOException {
-        String html = render("poster", Locale.forLanguageTag("pl"));
+        String html = render("poster", Locale.forLanguageTag("pl")).replaceAll("\\s+", " ");
         List<java.util.regex.MatchResult> options = java.util.regex.Pattern
                 .compile("<option value=\"([A-Z]+)\" data-heading=\"[^\"]*\" data-theme=\"([A-Z]+)\" data-font=\"([A-Z]+)\"( data-colour=\"([^\"]*)\")?")
                 .matcher(html).results().toList();

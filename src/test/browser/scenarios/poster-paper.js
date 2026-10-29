@@ -210,3 +210,33 @@
         }
     });
 })();
+
+// The colours told by name (qr-print.html, PosterColours): a screen reader said "#fbf3e2"; the swatch's name now — "Kremowy", "Malinowy"
+// —, its title too. "Własny" opens the colour field from the whole chip: only its 28 × 24 px square did before, a tap on the word
+// picked the colour without a way to change it.
+(function () {
+    S2P.scenario({
+        name: 'poster-colours-named',
+        page: 'qr-print-poster',
+        title: 'the paper\'s and the heading\'s colours named for a screen reader, never by their code; "Własny" opens the colour field from the whole chip',
+        run: async function (t) {
+            const swatches = Array.from(document.querySelectorAll('#posterForm input[name="paper"], #posterForm input[name="accent"]'))
+                .filter(function (r) { return r.id !== 'posterPaperOwn' && r.id !== 'posterAccentOwn' && r.value; });
+            const names = swatches.map(function (r) { return r.getAttribute('aria-label') || ''; });
+            t.step('fourteen colours, each a name', [swatches.length, names.filter(function (n) { return !n || n.charAt(0) === '#'; })], [14, []]);
+            t.step('no two alike in a group', [new Set(names.slice(0, 6)).size, new Set(names.slice(6)).size], [6, 8]);
+            t.step('the title the same name', swatches.every(function (r) { return r.closest('label').title === r.getAttribute('aria-label'); }), true);
+            const opened = [];
+            const show = HTMLInputElement.prototype.showPicker;
+            HTMLInputElement.prototype.showPicker = function () { opened.push(this.id); };
+            try {
+                document.querySelector('#posterAccentOwn + .swatch-chip > span').click();
+                document.querySelector('#posterPaperOwn + .swatch-chip > span').click();
+            } finally {
+                HTMLInputElement.prototype.showPicker = show;
+            }
+            t.step('a tap on "Własny": the colour field opens, the own colour picked', [opened, document.getElementById('posterAccentOwn').checked,
+                document.getElementById('posterPaperOwn').checked], [['posterAccentPicker', 'posterPaperPicker'], true, true]);
+        }
+    });
+})();
