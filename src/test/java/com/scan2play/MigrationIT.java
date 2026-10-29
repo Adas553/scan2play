@@ -212,6 +212,20 @@ class MigrationIT extends PostgresIntegrationTest {
         }
     }
 
+    /** V51: the QR print's heading font — the theme's by default, and only a known one. */
+    @Test
+    void theQrPrint_hasAHeadingFont_theThemesByDefault() {
+        String code = "V51" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT poster_font FROM party_settings WHERE party_code = ?", String.class, code)).isEqualTo("THEME");
+        for (String font : List.of("SANS", "SERIF", "SCRIPT", "THEME")) {
+            jdbc.update("UPDATE party_settings SET poster_font = ? WHERE party_code = ?", font, code);
+        }
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET poster_font = 'COMIC' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_poster_font_check");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

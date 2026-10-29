@@ -65,7 +65,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    fills; the club theme says it takes a lot of ink instead. New looks (themes, fonts, ornaments) for every plan; photos on the poster
    later, as Pro. **#195 in `dev`.** Then (the owner, 2026-10-29: "zrób na razie 1") **the print's own fonts** ("S2P Sans" = Source
    Sans 3, "S2P Serif" = Playfair Display, `static/fonts`, OFL, `/fonts/**` public and kept a year) **and the DJ's heading and line
-   fitted** — built on `claude/bold-bell-w3epu5`, no migration (the longest words were cut on a card and a tent before). Next
+   fitted**, and (the owner: "dodaj wybór kroju") **"Krój nagłówka"** (V51: the theme's, sans, serif, script — Dancing Script) —
+   built on `claude/bold-bell-w3epu5` (the longest words were cut on a card and a tent before; V51 on production: check Flyway's
+   line once). Next
    candidates: A5 / A6 for the acrylic stands; the TV screen in the print's look; small ones (A3, the scan distance, a ruler). Open: stickers and business cards against "Zmień kod imprezy" (V49 kills old
    prints). To try on a phone: "Do internetu" opens the share sheet (Instagram) on Android and an iPhone.
 4. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue

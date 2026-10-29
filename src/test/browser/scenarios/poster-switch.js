@@ -35,6 +35,9 @@
             const theme = document.getElementById('posterTheme');
             theme.value = 'ELEGANT';
             theme.dispatchEvent(new Event('change', { bubbles: true }));
+            const font = document.getElementById('posterFont');
+            font.value = 'SCRIPT';
+            font.dispatchEvent(new Event('change', { bubbles: true }));
             const picker = document.getElementById('posterAccentPicker');
             picker.value = '#123abc';
             picker.dispatchEvent(new Event('input', { bubbles: true }));
@@ -45,8 +48,8 @@
             t.step('the editor says the changes are not saved', document.getElementById('posterAnswer').textContent, form.dataset.unsaved);
             clickSwitch();
             const kept = JSON.parse(sessionStorage.getItem(stashKey()) || '{}');
-            t.step('kept for the tab', [kept.heading, kept.line, kept.tables, kept.theme, kept.accent, kept.parts && kept.parts.address],
-                ['Wesele Ani i Tomka', 'Zatańczmy razem', '12', 'ELEGANT', '#123abc', false]);
+            t.step('kept for the tab', [kept.heading, kept.line, kept.tables, kept.theme, kept.font, kept.accent, kept.parts && kept.parts.address],
+                ['Wesele Ani i Tomka', 'Zatańczmy razem', '12', 'ELEGANT', 'SCRIPT', '#123abc', false]);
             sessionStorage.removeItem(stashKey());
         }
     });
@@ -56,7 +59,7 @@
         page: 'qr-print-cards',
         title: 'the cards after the switch: the kept changes in the editor and on the cards, "Niezapisane zmiany", the stash gone; "Zapisz" sends them',
         run: async function (t) {
-            sessionStorage.setItem(stashKey(), JSON.stringify({ heading: 'Wesele Ani i Tomka', line: 'Zatańczmy razem', tables: '12', theme: 'ELEGANT',
+            sessionStorage.setItem(stashKey(), JSON.stringify({ heading: 'Wesele Ani i Tomka', line: 'Zatańczmy razem', tables: '12', theme: 'ELEGANT', font: 'SCRIPT',
                 accent: '#123abc', picker: '#123abc', parts: { address: false } }));
             const script = document.createElement('script');
             script.src = document.querySelector('script[src*="qr-print.js"]').src;
@@ -68,16 +71,17 @@
                 document.querySelector('[data-poster-toggle="address"]').checked],
                 ['Wesele Ani i Tomka', 'Zatańczmy razem', '12', 'ELEGANT', true, '#123abc', false]);
             t.step('the cards show them', [heading.textContent, heading.hidden, document.querySelectorAll('.card').length,
-                document.body.classList.contains('theme-elegant'), document.querySelector('.card [data-poster-part="address"]').hidden],
-                ['Wesele Ani i Tomka', false, 12, true, true]);
+                document.body.classList.contains('theme-elegant'), document.body.classList.contains('font-script'),
+                document.querySelector('.card [data-poster-part="address"]').hidden],
+                ['Wesele Ani i Tomka', false, 12, true, true, true]);
             const answer = document.getElementById('posterAnswer');
             t.step('not saved, it says; the stash gone', [answer.textContent, answer.classList.contains('unsaved'),
                 sessionStorage.getItem(stashKey())], [form.dataset.unsaved, true, null]);
             document.getElementById('posterSave').click();
             await t.waitFor(function () { return answer.textContent === form.dataset.saved; }, 'saved', 3000);
             const sent = (await t.stand.requests('POST /dj/qr-print/settings')).pop().q;
-            t.step('"Zapisz" sends them', [sent.heading, sent.tables, sent.theme, sent.accent, sent.showAddress], ['Wesele Ani i Tomka', '12',
-                'ELEGANT', '#123abc', undefined]);
+            t.step('"Zapisz" sends them', [sent.heading, sent.tables, sent.theme, sent.font, sent.accent, sent.showAddress], ['Wesele Ani i Tomka', '12',
+                'ELEGANT', 'SCRIPT', '#123abc', undefined]);
         }
     });
 

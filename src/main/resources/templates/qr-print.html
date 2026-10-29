@@ -19,7 +19,7 @@
     (data-poster-part), so the editor's preview (qr-print.js) shows it again at once. The party's number of tables (V50) makes as many
     cards and tents (data-print-item), numbered; without it eight cards and one tent, the number rendered hidden.
 */-->
-<body th:class="${'layout-' + qrLayout + ' ' + poster.posterTheme.cssClass()}"
+<body th:class="${'layout-' + qrLayout + ' ' + poster.posterTheme.cssClass() + (poster.posterFont.cssClass().isEmpty() ? '' : ' ' + poster.posterFont.cssClass())}"
       th:attr="data-accent=${poster.posterAccent}" th:classappend="${posterEdit} ? 'has-editor'"
       th:with="pl=${printLang != 'en'}, en=${printLang != 'pl'}, both=${printLang == 'both'},
                logoShown=${djLogo != null and poster.posterShowLogo}, tables=${poster.posterTables}">
@@ -117,6 +117,14 @@
             </select>
             <!--/* the dark club sheet soaks a home printer's paper with ink; the classic one is white with no fills */-->
             <small id="posterInkHint" class="editor-hint" th:hidden="${poster.posterTheme.name() != 'CLUB'}" th:text="#{qr.edit.theme.club.ink}">A lot of ink</small>
+        </div>
+        <!--/* the heading's font (V51): the theme's, or one of ours whatever the theme — the heading only (qr-print.css body.font-*) */-->
+        <div class="editor-field">
+            <label for="posterFont" th:text="#{qr.edit.font}">Heading font</label>
+            <select id="posterFont" name="font">
+                <option th:each="f : ${posterFonts}" th:value="${f.name()}"
+                        th:selected="${f == poster.posterFont}" th:text="#{'qr.edit.font.' + ${f.name().toLowerCase()}}">The theme's</option>
+            </select>
         </div>
         <fieldset class="editor-colors" th:with="palette=${ {'#1565c0', '#2e7d32', '#c2185b', '#d84315', '#6a1b9a', '#b08a3e', '#00bcd4', '#111111'} },
                   own=${poster.posterAccent != null and !#lists.contains(palette, poster.posterAccent)}">

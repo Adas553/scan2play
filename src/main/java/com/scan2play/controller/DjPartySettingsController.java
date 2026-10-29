@@ -148,7 +148,8 @@ public class DjPartySettingsController {
     /**
      * The QR print as the DJ sets it (V46, V47), from the print page (qr-print.js, in the background — 204): the DJ's own heading and
      * line (one line each, cut to {@value PartySettingsEntity#POSTER_HEADING_MAX} / {@value PartySettingsEntity#POSTER_LINE_MAX}; empty =
-     * ours / none), the language, the look (the theme; the DJ's colour "#rrggbb", anything else the theme's own), the number of tables
+     * ours / none), the language, the look (the theme; the DJ's colour "#rrggbb", anything else the theme's own; the heading's font, V51,
+     * anything else the theme's), the number of tables
      * (V50: 1 … {@value PartySettingsEntity#POSTER_TABLES_MAX}, more is the most; anything else none) and what of the DJ's it shows.
      * Whoever may change the party's card "Impreza" (VIBE), any plan: the words on paper are the party's, as its vibe note; the logo
      * shown stays the plan's (PlanService.asPlanned).
@@ -158,6 +159,7 @@ public class DjPartySettingsController {
     public ResponseEntity<Void> updatePoster(@RequestParam String partyCode, @RequestParam(required = false) String heading,
                                              @RequestParam(required = false) String line, @RequestParam(required = false) String language,
                                              @RequestParam(required = false) String theme, @RequestParam(required = false) String accent,
+                                             @RequestParam(required = false) String font,
                                              @RequestParam(required = false) String tables,
                                              @RequestParam(defaultValue = "false") boolean showLogo,
                                              @RequestParam(defaultValue = "false") boolean showLinks,
@@ -173,6 +175,7 @@ public class DjPartySettingsController {
             s.setPosterLanguage(PosterLanguage.of(language));
             s.setPosterTheme(PosterTheme.of(theme));
             s.setPosterAccent(PosterTheme.accent(accent));
+            s.setPosterFont(com.scan2play.model.PosterFont.of(font));
             s.setPosterTables(posterTables(tables));
             s.setPosterShowLogo(showLogo);
             s.setPosterShowLinks(showLinks);

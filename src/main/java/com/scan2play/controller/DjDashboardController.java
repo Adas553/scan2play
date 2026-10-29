@@ -409,6 +409,7 @@ public class DjDashboardController {
         model.addAttribute(PRINT_LANG, settings.getPosterLanguage().printed(locale.getLanguage()));
         model.addAttribute(POSTER_EDIT, access.may(StaffPermission.VIBE));
         model.addAttribute(POSTER_THEMES, com.scan2play.model.PosterTheme.values());
+        model.addAttribute(POSTER_FONTS, com.scan2play.model.PosterFont.values());
         return "qr-print";
     }
 

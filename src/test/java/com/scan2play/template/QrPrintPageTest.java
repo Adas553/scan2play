@@ -353,6 +353,21 @@ class QrPrintPageTest {
     }
 
     /**
+     * "Krój nagłówka" (V51): the font the DJ picked is the page's class ("font-script"; the theme's, none) and picked in the editor; four
+     * fonts offered.
+     */
+    @Test
+    void theHeadingsFont_isTheOneTheDjPicked() throws IOException {
+        String script = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY)
+                .posterFont(com.scan2play.model.PosterFont.SCRIPT).build()).replaceAll("\\s+", " ");
+        assertThat(script).contains("class=\"layout-poster theme-classic font-script has-editor\"",
+                "<option value=\"SCRIPT\" selected=\"selected\">Odręczny</option>", "<option value=\"THEME\">Motywu</option>",
+                "<option value=\"SANS\">Bezszeryfowy</option>", "<option value=\"SERIF\">Szeryfowy</option>");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).contains("class=\"layout-poster theme-classic has-editor\"",
+                "<option value=\"THEME\" selected=\"selected\">The theme&#39;s</option>").doesNotContain("font-");
+    }
+
+    /**
      * "Nagłówek na okazję": six occasions, each text in the print's language — Polish, English, or both at once — and never longer than
      * the heading's column (the editor puts it in the heading as if typed).
      */

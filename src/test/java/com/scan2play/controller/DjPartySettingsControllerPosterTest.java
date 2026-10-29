@@ -127,6 +127,16 @@ class DjPartySettingsControllerPosterTest {
                 .getPosterTables()).as("not sent: none").isNull();
     }
 
+    /** The heading's font (V51): by its name; anything else the theme's. */
+    @Test
+    void theHeadingsFont_isSaved_aWrongOne_isTheThemes() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("font", "script")).getPosterFont()).isEqualTo(com.scan2play.model.PosterFont.SCRIPT);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("font", "COMIC")).getPosterFont()).isEqualTo(com.scan2play.model.PosterFont.THEME);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings")).getPosterFont()).as("not sent").isEqualTo(com.scan2play.model.PosterFont.THEME);
+    }
+
     @Test
     void theLanguage_printed_followsThePanelOnlyWhenAuto() {
         assertThat(PosterLanguage.AUTO.printed("pl")).isEqualTo("both");
