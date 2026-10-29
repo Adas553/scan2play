@@ -659,27 +659,30 @@ body.theme-rustic {
     --frame: var(--accent, var(--accent-base));
 }
 
-/* V52: a ball, New Year's Eve, a palace wedding — ivory and gold (a gold dark enough to read) */
+/* V52: a ball, New Year's Eve, a palace wedding — navy and gold on white: a navy heading and band, a gold line and diamonds (the
+   elegant one is the cream and gold one; the two were alike at a glance) */
 body.theme-gala {
-    --paper: #fffdf6;
+    --paper: #ffffff;
     --ink: #1d1d1f;
     --muted: #5c5649;
-    --accent-base: #8c6d1f;
+    --accent-base: #1c2b4f;
+    --gold: #a8842c;
     --frame: var(--accent, var(--accent-base));
 }
 
-/* V52: a club, an 18th — the club's colours on white paper: ink for the frame only */
+/* V52: a club, an 18th — the club's colours on white paper: ink for the frame only; a violet heading, the frame pink to violet to
+   cyan (a pink heading was the pastel's at a glance) */
 body.theme-neon {
     --paper: #ffffff;
     --ink: #121212;
     --muted: #555555;
-    --accent-base: #c2127a;
+    --accent-base: #6f2dbd;
     --frame: var(--accent, var(--accent-base));
 }
 
-/* V52: a birthday — white, coloured dots in the frame's band */
+/* V52: a birthday — a warm cream paper, coloured dots in the frame's band (white, it was the neon's paper) */
 body.theme-confetti {
-    --paper: #ffffff;
+    --paper: #fff8e7;
     --ink: #1f1f1f;
     --muted: #555555;
     --accent-base: #c4410c;
@@ -780,20 +783,25 @@ body.theme-classic.paper-own .poster {
     padding: 6mm 8mm;
 }
 
-/* V52's frames: the rustic stitched (dashed, a thin line inside it), the gala double with a diamond at its top and foot, the neon in a
-   gradient from the heading's colour, the confetti a band of dots around white paper — the decoration only in the frame, never under
-   the words or the code; ".tent .face" over the tent's own frame of a theme (below) */
+/* V52's frames: the rustic stitched (dashed, a thin line inside it), the gala a navy band with a gold line inside it and a gold diamond
+   at its top and foot, the neon in a gradient through the heading's colour, the confetti a band of dots around its paper — the
+   decoration only in the frame, never under the words or the code; ".tent .face" over the tent's own frame of a theme (below).
+   qr-social.js draws the same frames on the pictures for social media */
 body.theme-rustic .poster,
 body.theme-rustic .tent .face {
     border: 0.7mm dashed var(--frame);
-    box-shadow: inset 0 0 0 1.4mm var(--paper), inset 0 0 0 1.7mm var(--frame);
+    /* the line inside: an outline drawn in — a box-shadow there took the place of the preview's white page margin (has-editor) */
+    outline: 0.3mm solid var(--frame);
+    outline-offset: -2.4mm;
     border-radius: 1.5mm;
 }
 
 body.theme-gala .poster,
 body.theme-gala .tent .face {
     position: relative;
-    border: 1.8mm double var(--frame);
+    border: 2.2mm solid var(--frame);
+    outline: 0.5mm solid var(--gold);
+    outline-offset: -4.1mm;
 }
 
 body.theme-gala .poster::before,
@@ -805,7 +813,7 @@ body.theme-gala .tent .face::after {
     left: calc(50% - 1.6mm);
     width: 3.2mm;
     height: 3.2mm;
-    background: var(--frame);
+    background: var(--gold);
     transform: rotate(45deg);
 }
 
@@ -822,7 +830,7 @@ body.theme-gala .tent .face::after {
 body.theme-neon .poster,
 body.theme-neon .tent .face {
     border: 1.4mm solid var(--frame);
-    border-image: linear-gradient(135deg, var(--frame), #6f2dbd, #0aa2c0) 1;
+    border-image: linear-gradient(135deg, #e0218a, var(--frame), #0aa2c0) 1;
 }
 
 body.theme-confetti .poster,

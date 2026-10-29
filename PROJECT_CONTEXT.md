@@ -438,10 +438,13 @@ until the DJ picks one (`AUTO`, the default) the panel's is printed and picked: 
 English alone — and boxes for what of the DJ's it shows (the
 logo, the profiles, the tip, the address with the party's code; a box only for what the party has) and **the look** (V47): a theme —
 "Klasyczny" (white, as before), "Elegancki" (cream, for a wedding, a serif heading, a double frame), "Klubowy" (dark, the DJ's logo on a
-white badge), "Pastelowy" (soft pink, rounded) and, V52, "Rustykalny" (kraft, olive, a stitched frame — a barn wedding), "Gala" (ivory,
-gold, a double frame with diamonds — a ball, New Year's Eve), "Neon" (white, a frame in a gradient from the heading's colour to violet
-and cyan — the club's colours without its ink), "Konfetti" (white, coloured dots in the frame's band only — a birthday); the rustic
-and the gala headings in the serif as the elegant one; the decoration never under the words or the code (`poster-themes-more`); the
+white badge), "Pastelowy" (soft pink, rounded) and, V52, "Rustykalny" (kraft, olive, a stitched frame with a line inside — a barn
+wedding), "Gala" (white, navy and gold: a navy heading and band, a gold line inside it and gold diamonds — a ball, New Year's Eve),
+"Neon" (white, a violet heading, a frame in a gradient pink → the heading's colour → cyan — the club's colours without its ink),
+"Konfetti" (a warm cream, coloured dots in the frame's band only — a birthday); the rustic and the gala headings in the serif as the
+elegant one; the lines inside a frame are outlines (a box-shadow took the place of the preview's white page margin); every two
+themes apart at a glance — at least two of the paper, the heading's colour and the kind of frame differ (`poster-themes-apart`: the
+elegant and the gala, the pastel and the neon were alike); the decoration never under the words or the code (`poster-themes-more`); the
 themes' scenarios take every theme of the editor, so a new one is checked by itself; **"Kolor tła"** (V53): the theme's paper, one of six
 light tints or the DJ's own — printed as picked (two shades alike print alike), the words on it black or white, whichever reads
 better (always at least 4.5:1; `body.paper-own`), the code on its white tile, the DJ's logo on a white badge on any paper of
@@ -504,8 +507,10 @@ first table's number are with what is on the print, on the cards and the tents o
 "Kolor tła"'s hint says a dark colour prints dark). **"Do internetu"**
 (`js/qr-social.js`): a PNG story 1080 × 1920 or post 1080 × 1350 drawn on a canvas in the page from what the preview shows, unsaved
 changes too — the logo, the heading, the line, the code on a white tile, the party's code large and the address (nobody scans the screen
-they hold), the profiles (never broken across lines), the tip, "Działa na" with the DJ's logo; the theme's paper, ink, colour and frame,
-the DJ's logo on a white badge on the club paper; too much, and every size shrinks until it fits. A phone that can share files opens its
+they hold), the profiles (never broken across lines), the tip, "Działa na" with the DJ's logo; the theme's paper, ink, colour and frame
+as on paper (the double, the rounded, the stitched, the gala's band, the neon's gradient, the confetti's dots — `poster-social-frames`),
+the party's code in the print's font; a story's words, logo and code between Instagram's bars, 250 px at its top and foot
+(`poster-social-story-safe`); the DJ's logo on a white badge on the club paper; too much, and every size shrinks until it fits. A phone that can share files opens its
 share sheet, anything else saves `scan2play-<code>-story.png`; nothing is sent (`poster-social-story`, `…-post`, `…-longest`: every theme
 with the longest words, the DJ's logo, three profiles and the tip inside the picture, the code ≥ 420 / 340 px). The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the

@@ -106,6 +106,38 @@
         }
     });
 
+    // The themes apart: two of them alike at a glance (the elegant and the gala — cream and gold, a double frame; the pastel, the neon
+    // and the confetti — light paper, a pink or orange heading) were one choice twice. Every two differ in at least two of: the paper,
+    // the heading's colour, the kind of frame.
+    S2P.scenario({
+        name: 'poster-themes-apart',
+        page: 'qr-print-poster',
+        title: 'every two themes apart at a glance: at least two of the paper, the heading\'s colour and the kind of frame differ',
+        run: async function (t) {
+            const poster = document.querySelector('.poster');
+            const look = {};
+            themes().forEach(function (theme) {
+                pickTheme(theme);
+                const s = getComputedStyle(poster);
+                look[theme] = { paper: rgb(s.backgroundColor), heading: rgb(getComputedStyle(document.querySelector('.poster h1 .ours > span')).color),
+                    frame: [s.borderTopStyle, s.borderTopWidth === '0px' ? 'none' : (s.borderImageSource !== 'none' ? 'gradient' : ''),
+                        /radial/.test(s.backgroundImage) ? 'dots' : '', s.outlineStyle !== 'none' ? 'inner line' : '',
+                        s.borderTopLeftRadius !== '0px' ? 'rounded' : '', parseFloat(s.borderTopWidth) >= 7 ? 'wide' : ''].join(' ') };
+            });
+            const far = function (a, b, d) { return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) >= d; };
+            const alike = [];
+            const names = Object.keys(look);
+            names.forEach(function (a, i) {
+                names.slice(i + 1).forEach(function (b) {
+                    const apart = [far(look[a].paper, look[b].paper, 20), far(look[a].heading, look[b].heading, 60), look[a].frame !== look[b].frame]
+                        .filter(Boolean).length;
+                    if (apart < 2) alike.push(a + ' ~ ' + b);
+                });
+            });
+            t.step('no two alike', alike, []);
+        }
+    });
+
     S2P.scenario({
         name: 'poster-themes-fit',
         page: 'qr-print-poster-logo',
