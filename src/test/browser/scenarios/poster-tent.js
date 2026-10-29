@@ -305,6 +305,9 @@
             t.check('two in a row, as on the sheet', Math.abs(a.top - b.top) < 1 && b.left > a.right - 1);
             t.check('inside the screen (' + Math.round(a.left) + ' … ' + Math.round(b.right) + ' of ' + width + ')', a.left >= 0 && b.right <= width);
             t.check('no sideways scroll', document.documentElement.scrollWidth <= width);
+            // the preview's zoom and margin are the stylesheet's, on the screen only: on the sheet itself they printed it off the page
+            const main = document.querySelector('body > main');
+            t.step('nothing of the preview on the sheet itself (the print has none)', [main.style.zoom, main.style.marginLeft], ['', '']);
         }
     });
 })();

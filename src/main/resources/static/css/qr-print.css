@@ -166,6 +166,72 @@ body {
     }
 }
 
+/* "Edytuj | Podgląd" (qr-print.html #posterModes): below 1100 px the editor stood above the paper — on a phone some 1800 px of fields
+   before the preview. One of the two at a time, the switch held at the top; qr-print.js shows it (without the script, the editor and
+   the paper one under the other, as before). The preview away while editing stays laid out, out of sight and out of the page's
+   length: the fitting measures it, and the print — screen rules only — always has it */
+.modes {
+    display: none;
+}
+
+@media screen and (max-width: 1099.98px) {
+    body.mode-edit .modes,
+    body.mode-preview .modes {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        gap: 0;
+        padding: 8px 16px;
+        background: #161616;
+        border-bottom: 1px solid #333333;
+    }
+
+    .modes button {
+        flex: 1 1 0;
+        min-height: 44px;
+        padding: 6px 14px;
+        border: 1px solid #6c757d;
+        background: transparent;
+        color: #f8f9fa;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .modes button:first-child {
+        border-radius: 8px 0 0 8px;
+    }
+
+    .modes button + button {
+        border-left: 0;
+        border-radius: 0 8px 8px 0;
+    }
+
+    /* the one shown filled light, as the layout switch */
+    .modes button[aria-pressed="true"] {
+        background: #f8f9fa;
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .modes button:focus-visible {
+        outline: 2px solid #0dcaf0;
+        outline-offset: 2px;
+    }
+
+    body.mode-preview #posterForm {
+        display: none;
+    }
+
+    body.mode-edit > main {
+        position: fixed;
+        top: 0;
+        left: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
 /* the page's one main action in the colour of Scan2Play's actions (the cyan of the "2"), dark text — as on every other page */
 .toolbar #printBtn {
     border-color: #0dcaf0;
@@ -1047,7 +1113,8 @@ body:not(.theme-classic) .card {
     .cards,
     .tents {
         width: 186mm;
-        margin-left: 0;
+        /* centred in the screen by qr-print.js fitPreview (a zoomed box's margin is zoomed too) */
+        margin-left: var(--preview-margin, 0);
         margin-right: 0;
     }
 

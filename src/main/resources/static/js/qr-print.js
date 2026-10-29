@@ -150,7 +150,8 @@
     // A phone (narrower than the paper), or a computer's column beside the editor narrower than the sheet and its white margin: the
     // sheet keeps its printed width (qr-print.css) and is made smaller here with zoom — the page then scrolls as far as the smaller
     // sheet (a transform left its full height empty below it), and the sizes the fitting above measures (a box's height, a line's) stay
-    // the print's, unzoomed alike. The zoom is --preview-zoom, used by the stylesheet on the screen only: never on paper.
+    // the print's, unzoomed alike. The zoom and a phone's margin are --preview-zoom and --preview-margin, used by the stylesheet on
+    // the screen only: never on paper (a margin left on the sheet printed the cards off the page's middle).
     const PAPER = 186 * 96 / 25.4;
     const wide = matchMedia('screen and (min-width: 1100px)');   // qr-print.css: the editor a panel beside the page
     const SHEET_MARGIN = 12 * 96 / 25.4 + 24;   // the page's white margin around the sheet and the desk's air (qr-print.css)
@@ -175,7 +176,10 @@
             if (zoom) main.style.setProperty('--preview-zoom', zoom);
             else main.style.removeProperty('--preview-zoom');
         }
-        if (main.style.marginLeft !== margin) main.style.marginLeft = margin;
+        if (main.style.getPropertyValue('--preview-margin') !== margin) {
+            if (margin) main.style.setProperty('--preview-margin', margin);
+            else main.style.removeProperty('--preview-margin');
+        }
     }
 
     fitTexts();
@@ -195,6 +199,27 @@
 
     const form = document.getElementById('posterForm');
     if (!form) return;
+
+    // "Edytuj | Podgląd" (below 1100 px, qr-print.css): the editor or the preview, the page opening on the preview — what prints. The
+    // preview away is still laid out, so the fitting and the print have it; each tap starts at the page's top
+    const modes = document.getElementById('posterModes');
+
+    function showMode(name) {
+        document.body.classList.toggle('mode-edit', name === 'edit');
+        document.body.classList.toggle('mode-preview', name !== 'edit');
+        Array.prototype.forEach.call(modes.querySelectorAll('[data-mode]'), function (button) {
+            button.setAttribute('aria-pressed', String(button.dataset.mode === name));
+        });
+        window.scrollTo(0, 0);
+    }
+
+    if (modes) {
+        modes.addEventListener('click', function (e) {
+            const button = e.target.closest('[data-mode]');
+            if (button) showMode(button.dataset.mode);
+        });
+        showMode('preview');
+    }
     const answer = document.getElementById('posterAnswer');
     const save = document.getElementById('posterSave');
 

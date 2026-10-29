@@ -40,6 +40,13 @@
     <p class="hint" th:text="#{qr.print.hint}">This bar is not printed.</p>
 </nav>
 
+<!--/* "Edytuj | Podgląd": below 1100 px the editor or the preview, held at the top (qr-print.js shows it, qr-print.css); on a computer
+     both side by side and no switch */-->
+<div th:if="${posterEdit}" id="posterModes" class="modes no-print" role="group" th:attr="aria-label=#{qr.edit.mode}">
+    <button type="button" data-mode="edit" aria-pressed="false" th:text="#{qr.edit.mode.edit}">Edit</button>
+    <button type="button" data-mode="preview" aria-pressed="true" th:text="#{qr.edit.mode.preview}">Preview</button>
+</div>
+
 <!--/* The editor (V46, V47), for whom may change the party's card "Impreza": what is typed or ticked shows on the page at once;
      "Zapisz" keeps it with the party (POST /dj/qr-print/settings, in the background); a new language is saved and the page loads
      again. On a computer a panel beside the paper (the preview), on a phone above it. */-->

@@ -484,7 +484,11 @@ before 17.4: the script threw at load and the editor did nothing — `poster-edi
 to the page's foot —; the room its words and parts leave goes to the code, larger up to 140 mm (our words alone: 140; the longest
 words, the DJ's logo, three profiles and the tip: still ≥ 100), what is left centres them (`poster-fills-the-page`, `…-longest`,
 `poster-preview-a4-wide`). A computer's column narrower than the sheet makes the preview smaller (`--preview-zoom`, used by the
-stylesheet on the screen only — never on paper; `poster-preview-a4-laptop`), as a phone's (`fitPreview`).
+stylesheet on the screen only — never on paper; `poster-preview-a4-laptop`), as a phone's (`fitPreview`; its margin is
+`--preview-margin`, screen only too: on the sheet itself it printed the cards off the page's middle from a phone).
+**"Edytuj | Podgląd"** (`#posterModes`, below 1100 px): the editor or the preview, one at a time, the switch held at the top; the page
+opens on the preview (what prints). The preview away while editing stays laid out (fixed, hidden), so the fitting measures it and the
+print has it (`poster-phone-modes`, `…-fitted`, `poster-modes-wide`); without the script, the editor above the paper as before.
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
 the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane
