@@ -758,6 +758,15 @@ body.theme-elegant .poster {
     font-family: var(--line-font);
 }
 
+/* a heading or a line of two or three lines balanced — as long as one another: filled as far as each goes, a line left one word alone
+   below it ("Poproś o piosenkę dla Młodej" over "Pary"). The number of lines stays, so the fitting (qr-print.js) and the page do too */
+.poster h1,
+.card .title,
+.face .title,
+.own-line {
+    text-wrap: balance;
+}
+
 /* the heading's font as the DJ picked it (V51), whatever the theme — the heading only, the line and the code's texts stay in the
    theme's; after the themes, so it wins over their --heading-font */
 body.font-sans {

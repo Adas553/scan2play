@@ -73,7 +73,7 @@
             t.check('the code at least 500 px (' + qr.size + ')', qr.size >= 500);
             const across = story.dark(qr.x, Math.round(qr.y + qr.size / 2), qr.size);
             t.check('its modules: black and white across its middle (' + across + ' dark of ' + qr.size + ')', across > qr.size * 0.15 && across < qr.size * 0.85);
-            t.step('the unsaved heading drawn', story.layout.heading.join(' '), 'Wesele Ani i Tomka');
+            t.step('the unsaved heading drawn', story.layout.heading.join(' ').replace(/\u00a0/g, ' '), 'Wesele Ani i Tomka');
             t.check('the party\'s code drawn large (' + story.layout.code + ')', story.layout.code === 'PRNT1');
             t.check('inside: ' + JSON.stringify([story.layout.left, story.layout.right, story.layout.top, story.layout.bottom]),
                 story.layout.left >= 60 && story.layout.right <= 1020 && story.layout.top >= 60 && story.layout.bottom <= 1860);

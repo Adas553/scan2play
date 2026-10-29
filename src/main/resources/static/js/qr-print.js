@@ -184,6 +184,18 @@
         }
     }
 
+    // Polish typesetting: a one-letter word ("i", "o", "w", "z", "a", "u") never ends a line — the space after it a non-breaking one, in
+    // what is printed (the field keeps what the DJ typed); twice, for two in a row ("i w Lipnicy"). Ours too ("Zeskanuj i poproś o …")
+    function typeset(text) {
+        const loose = /(^|[\s\u00a0])([aiouwz]) /gi;
+        return text.replace(loose, '$1$2\u00a0').replace(loose, '$1$2\u00a0');
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.poster h1, .card .title, .face .title, [data-poster-line]'), function (el) {
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) walker.currentNode.data = typeset(walker.currentNode.data);
+    });
+
     fitTexts();
     if (document.fonts) {
         document.fonts.ready.then(fitTexts);
@@ -234,14 +246,14 @@
 
     function showHeading() {
         const own = form.elements.heading.value.replace(/\s+/g, ' ').trim();
-        all('[data-poster-heading]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
+        all('[data-poster-heading]').forEach(function (el) { el.textContent = typeset(own); el.hidden = !own; });
         all('[data-poster-ours-heading]').forEach(function (el) { el.hidden = !!own; });
         fitTexts();
     }
 
     function showLine() {
         const own = form.elements.line.value.replace(/\s+/g, ' ').trim();
-        all('[data-poster-line]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
+        all('[data-poster-line]').forEach(function (el) { el.textContent = typeset(own); el.hidden = !own; });
         fitTexts();
     }
 

@@ -464,7 +464,11 @@ the SIL Open Font License beside them, ~150 KB): "S2P Sans" (Source Sans 3) on t
 Display) for the elegant headings and the DJ's line on the poster and a tent (on a card the line stays in the sans: 60 letters of
 the serif do not fit its column) — variable fonts, the Latin and the Latin Extended halves apart, `font-display: block`; the bar and
 the editor keep the device's fonts, as the panel. So the paper lays out the same everywhere and the scenarios measure what prints
-(`poster-fonts-ours`). **The DJ's heading and line fitted** (`qr-print.js`): a long one made smaller half a point at a time until
+(`poster-fonts-ours`). **Balanced lines**: a heading or a line of two or three lines is balanced (`text-wrap: balance`; the pictures'
+`qr-social.js` `balance`, the narrowest width keeping the lines' number) — filled as far as each went, a word was left alone below
+("Poproś o piosenkę dla Młodej" over "Pary", the owner's screenshot); and a one-letter word ("i", "o", "w", "z", "a", "u") never ends a
+line — the space after it non-breaking in what is printed and drawn, ours too (`typeset`; the field keeps what was typed) —
+`poster-heading-balanced`, `…-many`, `…-cards-tent`, `…-story`, `poster-heading-one-letter-words`. **The DJ's heading and line fitted** (`qr-print.js`): a long one made smaller half a point at a time until
 whole in its lines — two for the poster's heading, three elsewhere —, no smaller than its least (the poster's heading 16 pt, a card's
 7 pt, a tent's 12 pt); a short one keeps the stylesheet's size; measured on the first card or tent, the same size for all; on a phone
 too — **a phone's preview** is the sheet laid out as it prints (186 mm wide) and made smaller to the screen with `zoom`

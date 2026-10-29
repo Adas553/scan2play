@@ -21,7 +21,9 @@
     // checkVisibility where the browser has it (Safari only from 17.4); laid out, else
     function shown(el) { return !!el && (el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0); }
 
-    function text(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
+    // the page's words as drawn: runs of white space one space — but a non-breaking one stays (qr-print.js typeset: a one-letter word
+    // never at a line's end), and wrap keeps it inside its word
+    function text(el) { return el ? el.textContent.replace(/[^\S\u00a0]+/g, ' ').trim() : ''; }
 
     /** What the first printed item (the poster, a card, a tent's upright face) shows, and the theme's colours and fonts. */
     function content() {
@@ -89,6 +91,22 @@
     }
 
     /**
+     * {@code words} in as many lines as {@code wrap} gives them at {@code width}, but as long as one another (the print's text-wrap:
+     * balance): the narrowest width that keeps that number of lines — filled as far as each goes, a line left one word alone below it.
+     */
+    function balance(ctx, words, width) {
+        const lines = wrap(ctx, words, width);
+        if (lines.length < 2) return lines;
+        let low = 0, high = width;
+        while (high - low > 2) {
+            const mid = (low + high) / 2;
+            if (wrap(ctx, words, mid).length > lines.length) low = mid;
+            else high = mid;
+        }
+        return wrap(ctx, words, high);
+    }
+
+    /**
      * The picture as a list of things to draw, from the top, at the scale {@code s}: each text block wrapped to the width, the logo
      * and the code in their boxes. Its height tells whether it fits.
      */
@@ -101,7 +119,7 @@
             if (!words) return;
             ctx.font = weight + ' ' + Math.round(px * s) + 'px ' + family;
             ctx.letterSpacing = spacing ? Math.round(spacing * s) + 'px' : '0px';
-            wrap(ctx, words, width).forEach(function (line) {
+            (role === 'heading' || role === 'second' || role === 'line' ? balance : wrap)(ctx, words, width).forEach(function (line) {
                 add({ kind: 'text', text: line, font: ctx.font, spacing: ctx.letterSpacing, colour: colour, height: Math.round(px * s * 1.18),
                     role: role });
             });
@@ -124,7 +142,7 @@
             block(part.text, (part.second ? (story ? 62 : 50) : (story ? 92 : 74)) * script, part.second ? 600 : 700, c.headingFont,
                 part.second ? c.muted : c.accent, last ? (story ? 34 : 24) : 10, 0, part.second ? 'second' : 'heading');
         });
-        block(c.line, story ? 54 : 44, 600, c.lineFont, c.ink, story ? 48 : 30);
+        block(c.line, story ? 54 : 44, 600, c.lineFont, c.ink, story ? 48 : 30, 0, 'line');
         const qr = Math.round(Math.min(width, (story ? 640 : 500) * s));
         add({ kind: 'qr', size: qr });
         add({ kind: 'gap', height: Math.round((story ? 44 : 30) * s) });

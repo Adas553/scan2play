@@ -75,7 +75,7 @@
                 document.getElementById('posterAccentOwn').checked, document.getElementById('posterAccentPicker').value,
                 document.querySelector('[data-poster-toggle="address"]').checked],
                 ['Wesele Ani i Tomka', 'Zatańczmy razem', '12', 'ELEGANT', true, '#123abc', false]);
-            t.step('the cards show them', [heading.textContent, heading.hidden, document.querySelectorAll('.card').length,
+            t.step('the cards show them', [heading.textContent.replace(/\u00a0/g, ' '), heading.hidden, document.querySelectorAll('.card').length,
                 document.body.classList.contains('theme-elegant'), document.body.classList.contains('font-script'),
                 document.querySelector('.card [data-poster-part="address"]').hidden],
                 ['Wesele Ani i Tomka', false, 12, true, true, true]);

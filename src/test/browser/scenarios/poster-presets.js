@@ -22,7 +22,8 @@
             pick(select, 'WEDDING');
             const heading = document.getElementById('posterHeading');
             const shown = document.querySelector('.poster [data-poster-heading]');
-            t.step('the heading filled, the preview shows it', [heading.value, shown.textContent, shown.hidden],
+            // the preview's spaces after a one-letter word non-breaking (qr-print.js typeset)
+            t.step('the heading filled, the preview shows it', [heading.value, shown.textContent.replace(/\u00a0/g, ' '), shown.hidden],
                 [options[0].dataset.heading, options[0].dataset.heading, false]);
             const form = document.getElementById('posterForm');
             t.step('not saved yet, it says', document.getElementById('posterAnswer').textContent, form.dataset.unsaved);
