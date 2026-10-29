@@ -203,7 +203,7 @@
          th:alt="${both ? 'QR code / kod QR' : (pl ? 'Kod QR' : 'QR code')}">
     <p class="link" data-poster-part="address" th:hidden="${!poster.posterShowAddress}">
         <span th:if="${pl}" lang="pl">Nie możesz zeskanować? Wejdź na:</span> <span th:if="${en}" lang="en" th:class="${both} ? 'second'">Can't scan? Open:</span><br>
-        <strong th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</strong>
+        <strong th:insert="~{qr-print :: printedLink}">www.scan2play.com.pl/p/ABCDE</strong>
     </p>
     <p class="code" data-poster-part="address" th:hidden="${!poster.posterShowAddress}"><th:block th:if="${pl}"><span lang="pl">Kod imprezy</span><th:block th:if="${en}"> / </th:block></th:block><span
             th:if="${en}" lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
@@ -250,7 +250,7 @@
                         lang="pl">Zeskanuj i poproś o piosenkę</span><br th:if="${en}"></th:block><span th:if="${en}" lang="en" th:class="${both} ? 'second'">Scan to request a song</span></span>
             </p>
             <p class="small own-line" data-poster-line th:hidden="${poster.posterLine == null}" th:text="${poster.posterLine}">Wesele Ani i Tomka</p>
-            <p class="small link" data-poster-part="address" th:hidden="${!poster.posterShowAddress}" th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</p>
+            <p class="small link" data-poster-part="address" th:hidden="${!poster.posterShowAddress}" th:insert="~{qr-print :: printedLink}">www.scan2play.com.pl/p/ABCDE</p>
             <p class="small" data-poster-part="address" th:hidden="${!poster.posterShowAddress}"><th:block th:if="${pl}"><span lang="pl">Kod</span><th:block
                     th:if="${en}"> / </th:block></th:block><span th:if="${en}" lang="en">Code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
             <p th:replace="~{qr-print :: tipLink}" class="small"></p>
@@ -268,6 +268,12 @@
         <div th:replace="~{qr-print :: tentFace('face-lower', ${n})}"></div>
     </section>
 </main>
+
+<!--/* The address a guest types from paper when the code does not scan: without "https://" (a browser adds it), the party's code never
+     broken across lines — a line breaks before it (wbr) or, on a card's narrow column, in the address before it (qr-print.css .link). */-->
+<th:block th:if="${false}"><th:block th:fragment="printedLink" th:with="typed=${#strings.substringAfter(permanentLink, '://')}"><span
+        th:text="${#strings.substringBefore(typed, '/p/') + '/p/'}">www.scan2play.com.pl/p/</span><wbr><span class="link-code"
+        th:text="${partyCode}">ABCDE</span></th:block></th:block>
 
 <!--/* A face of the tent, as a card larger: the code's column (a logo above the code, the DJ's profiles under it) and the texts
      beside it. Only a fragment: never rendered here, the tent above takes it twice. */-->
@@ -288,7 +294,7 @@
                     th:if="${en}" lang="en" th:class="${both} ? 'second'">Scan to request a song</span></span>
         </p>
         <p class="own-line" data-poster-line th:hidden="${poster.posterLine == null}" th:text="${poster.posterLine}">Wesele Ani i Tomka</p>
-        <p class="link" data-poster-part="address" th:hidden="${!poster.posterShowAddress}" th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</p>
+        <p class="link" data-poster-part="address" th:hidden="${!poster.posterShowAddress}" th:insert="~{qr-print :: printedLink}">www.scan2play.com.pl/p/ABCDE</p>
         <p class="code" data-poster-part="address" th:hidden="${!poster.posterShowAddress}"><th:block th:if="${pl}"><span lang="pl">Kod imprezy</span><th:block
                 th:if="${en}"> / </th:block></th:block><span th:if="${en}" lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
         <p th:replace="~{qr-print :: tipLink}"></p>

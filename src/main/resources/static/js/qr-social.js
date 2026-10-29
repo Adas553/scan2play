@@ -15,7 +15,8 @@
     const ourMark = new Image();
     ourMark.src = '/images/icon-192.png';
 
-    function shown(el) { return !!el && el.checkVisibility(); }
+    // checkVisibility where the browser has it (Safari only from 17.4); laid out, else
+    function shown(el) { return !!el && (el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0); }
 
     function text(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
 

@@ -821,7 +821,13 @@ body:not(.theme-classic) .card {
 .poster .link {
     margin: 2mm 0;
     font-size: 11pt;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+/* the address a guest types (qr-print.html printedLink): a line breaks before the party's code or in the address before it, never
+   inside the code — "…/p/P" over "RNT1" was read as two things */
+.link-code {
+    white-space: nowrap;
 }
 
 .poster .code {
@@ -1010,7 +1016,7 @@ body:not(.theme-classic) .card {
 }
 
 .card .link {
-    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 @media print {
@@ -1281,7 +1287,7 @@ body:not(.theme-classic) .card {
 
 .face .link {
     font-size: 10pt;
-    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 .face .code,

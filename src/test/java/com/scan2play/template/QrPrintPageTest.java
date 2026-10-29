@@ -129,7 +129,9 @@ class QrPrintPageTest {
         String html = render("poster", Locale.forLanguageTag("pl"));
 
         assertThat(html).contains("class=\"layout-poster theme-classic has-editor\"", "<main class=\"poster\">", "data:image/png;base64,");
-        assertThat(html).contains("https://www.scan2play.com.pl/p/" + PARTY, ">" + PARTY + "<");
+        // the address as a guest types it — no "https://" — the party's code whole after a possible line break (wbr)
+        assertThat(html).contains("<span>www.scan2play.com.pl/p/</span><wbr><span class=\"link-code\">" + PARTY + "</span>")
+                .doesNotContain("https://www.scan2play.com.pl/p/");
         // a Polish panel: Polish and English at once; "poproś", as the TV screen and the rest of the app ("prośba"), not "zamów"
         assertThat(html).contains("<span lang=\"pl\">Zeskanuj i poproś o piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>")
                 .doesNotContain("zamów");

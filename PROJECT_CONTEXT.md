@@ -474,7 +474,12 @@ once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads
 again (the server writes it). Changes not saved say "Niezapisane zmiany" and go along to the other layouts (the switch "Plakat A4 |
 Kartki na stoliki | Namiot na stół" keeps them in `sessionStorage` for the tab, the next page takes them — scenarios `poster-switch-keeps`,
-`…-takes`; on a phone the switch spans the bar, a long name on two lines).
+`…-takes`; on a phone the switch spans the bar, a long name on two lines); leaving the page with them asks first (`beforeunload` —
+never on the layout switch nor on the reload after a new language, which saved them: `poster-unsaved-asks-before-leaving`). The
+address a guest types from paper is printed without "https://" and the party's code in it never breaks across lines (the fragment
+`printedLink`, `.link-code`; on a card's narrow column the address broke anywhere, "…/p/P" over "RNT1" —
+`poster-address-code-whole-cards`, `…-cards-logo`, `…-tent`, `…-poster`). The page works without `Element.checkVisibility` (Safari
+before 17.4: the script threw at load and the editor did nothing — `poster-editor-without-check-visibility`, the harness's `without`).
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
 the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane

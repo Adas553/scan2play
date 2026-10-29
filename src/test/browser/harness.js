@@ -9,6 +9,12 @@
 
     const params = new URLSearchParams(location.search);
     const name = params.get('scenario');
+    // ?without=Element.checkVisibility (a scenario's "without"): the page as an older browser runs it, the method taken away before
+    // the page's own scripts — this file is the first in <head>
+    (params.get('without') || '').split(',').filter(Boolean).forEach(function (what) {
+        const parts = what.split('.');
+        if (window[parts[0]]) delete window[parts[0]].prototype[parts[1]];
+    });
     const scenarios = {};
     const steps = [];
     const errors = [];        // uncaught exceptions and unhandled rejections: none is expected
@@ -40,6 +46,8 @@
      *            DashboardPageRenderTest, GuestPageRenderTest, QrPrintPageTest
      *   viewport the browser window's size, e.g. '390,844' (a phone's screen; read by run.py)
      *   setup    what the stand-in server is told before the scenario runs (see server.py, POST /__config)
+     *   without  optional: methods the page runs without, as an older browser lacks them — 'Element.checkVisibility' (Safari
+     *            before 17.4); taken away before the page's own scripts
      *   run      async function (t): does something and records steps with t.step(...)
      *   control  optional: this scenario is a CONTROL — the same check with the problem put back, which must fail. It passes
      *            only if every step whose label starts with one of control.mustFail fails (so the check does see the problem).
@@ -120,8 +128,11 @@
     async function runScenario() {
         const definition = scenarios[name];
         // a scenario on another rendered page: load that page (the scenario files are served with every page)
-        if (definition && definition.page && params.get('page') !== definition.page) {
-            params.set('page', definition.page);
+        // and as an older browser runs it (definition.without, see the top of this file)
+        if (definition && ((definition.page && params.get('page') !== definition.page)
+                || (definition.without && params.get('without') !== definition.without))) {
+            if (definition.page) params.set('page', definition.page);
+            if (definition.without) params.set('without', definition.without);
             location.replace(location.pathname + '?' + params.toString());
             return;
         }

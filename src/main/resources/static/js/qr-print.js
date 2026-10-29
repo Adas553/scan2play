@@ -94,6 +94,12 @@
     const PT = 96 / 72;
     const narrow = matchMedia('screen and (max-width: 200mm)');
 
+    /** Laid out on the page — neither it nor a parent hidden. checkVisibility where the browser has it: Safari has it only from 17.4,
+     *  and a call to it there throws at load, which leaves the editor doing nothing. */
+    function visible(el) {
+        return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
+    }
+
     function tooLong(el, most) {
         const line = parseFloat(getComputedStyle(el).lineHeight);
         // a line the clamp hid, not the font's letters reaching a little past their line
@@ -104,7 +110,7 @@
         FITS.forEach(function (fit) {
             const texts = Array.prototype.slice.call(document.querySelectorAll(fit[0]));
             texts.forEach(function (el) { el.style.removeProperty('font-size'); });
-            const first = texts.find(function (el) { return el.checkVisibility(); });
+            const first = texts.find(visible);
             if (!first) return;
             const least = fit[3] && document.body.classList.contains('font-script') ? fit[3] : fit[2];
             let size = parseFloat(getComputedStyle(first).fontSize) / PT;
@@ -384,8 +390,12 @@
         }
     }
 
+    // the switch to another layout takes the unsaved changes along (stash): leaving by it asks nothing
+    let switching = false;
+
     all('[data-layout-switch]').forEach(function (link) {
-        link.addEventListener('click', function () {
+        link.addEventListener('click', function (e) {
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) switching = true;
             if (unsaved) stash();
             try {
                 if (fromField && fromField.value) sessionStorage.setItem(firstKey, fromField.value);
@@ -399,10 +409,19 @@
         say(form.dataset.sending, false);
         try {
             await send();
+            unsaved = false;   // the whole form was sent: the reload keeps it
             location.reload();
         } catch (e) {
             say(form.dataset.refused, true);
         }
+    });
+
+    // Changes not saved: leaving the page asks first — "Powrót do panelu", the tab closed after printing —, or they are gone without
+    // a word
+    window.addEventListener('beforeunload', function (e) {
+        if (!unsaved || switching) return;
+        e.preventDefault();
+        e.returnValue = '';
     });
 
     form.addEventListener('submit', async function (e) {

@@ -154,4 +154,67 @@
                 .map(function (el) { return el.tagName + ' ' + el.textContent.trim().slice(0, 20); }), []);
         }
     });
+
+    /** Whether leaving the page now would ask first: a beforeunload the page's script cancels. */
+    function asksBeforeLeaving() {
+        const e = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(e);
+        return e.defaultPrevented;
+    }
+
+    S2P.scenario({
+        name: 'poster-unsaved-asks-before-leaving',
+        page: 'qr-print-poster',
+        title: 'changes not saved: leaving the page ("Powrót do panelu", the tab closed) asks first; saved, a new language (saved, then the page again) or another layout (the changes go along) does not',
+        run: async function (t) {
+            const loads = [];
+            navigation.addEventListener('navigate', function (e) {
+                loads.push(e.navigationType);
+                e.preventDefault();
+            });
+            const form = document.getElementById('posterForm');
+            t.step('nothing changed: leaves at once', asksBeforeLeaving(), false);
+            type('posterHeading', 'Osiemnastka Dawida');
+            t.step('changed, not saved: asks', asksBeforeLeaving(), true);
+            document.getElementById('posterSave').click();
+            await t.waitFor(function () { return document.getElementById('posterAnswer').textContent === form.dataset.saved; }, 'saved', 3000);
+            t.step('saved: leaves at once', asksBeforeLeaving(), false);
+
+            const preset = document.getElementById('posterPreset');
+            preset.value = preset.options[1].value;
+            preset.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('a heading for the occasion picked (as if typed): asks', asksBeforeLeaving(), true);
+            const select = document.getElementById('posterLanguage');
+            select.value = 'PL';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            await t.waitFor(function () { return loads.length > 0; }, 'the page again', 3000);
+            t.step('a new language: everything saved, then the page again without asking', asksBeforeLeaving(), false);
+
+            type('posterLine', 'Sobota, sala Pod Lipami');
+            t.step('changed again: asks', asksBeforeLeaving(), true);
+            document.querySelector('[data-layout-switch]:not(.active)').click();
+            t.step('another layout: the changes go along, no question', asksBeforeLeaving(), false);
+        }
+    });
+
+    // An older browser (Safari before 17.4) has no Element.checkVisibility: the page's scripts threw at load and the editor did nothing
+    // — no preview, no pictures. The method is taken away before the page's scripts run (harness.js, "without").
+    S2P.scenario({
+        name: 'poster-editor-without-check-visibility',
+        page: 'qr-print-cards',
+        without: 'Element.checkVisibility',
+        title: 'a browser without Element.checkVisibility (Safari before 17.4): the editor still shows what is typed, the long heading fitted, the story drawn',
+        run: async function (t) {
+            await document.fonts.ready;
+            t.step('the method is gone', typeof Element.prototype.checkVisibility, 'undefined');
+            type('posterHeading', 'W'.repeat(40));
+            const own = document.querySelector('.card [data-poster-heading]');
+            t.step('typed: on the cards at once', [own.textContent, own.hidden], ['W'.repeat(40), false]);
+            t.check('the long heading made smaller to the card\'s three lines (' + own.style.fontSize + ')', parseFloat(own.style.fontSize) < 11);
+            const group = document.getElementById('posterSocial');
+            document.getElementById('posterStory').click();
+            await t.waitFor(function () { return !!group.dataset.lastLayout; }, 'the story drawn', 5000);
+            t.step('the story has the DJ\'s heading', JSON.parse(group.dataset.lastLayout).heading.join(''), 'W'.repeat(40));
+        }
+    });
 })();
