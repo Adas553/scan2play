@@ -274,6 +274,26 @@
         }
     });
 
+    // A phone's address bar hides and shows while the page scrolls: the window's height changes and "resize" comes, again and again.
+    // The scale depends on the width alone, so such a resize must not touch the sheet (taking the zoom off and on made the page
+    // longer for a moment, and the page jumped at its foot).
+    S2P.scenario({
+        name: 'poster-phone-preview-steady',
+        page: 'qr-print-poster',
+        viewport: '390,844',
+        title: 'the phone\'s preview stays put while the address bar comes and goes: a resize of the same width touches nothing',
+        run: async function (t) {
+            const main = document.querySelector('body > main');
+            const zoom = main.style.zoom;
+            const changes = [];
+            new MutationObserver(function (list) { list.forEach(function (m) { changes.push(m.attributeName + ' ' + main.getAttribute('style')); }); })
+                .observe(main, { attributes: true, attributeFilter: ['style'] });
+            for (let i = 0; i < 5; i++) window.dispatchEvent(new Event('resize'));
+            await t.sleep(100);
+            t.step('the sheet untouched', [changes, main.style.zoom], [[], zoom]);
+        }
+    });
+
     S2P.scenario({
         name: 'poster-phone-preview-cards',
         page: 'qr-print-cards',

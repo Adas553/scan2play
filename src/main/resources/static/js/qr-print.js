@@ -151,21 +151,32 @@
     // fitting above measures (a box's height, a line's) stay the print's, unzoomed alike.
     const PAPER = 186 * 96 / 25.4;
 
+    // Set only when it changes, never taken off and put back: a phone's address bar, hiding and showing as the page scrolls, sends
+    // "resize" again and again with the same width — the sheet unzoomed for a moment made the page longer and it jumped at its foot.
     function fitPreview() {
         const main = document.querySelector('body > main');
         if (!main) return;
-        ['zoom', 'margin-left'].forEach(function (name) { main.style.removeProperty(name); });
-        if (!narrow.matches) return;
-        const room = document.documentElement.clientWidth - 32;
-        const scale = Math.min(1, room / PAPER);
-        main.style.zoom = String(scale);
-        main.style.marginLeft = (16 + (room - PAPER * scale) / 2) / scale + 'px';   // a zoomed box's margin is zoomed too
+        let zoom = '', margin = '';
+        if (narrow.matches) {
+            const room = document.documentElement.clientWidth - 32;
+            const scale = Math.min(1, room / PAPER);
+            zoom = String(scale);
+            margin = (16 + (room - PAPER * scale) / 2) / scale + 'px';   // a zoomed box's margin is zoomed too
+        }
+        if (main.style.zoom !== zoom) main.style.zoom = zoom;
+        if (main.style.marginLeft !== margin) main.style.marginLeft = margin;
     }
 
     fitTexts();
     if (document.fonts) document.fonts.ready.then(fitTexts);
     narrow.addEventListener('change', fitTexts);
-    window.addEventListener('resize', fitPreview);
+    // the scale depends on the width alone: a resize of the height (the address bar) is nothing to do
+    let previewWidth = document.documentElement.clientWidth;
+    window.addEventListener('resize', function () {
+        if (document.documentElement.clientWidth === previewWidth) return;
+        previewWidth = document.documentElement.clientWidth;
+        fitPreview();
+    });
 
     const form = document.getElementById('posterForm');
     if (!form) return;
