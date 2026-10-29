@@ -15,7 +15,8 @@
     const ourMark = new Image();
     ourMark.src = '/images/icon-192.png';
 
-    function shown(el) { return !!el && el.checkVisibility(); }
+    // checkVisibility where the browser has it (Safari only from 17.4); laid out, else
+    function shown(el) { return !!el && (el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0); }
 
     function text(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
 
@@ -51,7 +52,7 @@
             accent: heading.length ? getComputedStyle(heading[0].el).color : '#111111',
             framed: !document.body.classList.contains('theme-classic'),
             club: document.body.classList.contains('theme-club'),
-            badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-dark'),
+            badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-own'),
             font: paperFont,
             headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont,
             // the DJ's line in its own font (the serif on the elegant theme), never the heading's script

@@ -443,17 +443,15 @@ gold, a double frame with diamonds — a ball, New Year's Eve), "Neon" (white, a
 and cyan — the club's colours without its ink), "Konfetti" (white, coloured dots in the frame's band only — a birthday); the rustic
 and the gala headings in the serif as the elegant one; the decoration never under the words or the code (`poster-themes-more`); the
 themes' scenarios take every theme of the editor, so a new one is checked by itself; **"Kolor tła"** (V53): the theme's paper, one of six
-light tints or the DJ's own — a light colour made a light tint in the page (`qr-print.js light`: mixed towards white to a luminance
-of 0.85 — little ink), a dark one (luminance under 0.25) a dark paper (`deep`: darkened only to 0.09, so the quiet words read at
-4.5:1) — the words on it dark or light (`body.paper-own`, `.paper-dark`), the heading's colour (the theme's too; a near-black one on a
-dark paper the light words' colour) readable on it, the code on its white tile, the DJ's logo on a white badge on a dark paper, the
-classic paper coloured with the words 8 mm off its edges (`poster-paper`,
-`…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
+light tints or the DJ's own — printed as picked (two shades alike print alike), the words on it black or white, whichever reads
+better (always at least 4.5:1; `body.paper-own`), the code on its white tile, the DJ's logo on a white badge on any paper of
+the DJ's (one shape while the DJ tries colours — `poster-paper-logo-steady`), the classic paper coloured with the words 8 mm off its edges (`poster-paper`, `…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
-`--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
-with a margin; a near-black on a dark paper, a near-white on a light one take the words' own colour, not a grey; the DJ's colour so
-changed is said under the colours, "drukują się jaśniej" / "ciemniej" — `poster-accent-adjusted`) — browser scenario
-`poster-themes-readable`: every theme with white, a pale yellow, black and a light cyan. The code
+`--accent`); the DJ's colour prints as picked — the DJ decides; a heading that stands out poorly from its paper (under 3:1, WCAG's
+least for large text) is said under the colours ("Nagłówek słabo odcina się od tła"), never changed (`qr-print.js`;
+`poster-accent-exact`; while the DJ drags in a colour picker the preview follows and the note waits for the colour picked — shown
+and hidden under the open picker, it moved the editor and the browser closed the picker, `poster-accent-note-steady`); the theme's own colours read on its paper — browser scenario `poster-themes-readable`: every theme with white,
+a pale yellow, black and a light cyan. The code
 stays black on white (its own white margin is its tile) in every theme; every theme fits A4 and the cards with the longest words
 (`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font). **The print's own fonts** (`static/fonts`,
 the SIL Open Font License beside them, ~150 KB): "S2P Sans" (Source Sans 3) on the paper in every theme, "S2P Serif" (Playfair
@@ -476,7 +474,12 @@ once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads
 again (the server writes it). Changes not saved say "Niezapisane zmiany" and go along to the other layouts (the switch "Plakat A4 |
 Kartki na stoliki | Namiot na stół" keeps them in `sessionStorage` for the tab, the next page takes them — scenarios `poster-switch-keeps`,
-`…-takes`; on a phone the switch spans the bar, a long name on two lines).
+`…-takes`; on a phone the switch spans the bar, a long name on two lines); leaving the page with them asks first (`beforeunload` —
+never on the layout switch nor on the reload after a new language, which saved them: `poster-unsaved-asks-before-leaving`). The
+address a guest types from paper is printed without "https://" and the party's code in it never breaks across lines (the fragment
+`printedLink`, `.link-code`; on a card's narrow column the address broke anywhere, "…/p/P" over "RNT1" —
+`poster-address-code-whole-cards`, `…-cards-logo`, `…-tent`, `…-poster`). The page works without `Element.checkVisibility` (Safari
+before 17.4: the script threw at load and the editor did nothing — `poster-editor-without-check-visibility`, the harness's `without`).
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
 the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane

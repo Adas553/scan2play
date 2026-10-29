@@ -12,11 +12,10 @@
 // saved: the next print starts from 1) numbers them from it — 22 from 22 are tables 22 … 43, a reprint of one is 1 from 16 —, and
 // the summary under it says which tables print on how many pages.
 //
-// The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
-// theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
-// --accent; none, and the theme's own applies. The DJ's paper (V53, data-paper): a light colour made a light tint, a dark one a dark
-// paper, set as --paper — the words on it dark or light, the heading's colour (the theme's too) readable on it. On every load, for whoever prints, and at once while the editor
-// changes them.
+// The look (V47, V53): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent, the DJ's paper its
+// data-paper — both printed as picked, set as --accent / --paper; the words on the DJ's paper black or white, whichever reads better.
+// A heading that stands out poorly from its paper is said under the colours, never changed: the DJ decides. On every load, for
+// whoever prints, and at once while the editor changes them.
 (function () {
     'use strict';
     const button = document.getElementById('printBtn');
@@ -43,43 +42,10 @@
         return '#' + c.map(function (v) { return Math.round(v).toString(16).padStart(2, '0'); }).join('');
     }
 
-    /** {@code colour} as it reads on {@code paper}: as it is, or mixed towards black / white step by step until 4.5:1 (and a little). */
-    function readable(colour, paper) {
-        const c = rgb(colour), p = rgb(paper);
-        if (!c || !p) return colour;
-        const target = luminance(p) > 0.5 ? [0, 0, 0] : [255, 255, 255];
-        for (let t = 0; t <= 1.0001; t += 0.05) {
-            const mixed = c.map(function (v, i) { return v + (target[i] - v) * t; });
-            if (contrast(mixed, p) >= 4.6) return hex(mixed);   // 4.6: a margin over AA's 4.5 for the rounding to whole values
-        }
-        return hex(target);
-    }
+    /** A heading — large letters — stands out poorly from its paper under this contrast (WCAG's least for large text). */
+    const WEAK = 3;
 
-    /** {@code colour} as a light paper (V53): mixed towards white until it is as light as a pale paper — little ink, dark words read. */
-    function light(colour) {
-        const c = rgb(colour);
-        if (!c) return null;
-        for (let t = 0; t <= 1.0001; t += 0.02) {
-            const mixed = c.map(function (v) { return v + (255 - v) * t; });
-            if (luminance(mixed) >= 0.85) return hex(mixed);
-        }
-        return '#ffffff';
-    }
-
-    /** {@code colour} as a dark paper (V53): darkened only until light words read on it — the quiet ones at 4.5:1 too. */
-    function deep(colour) {
-        const c = rgb(colour);
-        for (let t = 0; t <= 1.0001; t += 0.02) {
-            const mixed = c.map(function (v) { return v * (1 - t); });
-            if (luminance(mixed) <= 0.09) return hex(mixed);
-        }
-        return '#000000';
-    }
-
-    /** A colour the DJ picks for the paper is a dark paper below this luminance, else a light tint. */
-    const DARK_PAPER = 0.25;
-
-    function showLook(theme, accent, font, paperColour) {
+    function showLook(theme, accent, font, paperColour, keepNote) {
         const body = document.body;
         if (theme) {
             body.className = body.className.replace(/\btheme-\w+\b/g, '').trim() + ' theme-' + theme.toLowerCase();
@@ -87,41 +53,30 @@
         if (font) {   // the heading's font (V51): the theme's has no class
             body.className = body.className.replace(/\bfont-\w+\b/g, '').trim() + (font === 'THEME' ? '' : ' font-' + font.toLowerCase());
         }
-        // the DJ's paper (V53): a light colour a light tint, the words on it dark (the club's white ink would vanish); a dark one a
-        // dark paper, the words light — and the classes for the rest: words off the classic paper's edges, the logo on a badge
+        // The DJ's paper (V53) and colour print as picked — the DJ decides; nothing is changed by itself. The words on the DJ's paper
+        // black or white, whichever reads better (always at least 4.5:1); on it the DJ's logo on a white badge and the classic paper's
+        // words off its edges (qr-print.css .paper-own).
         const picked = paperColour ? rgb(paperColour) : null;
-        const dark = !!picked && luminance(picked) < DARK_PAPER;
-        const tint = picked ? (dark ? deep(paperColour) : light(paperColour)) : null;
-        ['--paper', '--ink', '--muted'].forEach(function (name) { body.style.removeProperty(name); });
-        body.classList.toggle('paper-own', !!tint);
-        body.classList.toggle('paper-dark', dark);
-        if (tint) {
-            body.style.setProperty('--paper', tint);
-            body.style.setProperty('--ink', dark ? '#f5f5f7' : '#1a1a1a');
-            body.style.setProperty('--muted', dark ? '#c9cad3' : '#555555');
+        const whiteWords = !!picked && contrast(picked, [255, 255, 255]) > contrast(picked, [0, 0, 0]);
+        ['--paper', '--ink', '--muted', '--accent'].forEach(function (name) { body.style.removeProperty(name); });
+        body.classList.toggle('paper-own', !!picked);
+        if (picked) {
+            body.style.setProperty('--paper', hex(picked));
+            body.style.setProperty('--ink', whiteWords ? '#ffffff' : '#000000');
+            body.style.setProperty('--muted', whiteWords ? '#ffffff' : '#000000');
         }
-        const paper = getComputedStyle(body).getPropertyValue('--paper').trim();
-        // the heading's colour readable on the paper: the DJ's, or on a paper of the DJ's the theme's own too (the club's cyan on pale).
-        // A near-black on a dark paper, a near-white on a light one: the words' own colour, not a grey made of it. The DJ's colour so
-        // changed is said under the colours, lighter or darker — a picked black that prints light is no surprise then
-        const base = accent || (tint ? getComputedStyle(body).getPropertyValue('--accent-base').trim() : '');
-        const darkPaper = !!rgb(paper) && luminance(rgb(paper)) < 0.5;
-        let shown = '';
-        if (rgb(base)) {
-            const lightness = luminance(rgb(base));
-            shown = readable(base, paper);
-            if (shown !== hex(rgb(base)) && (darkPaper ? lightness < 0.05 : lightness > 0.8)) {
-                shown = getComputedStyle(body).getPropertyValue('--ink').trim();
-            }
-            body.style.setProperty('--accent', shown);
-        } else {
-            body.style.removeProperty('--accent');
-        }
+        if (rgb(accent)) body.style.setProperty('--accent', hex(rgb(accent)));
+        // a heading that stands out poorly from the paper — the DJ's colour, or the theme's on the DJ's paper — is said under the
+        // colours; the theme's own colours on its own paper always read. Kept as it is while the DJ drags in a colour picker: shown and
+        // hidden then, it moved the editor under the open picker and the browser closed it
         const note = document.getElementById('posterAccentNote');
-        if (note) {
-            const changed = !!rgb(accent) && shown.toLowerCase() !== hex(rgb(accent));
-            note.hidden = !changed;
-            note.textContent = changed ? (darkPaper ? note.dataset.lighter : note.dataset.darker) : '';
+        if (note && !keepNote) {
+            const style = getComputedStyle(body);
+            const heading = rgb(accent) || rgb(style.getPropertyValue('--accent-base').trim());
+            const paper = rgb(style.getPropertyValue('--paper').trim());
+            const weak = !!heading && !!paper && contrast(heading, paper) < WEAK;
+            note.hidden = !weak;
+            note.textContent = weak ? note.dataset.weak : '';
         }
     }
 
@@ -139,6 +94,12 @@
     const PT = 96 / 72;
     const narrow = matchMedia('screen and (max-width: 200mm)');
 
+    /** Laid out on the page — neither it nor a parent hidden. checkVisibility where the browser has it: Safari has it only from 17.4,
+     *  and a call to it there throws at load, which leaves the editor doing nothing. */
+    function visible(el) {
+        return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
+    }
+
     function tooLong(el, most) {
         const line = parseFloat(getComputedStyle(el).lineHeight);
         // a line the clamp hid, not the font's letters reaching a little past their line
@@ -149,7 +110,7 @@
         FITS.forEach(function (fit) {
             const texts = Array.prototype.slice.call(document.querySelectorAll(fit[0]));
             texts.forEach(function (el) { el.style.removeProperty('font-size'); });
-            const first = texts.find(function (el) { return el.checkVisibility(); });
+            const first = texts.find(visible);
             if (!first) return;
             const least = fit[3] && document.body.classList.contains('font-script') ? fit[3] : fit[2];
             let size = parseFloat(getComputedStyle(first).fontSize) / PT;
@@ -301,8 +262,8 @@
         return checked ? checked.value : '';
     }
 
-    function changeLook() {
-        showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper());
+    function changeLook(keepNote) {
+        showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper(), keepNote === true);
         fitTexts();   // another font, another width
     }
 
@@ -311,12 +272,14 @@
     Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
         radio.addEventListener('change', changeLook);
     });
+    // a colour picker: the preview follows the drag ("input"), the note about a weak heading waits for the colour picked ("change")
     if (picker && own) {
         picker.addEventListener('input', function () {
             own.value = picker.value;
             own.checked = true;
-            changeLook();
+            changeLook(true);
         });
+        picker.addEventListener('change', function () { changeLook(); });
     }
     Array.prototype.forEach.call(form.querySelectorAll('input[name="paper"]'), function (radio) {
         radio.addEventListener('change', changeLook);
@@ -325,8 +288,9 @@
         paperPicker.addEventListener('input', function () {
             ownPaper.value = paperPicker.value;
             ownPaper.checked = true;
-            changeLook();
+            changeLook(true);
         });
+        paperPicker.addEventListener('change', function () { changeLook(); });
     }
 
     form.elements.heading.addEventListener('input', showHeading);
@@ -426,8 +390,12 @@
         }
     }
 
+    // the switch to another layout takes the unsaved changes along (stash): leaving by it asks nothing
+    let switching = false;
+
     all('[data-layout-switch]').forEach(function (link) {
-        link.addEventListener('click', function () {
+        link.addEventListener('click', function (e) {
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) switching = true;
             if (unsaved) stash();
             try {
                 if (fromField && fromField.value) sessionStorage.setItem(firstKey, fromField.value);
@@ -441,10 +409,19 @@
         say(form.dataset.sending, false);
         try {
             await send();
+            unsaved = false;   // the whole form was sent: the reload keeps it
             location.reload();
         } catch (e) {
             say(form.dataset.refused, true);
         }
+    });
+
+    // Changes not saved: leaving the page asks first — "Powrót do panelu", the tab closed after printing —, or they are gone without
+    // a word
+    window.addEventListener('beforeunload', function (e) {
+        if (!unsaved || switching) return;
+        e.preventDefault();
+        e.returnValue = '';
     });
 
     form.addEventListener('submit', async function (e) {

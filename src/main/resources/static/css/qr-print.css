@@ -264,6 +264,11 @@ body {
     line-height: 1.35;
 }
 
+/* a warning of the editor: the heading stands out poorly from the paper */
+.editor-warning {
+    color: #ffd166;
+}
+
 /* what prints with the tables set: "Na wydruku: stoły 22–43 · strony: 3" */
 .editor-summary {
     margin: 4px 0 0;
@@ -744,10 +749,10 @@ body:not(.theme-classic) .poster > .logo {
     margin-bottom: 4mm;
 }
 
-/* on the dark club paper — and on the DJ's own dark one (V53) — the DJ's logo on a white badge: a dark logo with a transparent
-   background would vanish */
+/* on the dark club paper — and on any paper of the DJ's own (V53), whatever its words' colour, so the logo keeps one shape while the
+   DJ tries colours — the DJ's logo on a white badge: a dark logo with a transparent background would vanish */
 body.theme-club .dj-logo,
-body.paper-dark .dj-logo {
+body.paper-own .dj-logo {
     padding: 1.5mm 2.5mm;
     border-radius: 2mm;
     background: #ffffff;
@@ -816,7 +821,13 @@ body:not(.theme-classic) .card {
 .poster .link {
     margin: 2mm 0;
     font-size: 11pt;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+/* the address a guest types (qr-print.html printedLink): a line breaks before the party's code or in the address before it, never
+   inside the code — "…/p/P" over "RNT1" was read as two things */
+.link-code {
+    white-space: nowrap;
 }
 
 .poster .code {
@@ -1005,7 +1016,7 @@ body:not(.theme-classic) .card {
 }
 
 .card .link {
-    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 @media print {
@@ -1276,7 +1287,7 @@ body:not(.theme-classic) .card {
 
 .face .link {
     font-size: 10pt;
-    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 .face .code,
