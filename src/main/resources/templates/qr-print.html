@@ -19,7 +19,8 @@
     (data-poster-part), so the editor's preview (qr-print.js) shows it again at once. The party's number of tables (V50) makes as many
     cards and tents (data-print-item), numbered; without it eight cards and one tent, the number rendered hidden.
 */-->
-<body th:class="${'layout-' + qrLayout + ' ' + poster.posterTheme.cssClass() + (poster.posterFont.cssClass().isEmpty() ? '' : ' ' + poster.posterFont.cssClass())}"
+<body th:class="${'layout-' + qrLayout + ' ' + poster.posterTheme.cssClass() + (poster.posterFont.cssClass().isEmpty() ? '' : ' ' + poster.posterFont.cssClass())
+                  + (poster.posterSize.cssClass().isEmpty() ? '' : ' ' + poster.posterSize.cssClass())}"
       th:attr="data-accent=${poster.posterAccent},data-paper=${poster.posterPaper}" th:classappend="${posterEdit} ? 'has-editor'"
       th:with="pl=${printLang != 'en'}, en=${printLang != 'pl'}, both=${printLang == 'both'},
                logoShown=${djLogo != null and poster.posterShowLogo}, tables=${poster.posterTables}">
@@ -96,7 +97,7 @@
     <!--/* the look (V47, V51, V53): the theme, and folded under "Więcej wyglądu" the paper, the heading's font and its colour — open when
          the party has one of them set. Each colour is its own button: the radio hidden, the dot ringed when picked, its name
          (PosterColours) for a screen reader. */-->
-    <section class="editor-group" th:with="moreLook=${poster.posterPaper != null or poster.posterAccent != null or poster.posterFont.name() != 'THEME'}">
+    <section class="editor-group" th:with="moreLook=${poster.posterPaper != null or poster.posterAccent != null or poster.posterFont.name() != 'THEME' or poster.posterSize.name() != 'NORMAL'}">
         <h2 th:text="#{qr.edit.group.look}">Look</h2>
         <div class="editor-field">
             <label for="posterTheme" th:text="#{qr.edit.theme}">Theme</label>
@@ -129,6 +130,13 @@
                             th:selected="${f == poster.posterFont}" th:text="#{'qr.edit.font.' + ${f.name().toLowerCase()}}">The theme's</option>
                 </select>
             </div>
+            <!--/* the heading's size (V54): smaller, as the theme has it, or larger — the heading only (qr-print.css --heading-scale) */-->
+            <fieldset class="editor-colors">
+                <legend th:text="#{qr.edit.size}">Heading size</legend>
+                <label th:each="z : ${T(com.scan2play.model.PosterSize).values()}" class="swatch swatch-text"><input type="radio" name="size"
+                       th:value="${z.name()}" th:checked="${z == poster.posterSize}"><span class="swatch-chip"
+                       th:text="#{'qr.edit.size.' + ${z.name().toLowerCase()}}">As it is</span></label>
+            </fieldset>
             <fieldset class="editor-colors" th:with="own=${poster.posterAccent != null and !T(com.scan2play.model.PosterColours).offers(T(com.scan2play.model.PosterColours).ACCENTS, poster.posterAccent)}">
                 <legend th:text="#{qr.edit.accent}">Colour</legend>
                 <label class="swatch swatch-text"><input type="radio" name="accent" value="" th:checked="${poster.posterAccent == null}"><span

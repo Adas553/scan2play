@@ -2,6 +2,7 @@ package com.scan2play.entity;
 
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.PosterFont;
+import com.scan2play.model.PosterSize;
 import com.scan2play.model.PosterLanguage;
 import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
@@ -241,6 +242,12 @@ public class PartySettingsEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 6)
     private PosterFont posterFont = PosterFont.THEME;
+
+    /** The print's heading size (V54): smaller, as the theme has it, or larger. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 6)
+    private PosterSize posterSize = PosterSize.NORMAL;
 
     /** The most tables the print numbers (V50): 50 tents are 50 sheets. */
     public static final int POSTER_TABLES_MAX = 50;

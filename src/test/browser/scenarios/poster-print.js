@@ -34,6 +34,20 @@
     });
 
     S2P.scenario({
+        name: 'poster-print-pdf-large',
+        page: 'qr-print-poster-logo',
+        pdf: 1,
+        title: 'the poster printed with the larger heading (V54) in the script, the gala, the longest words, the DJ\'s logo, three profiles, the tip: one A4 page',
+        run: async function (t) {
+            const radio = document.querySelector('#posterForm input[name="size"][value="LARGE"]');
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+            await longest(t, 'GALA', 'SCRIPT');
+            t.step('larger', document.body.classList.contains('size-large'), true);
+        }
+    });
+
+    S2P.scenario({
         name: 'poster-print-pdf-cards',
         page: 'qr-print-cards-logo',
         pdf: 1,
