@@ -4,8 +4,9 @@
  *
  * Panel shows the queue, History the history, each brought into view from anywhere on a long page; the lit tab is the list that
  * shows. The History tab loads its content via AJAX into #history-content and swaps it with #queue-content, for every kind of
- * party: the page is not reloaded (the DJ keeps their place). The standalone history page does not load this module: its tabs
- * are plain links.
+ * party: the page is not reloaded (the DJ keeps their place). While it shows, the page is the page "Historia" as the standalone one:
+ * <body> has .s2p-history-shown and app.css hides the panel's "Impreza i kod QR" and its settings, which the Panel tab brings back as
+ * they were. The standalone history page does not load this module: its tabs are plain links.
  */
 import { EVENTS, on } from './events.js';
 import { csrfHeaders, demoMode, hideRefused, partyCode, showRefused } from './common.js';
@@ -117,6 +118,7 @@ import { reopenCards } from './cards.js';
             queueContent.hidden = false;
             historyContent.hidden = true;
             activeList = 'queue';
+            document.body.classList.remove('s2p-history-shown');
         }
         setLit('panel');
         revealContent(queueContent);
@@ -138,6 +140,7 @@ import { reopenCards } from './cards.js';
             queueContent.hidden = true;
             historyContent.hidden = false;
             activeList = 'history';
+            document.body.classList.add('s2p-history-shown');
             setLit('history');
             // Init sorting on dynamically loaded history table
             initSortableHeaders(historyContent);
