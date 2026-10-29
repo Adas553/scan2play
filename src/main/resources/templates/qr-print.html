@@ -67,14 +67,17 @@
                    th:placeholder="#{qr.edit.tables.placeholder}" aria-describedby="posterTablesHint">
             <small id="posterTablesHint" class="editor-hint" th:text="#{qr.edit.tables.hint}">Numbers on the cards and the tents</small>
         </div>
-        <!--/* a reprint: only the tables from this one on (one card, one tent too few). No name: never sent, never saved — the next
-             print starts from the first again */-->
+        <!--/* the first table's number: the cards and the tents numbered from it (22 from 22 — tables 22 … 43; a reprint of one — 1 from
+             16; a room numbered from 101). Never sent, never saved — the next print starts from 1 again: of a form of its own
+             (posterTablesFromForm), so a number past its limits never holds back "Zapisz". The summary under it says what prints, filled
+             by qr-print.js ({from}, {to}, {pages}) */-->
         <div class="editor-field">
-            <label for="posterTablesFrom" th:text="#{qr.edit.tables.from}">Print from table</label>
-            <input type="number" id="posterTablesFrom" min="1"
-                   th:max="${T(com.scan2play.entity.PartySettingsEntity).POSTER_TABLES_MAX}" step="1" inputmode="numeric"
-                   placeholder="1" aria-describedby="posterTablesFromHint">
-            <small id="posterTablesFromHint" class="editor-hint" th:text="#{qr.edit.tables.from.hint}">For a reprint</small>
+            <label for="posterTablesFrom" th:text="#{qr.edit.tables.from}">First table number</label>
+            <input type="number" id="posterTablesFrom" form="posterTablesFromForm" min="1" max="999" step="1" inputmode="numeric" placeholder="1"
+                   aria-describedby="posterTablesFromHint posterTablesSummary">
+            <small id="posterTablesFromHint" class="editor-hint" th:text="#{qr.edit.tables.from.hint}">1 by default</small>
+            <p id="posterTablesSummary" class="editor-summary" role="status" hidden
+               th:attr="data-one=#{qr.edit.tables.summary.one},data-many=#{qr.edit.tables.summary.many}"></p>
         </div>
         <div class="editor-field">
             <label for="posterLanguage" th:text="#{qr.edit.language}">Language</label>
@@ -127,6 +130,8 @@
         <span id="posterAnswer" role="status"></span>
     </div>
 </form>
+
+<form th:if="${posterEdit}" id="posterTablesFromForm" hidden></form>
 
 <main th:if="${qrLayout == 'poster'}" class="poster" th:classappend="${logoShown} ? 'with-logo'">
     <!--/* the DJ's logo (V45, Pro) heads the poster; ours then a quiet line at the foot */-->

@@ -197,6 +197,14 @@ body {
     line-height: 1.35;
 }
 
+/* what prints with the tables set: "Na wydruku: stoły 22–43 · strony: 3" */
+.editor-summary {
+    margin: 4px 0 0;
+    color: #dee2e6;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
 /* the colours: each its own button — the radio hidden, the dot (or the word) ringed when picked */
 .editor-colors {
     display: flex;

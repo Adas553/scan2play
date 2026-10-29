@@ -81,6 +81,7 @@
             type('posterHeading', 'W'.repeat(40));
             type('posterLine', 'W'.repeat(60));
             type('posterTables', '50');
+            type('posterTablesFrom', '950');
             await t.waitFor(function () { return Array.from(document.querySelectorAll('.tent .dj-logo')).every(function (i) { return i.complete; }); }, 'the logos', 3000);
             const out = [];
             const pages = [];
@@ -96,7 +97,7 @@
             });
             t.step('every part on its face, in every theme', out, []);
             t.step('one A4 page in every theme', pages, []);
-            t.step('the 50th tent says it', numbers('.tent .face')[99], '50');
+            t.step('the 50th tent says it', numbers('.tent .face')[99], '999');
         }
     });
 
@@ -129,39 +130,50 @@
     S2P.scenario({
         name: 'poster-tables-from',
         page: 'qr-print-cards',
-        title: 'a reprint: "Drukuj od stołu" 16 of 16 tables — one card, the 16th; 9 — 9 … 16 on one sheet; more than the tables — the last; empty — from 1; never saved',
+        title: 'the first table\'s number: 22 tables from 22 — tables 22 … 43; a reprint of one — 1 from 16; empty — from 1; at most 999; the summary under the fields says what prints; never saved',
         run: async function (t) {
-            type('posterTables', '16');
+            const summary = document.getElementById('posterTablesSummary');
+            type('posterTables', '22');
+            type('posterTablesFrom', '22');
+            const printed = numbers('.card');
+            t.step('22 from 22: tables 22 … 43', [printed.length, printed[0], printed[21]], [22, '22', '43']);
+            t.step('the summary: the tables and the pages (8 cards a page)', [summary.hidden, summary.textContent.indexOf('22–43') >= 0,
+                /\b3\b/.test(summary.textContent)], [false, true, true]);
+            type('posterTables', '1');
             type('posterTablesFrom', '16');
-            t.step('from 16: the 16th alone', numbers('.card'), ['16']);
-            type('posterTablesFrom', '9');
-            t.step('from 9: 9 … 16', numbers('.card'), ['9', '10', '11', '12', '13', '14', '15', '16']);
-            type('posterTablesFrom', '40');
-            t.step('past the tables: the last', numbers('.card'), ['16']);
+            t.step('a reprint: 1 from 16 — the 16th alone', numbers('.card'), ['16']);
+            t.check('the summary names the one table: ' + summary.textContent, summary.textContent.indexOf('16') >= 0 && summary.textContent.indexOf('–') < 0);
             type('posterTablesFrom', '');
-            t.step('emptied: from 1', numbers('.card').length, 16);
-            type('posterTablesFrom', '9');
+            t.step('emptied: from 1', numbers('.card'), ['1']);
+            type('posterTablesFrom', '5000');
+            t.step('at most 999', numbers('.card'), ['999']);
             type('posterTables', '');
-            t.step('no tables: eight cards, no numbers, whatever "from"', numbers('.card'), ['', '', '', '', '', '', '', '']);
+            t.step('no tables: eight cards, no numbers, no summary, whatever the first number', [numbers('.card'), summary.hidden],
+                [['', '', '', '', '', '', '', ''], true]);
             type('posterTables', '16');
             document.getElementById('posterSave').click();
             const form = document.getElementById('posterForm');
             await t.waitFor(function () { return document.getElementById('posterAnswer').textContent === form.dataset.saved; }, 'saved', 3000);
             const sent = (await t.stand.requests('POST /dj/qr-print/settings')).pop().q;
-            t.step('saved: the tables, never "from"', [sent.tables, Object.keys(sent).filter(function (k) { return /from/i.test(k); })], ['16', []]);
+            t.step('saved: the tables, never the first number', [sent.tables, Object.keys(sent).filter(function (k) { return /from/i.test(k); })], ['16', []]);
             type('posterTablesFrom', '12');
-            t.step('"from" changed after "Zapisz": still saved, nothing unsaved', document.getElementById('posterAnswer').textContent, form.dataset.saved);
+            t.step('the first number changed after "Zapisz": still saved, nothing unsaved', document.getElementById('posterAnswer').textContent, form.dataset.saved);
         }
     });
 
     S2P.scenario({
         name: 'poster-tables-from-tents',
         page: 'qr-print-tent',
-        title: 'a reprint of tents: from 16 of 16 — one tent, both faces 16',
+        title: 'tents from a number: 1 from 16 — one tent, both faces 16; 3 from 10 — 10, 11, 12, a page each',
         run: async function (t) {
-            type('posterTables', '16');
+            type('posterTables', '1');
             type('posterTablesFrom', '16');
             t.step('the 16th tent alone', numbers('.tent .face'), ['16', '16']);
+            type('posterTables', '3');
+            type('posterTablesFrom', '10');
+            t.step('3 from 10', numbers('.tent .face'), ['10', '10', '11', '11', '12', '12']);
+            t.check('the summary: 3 pages — ' + document.getElementById('posterTablesSummary').textContent,
+                /\b3\b/.test(document.getElementById('posterTablesSummary').textContent.split('·').pop()));
         }
     });
 
@@ -185,6 +197,7 @@
             type('posterHeading', 'W'.repeat(40));
             type('posterLine', 'W'.repeat(60));
             type('posterTables', '50');
+            type('posterTablesFrom', '950');
             await t.waitFor(function () { return Array.from(document.querySelectorAll('.card .dj-logo')).every(function (i) { return i.complete; }); }, 'the logos', 3000);
             const bad = [];
             THEMES.forEach(function (theme) {

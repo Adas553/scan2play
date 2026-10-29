@@ -427,8 +427,9 @@ middle — the fold printed dashed —, two faces of the same code and words, th
 sides of a table; each face as a card larger, the code 78 mm, 72 mm with the DJ's logo; a tent a page); **the number of tables** (V50,
 "Liczba stołów", 1 … 50, empty = none): as many cards and tents as tables, numbered "Stół / Table 5" in the print's language — on a
 card in its top corner, on a tent's face above the heading —, a reprint the same set; without it eight cards and one tent; the poster
-has none; "Drukuj od stołu" (a reprint: only the tables from that one on, e.g. 16 of 16 — the 16th alone; in the page only, never sent
-nor saved) (scenarios `poster-tent-layout`, `poster-tent-longest-fits`, `poster-tables-cards`, `…-tents`, `…-cards-fit`,
+has none; "Numer pierwszego stołu" numbers them from it (22 from 22 — tables 22 … 43; a reprint of one — 1 from 16; at most 999; in
+the page only, of a form of its own so it never holds back "Zapisz", never sent nor saved — the next print starts from 1), and a line
+under it says what prints, "Na wydruku: stoły 22–43 · strony: 3" (scenarios `poster-tent-layout`, `poster-tent-longest-fits`, `poster-tables-cards`, `…-tents`, `…-cards-fit`,
 `…-from`, `…-from-tents`, `poster-tent-phone`); **the print as the DJ sets it** (V46) — an editor over the paper, for
 whom may change the card "Impreza" (VIBE), any plan: the DJ's own heading (≤ 40) in place of "Zeskanuj i poproś o piosenkę / Scan to
 request a song", one line of the DJ's own (≤ 60, "Osiemnastka Dawida"), the language — "Polski + English", "Polski", "English";

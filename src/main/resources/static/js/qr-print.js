@@ -8,8 +8,9 @@
 // What is changed and not saved yet says so, and goes along to the other layouts (sessionStorage, for this tab), to compare them.
 //
 // The number of tables (V50): the cards and the table tents (data-print-item) as many as the tables, numbered 1 … N — the first one
-// copied —, at once; empty, eight cards and one tent without numbers. The poster has none. "Drukuj od stołu" (a reprint, never sent
-// nor saved) leaves out the tables before it: 16 of 16 is the 16th card or tent alone.
+// copied —, at once; empty, eight cards and one tent without numbers. The poster has none. "Numer pierwszego stołu" (never sent nor
+// saved: the next print starts from 1) numbers them from it — 22 from 22 are tables 22 … 43, a reprint of one is 1 from 16 —, and
+// the summary under it says which tables print on how many pages.
 //
 // The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
 // theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
@@ -100,19 +101,29 @@
     }
 
     const fromField = document.getElementById('posterTablesFrom');
+    const summary = document.getElementById('posterTablesSummary');
 
-    /** The first table printed: 1 … the tables, more is the last; anything else the first. */
-    function firstTable(tables) {
+    /** The first table's number: 1 … its field's most, more is the most; anything else 1. */
+    function firstTable() {
         const n = parseInt(fromField ? fromField.value : '', 10);
-        return n >= 1 ? Math.min(n, tables) : 1;
+        return n >= 1 ? Math.min(n, Number(fromField.max) || 999) : 1;
+    }
+
+    function showSummary(tables, first, pages) {
+        if (!summary) return;
+        summary.hidden = !tables;
+        if (!tables) return;
+        summary.textContent = (tables === 1 ? summary.dataset.one : summary.dataset.many)
+            .replace('{from}', first).replace('{to}', first + tables - 1).replace('{pages}', pages);
     }
 
     function showTables() {
         const items = all('[data-print-item]');
         if (!items.length) return;
+        const cards = items[0].classList.contains('card');
         const tables = tablesTyped();
-        const first = tables ? firstTable(tables) : 1;
-        const count = tables ? tables - first + 1 : (items[0].classList.contains('card') ? 8 : 1);
+        const first = firstTable();
+        const count = tables || (cards ? 8 : 1);
         for (let i = items.length; i < count; i++) {
             items.push(items[0].parentNode.appendChild(items[0].cloneNode(true)));
         }
@@ -123,6 +134,7 @@
                 no.querySelector('[data-table-n]').textContent = String(first + i);
             });
         });
+        showSummary(tables, first, cards ? Math.ceil(count / 8) : count);
     }
 
     function say(text, refused) {
@@ -167,6 +179,7 @@
     form.elements.line.addEventListener('input', showLine);
     form.elements.tables.addEventListener('input', showTables);
     if (fromField) fromField.addEventListener('input', showTables);
+    showTables();   // the summary of the saved tables
     all('[data-poster-toggle]').forEach(function (box) {
         box.addEventListener('change', function () { showPart(box); });
     });
