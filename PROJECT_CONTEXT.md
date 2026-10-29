@@ -480,6 +480,11 @@ address a guest types from paper is printed without "https://" and the party's c
 `printedLink`, `.link-code`; on a card's narrow column the address broke anywhere, "…/p/P" over "RNT1" —
 `poster-address-code-whole-cards`, `…-cards-logo`, `…-tent`, `…-poster`). The page works without `Element.checkVisibility` (Safari
 before 17.4: the script threw at load and the editor did nothing — `poster-editor-without-check-visibility`, the harness's `without`).
+**The poster is its A4 page** (`.poster`, `qr-print.js` `fitPoster`): 186 × 272 mm on the screen as on paper — the theme's frame down
+to the page's foot —; the room its words and parts leave goes to the code, larger up to 140 mm (our words alone: 140; the longest
+words, the DJ's logo, three profiles and the tip: still ≥ 100), what is left centres them (`poster-fills-the-page`, `…-longest`,
+`poster-preview-a4-wide`). A computer's column narrower than the sheet makes the preview smaller (`--preview-zoom`, used by the
+stylesheet on the screen only — never on paper; `poster-preview-a4-laptop`), as a phone's (`fitPreview`).
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
 the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane

@@ -284,13 +284,13 @@
         title: 'the phone\'s preview stays put while the address bar comes and goes: a resize of the same width touches nothing',
         run: async function (t) {
             const main = document.querySelector('body > main');
-            const zoom = main.style.zoom;
+            const style = main.getAttribute('style');
             const changes = [];
             new MutationObserver(function (list) { list.forEach(function (m) { changes.push(m.attributeName + ' ' + main.getAttribute('style')); }); })
                 .observe(main, { attributes: true, attributeFilter: ['style'] });
             for (let i = 0; i < 5; i++) window.dispatchEvent(new Event('resize'));
             await t.sleep(100);
-            t.step('the sheet untouched', [changes, main.style.zoom], [[], zoom]);
+            t.step('the sheet untouched', [changes, main.getAttribute('style')], [[], style]);
         }
     });
 

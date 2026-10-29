@@ -120,13 +120,40 @@
             }
             texts.forEach(function (el) { el.style.fontSize = first.style.fontSize; });
         });
+        fitPoster();
         fitPreview();
     }
 
-    // A phone (narrower than the paper): the sheet keeps its printed width (qr-print.css) and is made smaller to the screen here with
-    // zoom — the page then scrolls as far as the smaller sheet (a transform left its full height empty below it), and the sizes the
-    // fitting above measures (a box's height, a line's) stay the print's, unzoomed alike.
+    // The poster fills its page (qr-print.css .poster: as high as the printable page): the room its words and parts leave goes to the
+    // code — larger, read from further away — up to QR_MOST; what is left centres them. The room is measured with the sheet as high
+    // as its words, and the code's new size taken as a ratio of its own: the same on a preview made smaller (zoom).
+    const QR_MOST = 140 * 96 / 25.4;
+
+    function fitPoster() {
+        const poster = document.querySelector('main.poster');
+        const qr = poster && poster.querySelector('.qr');
+        if (!qr) return;
+        qr.style.removeProperty('width');
+        qr.style.removeProperty('height');
+        const page = poster.offsetHeight;
+        poster.style.minHeight = '0';
+        const room = page - poster.offsetHeight;
+        poster.style.removeProperty('min-height');
+        const base = parseFloat(getComputedStyle(qr).width);
+        const size = Math.min(QR_MOST, base * (qr.offsetHeight + room) / qr.offsetHeight);
+        if (size > base) {
+            qr.style.width = size + 'px';
+            qr.style.height = size + 'px';
+        }
+    }
+
+    // A phone (narrower than the paper), or a computer's column beside the editor narrower than the sheet and its white margin: the
+    // sheet keeps its printed width (qr-print.css) and is made smaller here with zoom — the page then scrolls as far as the smaller
+    // sheet (a transform left its full height empty below it), and the sizes the fitting above measures (a box's height, a line's) stay
+    // the print's, unzoomed alike. The zoom is --preview-zoom, used by the stylesheet on the screen only: never on paper.
     const PAPER = 186 * 96 / 25.4;
+    const wide = matchMedia('screen and (min-width: 1100px)');   // qr-print.css: the editor a panel beside the page
+    const SHEET_MARGIN = 12 * 96 / 25.4 + 24;   // the page's white margin around the sheet and the desk's air (qr-print.css)
 
     // Set only when it changes, never taken off and put back: a phone's address bar, hiding and showing as the page scrolls, sends
     // "resize" again and again with the same width — the sheet unzoomed for a moment made the page longer and it jumped at its foot.
@@ -134,18 +161,29 @@
         const main = document.querySelector('body > main');
         if (!main) return;
         let zoom = '', margin = '';
+        const editor = document.getElementById('posterForm');
         if (narrow.matches) {
             const room = document.documentElement.clientWidth - 32;
             const scale = Math.min(1, room / PAPER);
             zoom = String(scale);
             margin = (16 + (room - PAPER * scale) / 2) / scale + 'px';   // a zoomed box's margin is zoomed too
+        } else if (wide.matches && editor) {
+            const room = document.documentElement.clientWidth - editor.offsetWidth - 2 * SHEET_MARGIN;
+            if (room < PAPER) zoom = String(room / PAPER);
         }
-        if (main.style.zoom !== zoom) main.style.zoom = zoom;
+        if (main.style.getPropertyValue('--preview-zoom') !== zoom) {
+            if (zoom) main.style.setProperty('--preview-zoom', zoom);
+            else main.style.removeProperty('--preview-zoom');
+        }
         if (main.style.marginLeft !== margin) main.style.marginLeft = margin;
     }
 
     fitTexts();
     if (document.fonts) document.fonts.ready.then(fitTexts);
+    // the DJ's logo takes its height once loaded: the code is given the room again
+    Array.prototype.forEach.call(document.querySelectorAll('body > main img'), function (img) {
+        if (!img.complete) img.addEventListener('load', fitTexts);
+    });
     narrow.addEventListener('change', fitTexts);
     // the scale depends on the width alone: a resize of the height (the address bar) is nothing to do
     let previewWidth = document.documentElement.clientWidth;
@@ -182,6 +220,7 @@
             all('[data-poster-part="ours"]').forEach(function (el) { el.hidden = box.checked; });
             all('.poster, .card, .face').forEach(function (el) { el.classList.toggle('with-logo', box.checked); });
         }
+        fitPoster();   // a part more or less: the code's room
     }
 
     const MAX_TABLES = Number(form.elements.tables.max) || 50;

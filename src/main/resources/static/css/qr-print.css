@@ -479,6 +479,7 @@ body {
         grid-column: 2;
         grid-row: 2;
         align-self: start;
+        justify-self: center;
         /* the sheet as it comes out of the printer: the page's margin (@page, 12 mm) stays white paper around what is printed */
         margin-top: calc(24px + 12mm);
         margin-bottom: calc(24px + 12mm);
@@ -768,7 +769,12 @@ body:not(.theme-classic) .card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 186mm;
+    /* the sheet is its page, on the screen as on paper: 186 mm wide whatever its words, as high as the printable page (297 mm less
+       @page's 12 mm twice, and a millimetre to spare) — the theme's frame down to its foot. The room the words leave goes to the
+       code (qr-print.js fitPoster); what is left centres them */
+    justify-content: center;
+    width: 186mm;
+    min-height: 272mm;
     margin: 0 auto;
     padding: 8mm 0;
     text-align: center;
@@ -1022,6 +1028,14 @@ body:not(.theme-classic) .card {
 @media print {
     .cards {
         padding: 0;
+    }
+}
+
+/* the preview made smaller to its screen or column (qr-print.js fitPreview sets --preview-zoom): on the screen only — a zoom left on
+   the sheet would print it smaller */
+@media screen {
+    body > main {
+        zoom: var(--preview-zoom, 1);
     }
 }
 
