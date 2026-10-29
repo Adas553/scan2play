@@ -236,10 +236,32 @@
     function unsaving(e) { return e.target.name !== 'language' && e.target !== fromField; }
     form.addEventListener('input', function (e) { if (unsaving(e)) markUnsaved(); });
     form.addEventListener('change', function (e) { if (unsaving(e)) markUnsaved(); });
+    // The first table's number is never saved, yet the DJ switching layouts to compare them keeps it: it goes along with the switch
+    // alone (unsaved changes or not), and the next page takes it once — a reload starts from 1 again.
+    const firstKey = 's2p-poster-first-' + form.elements.partyCode.value;
+
+    function takeFirst() {
+        let first = null;
+        try {
+            first = sessionStorage.getItem(firstKey);
+            sessionStorage.removeItem(firstKey);
+        } catch (e) { return; }
+        if (first && fromField) {
+            fromField.value = first;
+            showTables();
+        }
+    }
+
     all('[data-layout-switch]').forEach(function (link) {
-        link.addEventListener('click', function () { if (unsaved) stash(); });
+        link.addEventListener('click', function () {
+            if (unsaved) stash();
+            try {
+                if (fromField && fromField.value) sessionStorage.setItem(firstKey, fromField.value);
+            } catch (e) { /* no storage: the next layout starts from 1 */ }
+        });
     });
     unstash();
+    takeFirst();
 
     form.elements.language.addEventListener('change', async function () {
         say(form.dataset.sending, false);

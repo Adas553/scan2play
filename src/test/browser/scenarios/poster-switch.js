@@ -80,4 +80,42 @@
                 'ELEGANT', '#123abc', undefined]);
         }
     });
+
+    // "Numer pierwszego stołu" is never saved, but goes along with the switch — the DJ compares the layouts —, also with nothing else
+    // changed; a reload (no switch) starts from 1 again.
+    function firstKey() { return 's2p-poster-first-' + document.querySelector('#posterForm input[name="partyCode"]').value; }
+
+    S2P.scenario({
+        name: 'poster-switch-keeps-first-table',
+        page: 'qr-print-cards',
+        title: 'the switch keeps the first table\'s number for the next layout, with nothing else changed',
+        run: async function (t) {
+            sessionStorage.removeItem(firstKey());
+            sessionStorage.removeItem(stashKey());
+            type('posterTables', '1');
+            document.getElementById('posterSave').click();
+            const form = document.getElementById('posterForm');
+            await t.waitFor(function () { return document.getElementById('posterAnswer').textContent === form.dataset.saved; }, 'saved', 3000);
+            type('posterTablesFrom', '16');
+            clickSwitch();
+            t.step('kept for the next page; nothing else stashed', [sessionStorage.getItem(firstKey()), sessionStorage.getItem(stashKey())], ['16', null]);
+            sessionStorage.removeItem(firstKey());
+        }
+    });
+
+    S2P.scenario({
+        name: 'poster-switch-takes-first-table',
+        page: 'qr-print-tent',
+        title: 'the next layout takes the first table\'s number: the field and the numbers; then it is gone, so a reload starts from 1',
+        run: async function (t) {
+            type('posterTables', '1');
+            sessionStorage.setItem(firstKey(), '16');
+            const script = document.createElement('script');
+            script.src = document.querySelector('script[src*="qr-print.js"]').src;
+            await new Promise(function (resolve, reject) { script.onload = resolve; script.onerror = reject; document.body.appendChild(script); });
+            const no = document.querySelector('.tent [data-table-n]');
+            t.step('the field and the tent', [document.getElementById('posterTablesFrom').value, no.textContent], ['16', '16']);
+            t.step('gone once taken', sessionStorage.getItem(firstKey()), null);
+        }
+    });
 })();
