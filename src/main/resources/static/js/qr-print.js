@@ -45,7 +45,7 @@
     /** A heading — large letters — stands out poorly from its paper under this contrast (WCAG's least for large text). */
     const WEAK = 3;
 
-    function showLook(theme, accent, font, paperColour) {
+    function showLook(theme, accent, font, paperColour, keepNote) {
         const body = document.body;
         if (theme) {
             body.className = body.className.replace(/\btheme-\w+\b/g, '').trim() + ' theme-' + theme.toLowerCase();
@@ -67,9 +67,10 @@
         }
         if (rgb(accent)) body.style.setProperty('--accent', hex(rgb(accent)));
         // a heading that stands out poorly from the paper — the DJ's colour, or the theme's on the DJ's paper — is said under the
-        // colours; the theme's own colours on its own paper always read
+        // colours; the theme's own colours on its own paper always read. Kept as it is while the DJ drags in a colour picker: shown and
+        // hidden then, it moved the editor under the open picker and the browser closed it
         const note = document.getElementById('posterAccentNote');
-        if (note) {
+        if (note && !keepNote) {
             const style = getComputedStyle(body);
             const heading = rgb(accent) || rgb(style.getPropertyValue('--accent-base').trim());
             const paper = rgb(style.getPropertyValue('--paper').trim());
@@ -255,8 +256,8 @@
         return checked ? checked.value : '';
     }
 
-    function changeLook() {
-        showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper());
+    function changeLook(keepNote) {
+        showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper(), keepNote === true);
         fitTexts();   // another font, another width
     }
 
@@ -265,12 +266,14 @@
     Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
         radio.addEventListener('change', changeLook);
     });
+    // a colour picker: the preview follows the drag ("input"), the note about a weak heading waits for the colour picked ("change")
     if (picker && own) {
         picker.addEventListener('input', function () {
             own.value = picker.value;
             own.checked = true;
-            changeLook();
+            changeLook(true);
         });
+        picker.addEventListener('change', function () { changeLook(); });
     }
     Array.prototype.forEach.call(form.querySelectorAll('input[name="paper"]'), function (radio) {
         radio.addEventListener('change', changeLook);
@@ -279,8 +282,9 @@
         paperPicker.addEventListener('input', function () {
             ownPaper.value = paperPicker.value;
             ownPaper.checked = true;
-            changeLook();
+            changeLook(true);
         });
+        paperPicker.addEventListener('change', function () { changeLook(); });
     }
 
     form.elements.heading.addEventListener('input', showHeading);

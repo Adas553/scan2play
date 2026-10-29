@@ -31,6 +31,7 @@
         const picker = document.getElementById('posterPaperPicker');
         picker.value = colour;
         picker.dispatchEvent(new Event('input', { bubbles: true }));
+        picker.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     function paper() { return getComputedStyle(document.querySelector('.poster')).backgroundColor; }
@@ -122,6 +123,7 @@
         const picker = document.getElementById(id);
         picker.value = colour;
         picker.dispatchEvent(new Event('input', { bubbles: true }));
+        picker.dispatchEvent(new Event('change', { bubbles: true }));   // the picker closed: the colour picked
     }
 
     S2P.scenario({
@@ -173,6 +175,38 @@
             t.check('black and white words both seen (' + words.join(' / ') + ')', words.indexOf('rgb(0, 0, 0)') >= 0 && words.indexOf('rgb(255, 255, 255)') >= 0);
             t.step('one badge for all', [looks[0][0], JSON.stringify(looks[0]) === JSON.stringify(looks[1]) && JSON.stringify(looks[1]) === JSON.stringify(looks[2])],
                 ['rgb(255, 255, 255)', true]);
+        }
+    });
+})();
+
+// While the DJ drags in the browser's colour picker ("input", again and again) the heading follows at once, but the note about a weak
+// heading waits for the colour picked ("change"): shown and hidden while dragging, it made the editor shorter and longer under the
+// open picker, the panel scrolled and the browser closed the picker.
+(function () {
+    S2P.scenario({
+        name: 'poster-accent-note-steady',
+        page: 'qr-print-poster',
+        title: 'dragging in the colour picker: the heading follows, the note waits until the colour is picked — nothing below moves under the open picker',
+        run: async function (t) {
+            const note = document.getElementById('posterAccentNote');
+            const picker = document.getElementById('posterAccentPicker');
+            const heading = document.querySelector('.poster h1 .ours > span');
+            picker.value = '#fafafa';
+            picker.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('dragging: the heading in the colour, the note not yet', [getComputedStyle(heading).color, note.hidden], ['rgb(250, 250, 250)', true]);
+            picker.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('picked: the note', note.hidden, false);
+            picker.value = '#123abc';
+            picker.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('dragging on: the note stays as it was', note.hidden, false);
+            picker.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('picked a colour that reads: gone', note.hidden, true);
+            const paper = document.getElementById('posterPaperPicker');
+            paper.value = '#123abc';
+            paper.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('the paper\'s picker dragged to the heading\'s colour: the note waits', note.hidden, true);
+            paper.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('picked: the note', note.hidden, false);
         }
     });
 })();

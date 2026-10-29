@@ -449,7 +449,8 @@ the DJ's (one shape while the DJ tries colours — `poster-paper-logo-steady`), 
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); the DJ's colour prints as picked — the DJ decides; a heading that stands out poorly from its paper (under 3:1, WCAG's
 least for large text) is said under the colours ("Nagłówek słabo odcina się od tła"), never changed (`qr-print.js`;
-`poster-accent-exact`); the theme's own colours read on its paper — browser scenario `poster-themes-readable`: every theme with white,
+`poster-accent-exact`; while the DJ drags in a colour picker the preview follows and the note waits for the colour picked — shown
+and hidden under the open picker, it moved the editor and the browser closed the picker, `poster-accent-note-steady`); the theme's own colours read on its paper — browser scenario `poster-themes-readable`: every theme with white,
 a pale yellow, black and a light cyan. The code
 stays black on white (its own white margin is its tile) in every theme; every theme fits A4 and the cards with the longest words
 (`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font). **The print's own fonts** (`static/fonts`,

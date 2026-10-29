@@ -38,6 +38,7 @@
         const picker = document.getElementById('posterAccentPicker');
         picker.value = colour;
         picker.dispatchEvent(new Event('input', { bubbles: true }));
+        picker.dispatchEvent(new Event('change', { bubbles: true }));   // the picker closed: the colour picked
     }
 
     S2P.scenario({
