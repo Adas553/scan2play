@@ -1014,22 +1014,24 @@ body:not(.theme-classic) .card {
     }
 }
 
-/* ---- A phone: the preview fits the screen (the print itself keeps the A4 layout above) ---- */
+/* ---- A phone: the sheet laid out as it prints, 186 mm wide — qr-print.js makes it smaller to the screen's width, so the frame, the
+   code's tile and the margins look as on paper (laid out again for the narrow screen, the code covered the frame) ---- */
 
 @media screen and (max-width: 200mm) {
-    .poster {
-        padding: 6mm 16px;
-    }
-
-    .poster .qr {
-        width: min(115mm, 100%);
-        height: auto;
+    .poster,
+    .cards,
+    .tents {
+        width: 186mm;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .cards {
-        grid-template-columns: minmax(0, 93mm);
-        grid-auto-rows: minmax(68mm, auto);
-        padding: 6mm 16px;
+        justify-content: start;
+    }
+
+    .tents {
+        align-items: start;
     }
 }
 
@@ -1314,13 +1316,6 @@ body.theme-club .face {
     body.has-editor > main.tents {
         margin: 0;
         box-shadow: none;
-    }
-}
-
-/* a phone: the sheets made smaller to fit the screen — only the preview, the print keeps A4 */
-@media screen and (max-width: 200mm) {
-    .tents {
-        zoom: 0.45;
     }
 }
 

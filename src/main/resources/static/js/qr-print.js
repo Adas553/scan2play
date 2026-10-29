@@ -113,9 +113,9 @@
 
     // The DJ's own heading and line fitted to their lines, in the print's own font (qr-print.css): a long one made smaller, half a point
     // at a time, until it takes its lines whole — two for the poster's heading, three elsewhere — and no smaller than its least; a short
-    // one keeps the stylesheet's size. Measured on the first card or tent, the same size given to all (their words are the same). The
-    // poster on a screen narrower than its paper (a phone) keeps the stylesheet's sizes: measured there, a heading would print smaller
-    // than it needs. The line clamp of the stylesheet stays the last guard. For whoever prints, on every load once the fonts are in.
+    // one keeps the stylesheet's size. Measured on the first card or tent, the same size given to all (their words are the same). On a
+    // phone too: the sheet is laid out there as it prints (fitPreview). The line clamp of the stylesheet stays the last guard. For
+    // whoever prints, on every load once the fonts are in.
     // [the text, its most lines, its least size in pt, the least of a heading in the script]. The script's size is brought to the
     // sans's height of small letters (qr-print.css font-size-adjust), its letters wider: 40 of them need a smaller size on a card
     const FITS = [['.poster h1 .own', 2, 16], ['.poster .own-line', 3, 11], ['.card .title .own', 3, 7, 5.5], ['.card .own-line', 3, 6],
@@ -134,7 +134,7 @@
             const texts = Array.prototype.slice.call(document.querySelectorAll(fit[0]));
             texts.forEach(function (el) { el.style.removeProperty('font-size'); });
             const first = texts.find(function (el) { return el.checkVisibility(); });
-            if (!first || (narrow.matches && first.closest('.poster'))) return;
+            if (!first) return;
             const least = fit[3] && document.body.classList.contains('font-script') ? fit[3] : fit[2];
             let size = parseFloat(getComputedStyle(first).fontSize) / PT;
             while (size > least && tooLong(first, fit[1])) {
@@ -143,11 +143,29 @@
             }
             texts.forEach(function (el) { el.style.fontSize = first.style.fontSize; });
         });
+        fitPreview();
+    }
+
+    // A phone (narrower than the paper): the sheet keeps its printed width (qr-print.css) and is made smaller to the screen here with
+    // zoom — the page then scrolls as far as the smaller sheet (a transform left its full height empty below it), and the sizes the
+    // fitting above measures (a box's height, a line's) stay the print's, unzoomed alike.
+    const PAPER = 186 * 96 / 25.4;
+
+    function fitPreview() {
+        const main = document.querySelector('body > main');
+        if (!main) return;
+        ['zoom', 'margin-left'].forEach(function (name) { main.style.removeProperty(name); });
+        if (!narrow.matches) return;
+        const room = document.documentElement.clientWidth - 32;
+        const scale = Math.min(1, room / PAPER);
+        main.style.zoom = String(scale);
+        main.style.marginLeft = (16 + (room - PAPER * scale) / 2) / scale + 'px';   // a zoomed box's margin is zoomed too
     }
 
     fitTexts();
     if (document.fonts) document.fonts.ready.then(fitTexts);
     narrow.addEventListener('change', fitTexts);
+    window.addEventListener('resize', fitPreview);
 
     const form = document.getElementById('posterForm');
     if (!form) return;
@@ -214,6 +232,7 @@
             items.push(items[0].parentNode.appendChild(items[0].cloneNode(true)));
         }
         items.splice(count).forEach(function (item) { item.remove(); });
+        fitPreview();   // more or fewer sheets
         items.forEach(function (item, i) {
             item.querySelectorAll('[data-table-number]').forEach(function (no) {
                 no.hidden = !tables;

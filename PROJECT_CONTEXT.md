@@ -460,9 +460,10 @@ the serif do not fit its column) — variable fonts, the Latin and the Latin Ext
 the editor keep the device's fonts, as the panel. So the paper lays out the same everywhere and the scenarios measure what prints
 (`poster-fonts-ours`). **The DJ's heading and line fitted** (`qr-print.js`): a long one made smaller half a point at a time until
 whole in its lines — two for the poster's heading, three elsewhere —, no smaller than its least (the poster's heading 16 pt, a card's
-7 pt, a tent's 12 pt); a short one keeps the stylesheet's size; measured on the first card or tent, the same size for all; the poster
-on a screen narrower than its paper keeps the stylesheet's sizes (measured there it would print smaller); the line clamp stays the
-last guard (before, the longest words were cut on a card and a tent — `poster-heading-fitted`, `…-tent`, `…-poster`). **"Krój
+7 pt, a tent's 12 pt); a short one keeps the stylesheet's size; measured on the first card or tent, the same size for all; on a phone
+too — **a phone's preview** is the sheet laid out as it prints (186 mm wide) and made smaller to the screen with `zoom`
+(`fitPreview`; laid out again for the narrow screen, the code covered the frame — `poster-phone-preview`, `…-cards`); the line clamp
+stays the last guard (before, the longest words were cut on a card and a tent — `poster-heading-fitted`, `…-tent`, `…-poster`). **"Krój
 nagłówka"** (V51): the theme's (the default), "Bezszeryfowy", "Szeryfowy" or "Odręczny" ("S2P Script", Dancing Script, OFL) whatever the
 theme — the heading only (`body.font-*`), the DJ's line and the code's texts stay in the theme's; the script's small letters brought to
 the sans's height (`font-size-adjust: 0.49`) and its least sizes its own (a card 5.5 pt, a tent 11.5 pt: its letters are wider); every
