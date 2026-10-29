@@ -630,9 +630,17 @@ body {
     --muted: #555555;
     --accent-base: #111111;
     --frame: transparent;
+    /* the print's fonts (static/fonts); a theme's heading and the DJ's line in one of them, "Krój nagłówka" over the theme's */
+    --sans: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --serif: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+    --script: "S2P Script", "Segoe Script", cursive;
+    --heading-font: var(--sans);
+    --line-font: var(--sans);
 }
 
 body.theme-elegant {
+    --heading-font: var(--serif);
+    --line-font: var(--serif);
     --paper: #fbf7ef;
     --ink: #1f2a44;
     --muted: #5b6275;
@@ -658,6 +666,8 @@ body.theme-pastel {
 
 /* V52: a barn wedding, boho — kraft and olive */
 body.theme-rustic {
+    --heading-font: var(--serif);
+    --line-font: var(--serif);
     --paper: #f4ecdc;
     --ink: #3b3226;
     --muted: #625545;
@@ -668,6 +678,8 @@ body.theme-rustic {
 /* V52: a ball, New Year's Eve, a palace wedding — navy and gold on white: a navy heading and band, a gold line and diamonds (the
    elegant one is the cream and gold one; the two were alike at a glance) */
 body.theme-gala {
+    --heading-font: var(--serif);
+    --line-font: var(--serif);
     --paper: #ffffff;
     --ink: #1d1d1f;
     --muted: #5c5649;
@@ -705,7 +717,7 @@ body.theme-confetti {
 .poster,
 .cards,
 .tents {
-    font-family: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-family: var(--sans);
 }
 
 .poster h1,
@@ -733,44 +745,36 @@ body.theme-elegant .poster {
     border: 1.6mm double var(--frame);
 }
 
-/* the serif for the headings, and the DJ's line on the poster and a tent — on a card the line stays in the sans: 60 letters of the
-   wider serif do not fit its column in three lines even at the least size */
-body.theme-elegant .poster h1,
-body.theme-elegant .card .title,
-body.theme-elegant .face .title,
-body.theme-elegant .poster .own-line,
-body.theme-elegant .face .own-line,
-body.theme-rustic .poster h1,
-body.theme-rustic .card .title,
-body.theme-rustic .face .title,
-body.theme-rustic .poster .own-line,
-body.theme-rustic .face .own-line,
-body.theme-gala .poster h1,
-body.theme-gala .card .title,
-body.theme-gala .face .title,
-body.theme-gala .poster .own-line,
-body.theme-gala .face .own-line {
-    font-family: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+/* the theme's fonts (its --heading-font, --line-font): the heading, and the DJ's line on the poster and a tent — on a card the line
+   stays in the sans: 60 letters of the wider serif do not fit its column in three lines even at the least size */
+.poster h1,
+.card .title,
+.face .title {
+    font-family: var(--heading-font);
+}
+
+.poster .own-line,
+.face .own-line {
+    font-family: var(--line-font);
 }
 
 /* the heading's font as the DJ picked it (V51), whatever the theme — the heading only, the line and the code's texts stay in the
-   theme's; after the theme's rules, so it wins over the elegant serif */
-body.font-sans .poster h1,
-body.font-sans .card .title,
-body.font-sans .face .title {
-    font-family: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+   theme's; after the themes, so it wins over their --heading-font */
+body.font-sans {
+    --heading-font: var(--sans);
 }
 
-body.font-serif .poster h1,
-body.font-serif .card .title,
-body.font-serif .face .title {
-    font-family: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+body.font-serif {
+    --heading-font: var(--serif);
+}
+
+body.font-script {
+    --heading-font: var(--script);
 }
 
 body.font-script .poster h1,
 body.font-script .card .title,
 body.font-script .face .title {
-    font-family: "S2P Script", "Segoe Script", cursive;
     /* the script's small letters are low: brought to the sans's height, so it reads as large (qr-print.js still fits it to its lines;
        a browser without it shows the script a little smaller) */
     font-size-adjust: 0.49;

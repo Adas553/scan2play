@@ -400,12 +400,19 @@
     // this tab only, for the next page, and gone once it has them.
     const stashKey = 's2p-poster-' + form.elements.partyCode.value;
 
+    /** The fields that go along: every one of the form by its name — the language saves itself, the party's code is the page's. */
+    function carried(el) { return el.name && el.name !== 'partyCode' && el.name !== 'language' && el.type !== 'hidden'; }
+
+    // Every field by its name — a text, a list, a number its value, a box ticked or not, a group of colours the one picked —, and the
+    // colour fields (no name) by their id: a new field of the print goes along with nothing added here
     function stash() {
-        const state = { heading: form.elements.heading.value, line: form.elements.line.value, tables: form.elements.tables.value,
-            theme: form.elements.theme.value, font: form.elements.font.value,
-            accent: chosenAccent(), picker: picker ? picker.value : '',
-            paper: chosenPaper(), paperPicker: paperPicker ? paperPicker.value : '', parts: {} };
-        all('[data-poster-toggle]').forEach(function (box) { state.parts[box.dataset.posterToggle] = box.checked; });
+        const state = { fields: {}, pickers: {} };
+        Array.prototype.filter.call(form.elements, carried).forEach(function (el) {
+            if (el.type === 'checkbox') state.fields[el.name] = el.checked;
+            else if (el.type !== 'radio') state.fields[el.name] = el.value;
+            else if (el.checked) state.fields[el.name] = el.value;
+        });
+        all('#posterForm input[type="color"]').forEach(function (field) { state.pickers[field.id] = field.value; });
         try { sessionStorage.setItem(stashKey, JSON.stringify(state)); } catch (e) { /* no storage: the switch loses them, as before */ }
     }
 
@@ -415,28 +422,31 @@
             state = JSON.parse(sessionStorage.getItem(stashKey) || 'null');
             sessionStorage.removeItem(stashKey);
         } catch (e) { return; }
-        if (!state) return;
-        form.elements.heading.value = state.heading || '';
-        form.elements.line.value = state.line || '';
-        form.elements.tables.value = state.tables || '';
-        if (form.querySelector('#posterTheme option[value="' + state.theme + '"]')) form.elements.theme.value = state.theme;
-        if (form.querySelector('#posterFont option[value="' + state.font + '"]')) form.elements.font.value = state.font;
-        if (picker && state.picker) picker.value = state.picker;
-        const swatch = Array.prototype.find.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
-            return radio !== own && radio.value === state.accent;
+        if (!state || !state.fields) return;
+        Object.keys(state.pickers || {}).forEach(function (id) {
+            const field = document.getElementById(id);
+            if (field && state.pickers[id]) field.value = state.pickers[id];
         });
-        if (swatch) swatch.checked = true;
-        else if (own && state.accent) { own.value = state.accent; own.checked = true; }
-        if (paperPicker && state.paperPicker) paperPicker.value = state.paperPicker;
-        const tint = Array.prototype.find.call(form.querySelectorAll('input[name="paper"]'), function (radio) {
-            return radio !== ownPaper && radio.value === (state.paper || '');
+        Array.prototype.filter.call(form.elements, carried).forEach(function (el) {
+            if (!(el.name in state.fields)) return;
+            const value = state.fields[el.name];
+            if (el.type === 'checkbox') {
+                el.checked = value === true;
+            } else if (el.type !== 'radio') {
+                // a list keeps its value only if it still has it
+                if (el.tagName !== 'SELECT' || el.querySelector('option[value="' + value + '"]')) el.value = value;
+            }
         });
-        if (tint) tint.checked = true;
-        else if (ownPaper && state.paper) { ownPaper.value = state.paper; ownPaper.checked = true; }
-        all('[data-poster-toggle]').forEach(function (box) {
-            if (typeof state.parts[box.dataset.posterToggle] === 'boolean') box.checked = state.parts[box.dataset.posterToggle];
-            showPart(box);
+        // a group of colours: the swatch of that value, else the DJ's own (the radio beside a colour field) given it
+        Object.keys(state.fields).forEach(function (name) {
+            const radios = Array.prototype.filter.call(form.elements, function (el) { return el.type === 'radio' && el.name === name; });
+            if (!radios.length) return;
+            const own = radios.find(function (r) { return r.closest('label').querySelector('input[type="color"]'); });
+            const swatch = radios.find(function (r) { return r !== own && r.value === state.fields[name]; });
+            if (swatch) swatch.checked = true;
+            else if (own) { own.value = state.fields[name]; own.checked = true; }
         });
+        all('[data-poster-toggle]').forEach(showPart);
         showHeading();
         showLine();
         showTables();
