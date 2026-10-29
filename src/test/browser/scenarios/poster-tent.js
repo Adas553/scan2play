@@ -284,13 +284,13 @@
         title: 'the phone\'s preview stays put while the address bar comes and goes: a resize of the same width touches nothing',
         run: async function (t) {
             const main = document.querySelector('body > main');
-            const zoom = main.style.zoom;
+            const style = main.getAttribute('style');
             const changes = [];
             new MutationObserver(function (list) { list.forEach(function (m) { changes.push(m.attributeName + ' ' + main.getAttribute('style')); }); })
                 .observe(main, { attributes: true, attributeFilter: ['style'] });
             for (let i = 0; i < 5; i++) window.dispatchEvent(new Event('resize'));
             await t.sleep(100);
-            t.step('the sheet untouched', [changes, main.style.zoom], [[], zoom]);
+            t.step('the sheet untouched', [changes, main.getAttribute('style')], [[], style]);
         }
     });
 
@@ -305,6 +305,9 @@
             t.check('two in a row, as on the sheet', Math.abs(a.top - b.top) < 1 && b.left > a.right - 1);
             t.check('inside the screen (' + Math.round(a.left) + ' … ' + Math.round(b.right) + ' of ' + width + ')', a.left >= 0 && b.right <= width);
             t.check('no sideways scroll', document.documentElement.scrollWidth <= width);
+            // the preview's zoom and margin are the stylesheet's, on the screen only: on the sheet itself they printed it off the page
+            const main = document.querySelector('body > main');
+            t.step('nothing of the preview on the sheet itself (the print has none)', [main.style.zoom, main.style.marginLeft], ['', '']);
         }
     });
 })();

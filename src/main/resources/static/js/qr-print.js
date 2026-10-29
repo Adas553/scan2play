@@ -120,13 +120,43 @@
             }
             texts.forEach(function (el) { el.style.fontSize = first.style.fontSize; });
         });
+        fitPoster();
         fitPreview();
     }
 
-    // A phone (narrower than the paper): the sheet keeps its printed width (qr-print.css) and is made smaller to the screen here with
-    // zoom — the page then scrolls as far as the smaller sheet (a transform left its full height empty below it), and the sizes the
-    // fitting above measures (a box's height, a line's) stay the print's, unzoomed alike.
+    // The poster fills its page (qr-print.css .poster: as high as the printable page): the room its words and parts leave goes to the
+    // code — larger, read from further away — up to QR_MOST; what is left centres them. The room is measured with the sheet as high
+    // as its words, and the code's new size taken as a ratio of its own: the same on a preview made smaller (zoom).
+    const QR_MOST = 140 * 96 / 25.4;
+    // what the code leaves of the page: a printer's layout a fraction of a millimetre taller never takes a second page
+    const PAGE_SPARE = 2 * 96 / 25.4;
+
+    function fitPoster() {
+        const poster = document.querySelector('main.poster');
+        const qr = poster && poster.querySelector('.qr');
+        if (!qr) return;
+        qr.style.removeProperty('width');
+        qr.style.removeProperty('height');
+        const page = poster.offsetHeight;
+        poster.style.minHeight = '0';
+        const room = page - poster.offsetHeight - PAGE_SPARE;
+        poster.style.removeProperty('min-height');
+        const base = parseFloat(getComputedStyle(qr).width);
+        const size = Math.min(QR_MOST, base * (qr.offsetHeight + room) / qr.offsetHeight);
+        if (size > base) {
+            qr.style.width = size + 'px';
+            qr.style.height = size + 'px';
+        }
+    }
+
+    // A phone (narrower than the paper), or a computer's column beside the editor narrower than the sheet and its white margin: the
+    // sheet keeps its printed width (qr-print.css) and is made smaller here with zoom — the page then scrolls as far as the smaller
+    // sheet (a transform left its full height empty below it), and the sizes the fitting above measures (a box's height, a line's) stay
+    // the print's, unzoomed alike. The zoom and a phone's margin are --preview-zoom and --preview-margin, used by the stylesheet on
+    // the screen only: never on paper (a margin left on the sheet printed the cards off the page's middle).
     const PAPER = 186 * 96 / 25.4;
+    const wide = matchMedia('screen and (min-width: 1100px)');   // qr-print.css: the editor a panel beside the page
+    const SHEET_MARGIN = 12 * 96 / 25.4 + 24;   // the page's white margin around the sheet and the desk's air (qr-print.css)
 
     // Set only when it changes, never taken off and put back: a phone's address bar, hiding and showing as the page scrolls, sends
     // "resize" again and again with the same width — the sheet unzoomed for a moment made the page longer and it jumped at its foot.
@@ -134,18 +164,49 @@
         const main = document.querySelector('body > main');
         if (!main) return;
         let zoom = '', margin = '';
+        const editor = document.getElementById('posterForm');
         if (narrow.matches) {
             const room = document.documentElement.clientWidth - 32;
             const scale = Math.min(1, room / PAPER);
             zoom = String(scale);
             margin = (16 + (room - PAPER * scale) / 2) / scale + 'px';   // a zoomed box's margin is zoomed too
+        } else if (wide.matches && editor) {
+            const room = document.documentElement.clientWidth - editor.offsetWidth - 2 * SHEET_MARGIN;
+            if (room < PAPER) zoom = String(room / PAPER);
         }
-        if (main.style.zoom !== zoom) main.style.zoom = zoom;
-        if (main.style.marginLeft !== margin) main.style.marginLeft = margin;
+        if (main.style.getPropertyValue('--preview-zoom') !== zoom) {
+            if (zoom) main.style.setProperty('--preview-zoom', zoom);
+            else main.style.removeProperty('--preview-zoom');
+        }
+        if (main.style.getPropertyValue('--preview-margin') !== margin) {
+            if (margin) main.style.setProperty('--preview-margin', margin);
+            else main.style.removeProperty('--preview-margin');
+        }
     }
 
+    // Polish typesetting: a one-letter word ("i", "o", "w", "z", "a", "u") never ends a line — the space after it a non-breaking one, in
+    // what is printed (the field keeps what the DJ typed); twice, for two in a row ("i w Lipnicy"). Ours too ("Zeskanuj i poproś o …")
+    function typeset(text) {
+        const loose = /(^|[\s\u00a0])([aiouwz]) /gi;
+        return text.replace(loose, '$1$2\u00a0').replace(loose, '$1$2\u00a0');
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.poster h1, .card .title, .face .title, [data-poster-line]'), function (el) {
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) walker.currentNode.data = typeset(walker.currentNode.data);
+    });
+
     fitTexts();
-    if (document.fonts) document.fonts.ready.then(fitTexts);
+    if (document.fonts) {
+        document.fonts.ready.then(fitTexts);
+        // a font loaded later — the script or the serif, first picked in the editor — changes the words' size: fitted again, or the
+        // code took the room the fallback font had left and the poster ran onto a second page
+        document.fonts.addEventListener('loadingdone', fitTexts);
+    }
+    // the DJ's logo takes its height once loaded: the code is given the room again
+    Array.prototype.forEach.call(document.querySelectorAll('body > main img'), function (img) {
+        if (!img.complete) img.addEventListener('load', fitTexts);
+    });
     narrow.addEventListener('change', fitTexts);
     // the scale depends on the width alone: a resize of the height (the address bar) is nothing to do
     let previewWidth = document.documentElement.clientWidth;
@@ -157,6 +218,27 @@
 
     const form = document.getElementById('posterForm');
     if (!form) return;
+
+    // "Edytuj | Podgląd" (below 1100 px, qr-print.css): the editor or the preview, the page opening on the preview — what prints. The
+    // preview away is still laid out, so the fitting and the print have it; each tap starts at the page's top
+    const modes = document.getElementById('posterModes');
+
+    function showMode(name) {
+        document.body.classList.toggle('mode-edit', name === 'edit');
+        document.body.classList.toggle('mode-preview', name !== 'edit');
+        Array.prototype.forEach.call(modes.querySelectorAll('[data-mode]'), function (button) {
+            button.setAttribute('aria-pressed', String(button.dataset.mode === name));
+        });
+        window.scrollTo(0, 0);
+    }
+
+    if (modes) {
+        modes.addEventListener('click', function (e) {
+            const button = e.target.closest('[data-mode]');
+            if (button) showMode(button.dataset.mode);
+        });
+        showMode('preview');
+    }
     const answer = document.getElementById('posterAnswer');
     const save = document.getElementById('posterSave');
 
@@ -164,14 +246,14 @@
 
     function showHeading() {
         const own = form.elements.heading.value.replace(/\s+/g, ' ').trim();
-        all('[data-poster-heading]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
+        all('[data-poster-heading]').forEach(function (el) { el.textContent = typeset(own); el.hidden = !own; });
         all('[data-poster-ours-heading]').forEach(function (el) { el.hidden = !!own; });
         fitTexts();
     }
 
     function showLine() {
         const own = form.elements.line.value.replace(/\s+/g, ' ').trim();
-        all('[data-poster-line]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
+        all('[data-poster-line]').forEach(function (el) { el.textContent = typeset(own); el.hidden = !own; });
         fitTexts();
     }
 
@@ -182,6 +264,7 @@
             all('[data-poster-part="ours"]').forEach(function (el) { el.hidden = box.checked; });
             all('.poster, .card, .face').forEach(function (el) { el.classList.toggle('with-logo', box.checked); });
         }
+        fitPoster();   // a part more or less: the code's room
     }
 
     const MAX_TABLES = Number(form.elements.tables.max) || 50;
@@ -292,14 +375,33 @@
         });
         paperPicker.addEventListener('change', function () { changeLook(); });
     }
+    // "Własny": the whole chip opens the colour field — only its small square did, and a tap on the word picked the colour with no way
+    // to change it. A click on the field itself, or the radio's own click that follows the label's, is left to the browser
+    [[own, picker], [ownPaper, paperPicker]].forEach(function (pair) {
+        if (!pair[0] || !pair[1]) return;
+        pair[0].closest('label').addEventListener('click', function (e) {
+            if (e.target.tagName === 'INPUT' || !pair[1].showPicker) return;
+            try {
+                pair[1].showPicker();
+            } catch (err) { /* not allowed here: the square still opens it */ }
+        });
+    });
 
     form.elements.heading.addEventListener('input', showHeading);
-    // "Nagłówek na okazję": the occasion's text in the heading, as if typed (the preview, "Niezapisane zmiany"); the list back to its prompt
+    // "Wzór na okazję": the occasion's text in the heading, as if typed (the preview, "Niezapisane zmiany"), and its look — the theme,
+    // the heading's font, the colour (empty: the theme's) and the theme's paper; the list back to its prompt
     const preset = document.getElementById('posterPreset');
     if (preset) {
         preset.addEventListener('change', function () {
             const option = preset.options[preset.selectedIndex];
             if (!option || !option.dataset.heading) return;
+            form.elements.theme.value = option.dataset.theme;
+            form.elements.font.value = option.dataset.font;
+            [['accent', option.dataset.colour || ''], ['paper', '']].forEach(function (pick) {
+                const radio = form.querySelector('input[name="' + pick[0] + '"][value="' + pick[1] + '"]');
+                if (radio) radio.checked = true;
+            });
+            changeLook();
             form.elements.heading.value = option.dataset.heading;
             form.elements.heading.dispatchEvent(new Event('input', { bubbles: true }));
             preset.value = '';
@@ -317,12 +419,19 @@
     // this tab only, for the next page, and gone once it has them.
     const stashKey = 's2p-poster-' + form.elements.partyCode.value;
 
+    /** The fields that go along: every one of the form by its name — the language saves itself, the party's code is the page's. */
+    function carried(el) { return el.name && el.name !== 'partyCode' && el.name !== 'language' && el.type !== 'hidden'; }
+
+    // Every field by its name — a text, a list, a number its value, a box ticked or not, a group of colours the one picked —, and the
+    // colour fields (no name) by their id: a new field of the print goes along with nothing added here
     function stash() {
-        const state = { heading: form.elements.heading.value, line: form.elements.line.value, tables: form.elements.tables.value,
-            theme: form.elements.theme.value, font: form.elements.font.value,
-            accent: chosenAccent(), picker: picker ? picker.value : '',
-            paper: chosenPaper(), paperPicker: paperPicker ? paperPicker.value : '', parts: {} };
-        all('[data-poster-toggle]').forEach(function (box) { state.parts[box.dataset.posterToggle] = box.checked; });
+        const state = { fields: {}, pickers: {} };
+        Array.prototype.filter.call(form.elements, carried).forEach(function (el) {
+            if (el.type === 'checkbox') state.fields[el.name] = el.checked;
+            else if (el.type !== 'radio') state.fields[el.name] = el.value;
+            else if (el.checked) state.fields[el.name] = el.value;
+        });
+        all('#posterForm input[type="color"]').forEach(function (field) { state.pickers[field.id] = field.value; });
         try { sessionStorage.setItem(stashKey, JSON.stringify(state)); } catch (e) { /* no storage: the switch loses them, as before */ }
     }
 
@@ -332,28 +441,31 @@
             state = JSON.parse(sessionStorage.getItem(stashKey) || 'null');
             sessionStorage.removeItem(stashKey);
         } catch (e) { return; }
-        if (!state) return;
-        form.elements.heading.value = state.heading || '';
-        form.elements.line.value = state.line || '';
-        form.elements.tables.value = state.tables || '';
-        if (form.querySelector('#posterTheme option[value="' + state.theme + '"]')) form.elements.theme.value = state.theme;
-        if (form.querySelector('#posterFont option[value="' + state.font + '"]')) form.elements.font.value = state.font;
-        if (picker && state.picker) picker.value = state.picker;
-        const swatch = Array.prototype.find.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
-            return radio !== own && radio.value === state.accent;
+        if (!state || !state.fields) return;
+        Object.keys(state.pickers || {}).forEach(function (id) {
+            const field = document.getElementById(id);
+            if (field && state.pickers[id]) field.value = state.pickers[id];
         });
-        if (swatch) swatch.checked = true;
-        else if (own && state.accent) { own.value = state.accent; own.checked = true; }
-        if (paperPicker && state.paperPicker) paperPicker.value = state.paperPicker;
-        const tint = Array.prototype.find.call(form.querySelectorAll('input[name="paper"]'), function (radio) {
-            return radio !== ownPaper && radio.value === (state.paper || '');
+        Array.prototype.filter.call(form.elements, carried).forEach(function (el) {
+            if (!(el.name in state.fields)) return;
+            const value = state.fields[el.name];
+            if (el.type === 'checkbox') {
+                el.checked = value === true;
+            } else if (el.type !== 'radio') {
+                // a list keeps its value only if it still has it
+                if (el.tagName !== 'SELECT' || el.querySelector('option[value="' + value + '"]')) el.value = value;
+            }
         });
-        if (tint) tint.checked = true;
-        else if (ownPaper && state.paper) { ownPaper.value = state.paper; ownPaper.checked = true; }
-        all('[data-poster-toggle]').forEach(function (box) {
-            if (typeof state.parts[box.dataset.posterToggle] === 'boolean') box.checked = state.parts[box.dataset.posterToggle];
-            showPart(box);
+        // a group of colours: the swatch of that value, else the DJ's own (the radio beside a colour field) given it
+        Object.keys(state.fields).forEach(function (name) {
+            const radios = Array.prototype.filter.call(form.elements, function (el) { return el.type === 'radio' && el.name === name; });
+            if (!radios.length) return;
+            const own = radios.find(function (r) { return r.closest('label').querySelector('input[type="color"]'); });
+            const swatch = radios.find(function (r) { return r !== own && r.value === state.fields[name]; });
+            if (swatch) swatch.checked = true;
+            else if (own) { own.value = state.fields[name]; own.checked = true; }
         });
+        all('[data-poster-toggle]').forEach(showPart);
         showHeading();
         showLine();
         showTables();
@@ -369,7 +481,7 @@
         answer.classList.add('unsaved');
     }
 
-    // the language saves itself; the helpers (#posterHelperForm: "Nagłówek na okazję", "Numer pierwszego stołu") are never saved —
+    // the language saves itself; the helpers (#posterHelperForm: "Wzór na okazję", "Numer pierwszego stołu") are never saved —
     // none of them makes the editor's changes unsaved by itself
     function unsaving(e) { return e.target.name !== 'language' && e.target.form === form; }
     form.addEventListener('input', function (e) { if (unsaving(e)) markUnsaved(); });

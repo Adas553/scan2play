@@ -77,6 +77,8 @@ S2P.scenario({
     viewport: '390,844',                 // optional: the browser window's size (default 1280,900) — a phone's screen; run.py reads it
     setup: { queue: [{ id: 1, name: 'Wilki - Baśka', url: 'https://www.youtube.com/results?search_query=Wilki' }] },   // told to the stand-in first
     without: 'Element.checkVisibility',  // optional: the page as an older browser runs it — the method taken away before its scripts
+    pdf: 1,                              // optional: once it has its verdict, the page printed to a PDF (DevTools Page.printToPDF, the
+                                         // stylesheet's @page) — its A4 pages counted, the file kept in results/NAME.pdf
     run: async function (t) {
         await t.waitFor(function () { return document.querySelector('#song-list [data-song-id="1"]'); }, 'the queue poll', 8000);
         document.querySelector('#song-list tr[data-song-id="1"] form[action="/dj/dashboard/dismiss"] button').click();

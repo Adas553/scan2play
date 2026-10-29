@@ -11,6 +11,9 @@
 
     const SIZES = { story: { width: 1080, height: 1920 }, post: { width: 1080, height: 1350 } };
     const MARGIN = 90;
+    // a story's top and foot are under Instagram's own bars (the profile, the reply field): the words, the logo and the code stay
+    // between them — the frame, a decoration, may run under them
+    const STORY_BARS = 250;
     // our mark as a PNG: a canvas draws an SVG without a size of its own badly in some browsers
     const ourMark = new Image();
     ourMark.src = '/images/icon-192.png';
@@ -18,7 +21,9 @@
     // checkVisibility where the browser has it (Safari only from 17.4); laid out, else
     function shown(el) { return !!el && (el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0); }
 
-    function text(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
+    // the page's words as drawn: runs of white space one space — but a non-breaking one stays (qr-print.js typeset: a one-letter word
+    // never at a line's end), and wrap keeps it inside its word
+    function text(el) { return el ? el.textContent.replace(/[^\S\u00a0]+/g, ' ').trim() : ''; }
 
     /** What the first printed item (the poster, a card, a tent's upright face) shows, and the theme's colours and fonts. */
     function content() {
@@ -50,8 +55,8 @@
             ink: style.getPropertyValue('--ink').trim() || '#111111',
             muted: style.getPropertyValue('--muted').trim() || '#555555',
             accent: heading.length ? getComputedStyle(heading[0].el).color : '#111111',
-            framed: !document.body.classList.contains('theme-classic'),
-            club: document.body.classList.contains('theme-club'),
+            theme: (document.body.className.match(/\btheme-(\w+)/) || [])[1] || 'classic',
+            gold: style.getPropertyValue('--gold').trim() || '#a8842c',
             badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-own'),
             font: paperFont,
             headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont,
@@ -86,6 +91,22 @@
     }
 
     /**
+     * {@code words} in as many lines as {@code wrap} gives them at {@code width}, but as long as one another (the print's text-wrap:
+     * balance): the narrowest width that keeps that number of lines — filled as far as each goes, a line left one word alone below it.
+     */
+    function balance(ctx, words, width) {
+        const lines = wrap(ctx, words, width);
+        if (lines.length < 2) return lines;
+        let low = 0, high = width;
+        while (high - low > 2) {
+            const mid = (low + high) / 2;
+            if (wrap(ctx, words, mid).length > lines.length) low = mid;
+            else high = mid;
+        }
+        return wrap(ctx, words, high);
+    }
+
+    /**
      * The picture as a list of things to draw, from the top, at the scale {@code s}: each text block wrapped to the width, the logo
      * and the code in their boxes. Its height tells whether it fits.
      */
@@ -98,7 +119,7 @@
             if (!words) return;
             ctx.font = weight + ' ' + Math.round(px * s) + 'px ' + family;
             ctx.letterSpacing = spacing ? Math.round(spacing * s) + 'px' : '0px';
-            wrap(ctx, words, width).forEach(function (line) {
+            (role === 'heading' || role === 'second' || role === 'line' ? balance : wrap)(ctx, words, width).forEach(function (line) {
                 add({ kind: 'text', text: line, font: ctx.font, spacing: ctx.letterSpacing, colour: colour, height: Math.round(px * s * 1.18),
                     role: role });
             });
@@ -106,7 +127,7 @@
             add({ kind: 'gap', height: Math.round(gap * s) });
         }
         if (c.logo) {
-            const box = { w: (story ? 560 : 440) * s, h: (story ? 220 : 150) * s };
+            const box = { w: (story ? 560 : 440) * s, h: (story ? 180 : 150) * s };   // the story's height kept for the code
             const ratio = Math.min(box.w / c.logo.naturalWidth, box.h / c.logo.naturalHeight);
             add({ kind: 'logo', image: c.logo, w: Math.round(c.logo.naturalWidth * ratio), h: Math.round(c.logo.naturalHeight * ratio), badge: c.badge });
             add({ kind: 'gap', height: Math.round((story ? 56 : 40) * s) });
@@ -121,12 +142,12 @@
             block(part.text, (part.second ? (story ? 62 : 50) : (story ? 92 : 74)) * script, part.second ? 600 : 700, c.headingFont,
                 part.second ? c.muted : c.accent, last ? (story ? 34 : 24) : 10, 0, part.second ? 'second' : 'heading');
         });
-        block(c.line, story ? 54 : 44, 600, c.lineFont, c.ink, story ? 48 : 30);
+        block(c.line, story ? 54 : 44, 600, c.lineFont, c.ink, story ? 48 : 30, 0, 'line');
         const qr = Math.round(Math.min(width, (story ? 640 : 500) * s));
         add({ kind: 'qr', size: qr });
         add({ kind: 'gap', height: Math.round((story ? 44 : 30) * s) });
         block(c.codeLabel, story ? 42 : 36, 400, c.font, c.muted, 4);
-        if (c.codeLabel) block(c.code, story ? 132 : 104, 800, 'ui-monospace, "DejaVu Sans Mono", Consolas, monospace', c.ink, story ? 18 : 12, 14, 'code');
+        if (c.codeLabel) block(c.code, story ? 132 : 104, 800, c.font, c.ink, story ? 18 : 12, 14, 'code');
         block(c.link, story ? 40 : 34, 400, c.font, c.ink, story ? 36 : 24);
         // a profile never broken across lines ("Facebook djkoko"): its own spaces made non-breaking, only the separators wrap
         block(c.links.map(function (l) { return l.replace(/ /g, '\u00a0'); }).join(' · '), story ? 40 : 34, 600, c.font, c.ink, 12);
@@ -148,6 +169,69 @@
         ctx.roundRect(x, y, w, h, r);
     }
 
+    /** A line around the picture, {@code inset} from its edges, centred on it. */
+    function around(ctx, size, inset, width, colour, radius) {
+        ctx.lineWidth = width;
+        ctx.strokeStyle = colour;
+        roundRect(ctx, inset, inset, size.width - 2 * inset, size.height - 2 * inset, radius || 0);
+        ctx.stroke();
+    }
+
+    /**
+     * The theme's frame as on paper (qr-print.css): the elegant double, the club and the pastel rounded, the rustic stitched with a line
+     * inside it, the gala a band with a gold line and gold diamonds, the neon in a gradient through the heading's colour, the confetti a
+     * band of dots in four colours; the classic none. In the heading's colour, as the print's --frame.
+     */
+    function frame(ctx, c, size) {
+        const w = size.width, h = size.height, colour = c.accent;
+        ctx.save();
+        if (c.theme === 'elegant') {
+            around(ctx, size, 34, 4, colour, 6);
+            around(ctx, size, 50, 4, colour, 4);
+        } else if (c.theme === 'club') {
+            around(ctx, size, 34, 10, colour, 28);
+        } else if (c.theme === 'pastel') {
+            around(ctx, size, 34, 10, colour, 60);
+        } else if (c.theme === 'rustic') {
+            ctx.setLineDash([28, 16]);
+            around(ctx, size, 34, 6, colour, 8);
+            ctx.setLineDash([]);
+            around(ctx, size, 52, 3, colour, 6);
+        } else if (c.theme === 'gala') {
+            around(ctx, size, 40, 22, colour, 0);
+            around(ctx, size, 62, 4, c.gold, 0);
+            ctx.fillStyle = c.gold;
+            [40, h - 40].forEach(function (y) {
+                ctx.save();
+                ctx.translate(w / 2, y);
+                ctx.rotate(Math.PI / 4);
+                ctx.fillRect(-14, -14, 28, 28);
+                ctx.restore();
+            });
+        } else if (c.theme === 'neon') {
+            const gradient = ctx.createLinearGradient(0, 0, w, h);
+            gradient.addColorStop(0, '#e0218a');
+            gradient.addColorStop(0.5, colour);
+            gradient.addColorStop(1, '#0aa2c0');
+            around(ctx, size, 38, 16, gradient, 0);
+        } else if (c.theme === 'confetti') {
+            // the print's tile of four dots, a row of tiles 20 … 60 px from each edge — the words start 90 px in
+            const dots = [[8, 8, colour, 6], [28, 14, '#0aa2c0', 6], [16, 30, '#e0a526', 6], [34, 34, '#6f2dbd', 5]];
+            for (let y = 20; y + 40 <= h - 20; y += 40) {
+                for (let x = 20; x + 40 <= w - 20; x += 40) {
+                    if (x >= 60 && x + 40 <= w - 60 && y >= 60 && y + 40 <= h - 60) continue;
+                    dots.forEach(function (d) {
+                        ctx.fillStyle = d[2];
+                        ctx.beginPath();
+                        ctx.arc(x + d[0], y + d[1], d[3], 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
+                }
+            }
+        }
+        ctx.restore();
+    }
+
     /** Draws the picture of {@code kind} on a new canvas; gives the canvas and its layout. */
     function draw(kind) {
         const size = SIZES[kind];
@@ -156,21 +240,17 @@
         canvas.width = size.width;
         canvas.height = size.height;
         const ctx = canvas.getContext('2d');
+        const edge = kind === 'story' ? STORY_BARS : MARGIN;
         let s = 1, laid = plan(ctx, c, size, s);
-        while (laid.height > size.height - 2 * MARGIN && s > 0.4) {
+        while (laid.height > size.height - 2 * edge && s > 0.4) {
             s *= 0.94;
             laid = plan(ctx, c, size, s);
         }
         ctx.fillStyle = c.paper;
         ctx.fillRect(0, 0, size.width, size.height);
-        if (c.framed) {
-            ctx.strokeStyle = c.accent;
-            ctx.lineWidth = 10;
-            roundRect(ctx, 34, 34, size.width - 68, size.height - 68, c.club ? 28 : 40);
-            ctx.stroke();
-        }
+        frame(ctx, c, size);
         const layout = { kind: kind, width: size.width, height: size.height, left: size.width, right: 0, heading: [], code: '', logo: false };
-        let y = Math.round(Math.max(MARGIN, (size.height - laid.height) / 2));
+        let y = Math.round(Math.max(edge, (size.height - laid.height) / 2));
         layout.top = y;
         const centre = size.width / 2;
         const reach = function (w) {
@@ -242,7 +322,10 @@
                 reach(ctx.measureText(item.text).width);
                 ctx.letterSpacing = '0px';
                 if (item.role === 'heading') layout.heading.push(item.text);
-                if (item.role === 'code') layout.code = item.text;
+                if (item.role === 'code') {
+                    layout.code = item.text;
+                    layout.codeFont = item.font;
+                }
                 y += item.height;
             }
         });

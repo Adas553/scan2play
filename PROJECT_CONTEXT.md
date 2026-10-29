@@ -438,16 +438,22 @@ until the DJ picks one (`AUTO`, the default) the panel's is printed and picked: 
 English alone — and boxes for what of the DJ's it shows (the
 logo, the profiles, the tip, the address with the party's code; a box only for what the party has) and **the look** (V47): a theme —
 "Klasyczny" (white, as before), "Elegancki" (cream, for a wedding, a serif heading, a double frame), "Klubowy" (dark, the DJ's logo on a
-white badge), "Pastelowy" (soft pink, rounded) and, V52, "Rustykalny" (kraft, olive, a stitched frame — a barn wedding), "Gala" (ivory,
-gold, a double frame with diamonds — a ball, New Year's Eve), "Neon" (white, a frame in a gradient from the heading's colour to violet
-and cyan — the club's colours without its ink), "Konfetti" (white, coloured dots in the frame's band only — a birthday); the rustic
-and the gala headings in the serif as the elegant one; the decoration never under the words or the code (`poster-themes-more`); the
+white badge), "Pastelowy" (soft pink, rounded) and, V52, "Rustykalny" (kraft, olive, a stitched frame with a line inside — a barn
+wedding), "Gala" (white, navy and gold: a navy heading and band, a gold line inside it and gold diamonds — a ball, New Year's Eve),
+"Neon" (white, a violet heading, a frame in a gradient pink → the heading's colour → cyan — the club's colours without its ink),
+"Konfetti" (a warm cream, coloured dots in the frame's band only — a birthday); the rustic and the gala headings in the serif as the
+elegant one; the lines inside a frame are outlines (a box-shadow took the place of the preview's white page margin); every two
+themes apart at a glance — at least two of the paper, the heading's colour and the kind of frame differ (`poster-themes-apart`: the
+elegant and the gala, the pastel and the neon were alike); the decoration never under the words or the code (`poster-themes-more`); the
 themes' scenarios take every theme of the editor, so a new one is checked by itself; **"Kolor tła"** (V53): the theme's paper, one of six
 light tints or the DJ's own — printed as picked (two shades alike print alike), the words on it black or white, whichever reads
 better (always at least 4.5:1; `body.paper-own`), the code on its white tile, the DJ's logo on a white badge on any paper of
 the DJ's (one shape while the DJ tries colours — `poster-paper-logo-steady`), the classic paper coloured with the words 8 mm off its edges (`poster-paper`, `…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
-DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
-`--accent`); the DJ's colour prints as picked — the DJ decides; a heading that stands out poorly from its paper (under 3:1, WCAG's
+DJ's own (the browser's colour field); the editor's colours are `PosterColours` (the paper's six, the heading's eight), each told
+by its name to a screen reader and in its title, never by its code (`poster-colours-named`, `PosterColoursTest`), and "Własny" opens
+the colour field from its whole chip. The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
+`--accent`, its fonts `--heading-font` / `--line-font` — "Krój nagłówka" sets the heading's over it; a new theme is one block of
+tokens and, if it has one, its frame); the DJ's colour prints as picked — the DJ decides; a heading that stands out poorly from its paper (under 3:1, WCAG's
 least for large text) is said under the colours ("Nagłówek słabo odcina się od tła"), never changed (`qr-print.js`;
 `poster-accent-exact`; while the DJ drags in a colour picker the preview follows and the note waits for the colour picked — shown
 and hidden under the open picker, it moved the editor and the browser closed the picker, `poster-accent-note-steady`); the theme's own colours read on its paper — browser scenario `poster-themes-readable`: every theme with white,
@@ -458,7 +464,11 @@ the SIL Open Font License beside them, ~150 KB): "S2P Sans" (Source Sans 3) on t
 Display) for the elegant headings and the DJ's line on the poster and a tent (on a card the line stays in the sans: 60 letters of
 the serif do not fit its column) — variable fonts, the Latin and the Latin Extended halves apart, `font-display: block`; the bar and
 the editor keep the device's fonts, as the panel. So the paper lays out the same everywhere and the scenarios measure what prints
-(`poster-fonts-ours`). **The DJ's heading and line fitted** (`qr-print.js`): a long one made smaller half a point at a time until
+(`poster-fonts-ours`). **Balanced lines**: a heading or a line of two or three lines is balanced (`text-wrap: balance`; the pictures'
+`qr-social.js` `balance`, the narrowest width keeping the lines' number) — filled as far as each went, a word was left alone below
+("Poproś o piosenkę dla Młodej" over "Pary", the owner's screenshot); and a one-letter word ("i", "o", "w", "z", "a", "u") never ends a
+line — the space after it non-breaking in what is printed and drawn, ours too (`typeset`; the field keeps what was typed) —
+`poster-heading-balanced`, `…-many`, `…-cards-tent`, `…-story`, `poster-heading-one-letter-words`. **The DJ's heading and line fitted** (`qr-print.js`): a long one made smaller half a point at a time until
 whole in its lines — two for the poster's heading, three elsewhere —, no smaller than its least (the poster's heading 16 pt, a card's
 7 pt, a tent's 12 pt); a short one keeps the stylesheet's size; measured on the first card or tent, the same size for all; on a phone
 too — **a phone's preview** is the sheet laid out as it prints (186 mm wide) and made smaller to the screen with `zoom`
@@ -480,17 +490,37 @@ address a guest types from paper is printed without "https://" and the party's c
 `printedLink`, `.link-code`; on a card's narrow column the address broke anywhere, "…/p/P" over "RNT1" —
 `poster-address-code-whole-cards`, `…-cards-logo`, `…-tent`, `…-poster`). The page works without `Element.checkVisibility` (Safari
 before 17.4: the script threw at load and the editor did nothing — `poster-editor-without-check-visibility`, the harness's `without`).
+**The poster is its A4 page** (`.poster`, `qr-print.js` `fitPoster`): 186 × 272 mm on the screen as on paper — the theme's frame down
+to the page's foot —; the room its words and parts leave goes to the code, larger up to 140 mm (our words alone: 140; the longest
+words, the DJ's logo, three profiles and the tip: still ≥ 100), what is left centres them (`poster-fills-the-page`, `…-longest`,
+`poster-preview-a4-wide`), 2 mm left to spare; fitted again when a font loads late (the script first picked: the code took the
+fallback's room and the poster printed two pages — `poster-fills-the-page-font-late`). **The print itself**: `run.py`'s `pdf` prints a
+scenario's page (DevTools `Page.printToPDF`) and counts its A4 pages — the poster, the cards, the tent with the longest words in a
+theme, 22 cards, 3 tents (`poster-print-pdf*`, a control told one page for two). A computer's column narrower than the sheet makes the preview smaller (`--preview-zoom`, used by the
+stylesheet on the screen only — never on paper; `poster-preview-a4-laptop`), as a phone's (`fitPreview`; its margin is
+`--preview-margin`, screen only too: on the sheet itself it printed the cards off the page's middle from a phone).
+**"Edytuj | Podgląd"** (`#posterModes`, below 1100 px): the editor or the preview, one at a time, the switch held at the top; the page
+opens on the preview (what prints). The preview away while editing stays laid out (fixed, hidden), so the fitting measures it and the
+print has it (`poster-phone-modes`, `…-fitted`, `poster-modes-wide`); without the script, the editor above the paper as before.
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
 the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane
-zmiany" by themselves): "Nagłówek na okazję" — six occasions (wesele, osiemnastka, urodziny, klub, pub, impreza firmowa), each text in the
-print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) — fills the
-heading as if typed and goes back to its prompt (`poster-presets`, `…-both`); no note about the ink of a dark sheet (obvious;
+zmiany" by themselves): "Wzór na okazję" — the first field — six occasions (wesele, osiemnastka, urodziny, klub, pub, impreza firmowa), each
+text in the print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) —
+fills the heading as if typed and sets its look: the theme, the heading's font, the colour (none: the theme's) and the theme's paper
+(the wedding Elegancki with the script, the 18th Neon, the birthday Konfetti, the club Klubowy, the pub Rustykalny, the company
+Klasyczny in navy and the sans), and goes back to its prompt (`poster-presets`, `…-both`, `…-look`). **Fewer fields to start**:
+"Treść" is the occasion, the heading, "Druga linia" and the language; the paper, the heading's font and its colour are folded under
+"Więcej wyglądu" (`#posterMoreLook`, open when the party has one of them set; the weak heading's note outside it); the tables and the
+first table's number are with what is on the print, on the cards and the tents only (on the poster hidden, still sent —
+`poster-editor-fewer-fields`, `poster-editor-tables-on-cards`); no note about the ink of a dark sheet (obvious;
 "Kolor tła"'s hint says a dark colour prints dark). **"Do internetu"**
 (`js/qr-social.js`): a PNG story 1080 × 1920 or post 1080 × 1350 drawn on a canvas in the page from what the preview shows, unsaved
 changes too — the logo, the heading, the line, the code on a white tile, the party's code large and the address (nobody scans the screen
-they hold), the profiles (never broken across lines), the tip, "Działa na" with the DJ's logo; the theme's paper, ink, colour and frame,
-the DJ's logo on a white badge on the club paper; too much, and every size shrinks until it fits. A phone that can share files opens its
+they hold), the profiles (never broken across lines), the tip, "Działa na" with the DJ's logo; the theme's paper, ink, colour and frame
+as on paper (the double, the rounded, the stitched, the gala's band, the neon's gradient, the confetti's dots — `poster-social-frames`),
+the party's code in the print's font; a story's words, logo and code between Instagram's bars, 250 px at its top and foot
+(`poster-social-story-safe`); the DJ's logo on a white badge on the club paper; too much, and every size shrinks until it fits. A phone that can share files opens its
 share sheet, anything else saves `scan2play-<code>-story.png`; nothing is sent (`poster-social-story`, `…-post`, `…-longest`: every theme
 with the longest words, the DJ's logo, three profiles and the tip inside the picture, the code ≥ 420 / 340 px). The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the
@@ -877,7 +907,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); a song the DJ adds (`addByTheDj`, V44) under the same lock; evicts `dashboardQueue` after the commit |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
-| `QrCodeService` | QR codes (ZXing, cached) |
+| `QrCodeService` | QR codes (ZXing, cached; error correction M — the same version 3 as L for the guest link, so as large on paper; `QrCodeServiceTest`) |
 | `PartyCodeService` | a party's code (V49): `freshCode` — one no party has nor had (`party_code_retired`), for a new party and a new code; `changeCode` — "Zmień kod imprezy": the party and all of it under a new code, the old one retired, the caches evicted after the commit |
 | `AccountDeletionService` | deletes all of a DJ's data (their party's staff and invitations by e-mail, their places on other staffs too) and evicts the caches after the commit; first the party's locks in the app's order — "S2PR", then the party's row (a guest's request and "Dołącz" wait or find nothing, no deadlock) —; the requests and the feedback in one `DELETE` each |
 | `PartyStaffService` | the party's staff (V30, V32): what a person may do at a party (`Access`), joining by the invitation link with its role (under the party's lock, V33), the places shared with the invitations (`placesTaken`), the owner's list, permissions, taking access away, the panels, the party's name |
@@ -1363,7 +1393,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards / tent (V50; the cards and the tents a table each, numbered, when the party has tables); as the DJ set it (V46: the heading, the line, the language — by default the panel's: Polish prints Polish and English, any other English —, the parts shown); the editor for whom has VIBE |
-| POST | `/dj/qr-print/settings` | `partyCode`, `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI, anything else CLASSIC, V47, V52), `accent` ("#rrggbb", anything else none), `font` (THEME / SANS / SERIF / SCRIPT, anything else THEME, V51), `paper` ("#rrggbb", anything else none, V53), `tables` (V50: 1 … 50, more is 50, anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
+| POST | `/dj/qr-print/settings` | `partyCode` and the form as one record (`DjPartySettingsController.PosterForm`, `applyTo`): `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI, anything else CLASSIC, V47, V52), `accent` ("#rrggbb", anything else none), `font` (THEME / SANS / SERIF / SCRIPT, anything else THEME, V51), `paper` ("#rrggbb", anything else none, V53), `tables` (V50: 1 … 50, more is 50, anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
 | GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days, and the organisers new in the last 7 days with their address (V48); only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s) |

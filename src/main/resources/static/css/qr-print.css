@@ -166,6 +166,72 @@ body {
     }
 }
 
+/* "Edytuj | Podgląd" (qr-print.html #posterModes): below 1100 px the editor stood above the paper — on a phone some 1800 px of fields
+   before the preview. One of the two at a time, the switch held at the top; qr-print.js shows it (without the script, the editor and
+   the paper one under the other, as before). The preview away while editing stays laid out, out of sight and out of the page's
+   length: the fitting measures it, and the print — screen rules only — always has it */
+.modes {
+    display: none;
+}
+
+@media screen and (max-width: 1099.98px) {
+    body.mode-edit .modes,
+    body.mode-preview .modes {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        gap: 0;
+        padding: 8px 16px;
+        background: #161616;
+        border-bottom: 1px solid #333333;
+    }
+
+    .modes button {
+        flex: 1 1 0;
+        min-height: 44px;
+        padding: 6px 14px;
+        border: 1px solid #6c757d;
+        background: transparent;
+        color: #f8f9fa;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .modes button:first-child {
+        border-radius: 8px 0 0 8px;
+    }
+
+    .modes button + button {
+        border-left: 0;
+        border-radius: 0 8px 8px 0;
+    }
+
+    /* the one shown filled light, as the layout switch */
+    .modes button[aria-pressed="true"] {
+        background: #f8f9fa;
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .modes button:focus-visible {
+        outline: 2px solid #0dcaf0;
+        outline-offset: 2px;
+    }
+
+    body.mode-preview #posterForm {
+        display: none;
+    }
+
+    body.mode-edit > main {
+        position: fixed;
+        top: 0;
+        left: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
 /* the page's one main action in the colour of Scan2Play's actions (the cyan of the "2"), dark text — as on every other page */
 .toolbar #printBtn {
     border-color: #0dcaf0;
@@ -277,6 +343,47 @@ body {
     font-weight: 600;
 }
 
+/* "Więcej wyglądu": the paper, the heading's font and its colour folded under the theme — the editor starts with less (open when the
+   party has one of them set) */
+.editor-more {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.editor-more summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: #dee2e6;
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+/* its own arrow: the browser's marker is gone with the summary's flex */
+.editor-more summary::-webkit-details-marker {
+    display: none;
+}
+
+.editor-more summary::before {
+    content: "▸";
+    width: 1.2em;
+    color: #adb5bd;
+}
+
+.editor-more[open] > summary::before {
+    content: "▾";
+}
+
+.editor-more summary:focus-visible {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 2px;
+}
+
+.editor-more[open] > summary {
+    margin-bottom: 6px;
+}
+
 /* the colours: each its own button — the radio hidden, the dot (or the word) ringed when picked */
 .editor-colors {
     display: flex;
@@ -345,6 +452,12 @@ body {
 .swatch:has(input:focus-visible) .swatch-chip {
     outline: 2px solid #0dcaf0;
     outline-offset: 3px;
+}
+
+/* a dot's focus outside the picked one's white ring, the dark of the group between: on the turquoise dot the cyan ring was the dot's
+   own colour */
+.swatch:has(input:focus-visible) .swatch-dot {
+    outline-offset: 6px;
 }
 
 .swatch-chip input[type="color"] {
@@ -479,6 +592,7 @@ body {
         grid-column: 2;
         grid-row: 2;
         align-self: start;
+        justify-self: center;
         /* the sheet as it comes out of the printer: the page's margin (@page, 12 mm) stays white paper around what is printed */
         margin-top: calc(24px + 12mm);
         margin-bottom: calc(24px + 12mm);
@@ -516,9 +630,17 @@ body {
     --muted: #555555;
     --accent-base: #111111;
     --frame: transparent;
+    /* the print's fonts (static/fonts); a theme's heading and the DJ's line in one of them, "Krój nagłówka" over the theme's */
+    --sans: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --serif: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+    --script: "S2P Script", "Segoe Script", cursive;
+    --heading-font: var(--sans);
+    --line-font: var(--sans);
 }
 
 body.theme-elegant {
+    --heading-font: var(--serif);
+    --line-font: var(--serif);
     --paper: #fbf7ef;
     --ink: #1f2a44;
     --muted: #5b6275;
@@ -544,6 +666,8 @@ body.theme-pastel {
 
 /* V52: a barn wedding, boho — kraft and olive */
 body.theme-rustic {
+    --heading-font: var(--serif);
+    --line-font: var(--serif);
     --paper: #f4ecdc;
     --ink: #3b3226;
     --muted: #625545;
@@ -551,27 +675,32 @@ body.theme-rustic {
     --frame: var(--accent, var(--accent-base));
 }
 
-/* V52: a ball, New Year's Eve, a palace wedding — ivory and gold (a gold dark enough to read) */
+/* V52: a ball, New Year's Eve, a palace wedding — navy and gold on white: a navy heading and band, a gold line and diamonds (the
+   elegant one is the cream and gold one; the two were alike at a glance) */
 body.theme-gala {
-    --paper: #fffdf6;
+    --heading-font: var(--serif);
+    --line-font: var(--serif);
+    --paper: #ffffff;
     --ink: #1d1d1f;
     --muted: #5c5649;
-    --accent-base: #8c6d1f;
+    --accent-base: #1c2b4f;
+    --gold: #a8842c;
     --frame: var(--accent, var(--accent-base));
 }
 
-/* V52: a club, an 18th — the club's colours on white paper: ink for the frame only */
+/* V52: a club, an 18th — the club's colours on white paper: ink for the frame only; a violet heading, the frame pink to violet to
+   cyan (a pink heading was the pastel's at a glance) */
 body.theme-neon {
     --paper: #ffffff;
     --ink: #121212;
     --muted: #555555;
-    --accent-base: #c2127a;
+    --accent-base: #6f2dbd;
     --frame: var(--accent, var(--accent-base));
 }
 
-/* V52: a birthday — white, coloured dots in the frame's band */
+/* V52: a birthday — a warm cream paper, coloured dots in the frame's band (white, it was the neon's paper) */
 body.theme-confetti {
-    --paper: #ffffff;
+    --paper: #fff8e7;
     --ink: #1f1f1f;
     --muted: #555555;
     --accent-base: #c4410c;
@@ -588,7 +717,7 @@ body.theme-confetti {
 .poster,
 .cards,
 .tents {
-    font-family: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-family: var(--sans);
 }
 
 .poster h1,
@@ -616,44 +745,45 @@ body.theme-elegant .poster {
     border: 1.6mm double var(--frame);
 }
 
-/* the serif for the headings, and the DJ's line on the poster and a tent — on a card the line stays in the sans: 60 letters of the
-   wider serif do not fit its column in three lines even at the least size */
-body.theme-elegant .poster h1,
-body.theme-elegant .card .title,
-body.theme-elegant .face .title,
-body.theme-elegant .poster .own-line,
-body.theme-elegant .face .own-line,
-body.theme-rustic .poster h1,
-body.theme-rustic .card .title,
-body.theme-rustic .face .title,
-body.theme-rustic .poster .own-line,
-body.theme-rustic .face .own-line,
-body.theme-gala .poster h1,
-body.theme-gala .card .title,
-body.theme-gala .face .title,
-body.theme-gala .poster .own-line,
-body.theme-gala .face .own-line {
-    font-family: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+/* the theme's fonts (its --heading-font, --line-font): the heading, and the DJ's line on the poster and a tent — on a card the line
+   stays in the sans: 60 letters of the wider serif do not fit its column in three lines even at the least size */
+.poster h1,
+.card .title,
+.face .title {
+    font-family: var(--heading-font);
+}
+
+.poster .own-line,
+.face .own-line {
+    font-family: var(--line-font);
+}
+
+/* a heading or a line of two or three lines balanced — as long as one another: filled as far as each goes, a line left one word alone
+   below it ("Poproś o piosenkę dla Młodej" over "Pary"). The number of lines stays, so the fitting (qr-print.js) and the page do too */
+.poster h1,
+.card .title,
+.face .title,
+.own-line {
+    text-wrap: balance;
 }
 
 /* the heading's font as the DJ picked it (V51), whatever the theme — the heading only, the line and the code's texts stay in the
-   theme's; after the theme's rules, so it wins over the elegant serif */
-body.font-sans .poster h1,
-body.font-sans .card .title,
-body.font-sans .face .title {
-    font-family: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+   theme's; after the themes, so it wins over their --heading-font */
+body.font-sans {
+    --heading-font: var(--sans);
 }
 
-body.font-serif .poster h1,
-body.font-serif .card .title,
-body.font-serif .face .title {
-    font-family: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+body.font-serif {
+    --heading-font: var(--serif);
+}
+
+body.font-script {
+    --heading-font: var(--script);
 }
 
 body.font-script .poster h1,
 body.font-script .card .title,
 body.font-script .face .title {
-    font-family: "S2P Script", "Segoe Script", cursive;
     /* the script's small letters are low: brought to the sans's height, so it reads as large (qr-print.js still fits it to its lines;
        a browser without it shows the script a little smaller) */
     font-size-adjust: 0.49;
@@ -672,20 +802,25 @@ body.theme-classic.paper-own .poster {
     padding: 6mm 8mm;
 }
 
-/* V52's frames: the rustic stitched (dashed, a thin line inside it), the gala double with a diamond at its top and foot, the neon in a
-   gradient from the heading's colour, the confetti a band of dots around white paper — the decoration only in the frame, never under
-   the words or the code; ".tent .face" over the tent's own frame of a theme (below) */
+/* V52's frames: the rustic stitched (dashed, a thin line inside it), the gala a navy band with a gold line inside it and a gold diamond
+   at its top and foot, the neon in a gradient through the heading's colour, the confetti a band of dots around its paper — the
+   decoration only in the frame, never under the words or the code; ".tent .face" over the tent's own frame of a theme (below).
+   qr-social.js draws the same frames on the pictures for social media */
 body.theme-rustic .poster,
 body.theme-rustic .tent .face {
     border: 0.7mm dashed var(--frame);
-    box-shadow: inset 0 0 0 1.4mm var(--paper), inset 0 0 0 1.7mm var(--frame);
+    /* the line inside: an outline drawn in — a box-shadow there took the place of the preview's white page margin (has-editor) */
+    outline: 0.3mm solid var(--frame);
+    outline-offset: -2.4mm;
     border-radius: 1.5mm;
 }
 
 body.theme-gala .poster,
 body.theme-gala .tent .face {
     position: relative;
-    border: 1.8mm double var(--frame);
+    border: 2.2mm solid var(--frame);
+    outline: 0.5mm solid var(--gold);
+    outline-offset: -4.1mm;
 }
 
 body.theme-gala .poster::before,
@@ -697,7 +832,7 @@ body.theme-gala .tent .face::after {
     left: calc(50% - 1.6mm);
     width: 3.2mm;
     height: 3.2mm;
-    background: var(--frame);
+    background: var(--gold);
     transform: rotate(45deg);
 }
 
@@ -714,7 +849,7 @@ body.theme-gala .tent .face::after {
 body.theme-neon .poster,
 body.theme-neon .tent .face {
     border: 1.4mm solid var(--frame);
-    border-image: linear-gradient(135deg, var(--frame), #6f2dbd, #0aa2c0) 1;
+    border-image: linear-gradient(135deg, #e0218a, var(--frame), #0aa2c0) 1;
 }
 
 body.theme-confetti .poster,
@@ -768,7 +903,12 @@ body:not(.theme-classic) .card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 186mm;
+    /* the sheet is its page, on the screen as on paper: 186 mm wide whatever its words, as high as the printable page (297 mm less
+       @page's 12 mm twice, and a millimetre to spare) — the theme's frame down to its foot. The room the words leave goes to the
+       code (qr-print.js fitPoster); what is left centres them */
+    justify-content: center;
+    width: 186mm;
+    min-height: 272mm;
     margin: 0 auto;
     padding: 8mm 0;
     text-align: center;
@@ -1025,6 +1165,14 @@ body:not(.theme-classic) .card {
     }
 }
 
+/* the preview made smaller to its screen or column (qr-print.js fitPreview sets --preview-zoom): on the screen only — a zoom left on
+   the sheet would print it smaller */
+@media screen {
+    body > main {
+        zoom: var(--preview-zoom, 1);
+    }
+}
+
 /* ---- A phone: the sheet laid out as it prints, 186 mm wide — qr-print.js makes it smaller to the screen's width, so the frame, the
    code's tile and the margins look as on paper (laid out again for the narrow screen, the code covered the frame) ---- */
 
@@ -1033,7 +1181,8 @@ body:not(.theme-classic) .card {
     .cards,
     .tents {
         width: 186mm;
-        margin-left: 0;
+        /* centred in the screen by qr-print.js fitPreview (a zoomed box's margin is zoomed too) */
+        margin-left: var(--preview-margin, 0);
         margin-right: 0;
     }
 
