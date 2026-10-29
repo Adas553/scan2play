@@ -4,7 +4,8 @@
 // words, the DJ's logo, three profiles and the tip, every font in every theme still fits A4, a card and a tent's face, the heading
 // whole in its lines.
 (function () {
-    const THEMES = ['CLASSIC', 'ELEGANT', 'CLUB', 'PASTEL'];
+    /** Every theme the editor offers (V47, V52): a new theme is checked here by itself. */
+    function themes() { return Array.from(document.querySelectorAll('#posterTheme option')).map(function (o) { return o.value; }); }
     const FONTS = ['THEME', 'SANS', 'SERIF', 'SCRIPT'];
     const A4_PRINTABLE = (297 - 2 * 12) * 96 / 25.4;
     const PT = 96 / 72;
@@ -32,7 +33,7 @@
     }
 
     function each(run) {
-        THEMES.forEach(function (theme) {
+        themes().forEach(function (theme) {
             pick('posterTheme', theme);
             FONTS.forEach(function (font) {
                 pick('posterFont', font);

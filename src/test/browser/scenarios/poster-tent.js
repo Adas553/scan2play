@@ -4,7 +4,8 @@
 // cards and one tent. With the longest words, the DJ's logo, three profiles, the tip and a table's number every part stays on its face
 // and on its card, in every theme.
 (function () {
-    const THEMES = ['CLASSIC', 'ELEGANT', 'CLUB', 'PASTEL'];
+    /** Every theme the editor offers (V47, V52): a new theme is checked here by itself. */
+    function themes() { return Array.from(document.querySelectorAll('#posterTheme option')).map(function (o) { return o.value; }); }
     /** The printable height of an A4 page in CSS px: 297 mm less the page's margins (qr-print.css, @page 12 mm). */
     const A4_PRINTABLE = (297 - 2 * 12) * 96 / 25.4;
     const MM = 96 / 25.4;
@@ -85,7 +86,7 @@
             await t.waitFor(function () { return Array.from(document.querySelectorAll('.tent .dj-logo')).every(function (i) { return i.complete; }); }, 'the logos', 3000);
             const out = [];
             const pages = [];
-            THEMES.forEach(function (theme) {
+            themes().forEach(function (theme) {
                 pickTheme(theme);
                 const tent = document.querySelectorAll('.tent')[49];
                 tent.querySelectorAll('.face').forEach(function (face, i) {
@@ -200,7 +201,7 @@
             type('posterTablesFrom', '950');
             await t.waitFor(function () { return Array.from(document.querySelectorAll('.card .dj-logo')).every(function (i) { return i.complete; }); }, 'the logos', 3000);
             const bad = [];
-            THEMES.forEach(function (theme) {
+            themes().forEach(function (theme) {
                 pickTheme(theme);
                 const card = document.querySelectorAll('.card')[49];
                 const no = card.querySelector('[data-table-number]');

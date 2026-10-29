@@ -104,7 +104,10 @@ class DjPartySettingsControllerPosterTest {
         assertThat(party.getPosterAccent()).isEqualTo("#00bcd4");
 
         setUp();
-        PartySettingsEntity wrong = send(post("/dj/qr-print/settings").param("theme", "NEON").param("accent", "red; background:url(x)"));
+        assertThat(send(post("/dj/qr-print/settings").param("theme", "confetti")).getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CONFETTI);
+
+        setUp();
+        PartySettingsEntity wrong = send(post("/dj/qr-print/settings").param("theme", "WINTER").param("accent", "red; background:url(x)"));
         assertThat(wrong.getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CLASSIC);
         assertThat(wrong.getPosterAccent()).isNull();
     }

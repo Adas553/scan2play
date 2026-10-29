@@ -76,7 +76,7 @@
     // [the text, its most lines, its least size in pt, the least of a heading in the script]. The script's size is brought to the
     // sans's height of small letters (qr-print.css font-size-adjust), its letters wider: 40 of them need a smaller size on a card
     const FITS = [['.poster h1 .own', 2, 16], ['.poster .own-line', 3, 11], ['.card .title .own', 3, 7, 5.5], ['.card .own-line', 3, 6],
-        ['.face .title .own', 3, 12, 11.5], ['.face .own-line', 3, 9]];
+        ['.face .title .own', 3, 12, 10], ['.face .own-line', 3, 9]];
     const PT = 96 / 72;
     const narrow = matchMedia('screen and (max-width: 200mm)');
 

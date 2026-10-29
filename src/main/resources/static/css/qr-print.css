@@ -530,6 +530,42 @@ body.theme-pastel {
     --frame: var(--accent, var(--accent-base));
 }
 
+/* V52: a barn wedding, boho — kraft and olive */
+body.theme-rustic {
+    --paper: #f4ecdc;
+    --ink: #3b3226;
+    --muted: #625545;
+    --accent-base: #55622f;
+    --frame: var(--accent, var(--accent-base));
+}
+
+/* V52: a ball, New Year's Eve, a palace wedding — ivory and gold (a gold dark enough to read) */
+body.theme-gala {
+    --paper: #fffdf6;
+    --ink: #1d1d1f;
+    --muted: #5c5649;
+    --accent-base: #8c6d1f;
+    --frame: var(--accent, var(--accent-base));
+}
+
+/* V52: a club, an 18th — the club's colours on white paper: ink for the frame only */
+body.theme-neon {
+    --paper: #ffffff;
+    --ink: #121212;
+    --muted: #555555;
+    --accent-base: #c2127a;
+    --frame: var(--accent, var(--accent-base));
+}
+
+/* V52: a birthday — white, coloured dots in the frame's band */
+body.theme-confetti {
+    --paper: #ffffff;
+    --ink: #1f1f1f;
+    --muted: #555555;
+    --accent-base: #c4410c;
+    --frame: var(--accent, var(--accent-base));
+}
+
 .poster,
 .card,
 .face {
@@ -574,7 +610,17 @@ body.theme-elegant .poster h1,
 body.theme-elegant .card .title,
 body.theme-elegant .face .title,
 body.theme-elegant .poster .own-line,
-body.theme-elegant .face .own-line {
+body.theme-elegant .face .own-line,
+body.theme-rustic .poster h1,
+body.theme-rustic .card .title,
+body.theme-rustic .face .title,
+body.theme-rustic .poster .own-line,
+body.theme-rustic .face .own-line,
+body.theme-gala .poster h1,
+body.theme-gala .card .title,
+body.theme-gala .face .title,
+body.theme-gala .poster .own-line,
+body.theme-gala .face .own-line {
     font-family: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
 }
 
@@ -607,6 +653,70 @@ body.theme-pastel .poster {
 
 body.theme-club .poster {
     border-radius: 4mm;
+}
+
+/* V52's frames: the rustic stitched (dashed, a thin line inside it), the gala double with a diamond at its top and foot, the neon in a
+   gradient from the heading's colour, the confetti a band of dots around white paper — the decoration only in the frame, never under
+   the words or the code; ".tent .face" over the tent's own frame of a theme (below) */
+body.theme-rustic .poster,
+body.theme-rustic .tent .face {
+    border: 0.7mm dashed var(--frame);
+    box-shadow: inset 0 0 0 1.4mm var(--paper), inset 0 0 0 1.7mm var(--frame);
+    border-radius: 1.5mm;
+}
+
+body.theme-gala .poster,
+body.theme-gala .tent .face {
+    position: relative;
+    border: 1.8mm double var(--frame);
+}
+
+body.theme-gala .poster::before,
+body.theme-gala .poster::after,
+body.theme-gala .tent .face::before,
+body.theme-gala .tent .face::after {
+    content: "";
+    position: absolute;
+    left: calc(50% - 1.6mm);
+    width: 3.2mm;
+    height: 3.2mm;
+    background: var(--frame);
+    transform: rotate(45deg);
+}
+
+body.theme-gala .poster::before,
+body.theme-gala .tent .face::before {
+    top: -2.5mm;
+}
+
+body.theme-gala .poster::after,
+body.theme-gala .tent .face::after {
+    bottom: -2.5mm;
+}
+
+body.theme-neon .poster,
+body.theme-neon .tent .face {
+    border: 1.4mm solid var(--frame);
+    border-image: linear-gradient(135deg, var(--frame), #6f2dbd, #0aa2c0) 1;
+}
+
+body.theme-confetti .poster,
+body.theme-confetti .tent .face {
+    border: 5mm solid transparent;
+    background:
+        linear-gradient(var(--paper), var(--paper)) padding-box,
+        radial-gradient(circle, var(--frame) 0.65mm, transparent 0.75mm) 0 0 / 9mm 8mm border-box,
+        radial-gradient(circle, #0aa2c0 0.65mm, transparent 0.75mm) 3mm 4mm / 11mm 10mm border-box,
+        radial-gradient(circle, #e0a526 0.65mm, transparent 0.75mm) 6mm 1.5mm / 8mm 11mm border-box,
+        radial-gradient(circle, #6f2dbd 0.5mm, transparent 0.6mm) 1.5mm 6mm / 12mm 9mm border-box;
+    /* white under the dots too: the paper's colour as the page reads it (the colours made readable on it) */
+    background-color: var(--paper);
+    border-radius: 3mm;
+}
+
+/* a tent's face is narrower than the poster: a narrower band leaves the heading its room */
+body.theme-confetti .tent .face {
+    border-width: 4mm;
 }
 
 /* the code's own white margin is its tile: rounded, never on the theme's paper */

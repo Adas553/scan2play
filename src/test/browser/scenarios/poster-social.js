@@ -4,7 +4,8 @@
 // after the party (a phone that can share files opens its share sheet instead). With the longest words, the DJ's logo, three profiles
 // and the tip, everything stays inside the picture, in every theme.
 (function () {
-    const THEMES = ['CLASSIC', 'ELEGANT', 'CLUB', 'PASTEL'];
+    /** Every theme the editor offers (V47, V52): a new theme is checked here by itself. */
+    function themes() { return Array.from(document.querySelectorAll('#posterTheme option')).map(function (o) { return o.value; }); }
 
     function type(id, text) {
         const field = document.getElementById(id);
@@ -88,7 +89,7 @@
             type('posterLine', 'W'.repeat(60));
             await t.waitFor(function () { return document.querySelector('.poster .dj-logo').complete; }, 'the logo', 3000);
             const out = [];
-            for (const theme of THEMES) {
+            for (const theme of themes()) {
                 pickTheme(theme);
                 for (const kind of ['story', 'post']) {
                     const made = await make(t, kind);

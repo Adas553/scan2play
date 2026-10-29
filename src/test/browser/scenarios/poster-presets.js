@@ -52,11 +52,11 @@
         run: async function (t) {
             const hint = document.getElementById('posterInkHint');
             const theme = document.getElementById('posterTheme');
-            const seen = ['CLASSIC', 'ELEGANT', 'CLUB', 'PASTEL'].map(function (value) {
+            const warned = Array.from(theme.options).map(function (o) { return o.value; }).filter(function (value) {
                 pick(theme, value);
-                return value + ' ' + !hint.hidden;
+                return !hint.hidden;
             });
-            t.step('only with the club theme', seen, ['CLASSIC false', 'ELEGANT false', 'CLUB true', 'PASTEL false']);
+            t.step('only with the club theme', warned, ['CLUB']);
         }
     });
 })();

@@ -111,7 +111,7 @@ the person", no profanity and no song's name in an accepted one; the dashboard's
 `POST /dj/dashboard/comment-style`), `dedicationsOn` (V38, NOT NULL, default true — every party there too: whether the guests
 may add a dedication; a select "Dedykacje gości" in the card "Impreza", `POST /dj/dashboard/dedications`, permission VIBE; off, the
 party page has no field and a dedication sent anyway is left out),
-`posterHeading` (V46, ≤ 40) / `posterLine` (≤ 60) / `posterLanguage` (`PosterLanguage`: AUTO — the panel's —, BOTH, PL, EN) / `posterShowLogo`, `posterShowLinks`, `posterShowTip`, `posterShowAddress` (NOT NULL, default true), `posterTheme` (V47, `PosterTheme`: CLASSIC / ELEGANT / CLUB / PASTEL) / `posterAccent` (V47, "#rrggbb", null = the theme's) / `posterFont` (V51, `PosterFont`: THEME — the theme's —, SANS, SERIF, SCRIPT) / `posterTables` (V50, 1 … `POSTER_TABLES_MAX` = 50, null = no numbers): the QR print as the DJ sets it — see "The QR print" in 5.1;
+`posterHeading` (V46, ≤ 40) / `posterLine` (≤ 60) / `posterLanguage` (`PosterLanguage`: AUTO — the panel's —, BOTH, PL, EN) / `posterShowLogo`, `posterShowLinks`, `posterShowTip`, `posterShowAddress` (NOT NULL, default true), `posterTheme` (V47, V52, `PosterTheme`: CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI) / `posterAccent` (V47, "#rrggbb", null = the theme's) / `posterFont` (V51, `PosterFont`: THEME — the theme's —, SANS, SERIF, SCRIPT) / `posterTables` (V50, 1 … `POSTER_TABLES_MAX` = 50, null = no numbers): the QR print as the DJ sets it — see "The QR print" in 5.1;
 `requestLimit` / `cooldownMinutes`
 (the guest's own limit, 1–100 / 1–1440), `duplicateCheckWindow` (0–50 recently played songs the AI must not repeat). The column
 `request_counter` (V28, not mapped — written only by `SongRequestRepository.nextRequestNumber`, so a save of the settings never
@@ -438,7 +438,11 @@ until the DJ picks one (`AUTO`, the default) the panel's is printed and picked: 
 English alone — and boxes for what of the DJ's it shows (the
 logo, the profiles, the tip, the address with the party's code; a box only for what the party has) and **the look** (V47): a theme —
 "Klasyczny" (white, as before), "Elegancki" (cream, for a wedding, a serif heading, a double frame), "Klubowy" (dark, the DJ's logo on a
-white badge), "Pastelowy" (soft pink, rounded) — and the colour of the heading and the frame: the theme's, one of eight, or the
+white badge), "Pastelowy" (soft pink, rounded) and, V52, "Rustykalny" (kraft, olive, a stitched frame — a barn wedding), "Gala" (ivory,
+gold, a double frame with diamonds — a ball, New Year's Eve), "Neon" (white, a frame in a gradient from the heading's colour to violet
+and cyan — the club's colours without its ink), "Konfetti" (white, coloured dots in the frame's band only — a birthday); the rustic
+and the gala headings in the serif as the elegant one; the decoration never under the words or the code (`poster-themes-more`); the
+themes' scenarios take every theme of the editor, so a new one is checked by itself — and the colour of the heading and the frame: the theme's, one of eight, or the
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
 with a margin) — browser scenario `poster-themes-readable`: every theme with white, a pale yellow, black and a light cyan. The code
@@ -1223,6 +1227,7 @@ schema behind Flyway's back.
 | V49 | the foreign keys on `party_code` (`party_logo`, `party_staff`, `staff_invitation`, `dj_library`, and `dj_library_track` → `dj_library`) recreated with ON UPDATE CASCADE; table `party_code_retired` (`party_code` varchar(5) PK, `retired_at` timestamptz NOT NULL DEFAULT now()): "Zmień kod imprezy" (`MigrationIT`, `PartyCodeChangeIT`) |
 | V50 | `party_settings.poster_tables` integer, nullable (check 1 … 50): the QR print's number of tables — the cards and the table tents numbered (`MigrationIT`) |
 | V51 | `party_settings.poster_font` varchar(6) NOT NULL DEFAULT 'THEME' (check THEME / SANS / SERIF / SCRIPT): the QR print's heading font (`MigrationIT`) |
+| V52 | `party_settings_poster_theme_check` made again with RUSTIC / GALA / NEON / CONFETTI beside V47's four: the QR print's themes (`MigrationIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1345,7 +1350,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards / tent (V50; the cards and the tents a table each, numbered, when the party has tables); as the DJ set it (V46: the heading, the line, the language — by default the panel's: Polish prints Polish and English, any other English —, the parts shown); the editor for whom has VIBE |
-| POST | `/dj/qr-print/settings` | `partyCode`, `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL, anything else CLASSIC, V47), `accent` ("#rrggbb", anything else none), `font` (THEME / SANS / SERIF / SCRIPT, anything else THEME, V51), `tables` (V50: 1 … 50, more is 50, anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
+| POST | `/dj/qr-print/settings` | `partyCode`, `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI, anything else CLASSIC, V47, V52), `accent` ("#rrggbb", anything else none), `font` (THEME / SANS / SERIF / SCRIPT, anything else THEME, V51), `tables` (V50: 1 … 50, more is 50, anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
 | GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days, and the organisers new in the last 7 days with their address (V48); only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s) |
