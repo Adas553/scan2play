@@ -194,6 +194,24 @@ class MigrationIT extends PostgresIntegrationTest {
                 + " AND is_nullable = 'NO' ORDER BY column_name", String.class)).containsExactly("party_code", "retired_at");
     }
 
+    /** V50: the QR print's number of tables — none, or 1 … 50 (the editor's "Liczba stołów"). */
+    @Test
+    void theQrPrint_hasANumberOfTables_noneOrOneTo50() {
+        assertThat(jdbc.queryForObject("SELECT data_type FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name = 'poster_tables' AND is_nullable = 'YES' AND column_default IS NULL", String.class)).isEqualTo("integer");
+        String code = "V50" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT poster_tables FROM party_settings WHERE party_code = ?", Integer.class, code)).isNull();
+        for (int tables : new int[] {1, 50}) {
+            jdbc.update("UPDATE party_settings SET poster_tables = ? WHERE party_code = ?", tables, code);
+        }
+        for (int wrong : new int[] {0, 51, -1}) {
+            assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET poster_tables = ? WHERE party_code = ?", wrong, code))
+                    .hasMessageContaining("party_settings_poster_tables_check");
+        }
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

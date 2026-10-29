@@ -148,15 +148,17 @@ public class DjPartySettingsController {
     /**
      * The QR print as the DJ sets it (V46, V47), from the print page (qr-print.js, in the background — 204): the DJ's own heading and
      * line (one line each, cut to {@value PartySettingsEntity#POSTER_HEADING_MAX} / {@value PartySettingsEntity#POSTER_LINE_MAX}; empty =
-     * ours / none), the language, the look (the theme; the DJ's colour "#rrggbb", anything else the theme's own) and what of the DJ's
-     * it shows. Whoever may change the party's card "Impreza" (VIBE), any plan: the words on paper are the party's, as its vibe note;
-     * the logo shown stays the plan's (PlanService.asPlanned).
+     * ours / none), the language, the look (the theme; the DJ's colour "#rrggbb", anything else the theme's own), the number of tables
+     * (V50: 1 … {@value PartySettingsEntity#POSTER_TABLES_MAX}, more is the most; anything else none) and what of the DJ's it shows.
+     * Whoever may change the party's card "Impreza" (VIBE), any plan: the words on paper are the party's, as its vibe note; the logo
+     * shown stays the plan's (PlanService.asPlanned).
      */
     @PostMapping("/qr-print/settings")
     @ResponseBody
     public ResponseEntity<Void> updatePoster(@RequestParam String partyCode, @RequestParam(required = false) String heading,
                                              @RequestParam(required = false) String line, @RequestParam(required = false) String language,
                                              @RequestParam(required = false) String theme, @RequestParam(required = false) String accent,
+                                             @RequestParam(required = false) String tables,
                                              @RequestParam(defaultValue = "false") boolean showLogo,
                                              @RequestParam(defaultValue = "false") boolean showLinks,
                                              @RequestParam(defaultValue = "false") boolean showTip,
@@ -171,12 +173,22 @@ public class DjPartySettingsController {
             s.setPosterLanguage(PosterLanguage.of(language));
             s.setPosterTheme(PosterTheme.of(theme));
             s.setPosterAccent(PosterTheme.accent(accent));
+            s.setPosterTables(posterTables(tables));
             s.setPosterShowLogo(showLogo);
             s.setPosterShowLinks(showLinks);
             s.setPosterShowTip(showTip);
             s.setPosterShowAddress(showAddress);
         });
         return ResponseEntity.noContent().build();
+    }
+
+    /** The number of tables as kept (V50): a whole number from 1, more than the most is the most; anything else none. */
+    static Integer posterTables(String value) {
+        if (value == null || !value.trim().matches("\\d{1,9}")) {
+            return null;
+        }
+        int tables = Integer.parseInt(value.trim());
+        return tables < 1 ? null : Math.min(tables, PartySettingsEntity.POSTER_TABLES_MAX);
     }
 
     /**

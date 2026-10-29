@@ -86,6 +86,19 @@ body {
     font-weight: 600;
 }
 
+/* a phone: the three layouts across the bar's whole width, a long name on two lines rather than past the screen's edge */
+@media screen and (max-width: 600px) {
+    .segmented {
+        flex-basis: 100%;
+    }
+
+    .toolbar .segmented a {
+        flex: 1 1 0;
+        text-align: center;
+        line-height: 1.2;
+    }
+}
+
 /* the page's one main action in the colour of Scan2Play's actions (the cyan of the "2"), dark text — as on every other page */
 .toolbar #printBtn {
     border-color: #0dcaf0;
@@ -151,6 +164,7 @@ body {
 }
 
 .editor input[type="text"],
+.editor input[type="number"],
 .editor select {
     width: 100%;
     min-height: 44px;
@@ -164,14 +178,23 @@ body {
     color-scheme: dark;
 }
 
-.editor input[type="text"]::placeholder {
+.editor input[type="text"]::placeholder,
+.editor input[type="number"]::placeholder {
     color: #a3acb6;
 }
 
 .editor input[type="text"]:focus-visible,
+.editor input[type="number"]:focus-visible,
 .editor select:focus-visible {
     outline: 2px solid #0dcaf0;
     outline-offset: 1px;
+}
+
+/* a field's hint under it: where the number of tables prints */
+.editor-hint {
+    color: #adb5bd;
+    font-size: 0.8rem;
+    line-height: 1.35;
 }
 
 /* the colours: each its own button — the radio hidden, the dot (or the word) ringed when picked */
@@ -413,20 +436,24 @@ body.theme-pastel {
 }
 
 .poster,
-.card {
+.card,
+.face {
     background: var(--paper);
     color: var(--ink);
 }
 
 .poster h1,
-.card .title {
+.card .title,
+.face .title,
+.table-no {
     color: var(--accent, var(--accent-base));
 }
 
 /* The second language of a pair: the same text, a little quieter */
 .second,
 .poster h1 .second,
-.card .title .second {
+.card .title .second,
+.face .title .second {
     color: var(--muted);
 }
 
@@ -442,6 +469,7 @@ body.theme-elegant .poster {
 
 body.theme-elegant .poster h1,
 body.theme-elegant .card .title,
+body.theme-elegant .face .title,
 body.theme-elegant .own-line {
     font-family: Georgia, "Times New Roman", "DejaVu Serif", serif;
 }
@@ -703,7 +731,9 @@ body:not(.theme-classic) .card {
 /* the DJ's heading and line on a card (V46): three lines at most whatever the font, so the longest words never leave the card — a
    real 40 / 60 characters take two */
 .card .own-line,
-.card .title .own {
+.card .title .own,
+.face .own-line,
+.face .title .own {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
@@ -805,4 +835,244 @@ body:not(.theme-classic) .card {
 
 .card.with-logo {
     grid-template-rows: auto 36mm auto;
+}
+
+/* ---- The table number (V50): "Stół / Table 5" — on a card in its top corner, over none of its parts; on a tent's face above the
+   heading. In the heading's colour. ---- */
+
+.table-no {
+    margin: 0;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.card {
+    position: relative;
+}
+
+.card .table-no {
+    position: absolute;
+    top: 1.5mm;
+    right: 2.5mm;
+    font-size: 8pt;
+}
+
+/* ---- The table tent (V50): one A4 sheet folded across its middle (the dashed line, printed), two faces of the same code and words,
+   the upper one upside down. Each face as a card larger: the code's column and the texts beside it, 5 mm away from the fold so a fold
+   a little off never cuts a word. A tent a page. ---- */
+
+.tents {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tent {
+    position: relative;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    width: 186mm;
+    /* the printable height of A4 (297 mm less @page's 12 mm twice) and a millimetre to spare: never a blank page after it */
+    height: 272mm;
+    break-after: page;
+    break-inside: avoid;
+}
+
+.tent:last-child {
+    break-after: auto;
+}
+
+.tent .fold {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    border-top: 0.3mm dashed #999999;
+}
+
+.face {
+    display: grid;
+    grid-template-columns: 78mm 1fr;
+    grid-template-rows: auto 78mm auto;
+    align-content: center;
+    gap: 2mm 8mm;
+    padding: 5mm 8mm;
+    overflow: hidden;
+}
+
+.face-upper {
+    margin-bottom: 5mm;
+    transform: rotate(180deg);
+}
+
+.face-lower {
+    margin-top: 5mm;
+}
+
+.face .side {
+    display: contents;
+}
+
+.face .side > * {
+    grid-column: 1;
+    justify-self: center;
+    margin: 0;
+}
+
+.face .side > .logo,
+.face .side > .dj-logo {
+    grid-row: 1;
+}
+
+.face .side > .qr {
+    grid-row: 2;
+}
+
+.face .side > .dj-links {
+    grid-row: 3;
+}
+
+.face .qr {
+    width: 78mm;
+    height: 78mm;
+    image-rendering: pixelated;
+}
+
+.face.with-logo {
+    grid-template-rows: auto 72mm auto;
+}
+
+.face.with-logo .qr {
+    width: 72mm;
+    height: 72mm;
+}
+
+.face .logo {
+    gap: 2mm;
+    font-size: 14pt;
+}
+
+.face .logo img {
+    width: 8mm;
+    height: 8mm;
+}
+
+.face .dj-logo {
+    max-width: 78mm;
+    max-height: 16mm;
+}
+
+.face .dj-links {
+    text-align: center;
+    font-size: 10pt;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.face .dj-links span {
+    display: block;
+}
+
+.face .text {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    align-self: center;
+    min-width: 0;
+}
+
+.face .text p {
+    margin: 0 0 2.5mm;
+}
+
+.face .text p:last-child {
+    margin-bottom: 0;
+}
+
+.face .table-no {
+    font-size: 16pt;
+}
+
+.face .text .table-no {
+    margin-bottom: 4mm;
+}
+
+.face .title {
+    font-size: 20pt;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.face .title .ours > span {
+    display: block;
+}
+
+.face .title .second {
+    margin-top: 1.5mm;
+    font-size: 15pt;
+    font-weight: 600;
+}
+
+.face .own-line {
+    font-size: 13pt;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.face .link {
+    font-size: 10pt;
+    word-break: break-all;
+}
+
+.face .code,
+.face .tip {
+    font-size: 11pt;
+}
+
+/* the themes: each face a framed card of the theme's paper */
+body:not(.theme-classic) .face {
+    border: 0.8mm solid var(--frame);
+}
+
+body.theme-elegant .face {
+    border: 1.6mm double var(--frame);
+}
+
+body.theme-pastel .face {
+    border-radius: 6mm;
+}
+
+body.theme-club .face {
+    border-radius: 3mm;
+}
+
+/* the screen: each tent on its own sheet, the page's margin white around it as it comes out of the printer */
+@media screen {
+    .tents {
+        gap: calc(48px + 24mm);
+        padding: calc(24px + 12mm) 0;
+    }
+
+    .tent {
+        background: #ffffff;
+        box-shadow: 0 0 0 12mm #fff, 0 4px 24px 12mm rgba(0, 0, 0, 0.5);
+    }
+
+    body.has-editor > main.tents {
+        margin: 0;
+        box-shadow: none;
+    }
+}
+
+/* a phone: the sheets made smaller to fit the screen — only the preview, the print keeps A4 */
+@media screen and (max-width: 200mm) {
+    .tents {
+        zoom: 0.45;
+    }
+}
+
+@media print {
+    .tents {
+        display: block;
+    }
 }
