@@ -127,6 +127,45 @@
     });
 
     S2P.scenario({
+        name: 'poster-tables-from',
+        page: 'qr-print-cards',
+        title: 'a reprint: "Drukuj od stołu" 16 of 16 tables — one card, the 16th; 9 — 9 … 16 on one sheet; more than the tables — the last; empty — from 1; never saved',
+        run: async function (t) {
+            type('posterTables', '16');
+            type('posterTablesFrom', '16');
+            t.step('from 16: the 16th alone', numbers('.card'), ['16']);
+            type('posterTablesFrom', '9');
+            t.step('from 9: 9 … 16', numbers('.card'), ['9', '10', '11', '12', '13', '14', '15', '16']);
+            type('posterTablesFrom', '40');
+            t.step('past the tables: the last', numbers('.card'), ['16']);
+            type('posterTablesFrom', '');
+            t.step('emptied: from 1', numbers('.card').length, 16);
+            type('posterTablesFrom', '9');
+            type('posterTables', '');
+            t.step('no tables: eight cards, no numbers, whatever "from"', numbers('.card'), ['', '', '', '', '', '', '', '']);
+            type('posterTables', '16');
+            document.getElementById('posterSave').click();
+            const form = document.getElementById('posterForm');
+            await t.waitFor(function () { return document.getElementById('posterAnswer').textContent === form.dataset.saved; }, 'saved', 3000);
+            const sent = (await t.stand.requests('POST /dj/qr-print/settings')).pop().q;
+            t.step('saved: the tables, never "from"', [sent.tables, Object.keys(sent).filter(function (k) { return /from/i.test(k); })], ['16', []]);
+            type('posterTablesFrom', '12');
+            t.step('"from" changed after "Zapisz": still saved, nothing unsaved', document.getElementById('posterAnswer').textContent, form.dataset.saved);
+        }
+    });
+
+    S2P.scenario({
+        name: 'poster-tables-from-tents',
+        page: 'qr-print-tent',
+        title: 'a reprint of tents: from 16 of 16 — one tent, both faces 16',
+        run: async function (t) {
+            type('posterTables', '16');
+            type('posterTablesFrom', '16');
+            t.step('the 16th tent alone', numbers('.tent .face'), ['16', '16']);
+        }
+    });
+
+    S2P.scenario({
         name: 'poster-tables-tents',
         page: 'qr-print-tent',
         title: 'the number of tables on the tents: a tent a table, both faces numbered; emptied — one tent without a number',

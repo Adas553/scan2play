@@ -8,7 +8,8 @@
 // What is changed and not saved yet says so, and goes along to the other layouts (sessionStorage, for this tab), to compare them.
 //
 // The number of tables (V50): the cards and the table tents (data-print-item) as many as the tables, numbered 1 … N — the first one
-// copied —, at once; empty, eight cards and one tent without numbers. The poster has none.
+// copied —, at once; empty, eight cards and one tent without numbers. The poster has none. "Drukuj od stołu" (a reprint, never sent
+// nor saved) leaves out the tables before it: 16 of 16 is the 16th card or tent alone.
 //
 // The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
 // theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
@@ -98,11 +99,20 @@
         return n >= 1 ? Math.min(n, MAX_TABLES) : null;
     }
 
+    const fromField = document.getElementById('posterTablesFrom');
+
+    /** The first table printed: 1 … the tables, more is the last; anything else the first. */
+    function firstTable(tables) {
+        const n = parseInt(fromField ? fromField.value : '', 10);
+        return n >= 1 ? Math.min(n, tables) : 1;
+    }
+
     function showTables() {
         const items = all('[data-print-item]');
         if (!items.length) return;
         const tables = tablesTyped();
-        const count = tables || (items[0].classList.contains('card') ? 8 : 1);
+        const first = tables ? firstTable(tables) : 1;
+        const count = tables ? tables - first + 1 : (items[0].classList.contains('card') ? 8 : 1);
         for (let i = items.length; i < count; i++) {
             items.push(items[0].parentNode.appendChild(items[0].cloneNode(true)));
         }
@@ -110,7 +120,7 @@
         items.forEach(function (item, i) {
             item.querySelectorAll('[data-table-number]').forEach(function (no) {
                 no.hidden = !tables;
-                no.querySelector('[data-table-n]').textContent = String(i + 1);
+                no.querySelector('[data-table-n]').textContent = String(first + i);
             });
         });
     }
@@ -156,6 +166,7 @@
     form.elements.heading.addEventListener('input', showHeading);
     form.elements.line.addEventListener('input', showLine);
     form.elements.tables.addEventListener('input', showTables);
+    if (fromField) fromField.addEventListener('input', showTables);
     all('[data-poster-toggle]').forEach(function (box) {
         box.addEventListener('change', function () { showPart(box); });
     });
@@ -208,8 +219,10 @@
         answer.classList.add('unsaved');
     }
 
-    form.addEventListener('input', function (e) { if (e.target.name !== 'language') markUnsaved(); });
-    form.addEventListener('change', function (e) { if (e.target.name !== 'language') markUnsaved(); });
+    // the language saves itself; "Drukuj od stołu" is never saved — neither makes the editor's changes unsaved
+    function unsaving(e) { return e.target.name !== 'language' && e.target !== fromField; }
+    form.addEventListener('input', function (e) { if (unsaving(e)) markUnsaved(); });
+    form.addEventListener('change', function (e) { if (unsaving(e)) markUnsaved(); });
     all('[data-layout-switch]').forEach(function (link) {
         link.addEventListener('click', function () { if (unsaved) stash(); });
     });
