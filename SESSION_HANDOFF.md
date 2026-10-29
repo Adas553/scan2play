@@ -55,7 +55,16 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    only, last card of "Ustawienia imprezy", asks "Zmienić kod imprezy? Stare plakaty i karty przestaną działać.". Everything of the party
    moves (FKs ON UPDATE CASCADE, requests and feedback by UPDATE), the old code is retired for good (`party_code_retired`), the TV
    screen opened again from the panel. Not done (proposed): closing a party by itself after hours without requests.
-3. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
+3. **The QR print's editor, enriched** (the owner, 2026-10-29: "chcę wzbogacić edytor plakatów i kart") — the ideas, the competitors and
+   the mock-ups: the artifact "Edytor wydruku: co dalej" (claude.ai, private). The owner's picks: first **the table tent** (one A4
+   sheet, two A5 faces alike, the upper one upside down) and **the number of tables** saved with the party (V50, "Liczba stołów", on the
+   cards and the tents, never on the poster) — **built on `claude/bold-bell-w3epu5`, the PR to `dev` waits for the owner's review** (then
+   a release; V50 on production: check Flyway's line once; print a tent on a home printer and fold it). New looks (themes, fonts,
+   ornaments) for every plan; photos on the poster later, as Pro. Next candidates, in order: texts for the occasion (wedding, 18th,
+   club, pub), the theme "Oszczędny" for a home printer (a new theme = V5x changing the check of V47), an Instagram story / post drawn in
+   the browser, fonts of our own (`qr-print.css` still has `system-ui` first) with the heading fitted. Open: stickers and business cards
+   against "Zmień kod imprezy" (V49 kills old prints).
+4. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
    on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.
 
 ## Later (not now)

@@ -5,7 +5,12 @@
 // cards at once — the DJ's own heading in place of ours, the DJ's line, the parts of the DJ's shown or left off (data-poster-part;
 // the DJ's logo left off brings ours back, and the cards' code its full size). "Zapisz" keeps it with the party in the background
 // (POST /dj/qr-print/settings, 204); the print's language is written by the server, so a new one is saved and the page loads again.
-// What is changed and not saved yet says so, and goes along to the other layout (sessionStorage, for this tab), to compare the two.
+// What is changed and not saved yet says so, and goes along to the other layouts (sessionStorage, for this tab), to compare them.
+//
+// The number of tables (V50): the cards and the table tents (data-print-item) as many as the tables, numbered 1 … N — the first one
+// copied —, at once; empty, eight cards and one tent without numbers. The poster has none. "Numer pierwszego stołu" (never sent nor
+// saved: the next print starts from 1) numbers them from it — 22 from 22 are tables 22 … 43, a reprint of one is 1 from 16 —, and
+// the summary under it says which tables print on how many pages.
 //
 // The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
 // theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
@@ -83,8 +88,53 @@
         all('[data-poster-part="' + part + '"]').forEach(function (el) { el.hidden = !box.checked; });
         if (part === 'logo') {
             all('[data-poster-part="ours"]').forEach(function (el) { el.hidden = box.checked; });
-            all('.poster, .card').forEach(function (el) { el.classList.toggle('with-logo', box.checked); });
+            all('.poster, .card, .face').forEach(function (el) { el.classList.toggle('with-logo', box.checked); });
         }
+    }
+
+    const MAX_TABLES = Number(form.elements.tables.max) || 50;
+
+    /** The number of tables typed: 1 … the most, more is the most; anything else none. */
+    function tablesTyped() {
+        const n = parseInt(form.elements.tables.value, 10);
+        return n >= 1 ? Math.min(n, MAX_TABLES) : null;
+    }
+
+    const fromField = document.getElementById('posterTablesFrom');
+    const summary = document.getElementById('posterTablesSummary');
+
+    /** The first table's number: 1 … its field's most, more is the most; anything else 1. */
+    function firstTable() {
+        const n = parseInt(fromField ? fromField.value : '', 10);
+        return n >= 1 ? Math.min(n, Number(fromField.max) || 999) : 1;
+    }
+
+    function showSummary(tables, first, pages) {
+        if (!summary) return;
+        summary.hidden = !tables;
+        if (!tables) return;
+        summary.textContent = (tables === 1 ? summary.dataset.one : summary.dataset.many)
+            .replace('{from}', first).replace('{to}', first + tables - 1).replace('{pages}', pages);
+    }
+
+    function showTables() {
+        const items = all('[data-print-item]');
+        if (!items.length) return;
+        const cards = items[0].classList.contains('card');
+        const tables = tablesTyped();
+        const first = firstTable();
+        const count = tables || (cards ? 8 : 1);
+        for (let i = items.length; i < count; i++) {
+            items.push(items[0].parentNode.appendChild(items[0].cloneNode(true)));
+        }
+        items.splice(count).forEach(function (item) { item.remove(); });
+        items.forEach(function (item, i) {
+            item.querySelectorAll('[data-table-number]').forEach(function (no) {
+                no.hidden = !tables;
+                no.querySelector('[data-table-n]').textContent = String(first + i);
+            });
+        });
+        showSummary(tables, first, cards ? Math.ceil(count / 8) : count);
     }
 
     function say(text, refused) {
@@ -127,16 +177,20 @@
 
     form.elements.heading.addEventListener('input', showHeading);
     form.elements.line.addEventListener('input', showLine);
+    form.elements.tables.addEventListener('input', showTables);
+    if (fromField) fromField.addEventListener('input', showTables);
+    showTables();   // the summary of the saved tables
     all('[data-poster-toggle]').forEach(function (box) {
         box.addEventListener('change', function () { showPart(box); });
     });
 
-    // Changes not saved yet go with the DJ to the other layout (poster ↔ cards), so the two can be compared before "Zapisz": kept in
+    // Changes not saved yet go with the DJ to the other layouts (poster, cards, tent), so they can be compared before "Zapisz": kept in
     // this tab only, for the next page, and gone once it has them.
     const stashKey = 's2p-poster-' + form.elements.partyCode.value;
 
     function stash() {
-        const state = { heading: form.elements.heading.value, line: form.elements.line.value, theme: form.elements.theme.value,
+        const state = { heading: form.elements.heading.value, line: form.elements.line.value, tables: form.elements.tables.value,
+            theme: form.elements.theme.value,
             accent: chosenAccent(), picker: picker ? picker.value : '', parts: {} };
         all('[data-poster-toggle]').forEach(function (box) { state.parts[box.dataset.posterToggle] = box.checked; });
         try { sessionStorage.setItem(stashKey, JSON.stringify(state)); } catch (e) { /* no storage: the switch loses them, as before */ }
@@ -151,6 +205,7 @@
         if (!state) return;
         form.elements.heading.value = state.heading || '';
         form.elements.line.value = state.line || '';
+        form.elements.tables.value = state.tables || '';
         if (form.querySelector('#posterTheme option[value="' + state.theme + '"]')) form.elements.theme.value = state.theme;
         if (picker && state.picker) picker.value = state.picker;
         const swatch = Array.prototype.find.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
@@ -164,6 +219,7 @@
         });
         showHeading();
         showLine();
+        showTables();
         changeLook();
         markUnsaved();
     }
@@ -176,12 +232,36 @@
         answer.classList.add('unsaved');
     }
 
-    form.addEventListener('input', function (e) { if (e.target.name !== 'language') markUnsaved(); });
-    form.addEventListener('change', function (e) { if (e.target.name !== 'language') markUnsaved(); });
+    // the language saves itself; "Drukuj od stołu" is never saved — neither makes the editor's changes unsaved
+    function unsaving(e) { return e.target.name !== 'language' && e.target !== fromField; }
+    form.addEventListener('input', function (e) { if (unsaving(e)) markUnsaved(); });
+    form.addEventListener('change', function (e) { if (unsaving(e)) markUnsaved(); });
+    // The first table's number is never saved, yet the DJ switching layouts to compare them keeps it: it goes along with the switch
+    // alone (unsaved changes or not), and the next page takes it once — a reload starts from 1 again.
+    const firstKey = 's2p-poster-first-' + form.elements.partyCode.value;
+
+    function takeFirst() {
+        let first = null;
+        try {
+            first = sessionStorage.getItem(firstKey);
+            sessionStorage.removeItem(firstKey);
+        } catch (e) { return; }
+        if (first && fromField) {
+            fromField.value = first;
+            showTables();
+        }
+    }
+
     all('[data-layout-switch]').forEach(function (link) {
-        link.addEventListener('click', function () { if (unsaved) stash(); });
+        link.addEventListener('click', function () {
+            if (unsaved) stash();
+            try {
+                if (fromField && fromField.value) sessionStorage.setItem(firstKey, fromField.value);
+            } catch (e) { /* no storage: the next layout starts from 1 */ }
+        });
     });
     unstash();
+    takeFirst();
 
     form.elements.language.addEventListener('change', async function () {
         say(form.dataset.sending, false);

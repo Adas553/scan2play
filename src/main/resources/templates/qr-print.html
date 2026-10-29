@@ -16,22 +16,25 @@
     default the panel's (a Polish panel both, any other English: a DJ abroad got a Polish poster). The texts are written here, each in
     an element with its own lang; the bar at the top and the editor, which the print leaves out, speak the DJ's language (the bundles).
     The DJ's own heading and line, and what of the DJ's the paper shows, are the party's (V46): a part left off is rendered hidden
-    (data-poster-part), so the editor's preview (qr-print.js) shows it again at once.
+    (data-poster-part), so the editor's preview (qr-print.js) shows it again at once. The party's number of tables (V50) makes as many
+    cards and tents (data-print-item), numbered; without it eight cards and one tent, the number rendered hidden.
 */-->
-<body th:class="${(qrLayout == 'cards' ? 'layout-cards ' : 'layout-poster ') + poster.posterTheme.cssClass()}"
+<body th:class="${'layout-' + qrLayout + ' ' + poster.posterTheme.cssClass()}"
       th:attr="data-accent=${poster.posterAccent}" th:classappend="${posterEdit} ? 'has-editor'"
       th:with="pl=${printLang != 'en'}, en=${printLang != 'pl'}, both=${printLang == 'both'},
-               logoShown=${djLogo != null and poster.posterShowLogo}">
+               logoShown=${djLogo != null and poster.posterShowLogo}, tables=${poster.posterTables}">
 
 <nav class="toolbar no-print">
     <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" class="toolbar-back" th:text="#{qr.print.back}">Back to the dashboard</a>
     <strong class="toolbar-title" th:text="#{qr.print.title}">Print the QR code</strong>
-    <!--/* the two layouts as one switch; the editor's unsaved changes go along (qr-print.js keeps them for the tab) */-->
+    <!--/* the three layouts as one switch; the editor's unsaved changes go along (qr-print.js keeps them for the tab) */-->
     <div class="segmented" role="group" th:attr="aria-label=#{qr.print.title}">
         <a th:href="@{/dj/qr-print(layout='poster',party=${partyCode})}" th:classappend="${qrLayout == 'poster'} ? 'active'" data-layout-switch
            th:attr="aria-current=${qrLayout == 'poster'} ? 'page'" th:text="#{qr.print.layout.poster}">A4 poster</a>
         <a th:href="@{/dj/qr-print(layout='cards',party=${partyCode})}" th:classappend="${qrLayout == 'cards'} ? 'active'" data-layout-switch
            th:attr="aria-current=${qrLayout == 'cards'} ? 'page'" th:text="#{qr.print.layout.cards}">Table cards</a>
+        <a th:href="@{/dj/qr-print(layout='tent',party=${partyCode})}" th:classappend="${qrLayout == 'tent'} ? 'active'" data-layout-switch
+           th:attr="aria-current=${qrLayout == 'tent'} ? 'page'" th:text="#{qr.print.layout.tent}">Table tent</a>
     </div>
     <button type="button" id="printBtn" th:text="#{qr.print.print}">Print</button>
     <p class="hint" th:text="#{qr.print.hint}">This bar is not printed.</p>
@@ -55,6 +58,26 @@
             <label for="posterLine" th:text="#{qr.edit.line}">A line of your own</label>
             <input type="text" id="posterLine" name="line" th:value="${poster.posterLine}" maxlength="60"
                    th:placeholder="#{qr.edit.line.placeholder}">
+        </div>
+        <!--/* the number of tables (V50): on every layout, the poster has no numbers — the hint says where they print */-->
+        <div class="editor-field">
+            <label for="posterTables" th:text="#{qr.edit.tables}">Number of tables</label>
+            <input type="number" id="posterTables" name="tables" th:value="${tables}" min="1"
+                   th:max="${T(com.scan2play.entity.PartySettingsEntity).POSTER_TABLES_MAX}" step="1" inputmode="numeric"
+                   th:placeholder="#{qr.edit.tables.placeholder}" aria-describedby="posterTablesHint">
+            <small id="posterTablesHint" class="editor-hint" th:text="#{qr.edit.tables.hint}">Numbers on the cards and the tents</small>
+        </div>
+        <!--/* the first table's number: the cards and the tents numbered from it (22 from 22 — tables 22 … 43; a reprint of one — 1 from
+             16; a room numbered from 101). Never sent, never saved — the next print starts from 1 again: of a form of its own
+             (posterTablesFromForm), so a number past its limits never holds back "Zapisz". The summary under it says what prints, filled
+             by qr-print.js ({from}, {to}, {pages}) */-->
+        <div class="editor-field">
+            <label for="posterTablesFrom" th:text="#{qr.edit.tables.from}">First table number</label>
+            <input type="number" id="posterTablesFrom" form="posterTablesFromForm" min="1" max="999" step="1" inputmode="numeric" placeholder="1"
+                   aria-describedby="posterTablesFromHint posterTablesSummary">
+            <small id="posterTablesFromHint" class="editor-hint" th:text="#{qr.edit.tables.from.hint}">1 by default</small>
+            <p id="posterTablesSummary" class="editor-summary" role="status" hidden
+               th:attr="data-one=#{qr.edit.tables.summary.one},data-many=#{qr.edit.tables.summary.many}"></p>
         </div>
         <div class="editor-field">
             <label for="posterLanguage" th:text="#{qr.edit.language}">Language</label>
@@ -108,6 +131,8 @@
     </div>
 </form>
 
+<form th:if="${posterEdit}" id="posterTablesFromForm" hidden></form>
+
 <main th:if="${qrLayout == 'poster'}" class="poster" th:classappend="${logoShown} ? 'with-logo'">
     <!--/* the DJ's logo (V45, Pro) heads the poster; ours then a quiet line at the foot */-->
     <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" alt="DJ" data-poster-part="logo" th:hidden="${!poster.posterShowLogo}">
@@ -151,7 +176,11 @@
 </main>
 
 <main th:if="${qrLayout == 'cards'}" class="cards">
-    <section class="card" th:classappend="${logoShown} ? 'with-logo'" th:each="card : ${#numbers.sequence(1, 8)}">
+    <section class="card" data-print-item th:classappend="${logoShown} ? 'with-logo'" th:each="n : ${#numbers.sequence(1, tables != null ? tables : 8)}">
+        <!--/* the table's number (V50) in the card's corner, over none of its parts; "Stół / Table 5" in the print's language */-->
+        <p th:fragment="tableNo(n)" class="table-no" data-table-number th:hidden="${tables == null}"><th:block th:if="${pl}"><span
+                lang="pl">Stół</span><th:block th:if="${en}"> / </th:block></th:block><span th:if="${en}" lang="en">Table</span> <b data-table-n
+                th:text="${n}">5</b></p>
         <!--/* the code's column: our logo above the code, the DJ's profiles under it (the owner, 2026-10-07); the texts beside */-->
         <div class="side">
             <!--/* the DJ's logo (V45) in place of ours: two marks stacked on a card this small were clutter, and its address names us */-->
@@ -175,6 +204,44 @@
         </div>
     </section>
 </main>
+
+<!--/* The table tent (V50): one A4 sheet folded across its middle — the fold printed —, two faces of the same code and words; the
+     upper one is turned upside down by the stylesheet, so the folded tent reads the right way up from both sides of a table. A tent a
+     table when the DJ set the tables, each face numbered. */-->
+<main th:if="${qrLayout == 'tent'}" class="tents">
+    <section class="tent" data-print-item th:each="n : ${#numbers.sequence(1, tables != null ? tables : 1)}">
+        <div th:replace="~{qr-print :: tentFace('face-upper', ${n})}"></div>
+        <div class="fold"></div>
+        <div th:replace="~{qr-print :: tentFace('face-lower', ${n})}"></div>
+    </section>
+</main>
+
+<!--/* A face of the tent, as a card larger: the code's column (a logo above the code, the DJ's profiles under it) and the texts
+     beside it. Only a fragment: never rendered here, the tent above takes it twice. */-->
+<th:block th:if="${false}">
+<div th:fragment="tentFace(side, n)" class="face" th:classappend="${side + (logoShown ? ' with-logo' : '')}">
+    <div class="side">
+        <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" alt="DJ" data-poster-part="logo" th:hidden="${!poster.posterShowLogo}">
+        <p class="logo" data-poster-part="ours" th:hidden="${logoShown}"><img src="/images/logo.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+        <img th:if="${qrCodeBase64}" class="qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR"
+             th:alt="${both ? 'QR code / kod QR' : (pl ? 'Kod QR' : 'QR code')}">
+        <th:block th:replace="~{qr-print :: djLinks}"></th:block>
+    </div>
+    <div class="text">
+        <p th:replace="~{qr-print :: tableNo(${n})}"></p>
+        <p class="title">
+            <span class="own" data-poster-heading th:hidden="${poster.posterHeading == null}" th:text="${poster.posterHeading}">Osiemnastka Dawida</span>
+            <span class="ours" data-poster-ours-heading th:hidden="${poster.posterHeading != null}"><span th:if="${pl}" lang="pl">Zeskanuj i poproś o piosenkę</span><span
+                    th:if="${en}" lang="en" th:class="${both} ? 'second'">Scan to request a song</span></span>
+        </p>
+        <p class="own-line" data-poster-line th:hidden="${poster.posterLine == null}" th:text="${poster.posterLine}">Wesele Ani i Tomka</p>
+        <p class="link" data-poster-part="address" th:hidden="${!poster.posterShowAddress}" th:text="${permanentLink}">https://www.scan2play.com.pl/p/ABCDE</p>
+        <p class="code" data-poster-part="address" th:hidden="${!poster.posterShowAddress}"><th:block th:if="${pl}"><span lang="pl">Kod imprezy</span><th:block
+                th:if="${en}"> / </th:block></th:block><span th:if="${en}" lang="en">Party code</span>: <strong th:text="${partyCode}">ABCDE</strong></p>
+        <p th:replace="~{qr-print :: tipLink}"></p>
+    </div>
+</div>
+</th:block>
 
 <script src="/js/qr-print.js" th:src="@{/js/qr-print.js}"></script>
 </body>
