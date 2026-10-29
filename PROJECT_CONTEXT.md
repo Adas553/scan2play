@@ -561,7 +561,9 @@ plakietką „bez oceny AI” — przejrzyj je przed zagraniem.", gone with the 
 
 **The history** (`PlayHistoryService`): the party's requests that played or were rejected, by the DJ's moment —
 `COALESCE(played_at, skipped_at, cleared_at, requested_at)`, the time it shows too (a skip was placed by its request time until
-2026-10-12) —, newest first, one bounded query (`limit + 1`). The History tab (in place of the queue) and the standalone page `/dj/history-view`:
+2026-10-12) —, newest first, one bounded query (`limit + 1`). The History tab (in place of the queue — the page then is the page
+"Historia" as the standalone one: `body.s2p-history-shown` hides "Impreza i kod QR" and the settings, the Panel tab brings them back as
+they were; `history-tab-like-its-page`, 2026-10-29) and the standalone page `/dj/history-view`:
 filters All / Played / Rejected applied by the server, "Show more" (50 at a time, ≤ 300); both keep the search text and the sort by a
 column (`captureListState` / `restoreListState` in the tab; on the standalone page, which loads itself again, through
 `sessionStorage` once). A heading row where a new day starts, Polish time (`tr[data-day-heading]`: "dziś — sobota, 03.10",
