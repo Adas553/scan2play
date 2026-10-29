@@ -1,6 +1,7 @@
-// The QR print's look (V47, qr-print.js): a theme picked in the editor is the page's class at once, a colour (the palette's, the DJ's
-// own) is made readable on the theme's paper — 4.5:1 for the heading whatever the DJ picks, a pale yellow on cream too —, the code
-// stays black on white in every theme, and every theme with the longest words still fits one A4 page and the cards.
+// The QR print's look (V47, qr-print.js): a theme picked in the editor is the page's class at once; a colour (the palette's, the DJ's
+// own) prints as picked — the DJ decides; one that stands out poorly from the paper (under 3:1, a large heading's least) is said
+// under the colours, never changed; the theme's own colours read on its paper; the code stays black on white in every theme, and
+// every theme with the longest words still fits one A4 page and the cards.
 (function () {
     /** Every theme the editor offers (V47, V52): a new theme is checked here by itself. */
     function themes() { return Array.from(document.querySelectorAll('#posterTheme option')).map(function (o) { return o.value; }); }
@@ -51,9 +52,7 @@
             t.step('the club theme: the page\'s class, a dark paper, at once', [document.body.classList.contains('theme-club'),
                 document.body.classList.contains('theme-classic'), luminance(rgb(paper())) < 0.05], [true, false, true]);
             pickAccent('#c2185b');
-            const club = getComputedStyle(h1).color;
-            t.check('a swatch colours the heading, made readable on the dark paper (' + club + ', ' + contrast(club, paper()).toFixed(1) + ':1)',
-                contrast(club, paper()) >= 4.5 && club !== 'rgb(194, 24, 91)');
+            t.step('a swatch colours the heading as picked, on the dark paper too', getComputedStyle(h1).color, 'rgb(194, 24, 91)');
             pickTheme('PASTEL');
             pickAccent('#123abc');
             t.step('the DJ\'s own colour: "Własny" picked, the heading in it', [document.getElementById('posterAccentOwn').checked,
@@ -71,7 +70,7 @@
     S2P.scenario({
         name: 'poster-themes-readable',
         page: 'qr-print-poster',
-        title: 'every theme with the colours that read worst: the heading, the text and the quieter lines at least 4.5:1 on the paper; the code black on white',
+        title: 'every theme with the colours that read worst: the DJ\'s colour as picked, said when under 3:1; the theme\'s own heading, the text and the quieter lines at least 4.5:1; the code black on white',
         run: async function (t) {
             const poster = document.querySelector('.poster');
             const bad = [];
@@ -80,9 +79,17 @@
                 ACCENTS.forEach(function (accent) {
                     pickAccent(accent);
                     const paper = getComputedStyle(poster).backgroundColor;
-                    // the panel's language decides which of the pair are printed: a line not there is not checked
-                    [['heading', '.poster h1 .ours > span'], ['English', '.poster h1 .second'], ['text', '.poster .code'],
-                        ['quiet', '.poster .link .second']].forEach(function (pair) {
+                    const heading = getComputedStyle(document.querySelector('.poster h1 .ours > span')).color;
+                    const note = document.getElementById('posterAccentNote');
+                    if (accent) {
+                        if (contrast(heading, accent) > 1.01) bad.push(theme + ' ' + accent + ' heading changed to ' + heading);
+                        if (note.hidden !== (contrast(heading, paper) >= 3)) bad.push(theme + ' ' + accent + ' the note ' + (note.hidden ? 'missing' : 'needless'));
+                    } else if (!note.hidden) {
+                        bad.push(theme + ' the theme\'s own: a note');
+                    }
+                    // the panel's language decides which of the pair are printed: a line not there is not checked; the DJ's heading is the DJ's
+                    (accent ? [] : [['heading', '.poster h1 .ours > span']]).concat([['English', '.poster h1 .second'], ['text', '.poster .code'],
+                        ['quiet', '.poster .link .second']]).forEach(function (pair) {
                         const el = document.querySelector(pair[1]);
                         if (!el) return;
                         const ratio = contrast(getComputedStyle(el).color, paper);
@@ -94,7 +101,7 @@
                     if (theme === 'CLASSIC' && paper !== 'rgb(255, 255, 255)') bad.push('classic paper ' + paper);
                 });
             });
-            t.step('nothing below 4.5:1, the code always on white', bad, []);
+            t.step('the DJ\'s colours as picked and said when weak; the rest at least 4.5:1; the code always on white', bad, []);
         }
     });
 

@@ -264,6 +264,11 @@ body {
     line-height: 1.35;
 }
 
+/* a warning of the editor: the heading stands out poorly from the paper */
+.editor-warning {
+    color: #ffd166;
+}
+
 /* what prints with the tables set: "Na wydruku: stoły 22–43 · strony: 3" */
 .editor-summary {
     margin: 4px 0 0;

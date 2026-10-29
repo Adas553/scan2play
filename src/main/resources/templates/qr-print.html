@@ -116,8 +116,8 @@
                         th:selected="${t == poster.posterTheme}" th:text="#{'qr.edit.theme.' + ${t.name().toLowerCase()}}">Classic</option>
             </select>
         </div>
-        <!--/* the paper's colour (V53): the theme's, one of six light tints, or the DJ's own — any colour made a light tint by the page
-             (qr-print.js), the words then dark and the heading's colour readable on it */-->
+        <!--/* the paper's colour (V53): the theme's, one of six light tints, or the DJ's own — printed as picked (qr-print.js), the words
+             on it black or white, whichever reads better */-->
         <fieldset class="editor-colors" th:with="tints=${ {'#fbf3e2', '#fdeef3', '#e9f6ee', '#e8f3fb', '#f0ecf9', '#f2f2f2'} },
                   ownPaper=${poster.posterPaper != null and !#lists.contains(tints, poster.posterPaper)}">
             <legend th:text="#{qr.edit.paper}">Paper colour</legend>
@@ -148,9 +148,9 @@
             <label class="swatch swatch-text"><input type="radio" name="accent" id="posterAccentOwn" th:value="${own ? poster.posterAccent : '#ff4081'}" th:checked="${own}"><span
                     class="swatch-chip"><span th:text="#{qr.edit.accent.own}">Your own</span><input type="color" id="posterAccentPicker"
                     th:value="${own ? poster.posterAccent : '#ff4081'}" th:attr="aria-label=#{qr.edit.accent.own}"></span></label>
-            <!--/* the DJ's colour changed to read on the paper (qr-print.js): said, so a picked black that prints light is no surprise */-->
-            <small id="posterAccentNote" class="editor-hint" role="status" hidden
-                   th:attr="data-lighter=#{qr.edit.accent.lighter},data-darker=#{qr.edit.accent.darker}"></small>
+            <!--/* a heading that stands out poorly from the paper (qr-print.js, under 3:1): said, never changed — the DJ decides */-->
+            <small id="posterAccentNote" class="editor-hint editor-warning" role="status" hidden
+                   th:attr="data-weak=#{qr.edit.accent.weak}"></small>
         </fieldset>
     </section>
     <section class="editor-group">
