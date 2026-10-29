@@ -444,8 +444,8 @@ and cyan — the club's colours without its ink), "Konfetti" (white, coloured do
 and the gala headings in the serif as the elegant one; the decoration never under the words or the code (`poster-themes-more`); the
 themes' scenarios take every theme of the editor, so a new one is checked by itself; **"Kolor tła"** (V53): the theme's paper, one of six
 light tints or the DJ's own — printed as picked (two shades alike print alike), the words on it black or white, whichever reads
-better (always at least 4.5:1; `body.paper-own`, `.paper-dark` with white words), the code on its white tile, the DJ's logo on a
-white badge with white words, the classic paper coloured with the words 8 mm off its edges (`poster-paper`, `…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
+better (always at least 4.5:1; `body.paper-own`), the code on its white tile, the DJ's logo on a white badge on any paper of
+the DJ's (one shape while the DJ tries colours — `poster-paper-logo-steady`), the classic paper coloured with the words 8 mm off its edges (`poster-paper`, `…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); the DJ's colour prints as picked — the DJ decides; a heading that stands out poorly from its paper (under 3:1, WCAG's
 least for large text) is said under the colours ("Nagłówek słabo odcina się od tła"), never changed (`qr-print.js`;

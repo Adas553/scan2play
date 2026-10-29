@@ -749,10 +749,10 @@ body:not(.theme-classic) .poster > .logo {
     margin-bottom: 4mm;
 }
 
-/* on the dark club paper — and on the DJ's own dark one (V53) — the DJ's logo on a white badge: a dark logo with a transparent
-   background would vanish */
+/* on the dark club paper — and on any paper of the DJ's own (V53), whatever its words' colour, so the logo keeps one shape while the
+   DJ tries colours — the DJ's logo on a white badge: a dark logo with a transparent background would vanish */
 body.theme-club .dj-logo,
-body.paper-dark .dj-logo {
+body.paper-own .dj-logo {
     padding: 1.5mm 2.5mm;
     border-radius: 2mm;
     background: #ffffff;

@@ -54,13 +54,12 @@
             body.className = body.className.replace(/\bfont-\w+\b/g, '').trim() + (font === 'THEME' ? '' : ' font-' + font.toLowerCase());
         }
         // The DJ's paper (V53) and colour print as picked — the DJ decides; nothing is changed by itself. The words on the DJ's paper
-        // black or white, whichever reads better (always at least 4.5:1); with white words the logo on a badge (qr-print.css
-        // .paper-dark), the classic paper's words off its edges (.paper-own).
+        // black or white, whichever reads better (always at least 4.5:1); on it the DJ's logo on a white badge and the classic paper's
+        // words off its edges (qr-print.css .paper-own).
         const picked = paperColour ? rgb(paperColour) : null;
         const whiteWords = !!picked && contrast(picked, [255, 255, 255]) > contrast(picked, [0, 0, 0]);
         ['--paper', '--ink', '--muted', '--accent'].forEach(function (name) { body.style.removeProperty(name); });
         body.classList.toggle('paper-own', !!picked);
-        body.classList.toggle('paper-dark', whiteWords);
         if (picked) {
             body.style.setProperty('--paper', hex(picked));
             body.style.setProperty('--ink', whiteWords ? '#ffffff' : '#000000');

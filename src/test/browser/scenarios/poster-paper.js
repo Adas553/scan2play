@@ -151,3 +151,28 @@
         }
     });
 })();
+
+// The DJ's logo on the DJ's own paper: always on the same white badge, whatever the words' colour — it changed its shape when the
+// words turned from black to white (the badge was for white words only).
+(function () {
+    S2P.scenario({
+        name: 'poster-paper-logo-steady',
+        page: 'qr-print-poster-logo',
+        title: 'the DJ\'s logo on the DJ\'s own paper: the same white badge with black words and with white ones',
+        run: async function (t) {
+            const logo = document.querySelector('.poster .dj-logo');
+            const look = function () { const s = getComputedStyle(logo); return [s.backgroundColor, s.paddingTop, s.borderTopLeftRadius]; };
+            const picker = document.getElementById('posterPaperPicker');
+            const words = [];
+            const looks = ['#e10ea9', '#3b0a14', '#f2c94c'].map(function (colour) {
+                picker.value = colour;
+                picker.dispatchEvent(new Event('input', { bubbles: true }));
+                words.push(getComputedStyle(document.querySelector('.poster .code')).color);
+                return look();
+            });
+            t.check('black and white words both seen (' + words.join(' / ') + ')', words.indexOf('rgb(0, 0, 0)') >= 0 && words.indexOf('rgb(255, 255, 255)') >= 0);
+            t.step('one badge for all', [looks[0][0], JSON.stringify(looks[0]) === JSON.stringify(looks[1]) && JSON.stringify(looks[1]) === JSON.stringify(looks[2])],
+                ['rgb(255, 255, 255)', true]);
+        }
+    });
+})();

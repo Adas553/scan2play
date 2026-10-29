@@ -51,7 +51,7 @@
             accent: heading.length ? getComputedStyle(heading[0].el).color : '#111111',
             framed: !document.body.classList.contains('theme-classic'),
             club: document.body.classList.contains('theme-club'),
-            badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-dark'),
+            badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-own'),
             font: paperFont,
             headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont,
             // the DJ's line in its own font (the serif on the elegant theme), never the heading's script
