@@ -130,6 +130,16 @@ class DjPartySettingsControllerPosterTest {
                 .getPosterTables()).as("not sent: none").isNull();
     }
 
+    /** The paper's colour (V53): "#rrggbb" in lower case; anything else none — the theme's. */
+    @Test
+    void thePapersColour_isSaved_aWrongOne_isTheThemes() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "#FBF3E2")).getPosterPaper()).isEqualTo("#fbf3e2");
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "url(x)")).getPosterPaper()).isNull();
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "")).getPosterPaper()).isNull();
+    }
+
     /** The heading's font (V51): by its name; anything else the theme's. */
     @Test
     void theHeadingsFont_isSaved_aWrongOne_isTheThemes() throws Exception {

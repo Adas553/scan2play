@@ -232,6 +232,10 @@ public class PartySettingsEntity {
     @Column(length = 7)
     private String posterAccent;
 
+    /** The paper's colour (V53), "#rrggbb", made a light tint by the page; null = the theme's paper. */
+    @Column(length = 7)
+    private String posterPaper;
+
     /** The heading's font (V51); {@link PosterFont#THEME} = the theme's own. */
     @Builder.Default
     @Enumerated(EnumType.STRING)

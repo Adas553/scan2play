@@ -20,7 +20,7 @@
     cards and tents (data-print-item), numbered; without it eight cards and one tent, the number rendered hidden.
 */-->
 <body th:class="${'layout-' + qrLayout + ' ' + poster.posterTheme.cssClass() + (poster.posterFont.cssClass().isEmpty() ? '' : ' ' + poster.posterFont.cssClass())}"
-      th:attr="data-accent=${poster.posterAccent}" th:classappend="${posterEdit} ? 'has-editor'"
+      th:attr="data-accent=${poster.posterAccent},data-paper=${poster.posterPaper}" th:classappend="${posterEdit} ? 'has-editor'"
       th:with="pl=${printLang != 'en'}, en=${printLang != 'pl'}, both=${printLang == 'both'},
                logoShown=${djLogo != null and poster.posterShowLogo}, tables=${poster.posterTables}">
 
@@ -118,6 +118,20 @@
             <!--/* the dark club sheet soaks a home printer's paper with ink; the classic one is white with no fills */-->
             <small id="posterInkHint" class="editor-hint" th:hidden="${poster.posterTheme.name() != 'CLUB'}" th:text="#{qr.edit.theme.club.ink}">A lot of ink</small>
         </div>
+        <!--/* the paper's colour (V53): the theme's, one of six light tints, or the DJ's own — any colour made a light tint by the page
+             (qr-print.js), the words then dark and the heading's colour readable on it */-->
+        <fieldset class="editor-colors" th:with="tints=${ {'#fbf3e2', '#fdeef3', '#e9f6ee', '#e8f3fb', '#f0ecf9', '#f2f2f2'} },
+                  ownPaper=${poster.posterPaper != null and !#lists.contains(tints, poster.posterPaper)}">
+            <legend th:text="#{qr.edit.paper}">Paper colour</legend>
+            <label class="swatch swatch-text"><input type="radio" name="paper" value="" th:checked="${poster.posterPaper == null}"><span
+                    class="swatch-chip" th:text="#{qr.edit.paper.theme}">The theme's</span></label>
+            <label th:each="c : ${tints}" class="swatch" th:attr="title=${c}"><input type="radio" name="paper" th:value="${c}" th:checked="${c == poster.posterPaper}"
+                   th:attr="aria-label=${c}"><span class="swatch-dot" th:classappend="${'swatch-' + c.substring(1)}"></span></label>
+            <label class="swatch swatch-text"><input type="radio" name="paper" id="posterPaperOwn" th:value="${ownPaper ? poster.posterPaper : '#f6d7b0'}" th:checked="${ownPaper}"><span
+                    class="swatch-chip"><span th:text="#{qr.edit.accent.own}">Your own</span><input type="color" id="posterPaperPicker"
+                    th:value="${ownPaper ? poster.posterPaper : '#f6d7b0'}" th:attr="aria-label=#{qr.edit.paper.own}"></span></label>
+            <small class="editor-hint" th:text="#{qr.edit.paper.hint}">Made a light tint</small>
+        </fieldset>
         <!--/* the heading's font (V51): the theme's, or one of ours whatever the theme — the heading only (qr-print.css body.font-*) */-->
         <div class="editor-field">
             <label for="posterFont" th:text="#{qr.edit.font}">Heading font</label>

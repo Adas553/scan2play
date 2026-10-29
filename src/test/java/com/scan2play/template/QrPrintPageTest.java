@@ -355,6 +355,23 @@ class QrPrintPageTest {
     }
 
     /**
+     * "Kolor tła" (V53): the paper the DJ picked is the page's data-paper (qr-print.js makes it a light tint and sets it); the editor
+     * offers the theme's, six tints and the DJ's own, the saved one picked — a colour not of the tints is "Własny", in its colour field.
+     */
+    @Test
+    void thePaper_isTheColourTheDjPicked() throws IOException {
+        String tint = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#e8f3fb").build())
+                .replaceAll("\\s+", " ");
+        assertThat(tint).contains("data-paper=\"#e8f3fb\"", "name=\"paper\" value=\"#e8f3fb\" aria-label=\"#e8f3fb\" checked=\"checked\"", "Kolor tła");
+        String own = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#c2185b").build())
+                .replaceAll("\\s+", " ");
+        assertThat(own).contains("data-paper=\"#c2185b\"", "id=\"posterPaperOwn\" value=\"#c2185b\" checked=\"checked\"",
+                "id=\"posterPaperPicker\" value=\"#c2185b\"");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).doesNotContain("data-paper=")
+                .contains("<input type=\"radio\" name=\"paper\" value=\"\" checked=\"checked\">");
+    }
+
+    /**
      * "Krój nagłówka" (V51): the font the DJ picked is the page's class ("font-script"; the theme's, none) and picked in the editor; four
      * fonts offered.
      */

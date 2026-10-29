@@ -68,7 +68,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    fitted**, and (the owner: "dodaj wybór kroju") **"Krój nagłówka"** (V51: the theme's, sans, serif, script — Dancing Script) —
    built on `claude/bold-bell-w3epu5` (the longest words were cut on a card and a tent before; V51 on production: check Flyway's
    line once), and **four more themes** (V52: Rustykalny, Gala, Neon, Konfetti; the owner picked four of seven mock-ups — Morski, Retro,
-   Zimowy when DJs ask; at 10+ themes a picker of thumbnails in place of the list). Next
+   Zimowy when DJs ask; at 10+ themes a picker of thumbnails in place of the list), and **"Kolor tła"** (V53: the theme's, six tints
+   or the DJ's own, always printed as a light tint — the owner picked the tint over any colour). Next
    candidates: A5 / A6 for the acrylic stands; the TV screen in the print's look; small ones (A3, the scan distance, a ruler). Open: stickers and business cards against "Zmień kod imprezy" (V49 kills old
    prints). To try on a phone: "Do internetu" opens the share sheet (Instagram) on Android and an iPhone.
 4. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
