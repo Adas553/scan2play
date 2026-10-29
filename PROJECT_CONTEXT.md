@@ -451,7 +451,9 @@ classic paper coloured with the words 8 mm off its edges (`poster-paper`,
 `…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
-with a margin) — browser scenario `poster-themes-readable`: every theme with white, a pale yellow, black and a light cyan. The code
+with a margin; a near-black on a dark paper, a near-white on a light one take the words' own colour, not a grey; the DJ's colour so
+changed is said under the colours, "drukują się jaśniej" / "ciemniej" — `poster-accent-adjusted`) — browser scenario
+`poster-themes-readable`: every theme with white, a pale yellow, black and a light cyan. The code
 stays black on white (its own white margin is its tile) in every theme; every theme fits A4 and the cards with the longest words
 (`poster-themes-fit`, `poster-themes-cards-fit`, also with DejaVu Sans, GitHub's font). **The print's own fonts** (`static/fonts`,
 the SIL Open Font License beside them, ~150 KB): "S2P Sans" (Source Sans 3) on the paper in every theme, "S2P Serif" (Playfair

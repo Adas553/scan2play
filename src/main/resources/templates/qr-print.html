@@ -148,6 +148,9 @@
             <label class="swatch swatch-text"><input type="radio" name="accent" id="posterAccentOwn" th:value="${own ? poster.posterAccent : '#ff4081'}" th:checked="${own}"><span
                     class="swatch-chip"><span th:text="#{qr.edit.accent.own}">Your own</span><input type="color" id="posterAccentPicker"
                     th:value="${own ? poster.posterAccent : '#ff4081'}" th:attr="aria-label=#{qr.edit.accent.own}"></span></label>
+            <!--/* the DJ's colour changed to read on the paper (qr-print.js): said, so a picked black that prints light is no surprise */-->
+            <small id="posterAccentNote" class="editor-hint" role="status" hidden
+                   th:attr="data-lighter=#{qr.edit.accent.lighter},data-darker=#{qr.edit.accent.darker}"></small>
         </fieldset>
     </section>
     <section class="editor-group">
