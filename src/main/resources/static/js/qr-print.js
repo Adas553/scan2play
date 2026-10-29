@@ -358,12 +358,20 @@
     }
 
     form.elements.heading.addEventListener('input', showHeading);
-    // "Nagłówek na okazję": the occasion's text in the heading, as if typed (the preview, "Niezapisane zmiany"); the list back to its prompt
+    // "Wzór na okazję": the occasion's text in the heading, as if typed (the preview, "Niezapisane zmiany"), and its look — the theme,
+    // the heading's font, the colour (empty: the theme's) and the theme's paper; the list back to its prompt
     const preset = document.getElementById('posterPreset');
     if (preset) {
         preset.addEventListener('change', function () {
             const option = preset.options[preset.selectedIndex];
             if (!option || !option.dataset.heading) return;
+            form.elements.theme.value = option.dataset.theme;
+            form.elements.font.value = option.dataset.font;
+            [['accent', option.dataset.colour || ''], ['paper', '']].forEach(function (pick) {
+                const radio = form.querySelector('input[name="' + pick[0] + '"][value="' + pick[1] + '"]');
+                if (radio) radio.checked = true;
+            });
+            changeLook();
             form.elements.heading.value = option.dataset.heading;
             form.elements.heading.dispatchEvent(new Event('input', { bubbles: true }));
             preset.value = '';
@@ -433,7 +441,7 @@
         answer.classList.add('unsaved');
     }
 
-    // the language saves itself; the helpers (#posterHelperForm: "Nagłówek na okazję", "Numer pierwszego stołu") are never saved —
+    // the language saves itself; the helpers (#posterHelperForm: "Wzór na okazję", "Numer pierwszego stołu") are never saved —
     // none of them makes the editor's changes unsaved by itself
     function unsaving(e) { return e.target.name !== 'language' && e.target.form === form; }
     form.addEventListener('input', function (e) { if (unsaving(e)) markUnsaved(); });

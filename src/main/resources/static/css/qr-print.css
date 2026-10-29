@@ -343,6 +343,47 @@ body {
     font-weight: 600;
 }
 
+/* "Więcej wyglądu": the paper, the heading's font and its colour folded under the theme — the editor starts with less (open when the
+   party has one of them set) */
+.editor-more {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.editor-more summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: #dee2e6;
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+/* its own arrow: the browser's marker is gone with the summary's flex */
+.editor-more summary::-webkit-details-marker {
+    display: none;
+}
+
+.editor-more summary::before {
+    content: "▸";
+    width: 1.2em;
+    color: #adb5bd;
+}
+
+.editor-more[open] > summary::before {
+    content: "▾";
+}
+
+.editor-more summary:focus-visible {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 2px;
+}
+
+.editor-more[open] > summary {
+    margin-bottom: 6px;
+}
+
 /* the colours: each its own button — the radio hidden, the dot (or the word) ringed when picked */
 .editor-colors {
     display: flex;

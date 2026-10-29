@@ -492,9 +492,15 @@ print has it (`poster-phone-modes`, `…-fitted`, `poster-modes-wide`); without 
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
 the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane
-zmiany" by themselves): "Nagłówek na okazję" — six occasions (wesele, osiemnastka, urodziny, klub, pub, impreza firmowa), each text in the
-print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) — fills the
-heading as if typed and goes back to its prompt (`poster-presets`, `…-both`); no note about the ink of a dark sheet (obvious;
+zmiany" by themselves): "Wzór na okazję" — the first field — six occasions (wesele, osiemnastka, urodziny, klub, pub, impreza firmowa), each
+text in the print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) —
+fills the heading as if typed and sets its look: the theme, the heading's font, the colour (none: the theme's) and the theme's paper
+(the wedding Elegancki with the script, the 18th Neon, the birthday Konfetti, the club Klubowy, the pub Rustykalny, the company
+Klasyczny in navy and the sans), and goes back to its prompt (`poster-presets`, `…-both`, `…-look`). **Fewer fields to start**:
+"Treść" is the occasion, the heading, "Druga linia" and the language; the paper, the heading's font and its colour are folded under
+"Więcej wyglądu" (`#posterMoreLook`, open when the party has one of them set; the weak heading's note outside it); the tables and the
+first table's number are with what is on the print, on the cards and the tents only (on the poster hidden, still sent —
+`poster-editor-fewer-fields`, `poster-editor-tables-on-cards`); no note about the ink of a dark sheet (obvious;
 "Kolor tła"'s hint says a dark colour prints dark). **"Do internetu"**
 (`js/qr-social.js`): a PNG story 1080 × 1920 or post 1080 × 1350 drawn on a canvas in the page from what the preview shows, unsaved
 changes too — the logo, the heading, the line, the code on a white tile, the party's code large and the address (nobody scans the screen

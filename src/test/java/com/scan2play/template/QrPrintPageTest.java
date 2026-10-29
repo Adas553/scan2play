@@ -410,6 +410,31 @@ class QrPrintPageTest {
         assertThat(render("poster", Locale.ENGLISH)).contains("<option value=\"WEDDING\"", ">Wedding</option>", ">Company party</option>");
     }
 
+    /**
+     * "Wzór na okazję" sets the look too: each occasion's theme and font are the editor's, its colour one of the palette's or none (the
+     * theme's). The paper, the font and the colour are folded under "Więcej wyglądu" — open when the party has one of them set.
+     */
+    @Test
+    void theLooksForTheOccasion_areTheEditors_andTheMoreLookOpensWhenSet() throws IOException {
+        String html = render("poster", Locale.forLanguageTag("pl"));
+        List<java.util.regex.MatchResult> options = java.util.regex.Pattern
+                .compile("<option value=\"([A-Z]+)\" data-heading=\"[^\"]*\" data-theme=\"([A-Z]+)\" data-font=\"([A-Z]+)\"( data-colour=\"([^\"]*)\")?")
+                .matcher(html).results().toList();
+        assertThat(options).hasSize(6).allSatisfy(o -> {
+            assertThat(com.scan2play.model.PosterTheme.of(o.group(2)).name()).as(o.group(1)).isEqualTo(o.group(2));
+            assertThat(com.scan2play.model.PosterFont.of(o.group(3)).name()).as(o.group(1)).isEqualTo(o.group(3));
+            if (o.group(5) != null) {
+                assertThat(html).as(o.group(1)).contains("name=\"accent\" value=\"" + o.group(5) + "\"");
+            }
+        });
+        assertThat(html).contains("<details id=\"posterMoreLook\" class=\"editor-more\">");
+        for (PartySettingsEntity set : List.of(PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#fbf3e2").build(),
+                PartySettingsEntity.builder().partyCode(PARTY).posterAccent("#1565c0").build(),
+                PartySettingsEntity.builder().partyCode(PARTY).posterFont(com.scan2play.model.PosterFont.SERIF).build())) {
+            assertThat(render("poster", Locale.forLanguageTag("pl"), set)).contains("<details id=\"posterMoreLook\" class=\"editor-more\" open=\"open\">");
+        }
+    }
+
     @Test
     void theBarFollowsTheDjsLanguage_andTheLayoutDefaultsToThePoster() throws IOException {
         String polish = render("whatever", Locale.forLanguageTag("pl"));
