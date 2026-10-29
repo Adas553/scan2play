@@ -1,8 +1,74 @@
 /* The page to print the party's QR code (templates/qr-print.html): white, black, one A4 sheet. */
 
+/* The print's own fonts (static/fonts, the SIL Open Font License beside them): served by us, so the paper lays out the same on the DJ's
+   computer, a phone and GitHub's runner — the browser tests measure what prints, and the DJ's heading is fitted to its lines in that
+   font. "S2P Sans" (Source Sans 3) for every theme, "S2P Serif" (Playfair Display) for the elegant headings, "S2P Script" (Dancing
+   Script) for a heading the DJ wants handwritten (V51, "Krój nagłówka"); variable fonts (every
+   weight in one file), the Latin and the Latin Extended halves (Polish letters) apart. "block": the print never comes out in a
+   fallback while the font loads. A new version of a font is a new file name (the addresses are not versioned as /css and /js). */
+@font-face {
+    font-family: "S2P Sans";
+    font-style: normal;
+    font-display: block;
+    font-weight: 200 900;
+    src: url("/fonts/source-sans-3-5.3.1-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+        U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "S2P Sans";
+    font-style: normal;
+    font-display: block;
+    font-weight: 200 900;
+    src: url("/fonts/source-sans-3-5.3.1-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+        U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: "S2P Serif";
+    font-style: normal;
+    font-display: block;
+    font-weight: 400 900;
+    src: url("/fonts/playfair-display-5.3.0-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+        U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "S2P Serif";
+    font-style: normal;
+    font-display: block;
+    font-weight: 400 900;
+    src: url("/fonts/playfair-display-5.3.0-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+        U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 @page {
     size: A4;
     margin: 12mm;
+}
+
+@font-face {
+    font-family: "S2P Script";
+    font-style: normal;
+    font-display: block;
+    font-weight: 400 700;
+    src: url("/fonts/dancing-script-5.3.0-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+        U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "S2P Script";
+    font-style: normal;
+    font-display: block;
+    font-weight: 400 700;
+    src: url("/fonts/dancing-script-5.3.0-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+        U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 * {
@@ -13,7 +79,8 @@ body {
     margin: 0;
     background: #ffffff;
     color: #111111;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    /* the bar and the editor in the device's own fonts, as the DJ's panel (app.css --s2p-font); the paper in ours (below) */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
@@ -293,6 +360,13 @@ body {
 .swatch-b08a3e { background: #b08a3e; }
 .swatch-00bcd4 { background: #00bcd4; }
 .swatch-111111 { background: #111111; }
+/* the paper's tints (V53) */
+.swatch-fbf3e2 { background: #fbf3e2; }
+.swatch-fdeef3 { background: #fdeef3; }
+.swatch-e9f6ee { background: #e9f6ee; }
+.swatch-e8f3fb { background: #e8f3fb; }
+.swatch-f0ecf9 { background: #f0ecf9; }
+.swatch-f2f2f2 { background: #f2f2f2; }
 
 .editor-checks {
     display: flex;
@@ -463,11 +537,53 @@ body.theme-pastel {
     --frame: var(--accent, var(--accent-base));
 }
 
+/* V52: a barn wedding, boho — kraft and olive */
+body.theme-rustic {
+    --paper: #f4ecdc;
+    --ink: #3b3226;
+    --muted: #625545;
+    --accent-base: #55622f;
+    --frame: var(--accent, var(--accent-base));
+}
+
+/* V52: a ball, New Year's Eve, a palace wedding — ivory and gold (a gold dark enough to read) */
+body.theme-gala {
+    --paper: #fffdf6;
+    --ink: #1d1d1f;
+    --muted: #5c5649;
+    --accent-base: #8c6d1f;
+    --frame: var(--accent, var(--accent-base));
+}
+
+/* V52: a club, an 18th — the club's colours on white paper: ink for the frame only */
+body.theme-neon {
+    --paper: #ffffff;
+    --ink: #121212;
+    --muted: #555555;
+    --accent-base: #c2127a;
+    --frame: var(--accent, var(--accent-base));
+}
+
+/* V52: a birthday — white, coloured dots in the frame's band */
+body.theme-confetti {
+    --paper: #ffffff;
+    --ink: #1f1f1f;
+    --muted: #555555;
+    --accent-base: #c4410c;
+    --frame: var(--accent, var(--accent-base));
+}
+
 .poster,
 .card,
 .face {
     background: var(--paper);
     color: var(--ink);
+}
+
+.poster,
+.cards,
+.tents {
+    font-family: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 .poster h1,
@@ -495,11 +611,47 @@ body.theme-elegant .poster {
     border: 1.6mm double var(--frame);
 }
 
+/* the serif for the headings, and the DJ's line on the poster and a tent — on a card the line stays in the sans: 60 letters of the
+   wider serif do not fit its column in three lines even at the least size */
 body.theme-elegant .poster h1,
 body.theme-elegant .card .title,
 body.theme-elegant .face .title,
-body.theme-elegant .own-line {
-    font-family: Georgia, "Times New Roman", "DejaVu Serif", serif;
+body.theme-elegant .poster .own-line,
+body.theme-elegant .face .own-line,
+body.theme-rustic .poster h1,
+body.theme-rustic .card .title,
+body.theme-rustic .face .title,
+body.theme-rustic .poster .own-line,
+body.theme-rustic .face .own-line,
+body.theme-gala .poster h1,
+body.theme-gala .card .title,
+body.theme-gala .face .title,
+body.theme-gala .poster .own-line,
+body.theme-gala .face .own-line {
+    font-family: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+}
+
+/* the heading's font as the DJ picked it (V51), whatever the theme — the heading only, the line and the code's texts stay in the
+   theme's; after the theme's rules, so it wins over the elegant serif */
+body.font-sans .poster h1,
+body.font-sans .card .title,
+body.font-sans .face .title {
+    font-family: "S2P Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+body.font-serif .poster h1,
+body.font-serif .card .title,
+body.font-serif .face .title {
+    font-family: "S2P Serif", Georgia, "Times New Roman", "DejaVu Serif", serif;
+}
+
+body.font-script .poster h1,
+body.font-script .card .title,
+body.font-script .face .title {
+    font-family: "S2P Script", "Segoe Script", cursive;
+    /* the script's small letters are low: brought to the sans's height, so it reads as large (qr-print.js still fits it to its lines;
+       a browser without it shows the script a little smaller) */
+    font-size-adjust: 0.49;
 }
 
 body.theme-pastel .poster {
@@ -508,6 +660,77 @@ body.theme-pastel .poster {
 
 body.theme-club .poster {
     border-radius: 4mm;
+}
+
+/* the classic paper coloured by the DJ (V53): the words off its edges, as on a theme's paper */
+body.theme-classic.paper-own .poster {
+    padding: 6mm 8mm;
+}
+
+/* V52's frames: the rustic stitched (dashed, a thin line inside it), the gala double with a diamond at its top and foot, the neon in a
+   gradient from the heading's colour, the confetti a band of dots around white paper — the decoration only in the frame, never under
+   the words or the code; ".tent .face" over the tent's own frame of a theme (below) */
+body.theme-rustic .poster,
+body.theme-rustic .tent .face {
+    border: 0.7mm dashed var(--frame);
+    box-shadow: inset 0 0 0 1.4mm var(--paper), inset 0 0 0 1.7mm var(--frame);
+    border-radius: 1.5mm;
+}
+
+body.theme-gala .poster,
+body.theme-gala .tent .face {
+    position: relative;
+    border: 1.8mm double var(--frame);
+}
+
+body.theme-gala .poster::before,
+body.theme-gala .poster::after,
+body.theme-gala .tent .face::before,
+body.theme-gala .tent .face::after {
+    content: "";
+    position: absolute;
+    left: calc(50% - 1.6mm);
+    width: 3.2mm;
+    height: 3.2mm;
+    background: var(--frame);
+    transform: rotate(45deg);
+}
+
+body.theme-gala .poster::before,
+body.theme-gala .tent .face::before {
+    top: -2.5mm;
+}
+
+body.theme-gala .poster::after,
+body.theme-gala .tent .face::after {
+    bottom: -2.5mm;
+}
+
+body.theme-neon .poster,
+body.theme-neon .tent .face {
+    border: 1.4mm solid var(--frame);
+    border-image: linear-gradient(135deg, var(--frame), #6f2dbd, #0aa2c0) 1;
+}
+
+body.theme-confetti .poster,
+body.theme-confetti .tent .face {
+    border: 5mm solid transparent;
+    /* one tile of four dots, all of it repeated: "round" fits a whole number of tiles to the frame, so no dot is cut at an edge and
+       the colours mix along every side (four tiles of their own sizes made stripes of one colour) */
+    background:
+        linear-gradient(var(--paper), var(--paper)) padding-box,
+        radial-gradient(circle at 2mm 2mm, var(--frame) 0.65mm, transparent 0.75mm) 0 0 / 10mm 10mm round border-box,
+        radial-gradient(circle at 7mm 3.5mm, #0aa2c0 0.65mm, transparent 0.75mm) 0 0 / 10mm 10mm round border-box,
+        radial-gradient(circle at 4mm 7.5mm, #e0a526 0.65mm, transparent 0.75mm) 0 0 / 10mm 10mm round border-box,
+        radial-gradient(circle at 8.5mm 8.5mm, #6f2dbd 0.55mm, transparent 0.65mm) 0 0 / 10mm 10mm round border-box;
+    /* white under the dots too: the paper's colour as the page reads it (the colours made readable on it) */
+    background-color: var(--paper);
+    border-radius: 3mm;
+}
+
+/* a tent's face is narrower than the poster: a narrower band leaves the heading its room */
+body.theme-confetti .tent .face {
+    border-width: 4mm;
 }
 
 /* the code's own white margin is its tile: rounded, never on the theme's paper */
@@ -521,8 +744,10 @@ body:not(.theme-classic) .poster > .logo {
     margin-bottom: 4mm;
 }
 
-/* on the dark club paper the DJ's logo on a white badge: a dark logo with a transparent background would vanish */
-body.theme-club .dj-logo {
+/* on the dark club paper — and on the DJ's own dark one (V53) — the DJ's logo on a white badge: a dark logo with a transparent
+   background would vanish */
+body.theme-club .dj-logo,
+body.paper-dark .dj-logo {
     padding: 1.5mm 2.5mm;
     border-radius: 2mm;
     background: #ffffff;
@@ -789,22 +1014,24 @@ body:not(.theme-classic) .card {
     }
 }
 
-/* ---- A phone: the preview fits the screen (the print itself keeps the A4 layout above) ---- */
+/* ---- A phone: the sheet laid out as it prints, 186 mm wide — qr-print.js makes it smaller to the screen's width, so the frame, the
+   code's tile and the margins look as on paper (laid out again for the narrow screen, the code covered the frame) ---- */
 
 @media screen and (max-width: 200mm) {
-    .poster {
-        padding: 6mm 16px;
-    }
-
-    .poster .qr {
-        width: min(115mm, 100%);
-        height: auto;
+    .poster,
+    .cards,
+    .tents {
+        width: 186mm;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .cards {
-        grid-template-columns: minmax(0, 93mm);
-        grid-auto-rows: minmax(68mm, auto);
-        padding: 6mm 16px;
+        justify-content: start;
+    }
+
+    .tents {
+        align-items: start;
     }
 }
 
@@ -1089,13 +1316,6 @@ body.theme-club .face {
     body.has-editor > main.tents {
         margin: 0;
         box-shadow: none;
-    }
-}
-
-/* a phone: the sheets made smaller to fit the screen — only the preview, the print keeps A4 */
-@media screen and (max-width: 200mm) {
-    .tents {
-        zoom: 0.45;
     }
 }
 

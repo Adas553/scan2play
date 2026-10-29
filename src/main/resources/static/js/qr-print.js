@@ -14,7 +14,9 @@
 //
 // The look (V47): the theme is the class of <body> (qr-print.css), the DJ's colour its data-accent. A colour is made readable on the
 // theme's paper here — darkened on a light paper, lightened on a dark one, until it has a contrast of 4.5:1 (WCAG AA) — and set as
-// --accent; none, and the theme's own applies. On every load, for whoever prints, and at once while the editor changes them.
+// --accent; none, and the theme's own applies. The DJ's paper (V53, data-paper): a light colour made a light tint, a dark one a dark
+// paper, set as --paper — the words on it dark or light, the heading's colour (the theme's too) readable on it. On every load, for whoever prints, and at once while the editor
+// changes them.
 (function () {
     'use strict';
     const button = document.getElementById('printBtn');
@@ -53,17 +55,128 @@
         return hex(target);
     }
 
-    function showLook(theme, accent) {
+    /** {@code colour} as a light paper (V53): mixed towards white until it is as light as a pale paper — little ink, dark words read. */
+    function light(colour) {
+        const c = rgb(colour);
+        if (!c) return null;
+        for (let t = 0; t <= 1.0001; t += 0.02) {
+            const mixed = c.map(function (v) { return v + (255 - v) * t; });
+            if (luminance(mixed) >= 0.85) return hex(mixed);
+        }
+        return '#ffffff';
+    }
+
+    /** {@code colour} as a dark paper (V53): darkened only until light words read on it — the quiet ones at 4.5:1 too. */
+    function deep(colour) {
+        const c = rgb(colour);
+        for (let t = 0; t <= 1.0001; t += 0.02) {
+            const mixed = c.map(function (v) { return v * (1 - t); });
+            if (luminance(mixed) <= 0.09) return hex(mixed);
+        }
+        return '#000000';
+    }
+
+    /** A colour the DJ picks for the paper is a dark paper below this luminance, else a light tint. */
+    const DARK_PAPER = 0.25;
+
+    function showLook(theme, accent, font, paperColour) {
         const body = document.body;
         if (theme) {
             body.className = body.className.replace(/\btheme-\w+\b/g, '').trim() + ' theme-' + theme.toLowerCase();
         }
+        if (font) {   // the heading's font (V51): the theme's has no class
+            body.className = body.className.replace(/\bfont-\w+\b/g, '').trim() + (font === 'THEME' ? '' : ' font-' + font.toLowerCase());
+        }
+        // the DJ's paper (V53): a light colour a light tint, the words on it dark (the club's white ink would vanish); a dark one a
+        // dark paper, the words light — and the classes for the rest: words off the classic paper's edges, the logo on a badge
+        const picked = paperColour ? rgb(paperColour) : null;
+        const dark = !!picked && luminance(picked) < DARK_PAPER;
+        const tint = picked ? (dark ? deep(paperColour) : light(paperColour)) : null;
+        ['--paper', '--ink', '--muted'].forEach(function (name) { body.style.removeProperty(name); });
+        body.classList.toggle('paper-own', !!tint);
+        body.classList.toggle('paper-dark', dark);
+        if (tint) {
+            body.style.setProperty('--paper', tint);
+            body.style.setProperty('--ink', dark ? '#f5f5f7' : '#1a1a1a');
+            body.style.setProperty('--muted', dark ? '#c9cad3' : '#555555');
+        }
         const paper = getComputedStyle(body).getPropertyValue('--paper').trim();
-        if (accent) body.style.setProperty('--accent', readable(accent, paper));
+        // the heading's colour readable on the paper: the DJ's, or on a paper of the DJ's the theme's own too (the club's cyan on pale)
+        // (a theme's near-black heading on a dark paper: the light words' colour, not a grey made of it)
+        let base = accent || (tint ? getComputedStyle(body).getPropertyValue('--accent-base').trim() : '');
+        if (!accent && dark && rgb(base) && luminance(rgb(base)) < 0.05) base = '#f5f5f7';
+        if (base) body.style.setProperty('--accent', readable(base, paper));
         else body.style.removeProperty('--accent');
     }
 
-    showLook(null, document.body.dataset.accent);
+    showLook(null, document.body.dataset.accent, null, document.body.dataset.paper);
+
+    // The DJ's own heading and line fitted to their lines, in the print's own font (qr-print.css): a long one made smaller, half a point
+    // at a time, until it takes its lines whole — two for the poster's heading, three elsewhere — and no smaller than its least; a short
+    // one keeps the stylesheet's size. Measured on the first card or tent, the same size given to all (their words are the same). On a
+    // phone too: the sheet is laid out there as it prints (fitPreview). The line clamp of the stylesheet stays the last guard. For
+    // whoever prints, on every load once the fonts are in.
+    // [the text, its most lines, its least size in pt, the least of a heading in the script]. The script's size is brought to the
+    // sans's height of small letters (qr-print.css font-size-adjust), its letters wider: 40 of them need a smaller size on a card
+    const FITS = [['.poster h1 .own', 2, 16], ['.poster .own-line', 3, 11], ['.card .title .own', 3, 7, 5.5], ['.card .own-line', 3, 6],
+        ['.face .title .own', 3, 12, 10], ['.face .own-line', 3, 9]];
+    const PT = 96 / 72;
+    const narrow = matchMedia('screen and (max-width: 200mm)');
+
+    function tooLong(el, most) {
+        const line = parseFloat(getComputedStyle(el).lineHeight);
+        // a line the clamp hid, not the font's letters reaching a little past their line
+        return el.scrollHeight > el.clientHeight + line / 2 || Math.round(el.clientHeight / line) > most;
+    }
+
+    function fitTexts() {
+        FITS.forEach(function (fit) {
+            const texts = Array.prototype.slice.call(document.querySelectorAll(fit[0]));
+            texts.forEach(function (el) { el.style.removeProperty('font-size'); });
+            const first = texts.find(function (el) { return el.checkVisibility(); });
+            if (!first) return;
+            const least = fit[3] && document.body.classList.contains('font-script') ? fit[3] : fit[2];
+            let size = parseFloat(getComputedStyle(first).fontSize) / PT;
+            while (size > least && tooLong(first, fit[1])) {
+                size = Math.max(least, size - 0.5);
+                first.style.fontSize = size + 'pt';
+            }
+            texts.forEach(function (el) { el.style.fontSize = first.style.fontSize; });
+        });
+        fitPreview();
+    }
+
+    // A phone (narrower than the paper): the sheet keeps its printed width (qr-print.css) and is made smaller to the screen here with
+    // zoom — the page then scrolls as far as the smaller sheet (a transform left its full height empty below it), and the sizes the
+    // fitting above measures (a box's height, a line's) stay the print's, unzoomed alike.
+    const PAPER = 186 * 96 / 25.4;
+
+    // Set only when it changes, never taken off and put back: a phone's address bar, hiding and showing as the page scrolls, sends
+    // "resize" again and again with the same width — the sheet unzoomed for a moment made the page longer and it jumped at its foot.
+    function fitPreview() {
+        const main = document.querySelector('body > main');
+        if (!main) return;
+        let zoom = '', margin = '';
+        if (narrow.matches) {
+            const room = document.documentElement.clientWidth - 32;
+            const scale = Math.min(1, room / PAPER);
+            zoom = String(scale);
+            margin = (16 + (room - PAPER * scale) / 2) / scale + 'px';   // a zoomed box's margin is zoomed too
+        }
+        if (main.style.zoom !== zoom) main.style.zoom = zoom;
+        if (main.style.marginLeft !== margin) main.style.marginLeft = margin;
+    }
+
+    fitTexts();
+    if (document.fonts) document.fonts.ready.then(fitTexts);
+    narrow.addEventListener('change', fitTexts);
+    // the scale depends on the width alone: a resize of the height (the address bar) is nothing to do
+    let previewWidth = document.documentElement.clientWidth;
+    window.addEventListener('resize', function () {
+        if (document.documentElement.clientWidth === previewWidth) return;
+        previewWidth = document.documentElement.clientWidth;
+        fitPreview();
+    });
 
     const form = document.getElementById('posterForm');
     if (!form) return;
@@ -76,11 +189,13 @@
         const own = form.elements.heading.value.replace(/\s+/g, ' ').trim();
         all('[data-poster-heading]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
         all('[data-poster-ours-heading]').forEach(function (el) { el.hidden = !!own; });
+        fitTexts();
     }
 
     function showLine() {
         const own = form.elements.line.value.replace(/\s+/g, ' ').trim();
         all('[data-poster-line]').forEach(function (el) { el.textContent = own; el.hidden = !own; });
+        fitTexts();
     }
 
     function showPart(box) {
@@ -128,6 +243,7 @@
             items.push(items[0].parentNode.appendChild(items[0].cloneNode(true)));
         }
         items.splice(count).forEach(function (item) { item.remove(); });
+        fitPreview();   // more or fewer sheets
         items.forEach(function (item, i) {
             item.querySelectorAll('[data-table-number]').forEach(function (no) {
                 no.hidden = !tables;
@@ -161,14 +277,21 @@
         return checked ? checked.value : '';
     }
 
-    const inkHint = document.getElementById('posterInkHint');
+    const paperPicker = document.getElementById('posterPaperPicker');
+    const ownPaper = document.getElementById('posterPaperOwn');
+
+    function chosenPaper() {
+        const checked = form.querySelector('input[name="paper"]:checked');
+        return checked ? checked.value : '';
+    }
 
     function changeLook() {
-        showLook(form.elements.theme.value, chosenAccent());
-        if (inkHint) inkHint.hidden = form.elements.theme.value !== 'CLUB';
+        showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper());
+        fitTexts();   // another font, another width
     }
 
     form.elements.theme.addEventListener('change', changeLook);
+    form.elements.font.addEventListener('change', changeLook);
     Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
         radio.addEventListener('change', changeLook);
     });
@@ -176,6 +299,16 @@
         picker.addEventListener('input', function () {
             own.value = picker.value;
             own.checked = true;
+            changeLook();
+        });
+    }
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="paper"]'), function (radio) {
+        radio.addEventListener('change', changeLook);
+    });
+    if (paperPicker && ownPaper) {
+        paperPicker.addEventListener('input', function () {
+            ownPaper.value = paperPicker.value;
+            ownPaper.checked = true;
             changeLook();
         });
     }
@@ -206,8 +339,9 @@
 
     function stash() {
         const state = { heading: form.elements.heading.value, line: form.elements.line.value, tables: form.elements.tables.value,
-            theme: form.elements.theme.value,
-            accent: chosenAccent(), picker: picker ? picker.value : '', parts: {} };
+            theme: form.elements.theme.value, font: form.elements.font.value,
+            accent: chosenAccent(), picker: picker ? picker.value : '',
+            paper: chosenPaper(), paperPicker: paperPicker ? paperPicker.value : '', parts: {} };
         all('[data-poster-toggle]').forEach(function (box) { state.parts[box.dataset.posterToggle] = box.checked; });
         try { sessionStorage.setItem(stashKey, JSON.stringify(state)); } catch (e) { /* no storage: the switch loses them, as before */ }
     }
@@ -223,12 +357,19 @@
         form.elements.line.value = state.line || '';
         form.elements.tables.value = state.tables || '';
         if (form.querySelector('#posterTheme option[value="' + state.theme + '"]')) form.elements.theme.value = state.theme;
+        if (form.querySelector('#posterFont option[value="' + state.font + '"]')) form.elements.font.value = state.font;
         if (picker && state.picker) picker.value = state.picker;
         const swatch = Array.prototype.find.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
             return radio !== own && radio.value === state.accent;
         });
         if (swatch) swatch.checked = true;
         else if (own && state.accent) { own.value = state.accent; own.checked = true; }
+        if (paperPicker && state.paperPicker) paperPicker.value = state.paperPicker;
+        const tint = Array.prototype.find.call(form.querySelectorAll('input[name="paper"]'), function (radio) {
+            return radio !== ownPaper && radio.value === (state.paper || '');
+        });
+        if (tint) tint.checked = true;
+        else if (ownPaper && state.paper) { ownPaper.value = state.paper; ownPaper.checked = true; }
         all('[data-poster-toggle]').forEach(function (box) {
             if (typeof state.parts[box.dataset.posterToggle] === 'boolean') box.checked = state.parts[box.dataset.posterToggle];
             showPart(box);

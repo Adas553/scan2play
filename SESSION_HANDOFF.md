@@ -60,11 +60,17 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    sheet, two A5 faces alike, the upper one upside down) and **the number of tables** saved with the party (V50, "Liczba stołów", on the
    cards and the tents, never on the poster), "Numer pierwszego stołu" (never saved) — **in `dev` (#194), waiting for a release** (V50
    on production: check Flyway's line once; print a tent on a home printer and fold it). Then (the owner, 2026-10-29: "zrób następne
-   rzeczy z listy") **"Nagłówek na okazję", the club theme's ink note and "Do internetu" (a story / post PNG)** — built on
+   rzeczy z listy") **"Nagłówek na okazję" and "Do internetu" (a story / post PNG)** — built on
    `claude/bold-bell-w3epu5` again, no migration. The theme "Oszczędny" was not built: "Klasyczny" is already the white sheet with no
-   fills; the club theme says it takes a lot of ink instead. New looks (themes, fonts, ornaments) for every plan; photos on the poster
-   later, as Pro. Next candidates: fonts of our own (`qr-print.css` still has `system-ui` first) with the heading fitted; A5 / A6 for
-   the acrylic stands; the TV screen in the print's look. Open: stickers and business cards against "Zmień kod imprezy" (V49 kills old
+   fills (an ink note under the club theme was built and taken off again: the owner — everyone knows a dark sheet takes ink). New looks (themes, fonts, ornaments) for every plan; photos on the poster
+   later, as Pro. **#195 in `dev`.** Then (the owner, 2026-10-29: "zrób na razie 1") **the print's own fonts** ("S2P Sans" = Source
+   Sans 3, "S2P Serif" = Playfair Display, `static/fonts`, OFL, `/fonts/**` public and kept a year) **and the DJ's heading and line
+   fitted**, and (the owner: "dodaj wybór kroju") **"Krój nagłówka"** (V51: the theme's, sans, serif, script — Dancing Script) —
+   built on `claude/bold-bell-w3epu5` (the longest words were cut on a card and a tent before; V51 on production: check Flyway's
+   line once), and **four more themes** (V52: Rustykalny, Gala, Neon, Konfetti; the owner picked four of seven mock-ups — Morski, Retro,
+   Zimowy when DJs ask; at 10+ themes a picker of thumbnails in place of the list), and **"Kolor tła"** (V53: the theme's, six tints
+   or the DJ's own — a light colour a light tint, a dark one a dark paper with light words: the owner asked for dark ones too). Next
+   candidates: A5 / A6 for the acrylic stands; the TV screen in the print's look; small ones (A3, the scan distance, a ruler). Open: stickers and business cards against "Zmień kod imprezy" (V49 kills old
    prints). To try on a phone: "Do internetu" opens the share sheet (Instagram) on Android and an iPhone.
 4. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
    on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.

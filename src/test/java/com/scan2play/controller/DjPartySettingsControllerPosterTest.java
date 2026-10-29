@@ -104,7 +104,10 @@ class DjPartySettingsControllerPosterTest {
         assertThat(party.getPosterAccent()).isEqualTo("#00bcd4");
 
         setUp();
-        PartySettingsEntity wrong = send(post("/dj/qr-print/settings").param("theme", "NEON").param("accent", "red; background:url(x)"));
+        assertThat(send(post("/dj/qr-print/settings").param("theme", "confetti")).getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CONFETTI);
+
+        setUp();
+        PartySettingsEntity wrong = send(post("/dj/qr-print/settings").param("theme", "WINTER").param("accent", "red; background:url(x)"));
         assertThat(wrong.getPosterTheme()).isEqualTo(com.scan2play.model.PosterTheme.CLASSIC);
         assertThat(wrong.getPosterAccent()).isNull();
     }
@@ -125,6 +128,26 @@ class DjPartySettingsControllerPosterTest {
         setUp();
         assertThat(send(post("/dj/qr-print/settings"), PartySettingsEntity.builder().partyCode(PARTY).posterTables(7).build())
                 .getPosterTables()).as("not sent: none").isNull();
+    }
+
+    /** The paper's colour (V53): "#rrggbb" in lower case; anything else none — the theme's. */
+    @Test
+    void thePapersColour_isSaved_aWrongOne_isTheThemes() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "#FBF3E2")).getPosterPaper()).isEqualTo("#fbf3e2");
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "url(x)")).getPosterPaper()).isNull();
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("paper", "")).getPosterPaper()).isNull();
+    }
+
+    /** The heading's font (V51): by its name; anything else the theme's. */
+    @Test
+    void theHeadingsFont_isSaved_aWrongOne_isTheThemes() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("font", "script")).getPosterFont()).isEqualTo(com.scan2play.model.PosterFont.SCRIPT);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("font", "COMIC")).getPosterFont()).isEqualTo(com.scan2play.model.PosterFont.THEME);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings")).getPosterFont()).as("not sent").isEqualTo(com.scan2play.model.PosterFont.THEME);
     }
 
     @Test

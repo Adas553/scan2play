@@ -4,7 +4,8 @@
 // cards and one tent. With the longest words, the DJ's logo, three profiles, the tip and a table's number every part stays on its face
 // and on its card, in every theme.
 (function () {
-    const THEMES = ['CLASSIC', 'ELEGANT', 'CLUB', 'PASTEL'];
+    /** Every theme the editor offers (V47, V52): a new theme is checked here by itself. */
+    function themes() { return Array.from(document.querySelectorAll('#posterTheme option')).map(function (o) { return o.value; }); }
     /** The printable height of an A4 page in CSS px: 297 mm less the page's margins (qr-print.css, @page 12 mm). */
     const A4_PRINTABLE = (297 - 2 * 12) * 96 / 25.4;
     const MM = 96 / 25.4;
@@ -85,7 +86,7 @@
             await t.waitFor(function () { return Array.from(document.querySelectorAll('.tent .dj-logo')).every(function (i) { return i.complete; }); }, 'the logos', 3000);
             const out = [];
             const pages = [];
-            THEMES.forEach(function (theme) {
+            themes().forEach(function (theme) {
                 pickTheme(theme);
                 const tent = document.querySelectorAll('.tent')[49];
                 tent.querySelectorAll('.face').forEach(function (face, i) {
@@ -200,7 +201,7 @@
             type('posterTablesFrom', '950');
             await t.waitFor(function () { return Array.from(document.querySelectorAll('.card .dj-logo')).every(function (i) { return i.complete; }); }, 'the logos', 3000);
             const bad = [];
-            THEMES.forEach(function (theme) {
+            themes().forEach(function (theme) {
                 pickTheme(theme);
                 const card = document.querySelectorAll('.card')[49];
                 const no = card.querySelector('[data-table-number]');
@@ -223,6 +224,87 @@
             t.check('no sideways scroll (' + document.documentElement.scrollWidth + ' ≤ ' + width + ')', document.documentElement.scrollWidth <= width);
             const tent = document.querySelector('.tent').getBoundingClientRect();
             t.check('the sheet inside the screen', tent.left >= 0 && tent.right <= width);
+        }
+    });
+})();
+
+// A phone's preview (qr-print.js): the sheet laid out as it prints — the poster 186 mm wide, the cards two by two, the tent — and made
+// smaller to the screen's width, so the frame, the code's tile and the margins look as on paper; before, the poster was laid out
+// again for the narrow screen (the code over the frame). The DJ's heading is fitted as on a computer.
+(function () {
+    const MM = 96 / 25.4;
+
+    function type(id, text) {
+        const field = document.getElementById(id);
+        field.value = text;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function inside(inner, outer) {
+        const a = inner.getBoundingClientRect(), b = outer.getBoundingClientRect();
+        return a.left >= b.left - 0.5 && a.right <= b.right + 0.5 && a.top >= b.top - 0.5 && a.bottom <= b.bottom + 0.5;
+    }
+
+    S2P.scenario({
+        name: 'poster-phone-preview',
+        page: 'qr-print-poster-logo',
+        viewport: '390,844',
+        title: 'the poster on a phone: laid out as it prints (186 mm), made smaller to the screen, the code inside the frame, no sideways scroll; the heading fitted',
+        run: async function (t) {
+            const theme = document.getElementById('posterTheme');
+            theme.value = 'ELEGANT';
+            theme.dispatchEvent(new Event('change', { bubbles: true }));
+            type('posterHeading', 'W'.repeat(40));
+            await document.fonts.ready;
+            await t.sleep(200);
+            const poster = document.querySelector('.poster');
+            const width = document.documentElement.clientWidth, box = poster.getBoundingClientRect();
+            t.check('laid out as on paper: ' + poster.offsetWidth + ' px', Math.abs(poster.offsetWidth - 186 * MM) < 2);
+            t.check('made smaller to the screen (' + Math.round(box.left) + ' … ' + Math.round(box.right) + ' of ' + width + ')',
+                box.left >= 0 && box.right <= width && box.width >= width - 48);
+            t.check('the code\'s tile inside the frame', inside(document.querySelector('.poster .qr'), poster));
+            t.check('no sideways scroll (' + document.documentElement.scrollWidth + ' ≤ ' + width + ')', document.documentElement.scrollWidth <= width);
+            const own = document.querySelector('.poster h1 .own'), line = parseFloat(getComputedStyle(own).lineHeight);
+            t.check('the heading fitted to two lines', Math.round(own.clientHeight / line) <= 2);
+            const foot = document.querySelector('.poster .powered').getBoundingClientRect();
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            await t.sleep(100);
+            t.check('nothing after the sheet but its margin: the page ends within 40 mm (' + Math.round(document.documentElement.scrollHeight - (foot.bottom + window.scrollY)) + ' px)',
+                document.documentElement.scrollHeight - (poster.getBoundingClientRect().bottom + window.scrollY) <= 40 * MM);
+        }
+    });
+
+    // A phone's address bar hides and shows while the page scrolls: the window's height changes and "resize" comes, again and again.
+    // The scale depends on the width alone, so such a resize must not touch the sheet (taking the zoom off and on made the page
+    // longer for a moment, and the page jumped at its foot).
+    S2P.scenario({
+        name: 'poster-phone-preview-steady',
+        page: 'qr-print-poster',
+        viewport: '390,844',
+        title: 'the phone\'s preview stays put while the address bar comes and goes: a resize of the same width touches nothing',
+        run: async function (t) {
+            const main = document.querySelector('body > main');
+            const zoom = main.style.zoom;
+            const changes = [];
+            new MutationObserver(function (list) { list.forEach(function (m) { changes.push(m.attributeName + ' ' + main.getAttribute('style')); }); })
+                .observe(main, { attributes: true, attributeFilter: ['style'] });
+            for (let i = 0; i < 5; i++) window.dispatchEvent(new Event('resize'));
+            await t.sleep(100);
+            t.step('the sheet untouched', [changes, main.style.zoom], [[], zoom]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'poster-phone-preview-cards',
+        page: 'qr-print-cards',
+        viewport: '390,844',
+        title: 'the cards on a phone: two by two as they print, made smaller to the screen, no sideways scroll',
+        run: async function (t) {
+            const cards = document.querySelectorAll('.card');
+            const a = cards[0].getBoundingClientRect(), b = cards[1].getBoundingClientRect(), width = document.documentElement.clientWidth;
+            t.check('two in a row, as on the sheet', Math.abs(a.top - b.top) < 1 && b.left > a.right - 1);
+            t.check('inside the screen (' + Math.round(a.left) + ' … ' + Math.round(b.right) + ' of ' + width + ')', a.left >= 0 && b.right <= width);
+            t.check('no sideways scroll', document.documentElement.scrollWidth <= width);
         }
     });
 })();

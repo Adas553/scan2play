@@ -33,6 +33,7 @@
         const djLogo = root.querySelector('.dj-logo');
         const links = root.querySelector('.dj-links');
         const style = getComputedStyle(document.body);
+        const paperFont = getComputedStyle(root).fontFamily;   // the print's own (qr-print.css: "S2P Sans")
         return {
             code: code,
             heading: heading,
@@ -50,8 +51,11 @@
             accent: heading.length ? getComputedStyle(heading[0].el).color : '#111111',
             framed: !document.body.classList.contains('theme-classic'),
             club: document.body.classList.contains('theme-club'),
-            font: style.fontFamily,
-            headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : style.fontFamily
+            badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-dark'),
+            font: paperFont,
+            headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont,
+            // the DJ's line in its own font (the serif on the elegant theme), never the heading's script
+            lineFont: getComputedStyle(root.querySelector('[data-poster-line]') || root).fontFamily
         };
     }
 
@@ -103,18 +107,20 @@
         if (c.logo) {
             const box = { w: (story ? 560 : 440) * s, h: (story ? 220 : 150) * s };
             const ratio = Math.min(box.w / c.logo.naturalWidth, box.h / c.logo.naturalHeight);
-            add({ kind: 'logo', image: c.logo, w: Math.round(c.logo.naturalWidth * ratio), h: Math.round(c.logo.naturalHeight * ratio), badge: c.club });
+            add({ kind: 'logo', image: c.logo, w: Math.round(c.logo.naturalWidth * ratio), h: Math.round(c.logo.naturalHeight * ratio), badge: c.badge });
             add({ kind: 'gap', height: Math.round((story ? 56 : 40) * s) });
         } else {
             add({ kind: 'ours', h: Math.round((story ? 84 : 64) * s), font: '800 ' + Math.round((story ? 64 : 50) * s) + 'px ' + c.font });
             add({ kind: 'gap', height: Math.round((story ? 56 : 36) * s) });
         }
+        // the script's small letters are low: larger, as the print's font-size-adjust makes it (a canvas has none)
+        const script = /S2P Script/.test(c.headingFont) ? 1.3 : 1;
         c.heading.forEach(function (part, i) {
             const last = i === c.heading.length - 1;
-            block(part.text, part.second ? (story ? 62 : 50) : (story ? 92 : 74), part.second ? 600 : 700, c.headingFont,
+            block(part.text, (part.second ? (story ? 62 : 50) : (story ? 92 : 74)) * script, part.second ? 600 : 700, c.headingFont,
                 part.second ? c.muted : c.accent, last ? (story ? 34 : 24) : 10, 0, part.second ? 'second' : 'heading');
         });
-        block(c.line, story ? 54 : 44, 600, c.headingFont, c.ink, story ? 48 : 30);
+        block(c.line, story ? 54 : 44, 600, c.lineFont, c.ink, story ? 48 : 30);
         const qr = Math.round(Math.min(width, (story ? 640 : 500) * s));
         add({ kind: 'qr', size: qr });
         add({ kind: 'gap', height: Math.round((story ? 44 : 30) * s) });
@@ -244,7 +250,18 @@
         return canvas;
     }
 
-    function save(kind) {
+    // a canvas draws in a font only once it is loaded — Polish letters are in each font's second half, fetched when first needed
+    const FONTS_NEEDED = ['400 40px "S2P Sans"', '700 40px "S2P Sans"', '700 40px "S2P Serif"', '700 40px "S2P Script"'];
+
+    async function fontsIn() {
+        if (!document.fonts) return;
+        try {
+            await Promise.all(FONTS_NEEDED.map(function (font) { return document.fonts.load(font, 'Aa ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ'); }));
+        } catch (e) { /* a font that does not load: the canvas draws in the fallback */ }
+    }
+
+    async function save(kind) {
+        await fontsIn();
         const canvas = draw(kind);
         const name = group.dataset.name + '-' + kind + '.png';
         canvas.toBlob(async function (blob) {

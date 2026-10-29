@@ -272,6 +272,8 @@ class QrPrintPageTest {
         assertThat(html).contains("class=\"layout-poster theme-elegant has-editor\"", "data-accent=\"#123abc\"",
                 "<option value=\"ELEGANT\" selected=\"selected\">Elegancki</option>", "<option value=\"CLUB\">Klubowy</option>",
                 "<option value=\"PASTEL\">Pastelowy</option>", "<option value=\"CLASSIC\">Klasyczny</option>",
+                "<option value=\"RUSTIC\">Rustykalny</option>", "<option value=\"GALA\">Gala</option>", "<option value=\"NEON\">Neon</option>",
+                "<option value=\"CONFETTI\">Konfetti</option>",
                 "value=\"#123abc\" checked=\"checked\"", "id=\"posterAccentPicker\" value=\"#123abc\"", "class=\"swatch-dot swatch-c2185b\"");
         String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build());
         assertThat(palette).contains("value=\"#c2185b\" aria-label=\"#c2185b\" checked=\"checked\"").doesNotContain("value=\"#123abc\"");
@@ -350,6 +352,38 @@ class QrPrintPageTest {
         String editor = render("cards", Locale.forLanguageTag("pl"), party);
         assertThat(editor).contains("type=\"number\" id=\"posterTables\" name=\"tables\"", "min=\"1\"",
                 "max=\"" + PartySettingsEntity.POSTER_TABLES_MAX + "\"", "value=\"12\"");
+    }
+
+    /**
+     * "Kolor tła" (V53): the paper the DJ picked is the page's data-paper (qr-print.js makes it a light tint and sets it); the editor
+     * offers the theme's, six tints and the DJ's own, the saved one picked — a colour not of the tints is "Własny", in its colour field.
+     */
+    @Test
+    void thePaper_isTheColourTheDjPicked() throws IOException {
+        String tint = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#e8f3fb").build())
+                .replaceAll("\\s+", " ");
+        assertThat(tint).contains("data-paper=\"#e8f3fb\"", "name=\"paper\" value=\"#e8f3fb\" aria-label=\"#e8f3fb\" checked=\"checked\"", "Kolor tła");
+        String own = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#c2185b").build())
+                .replaceAll("\\s+", " ");
+        assertThat(own).contains("data-paper=\"#c2185b\"", "id=\"posterPaperOwn\" value=\"#c2185b\" checked=\"checked\"",
+                "id=\"posterPaperPicker\" value=\"#c2185b\"");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).doesNotContain("data-paper=")
+                .contains("<input type=\"radio\" name=\"paper\" value=\"\" checked=\"checked\">");
+    }
+
+    /**
+     * "Krój nagłówka" (V51): the font the DJ picked is the page's class ("font-script"; the theme's, none) and picked in the editor; four
+     * fonts offered.
+     */
+    @Test
+    void theHeadingsFont_isTheOneTheDjPicked() throws IOException {
+        String script = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY)
+                .posterFont(com.scan2play.model.PosterFont.SCRIPT).build()).replaceAll("\\s+", " ");
+        assertThat(script).contains("class=\"layout-poster theme-classic font-script has-editor\"",
+                "<option value=\"SCRIPT\" selected=\"selected\">Odręczny</option>", "<option value=\"THEME\">Motywu</option>",
+                "<option value=\"SANS\">Bezszeryfowy</option>", "<option value=\"SERIF\">Szeryfowy</option>");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).contains("class=\"layout-poster theme-classic has-editor\"",
+                "<option value=\"THEME\" selected=\"selected\">The theme&#39;s</option>").doesNotContain("font-");
     }
 
     /**

@@ -212,6 +212,45 @@ class MigrationIT extends PostgresIntegrationTest {
         }
     }
 
+    /** V53: the QR print's paper as the DJ picked it — none (the theme's), or a colour "#rrggbb". */
+    @Test
+    void theQrPrint_hasAPaperColour_noneOrAColour() {
+        String code = "V53" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT poster_paper FROM party_settings WHERE party_code = ?", String.class, code)).isNull();
+        jdbc.update("UPDATE party_settings SET poster_paper = '#fbf3e2' WHERE party_code = ?", code);
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET poster_paper = 'red' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_poster_paper_check");
+    }
+
+    /** V52: the QR print's themes — the four of V47 and four more; still only a known one. */
+    @Test
+    void theQrPrint_hasEightThemes_andOnlyThem() {
+        String code = "V52" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        for (String theme : List.of("RUSTIC", "GALA", "NEON", "CONFETTI", "CLASSIC", "ELEGANT", "CLUB", "PASTEL")) {
+            jdbc.update("UPDATE party_settings SET poster_theme = ? WHERE party_code = ?", theme, code);
+        }
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET poster_theme = 'WINTER' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_poster_theme_check");
+    }
+
+    /** V51: the QR print's heading font — the theme's by default, and only a known one. */
+    @Test
+    void theQrPrint_hasAHeadingFont_theThemesByDefault() {
+        String code = "V51" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT poster_font FROM party_settings WHERE party_code = ?", String.class, code)).isEqualTo("THEME");
+        for (String font : List.of("SANS", "SERIF", "SCRIPT", "THEME")) {
+            jdbc.update("UPDATE party_settings SET poster_font = ? WHERE party_code = ?", font, code);
+        }
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET poster_font = 'COMIC' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_poster_font_check");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");
