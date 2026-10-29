@@ -489,7 +489,10 @@ before 17.4: the script threw at load and the editor did nothing — `poster-edi
 **The poster is its A4 page** (`.poster`, `qr-print.js` `fitPoster`): 186 × 272 mm on the screen as on paper — the theme's frame down
 to the page's foot —; the room its words and parts leave goes to the code, larger up to 140 mm (our words alone: 140; the longest
 words, the DJ's logo, three profiles and the tip: still ≥ 100), what is left centres them (`poster-fills-the-page`, `…-longest`,
-`poster-preview-a4-wide`). A computer's column narrower than the sheet makes the preview smaller (`--preview-zoom`, used by the
+`poster-preview-a4-wide`), 2 mm left to spare; fitted again when a font loads late (the script first picked: the code took the
+fallback's room and the poster printed two pages — `poster-fills-the-page-font-late`). **The print itself**: `run.py`'s `pdf` prints a
+scenario's page (DevTools `Page.printToPDF`) and counts its A4 pages — the poster, the cards, the tent with the longest words in a
+theme, 22 cards, 3 tents (`poster-print-pdf*`, a control told one page for two). A computer's column narrower than the sheet makes the preview smaller (`--preview-zoom`, used by the
 stylesheet on the screen only — never on paper; `poster-preview-a4-laptop`), as a phone's (`fitPreview`; its margin is
 `--preview-margin`, screen only too: on the sheet itself it printed the cards off the page's middle from a phone).
 **"Edytuj | Podgląd"** (`#posterModes`, below 1100 px): the editor or the preview, one at a time, the switch held at the top; the page

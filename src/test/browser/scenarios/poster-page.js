@@ -122,4 +122,25 @@
             t.step('back on: the code as before', Math.round(qr.offsetWidth), Math.round(withLogo));
         }
     });
+
+    // A font loaded late — the script, first picked — changes the heading's height after it was fitted: the code took the room the
+    // fallback font left and the poster ran onto a second page (the print's PDF showed it). Fitted again once the font is in.
+    S2P.scenario({
+        name: 'poster-fills-the-page-font-late',
+        page: 'qr-print-poster-logo',
+        viewport: '1440,900',
+        title: 'the script picked with the longest words (its font loads only then): once it is in, the poster fitted again — still one page',
+        run: async function (t) {
+            const logo = document.querySelector('.poster .dj-logo');
+            await t.waitFor(function () { return logo.complete; }, 'the logo', 3000);
+            type('posterHeading', 'W'.repeat(40));
+            type('posterLine', 'W'.repeat(60));
+            pick('posterTheme', 'GALA');
+            pick('posterFont', 'SCRIPT');
+            await document.fonts.ready;
+            await t.sleep(100);
+            const poster = document.querySelector('main.poster');
+            t.check('one page (' + (poster.offsetHeight / MM).toFixed(1) + ' mm ≤ 272)', poster.offsetHeight <= PAGE + 1);
+        }
+    });
 })();

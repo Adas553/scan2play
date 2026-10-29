@@ -128,6 +128,8 @@
     // code — larger, read from further away — up to QR_MOST; what is left centres them. The room is measured with the sheet as high
     // as its words, and the code's new size taken as a ratio of its own: the same on a preview made smaller (zoom).
     const QR_MOST = 140 * 96 / 25.4;
+    // what the code leaves of the page: a printer's layout a fraction of a millimetre taller never takes a second page
+    const PAGE_SPARE = 2 * 96 / 25.4;
 
     function fitPoster() {
         const poster = document.querySelector('main.poster');
@@ -137,7 +139,7 @@
         qr.style.removeProperty('height');
         const page = poster.offsetHeight;
         poster.style.minHeight = '0';
-        const room = page - poster.offsetHeight;
+        const room = page - poster.offsetHeight - PAGE_SPARE;
         poster.style.removeProperty('min-height');
         const base = parseFloat(getComputedStyle(qr).width);
         const size = Math.min(QR_MOST, base * (qr.offsetHeight + room) / qr.offsetHeight);
@@ -183,7 +185,12 @@
     }
 
     fitTexts();
-    if (document.fonts) document.fonts.ready.then(fitTexts);
+    if (document.fonts) {
+        document.fonts.ready.then(fitTexts);
+        // a font loaded later — the script or the serif, first picked in the editor — changes the words' size: fitted again, or the
+        // code took the room the fallback font had left and the poster ran onto a second page
+        document.fonts.addEventListener('loadingdone', fitTexts);
+    }
     // the DJ's logo takes its height once loaded: the code is given the room again
     Array.prototype.forEach.call(document.querySelectorAll('body > main img'), function (img) {
         if (!img.complete) img.addEventListener('load', fitTexts);

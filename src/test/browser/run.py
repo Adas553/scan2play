@@ -126,6 +126,41 @@ def scenario_viewports():
     return sizes
 
 
+def scenario_pdfs():
+    """The pages a scenario's print must take (S2P.scenario({ name: '...', pdf: 1, ... })): once the page has given its verdict, it is
+    printed to a PDF as Chrome prints it (DevTools Page.printToPDF, the page size of the stylesheet's @page) and its pages counted."""
+    pages = {}
+    for path in sorted((HERE / 'scenarios').glob('*.js')):
+        for block in re.split(r'S2P\.scenario\(\{', path.read_text(encoding='utf-8'))[1:]:
+            name = re.match(r"\s*name:\s*'([^']+)'", block)
+            count = re.search(r"^\s*pdf:\s*(\d+)", block, re.M)
+            if name and count:
+                pages[name.group(1)] = int(count.group(1))
+    return pages
+
+
+def judge(verdict):
+    """Whether a verdict passes, as harness.js judges it: every step, or — a control — every step it must fail failed."""
+    steps, control = verdict['steps'], verdict.get('control')
+    if control:
+        return all(any(s['label'].startswith(p) and not s['pass'] for s in steps) for p in control['mustFail']) and not verdict.get('errors')
+    return bool(steps) and all(s['pass'] for s in steps) and not verdict.get('errors')
+
+
+def print_pdf(devtools, stand, name, verdict, pages):
+    """Prints the page as it is now — the scenario's words and look — to results/NAME.pdf, and adds a step to the verdict: its pages,
+    each A4 (595 × 842 pt). The screen's measures of "one A4 page" are the stylesheet's; this is what a printer gets."""
+    printed = base64.b64decode(devtools.call('Page.printToPDF', preferCSSPageSize=True, printBackground=True)['data'])
+    with open(os.path.join(stand.results, name + '.pdf'), 'wb') as f:
+        f.write(printed)
+    count = len(re.findall(rb'/Type\s*/Page(?![s\w])', printed))
+    boxes = [(float(w), float(h)) for w, h in re.findall(rb'/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]', printed)]
+    a4 = bool(boxes) and all(abs(w - 595) < 2 and abs(h - 842) < 2 for w, h in boxes)
+    verdict['steps'].append({'label': 'the print: %d A4 page%s' % (pages, '' if pages == 1 else 's'),
+                             'actual': [count, a4], 'expected': [pages, True], 'pass': count == pages and a4})
+    verdict['pass'] = judge(verdict)
+
+
 DEFAULT_WINDOW = '1280,900'
 
 # A headless browser's window is never narrower than about 500 px (measured: --window-size=390,844 gives innerWidth 496 … 504, in the
@@ -235,8 +270,9 @@ def kill(process):
         process.kill()
 
 
-def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DEFAULT_WINDOW):
-    """Opens the scenario in a fresh headless Chrome and waits for its verdict; None when none came (or the browser is gone)."""
+def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DEFAULT_WINDOW, pdf=None):
+    """Opens the scenario in a fresh headless Chrome and waits for its verdict; None when none came (or the browser is gone). With
+    pdf, the page is printed once it has its verdict (print_pdf)."""
     event = stand.event(name)
     event.clear()
     stand.result_data.pop(name, None)
@@ -253,15 +289,16 @@ def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DE
     url = 'http://127.0.0.1:%d/dj/dashboard?scenario=%s' % (port, name)
     width, height = (int(n) for n in window.split(','))
     phone = width < PHONE_WIDTH
-    if phone:
-        flags.append('--remote-debugging-port=0')   # the page's width is set before it loads (DevTools), then it is opened
-    process = subprocess.Popen([chrome] + flags + ['about:blank' if phone else url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if phone or pdf:
+        flags.append('--remote-debugging-port=0')   # the page's width set before it loads, or its print after the verdict (DevTools)
+    process = subprocess.Popen([chrome] + flags + ['about:blank' if phone or pdf else url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     devtools = None
     try:
-        if phone:
-            # a phone's screen: this width and height, no scroll bar taking a part of it (mobile), the page's own viewport meta
+        if phone or pdf:
             devtools = DevTools(profile, time.monotonic() + 30)
-            devtools.call('Emulation.setDeviceMetricsOverride', width=width, height=height, deviceScaleFactor=1, mobile=True)
+            if phone:
+                # a phone's screen: this width and height, no scroll bar taking a part of it (mobile), the page's own viewport meta
+                devtools.call('Emulation.setDeviceMetricsOverride', width=width, height=height, deviceScaleFactor=1, mobile=True)
             devtools.call('Page.navigate', url=url)
         # Wait for the verdict — but not the whole timeout for a browser that never started (a runner without a usable Chrome would
         # otherwise spend it on every scenario): once the process is gone, give the page a few seconds more and stop.
@@ -272,8 +309,10 @@ def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DE
                 if time.monotonic() - gone_since > 5:
                     print('      the browser exited with code %s before the scenario finished' % process.returncode, flush=True)
                     break
-    except (OSError, RuntimeError, ValueError) as e:
-        print('      the browser could not be given the phone\'s width: %s' % e, flush=True)
+        if pdf and event.is_set():
+            print_pdf(devtools, stand, name, stand.result_data[name], pdf)
+    except (OSError, RuntimeError, ValueError, KeyError) as e:
+        print('      the browser could not be driven (DevTools: the phone\'s width, the print): %s' % e, flush=True)
     finally:
         if devtools:
             devtools.close()
@@ -330,6 +369,7 @@ def main():
 
     known = scenario_names()
     viewports = scenario_viewports()
+    pdfs = scenario_pdfs()
     if args.list:
         print('\n'.join(known))
         return 0
@@ -363,7 +403,7 @@ def main():
     passed = True
     for name in wanted:
         passed = show(name, run_scenario(stand, port, name, chrome, args.timeout, args.no_sandbox,
-                                           viewports.get(name, DEFAULT_WINDOW))) and passed
+                                           viewports.get(name, DEFAULT_WINDOW), pdfs.get(name))) and passed
     httpd.shutdown()
     print('\n%s — results: %s' % ('all scenarios passed' if passed else 'SOME SCENARIOS FAILED', stand.results))
     return 0 if passed else 1
