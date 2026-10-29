@@ -352,6 +352,28 @@ class QrPrintPageTest {
                 "max=\"" + PartySettingsEntity.POSTER_TABLES_MAX + "\"", "value=\"12\"");
     }
 
+    /**
+     * "Nagłówek na okazję": six occasions, each text in the print's language — Polish, English, or both at once — and never longer than
+     * the heading's column (the editor puts it in the heading as if typed).
+     */
+    @Test
+    void theHeadingsForTheOccasion_areInThePrintsLanguage_andFitTheColumn() throws IOException {
+        for (com.scan2play.model.PosterLanguage language : List.of(com.scan2play.model.PosterLanguage.PL,
+                com.scan2play.model.PosterLanguage.EN, com.scan2play.model.PosterLanguage.BOTH)) {
+            String html = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterLanguage(language).build());
+            List<String> headings = java.util.regex.Pattern.compile("data-heading=\"([^\"]*)\"").matcher(html).results()
+                    .map(m -> m.group(1)).toList();
+            assertThat(headings).as(language.name()).hasSize(6).allSatisfy(h -> assertThat(h.length()).as(h)
+                    .isBetween(1, PartySettingsEntity.POSTER_HEADING_MAX));
+            if (language == com.scan2play.model.PosterLanguage.BOTH) {
+                assertThat(headings).as("both languages").allSatisfy(h -> assertThat(h).contains(" / "));
+            } else if (language == com.scan2play.model.PosterLanguage.EN) {
+                assertThat(String.join(" ", headings)).doesNotContainPattern("[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]");
+            }
+        }
+        assertThat(render("poster", Locale.ENGLISH)).contains("<option value=\"WEDDING\"", ">Wedding</option>", ">Company party</option>");
+    }
+
     @Test
     void theBarFollowsTheDjsLanguage_andTheLayoutDefaultsToThePoster() throws IOException {
         String polish = render("whatever", Locale.forLanguageTag("pl"));

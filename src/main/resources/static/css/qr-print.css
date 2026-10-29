@@ -332,6 +332,26 @@ body {
     cursor: pointer;
 }
 
+/* "Do internetu": two quiet buttons — "Zapisz" stays the editor's one main action */
+.editor-social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.editor button.editor-secondary {
+    padding: 6px 14px;
+    border-color: #6c757d;
+    background: transparent;
+    color: #f8f9fa;
+    font-weight: 600;
+}
+
+.editor button.editor-secondary:focus-visible {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 2px;
+}
+
 .editor button:disabled {
     opacity: 0.6;
     cursor: default;
