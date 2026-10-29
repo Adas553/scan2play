@@ -102,3 +102,57 @@
         }
     });
 })();
+
+// The DJ's colour of the heading and the frame made readable on the paper (qr-print.js): a near-black on a dark paper becomes the light
+// words' colour (a grey made of it read as a mistake), a near-white on a light paper the dark words' colour; any colour changed so says
+// it under the colours — lighter or darker — and nothing is said when it prints as picked or the theme's own is used.
+(function () {
+    function pick(id, value) {
+        const select = document.getElementById(id);
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function radio(name, value) {
+        const r = document.querySelector('#posterForm input[name="' + name + '"][value="' + value + '"]');
+        r.checked = true;
+        r.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function ownPaper(colour) {
+        const picker = document.getElementById('posterPaperPicker');
+        picker.value = colour;
+        picker.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    S2P.scenario({
+        name: 'poster-accent-adjusted',
+        page: 'qr-print-poster',
+        title: 'the colour of the heading made readable: black on a dark paper the light words\' colour, a pale yellow on white darker; the editor says so, and says nothing when the colour prints as picked',
+        run: async function (t) {
+            const note = document.getElementById('posterAccentNote');
+            const heading = document.querySelector('.poster h1 .ours > span');
+            const seen = function () { return [getComputedStyle(heading).color, note.hidden ? '' : note.textContent.trim() === note.dataset.lighter ? 'lighter' : 'darker']; };
+            pick('posterTheme', 'GALA');
+            ownPaper('#8b1a1a');
+            radio('accent', '#111111');
+            t.step('black on a dark claret: the light words\' colour, said lighter', seen(), ['rgb(245, 245, 247)', 'lighter']);
+            radio('accent', '#1565c0');
+            const blue = seen();
+            t.check('a blue on the claret: lightened, not the words\' colour, said lighter (' + blue + ')', blue[0] !== 'rgb(245, 245, 247)' && blue[1] === 'lighter');
+            radio('accent', '');
+            t.step('the theme\'s own: nothing said', seen()[1], '');
+            pick('posterTheme', 'CLASSIC');
+            radio('paper', '');
+            radio('accent', '#111111');
+            t.step('black on white: as picked, nothing said', seen(), ['rgb(17, 17, 17)', '']);
+            const picker = document.getElementById('posterAccentPicker');
+            picker.value = '#ffff66';
+            picker.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('a pale yellow on white: darker, said so', seen()[1], 'darker');
+            picker.value = '#fafafa';
+            picker.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('a near-white on white: the dark words\' colour', seen(), ['rgb(17, 17, 17)', 'darker']);
+        }
+    });
+})();
