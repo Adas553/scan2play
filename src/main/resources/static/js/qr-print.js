@@ -247,8 +247,6 @@
         return checked ? checked.value : '';
     }
 
-    const inkHint = document.getElementById('posterInkHint');
-
     const paperPicker = document.getElementById('posterPaperPicker');
     const ownPaper = document.getElementById('posterPaperOwn');
 
@@ -260,16 +258,7 @@
     function changeLook() {
         showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper());
         fitTexts();   // another font, another width
-        inkNote();
     }
-
-    /** A dark paper takes a lot of ink: the club's own, or the DJ's dark one — said under the theme. */
-    function inkNote() {
-        const body = document.body;
-        if (inkHint) inkHint.hidden = !(body.classList.contains('paper-dark') || (form.elements.theme.value === 'CLUB' && !body.classList.contains('paper-own')));
-    }
-
-    inkNote();
 
     form.elements.theme.addEventListener('change', changeLook);
     form.elements.font.addEventListener('change', changeLook);

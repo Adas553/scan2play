@@ -115,8 +115,6 @@
                 <option th:each="t : ${posterThemes}" th:value="${t.name()}"
                         th:selected="${t == poster.posterTheme}" th:text="#{'qr.edit.theme.' + ${t.name().toLowerCase()}}">Classic</option>
             </select>
-            <!--/* the dark club sheet soaks a home printer's paper with ink; the classic one is white with no fills */-->
-            <small id="posterInkHint" class="editor-hint" th:hidden="${poster.posterTheme.name() != 'CLUB'}" th:text="#{qr.edit.theme.club.ink}">A lot of ink</small>
         </div>
         <!--/* the paper's colour (V53): the theme's, one of six light tints, or the DJ's own — any colour made a light tint by the page
              (qr-print.js), the words then dark and the heading's colour readable on it */-->

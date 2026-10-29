@@ -447,7 +447,7 @@ light tints or the DJ's own — a light colour made a light tint in the page (`q
 of 0.85 — little ink), a dark one (luminance under 0.25) a dark paper (`deep`: darkened only to 0.09, so the quiet words read at
 4.5:1) — the words on it dark or light (`body.paper-own`, `.paper-dark`), the heading's colour (the theme's too; a near-black one on a
 dark paper the light words' colour) readable on it, the code on its white tile, the DJ's logo on a white badge on a dark paper, the
-ink note under the theme for a dark paper, the classic paper coloured with the words 8 mm off its edges (`poster-paper`,
+classic paper coloured with the words 8 mm off its edges (`poster-paper`,
 `…-cards-tent`) — and the colour of the heading and the frame: the theme's, one of eight, or the
 DJ's own (the browser's colour field). The theme is `<body>`'s class (`qr-print.css`, `--paper` / `--ink` / `--muted` /
 `--accent`); a colour is made readable on the paper in the page (`qr-print.js`: mixed towards black or white until 4.6:1, WCAG AA
@@ -479,8 +479,8 @@ the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fiel
 the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane
 zmiany" by themselves): "Nagłówek na okazję" — six occasions (wesele, osiemnastka, urodziny, klub, pub, impreza firmowa), each text in the
 print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) — fills the
-heading as if typed and goes back to its prompt (`poster-presets`, `…-both`); "Klubowy" says a dark sheet takes a lot of ink at home
-(`poster-club-ink`; "Klasyczny" is the white one, no fills — no theme of its own for a home printer). **"Do internetu"**
+heading as if typed and goes back to its prompt (`poster-presets`, `…-both`); no note about the ink of a dark sheet (obvious;
+"Kolor tła"'s hint says a dark colour prints dark). **"Do internetu"**
 (`js/qr-social.js`): a PNG story 1080 × 1920 or post 1080 × 1350 drawn on a canvas in the page from what the preview shows, unsaved
 changes too — the logo, the heading, the line, the code on a white tile, the party's code large and the address (nobody scans the screen
 they hold), the profiles (never broken across lines), the tip, "Działa na" with the DJ's logo; the theme's paper, ink, colour and frame,

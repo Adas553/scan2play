@@ -1,6 +1,6 @@
 // The QR print's editor helps the DJ write (qr-print.js): "Nagłówek na okazję" fills the heading with a text for the occasion — a wedding,
 // an 18th, a birthday, a club, a pub, a company party — in the print's language, as if typed (the preview, "Niezapisane zmiany"), and
-// goes back to its prompt; the DJ edits it further. And the dark club theme says it takes a lot of ink at home.
+// goes back to its prompt; the DJ edits it further.
 (function () {
     function pick(select, value) {
         select.value = value;
@@ -42,21 +42,6 @@
             t.check('Polish / English: ' + value, value.indexOf(' / ') > 0 && value.length <= 40);
             t.check('every face shows it', Array.from(document.querySelectorAll('.face [data-poster-heading]'))
                 .every(function (el) { return el.textContent === value && !el.hidden; }));
-        }
-    });
-
-    S2P.scenario({
-        name: 'poster-club-ink',
-        page: 'qr-print-poster',
-        title: 'the club theme warns of the ink a dark sheet takes at home; the other themes do not',
-        run: async function (t) {
-            const hint = document.getElementById('posterInkHint');
-            const theme = document.getElementById('posterTheme');
-            const warned = Array.from(theme.options).map(function (o) { return o.value; }).filter(function (value) {
-                pick(theme, value);
-                return !hint.hidden;
-            });
-            t.step('only with the club theme', warned, ['CLUB']);
         }
     });
 })();

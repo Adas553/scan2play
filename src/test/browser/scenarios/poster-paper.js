@@ -1,8 +1,8 @@
 // "Kolor tła" (V53, qr-print.js): the paper as the DJ picks it — the theme's (the default), one of six light tints, or the DJ's own
 // colour: a light one made a light tint here (mixed towards white until it is as light as a pale paper: little ink), a dark one a dark
 // paper (darkened only until light words read on it) — on the poster, the cards and the tent. On a light paper the words turn dark,
-// on a dark one light, and the heading's colour is made readable on it; the code stays on its white tile; a dark paper says it takes a
-// lot of ink, the DJ's logo on a white badge as on the club's paper; the classic paper, coloured, keeps the words off its edges.
+// on a dark one light, and the heading's colour is made readable on it; the code stays on its white tile; on a dark paper the DJ's logo
+// on a white badge as on the club's paper; the classic paper, coloured, keeps the words off its edges.
 // "Zapisz" sends it, the switch keeps it.
 (function () {
     function rgb(css) { return (css.match(/[\d.]+/g) || []).slice(0, 3).map(Number); }
@@ -77,17 +77,8 @@
             const box = document.querySelector('.poster').getBoundingClientRect(), h1 = document.querySelector('.poster h1 .own').getBoundingClientRect();
             t.check('the classic paper coloured: the heading at least 5 mm off its edges (' + Math.round(h1.left - box.left) + ' px)',
                 h1.left - box.left >= 5 * 96 / 25.4 - 0.5 && box.right - h1.right >= 5 * 96 / 25.4 - 0.5);
-            const hint = document.getElementById('posterInkHint');
-            const hints = [];
-            [['CLASSIC', '#3b0a14'], ['CLASSIC', '#e8f3fb'], ['CLUB', '#e8f3fb'], ['CLUB', '']].forEach(function (pair) {
-                pick('posterTheme', pair[0]);
-                pickPaper(pair[1]);
-                hints.push(pair.join(' ') + ' ' + !hint.hidden);
-            });
             field.value = '';
             field.dispatchEvent(new Event('input', { bubbles: true }));
-            t.step('the ink note: a dark paper, the club\'s own dark one; never a light one', hints,
-                ['CLASSIC #3b0a14 true', 'CLASSIC #e8f3fb false', 'CLUB #e8f3fb false', 'CLUB  true']);
             pick('posterTheme', 'CLUB');
             pickPaper('');
             t.step('the theme\'s again: the club\'s dark paper', paper(), 'rgb(20, 20, 28)');

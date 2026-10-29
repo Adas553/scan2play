@@ -60,9 +60,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    sheet, two A5 faces alike, the upper one upside down) and **the number of tables** saved with the party (V50, "Liczba stołów", on the
    cards and the tents, never on the poster), "Numer pierwszego stołu" (never saved) — **in `dev` (#194), waiting for a release** (V50
    on production: check Flyway's line once; print a tent on a home printer and fold it). Then (the owner, 2026-10-29: "zrób następne
-   rzeczy z listy") **"Nagłówek na okazję", the club theme's ink note and "Do internetu" (a story / post PNG)** — built on
+   rzeczy z listy") **"Nagłówek na okazję" and "Do internetu" (a story / post PNG)** — built on
    `claude/bold-bell-w3epu5` again, no migration. The theme "Oszczędny" was not built: "Klasyczny" is already the white sheet with no
-   fills; the club theme says it takes a lot of ink instead. New looks (themes, fonts, ornaments) for every plan; photos on the poster
+   fills (an ink note under the club theme was built and taken off again: the owner — everyone knows a dark sheet takes ink). New looks (themes, fonts, ornaments) for every plan; photos on the poster
    later, as Pro. **#195 in `dev`.** Then (the owner, 2026-10-29: "zrób na razie 1") **the print's own fonts** ("S2P Sans" = Source
    Sans 3, "S2P Serif" = Playfair Display, `static/fonts`, OFL, `/fonts/**` public and kept a year) **and the DJ's heading and line
    fitted**, and (the owner: "dodaj wybór kroju") **"Krój nagłówka"** (V51: the theme's, sans, serif, script — Dancing Script) —
