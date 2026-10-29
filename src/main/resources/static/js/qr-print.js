@@ -161,7 +161,12 @@
         return checked ? checked.value : '';
     }
 
-    function changeLook() { showLook(form.elements.theme.value, chosenAccent()); }
+    const inkHint = document.getElementById('posterInkHint');
+
+    function changeLook() {
+        showLook(form.elements.theme.value, chosenAccent());
+        if (inkHint) inkHint.hidden = form.elements.theme.value !== 'CLUB';
+    }
 
     form.elements.theme.addEventListener('change', changeLook);
     Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
@@ -176,6 +181,17 @@
     }
 
     form.elements.heading.addEventListener('input', showHeading);
+    // "Nagłówek na okazję": the occasion's text in the heading, as if typed (the preview, "Niezapisane zmiany"); the list back to its prompt
+    const preset = document.getElementById('posterPreset');
+    if (preset) {
+        preset.addEventListener('change', function () {
+            const option = preset.options[preset.selectedIndex];
+            if (!option || !option.dataset.heading) return;
+            form.elements.heading.value = option.dataset.heading;
+            form.elements.heading.dispatchEvent(new Event('input', { bubbles: true }));
+            preset.value = '';
+        });
+    }
     form.elements.line.addEventListener('input', showLine);
     form.elements.tables.addEventListener('input', showTables);
     if (fromField) fromField.addEventListener('input', showTables);
@@ -232,8 +248,9 @@
         answer.classList.add('unsaved');
     }
 
-    // the language saves itself; "Drukuj od stołu" is never saved — neither makes the editor's changes unsaved
-    function unsaving(e) { return e.target.name !== 'language' && e.target !== fromField; }
+    // the language saves itself; the helpers (#posterHelperForm: "Nagłówek na okazję", "Numer pierwszego stołu") are never saved —
+    // none of them makes the editor's changes unsaved by itself
+    function unsaving(e) { return e.target.name !== 'language' && e.target.form === form; }
     form.addEventListener('input', function (e) { if (unsaving(e)) markUnsaved(); });
     form.addEventListener('change', function (e) { if (unsaving(e)) markUnsaved(); });
     // The first table's number is never saved, yet the DJ switching layouts to compare them keeps it: it goes along with the switch

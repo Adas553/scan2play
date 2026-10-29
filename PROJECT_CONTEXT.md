@@ -452,7 +452,17 @@ Kartki na stoliki | Namiot na stół" keeps them in `sessionStorage` for the tab
 `…-takes`; on a phone the switch spans the bar, a long name on two lines).
 On a wide screen (≥ 1100 px) the editor is a panel on the left (Treść, Wygląd, Na wydruku), the page beside it on a dark desk; the bar and
 the editor in the panel's colours (a card's #161616, a group #1e1e1e, black fields — 2026-10-28, `poster-editor-panel-colours`), only
-the paper light. The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
+the paper light. **Helpers** (2026-10-29), of a form of their own (`#posterHelperForm`: never sent, never saved, never "Niezapisane
+zmiany" by themselves): "Nagłówek na okazję" — six occasions (wesele, osiemnastka, urodziny, klub, pub, impreza firmowa), each text in the
+print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) — fills the
+heading as if typed and goes back to its prompt (`poster-presets`, `…-both`); "Klubowy" says a dark sheet takes a lot of ink at home
+(`poster-club-ink`; "Klasyczny" is the white one, no fills — no theme of its own for a home printer). **"Do internetu"**
+(`js/qr-social.js`): a PNG story 1080 × 1920 or post 1080 × 1350 drawn on a canvas in the page from what the preview shows, unsaved
+changes too — the logo, the heading, the line, the code on a white tile, the party's code large and the address (nobody scans the screen
+they hold), the profiles (never broken across lines), the tip, "Działa na" with the DJ's logo; the theme's paper, ink, colour and frame,
+the DJ's logo on a white badge on the club paper; too much, and every size shrinks until it fits. A phone that can share files opens its
+share sheet, anything else saves `scan2play-<code>-story.png`; nothing is sent (`poster-social-story`, `…-post`, `…-longest`: every theme
+with the longest words, the DJ's logo, three profiles and the tip inside the picture, the code ≥ 420 / 340 px). The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
 the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
@@ -901,7 +911,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
 | `js/song-list-count.js` | the hosts' lists ("Ustawienia imprezy", `/h/…`): the entries each holds of `SongList.MAX_LINES`, a warning over it |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side, the Polish store; iTunes matches whole words only, so a word being typed is completed here — the words before it are asked too, 50 songs kept in memory while the word grows, both asks at once — and the songs whose title, then artist, has a word starting so come first ("shakira da" → "Dai Dai"); each song once; an answer for what the field no longer says is dropped; an ARIA combobox — `aria-expanded`, `aria-controls`, `aria-activedescendant`) |
-| `js/qr-print.js`, `css/qr-print.css`, `css/app.css` | the print page; the shared styles — the look of Section 6.7 |
+| `js/qr-print.js`, `js/qr-social.js`, `css/qr-print.css`, `css/app.css` | the print page (`qr-social.js`: its pictures for Instagram, for whom has the editor); the shared styles — the look of Section 6.7 |
 | `js/tv.js`, `css/tv.css` | the screen for a TV: its list fetched again every 10 s (put in place only when it changed; a failed fetch or an answer that is not the list keeps it), the screen kept awake (Screen Wake Lock); dark, sized by the screen's height, nothing to scroll in landscape |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |

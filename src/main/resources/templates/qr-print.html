@@ -54,6 +54,22 @@
             <input type="text" id="posterHeading" name="heading" th:value="${poster.posterHeading}" maxlength="40"
                    th:attr="placeholder=${both ? 'Zeskanuj i poproś o piosenkę / Scan to request a song' : (pl ? 'Zeskanuj i poproś o piosenkę' : 'Scan to request a song')}">
         </div>
+        <!--/* a heading for the occasion, in the print's language (written here, as every printed text): picked, it fills the heading as
+             if typed and the list goes back to its prompt — the DJ edits it further. Each within the heading's 40 (QrPrintPageTest) */-->
+        <div class="editor-field" th:with="presets=${ {
+                {'WEDDING', 'Poproś o piosenkę dla Młodej Pary', 'Request a song for the newlyweds', 'Piosenka dla Pary / Song for the couple'},
+                {'EIGHTEEN', 'Wybierz hit na osiemnastkę', 'Pick a hit for the 18th', 'Hit na 18-stkę / Pick the next hit'},
+                {'BIRTHDAY', 'Poproś o piosenkę na urodziny', 'Request a birthday song', 'Piosenka na urodziny / Birthday song'},
+                {'CLUB', 'Ty wybierasz, co gra DJ', 'You pick what the DJ plays', 'Ty wybierasz / You pick the music'},
+                {'PUB', 'Masz ulubiony kawałek? Poproś!', 'Got a favourite song? Ask!', 'Poproś o kawałek / Ask for a song'},
+                {'COMPANY', 'Wybierz muzykę na naszą imprezę', 'Choose the music for our party', 'Nasza muzyka / Music for our party'}} }">
+            <label for="posterPreset" th:text="#{qr.edit.preset}">A heading for the occasion</label>
+            <select id="posterPreset" form="posterHelperForm">
+                <option value="" th:text="#{qr.edit.preset.prompt}">Pick the occasion…</option>
+                <option th:each="p : ${presets}" th:value="${p[0]}" th:attr="data-heading=${both ? p[3] : (pl ? p[1] : p[2])}"
+                        th:text="#{'qr.edit.preset.' + ${p[0].toLowerCase()}}">Wedding</option>
+            </select>
+        </div>
         <div class="editor-field">
             <label for="posterLine" th:text="#{qr.edit.line}">A line of your own</label>
             <input type="text" id="posterLine" name="line" th:value="${poster.posterLine}" maxlength="60"
@@ -69,11 +85,11 @@
         </div>
         <!--/* the first table's number: the cards and the tents numbered from it (22 from 22 — tables 22 … 43; a reprint of one — 1 from
              16; a room numbered from 101). Never sent, never saved — the next print starts from 1 again: of a form of its own
-             (posterTablesFromForm), so a number past its limits never holds back "Zapisz". The summary under it says what prints, filled
+             (posterHelperForm), so a number past its limits never holds back "Zapisz". The summary under it says what prints, filled
              by qr-print.js ({from}, {to}, {pages}) */-->
         <div class="editor-field">
             <label for="posterTablesFrom" th:text="#{qr.edit.tables.from}">First table number</label>
-            <input type="number" id="posterTablesFrom" form="posterTablesFromForm" min="1" max="999" step="1" inputmode="numeric" placeholder="1"
+            <input type="number" id="posterTablesFrom" form="posterHelperForm" min="1" max="999" step="1" inputmode="numeric" placeholder="1"
                    aria-describedby="posterTablesFromHint posterTablesSummary">
             <small id="posterTablesFromHint" class="editor-hint" th:text="#{qr.edit.tables.from.hint}">1 by default</small>
             <p id="posterTablesSummary" class="editor-summary" role="status" hidden
@@ -99,6 +115,8 @@
                 <option th:each="t : ${posterThemes}" th:value="${t.name()}"
                         th:selected="${t == poster.posterTheme}" th:text="#{'qr.edit.theme.' + ${t.name().toLowerCase()}}">Classic</option>
             </select>
+            <!--/* the dark club sheet soaks a home printer's paper with ink; the classic one is white with no fills */-->
+            <small id="posterInkHint" class="editor-hint" th:hidden="${poster.posterTheme.name() != 'CLUB'}" th:text="#{qr.edit.theme.club.ink}">A lot of ink</small>
         </div>
         <fieldset class="editor-colors" th:with="palette=${ {'#1565c0', '#2e7d32', '#c2185b', '#d84315', '#6a1b9a', '#b08a3e', '#00bcd4', '#111111'} },
                   own=${poster.posterAccent != null and !#lists.contains(palette, poster.posterAccent)}">
@@ -129,9 +147,21 @@
         <button type="submit" id="posterSave" th:text="#{qr.edit.save}">Save</button>
         <span id="posterAnswer" role="status"></span>
     </div>
+    <!--/* a PNG for Instagram, other social media or a message to the guests, drawn in the page (qr-social.js) from what the preview shows —
+         unsaved changes too; nothing is sent. The last picture's layout is kept in data-last-layout (the browser tests read it) */-->
+    <section id="posterSocial" class="editor-group" th:attr="data-name=${'scan2play-' + partyCode}">
+        <h2 th:text="#{qr.edit.group.social}">For social media</h2>
+        <div class="editor-social">
+            <button type="button" id="posterStory" class="editor-secondary" th:text="#{qr.edit.social.story}">Instagram story</button>
+            <button type="button" id="posterPost" class="editor-secondary" th:text="#{qr.edit.social.post}">Post</button>
+        </div>
+        <small class="editor-hint" th:text="#{qr.edit.social.hint}">A picture of what the preview shows</small>
+    </section>
 </form>
 
-<form th:if="${posterEdit}" id="posterTablesFromForm" hidden></form>
+<!--/* the editor's helpers that are never saved — "Nagłówek na okazję", "Numer pierwszego stołu" — belong to this form, not to
+     #posterForm: never sent, and a value past a field's limits never holds back "Zapisz" */-->
+<form th:if="${posterEdit}" id="posterHelperForm" hidden></form>
 
 <main th:if="${qrLayout == 'poster'}" class="poster" th:classappend="${logoShown} ? 'with-logo'">
     <!--/* the DJ's logo (V45, Pro) heads the poster; ours then a quiet line at the foot */-->
@@ -244,5 +274,6 @@
 </th:block>
 
 <script src="/js/qr-print.js" th:src="@{/js/qr-print.js}"></script>
+<script th:if="${posterEdit}" src="/js/qr-social.js" th:src="@{/js/qr-social.js}"></script>
 </body>
 </html>
