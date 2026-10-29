@@ -101,12 +101,28 @@
             body.style.setProperty('--muted', dark ? '#c9cad3' : '#555555');
         }
         const paper = getComputedStyle(body).getPropertyValue('--paper').trim();
-        // the heading's colour readable on the paper: the DJ's, or on a paper of the DJ's the theme's own too (the club's cyan on pale)
-        // (a theme's near-black heading on a dark paper: the light words' colour, not a grey made of it)
-        let base = accent || (tint ? getComputedStyle(body).getPropertyValue('--accent-base').trim() : '');
-        if (!accent && dark && rgb(base) && luminance(rgb(base)) < 0.05) base = '#f5f5f7';
-        if (base) body.style.setProperty('--accent', readable(base, paper));
-        else body.style.removeProperty('--accent');
+        // the heading's colour readable on the paper: the DJ's, or on a paper of the DJ's the theme's own too (the club's cyan on pale).
+        // A near-black on a dark paper, a near-white on a light one: the words' own colour, not a grey made of it. The DJ's colour so
+        // changed is said under the colours, lighter or darker — a picked black that prints light is no surprise then
+        const base = accent || (tint ? getComputedStyle(body).getPropertyValue('--accent-base').trim() : '');
+        const darkPaper = !!rgb(paper) && luminance(rgb(paper)) < 0.5;
+        let shown = '';
+        if (rgb(base)) {
+            const lightness = luminance(rgb(base));
+            shown = readable(base, paper);
+            if (shown !== hex(rgb(base)) && (darkPaper ? lightness < 0.05 : lightness > 0.8)) {
+                shown = getComputedStyle(body).getPropertyValue('--ink').trim();
+            }
+            body.style.setProperty('--accent', shown);
+        } else {
+            body.style.removeProperty('--accent');
+        }
+        const note = document.getElementById('posterAccentNote');
+        if (note) {
+            const changed = !!rgb(accent) && shown.toLowerCase() !== hex(rgb(accent));
+            note.hidden = !changed;
+            note.textContent = changed ? (darkPaper ? note.dataset.lighter : note.dataset.darker) : '';
+        }
     }
 
     showLook(null, document.body.dataset.accent, null, document.body.dataset.paper);
