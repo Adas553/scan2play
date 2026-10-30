@@ -48,7 +48,7 @@ class DjDashboardControllerOwnerContactTest {
     private final DjDashboardController controller = new DjDashboardController(mock(DjService.class), commands,
             mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), mock(GuestRequestLimiter.class),
             mock(PushNotificationService.class), mock(PartyStaffService.class), mock(StaffInvitationService.class), Plans.off(),
-            new AiHealthMonitor());
+            new AiHealthMonitor(), com.scan2play.service.PartySchedules.texts());
 
     DjDashboardControllerOwnerContactTest() {
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080");

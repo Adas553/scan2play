@@ -100,6 +100,8 @@ class GuidePageRenderTest {
                 "href=\"#after\"", "href=\"#staff\"", "href=\"#guests\"");
         assertThat(html).as("the pictures of buttons are not controls: no <button> and no form")
                 .doesNotContain("<button", "<form");
+        assertThat(html).as("the party's hours (V55), in the party's section").contains("id=\"guideHours\"", "Godziny imprezy", "Prośby od 20:00");
+        assertThat(html.indexOf("id=\"guideHours\"")).isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"phone\""));
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
     }

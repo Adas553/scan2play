@@ -179,6 +179,16 @@ public class PartySettingsEntity {
     /** When the organiser closed the panel's welcome card (V48); null = the card is shown. The parties of before count as closed. */
     private Instant welcomeDismissedAt;
 
+    /**
+     * When the party opens by itself (V55), null = not planned; {@link #nextCloseAt} when it closes. Written only through
+     * {@code PartySettingsCommandService} — the DJ's "Godziny imprezy", a manual open or close ({@code PartySchedule#settle}) and the
+     * job that applies a moment that has come; never one that would change nothing.
+     */
+    private Instant nextOpenAt;
+
+    /** When the party closes by itself (V55), null = not planned. */
+    private Instant nextCloseAt;
+
     /** How the AI words its comment to the guest (V22); {@link CommentStyle#CLASSIC} adds nothing to the prompt. */
     @Builder.Default
     @Enumerated(EnumType.STRING)

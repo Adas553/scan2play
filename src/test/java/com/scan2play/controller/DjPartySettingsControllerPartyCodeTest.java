@@ -32,7 +32,7 @@ class DjPartySettingsControllerPartyCodeTest {
     private final DjSessionHelper helper = mock(DjSessionHelper.class);
     private final PartyCodeService codes = mock(PartyCodeService.class);
     private final DjPartySettingsController controller = new DjPartySettingsController(mock(PartySettingsCommandService.class),
-            mock(AccountDeletionService.class), codes, helper, Plans.off());
+            mock(AccountDeletionService.class), codes, helper, Plans.off(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class)));
     private final OAuth2AuthenticationToken ola = new OAuth2AuthenticationToken(new DefaultOAuth2User(
             AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "ola"), "sub"), AuthorityUtils.createAuthorityList("ROLE_USER"),
             "google");

@@ -68,6 +68,10 @@ class GuestControllerTest {
     @Spy
     private PlanService planService = Plans.off();
 
+    /** The words of a party that opens by itself later (V55): none here, the parties have no plan. */
+    @Spy
+    private com.scan2play.service.PartyScheduleService partyScheduleService = com.scan2play.service.PartySchedules.texts();
+
     @InjectMocks
     private GuestController controller;
 
@@ -477,7 +481,7 @@ class GuestControllerTest {
         settings.setInstagramUrl("https://www.instagram.com/dj/");
         settings.setTipUrl("https://buycoffee.to/dj");
         GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
-                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter);
+                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter, com.scan2play.service.PartySchedules.texts());
 
         ExtendedModelMap model = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, model, request)).isEqualTo("index");
@@ -524,7 +528,7 @@ class GuestControllerTest {
         }
 
         GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
-                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter);
+                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter, com.scan2play.service.PartySchedules.texts());
         ExtendedModelMap freeEnded = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, freeEnded, request)).isEqualTo("party_ended");
         assertThat(freeEnded.get("instagramUrl")).isNull();

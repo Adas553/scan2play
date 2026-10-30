@@ -11,6 +11,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.function.Consumer;
 
 @Service
@@ -82,6 +84,24 @@ public class PartySettingsCommandService {
         PartySettingsEntity saved = partySettingsRepository.save(settings);
         evictAfterCommit(partyCode);
         return saved;
+    }
+
+    /**
+     * Opens or closes the parties whose planned moment (V55) has come by {@code now} — at most {@code limit} — in one statement
+     * ({@link PartySettingsRepository#applyDueSchedule}); their cached settings dropped once it is committed, as after
+     * {@link #updateSettings}.
+     */
+    @Transactional
+    public List<ScheduleChange> applyDueSchedule(Instant now, int limit) {
+        List<ScheduleChange> changes = partySettingsRepository.applyDueSchedule(now, limit).stream()
+                .map(row -> new ScheduleChange((String) row[0], (Boolean) row[1]))
+                .toList();
+        changes.forEach(change -> evictAfterCommit(change.partyCode()));
+        return changes;
+    }
+
+    /** A party the plan opened ({@code active}) or closed. */
+    public record ScheduleChange(String partyCode, boolean active) {
     }
 
     private void evictAfterCommit(String partyCode) {
