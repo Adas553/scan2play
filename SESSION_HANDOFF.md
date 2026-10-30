@@ -102,7 +102,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    once — it also adds KIOSK to the co-organisers' permissions). The owner's picks: Pro; with votes; whoever has the new permission KIOSK
    makes the link; the most wanted beside the form, as the TV screen. A guest's turn is a session ("Następny gość", or by itself after a
    minute without a touch); the kiosk's own limits (3 requests a minute, 20 👍 per 10 min) in place of the address's; a request marked
-   "🖥 kiosk" in the queue. Details: `PROJECT_CONTEXT.md` 5.1. To try on a real tablet: an iPad in Guided Access and an Android tablet
+   "🖥 kiosk" in the queue. After the review of 2026-10-30 (three fixes, each with a test seen red first): "Następny gość" keeps a
+   session with a login (it logged the DJ out), a refused request ends its turn by itself too (the next guest found the last one's
+   words and dedication), a lost 👍 goes to the kiosk's address instead of reloading (on an answer that sent the request again).
+   Details: `PROJECT_CONTEXT.md` 5.1. To try on a real tablet: an iPad in Guided Access and an Android tablet
    with the screen pinned, the native keyboard over the form, the suggestions.
 
 ## Later (not now)

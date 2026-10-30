@@ -222,4 +222,54 @@ class KioskWebTest {
                 .doesNotContain("id=\"requestForm\"", "id=\"kioskList\"");
         write("kiosk-closed.html", html);
     }
+
+    /**
+     * The kiosk opened in a browser where the DJ is logged in ("Otwórz kiosk" on the settings page, or the tablet the DJ set it up
+     * on): "Następny gość" ends the guest's turn — the limit, the requests and the 👍 of the party —, never the DJ's login.
+     */
+    @Test
+    void theNextGuest_inABrowserWithTheDjLoggedIn_keepsTheLogin() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        org.springframework.security.core.context.SecurityContext login =
+                org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        login.setAuthentication(new org.springframework.security.authentication.TestingAuthenticationToken("dj", null, "ROLE_USER"));
+        session.setAttribute("SPRING_SECURITY_CONTEXT", login);
+        send(session, "baśka wilki");
+        assertThat(session.getAttribute("myRequests_" + partyCode)).as("the turn's request remembered").isNotNull();
+
+        String token = csrf(page(session));
+        mockMvc.perform(post(KIOSK + "/next").session(session).param("_csrf", token)).andExpect(redirectedUrl(KIOSK));
+
+        assertThat(session.isInvalid()).as("the DJ's session, with the login").isFalse();
+        assertThat(session.getAttribute("SPRING_SECURITY_CONTEXT")).isSameAs(login);
+        assertThat(session.getAttribute("myRequests_" + partyCode)).as("the turn's request forgotten").isNull();
+        verify(guestVoteService).forget(any(), eq(partyCode));
+    }
+
+    /**
+     * A turn begun stays a turn when the page loads again: a refused request (here a mood, sent back with what was typed and the
+     * dedication) or a 👍 given — kiosk.js then ends it after a minute without a touch, so the next guest never finds the last one's
+     * words, dedication or votes. A fresh page is no one's turn. Every page names the kiosk's own address: the way back for kiosk.js
+     * (never a reload, which on an answer would send the request again). Writes {@code kiosk-refused.html}.
+     */
+    @Test
+    void aRefusedRequestOrAVote_leavesTheTurnBegun_aFreshPageNone() throws Exception {
+        when(songEvaluationService.evaluateAndSaveSong(eq(partyCode), eq("coś skocznego"), anyString(), any(), any(), anyBoolean()))
+                .thenReturn(new DjResponse("rejected", "", null, DjResponse.KIND_MOOD));
+        MockHttpSession session = new MockHttpSession();
+        String fresh = page(session);
+        assertThat(fresh).contains("data-kiosk-url=\"" + KIOSK + "\"").doesNotContain("data-kiosk-turn");
+
+        MvcResult started = mockMvc.perform(post(KIOSK + "/request").session(session).param("songName", "coś skocznego")
+                .param("dedication", "dla Kasi").param("_csrf", csrf(fresh))).andReturn();
+        MvcResult refused = mockMvc.perform(asyncDispatch(started)).andExpect(redirectedUrl(KIOSK)).andReturn();
+        String html = mockMvc.perform(get(KIOSK).session(session).flashAttrs(refused.getFlashMap())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("data-kiosk-turn=\"begun\"", "data-kiosk-state=\"form\"", "value=\"coś skocznego\"",
+                "value=\"dla Kasi\"", "id=\"kioskError\"");
+        write("kiosk-refused.html", html);
+
+        when(guestVoteService.myVotes(any(), eq(partyCode))).thenReturn(Set.of(8L));   // a 👍 given, then the page again
+        assertThat(page(new MockHttpSession())).contains("data-kiosk-turn=\"begun\"");
+    }
 }

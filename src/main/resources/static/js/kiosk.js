@@ -3,10 +3,12 @@
  *
  * - The request form says "Wysyłanie…" and is sent once (the AI takes seconds; a second tap would send it again).
  * - A 👍 is sent in the background ([data-kiosk-vote], X-Requested-With: fetch); the answer is the list, put in place with the new
- *   votes and a note when the 👍 did not count. Refused or lost: the page loads again (the kiosk's page is the way back).
+ *   votes and a note when the 👍 did not count. Refused or lost: the kiosk's own page (body[data-kiosk-url]) in place of this one —
+ *   never a reload: an answer is a POST's page, and a reload would send the request again.
  * - The list (#kioskList) is fetched again every LIST_MS — the room's votes and new songs, as the TV screen.
  * - The next guest: a guest who walked away leaves a typed song, a 👍 or an answer behind. After IDLE_MS without a touch (an answer:
- *   RESULT_MS) the turn ends by itself — "Następny gość" is sent ([data-kiosk-next]): a new session, an empty form. An untouched
+ *   RESULT_MS) the turn ends by itself — "Następny gość" is sent ([data-kiosk-next]): a new session, an empty form. A turn begun
+ *   before the page loaded (body[data-kiosk-turn]: a refused request back with its words, a 👍 given) is ended the same way. An untouched
  *   form is loaded again every REFRESH_MS, so its session and its form's token never run out on a tablet left all night; a closed
  *   party's page every CLOSED_MS, so the form comes within a minute of the party opening.
  */
@@ -17,8 +19,9 @@
     const REFRESH_MS = 10 * 60000;
     const CLOSED_MS = 60000;
     const state = document.body.dataset.kioskState;
-    // a turn begun (a typed song, a 👍, an answer on the screen), a request on its way, the last touch
-    let touched = state === 'result';
+    const home = document.body.dataset.kioskUrl;
+    // a turn begun (a typed song, a 👍, an answer on the screen — or before this page loaded), a request on its way, the last touch
+    let touched = state === 'result' || document.body.dataset.kioskTurn === 'begun';
     let busy = false;
     let lastTouch = Date.now();
 
@@ -36,6 +39,15 @@
             touched = true;
             busy = true;
         });
+    }
+
+    /** The kiosk's own page in place of this one: not reload(), which on an answer's page would send the request again. */
+    function backHome() {
+        if (home) {
+            window.location.replace(home);
+        } else {
+            window.location.reload();
+        }
     }
 
     // ---- the most wanted: 👍 in the background, the list again every few seconds ----
@@ -68,7 +80,7 @@
                 if (!putList(html)) throw new Error('an answer without the list');
             })
             .catch(function () {
-                window.location.reload();   // the session ran out, or the network: the kiosk's page again
+                backHome();   // the session ran out, or the network: the kiosk's page again
             })
             .finally(function () {
                 voting = false;
@@ -104,7 +116,7 @@
         if (next) {
             next.submit();
         } else {
-            window.location.reload();
+            backHome();
         }
     }
 

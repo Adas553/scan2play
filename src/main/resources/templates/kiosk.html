@@ -20,7 +20,13 @@
     the next guest by itself after a while without a touch. No link leads out of the page (no profiles, no tip link, no footer): a
     guest at the tablet stays in the kiosk.
 */-->
-<body class="page-kiosk" th:attr="data-kiosk-state=${!isActive} ? 'closed' : (${response != null} ? 'result' : 'form')">
+<!--/* data-kiosk-turn: a guest's turn begun before this page loaded — a refused request back with its words, a 👍 given —, so kiosk.js
+     ends it after a while without a touch; data-kiosk-url: the kiosk's own page, kiosk.js's way back (an answer is a POST's page:
+     a reload would send the request again) */-->
+<body class="page-kiosk" th:attr="data-kiosk-state=${!isActive} ? 'closed' : (${response != null} ? 'result' : 'form'),
+      data-kiosk-turn=${errorMessage != null or lastRequest != null or (kioskMyVotes != null and !kioskMyVotes.isEmpty())
+                       or (kioskMyRequests != null and !kioskMyRequests.isEmpty())} ? 'begun' : null,
+      data-kiosk-url=@{/k/{t}(t=${kioskToken})}">
 <main class="s2p-kiosk">
     <header class="s2p-kiosk-head">
         <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="s2p-kiosk-dj-logo" id="djLogo" alt="DJ" th:alt="#{logo.dj.alt}">

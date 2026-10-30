@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpSession;
+import java.security.Principal;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -145,11 +146,20 @@ public class KioskController {
         return "kiosk :: kioskList";
     }
 
-    /** "Następny gość": this guest's turn ends — the session goes, and the next guest starts on the kiosk's page with a new one. */
+    /**
+     * "Następny gość": this guest's turn ends — the session goes, and the next guest starts on the kiosk's page with a new one. Not
+     * a session with a login in it (the DJ opened the kiosk in their own browser, or set the tablet up with it): ending it would log
+     * the DJ out, so only the turn's limit, requests and 👍 at the party are forgotten.
+     */
     @PostMapping("/{token}/next")
-    public String next(@PathVariable String token, HttpSession session) {
-        party(token);
-        session.invalidate();
+    public String next(@PathVariable String token, HttpSession session, Principal loggedIn) {
+        PartySettingsEntity party = party(token);
+        if (loggedIn == null) {
+            session.invalidate();
+        } else {
+            guestSessionService.forget(session, party.getPartyCode());
+            guestVoteService.forget(session, party.getPartyCode());
+        }
         return "redirect:/k/" + token;
     }
 

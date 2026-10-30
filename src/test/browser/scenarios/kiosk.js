@@ -100,15 +100,45 @@
 
     S2P.scenario({
         name: 'kiosk-vote-lost-reloads',
-        title: 'a 👍 the server refuses (the turn\'s session ran out): the kiosk\'s page loads again, never a broken list',
+        title: 'a 👍 the server refuses (the turn\'s session ran out): the kiosk\'s own page again (its address, not a reload), never a broken list',
         page: 'kiosk',
         setup: { kioskVoteStatus: 403 },
         run: async function (t) {
             const loads = catchLoads();
             document.querySelector('#kioskList [data-song-id="8"] button').click();
             await t.waitFor(function () { return loads.length > 0; }, 'the page again', 3000);
-            t.step('a reload', loads.map(function (l) { return l[2]; }), ['reload']);
+            t.step('the kiosk\'s page, in place of this one', loads.map(function (l) { return [l[0], l[2]]; }), [['/k/' + TOKEN, 'replace']]);
             t.step('the list as it was', !!document.querySelector('#kioskList [data-song-id="8"] button.is-given'), false);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-answer-vote-lost',
+        title: 'a 👍 lost on the answer\'s page (an answer to a POST): the kiosk\'s own page — a reload would send the request again (a second AI call, or the browser\'s "Confirm resubmission" on the tablet)',
+        page: 'kiosk-result',
+        setup: { kioskVoteStatus: 403 },
+        run: async function (t) {
+            const loads = catchLoads();
+            document.querySelector('#kioskList [data-song-id="8"] button').click();
+            await t.waitFor(function () { return loads.length > 0; }, 'the page again', 3000);
+            t.step('the kiosk\'s page by its address, no reload', loads.map(function (l) { return [l[0], l[2]]; }), [['/k/' + TOKEN, 'replace']]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-refused-turn-ends',
+        title: 'a request refused (a mood: back with the words and the dedication) and the guest walked away: a minute without a touch, "Następny gość" by itself — the next guest never finds them',
+        page: 'kiosk-refused',
+        run: async function (t) {
+            const loads = catchLoads();
+            t.step('the words and the dedication back', [document.getElementById('songInput').value,
+                document.getElementById('dedicationInput').value], ['coś skocznego', 'dla Kasi']);
+            later(30000);
+            await t.sleep(1500);
+            t.step('half a minute: still their turn', loads, []);
+            later(61000);
+            await t.waitFor(function () { return loads.length > 0; }, 'the next guest', 3000);
+            t.step('"Następny gość", sent once', loads.map(function (l) { return l[0]; }), ['/k/' + TOKEN + '/next']);
         }
     });
 

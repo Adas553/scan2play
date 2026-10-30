@@ -232,4 +232,24 @@ class GuestSessionServiceTest {
             pool.shutdownNow();
         }
     }
+
+    /**
+     * The end of a guest's turn at the venue's kiosk in a session that is not only theirs (a DJ logged in on the tablet): the
+     * party's limit and requests forgotten, the session itself — and another party's — kept.
+     */
+    @Test
+    void forget_startsTheGuestAgainAtTheParty_andLeavesTheRestOfTheSession() {
+        service.tryAcquire(session, PARTY_CODE, settings);
+        service.tryAcquire(session, PARTY_CODE, settings);
+        service.rememberRequest(session, PARTY_CODE, 7L);
+        service.rememberRequest(session, "OTHER", 9L);
+        session.setAttribute("SPRING_SECURITY_CONTEXT", "the DJ's login");
+
+        service.forget(session, PARTY_CODE);
+
+        assertThat(service.tryAcquire(session, PARTY_CODE, settings)).as("the whole limit again").isEmpty();
+        assertThat(service.myRequestIds(session, PARTY_CODE)).isEmpty();
+        assertThat(service.myRequestIds(session, "OTHER")).containsExactly(9L);
+        assertThat(session.getAttribute("SPRING_SECURITY_CONTEXT")).isEqualTo("the DJ's login");
+    }
 }
