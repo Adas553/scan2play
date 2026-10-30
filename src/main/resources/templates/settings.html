@@ -47,8 +47,8 @@
 
         <!--/* "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, Polish time, either empty —
              for whoever may open and close it (OPEN_CLOSE), any plan. First: what a DJ sets before an evening. Sent in the background
-             (schedule.js): the server answers with this card alone (the fragment), unfolded, saying what was saved or why not (the
-             fields as typed), and it takes this one's place — the page does not move. Without the script, a page load back here. The
+             (schedule.js): the server answers with this card alone (the fragment), unfolded, the plan as saved — "✓" on "Zapisz" for a
+             moment, as every card — or why not under it (the fields as typed), and it takes this one's place — the page does not move. Without the script, a page load back here. The
              quick choices fill the fields from the server's today and tomorrow (schedule.js); "✕" beside a planned moment is a form of
              its own below the card's form, so Enter in a field saves rather than cancels. */-->
         <details th:fragment="partyHoursCard" th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard"
@@ -60,10 +60,6 @@
                       th:text="${!schedule.any()} ? #{settings.hours.none} : (${schedule.openFirst} ? ${schedule.openText} : ${schedule.closeText})">Not set</span>
             </summary>
             <div class="s2p-fold-body">
-            <div th:if="${scheduleError != null}" class="alert alert-danger py-2 mb-3" role="alert" id="partyHoursError" tabindex="-1"
-                 th:text="#{${scheduleError}}">That time has passed.</div>
-            <div th:if="${scheduleSaved != null and scheduleError == null}" class="alert alert-success py-2 mb-3" role="status" tabindex="-1"
-                 id="partyHoursSaved" th:text="#{settings.hours.saved}">Saved.</div>
             <p class="s2p-card-help mb-1" th:text="#{settings.hours.help}">The party opens and closes by itself…</p>
             <!--/* follows "Zakończ / Wznów" pressed on this page (common.js showPartyActive) */-->
             <p class="small text-light mb-3" id="partyHoursNow"
@@ -86,12 +82,12 @@
                     <div class="s2p-hours-fields">
                         <div class="s2p-hours-day">
                             <label th:for="${kind} + 'Date'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.date}">Day</label>
-                            <input type="date" class="form-control bg-black text-light border-secondary" th:id="${kind} + 'Date'"
+                            <input type="date" class="form-control form-control-sm bg-black text-light border-secondary" th:id="${kind} + 'Date'"
                                    th:name="${kind} + 'Date'" th:value="${typed[isOpen ? 0 : 2]}" th:min="${schedule.today}">
                         </div>
                         <div class="s2p-hours-time">
                             <label th:for="${kind} + 'Time'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.time}">Time</label>
-                            <input type="time" class="form-control bg-black text-light border-secondary" th:id="${kind} + 'Time'"
+                            <input type="time" class="form-control form-control-sm bg-black text-light border-secondary" th:id="${kind} + 'Time'"
                                    th:name="${kind} + 'Time'" th:value="${typed[isOpen ? 1 : 3]}" step="60">
                         </div>
                     </div>
@@ -103,7 +99,10 @@
                     </div>
                 </fieldset>
                 </th:block>
-                <button type="submit" class="btn btn-sm btn-outline-light s2p-hours-save" id="partyHoursSave" th:text="#{settings.hours.save}">Save</button>
+                <!--/* as every card: "✓" / "✗" on the button for a moment (schedule.js), why not in the red line under it */-->
+                <button type="submit" class="btn btn-sm btn-outline-light" id="partyHoursSave" th:text="#{settings.hours.save}">Save</button>
+                <div th:if="${scheduleError != null}" class="small text-danger mt-1" role="alert" id="partyHoursError" tabindex="-1"
+                     th:text="#{${scheduleError}}">That time has passed.</div>
             </form>
             <form th:each="kind : ${ {'open', 'close'} }" th:id="${kind} + 'HoursCancel'" th:action="@{/dj/dashboard/schedule}"
                   method="POST" class="d-none">

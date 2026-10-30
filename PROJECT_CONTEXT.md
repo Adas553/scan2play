@@ -651,7 +651,8 @@ whoever may open and close the party (OPEN_CLOSE — the organiser, and the staf
 day and a time in Polish time, either empty; quick choices "dziś 20:00", "jutro 20:00" / "dziś 23:00", "jutro 3:00" fill the fields from
 the server's today (`schedule.js`); "Zapisz" and the card's "✕" are sent in the background — the server answers with the card alone
 (the fragment `settings :: partyHoursCard`), its line and body take the old ones' place and the page does not move (a page load scrolled
-to the card: the screen jumped; without the script it still is one) —, and the card says "Zapisano." or why not
+to the card: the screen jumped; without the script it still is one) —; as every card, "✓" on its small "Zapisz" for a moment, or "✗"
+and why in the red line under it
 (`PartySchedule.Problem`: half a moment, a moment past or more than a year ahead, both at once, or one that would change nothing — "Otwórz
 o" while the party is open with no close before it, "Zamknij o" while closed) with the fields as typed. A time the clocks skip in spring
 is the same time after the change; one they go through twice in autumn the first. "Otwórz o" always on top, "Zamknij o" under it (the

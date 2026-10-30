@@ -205,7 +205,7 @@ class SettingsPageRenderTest {
     }
 
     /**
-     * "Zapisz" sent in the background: the answer is the card alone — no page, no heading —, unfolded, "Zapisano.", the plan as
+     * "Zapisz" sent in the background: the answer is the card alone — no page, no heading —, unfolded, the plan as
      * saved; or why not with the fields as typed. {@code settings-hours-answer-saved.html} / {@code -refused.html} for the stand-in.
      */
     @Test
@@ -215,14 +215,15 @@ class SettingsPageRenderTest {
         String saved = renderHoursAnswer(party, Map.of("openDate", "2026-10-30", "openTime", "21:00", "closeDate", "2026-10-31",
                 "closeTime", "04:00"));
         assertThat(saved.trim()).startsWith("<details").endsWith("</details>").doesNotContain("<html", "djTabBar", "hostListsCard");
-        assertThat(saved).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSaved\"", ">Zapisano.<",
+        assertThat(saved).doesNotContain("partyHoursError", "Zapisano");
+        assertThat(saved).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSave\"",
                 ">⏰ Otworzy się dziś o 21:00<", ">⏰ Zamknie się jutro o 4:00<", "name=\"openTime\" value=\"21:00\"",
                 "action=\"/dj/dashboard/schedule\"", "id=\"openHoursCancel\"");
         write("settings-hours-answer-saved.html", saved);
 
         String refused = renderHoursAnswer(party(), Map.of("openDate", "2026-10-30", "openTime", "11:30"));
         assertThat(refused).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursError\"",
-                ">Ta pora już minęła: wybierz późniejszą.<", "name=\"openTime\" value=\"11:30\"").doesNotContain("partyHoursSaved");
+                ">Ta pora już minęła: wybierz późniejszą.<", "name=\"openTime\" value=\"11:30\"");
         write("settings-hours-answer-refused.html", refused);
     }
 
@@ -477,12 +478,15 @@ class SettingsPageRenderTest {
                 Map.of("scheduleError", "schedule.error.past", "scheduleTyped", new String[]{"2026-10-29", "20:00", "", ""}));
 
         assertThat(html).contains("id=\"partyHoursCard\" open=\"open\"", ">Ta pora już minęła: wybierz późniejszą.<",
-                "name=\"openDate\" value=\"2026-10-29\"", "name=\"closeDate\" value=\"\"")
-                .doesNotContain("id=\"partyHoursSaved\"");
+                "name=\"openDate\" value=\"2026-10-29\"", "name=\"closeDate\" value=\"\"",
+                "class=\"small text-danger mt-1\" role=\"alert\" id=\"partyHoursError\"");
+        assertThat(html.indexOf("id=\"partyHoursError\"")).as("why: under \"Zapisz\", as every card")
+                .isGreaterThan(html.indexOf("id=\"partyHoursSave\""));
         write("settings-hours-error.html", html);
 
         assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), mock(DjService.class),
-                Map.of("scheduleSaved", true))).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSaved\"", ">Zapisano.<");
+                Map.of("scheduleSaved", true))).as("saved: the card open, no sentence — \"✓\" on the button, as every card")
+                .contains("id=\"partyHoursCard\" open=\"open\"").doesNotContain("id=\"partyHoursError\"", "Zapisano");
     }
 
     @Test

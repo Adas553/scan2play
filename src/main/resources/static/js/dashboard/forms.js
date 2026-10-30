@@ -117,7 +117,7 @@ function pathOf(form) {
  * The button says ✓ (saved) or ✗ (not) for a moment, then its own label again — its markup, not only its text ("Zakończ imprezę"
  * has a long and a short label in spans). A second answer within the moment keeps the first label.
  */
-function flash(btn, ok) {
+export function flash(btn, ok) {
     if (!btn) return;
     if (btn.s2pLabel === undefined) btn.s2pLabel = btn.innerHTML;
     const style = ok ? 'btn-success' : 'btn-danger';
