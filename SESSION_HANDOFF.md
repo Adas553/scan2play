@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-28
+# Session Handoff — 2026-10-30
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`,
@@ -10,10 +10,20 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Start here
 
-- **2026-10-28 — the state.** `main` = `dev` + the release merge #187 (`6318a28`), deployed 2026-10-28 15:53 UTC, SUCCESS. Checked
-  (Railway, read only): started in 5.5 s, Flyway validated 48 migrations and applied none (none in the release), the owner's first
-  minutes on `/dj/dashboard`, the History tab and `/dj/settings` all 200, the new assets under the deploy's version. The public pages
-  were not curled from the cloud session (its network refuses `www.scan2play.com.pl`): curl them without cookies to the page's end.
+- **2026-10-30 — the state.** `main` = `dev` + the release merge #209 (`c8b1fe7`), deployed 2026-10-30 15:26 UTC, SUCCESS. Checked
+  (Railway, read only): started in 5.4 s, Flyway validated 56 migrations and applied none. V55 came with #207 (`bfab063`, deployed
+  13:28 UTC): "Successfully applied 1 migration … now at version v55" (0.028 s). **The party hours work on production:** the owner's
+  party planned at 13:51 UTC (open 20:00, close 23:00 Polish time), the job logged "Party [...] opened by its plan" at 19:00:00.019 UTC
+  — the minute's first second. Still to see once: the planned close ("closed by its plan" at 22:00 UTC that evening) and the card's
+  save in place (#209) on a phone. The public pages were not curled from the cloud session (its network refuses
+  `www.scan2play.com.pl`): curl them without cookies to the page's end.
+- **Released 2026-10-30:** #207 "Godziny imprezy" (V55; item 5 below) and #209 its card saving in place, as every card (no jump of the
+  screen, "✓" / "✗" on its small "Zapisz"). Released before it the same day and the day before (other sessions): #199 the poster
+  heading's colour, #202 the QR print's editor after its review, #205 the table tent centred on a phone and the tips said to go 100 %
+  to the DJ.
+- **The use on 2026-10-30** (Railway's logs, read only): the owner's account alone on the panel; no guest's request all day; the
+  demo opened by the owner and by one visitor on an Android phone (10:58 Polish time, three loads, nothing sent); Googlebot crawling
+  `/`, `/demo` and the assets in the evening; a scanner asking for WordPress paths (404).
 - **Released 2026-10-28** (#186 / #187, the review of the DJ's panel against TipTunes and Rekwest, 10 commits): one heading and tabs
   "Panel DJ-a | Historia | Ustawienia" on every DJ page (a tab opens its page at the top), the devices' own fonts named
   (`-apple-system` … Arial — never `system-ui` first: DejaVu on GitHub's runner broke three one-line layouts), one accent (cyan; green a
@@ -29,7 +39,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   `window.innerWidth`; (3) after a release, curl production without cookies to the page's end, not only for a 200; (4) a layout that
   must stay on one line: run its scenario with the runner's fonts too — locally take Inter out of fontconfig (`FONTCONFIG_FILE` with a
   `<rejectfont>` globbing Inter's directory, e.g. `/usr/share/fonts/opentype/inter/*`, before the `<include>` of `/etc/fonts/fonts.conf`
-  — a glob `*Inter*` rejected nothing; check `fc-list | grep -ci inter` is 0), what is left is DejaVu and Liberation, as on GitHub.
+  — a glob `*Inter*` rejected nothing; check `fc-list | grep -ci inter` is 0), what is left is DejaVu and Liberation, as on GitHub. (5) in a cloud session the browser tests need a short `TMPDIR`
+  (`/tmp/s2p`): Chrome's profile under the long scratchpad path passes the length limit of a UNIX socket's name and the browser aborts
+  (code -6); the container's PostgreSQL (16) may stop between runs — `pg_ctlcluster 16 main start`; an `*IT` run failing everywhere at
+  once is that, not the code.
 
 ## Next (the owner's ideas, 2026-10-28)
 
@@ -74,9 +87,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    prints). To try on a phone: "Do internetu" opens the share sheet (Instagram) on Android and an iPhone.
 4. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
    on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.
-5. **"Godziny imprezy" — the party opens and closes by itself** (V55; the owner, 2026-10-30) — **built on
-   `claude/serene-fermat-6gp9b8`, waiting for the owner's review** (then a PR to `dev`, a release; V55 on production: check Flyway's
-   line once, and the job's first "Party [...] opened by its plan" in Railway's log). The owner's picks: one-off "Otwórz o" / "Zamknij o"
+5. **"Godziny imprezy" — the party opens and closes by itself** (V55; the owner, 2026-10-30) — **released 2026-10-30** (#206 / #207,
+   then #208 / #209: the card saves in place and looks as every card; V55 applied, the first planned open applied on the minute —
+   above). The job runs every minute on a scheduler of two threads (`spring.task.scheduling.pool.size=2`), the due rows picked once in
+   a CTE (an `IN (SELECT … LIMIT … SKIP LOCKED)` ran again per row under a nested-loop plan — `PartyScheduleIT`). The owner's picks: one-off "Otwórz o" / "Zamknij o"
    first (a weekly plan for clubs later, its own migration, writing into the same two columns); a manual change wins until the next
    planned moment; the guests read "Prośby od 20:00" / "Prośby od soboty, 20:00"; whoever has OPEN_CLOSE sets it, plan Free, the first
    card of "Ustawienia imprezy" with the panel's line "⏰ Zamknie się jutro o 3:00 ✕", quick choices "dziś 20:00" / "jutro 3:00".
