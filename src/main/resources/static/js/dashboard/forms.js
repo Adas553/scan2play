@@ -11,8 +11,8 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account, the hosts' link, the party's new code (V49), the party's hours (V55: the card comes back saying
-// what was saved or why not), the panel switcher, a pasted invitation, leaving a
+// Excluded: logout, delete-account, the hosts' link, the party's new code (V49), the party's hours (V55: schedule.js sends it and puts
+// the server's card in place; without that script, a page load back to the card), the panel switcher, a pasted invitation, leaving a
 // staff (V30) — a page reload / redirect is expected: the new link or code, the list or the other party's panel is shown at once — and
 // deleting the DJ's library (V41) or logo (V45): library.js / logo.js send it and bring its card again; should that script be missing,
 // the page loads.

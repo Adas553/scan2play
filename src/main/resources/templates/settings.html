@@ -46,11 +46,12 @@
     <div class="d-flex flex-column gap-3" id="settingsCards">
 
         <!--/* "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, Polish time, either empty —
-             for whoever may open and close it (OPEN_CLOSE), any plan. First: what a DJ sets before an evening. A page load (forms.js
-             leaves /dj/dashboard/schedule alone): the page comes back here, unfolded, with what was saved or why not (the fields as
-             typed). The quick choices fill the fields from the server's today and tomorrow (schedule.js); "✕" beside a planned moment
-             is a form of its own below the card's form, so Enter in a field saves rather than cancels. */-->
-        <details th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard"
+             for whoever may open and close it (OPEN_CLOSE), any plan. First: what a DJ sets before an evening. Sent in the background
+             (schedule.js): the server answers with this card alone (the fragment), unfolded, saying what was saved or why not (the
+             fields as typed), and it takes this one's place — the page does not move. Without the script, a page load back here. The
+             quick choices fill the fields from the server's today and tomorrow (schedule.js); "✕" beside a planned moment is a form of
+             its own below the card's form, so Enter in a field saves rather than cancels. */-->
+        <details th:fragment="partyHoursCard" th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard"
                  th:attr="open=${scheduleSaved != null or scheduleError != null} ? 'open' : null"
                  th:with="typed=${scheduleTyped != null ? scheduleTyped : {schedule.openDate, schedule.openTime, schedule.closeDate, schedule.closeTime}}">
             <summary class="s2p-fold-summary">
@@ -59,9 +60,9 @@
                       th:text="${!schedule.any()} ? #{settings.hours.none} : (${schedule.openFirst} ? ${schedule.openText} : ${schedule.closeText})">Not set</span>
             </summary>
             <div class="s2p-fold-body">
-            <div th:if="${scheduleError != null}" class="alert alert-danger py-2 mb-3" role="alert" id="partyHoursError"
+            <div th:if="${scheduleError != null}" class="alert alert-danger py-2 mb-3" role="alert" id="partyHoursError" tabindex="-1"
                  th:text="#{${scheduleError}}">That time has passed.</div>
-            <div th:if="${scheduleSaved != null and scheduleError == null}" class="alert alert-success py-2 mb-3" role="status"
+            <div th:if="${scheduleSaved != null and scheduleError == null}" class="alert alert-success py-2 mb-3" role="status" tabindex="-1"
                  id="partyHoursSaved" th:text="#{settings.hours.saved}">Saved.</div>
             <p class="s2p-card-help mb-1" th:text="#{settings.hours.help}">The party opens and closes by itself…</p>
             <!--/* follows "Zakończ / Wznów" pressed on this page (common.js showPartyActive) */-->

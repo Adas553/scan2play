@@ -649,7 +649,9 @@ plakietką „bez oceny AI” — przejrzyj je przed zagraniem.", gone with the 
 **The party opens and closes by itself** (V55, "Godziny imprezy"; the owner, 2026-10-30): the first card of "Ustawienia imprezy", for
 whoever may open and close the party (OPEN_CLOSE — the organiser, and the staff given it), any plan. "Otwórz o" and "Zamknij o", each a
 day and a time in Polish time, either empty; quick choices "dziś 20:00", "jutro 20:00" / "dziś 23:00", "jutro 3:00" fill the fields from
-the server's today (`schedule.js`); "Zapisz" is a page load back to the card, which says "Zapisano." or why not
+the server's today (`schedule.js`); "Zapisz" and the card's "✕" are sent in the background — the server answers with the card alone
+(the fragment `settings :: partyHoursCard`), its line and body take the old ones' place and the page does not move (a page load scrolled
+to the card: the screen jumped; without the script it still is one) —, and the card says "Zapisano." or why not
 (`PartySchedule.Problem`: half a moment, a moment past or more than a year ahead, both at once, or one that would change nothing — "Otwórz
 o" while the party is open with no close before it, "Zamknij o" while closed) with the fields as typed. A time the clocks skip in spring
 is the same time after the change; one they go through twice in autumn the first. "Otwórz o" always on top, "Zamknij o" under it (the
@@ -1438,7 +1440,7 @@ GuestQueueService          → DjService
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
-| POST | `/dj/dashboard/schedule` | "Godziny imprezy" (V55, OPEN_CLOSE, any plan): `openDate`, `openTime`, `closeDate`, `closeTime` (Polish time, empty = none) or `cancel=open\|close`; a page load back to `/dj/settings#partyHoursCard` with `scheduleSaved` or `scheduleError` (+ the fields as typed) |
+| POST | `/dj/dashboard/schedule` | "Godziny imprezy" (V55, OPEN_CLOSE, any plan): `openDate`, `openTime`, `closeDate`, `closeTime` (Polish time, empty = none) or `cancel=open\|close`; with `X-Requested-With: fetch` (schedule.js) the card alone (`settings :: partyHoursCard`) with `scheduleSaved` or `scheduleError` (+ the fields as typed), else a page load back to `/dj/settings#partyHoursCard` with them as flash attributes |
 | POST | `/dj/dashboard/schedule/cancel` | the panel's "✕" beside a planned moment (`event=open\|close`, OPEN_CLOSE), in the background |
 
 ---

@@ -50,7 +50,7 @@
 
     S2P.scenario({
         name: 'schedule-quick-choices',
-        title: '"Godziny imprezy": the first card, folded to the next moment; "jutro 3:00" / "dziś 20:00" fill the day and the time from the server\'s today; "Zapisz" is a page load with the four fields',
+        title: '"Godziny imprezy": the first card, folded to the next moment; "jutro 3:00" / "dziś 20:00" fill the day and the time from the server\'s today; "Zapisz" sends the four fields in the background',
         page: 'settings-hours',
         run: async function (t) {
             const loads = catchLoads();
@@ -74,16 +74,18 @@
             t.check('a quick choice sends nothing', loads.length === 0);
 
             document.getElementById('partyHoursSave').click();
-            await t.sleep(300);
-            t.step('"Zapisz": a page load of the form with the party and the four fields', loads, [['/dj/dashboard/schedule',
-                { partyCode: 'HARN1', openDate: '2026-10-30', openTime: '20:00', closeDate: '2026-10-30', closeTime: '23:00' }]]);
-            t.step('not sent in the background', await t.stand.count('POST /dj/dashboard/schedule'), 0);
+            await t.waitFor(function () { return !!document.getElementById('partyHoursSaved'); }, 'the answer in place', 3000);
+            const sent = await t.stand.requests('POST /dj/dashboard/schedule');
+            t.step('"Zapisz": sent once in the background with the party, the four fields, the token', sent.map(function (r) { return r.q; }),
+                [{ partyCode: 'HARN1', openDate: '2026-10-30', openTime: '20:00', closeDate: '2026-10-30', closeTime: '23:00',
+                    'X-Requested-With': 'fetch', 'X-CSRF-TOKEN': 'harness-csrf-token' }]);
+            t.step('no page load', loads, []);
         }
     });
 
     S2P.scenario({
         name: 'schedule-card-cancel',
-        title: '"Godziny imprezy": "✕" beside a planned moment is a page load of its own form — that moment only, none of the typed fields',
+        title: '"Godziny imprezy": "✕" beside a planned moment is a form of its own sent in the background — that moment only, none of the typed fields',
         page: 'settings-hours',
         run: async function (t) {
             const loads = catchLoads();
@@ -94,8 +96,11 @@
                 [true, true, Node.DOCUMENT_POSITION_FOLLOWING]);
             document.getElementById('openTime').value = '21:00';
             planned.querySelector('button').click();
-            await t.sleep(300);
-            t.step('the close cancelled alone', loads, [['/dj/dashboard/schedule', { partyCode: 'HARN1', cancel: 'close' }]]);
+            await t.waitFor(function () { return !!document.getElementById('partyHoursSaved'); }, 'the answer in place', 3000);
+            const sent = await t.stand.requests('POST /dj/dashboard/schedule');
+            t.step('the close cancelled alone, in the background', sent.map(function (r) { return [r.q.partyCode, r.q.cancel, r.q.openTime]; }),
+                [['HARN1', 'close', undefined]]);
+            t.step('no page load', loads, []);
         }
     });
 
@@ -312,6 +317,71 @@
             await t.waitFor(function () { return reloads.length > 0; }, 'the page loaded again', 3000);
             t.step('a reload', reloads, ['reload']);
             t.step('the words already follow', document.getElementById('partyHoursNow').textContent.trim(), 'Teraz impreza jest otwarta.');
+        }
+    });
+
+    /** The page scrolled so the card's "Zapisz" is low on the screen, as a DJ who filled the fields has it. */
+    function scrolledToTheSave() {
+        unfold();
+        const save = document.getElementById('partyHoursSave');
+        // instant: the page scrolls smoothly (app.css), and a reading during the glide is no place at all
+        window.scrollTo({ top: window.scrollY + save.getBoundingClientRect().top - window.innerHeight / 2, behavior: 'instant' });
+        return window.scrollY;
+    }
+
+    S2P.scenario({
+        name: 'schedule-save-stays-in-place',
+        title: '"Godziny imprezy" on a phone: "Zapisz" — the server\'s card takes the old one\'s place, open, "Zapisano." said and focused; the screen does not jump',
+        page: 'settings-hours',
+        viewport: '390,844',
+        run: async function (t) {
+            const loads = catchLoads();
+            const before = scrolledToTheSave();
+            const cardTop = document.getElementById('partyHoursCard').getBoundingClientRect().top;
+            document.getElementById('partyHoursSave').click();
+            await t.waitFor(function () { return !!document.getElementById('partyHoursSaved'); }, 'the answer in place', 3000);
+            const card = document.getElementById('partyHoursCard');
+            t.step('the new card, open, saying so', [card.open, document.getElementById('partyHoursSaved').textContent.trim(),
+                document.activeElement && document.activeElement.id], [true, 'Zapisano.', 'partyHoursSaved']);
+            t.step('the plan as saved', document.getElementById('openTime').value, '21:00');
+            t.step('the page where it was (± 2 px), the card too', [Math.abs(window.scrollY - before) <= 2,
+                Math.abs(card.getBoundingClientRect().top - cardTop) <= 2], [true, true]);
+            t.check('scrolled down to "Zapisz" first (a place to keep)', before > 100);
+            t.step('no page load', loads, []);
+            document.querySelector('[data-hours-fill="close"][data-day="tomorrow"]').click();
+            t.step('the quick choices work in the new card', document.getElementById('closeTime').value, '03:00');
+        }
+    });
+
+    S2P.scenario({
+        name: 'schedule-refused-in-place',
+        title: '"Godziny imprezy": a plan refused — why, in the new card, the fields as typed; the screen does not jump',
+        page: 'settings-hours',
+        setup: { scheduleAnswer: 'settings-hours-answer-refused' },
+        run: async function (t) {
+            const before = scrolledToTheSave();
+            document.getElementById('partyHoursSave').click();
+            await t.waitFor(function () { return !!document.getElementById('partyHoursError'); }, 'the answer in place', 3000);
+            t.step('why, focused', [document.getElementById('partyHoursError').textContent.trim(), document.activeElement.id],
+                ['Ta pora już minęła: wybierz późniejszą.', 'partyHoursError']);
+            t.step('as typed', document.getElementById('openTime').value, '11:30');
+            t.step('the page where it was', Math.abs(window.scrollY - before) <= 2, true);
+        }
+    });
+
+    S2P.scenario({
+        name: 'schedule-save-lost',
+        title: '"Godziny imprezy": "Zapisz" that the server refuses (a session ran out) — the card stays as typed, the page\'s notice says it was not saved',
+        page: 'settings-hours',
+        setup: { postStatus: { '/dj/dashboard/schedule': 403 } },
+        run: async function (t) {
+            unfold();
+            document.getElementById('openTime').value = '22:15';
+            document.getElementById('partyHoursSave').click();
+            await t.waitFor(function () { return shows(document.querySelector('[data-form-refused]')); }, 'the notice', 3000);
+            t.step('the typed time kept, nothing said in the card', [document.getElementById('openTime').value,
+                !!document.getElementById('partyHoursSaved')], ['22:15', false]);
+            t.step('the button usable again', document.getElementById('partyHoursSave').disabled, false);
         }
     });
 
