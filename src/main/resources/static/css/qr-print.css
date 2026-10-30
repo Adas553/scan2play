@@ -636,6 +636,16 @@ body {
     --script: "S2P Script", "Segoe Script", cursive;
     --heading-font: var(--sans);
     --line-font: var(--sans);
+    /* "Rozmiar nagłówka" (V54): every heading's size times this — a long one still made smaller to its lines (qr-print.js) */
+    --heading-scale: 1;
+}
+
+body.size-small {
+    --heading-scale: 0.85;
+}
+
+body.size-large {
+    --heading-scale: 1.2;
 }
 
 body.theme-elegant {
@@ -916,7 +926,7 @@ body:not(.theme-classic) .card {
 
 .poster h1 {
     margin: 0 0 6mm;
-    font-size: 30pt;
+    font-size: calc(30pt * var(--heading-scale));
     line-height: 1.2;
 }
 
@@ -925,7 +935,7 @@ body:not(.theme-classic) .card {
 }
 
 .poster h1 .second {
-    font-size: 22pt;
+    font-size: calc(22pt * var(--heading-scale));
     font-weight: 600;
 }
 
@@ -941,7 +951,7 @@ body:not(.theme-classic) .card {
 
 /* the DJ's own heading a little smaller than ours: 40 characters still two lines, the poster still one A4 page */
 .poster h1 .own {
-    font-size: 26pt;
+    font-size: calc(26pt * var(--heading-scale));
     overflow-wrap: anywhere;
 }
 
@@ -1127,7 +1137,7 @@ body:not(.theme-classic) .card {
 }
 
 .card .title {
-    font-size: 11pt;
+    font-size: calc(11pt * var(--heading-scale));
     font-weight: 700;
     line-height: 1.2;
 }
@@ -1413,7 +1423,7 @@ body:not(.theme-classic) .card {
 }
 
 .face .title {
-    font-size: 20pt;
+    font-size: calc(20pt * var(--heading-scale));
     font-weight: 700;
     line-height: 1.15;
 }
@@ -1424,7 +1434,7 @@ body:not(.theme-classic) .card {
 
 .face .title .second {
     margin-top: 1.5mm;
-    font-size: 15pt;
+    font-size: calc(15pt * var(--heading-scale));
     font-weight: 600;
 }
 

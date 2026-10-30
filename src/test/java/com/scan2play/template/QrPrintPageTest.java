@@ -390,6 +390,18 @@ class QrPrintPageTest {
                 "<option value=\"THEME\" selected=\"selected\">The theme&#39;s</option>").doesNotContain("font-");
     }
 
+    /** The heading's size (V54): the page's class and the picked radio; as the theme has it no class. */
+    @Test
+    void theHeadingsSize_isTheOneTheDjPicked() throws IOException {
+        String large = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY)
+                .posterSize(com.scan2play.model.PosterSize.LARGE).build()).replaceAll("\\s+", " ");
+        assertThat(large).contains("class=\"layout-poster theme-classic size-large has-editor\"",
+                "name=\"size\" value=\"LARGE\" checked=\"checked\"", ">Większy</span>", ">Mniejszy</span>", ">Zwykły</span>",
+                "<details id=\"posterMoreLook\" class=\"editor-more\" open=\"open\">");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).contains("name=\"size\" value=\"NORMAL\" checked=\"checked\"")
+                .doesNotContain("size-");
+    }
+
     /**
      * "Nagłówek na okazję": six occasions, each text in the print's language — Polish, English, or both at once — and never longer than
      * the heading's column (the editor puts it in the heading as if typed).

@@ -57,6 +57,7 @@
             accent: heading.length ? getComputedStyle(heading[0].el).color : '#111111',
             theme: (document.body.className.match(/\btheme-(\w+)/) || [])[1] || 'classic',
             gold: style.getPropertyValue('--gold').trim() || '#a8842c',
+            headingScale: parseFloat(style.getPropertyValue('--heading-scale')) || 1,   // "Rozmiar nagłówka" (V54)
             badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-own'),
             font: paperFont,
             headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont,
@@ -139,7 +140,7 @@
         const script = /S2P Script/.test(c.headingFont) ? 1.3 : 1;
         c.heading.forEach(function (part, i) {
             const last = i === c.heading.length - 1;
-            block(part.text, (part.second ? (story ? 62 : 50) : (story ? 92 : 74)) * script, part.second ? 600 : 700, c.headingFont,
+            block(part.text, (part.second ? (story ? 62 : 50) : (story ? 92 : 74)) * script * c.headingScale, part.second ? 600 : 700, c.headingFont,
                 part.second ? c.muted : c.accent, last ? (story ? 34 : 24) : 10, 0, part.second ? 'second' : 'heading');
         });
         block(c.line, story ? 54 : 44, 600, c.lineFont, c.ink, story ? 48 : 30, 0, 'line');
@@ -321,7 +322,10 @@
                 ctx.fillText(item.text, centre, y + item.height * 0.8);
                 reach(ctx.measureText(item.text).width);
                 ctx.letterSpacing = '0px';
-                if (item.role === 'heading') layout.heading.push(item.text);
+                if (item.role === 'heading') {
+                    layout.heading.push(item.text);
+                    layout.headingPx = layout.headingPx || item.height / 1.18;
+                }
                 if (item.role === 'code') {
                     layout.code = item.text;
                     layout.codeFont = item.font;

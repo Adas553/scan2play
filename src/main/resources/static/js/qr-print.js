@@ -45,8 +45,11 @@
     /** A heading — large letters — stands out poorly from its paper under this contrast (WCAG's least for large text). */
     const WEAK = 3;
 
-    function showLook(theme, accent, font, paperColour, keepNote) {
+    function showLook(theme, accent, font, paperColour, keepNote, size) {
         const body = document.body;
+        if (size) {   // the heading's size (V54): as the theme has it has no class
+            body.className = body.className.replace(/\bsize-\w+\b/g, '').trim() + (size === 'NORMAL' ? '' : ' size-' + size.toLowerCase());
+        }
         if (theme) {
             body.className = body.className.replace(/\btheme-\w+\b/g, '').trim() + ' theme-' + theme.toLowerCase();
         }
@@ -346,12 +349,16 @@
     }
 
     function changeLook(keepNote) {
-        showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper(), keepNote === true);
+        showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper(), keepNote === true,
+            form.elements.size ? form.elements.size.value : null);
         fitTexts();   // another font, another width
     }
 
     form.elements.theme.addEventListener('change', changeLook);
     form.elements.font.addEventListener('change', changeLook);
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="size"]'), function (radio) {
+        radio.addEventListener('change', changeLook);
+    });
     Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
         radio.addEventListener('change', changeLook);
     });

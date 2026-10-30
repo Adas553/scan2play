@@ -140,6 +140,16 @@ class DjPartySettingsControllerPosterTest {
         assertThat(send(post("/dj/qr-print/settings").param("paper", "")).getPosterPaper()).isNull();
     }
 
+    /** The heading's size (V54): by its name; anything else as the theme has it. */
+    @Test
+    void theHeadingsSize_isSavedByName() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("size", "large")).getPosterSize()).isEqualTo(com.scan2play.model.PosterSize.LARGE);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("size", "HUGE")).getPosterSize()).isEqualTo(com.scan2play.model.PosterSize.NORMAL);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings")).getPosterSize()).isEqualTo(com.scan2play.model.PosterSize.NORMAL);
+    }
+
     /** The heading's font (V51): by its name; anything else the theme's. */
     @Test
     void theHeadingsFont_isSaved_aWrongOne_isTheThemes() throws Exception {
