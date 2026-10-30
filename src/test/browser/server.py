@@ -92,6 +92,8 @@ def default_state():
         'kioskVoteStatus': None,
         # what the kiosk's card on the settings page is answered with when sent in the background (cards-in-place.js)
         'kioskLinkAnswer': 'settings-kiosk-answer',
+        # what the hosts' link sent in the background is answered with: the settings page the real server redirects to
+        'hostLinkAnswer': 'settings-host-link-answer',
         # The X-Party-Schedule header of every poll answer (V55): the planned moments, "open:<epoch s>,close:<epoch s>" — None: no header
         'partySchedule': None,
         # what "Godziny imprezy" sent in the background is answered with (V55): a rendered card, settings-hours-answer-*.html
@@ -406,6 +408,8 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path.startswith('/k/') and path.endswith('/vote'):   # a 👍 at the kiosk (V56), sent by fetch
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+        if path == '/dj/dashboard/host-link':         # the hosts' link: sent by fetch (cards-in-place.js) or as a page load
+            fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/schedule':           # "Godziny imprezy" sent by fetch (V55): with its headers
@@ -459,6 +463,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/dj-links':           # the DJ's profiles: a redirect when saved, as the real server, or 400
             status = state.get('djLinksStatus', 302)
             return self._send(status, headers={'Location': '/dj/dashboard'}) if status == 302 else self._send(status)
+        if path == '/dj/dashboard/host-link' and fields.get('X-Requested-With') == 'fetch':
+            # the hosts' link sent in the background: the settings page the real server's redirect leads to (the box taken from it)
+            with open(os.path.join(stand.rendered, state['hostLinkAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path in ('/dj/dashboard/host-lists', '/dj/dashboard/host-link', '/dj/panel'):
             # the hosts' lists and link (V29), the panel switcher (V30): a redirect
             return self._send(302, headers={'Location': '/dj/dashboard'})

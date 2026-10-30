@@ -602,8 +602,9 @@ and "▾"; a tap unfolds it, and unfolded its state goes (the fields say it). Th
 what can be set (no row of jumps above it); "Obsługa" is a line of the same look with "›", leading to its page (`#staffRow`). The card
 the address names unfolds by itself (`js/folds.js`: `#libraryCard`, "Nowy link" → `#hostListsCard`, "Zainstaluj" under an empty queue → `#deviceCard`, an element
 inside a card too), the others stay folded; a form saved in the background leaves its card unfolded, and the library's card brought
-again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are page loads that come
-back here, at the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
+again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are sent in the background and
+the link's box comes back from the settings page the server redirects to, the lists as typed, the page not moved — `cards-in-place.js`,
+`data-in-place="hostLinkBox"`; without the script page loads back to the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
 one line with their windows, "Limity serwera: sieć 4/30 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
 network is: "Jedna sieć to np. Wi-Fi lokalu — wszyscy goście w nim liczą się razem."), **"To urządzenie"** (everyone's:
 the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"), and last **"Kod imprezy"**
@@ -680,8 +681,9 @@ hours — later, a migration of its own that writes the next moment into the sam
 phone ask for a song and vote. The card of "Ustawienia imprezy" (whoever has the permission KIOSK; without Pro the organiser sees the
 offer): "Utwórz link kiosku" — a secret `/k/{token}` (`kioskToken`), to copy and open on the tablet —, "Nowy link" (asks first: the old
 tablet's link dies) and "Wyłącz", sent in the background — the server's card takes the old one's place, "✓" on the button, the page
-does not move (`cards-in-place.js`, as "Godziny imprezy": a card with `data-saves-in-place` whose endpoint answers a fetch with the card
-alone); a tip for Guided Access (iPad) / screen pinning (Android). **The kiosk's page**
+does not move (`cards-in-place.js`, as "Godziny imprezy" and the hosts' link: a card with `data-saves-in-place` whose forms marked
+`data-in-place` are fetched; the answer — the card alone, or the settings page a redirect leads to — gives the card's state and its body,
+or the part the form names); a tip for Guided Access (iPad) / screen pinning (Android). **The kiosk's page**
 (`KioskController`, `kiosk.html`, `js/kiosk.js`; public, no login, `noindex`; a token that is no kiosk's, or a party without Pro, a 404):
 the request form as the party page's (the iTunes suggestions, the dedication when on) and beside it — on a tablet held across, else under
 it — the most wanted with 👍, as the TV screen; no link out (no profiles, tip link, footer). **A guest's turn is a session:** "Następny

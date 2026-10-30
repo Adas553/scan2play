@@ -65,7 +65,7 @@
             <p class="small text-light mb-3" id="partyHoursNow"
                th:attr="data-open=#{settings.hours.now.open},data-closed=#{settings.hours.now.closed}"
                th:text="${isActive} ? #{settings.hours.now.open} : #{settings.hours.now.closed}">The party is open now.</p>
-            <form th:action="@{/dj/dashboard/schedule}" method="POST" class="m-0" id="partyHoursForm"
+            <form th:action="@{/dj/dashboard/schedule}" method="POST" class="m-0" id="partyHoursForm" data-in-place
                   th:attr="data-today=${schedule.today},data-tomorrow=${schedule.tomorrow}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <!--/* "Otwórz o" on top, "Zamknij o" under it, whichever comes first (the folded line says the next) */-->
@@ -105,7 +105,7 @@
                      th:text="#{${scheduleError}}">That time has passed.</div>
             </form>
             <form th:each="kind : ${ {'open', 'close'} }" th:id="${kind} + 'HoursCancel'" th:action="@{/dj/dashboard/schedule}"
-                  method="POST" class="d-none">
+                  method="POST" class="d-none" data-in-place>
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <input type="hidden" name="cancel" th:value="${kind}">
             </form>
@@ -118,7 +118,7 @@
         <!--/* Without the Pro plan (V35, the organiser only): the card says so in place of its form — and that the lists wait, when
              there are some. The staff of a party without Pro do not see the card. */-->
         <details th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}"
-                 class="card bg-dark border-secondary s2p-fold" id="hostListsCard">
+                 class="card bg-dark border-secondary s2p-fold" id="hostListsCard" data-saves-in-place>
             <summary class="s2p-fold-summary">
                 <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
                 <span class="s2p-fold-state" th:unless="${plan.pro('HOST_LISTS')}"
@@ -162,16 +162,17 @@
                 </div>
                 <!--/* the link's two buttons in a row of their own: on a phone each half of it */-->
                 <div class="s2p-btn-row">
-                    <!--/* a full reload (forms.js leaves /host-link alone): the new link is shown at once, here again. The field is "link",
+                    <!--/* sent in the background (cards-in-place.js): the settings page the server answers with gives this box anew — the
+                         new link at once, the lists as typed, the page not moved; without the script a full reload. The field is "link",
                          not "action": an input named "action" hides the form's own form.action from the scripts */-->
-                    <form th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0"
+                    <form th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0" data-in-place="hostLinkBox"
                           th:attr="data-confirm=${hostLink != null} ? #{dashboard.host.link.renew.confirm} : null">
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
                         <input type="hidden" name="link" value="new">
                         <button type="submit" id="hostLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
                                 th:text="${hostLink != null} ? #{dashboard.host.link.renew} : #{dashboard.host.link.create}">Make a link</button>
                     </form>
-                    <form th:if="${hostLink != null}" th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0">
+                    <form th:if="${hostLink != null}" th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0" data-in-place="hostLinkBox">
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
                         <input type="hidden" name="link" value="off">
                         <button type="submit" id="hostLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{dashboard.host.link.off}">Turn off</button>
@@ -210,14 +211,14 @@
                    th:text="#{settings.kiosk.open}">Open the kiosk</a>
             </div>
             <div class="s2p-btn-row">
-                <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0"
+                <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0" data-in-place
                       th:attr="data-confirm=${kioskLink != null} ? #{settings.kiosk.renew.confirm} : null">
                     <input type="hidden" name="partyCode" th:value="${partyCode}">
                     <input type="hidden" name="link" value="new">
                     <button type="submit" id="kioskLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
                             th:text="${kioskLink != null} ? #{settings.kiosk.renew} : #{settings.kiosk.create}">Make the kiosk link</button>
                 </form>
-                <form th:if="${kioskLink != null}" th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0">
+                <form th:if="${kioskLink != null}" th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0" data-in-place>
                     <input type="hidden" name="partyCode" th:value="${partyCode}">
                     <input type="hidden" name="link" value="off">
                     <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off}">Turn off</button>

@@ -257,7 +257,7 @@ class SettingsPageRenderTest {
                 .doesNotContain("id=\"backToPanel\"");
         assertThat(html.split("<script src=\"/js/dj-nav.js\">", -1)).as("dj-nav.js once: a second copy would ask every question twice").hasSize(2);
         assertThat(html).as("every card folded to its heading and its state (the panel's rows'), the card the address names unfolded by folds.js")
-                .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\">",
+                .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\">",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"deviceCard\">",
                         "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · napiwki<",
@@ -550,6 +550,20 @@ class SettingsPageRenderTest {
                 "value=\"http://localhost:8080/k/" + row.getKioskToken() + "\"", "id=\"kioskLinkNewBtn\"", ">Nowy link<")
                 .doesNotContain("??");
         write("settings-kiosk-answer.html", html);
+    }
+
+    /**
+     * The hosts' link made again (V29): the page "Ustawienia imprezy" the server redirects to, with the new link — what
+     * cards-in-place.js takes the link's box from. {@code settings-host-link-answer.html} for the stand-in.
+     */
+    @Test
+    void theHostsLinkMadeAgain_isOnThePageTheServerAnswersWith() throws IOException {
+        PartySettingsEntity renewed = party();
+        renewed.setHostToken("New_456-abcNew_456-abc");
+        String html = render(new PartyStaffService.Access(renewed, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        assertThat(html).contains("id=\"hostListsCard\" data-saves-in-place", "id=\"hostLinkBox\"",
+                "value=\"http://localhost:8080/h/New_456-abcNew_456-abc\"", "data-in-place=\"hostLinkBox\"");
+        write("settings-host-link-answer.html", html);
     }
 
     @Test

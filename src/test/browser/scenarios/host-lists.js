@@ -1,10 +1,10 @@
 // The hosts' lists (V29) on the page "Ustawienia imprezy" (since 2026-10-10; the panel's settings before): the two lists side by side,
-// saved in the background like the panel's forms; the hosts' link, made or taken away with a full page load (the new link is shown at
-// once); its "Kopiuj" copies the hosts' link.
+// saved in the background like the panel's forms; the hosts' link, made or taken away in the background too — the link's box comes back
+// from the server's page, the lists as typed (cards-in-place.js); its "Kopiuj" copies the hosts' link.
 
 S2P.scenario({
     name: 'host-lists',
-    title: 'the hosts\' lists: "Zapisz" goes in the background with both lists; the hosts\' link reloads the page; "Kopiuj" copies it',
+    title: 'the hosts\' lists: "Zapisz" goes in the background with both lists; the hosts\' link too; "Kopiuj" copies it',
     page: 'settings',
     run: async function (t) {
         const handled = [];
@@ -36,9 +36,13 @@ S2P.scenario({
             return [r.q.blocked.replace(/\r\n/g, '\n'), r.q.wanted, r.q.partyCode];   // a form sends a textarea's lines as CRLF
         }), [['Akcent\nBaby Shark', 'Perfect', 'HARN1']]);
 
-        // --- the hosts' link: a full page load ---
+        // --- the hosts' link: in the background too, its box put in place (cards-in-place.js; host-link-in-place) ---
         document.getElementById('hostLinkOffBtn').click();
-        t.step('turning the link off is a page load (not sent in the background)', handled.shift(), ['/dj/dashboard/host-link', false]);
+        t.step('turning the link off goes in the background (the page stays)', handled.shift(), ['/dj/dashboard/host-link', true]);
+        await t.waitFor(function () {   // the server's page answers with a new link (the stand-in's): its box in place
+            const field = document.getElementById('hostLinkInput');
+            return field && field.value.indexOf('New_456') >= 0;
+        }, 'the link\'s box from the server', 3000);
 
         // --- "Kopiuj" of the hosts' link copies that link ---
         let copied = null;
@@ -49,5 +53,37 @@ S2P.scenario({
         document.querySelector('button[data-copy-target="hostLinkInput"]').click();
         await t.sleep(100);
         t.step('"Kopiuj" copies the hosts\' link', copied, document.getElementById('hostLinkInput').value);
+    }
+});
+
+S2P.scenario({
+    name: 'host-link-in-place',
+    title: 'the hosts\' link made again on a phone: asks first, sent in the background, the new link in its box, "✓" on the button — the lists as typed, the screen does not jump',
+    page: 'settings',
+    viewport: '390,844',
+    run: async function (t) {
+        const loads = [];
+        navigation.addEventListener('navigate', function (e) { loads.push(e.destination.url); e.preventDefault(); });
+        const asked = [];
+        window.confirm = function (text) { asked.push(text); return true; };
+        const card = document.getElementById('hostListsCard');
+        card.querySelector('summary').click();
+        document.getElementById('hostBlockedInput').value = 'Akcent';   // typed, not saved yet
+        const oldLink = document.getElementById('hostLinkInput').value;
+        const button = document.getElementById('hostLinkNewBtn');
+        window.scrollTo({ top: window.scrollY + button.getBoundingClientRect().top - window.innerHeight / 2, behavior: 'instant' });
+        const before = window.scrollY;
+        const cardTop = card.getBoundingClientRect().top;
+        button.click();
+        await t.waitFor(function () { return document.getElementById('hostLinkInput').value !== oldLink; }, 'the new link in place', 3000);
+        t.step('asked first', asked.length, 1);
+        t.step('the new link', document.getElementById('hostLinkInput').value, 'http://localhost:8080/h/New_456-abcNew_456-abc');
+        const fresh = document.getElementById('hostLinkNewBtn');
+        t.step('"✓" on the button, as every card', [fresh.textContent.trim(), fresh.classList.contains('btn-success')], ['✓', true]);
+        t.step('the lists as typed', document.getElementById('hostBlockedInput').value, 'Akcent');
+        t.step('the page where it was (± 2 px), the card too', [Math.abs(window.scrollY - before) <= 2,
+            Math.abs(card.getBoundingClientRect().top - cardTop) <= 2], [true, true]);
+        t.check('scrolled down first (a place to keep)', before > 100);
+        t.step('no page load', loads, []);
     }
 });
