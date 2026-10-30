@@ -45,8 +45,8 @@
             t.check('the pictures under the start, within the screen', box('landingDashboardShot').top > box('landingStart').bottom
                 && box('landingDashboardShot').right <= document.documentElement.clientWidth && box('landingGuestShot').left >= 0);
             const questions = Array.from(document.querySelectorAll('#landingFaq summary'));
-            t.step('six questions, each 44 px to tap', [questions.length,
-                questions.filter(function (q) { return q.getBoundingClientRect().height >= 44 - 0.5; }).length], [6, 6]);
+            t.step('seven questions (the tips\' too), each 44 px to tap', [questions.length,
+                questions.filter(function (q) { return q.getBoundingClientRect().height >= 44 - 0.5; }).length], [7, 7]);
             const answer = questions[0].parentElement.querySelector('p');
             t.check('folded at first', !shows(answer) || !answer.checkVisibility());
             questions[0].click();

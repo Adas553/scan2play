@@ -388,6 +388,8 @@ class GuestPageRenderTest {
         assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");
         assertThat(tag(pages[1], "staffLogin")).as("open after a link that did not work").contains("open");
         assertThat(pages[1]).contains("id=\"staffLinkInvalid\"", "Ten link nie działa — poproś organizatora o nowy.");
+        // the owner, 2026-10-30: the tips go 100% to the DJ — said where a DJ compares the apps
+        assertThat(pages[0]).contains(">Czy bierzecie coś z napiwków?<", "Napiwki w 100% trafiają do DJ-a", "nie bierze prowizji");
     }
 
     @Test
@@ -422,7 +424,7 @@ class GuestPageRenderTest {
         String html = render(PL, Map.of("tipUrl", "https://revolut.me/djkoko"));
 
         assertThat(html).contains("id=\"djTip\"", "<a href=\"https://revolut.me/djkoko\" target=\"_blank\" rel=\"noopener noreferrer nofollow\"",
-                "💸 Napiwek dla DJ-a", "revolut.me/djkoko · prosto do DJ-a, poza Scan2Play",
+                "💸 Napiwek dla DJ-a", "revolut.me/djkoko · 100% dla DJ-a, prosto na jego konto",
                 "Jeśli chcesz, wpisz w tytule wpłaty numer piosenki z listy (np. #27)");
         assertThat(render(PL, Map.of())).doesNotContain("djTip", "Napiwek");
 
@@ -772,7 +774,7 @@ class GuestPageRenderTest {
             assertThat(section(html, "landingWho")).contains("href=\"/dj-weselny" + q + "\"", "href=\"/kluby" + q + "\"",
                     "href=\"/puby" + q + "\"").doesNotContain("karaoke\"");
             assertThat(section(html, "landingWho").split("class=\"stretched-link\"", -1)).as("three cards are links").hasSize(4);
-            assertThat(section(html, "landingFaq").split("<details", -1)).as("six questions").hasSize(7);
+            assertThat(section(html, "landingFaq").split("<details", -1)).as("seven questions — the tips' one too").hasSize(8);
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
             assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/privacy\"");
             // no "PRO" on one card (the owner, 2026-10-18); Pro and its page only while the plans are enforced (2026-10-21)

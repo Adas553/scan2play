@@ -100,7 +100,7 @@ class ProPageRenderTest {
                 "href=\"mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro\"", ">Napisz, że chcesz Pro<",
                 "data-copy-text=\"scan2playcontact@gmail.com\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
                 "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", ">Pro<", "Wszystko z Free, a do tego:",
-                ">Lista gospodarzy<", ">Twoje profile i napiwki<", ">Podsumowanie wieczoru<", ">Komentarze AI z charakterem<",
+                ">Lista gospodarzy<", ">Twoje profile i napiwki<", "w 100% dla Ciebie, bez prowizji", ">Podsumowanie wieczoru<", ">Komentarze AI z charakterem<",
                 ">Własne limity gości<", ">Obsługa do 10 osób<", ">Twoja biblioteka<",
                 "data-pro-faq", ">Co, gdy Pro się skończy?<", ">Czy obsługa potrzebuje Pro?<", ">A goście?<",
                 "Płatności w aplikacji jeszcze nie ma", "src=\"/js/dj-nav.js\"")

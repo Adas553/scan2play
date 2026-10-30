@@ -1472,7 +1472,11 @@ body.theme-club .face {
         background: #ffffff;
         box-shadow: 0 0 0 12mm #fff, 0 4px 24px 12mm rgba(0, 0, 0, 0.5);
     }
+}
 
+/* a computer: beside the editor the tents have their own sheets, not the poster's (has-editor > main); on a phone this took away the
+   margin that centres them (qr-print.js fitPreview) */
+@media screen and (min-width: 1100px) {
     body.has-editor > main.tents {
         margin: 0;
         box-shadow: none;
