@@ -652,8 +652,10 @@ day and a time in Polish time, either empty; quick choices "dziś 20:00", "jutro
 the server's today (`schedule.js`); "Zapisz" is a page load back to the card, which says "Zapisano." or why not
 (`PartySchedule.Problem`: half a moment, a moment past or more than a year ahead, both at once, or one that would change nothing — "Otwórz
 o" while the party is open with no close before it, "Zamknij o" while closed) with the fields as typed. A time the clocks skip in spring
-is the same time after the change; one they go through twice in autumn the first. A moment set beside its "✕" (a form of its own, so
-Enter saves). The panel shows each planned moment under the heading, the next first — "⏰ Zamknie się jutro o 3:00 ✕" (the words lead to
+is the same time after the change; one they go through twice in autumn the first. "Otwórz o" always on top, "Zamknij o" under it (the
+folded line names the next moment); a moment set beside its "✕" (a form of its own, so Enter saves). "Teraz impreza jest otwarta /
+zamknięta" follows "Zakończ / Wznów" pressed on that page, and with a moment planned the page loads again (the manual change may have
+dropped one; `common.js`). The panel shows each planned moment under the heading, the next first — "⏰ Zamknie się jutro o 3:00 ✕" (the words lead to
 the card, "✕" cancels in the background); the poll's `X-Party-Schedule` hides one no longer planned. **A manual change against the plan
 wins until the next planned moment** (the owner's rule): "Zakończ" drops a planned close that comes before the next open (it has
 happened), the open stays; "Wznów" drops the planned open, the close stays; a moment that would change nothing is never kept

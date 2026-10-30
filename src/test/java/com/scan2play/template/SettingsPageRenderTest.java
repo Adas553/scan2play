@@ -388,6 +388,16 @@ class SettingsPageRenderTest {
                 "data-day=\"today\" data-time=\"20:00\" data-hours-fill=\"open\">dziś 20:00<",
                 "data-day=\"tomorrow\" data-time=\"03:00\" data-hours-fill=\"close\">jutro 3:00<")
                 .doesNotContain(" open=\"open\"", "id=\"partyHoursError\"");
+        assertThat(card).contains("id=\"partyHoursNow\"", "data-open=\"Teraz impreza jest otwarta.\"",
+                "data-closed=\"Teraz impreza jest zamknięta.\"");
+        assertThat(card.indexOf("id=\"openHours\"")).as("\"Otwórz o\" on top").isLessThan(card.indexOf("id=\"closeHours\""));
+        PartySettingsEntity closesFirst = planned();
+        closesFirst.setActive(true);
+        closesFirst.setNextOpenAt(java.time.Instant.parse("2026-10-31T19:00:00Z"));
+        String open = render(new PartyStaffService.Access(closesFirst, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        assertThat(open.indexOf("id=\"openHours\"")).as("\"Otwórz o\" on top, also when the close comes first")
+                .isLessThan(open.indexOf("id=\"closeHours\""));
+        assertThat(open).as("the folded line: the next moment").contains("id=\"partyHoursState\">Zamknie się jutro o 3:00<");
         assertThat(card.indexOf("id=\"partyHoursSave\"")).as("the save before the cancels: Enter saves")
                 .isLessThan(card.indexOf("id=\"openHoursCancel\""));
         write("settings-hours.html", html);

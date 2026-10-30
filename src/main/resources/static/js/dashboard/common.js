@@ -27,7 +27,7 @@ let partyStateChangedHereAt = 0;
 /**
  * Shows the party open or closed: the "party closed" banner with its "resume" button, or the "end party" button. Used by the
  * window where the DJ pressed one of them (forms.js) and by every window when the queue poll says the state (X-Party-Active,
- * polling.js) — the party may have been ended on the phone.
+ * polling.js) — the party may have been ended on the phone; and the card "Godziny imprezy" of the settings page.
  */
 export function showPartyActive(active, pollSentAt) {
     if (pollSentAt === undefined) {
@@ -39,6 +39,11 @@ export function showPartyActive(active, pollSentAt) {
     const endForm = document.getElementById('end-party-form');
     if (banner) banner.classList.toggle('d-none', active);
     if (endForm) endForm.classList.toggle('d-none', !active);
+    // the card "Godziny imprezy" (settings, V55): "Teraz impreza jest otwarta / zamknięta" follows; a manual change pressed here may
+    // have dropped a planned moment on the server (PartySchedule.settle) — with one shown, the page loads again to show what is left
+    const now = document.getElementById('partyHoursNow');
+    if (now) now.textContent = active ? now.dataset.open : now.dataset.closed;
+    if (pollSentAt === undefined && document.querySelector('.s2p-hours-planned')) window.location.reload();
 }
 
 /**

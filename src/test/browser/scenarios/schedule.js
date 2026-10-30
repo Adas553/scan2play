@@ -278,4 +278,37 @@
                 'Prośby od 20:00 Requests from 20:00');
         }
     });
+    S2P.scenario({
+        name: 'schedule-card-follows-end-party',
+        title: '"Godziny imprezy" with nothing planned: "Zakończ imprezę" pressed on the settings page — the card says the party is closed now, "Wznów" open again; no page load',
+        page: 'settings',
+        run: async function (t) {
+            const loads = catchLoads();
+            window.confirm = function () { return true; };
+            unfold();
+            const now = document.getElementById('partyHoursNow');
+            t.step('at first', now.textContent.trim(), 'Teraz impreza jest otwarta.');
+            document.querySelector('#end-party-form button').click();
+            await t.waitFor(function () { return now.textContent.trim() === 'Teraz impreza jest zamknięta.'; }, 'closed now', 3000);
+            document.querySelector('#party-closed-banner form button').click();
+            await t.waitFor(function () { return now.textContent.trim() === 'Teraz impreza jest otwarta.'; }, 'open again', 3000);
+            t.step('no page load', loads, []);
+        }
+    });
+
+    S2P.scenario({
+        name: 'schedule-card-reloads-after-resume',
+        title: '"Godziny imprezy" with a plan: "Wznów imprezę" pressed on the settings page drops the planned open on the server — the page loads again, so the card shows what is left',
+        page: 'settings-hours',
+        run: async function (t) {
+            const reloads = [];
+            navigation.addEventListener('navigate', function (e) { reloads.push(e.navigationType); e.preventDefault(); });
+            unfold();
+            document.querySelector('#party-closed-banner form button').click();
+            await t.waitFor(function () { return reloads.length > 0; }, 'the page loaded again', 3000);
+            t.step('a reload', reloads, ['reload']);
+            t.step('the words already follow', document.getElementById('partyHoursNow').textContent.trim(), 'Teraz impreza jest otwarta.');
+        }
+    });
+
 })();

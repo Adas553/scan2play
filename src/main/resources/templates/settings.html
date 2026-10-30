@@ -64,13 +64,15 @@
             <div th:if="${scheduleSaved != null and scheduleError == null}" class="alert alert-success py-2 mb-3" role="status"
                  id="partyHoursSaved" th:text="#{settings.hours.saved}">Saved.</div>
             <p class="s2p-card-help mb-1" th:text="#{settings.hours.help}">The party opens and closes by itself…</p>
+            <!--/* follows "Zakończ / Wznów" pressed on this page (common.js showPartyActive) */-->
             <p class="small text-light mb-3" id="partyHoursNow"
+               th:attr="data-open=#{settings.hours.now.open},data-closed=#{settings.hours.now.closed}"
                th:text="${isActive} ? #{settings.hours.now.open} : #{settings.hours.now.closed}">The party is open now.</p>
             <form th:action="@{/dj/dashboard/schedule}" method="POST" class="m-0" id="partyHoursForm"
                   th:attr="data-today=${schedule.today},data-tomorrow=${schedule.tomorrow}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <!--/* the planned open first when it comes first: the order the party lives them */-->
-                <th:block th:each="kind : ${schedule.openFirst ? {'open', 'close'} : {'close', 'open'}}"
+                <!--/* "Otwórz o" on top, "Zamknij o" under it, whichever comes first (the folded line says the next) */-->
+                <th:block th:each="kind : ${ {'open', 'close'} }"
                           th:with="isOpen=${kind == 'open'}, text=${isOpen ? schedule.openText : schedule.closeText}">
                 <fieldset class="mb-3" th:id="${kind} + 'Hours'">
                     <legend class="small fw-semibold text-light mb-1" th:text="${isOpen} ? #{settings.hours.open} : #{settings.hours.close}">Open at</legend>
