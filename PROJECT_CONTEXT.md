@@ -399,7 +399,7 @@ the look; the panel shows the guests' dedications, the phone the folded "💌 Do
 (six cards: the vibe — with no repeats —, the guest's words, the votes, the dedications, the hosts' list, the phone and the staff; no
 "PRO" on a card; "Ile to kosztuje?" names Pro and links `/pro` only while the plans are enforced — `HomeController`'s
 `plansEnforced`; before, "Nic. Scan2Play jest za darmo…": the owner, 2026-10-21, `/pro` is a 404 then), for whom (wedding DJs, clubs, pubs, karaoke — the first three
-cards lead to their pages "Dla kogo", below; karaoke has none yet), six questions (`details`, no script) and the start again; no prices while the plans are not enforced.
+cards lead to their pages "Dla kogo", below; karaoke has none yet), seven questions (`details`, no script; one of them: the tips go 100% to the DJ, Scan2Play takes no commission — the owner, 2026-10-30) and the start again; no prices while the plans are not enforced.
 **The pages "Dla kogo"** (`ForWhomController`, `for-whom.html`, 2026-10-21; Next 7): `/dj-weselny`, `/kluby`, `/puby` — for search
 engines (in the sitemap, Polish at the address, English with `?lang=en`, canonical and `hreflang` like the other public pages) and for
 a link sent to a DJ or a pub's owner. Where one is, at once (the owner: from the landing page's card the page looked the same): breadcrumbs (the
@@ -472,7 +472,8 @@ line — the space after it non-breaking in what is printed and drawn, ours too 
 whole in its lines — two for the poster's heading, three elsewhere —, no smaller than its least (the poster's heading 16 pt, a card's
 7 pt, a tent's 12 pt); a short one keeps the stylesheet's size; measured on the first card or tent, the same size for all; on a phone
 too — **a phone's preview** is the sheet laid out as it prints (186 mm wide) and made smaller to the screen with `zoom`
-(`fitPreview`; laid out again for the narrow screen, the code covered the frame — `poster-phone-preview`, `…-cards`); the line clamp
+(`fitPreview`; laid out again for the narrow screen, the code covered the frame — `poster-phone-preview`, `…-cards`; a tent's sheet
+with its white page margin, centred — `poster-phone-preview-tent-centred`); the line clamp
 stays the last guard (before, the longest words were cut on a card and a tent — `poster-heading-fitted`, `…-tent`, `…-poster`). **"Krój
 nagłówka"** (V51): the theme's (the default), "Bezszeryfowy", "Szeryfowy" or "Odręczny" ("S2P Script", Dancing Script, OFL) whatever the
 theme — the heading only (`body.font-*`), the DJ's line and the code's texts stay in the theme's; the script's small letters brought to

@@ -159,7 +159,8 @@
     // the screen only: never on paper (a margin left on the sheet printed the cards off the page's middle).
     const PAPER = 186 * 96 / 25.4;
     const wide = matchMedia('screen and (min-width: 1100px)');   // qr-print.css: the editor a panel beside the page
-    const SHEET_MARGIN = 12 * 96 / 25.4 + 24;   // the page's white margin around the sheet and the desk's air (qr-print.css)
+    const SHEET_WHITE = 12 * 96 / 25.4;   // the page's white margin around a sheet on the screen (qr-print.css: @page's 12 mm)
+    const SHEET_MARGIN = SHEET_WHITE + 24;   // and the desk's air
 
     // Set only when it changes, never taken off and put back: a phone's address bar, hiding and showing as the page scrolls, sends
     // "resize" again and again with the same width — the sheet unzoomed for a moment made the page longer and it jumped at its foot.
@@ -169,10 +170,13 @@
         let zoom = '', margin = '';
         const editor = document.getElementById('posterForm');
         if (narrow.matches) {
+            // a tent's sheet has the page's white margin around it on the screen (qr-print.css .tent): made smaller with it, centred
+            // with it — to the sheet alone, the margin ran off the screen's left edge
+            const white = main.classList.contains('tents') ? SHEET_WHITE : 0;
             const room = document.documentElement.clientWidth - 32;
-            const scale = Math.min(1, room / PAPER);
+            const scale = Math.min(1, room / (PAPER + 2 * white));
             zoom = String(scale);
-            margin = (16 + (room - PAPER * scale) / 2) / scale + 'px';   // a zoomed box's margin is zoomed too
+            margin = (16 + (room - (PAPER + 2 * white) * scale) / 2) / scale + white + 'px';   // a zoomed box's margin is zoomed too
         } else if (wide.matches && editor) {
             const room = document.documentElement.clientWidth - editor.offsetWidth - 2 * SHEET_MARGIN;
             if (room < PAPER) zoom = String(room / PAPER);

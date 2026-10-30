@@ -214,7 +214,7 @@ class SettingsPageRenderTest {
                         "id=\"facebookInput\"", "id=\"tiktokInput\"", "value=\"https://www.instagram.com/dj.koko/\"",
                         "Goście widzą je na swojej stronie i na wydruku.", "id=\"tipLinkForm\"", "action=\"/dj/dashboard/tip-link\"",
                         "id=\"tipInput\" name=\"tip\"", "value=\"https://buycoffee.to/djkoko\"", ">Link do napiwków<",
-                        "pieniądze idą prosto do Ciebie", "Nie zapisano: to nie jest link do Twojej strony", "data-form-error hidden")
+                        "pieniądze idą w 100% prosto do Ciebie, Scan2Play nie bierze prowizji", "Nie zapisano: to nie jest link do Twojej strony", "data-form-error hidden")
                 .doesNotContain("Scan2Play ich nie dotyka", "(goście widzą");
         assertThat(html).as("a form refused by the server (the session ran out) says so, hidden until then (review 2026-10-14 W1)")
                 .contains("data-form-refused hidden", "Nie zapisano. Sesja mogła wygasnąć albo zerwało się połączenie",

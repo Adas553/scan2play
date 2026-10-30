@@ -149,6 +149,8 @@
                          404 — "schowaj to PRO, włączymy, jak będziemy używać") */-->
                     <p><th:block th:text="${plansEnforced} ? #{landing.faq.price.a} : #{landing.faq.price.free}">…</th:block>
                         <a th:if="${plansEnforced}" href="/pro" class="d-block mt-2" th:text="#{landing.faq.price.link}">See what Pro gives →</a></p></details>
+                <details><summary th:text="#{landing.faq.tips.q}">Do you take a cut of the tips?</summary>
+                    <p th:text="#{landing.faq.tips.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.ai.q}">What if the AI gets it wrong or is down?</summary>
                     <p th:text="#{landing.faq.ai.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.phone.q}">Does it work on the DJ's phone?</summary>
