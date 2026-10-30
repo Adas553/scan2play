@@ -102,6 +102,7 @@ class GuidePageRenderTest {
                 .doesNotContain("<button", "<form");
         assertThat(html).as("the party's hours (V55), in the party's section").contains("id=\"guideHours\"", "Godziny imprezy", "Prośby od 20:00");
         assertThat(html.indexOf("id=\"guideHours\"")).isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"phone\""));
+        assertThat(html).as("the venue's kiosk (V56)").contains("id=\"guideKiosk\"", "Kiosk dla gości", "Następny gość");
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
     }

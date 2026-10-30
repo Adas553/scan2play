@@ -140,6 +140,14 @@ public class PartySettingsEntity {
     @ToString.Exclude
     private Instant hostTokenMadeAt;
 
+    /**
+     * The secret of the venue's kiosk link ({@code /k/{token}}, V56): a tablet where guests without a phone ask and vote; null = no
+     * link. It does not run out — a tablet stays in the venue —; a new one makes the old link dead.
+     */
+    @Column(length = 32, unique = true)
+    @ToString.Exclude
+    private String kioskToken;
+
     /** The secret of the staff's invitation link ({@code /join/{token}}, V30): a bartender joins with it; null = no link. */
     @Column(length = 32, unique = true)
     @ToString.Exclude

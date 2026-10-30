@@ -51,6 +51,38 @@ class GuestRequestLimiterTest {
         assertThat(refusal).contains(new Refusal(Scope.CLIENT, 360));
     }
 
+    /**
+     * The venue's kiosk (V56): its own limit — three requests a minute — in place of an address's (it shares the venue's Wi-Fi with
+     * the phones: their window stays whole); the party's day counts its requests as every guest's.
+     */
+    @Test
+    void theKiosk_hasItsOwnLimit_notTheAddresses_andCountsInThePartysDay() {
+        GuestRequestLimiter limiter = limiter();
+        for (int i = 0; i < 3; i++) {
+            assertThat(limiter.tryAcquireKiosk(PARTY)).isEmpty();
+        }
+        clock.advance(Duration.ofSeconds(20));
+        assertThat(limiter.tryAcquireKiosk(PARTY)).contains(new Refusal(Scope.CLIENT, 40));
+        assertThat(limiter.busiestClientRequestsUsed(PARTY)).as("no address's window used").isZero();
+        assertThat(limiter.tryAcquire(IP, PARTY)).as("the phones on the same Wi-Fi ask as before").isEmpty();
+
+        clock.advance(Duration.ofSeconds(40));
+        assertThat(limiter.tryAcquireKiosk(PARTY)).isEmpty();   // a minute later: again
+        assertThat(limiter.partyRequestsUsed(PARTY)).as("3 + 1 from the kiosk, 1 from a phone").isEqualTo(5);
+        assertThat(limiter.tryAcquireKiosk(PARTY)).as("the party's day of 5 spent").contains(new Refusal(Scope.PARTY, 86_340));
+    }
+
+    /** The kiosk's 👍: its own limit — twenty in the address's window —, whichever guest's turn. */
+    @Test
+    void theKiosksVotes_haveTheirOwnLimit() {
+        GuestRequestLimiter limiter = limiter();
+        for (int i = 0; i < 20; i++) {
+            assertThat(limiter.tryAcquireKioskVote(PARTY)).isEmpty();
+        }
+        assertThat(limiter.tryAcquireKioskVote(PARTY)).contains(600L);
+        assertThat(limiter.tryAcquireVote(IP, PARTY)).as("a phone's 👍 is its own").isEmpty();
+    }
+
     @Test
     void oneAddress_mayAskAgain_onceItsWindowHasEnded() {
         GuestRequestLimiter limiter = limiter();

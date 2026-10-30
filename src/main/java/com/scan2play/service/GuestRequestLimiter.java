@@ -46,6 +46,15 @@ public class GuestRequestLimiter {
     public enum Scope { CLIENT, PARTY }
 
     private static final Duration PARTY_WINDOW = Duration.ofHours(24);
+    /**
+     * The venue's kiosk (V56): one tablet for every guest without a phone, so not the address's limit (it shares the venue's Wi-Fi
+     * with the phones) but its own — {@value #KIOSK_REQUESTS} requests a minute (one guest types in about twenty seconds) and
+     * {@value #KIOSK_VOTES} 👍 in the address's window (a guest may vote again after "Następny gość": this keeps one person at the
+     * tablet from piling votes). The party's day counts its requests as every guest's.
+     */
+    static final int KIOSK_REQUESTS = 3;
+    static final Duration KIOSK_WINDOW = Duration.ofMinutes(1);
+    static final int KIOSK_VOTES = 20;
     /** Parties with open windows at once (only known parties count requests: GuestController reads the party first). */
     private static final int MAX_PARTIES = 10_000;
     /** Address windows of one party at once: a venue has hundreds; a flood beyond it drops that party's own oldest. */
@@ -69,6 +78,7 @@ public class GuestRequestLimiter {
     private final Cache<String, Cache<String, Window>> clientWindowsByParty;
     private final Cache<String, Window> voteWindows;
     private final Cache<String, Window> partyWindows;
+    private final Cache<String, Window> kioskWindows;
 
     @Autowired
     public GuestRequestLimiter(@Value("${guest.limit.per-ip-party:30}") int perClientLimit,
@@ -101,6 +111,7 @@ public class GuestRequestLimiter {
         this.clientWindowsByParty = Caffeine.newBuilder().expireAfterAccess(clientWindow).maximumSize(MAX_PARTIES).build();
         this.voteWindows = Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(100_000).build();
         this.partyWindows = Caffeine.newBuilder().expireAfterWrite(PARTY_WINDOW).maximumSize(10_000).build();
+        this.kioskWindows = Caffeine.newBuilder().expireAfterWrite(KIOSK_WINDOW).maximumSize(MAX_PARTIES).build();
     }
 
     /**
@@ -130,6 +141,26 @@ public class GuestRequestLimiter {
         }
         return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
+    }
+
+    /**
+     * Counts one request from the party's kiosk (V56) against the kiosk's own limit, then the party's day — never an address's.
+     *
+     * @return empty if the request may go on (it has been counted), otherwise the limit that refused it ({@link Scope#CLIENT}: the
+     *         kiosk's)
+     */
+    public Optional<Refusal> tryAcquireKiosk(String partyCode) {
+        Optional<Long> kioskWait = acquire(kioskWindows, partyCode + "|kiosk", KIOSK_REQUESTS, KIOSK_WINDOW);
+        if (kioskWait.isPresent()) {
+            return Optional.of(new Refusal(Scope.CLIENT, kioskWait.get()));
+        }
+        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW)
+                .map(wait -> new Refusal(Scope.PARTY, wait));
+    }
+
+    /** Counts one 👍 (or its taking back) at the party's kiosk (V56) against the kiosk's own limit of votes. */
+    public Optional<Long> tryAcquireKioskVote(String partyCode) {
+        return acquire(voteWindows, partyCode + "|kiosk", KIOSK_VOTES, clientWindow);
     }
 
     /**

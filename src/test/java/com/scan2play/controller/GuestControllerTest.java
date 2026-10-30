@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -105,7 +106,7 @@ class GuestControllerTest {
     void aRequestWithinAllLimits_isEvaluated() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("ACCEPTED", "Song", "ok", "title", 42L));
 
         assertThat(request()).isEqualTo("result");
@@ -153,7 +154,7 @@ class GuestControllerTest {
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("wait 42 s");
         verify(guestRequestLimiter, never()).tryAcquire(anyString(), anyString());
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any(), anyBoolean());
     }
 
     /**
@@ -171,7 +172,7 @@ class GuestControllerTest {
         }
         verify(guestSessionService, never()).tryAcquire(any(), anyString(), any());
         verify(guestRequestLimiter, never()).tryAcquire(anyString(), anyString());
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -227,7 +228,7 @@ class GuestControllerTest {
 
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("too many");
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any(), anyBoolean());
         // the network's limit refused it, not the guest: their own limit is given back (review 2026-10-14 W2)
         verify(guestSessionService).giveBack(session, PARTY);
     }
@@ -240,7 +241,7 @@ class GuestControllerTest {
 
         assertThat(request()).isEqualTo("redirect:/p/" + PARTY);
         assertThat(redirectAttributes.getFlashAttributes().get(ViewAttributes.ERROR_MESSAGE)).isEqualTo("daily");
-        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any());
+        verify(songEvaluationService, never()).evaluateAndSaveSong(anyString(), anyString(), anyString(), any(), any(), anyBoolean());
         verify(guestSessionService).giveBack(session, PARTY);
     }
 
@@ -261,7 +262,7 @@ class GuestControllerTest {
         when(messageSource.getMessage("vibe.JAZZ", null, "JAZZ", java.util.Locale.of("pl"))).thenReturn("Jazz");
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "Jazz", java.util.Set.of(), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "Jazz", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 42L));
 
         org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.of("pl"));
@@ -286,7 +287,7 @@ class GuestControllerTest {
     void aMood_goesBackToTheFormAskingForASong() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of(), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", "mood"));
         when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
 
@@ -302,7 +303,7 @@ class GuestControllerTest {
     void aRequestPassedOnUnchecked_keepsItsPlace() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("accepted", "Sent to the DJ", "Song", DjResponse.KIND_UNCHECKED, 7L));
 
         assertThat(request("Song")).isEqualTo("result");
@@ -315,7 +316,7 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(guestSessionService.myRequestIds(session, PARTY)).thenReturn(java.util.Set.of(5L));
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(5L), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(5L), null, false))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 5L, 2, true))
                 .thenReturn(new DjResponse("accepted", "ok", "Other", "title", 6L, 3, false));
 
@@ -337,7 +338,7 @@ class GuestControllerTest {
     void aRejectedRequest_givesThePlaceBack_anAcceptedOneKeepsIt() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("rejected", "Not tonight", "Song", "title", 5L))
                 .thenReturn(new DjResponse("accepted", "Yes", "Song", "title", 6L));
 
@@ -356,7 +357,7 @@ class GuestControllerTest {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
         when(guestVoteService.myVotes(session, PARTY)).thenReturn(java.util.Set.of(9L));
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(9L), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(9L), null, false))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 9L, 4, true));
 
         assertThat(request("Song")).isEqualTo("result");
@@ -509,7 +510,7 @@ class GuestControllerTest {
         settings.setTiktokUrl("https://www.tiktok.com/@dj");
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 42L));
         ExtendedModelMap result = new ExtendedModelMap();
         assertThat(controller.requestSong(PARTY, "Song", null, result, session, request, redirectAttributes).call()).isEqualTo("result");
@@ -544,14 +545,14 @@ class GuestControllerTest {
     void theDedication_goesWithTheSong_andComesBackWithAMood() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), "dla Ani"))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), "dla Ani", false))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 42L).withDedication(true));
         ExtendedModelMap model = new ExtendedModelMap();
 
         assertThat(controller.requestSong(PARTY, "Song", "dla Ani", model, session, request, redirectAttributes).call()).isEqualTo("result");
         assertThat(((DjResponse) model.getAttribute(ViewAttributes.RESPONSE)).dedicationOk()).isTrue();
 
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of(), "dla Ani"))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of(), "dla Ani", false))
                 .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", "mood"));
         when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
         assertThat(controller.requestSong(PARTY, "coś do tańca", "dla Ani", new ExtendedModelMap(), session, request, redirectAttributes).call())
@@ -576,10 +577,10 @@ class GuestControllerTest {
 
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
         when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
-        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null))
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 42L));
         assertThat(controller.requestSong(PARTY, "Song", "dla Ani", new ExtendedModelMap(), session, request, redirectAttributes).call())
                 .isEqualTo("result");
-        verify(songEvaluationService).evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null);
+        verify(songEvaluationService).evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null, false);
     }
 }

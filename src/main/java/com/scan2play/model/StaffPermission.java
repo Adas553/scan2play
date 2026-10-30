@@ -32,7 +32,9 @@ public enum StaffPermission {
     /** The hosts' lists and their link. */
     HOST_LISTS,
     /** "Podsumowanie wieczoru" and its CSV. */
-    SUMMARY;
+    SUMMARY,
+    /** The venue's kiosk (V56): its link made, made again or taken away. */
+    KIOSK;
 
     /** Everything that can be delegated. */
     public static Set<StaffPermission> all() {

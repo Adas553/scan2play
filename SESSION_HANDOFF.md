@@ -97,6 +97,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    Details: `PROJECT_CONTEXT.md` 5.1. The idea of item 2 — closing a party by itself after hours without requests — fits this model:
    a job that, after N hours without a request, closes the party through `PartyScheduleService.setActive` (or writes `next_close_at`);
    not built. To try on a phone: the native day and time fields in an iPhone's Safari and on Android.
+6. **"Kiosk dla gości" — a tablet at the bar for guests without a phone** (V56, Pro; the owner, 2026-10-30, after Rekwest's kiosk) —
+   **built on `claude/serene-fermat-6gp9b8`, waiting for the owner's review** (then a release; V56 on production: check Flyway's line
+   once — it also adds KIOSK to the co-organisers' permissions). The owner's picks: Pro; with votes; whoever has the new permission KIOSK
+   makes the link; the most wanted beside the form, as the TV screen. A guest's turn is a session ("Następny gość", or by itself after a
+   minute without a touch); the kiosk's own limits (3 requests a minute, 20 👍 per 10 min) in place of the address's; a request marked
+   "🖥 kiosk" in the queue. Details: `PROJECT_CONTEXT.md` 5.1. To try on a real tablet: an iPad in Guided Access and an Android tablet
+   with the screen pinned, the native keyboard over the form, the suggestions.
 
 ## Later (not now)
 

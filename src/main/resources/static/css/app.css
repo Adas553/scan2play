@@ -1470,3 +1470,52 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 @media (max-width: 575.98px) {
     .s2p-btn-row > .s2p-hours-quick { flex: 1 1 0; }
 }
+
+/* The venue's kiosk (kiosk.html, V56): a tablet at the bar, read from a step away and tapped by many hands. The form and the most
+   wanted side by side on a tablet held across (from 900 px), one under the other otherwise; big words, every target at least 56 px
+   (a finger in a dim bar, not a careful thumb); the page fills the screen, nothing leads out of it. */
+.page-kiosk { min-height: 100vh; }
+.s2p-kiosk { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.s2p-kiosk-head { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+.s2p-kiosk-dj-logo { max-height: 72px; max-width: 220px; object-fit: contain; }
+.s2p-kiosk-logo { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--s2p-white); }
+.s2p-kiosk-dj { margin: 0; font-size: 1.25rem; color: var(--s2p-light); }
+.s2p-kiosk-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+@media (min-width: 900px) {
+    .s2p-kiosk-grid { grid-template-columns: 1fr 1fr; align-items: start; }
+}
+.s2p-kiosk-ask,
+.s2p-kiosk-list,
+.s2p-kiosk-closed {
+    background: var(--s2p-bg-card); border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); padding: 1.5rem;
+}
+.s2p-kiosk-title { font-size: 2rem; font-weight: 700; color: var(--s2p-white); margin-bottom: 1rem; }
+.s2p-kiosk .form-control-lg { min-height: 56px; font-size: 1.25rem; }
+.s2p-kiosk .btn-lg { min-height: 64px; font-size: 1.35rem; }
+.s2p-kiosk .s2p-dedication-box summary { min-height: 48px; display: flex; align-items: center; }
+.s2p-kiosk-song { font-size: 1.9rem; font-weight: 700; color: var(--s2p-white); overflow-wrap: anywhere; }
+.s2p-kiosk-verdict { font-size: 1.4rem; margin: 0.5rem 0 1rem; }
+.s2p-kiosk-verdict.is-accepted { color: var(--s2p-green); }
+.s2p-kiosk-verdict.is-rejected { color: var(--s2p-warning); }
+.s2p-kiosk-comment { font-size: 1.15rem; color: var(--s2p-light); }
+.s2p-kiosk-note { color: var(--s2p-light); font-weight: 600; }
+.s2p-kiosk-hint { color: var(--s2p-text-muted); font-size: 0.95rem; margin: 0.75rem 0 0; }
+.s2p-kiosk-list h2 { font-size: 1.5rem; font-weight: 700; color: var(--s2p-white); margin-bottom: 1rem; }
+.s2p-kiosk-songs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk; }
+.s2p-kiosk-song-row {
+    display: flex; align-items: center; gap: 0.75rem; min-height: 64px; padding: 0.5rem 0.75rem;
+    background: var(--s2p-bg-row); border-radius: var(--s2p-radius); counter-increment: kiosk;
+}
+.s2p-kiosk-song-row::before { content: counter(kiosk) "."; color: var(--s2p-text-muted); font-weight: 600; min-width: 1.75rem; }
+.s2p-kiosk-song-name { flex: 1 1 auto; min-width: 0; font-size: 1.15rem; color: var(--s2p-light); overflow-wrap: anywhere; }
+.s2p-kiosk-votes { flex: none; min-width: 88px; text-align: center; font-size: 1.15rem; color: var(--s2p-text-muted); }
+.s2p-kiosk-vote {
+    flex: none; min-width: 88px; min-height: 56px; font-size: 1.15rem; font-weight: 600;
+    color: var(--s2p-light); border: 1px solid var(--s2p-border-strong); background: transparent;
+}
+.s2p-kiosk-vote.is-given { color: var(--s2p-action-ink); background: var(--s2p-action); border-color: var(--s2p-action); }
+.s2p-kiosk-closed { text-align: center; padding: 3rem 1.5rem; }
+.s2p-kiosk-closed h1 { font-size: 2rem; color: var(--s2p-white); margin: 0; }
+.s2p-kiosk-foot { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; text-align: center; }
+.s2p-kiosk-foot .btn { min-height: 56px; min-width: 200px; font-size: 1.15rem; }
+.s2p-kiosk-foot .s2p-kiosk-hint { margin: 0; }

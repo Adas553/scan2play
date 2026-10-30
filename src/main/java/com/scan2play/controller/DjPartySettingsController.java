@@ -371,6 +371,24 @@ public class DjPartySettingsController {
     }
 
     /**
+     * The venue's kiosk link (V56, {@code /k/{token}}, Pro): {@code link=new} makes one — a new secret, so the old tablet's link stops
+     * working —, {@code link=off} takes it away. Whoever has the permission KIOSK. A page load back to the card.
+     */
+    @PostMapping("/dashboard/kiosk-link")
+    public String updateKioskLink(@RequestParam String partyCode, @RequestParam String link,
+                                  OAuth2AuthenticationToken authentication, HttpSession session) {
+        planService.require(sessionHelper.require(partyCode, StaffPermission.KIOSK, authentication, session), PlanFeature.KIOSK);
+        String token = switch (link) {
+            case "new" -> CodeGenerator.generateSecret();
+            case "off" -> null;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        };
+        log.info("Party [{}]: the kiosk link {}", partyCode, token == null ? "taken away" : "made");
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setKioskToken(token));
+        return REDIRECT_SETTINGS + "?party=" + partyCode + "#kioskCard";
+    }
+
+    /**
      * Updates the rate limiting and duplicate checking parameters for the party.
      */
     @PostMapping("/dashboard/limits")

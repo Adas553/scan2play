@@ -489,6 +489,32 @@ class SettingsPageRenderTest {
                 .contains("id=\"partyHoursCard\" open=\"open\"").doesNotContain("id=\"partyHoursError\"", "Zapisano");
     }
 
+    /**
+     * The venue's kiosk (V56): a card folded to "Włączony" / "Wyłączony"; with a link — to copy, to open on the tablet, made again
+     * (asking first) or taken away, page loads; without — "Utwórz link kiosku". Whoever has KIOSK; not the queue's staff.
+     * {@code settings-kiosk.html} for the browser tests.
+     */
+    @Test
+    void theKiosk_hasACard_withItsLink() throws IOException {
+        PartySettingsEntity withKiosk = party();
+        withKiosk.setKioskToken("Kiosk_123-xyzKiosk_123-x");
+        String html = render(new PartyStaffService.Access(withKiosk, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        String card = html.substring(html.indexOf("id=\"kioskCard\""), html.indexOf("id=\"linksCard\""));
+        assertThat(card).contains(">Kiosk dla gości<", "id=\"kioskState\">Włączony<",
+                "value=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" id=\"kioskLinkInput\"", "data-copy-target=\"kioskLinkInput\"",
+                "id=\"kioskOpen\"", "href=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" target=\"_blank\"",
+                "action=\"/dj/dashboard/kiosk-link\"", "data-confirm=\"Utworzyć nowy link? Tablet ze starym linkiem przestanie działać.\"",
+                ">Nowy link<", "id=\"kioskLinkOffBtn\"", "Dostęp nadzorowany");
+        write("settings-kiosk.html", html);
+
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("id=\"kioskState\">Wyłączony<", ">Utwórz link kiosku<")
+                .doesNotContain("id=\"kioskLinkInput\"", "id=\"kioskLinkOffBtn\"");
+        assertThat(render(staff(StaffRole.QUEUE.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .as("the queue's staff: not theirs").doesNotContain("id=\"kioskCard\"");
+        assertThat(render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .as("a co-organiser: theirs").contains("id=\"kioskCard\"");
+    }
+
     @Test
     void inEnglish() {
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), Locale.ENGLISH);
@@ -534,6 +560,8 @@ class SettingsPageRenderTest {
         assertThat(html).as("the library: what it would do, no form")
                 .contains("id=\"libraryCard\"", "Wgraj swoją bibliotekę, a przy każdej prośbie zobaczysz, czy masz ten utwór.")
                 .doesNotContain("id=\"libraryForm\"", "action=\"/dj/library\"");
+        assertThat(html).as("the kiosk (V56): the offer, no link to make").contains("id=\"kioskCard\"",
+                "Kiosk dla gości bez telefonu — w planie Pro.").doesNotContain("action=\"/dj/dashboard/kiosk-link\"");
         assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"");
         write("settings-free.html", html);
     }

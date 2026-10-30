@@ -12,7 +12,8 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 // phone, fold the settings away).
 //
 // Excluded: logout, delete-account, the hosts' link, the party's new code (V49), the party's hours (V55: schedule.js sends it and puts
-// the server's card in place; without that script, a page load back to the card), the panel switcher, a pasted invitation, leaving a
+// the server's card in place; without that script, a page load back to the card), the kiosk's link (V56: the new link shown at
+// once), the panel switcher, a pasted invitation, leaving a
 // staff (V30) — a page reload / redirect is expected: the new link or code, the list or the other party's panel is shown at once — and
 // deleting the DJ's library (V41) or logo (V45): library.js / logo.js send it and bring its card again; should that script be missing,
 // the page loads.
@@ -23,7 +24,7 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 
 /** The forms sent as a page load, not by fetch(). */
 const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host-link', '/dj/panel', '/dj/join', '/dj/staff/leave',
-    '/dj/library/delete', '/dj/logo/delete', '/dj/dashboard/party-code', '/dj/dashboard/schedule']);
+    '/dj/library/delete', '/dj/logo/delete', '/dj/dashboard/party-code', '/dj/dashboard/schedule', '/dj/dashboard/kiosk-link']);
 /** The forms after which the queue is fetched at once (a song played, skipped, put back; the hosts' lists; a tip; ...). */
 const CHANGE_THE_QUEUE = new Set(['/dj/dashboard/play', '/dj/dashboard/dismiss', '/dj/dashboard/clear-queue', '/dj/dashboard/restore',
     '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count', '/dj/dashboard/add-song',

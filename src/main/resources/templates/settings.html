@@ -184,6 +184,48 @@
             </div>
         </details>
 
+        <!--/* The venue's kiosk (V56, Pro): a tablet at the bar for the guests without a phone — its secret link (/k/{token},
+             KioskController) made here, made again (the old tablet's link dead: asks first) or taken away, copied or opened. Whoever
+             has the permission KIOSK; without Pro, the organiser sees the offer, the staff not the card. The forms are page loads
+             (forms.js leaves /kiosk-link alone), back to this card. */-->
+        <details th:if="${access.may('KIOSK') and (plan.allows('KIOSK') or plan.pro('KIOSK'))}"
+                 class="card bg-dark border-secondary s2p-fold" id="kioskCard">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.kiosk.title}">Guest kiosk</span><th:block th:if="${plan.pro('KIOSK')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+                <span class="s2p-fold-state" id="kioskState" th:unless="${plan.pro('KIOSK')}"
+                      th:text="${kioskLink != null} ? #{settings.kiosk.on} : #{settings.kiosk.none}">Off</span>
+            </summary>
+            <div class="s2p-fold-body">
+            <th:block th:if="${plan.pro('KIOSK')}"><div th:replace="~{fragments/components :: proOffer(#{plan.kiosk.offer})}"></div></th:block>
+            <th:block th:unless="${plan.pro('KIOSK')}">
+            <p class="s2p-card-help" th:text="#{settings.kiosk.help}">A tablet at the bar for guests without a phone…</p>
+            <div th:if="${kioskLink != null}" class="input-group input-group-sm mb-2 s2p-host-link">
+                <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${kioskLink}" id="kioskLinkInput" readonly
+                       th:attr="aria-label=#{settings.kiosk.title}">
+                <button class="btn btn-outline-secondary" type="button" data-copy-target="kioskLinkInput" th:text="#{dashboard.qr.copy}"
+                        th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
+                <a class="btn btn-outline-secondary" id="kioskOpen" th:href="${kioskLink}" target="_blank" rel="noopener"
+                   th:text="#{settings.kiosk.open}">Open the kiosk</a>
+            </div>
+            <div class="s2p-btn-row">
+                <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0"
+                      th:attr="data-confirm=${kioskLink != null} ? #{settings.kiosk.renew.confirm} : null">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <input type="hidden" name="link" value="new">
+                    <button type="submit" id="kioskLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
+                            th:text="${kioskLink != null} ? #{settings.kiosk.renew} : #{settings.kiosk.create}">Make the kiosk link</button>
+                </form>
+                <form th:if="${kioskLink != null}" th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <input type="hidden" name="link" value="off">
+                    <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off}">Turn off</button>
+                </form>
+            </div>
+            <p class="small text-secondary mt-2 mb-0" id="kioskTip" th:text="#{settings.kiosk.tip}">Guided Access on an iPad…</p>
+            </th:block>
+            </div>
+        </details>
+
         <!--/* The DJ's profiles (V24) and tip link (V27) — the owner's alone (money): the guests see them under "Kto gra" and on the QR
              print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks, TipLinks) —
              400 when it is not one, and the form says why. One "Zapisz" for the profiles, one for the tip link (two endpoints). */-->

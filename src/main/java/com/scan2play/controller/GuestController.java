@@ -202,57 +202,17 @@ public class GuestController {
                     return partyEnded(model, partyCode, settings);
                 }
 
-                // Nothing typed (only spaces get past the form's "required"; a POST may skip the form): back to the form before
-                // any limit is used or the AI is asked — with the AI down it would be an empty row in the DJ's queue
-                if (SongEvaluationService.asTyped(songName).isEmpty()) {
-                    return refuse(redirectAttributes, partyCode, "guest.error.empty");
+                Sent sent = send(partyCode, settings, songName, dedication, session, clientIp, false, locale);
+                if (sent instanceof Sent.Refused refused) {
+                    return refuse(redirectAttributes, partyCode, refused.messageKey(), refused.args());
                 }
-                siteCounter.count(SiteCounter.Event.GUEST_REQUEST);   // a guest's request sent, whatever comes of it (V40)
-                // The guest's own limit first (the DJ's setting), then the server's limits that do not need the cookie.
-                // Both count the request before the evaluation.
-                Optional<Long> waitTimeSeconds = guestSessionService.tryAcquire(session, partyCode, settings);
-                if (waitTimeSeconds.isPresent()) {
-                    return refuse(redirectAttributes, partyCode, "guest.error.rate_limit",
-                            settings.getRequestLimit(), waitText(waitTimeSeconds.get()));
-                }
-                Optional<GuestRequestLimiter.Refusal> refusal = guestRequestLimiter.tryAcquire(clientIp, partyCode);
-                if (refusal.isPresent()) {
-                    // the network's or the party's limit refused it, not the guest: their own limit is given back — it was used
-                    // up for a request never sent (review 2026-10-14 W2)
-                    guestSessionService.giveBack(session, partyCode);
-                    return switch (refusal.get().scope()) {
-                        case CLIENT -> refuse(redirectAttributes, partyCode, "guest.error.too_many_requests",
-                                waitText(refusal.get().waitSeconds()));
-                        case PARTY -> refuse(redirectAttributes, partyCode, "guest.error.party_daily_limit");
-                    };
-                }
-
-                // The guest's earlier requests and 👍: the same song asked for again while it waits is not one more vote
-                Set<Long> alreadyTheirs = new HashSet<>(guestSessionService.myRequestIds(session, partyCode));
-                alreadyTheirs.addAll(guestVoteService.myVotes(session, partyCode));
-                // the guest's dedication (V38) is checked by the AI in the same call; only the DJ sees it. Not while the DJ has them
-                // switched off: one sent anyway (an old page) is left out, the song judged as without it
-                String takenDedication = settings.isDedicationsOn() ? dedication : null;
-                DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
-                        styleOf(settings, locale), alreadyTheirs, takenDedication);
-                // A request that came to nothing — a mood sent back to the form, a rejected song, the guest's own song asked for
-                // again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
-                if (response.isMood() || response.ownSong() || DECISION_REJECTED.equalsIgnoreCase(response.decision())) {
-                    guestSessionService.giveBack(session, partyCode);
-                }
-                if (response.isMood()) {
+                if (sent instanceof Sent.Mood mood) {
                     // A mood, not a song (the DJ sets the mood): nothing was saved. Back to the form with the text, asking for a song.
-                    redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
-                    redirectAttributes.addFlashAttribute(LAST_DEDICATION, takenDedication);
+                    redirectAttributes.addFlashAttribute(LAST_REQUEST, mood.songName());
+                    redirectAttributes.addFlashAttribute(LAST_DEDICATION, mood.dedication());
                     return refuse(redirectAttributes, partyCode, "guest.error.song_only");
                 }
-
-                // Remembered in the session, so the party page can say that the guest's songs wait. The result itself is about this
-                // request alone: another of the guest's waiting songs named here read as the AI's mix-up (the owner, 2026-10-07).
-                // A song that already had the guest's vote (their request or 👍) stays as it was: a 👍 stays one they can take back.
-                if (!response.ownSong()) {
-                    guestSessionService.rememberRequest(session, partyCode, response.requestId());
-                }
+                DjResponse response = ((Sent.Answered) sent).response();
                 model.addAttribute(RESPONSE, response);
                 model.addAttribute(PARTY_CODE, partyCode);
                 // the DJ's tip link under an accepted request: the moment a guest is glad (V27)
@@ -267,6 +227,76 @@ public class GuestController {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);   // the party's account deleted meanwhile, or a code made up
             }
         };
+    }
+
+    /** What became of a guest's request ({@link #send}): refused by a limit (the message's key), a mood, or the AI's answer. */
+    sealed interface Sent {
+        record Refused(String messageKey, Object... args) implements Sent {
+        }
+
+        record Mood(String songName, String dedication) implements Sent {
+        }
+
+        record Answered(DjResponse response) implements Sent {
+        }
+    }
+
+    /**
+     * A guest's request to an open party, from the party page or the venue's kiosk (V56, {@code KioskController}) — the same way for
+     * both: nothing typed is refused before any limit is used; the guest's own limit (the DJ's setting, per session — at the kiosk per
+     * guest's turn), then the server's: the address's at the party ({@code clientIp}) or, at the kiosk, the kiosk's own; the party's
+     * day either way; the AI; a request that came to nothing gives the guest's limit back; the guest's song remembered in the session.
+     */
+    Sent send(String partyCode, PartySettingsEntity settings, String songName, String dedication, HttpSession session,
+              String clientIp, boolean kiosk, Locale locale) {
+        // Nothing typed (only spaces get past the form's "required"; a POST may skip the form): back to the form before
+        // any limit is used or the AI is asked — with the AI down it would be an empty row in the DJ's queue
+        if (SongEvaluationService.asTyped(songName).isEmpty()) {
+            return new Sent.Refused("guest.error.empty");
+        }
+        siteCounter.count(SiteCounter.Event.GUEST_REQUEST);   // a guest's request sent, whatever comes of it (V40)
+        // The guest's own limit first (the DJ's setting), then the server's limits that do not need the cookie.
+        // Both count the request before the evaluation.
+        Optional<Long> waitTimeSeconds = guestSessionService.tryAcquire(session, partyCode, settings);
+        if (waitTimeSeconds.isPresent()) {
+            return new Sent.Refused("guest.error.rate_limit", settings.getRequestLimit(), waitText(waitTimeSeconds.get()));
+        }
+        Optional<GuestRequestLimiter.Refusal> refusal = kiosk ? guestRequestLimiter.tryAcquireKiosk(partyCode)
+                : guestRequestLimiter.tryAcquire(clientIp, partyCode);
+        if (refusal.isPresent()) {
+            // the network's (the kiosk's) or the party's limit refused it, not the guest: their own limit is given back — it was
+            // used up for a request never sent (review 2026-10-14 W2)
+            guestSessionService.giveBack(session, partyCode);
+            return switch (refusal.get().scope()) {
+                case CLIENT -> new Sent.Refused(kiosk ? "kiosk.error.busy" : "guest.error.too_many_requests",
+                        waitText(refusal.get().waitSeconds()));
+                case PARTY -> new Sent.Refused("guest.error.party_daily_limit");
+            };
+        }
+
+        // The guest's earlier requests and 👍: the same song asked for again while it waits is not one more vote
+        Set<Long> alreadyTheirs = new HashSet<>(guestSessionService.myRequestIds(session, partyCode));
+        alreadyTheirs.addAll(guestVoteService.myVotes(session, partyCode));
+        // the guest's dedication (V38) is checked by the AI in the same call; only the DJ sees it. Not while the DJ has them
+        // switched off: one sent anyway (an old page) is left out, the song judged as without it
+        String takenDedication = settings.isDedicationsOn() ? dedication : null;
+        DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
+                styleOf(settings, locale), alreadyTheirs, takenDedication, kiosk);
+        // A request that came to nothing — a mood sent back to the form, a rejected song, the guest's own song asked for
+        // again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
+        if (response.isMood() || response.ownSong() || DECISION_REJECTED.equalsIgnoreCase(response.decision())) {
+            guestSessionService.giveBack(session, partyCode);
+        }
+        if (response.isMood()) {
+            return new Sent.Mood(songName, takenDedication);
+        }
+        // Remembered in the session, so the party page can say that the guest's songs wait. The result itself is about this
+        // request alone: another of the guest's waiting songs named here read as the AI's mix-up (the owner, 2026-10-07).
+        // A song that already had the guest's vote (their request or 👍) stays as it was: a 👍 stays one they can take back.
+        if (!response.ownSong()) {
+            guestSessionService.rememberRequest(session, partyCode, response.requestId());
+        }
+        return new Sent.Answered(response);
     }
 
     /**

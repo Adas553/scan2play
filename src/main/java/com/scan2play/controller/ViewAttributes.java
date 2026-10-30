@@ -137,6 +137,16 @@ public final class ViewAttributes {
     /** Flash: the party's new code after "Zmień kod imprezy" (V49) — its card says it and leads to printing it again. */
     public static final String CODE_CHANGED = "codeChanged";
 
+    // --- The venue's kiosk (V56) ---
+    /** The kiosk's secret on its own page ({@code /k/{token}}): its forms and its list's address. */
+    public static final String KIOSK_TOKEN = "kioskToken";
+    /** The kiosk link to copy on "Ustawienia imprezy" ({@code https://…/k/{token}}), or null: none made. */
+    public static final String KIOSK_LINK = "kioskLink";
+    /** The songs this guest's turn gave its 👍 at the kiosk. */
+    public static final String KIOSK_MY_VOTES = "kioskMyVotes";
+    /** The songs this guest's turn asked for at the kiosk (no 👍 on them). */
+    public static final String KIOSK_MY_REQUESTS = "kioskMyRequests";
+
     // --- When the party opens and closes by itself (V55) ---
     /** The plan as shown ({@code PartyScheduleService.View}): the panel's line, the card "Godziny imprezy" and its fields. */
     public static final String SCHEDULE = "schedule";

@@ -16,7 +16,7 @@
         viewport: '390,844',
         run: async function (t) {
             t.step('every card folded', folds().map(function (fold) { return [fold.id, fold.open]; }),
-                [['partyHoursCard', false], ['hostListsCard', false], ['linksCard', false], ['logoCard', false], ['limitsCard', false],
+                [['partyHoursCard', false], ['hostListsCard', false], ['kioskCard', false], ['linksCard', false], ['logoCard', false], ['limitsCard', false],
                     ['libraryCard', false], ['deviceCard', false], ['partyCodeCard', false]]);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('hostListsCard'), stateOf('linksCard'),
                 stateOf('logoCard'), stateOf('limitsCard'), stateOf('libraryCard'), stateOf('partyCodeCard')],
@@ -96,7 +96,9 @@
             body.querySelectorAll('form .btn').forEach(function (button) {
                 if (!button.checkVisibility() || button.closest('.input-group') || button.classList.contains('btn-link')
                     || button.parentElement.classList.contains('d-flex') && button.parentElement.querySelector('input')) return;
-                const share = button.closest('.s2p-btn-row') ? (width - 8) / button.closest('.s2p-btn-row').children.length : width;
+                // a row of n buttons: n shares of the width less the gaps (8 px) between them — one alone has it all
+                const row = button.closest('.s2p-btn-row');
+                const share = row ? (width - 8 * (row.children.length - 1)) / row.children.length : width;
                 if (Math.abs(button.getBoundingClientRect().width - share) > 1.5) odd.push(button.textContent.trim());
             });
         });
