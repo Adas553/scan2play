@@ -50,7 +50,7 @@
 
     S2P.scenario({
         name: 'schedule-quick-choices',
-        title: '"Godziny imprezy": the first card, folded to the next moment; "jutro 3:00" / "dziś 20:00" fill the day and the time from the server\'s today; "Zapisz" is a page load with the four fields',
+        title: '"Godziny imprezy": the first card, folded to the next moment; "jutro 3:00" / "dziś 20:00" fill the day and the time from the server\'s today; "Zapisz" sends the four fields in the background',
         page: 'settings-hours',
         run: async function (t) {
             const loads = catchLoads();
@@ -73,17 +73,20 @@
             t.step('"dziś 23:00"', [value('closeDate'), value('closeTime')], ['2026-10-30', '23:00']);
             t.check('a quick choice sends nothing', loads.length === 0);
 
-            document.getElementById('partyHoursSave').click();
-            await t.sleep(300);
-            t.step('"Zapisz": a page load of the form with the party and the four fields', loads, [['/dj/dashboard/schedule',
-                { partyCode: 'HARN1', openDate: '2026-10-30', openTime: '20:00', closeDate: '2026-10-30', closeTime: '23:00' }]]);
-            t.step('not sent in the background', await t.stand.count('POST /dj/dashboard/schedule'), 0);
+            const oldSave = document.getElementById('partyHoursSave');
+            oldSave.click();
+            await t.waitFor(function () { return document.getElementById('partyHoursSave') !== oldSave; }, 'the answer in place', 3000);
+            const sent = await t.stand.requests('POST /dj/dashboard/schedule');
+            t.step('"Zapisz": sent once in the background with the party, the four fields, the token', sent.map(function (r) { return r.q; }),
+                [{ partyCode: 'HARN1', openDate: '2026-10-30', openTime: '20:00', closeDate: '2026-10-30', closeTime: '23:00',
+                    'X-Requested-With': 'fetch', 'X-CSRF-TOKEN': 'harness-csrf-token' }]);
+            t.step('no page load', loads, []);
         }
     });
 
     S2P.scenario({
         name: 'schedule-card-cancel',
-        title: '"Godziny imprezy": "✕" beside a planned moment is a page load of its own form — that moment only, none of the typed fields',
+        title: '"Godziny imprezy": "✕" beside a planned moment is a form of its own sent in the background — that moment only, none of the typed fields',
         page: 'settings-hours',
         run: async function (t) {
             const loads = catchLoads();
@@ -93,9 +96,13 @@
                 document.getElementById('openPlanned').compareDocumentPosition(planned) & Node.DOCUMENT_POSITION_FOLLOWING],
                 [true, true, Node.DOCUMENT_POSITION_FOLLOWING]);
             document.getElementById('openTime').value = '21:00';
+            const oldSave = document.getElementById('partyHoursSave');
             planned.querySelector('button').click();
-            await t.sleep(300);
-            t.step('the close cancelled alone', loads, [['/dj/dashboard/schedule', { partyCode: 'HARN1', cancel: 'close' }]]);
+            await t.waitFor(function () { return document.getElementById('partyHoursSave') !== oldSave; }, 'the answer in place', 3000);
+            const sent = await t.stand.requests('POST /dj/dashboard/schedule');
+            t.step('the close cancelled alone, in the background', sent.map(function (r) { return [r.q.partyCode, r.q.cancel, r.q.openTime]; }),
+                [['HARN1', 'close', undefined]]);
+            t.step('no page load', loads, []);
         }
     });
 
@@ -313,6 +320,109 @@
             t.step('a reload', reloads, ['reload']);
             t.step('the words already follow', document.getElementById('partyHoursNow').textContent.trim(), 'Teraz impreza jest otwarta.');
         }
+    });
+
+    /** The page scrolled so the card's "Zapisz" is low on the screen, as a DJ who filled the fields has it. */
+    function scrolledToTheSave() {
+        unfold();
+        const save = document.getElementById('partyHoursSave');
+        // instant: the page scrolls smoothly (app.css), and a reading during the glide is no place at all
+        window.scrollTo({ top: window.scrollY + save.getBoundingClientRect().top - window.innerHeight / 2, behavior: 'instant' });
+        return window.scrollY;
+    }
+
+    S2P.scenario({
+        name: 'schedule-save-stays-in-place',
+        title: '"Godziny imprezy" on a phone: "Zapisz" — the server\'s card takes the old one\'s place, open, "✓" on its button as on every card; the screen does not jump',
+        page: 'settings-hours',
+        viewport: '390,844',
+        run: async function (t) {
+            const loads = catchLoads();
+            const before = scrolledToTheSave();
+            const cardTop = document.getElementById('partyHoursCard').getBoundingClientRect().top;
+            const oldSave = document.getElementById('partyHoursSave');
+            oldSave.click();
+            await t.waitFor(function () { return document.getElementById('partyHoursSave') !== oldSave; }, 'the answer in place', 3000);
+            const card = document.getElementById('partyHoursCard');
+            const save = document.getElementById('partyHoursSave');
+            t.step('the new card, open; "✓" on its "Zapisz" as on every card, focused — no sentence of its own',
+                [card.open, save.textContent.trim(), save.classList.contains('btn-success'), document.activeElement === save,
+                    !!document.getElementById('partyHoursSaved')], [true, '✓', true, true, false]);
+            await t.sleep(1800);
+            t.step('then its label again', [save.textContent.trim(), save.classList.contains('btn-success')], ['Zapisz', false]);
+            t.step('the plan as saved', document.getElementById('openTime').value, '21:00');
+            t.step('the page where it was (± 2 px), the card too', [Math.abs(window.scrollY - before) <= 2,
+                Math.abs(card.getBoundingClientRect().top - cardTop) <= 2], [true, true]);
+            t.check('scrolled down to "Zapisz" first (a place to keep)', before > 100);
+            t.step('no page load', loads, []);
+            document.querySelector('[data-hours-fill="close"][data-day="tomorrow"]').click();
+            t.step('the quick choices work in the new card', document.getElementById('closeTime').value, '03:00');
+        }
+    });
+
+    S2P.scenario({
+        name: 'schedule-refused-in-place',
+        title: '"Godziny imprezy": a plan refused — "✗" and why under "Zapisz", as every card, the fields as typed; the screen does not jump',
+        page: 'settings-hours',
+        setup: { scheduleAnswer: 'settings-hours-answer-refused' },
+        run: async function (t) {
+            const before = scrolledToTheSave();
+            document.getElementById('partyHoursSave').click();
+            await t.waitFor(function () { return !!document.getElementById('partyHoursError'); }, 'the answer in place', 3000);
+            const why = document.getElementById('partyHoursError');
+            t.step('why, focused, under "Zapisz" in the cards\' red line', [why.textContent.trim(), document.activeElement.id,
+                why.classList.contains('text-danger'), document.getElementById('partyHoursSave').compareDocumentPosition(why)
+                & Node.DOCUMENT_POSITION_FOLLOWING, document.getElementById('partyHoursSave').textContent.trim()],
+                ['Ta pora już minęła: wybierz późniejszą.', 'partyHoursError', true, Node.DOCUMENT_POSITION_FOLLOWING, '✗']);
+            t.step('as typed', document.getElementById('openTime').value, '11:30');
+            t.step('the page where it was', Math.abs(window.scrollY - before) <= 2, true);
+        }
+    });
+
+    S2P.scenario({
+        name: 'schedule-save-lost',
+        title: '"Godziny imprezy": "Zapisz" that the server refuses (a session ran out) — the card stays as typed, the page\'s notice says it was not saved',
+        page: 'settings-hours',
+        setup: { postStatus: { '/dj/dashboard/schedule': 403 } },
+        run: async function (t) {
+            unfold();
+            document.getElementById('openTime').value = '22:15';
+            document.getElementById('partyHoursSave').click();
+            await t.waitFor(function () { return shows(document.querySelector('[data-form-refused]')); }, 'the notice', 3000);
+            t.step('the typed time kept, nothing said in the card', [document.getElementById('openTime').value,
+                !!document.getElementById('partyHoursError')], ['22:15', false]);
+            t.step('the button usable again', document.getElementById('partyHoursSave').disabled, false);
+        }
+    });
+
+    /** "Godziny imprezy"'s "Zapisz" and its fields beside the card "Profile i napiwki"'s: the same classes, the same size. */
+    async function likeTheOtherCards(t) {
+        unfold();
+        document.querySelector('#linksCard > summary').click();
+        const ours = document.getElementById('partyHoursSave');
+        const theirs = document.querySelector('#djLinksForm button[type="submit"]');
+        t.step('the same classes', Array.from(ours.classList).filter(function (c) { return c.indexOf('btn') === 0; }).sort(),
+            Array.from(theirs.classList).filter(function (c) { return c.indexOf('btn') === 0; }).sort());
+        const a = ours.getBoundingClientRect();
+        const b = theirs.getBoundingClientRect();
+        t.step('the same height and width', [Math.round(a.height), Math.round(a.width)], [Math.round(b.height), Math.round(b.width)]);
+        t.step('the fields as high as the other cards\'', Math.round(document.getElementById('openDate').getBoundingClientRect().height),
+            Math.round(document.getElementById('instagramInput').getBoundingClientRect().height));
+    }
+
+    S2P.scenario({
+        name: 'schedule-save-like-the-other-cards',
+        title: '"Godziny imprezy"\'s "Zapisz" and fields as every card\'s, on a computer: the same classes, height and width',
+        page: 'settings-hours',
+        run: likeTheOtherCards
+    });
+
+    S2P.scenario({
+        name: 'schedule-save-like-the-other-cards-phone',
+        title: 'the same on a 390 px phone (every button and field 44 px high there)',
+        page: 'settings-hours',
+        viewport: '390,844',
+        run: likeTheOtherCards
     });
 
 })();

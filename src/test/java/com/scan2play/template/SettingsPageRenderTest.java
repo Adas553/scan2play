@@ -165,6 +165,68 @@ class SettingsPageRenderTest {
         return html;
     }
 
+    /**
+     * The answer to "Godziny imprezy" sent in the background (V55): the real controller, on Friday at noon, with the form's fields, and
+     * the card it answers with rendered as the view resolver would — the fragment {@code settings :: partyHoursCard} alone.
+     */
+    @SuppressWarnings("unchecked")
+    private static String renderHoursAnswer(PartySettingsEntity party, Map<String, String> fields) {
+        PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
+        when(commands.updateSettings(any(), any())).thenAnswer(call -> {
+            ((java.util.function.Consumer<PartySettingsEntity>) call.getArgument(1)).accept(party);
+            return party;
+        });
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(party);
+        when(sessionHelper.access(any(), any(), any())).thenReturn(new PartyStaffService.Access(party, true, StaffPermission.all()));
+        com.scan2play.controller.DjPartySettingsController controller = new com.scan2play.controller.DjPartySettingsController(commands,
+                mock(com.scan2play.service.AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper,
+                com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.of(commands, com.scan2play.service.PartySchedules.FRIDAY_NOON));
+        ConcurrentModel model = new ConcurrentModel();
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(PL);
+        String view;
+        try {
+            view = controller.updateSchedule(PARTY, fields.get("openDate"), fields.get("openTime"), fields.get("closeDate"),
+                    fields.get("closeTime"), fields.get("cancel"), "fetch", user("owner"), new MockHttpSession(), model,
+                    new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap());
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+        assertThat(view).isEqualTo("settings :: partyHoursCard");
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String html = engine.process("settings", Set.of("partyHoursCard"), context);
+        assertThat(html).doesNotContain("??");
+        DashboardPageRenderTest.assertNothingInline(html);
+        return html;
+    }
+
+    /**
+     * "Zapisz" sent in the background: the answer is the card alone — no page, no heading —, unfolded, the plan as
+     * saved; or why not with the fields as typed. {@code settings-hours-answer-saved.html} / {@code -refused.html} for the stand-in.
+     */
+    @Test
+    void theHoursSentInTheBackground_areAnsweredWithTheCardAlone() throws IOException {
+        PartySettingsEntity party = party();
+        party.setActive(false);
+        String saved = renderHoursAnswer(party, Map.of("openDate", "2026-10-30", "openTime", "21:00", "closeDate", "2026-10-31",
+                "closeTime", "04:00"));
+        assertThat(saved.trim()).startsWith("<details").endsWith("</details>").doesNotContain("<html", "djTabBar", "hostListsCard");
+        assertThat(saved).doesNotContain("partyHoursError", "Zapisano");
+        assertThat(saved).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSave\"",
+                ">⏰ Otworzy się dziś o 21:00<", ">⏰ Zamknie się jutro o 4:00<", "name=\"openTime\" value=\"21:00\"",
+                "action=\"/dj/dashboard/schedule\"", "id=\"openHoursCancel\"");
+        write("settings-hours-answer-saved.html", saved);
+
+        String refused = renderHoursAnswer(party(), Map.of("openDate", "2026-10-30", "openTime", "11:30"));
+        assertThat(refused).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursError\"",
+                ">Ta pora już minęła: wybierz późniejszą.<", "name=\"openTime\" value=\"11:30\"");
+        write("settings-hours-answer-refused.html", refused);
+    }
+
     private static PartyStaffService.Access owner() {
         return new PartyStaffService.Access(party(), true, StaffPermission.all());
     }
@@ -416,12 +478,15 @@ class SettingsPageRenderTest {
                 Map.of("scheduleError", "schedule.error.past", "scheduleTyped", new String[]{"2026-10-29", "20:00", "", ""}));
 
         assertThat(html).contains("id=\"partyHoursCard\" open=\"open\"", ">Ta pora już minęła: wybierz późniejszą.<",
-                "name=\"openDate\" value=\"2026-10-29\"", "name=\"closeDate\" value=\"\"")
-                .doesNotContain("id=\"partyHoursSaved\"");
+                "name=\"openDate\" value=\"2026-10-29\"", "name=\"closeDate\" value=\"\"",
+                "class=\"small text-danger mt-1\" role=\"alert\" id=\"partyHoursError\"");
+        assertThat(html.indexOf("id=\"partyHoursError\"")).as("why: under \"Zapisz\", as every card")
+                .isGreaterThan(html.indexOf("id=\"partyHoursSave\""));
         write("settings-hours-error.html", html);
 
         assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), mock(DjService.class),
-                Map.of("scheduleSaved", true))).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSaved\"", ">Zapisano.<");
+                Map.of("scheduleSaved", true))).as("saved: the card open, no sentence — \"✓\" on the button, as every card")
+                .contains("id=\"partyHoursCard\" open=\"open\"").doesNotContain("id=\"partyHoursError\"", "Zapisano");
     }
 
     @Test
