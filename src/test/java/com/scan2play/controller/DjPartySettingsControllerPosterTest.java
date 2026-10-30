@@ -46,7 +46,7 @@ class DjPartySettingsControllerPosterTest {
         settingsService = mock(PartySettingsCommandService.class);
         sessionHelper = mock(DjSessionHelper.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new DjPartySettingsController(
-                settingsService, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper, com.scan2play.service.Plans.off())).build();
+                settingsService, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper, com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.of(settingsService))).build();
         token = new OAuth2AuthenticationToken(
                 new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "owner"), "sub"),
                 AuthorityUtils.createAuthorityList("ROLE_USER"), "google");

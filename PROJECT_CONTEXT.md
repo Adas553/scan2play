@@ -104,6 +104,8 @@ staff and the invitation name a party by "Kto gra", else by it, else by the code
 from `scan2playcontact@gmail.com` — the privacy policy says so; gone with the row), `createdAt` (V48, the database's `now()`,
 `insertable = false`: when the party was made; null for the parties of before), `welcomeDismissedAt` (V48: when the organiser closed the
 panel's welcome card, null = shown; the parties of before closed by the migration),
+`nextOpenAt` / `nextCloseAt` (V55, timestamptz, null = none: when the party opens / closes by itself — "Godziny imprezy", 5.1; never one
+that would change nothing; a weekly plan, later, would write its next moment into them after each one),
 `commentStyle` (V22, `CommentStyle`:
 CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
@@ -644,6 +646,30 @@ The same header carries `ai-down` (the review of 2026-10-21, O2): while the AI d
 Section 7.1) every panel but the demo's shows a red bar above the queue, "⚠ AI chwilowo nie ocenia próśb: nowe trafiają na listę z
 plakietką „bez oceny AI” — przejrzyj je przed zagraniem.", gone with the next poll after the AI answers again.
 
+**The party opens and closes by itself** (V55, "Godziny imprezy"; the owner, 2026-10-30): the first card of "Ustawienia imprezy", for
+whoever may open and close the party (OPEN_CLOSE — the organiser, and the staff given it), any plan. "Otwórz o" and "Zamknij o", each a
+day and a time in Polish time, either empty; quick choices "dziś 20:00", "jutro 20:00" / "dziś 23:00", "jutro 3:00" fill the fields from
+the server's today (`schedule.js`); "Zapisz" is a page load back to the card, which says "Zapisano." or why not
+(`PartySchedule.Problem`: half a moment, a moment past or more than a year ahead, both at once, or one that would change nothing — "Otwórz
+o" while the party is open with no close before it, "Zamknij o" while closed) with the fields as typed. A time the clocks skip in spring
+is the same time after the change; one they go through twice in autumn the first. "Otwórz o" always on top, "Zamknij o" under it (the
+folded line names the next moment); a moment set beside its "✕" (a form of its own, so Enter saves). "Teraz impreza jest otwarta /
+zamknięta" follows "Zakończ / Wznów" pressed on that page, and with a moment planned the page loads again (the manual change may have
+dropped one; `common.js`). The panel shows each planned moment under the heading, the next first — "⏰ Zamknie się jutro o 3:00 ✕" (the words lead to
+the card, "✕" cancels in the background); the poll's `X-Party-Schedule` hides one no longer planned. The "party closed" banner says
+what the guests read meanwhile ("Goście … zobaczą „Prośby od 20:00”"), its plain words back once the open is gone. **A manual change against the plan
+wins until the next planned moment** (the owner's rule): "Zakończ" drops a planned close that comes before the next open (it has
+happened), the open stays; "Wznów" drops the planned open, the close stays; a moment that would change nothing is never kept
+(`PartySchedule.settle`). **The job** (`PartyScheduleService.applyDue`, every minute at :00, `Times.SCHEDULE_ZONE`): one `UPDATE … WHERE
+next_open_at <= now OR next_close_at <= now` over at most 500 rows found by the partial indexes, picked once in a CTE `FOR UPDATE SKIP
+LOCKED` (a row a DJ or another instance holds is taken next minute; as `id IN (SELECT … LIMIT …)` a nested-loop plan ran the subquery
+again per row and the limit was not kept — `PartyScheduleIT.aRun_isBounded` forces that plan), both due → as the later left it; through `PartySettingsCommandService.applyDueSchedule`,
+which empties the cache after the commit (`PartyScheduleIT`, also two runs at once). **The guests** of a closed party with a planned open
+read "Prośby od 20:00" (today), "Prośby od soboty, 20:00" (within six days), "Prośby od 06.11, 20:00" in place of "DJ nie przyjmuje teraz
+próśb", in their language — on `party_ended.html` and the TV screen (both languages there). Not built: a weekly plan for clubs (days and
+hours — later, a migration of its own that writes the next moment into the same columns); closing by itself after hours without requests
+(it would fit: a job that sets `next_close_at`, or closes at once, through the same service).
+
 **The history** (`PlayHistoryService`): the party's requests that played or were rejected, by the DJ's moment —
 `COALESCE(played_at, skipped_at, cleared_at, requested_at)`, the time it shows too (a skip was placed by its request time until
 2026-10-12) —, newest first, one bounded query (`limit + 1`). The History tab (in place of the queue — the page then is the page
@@ -912,6 +938,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); a song the DJ adds (`addByTheDj`, V44) under the same lock; evicts `dashboardQueue` after the commit |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
+| `PartyScheduleService` (+ `util/PartySchedule`) | "Godziny imprezy" (V55): the plan checked and saved, "Zakończ / Wznów" against it, the job of every minute, the words of the panel and the guests; time from an injected `Clock` |
 | `QrCodeService` | QR codes (ZXing, cached; error correction M — the same version 3 as L for the guest link, so as large on paper; `QrCodeServiceTest`) |
 | `PartyCodeService` | a party's code (V49): `freshCode` — one no party has nor had (`party_code_retired`), for a new party and a new code; `changeCode` — "Zmień kod imprezy": the party and all of it under a new code, the old one retired, the caches evicted after the commit |
 | `AccountDeletionService` | deletes all of a DJ's data (their party's staff and invitations by e-mail, their places on other staffs too) and evicts the caches after the commit; first the party's locks in the app's order — "S2PR", then the party's row (a guest's request and "Dołącz" wait or find nothing, no deadlock) —; the requests and the feedback in one `DELETE` each |
@@ -1200,6 +1227,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 |----------|-------|
 | `google.ai.model-name` / `google.ai.thinking-level` (`thinking-budget` for gemini-2.x) | `gemini-3.6-flash` / low (1024) |
 | `spring.jpa.hibernate.ddl-auto` | `validate` (Flyway owns the schema) |
+| `spring.task.scheduling.pool.size` | `2`: the job of every minute that opens and closes the parties (V55) never waits for a night's job (`PartyScheduleIT`) |
 | `server.forward-headers-strategy` | `FRAMEWORK` |
 | `server.compression.*` | gzip for HTML / CSS / JS / JSON from 2 KB |
 | `server.tomcat.max-http-form-post-size` | 10 KB |
@@ -1277,6 +1305,7 @@ schema behind Flyway's back.
 | V52 | `party_settings_poster_theme_check` made again with RUSTIC / GALA / NEON / CONFETTI beside V47's four: the QR print's themes (`MigrationIT`) |
 | V53 | `party_settings.poster_paper` varchar(7), nullable (check `^#[0-9a-f]{6}$`): the QR print's paper colour (`MigrationIT`) |
 | V54 | `party_settings.poster_size` varchar(6) NOT NULL DEFAULT 'NORMAL' (check SMALL / NORMAL / LARGE): the QR print's heading size (`MigrationIT`) |
+| V55 | `party_settings.next_open_at`, `next_close_at` timestamptz, nullable; partial indexes `idx_party_settings_next_open_at` / `…_next_close_at` (WHERE … IS NOT NULL): the party opens and closes by itself (`MigrationIT`, `PartyScheduleIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1408,7 +1437,9 @@ GuestQueueService          → DjService
 | POST | `/dj/library/delete` | `partyCode`: the library deleted (the organiser, any plan); back to `/dj/settings#libraryCard` |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
-| POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE) |
+| POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
+| POST | `/dj/dashboard/schedule` | "Godziny imprezy" (V55, OPEN_CLOSE, any plan): `openDate`, `openTime`, `closeDate`, `closeTime` (Polish time, empty = none) or `cancel=open\|close`; a page load back to `/dj/settings#partyHoursCard` with `scheduleSaved` or `scheduleError` (+ the fields as typed) |
+| POST | `/dj/dashboard/schedule/cancel` | the panel's "✕" beside a planned moment (`event=open\|close`, OPEN_CLOSE), in the background |
 
 ---
 

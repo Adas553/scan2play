@@ -61,6 +61,28 @@ function applyLimitsNear(network, party) {
     });
 }
 
+/**
+ * The party's plan as the poll says it (X-Party-Schedule, V55: "open:<s>,close:<s>", either, or empty): a line of #partySchedule whose
+ * moment is no longer planned — applied, cancelled, made pointless by "Zakończ" / "Wznów" — is hidden, and the line with the last one.
+ * A moment planned since on another device shows after a reload. A missing header changes nothing.
+ */
+function applySchedule(value) {
+    const line = document.getElementById('partySchedule');
+    if (value === null || !line) return;   // no line: no plan when the page was made, the banner says the plain words
+    const planned = value.split(',');
+    let shown = 0;
+    line.querySelectorAll('[data-schedule-key]').forEach(function (item) {
+        item.hidden = planned.indexOf(item.dataset.scheduleKey) < 0;
+        if (!item.hidden) shown++;
+    });
+    line.hidden = shown === 0;
+    // the "party closed" banner said what the guests read before the open ("Prośby od 20:00"): without it, its plain words again
+    const description = document.getElementById('partyClosedDescription');
+    if (description && !value.split(',').some(function (key) { return key.indexOf('open:') === 0; })) {
+        description.textContent = description.dataset.plain;
+    }
+}
+
 /** Whether the poll says other permissions than the page was made with (#panelAccess); a missing header changes nothing. */
 function accessChanged(value) {
     const shown = document.getElementById('panelAccess');
@@ -163,6 +185,8 @@ async function refreshTable() {
         // …and whether the party is open: it may have been ended or resumed in another window
         const partyActive = response.headers.get('X-Party-Active');
         if (partyActive === 'true' || partyActive === 'false') showPartyActive(partyActive === 'true', sentAt);
+        // …and its plan (V55): a moment applied or cancelled leaves the line under the heading
+        applySchedule(response.headers.get('X-Party-Schedule'));
 
         // The person's access (V32): taken away (403) or changed by the organiser (X-Panel-Access) — the page loads itself again, and
         // the panel says what happened; before, the queue stood still and only the console knew

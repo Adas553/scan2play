@@ -11,7 +11,8 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account, the hosts' link, the party's new code (V49), the panel switcher, a pasted invitation, leaving a
+// Excluded: logout, delete-account, the hosts' link, the party's new code (V49), the party's hours (V55: the card comes back saying
+// what was saved or why not), the panel switcher, a pasted invitation, leaving a
 // staff (V30) — a page reload / redirect is expected: the new link or code, the list or the other party's panel is shown at once — and
 // deleting the DJ's library (V41) or logo (V45): library.js / logo.js send it and bring its card again; should that script be missing,
 // the page loads.
@@ -22,15 +23,16 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 
 /** The forms sent as a page load, not by fetch(). */
 const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host-link', '/dj/panel', '/dj/join', '/dj/staff/leave',
-    '/dj/library/delete', '/dj/logo/delete', '/dj/dashboard/party-code']);
+    '/dj/library/delete', '/dj/logo/delete', '/dj/dashboard/party-code', '/dj/dashboard/schedule']);
 /** The forms after which the queue is fetched at once (a song played, skipped, put back; the hosts' lists; a tip; ...). */
 const CHANGE_THE_QUEUE = new Set(['/dj/dashboard/play', '/dj/dashboard/dismiss', '/dj/dashboard/clear-queue', '/dj/dashboard/restore',
-    '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count', '/dj/dashboard/add-song']);
+    '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count', '/dj/dashboard/add-song',
+    '/dj/dashboard/schedule/cancel', '/dj/end-party', '/dj/start-party']);
 /** The forms after which the history is fetched again. */
 const CHANGE_THE_HISTORY = new Set(['/dj/dashboard/restore', '/dj/dashboard/clear-history']);
 /** The forms whose button does not say ✓: what follows shows it (the history fetched again, the new count, the party's state). */
 const NO_FLASH = new Set(['/dj/dashboard/restore', '/dj/dashboard/tip-count', '/dj/dashboard/clear-history', '/dj/end-party',
-    '/dj/start-party']);
+    '/dj/start-party', '/dj/dashboard/schedule/cancel']);
 
 /** The form's path ("/dj/dashboard/play"), without the address and the query. */
 function pathOf(form) {
@@ -83,7 +85,8 @@ function pathOf(form) {
             // The queue fetched now, so the change shows at once: a song played, skipped or put back from the history, the queue
             // cleared, the hosts' lists saved (V29: a song on the wish list gets its ⭐), the party's day of guest requests started
             // again (W4: the poll says so at once, X-Guest-Limits — the warning goes), a tip counted or taken back (V28), a song the
-            // DJ added (V44)
+            // DJ added (V44); a planned moment cancelled, the party ended or resumed (V55: X-Party-Schedule hides the moment no longer
+            // planned)
             if (CHANGE_THE_QUEUE.has(path)) emit(EVENTS.GUEST_QUEUE_CHANGED);
             // A song added: the field empty for the next one (it stays open, the cursor in it)
             if (path === '/dj/dashboard/add-song') form.reset();

@@ -137,6 +137,21 @@ public final class ViewAttributes {
     /** Flash: the party's new code after "Zmień kod imprezy" (V49) — its card says it and leads to printing it again. */
     public static final String CODE_CHANGED = "codeChanged";
 
+    // --- When the party opens and closes by itself (V55) ---
+    /** The plan as shown ({@code PartyScheduleService.View}): the panel's line, the card "Godziny imprezy" and its fields. */
+    public static final String SCHEDULE = "schedule";
+    /** Flash: the card "Godziny imprezy" saved — it says so, unfolded. */
+    public static final String SCHEDULE_SAVED = "scheduleSaved";
+    /** Flash: why the plan was not saved (a message key, {@code PartySchedule.Problem}). */
+    public static final String SCHEDULE_ERROR = "scheduleError";
+    /** Flash: the fields as typed when the plan was not saved — open day, open time, close day, close time. */
+    public static final String SCHEDULE_TYPED = "scheduleTyped";
+    /** The guest's "Prośby od soboty, 20:00" on the closed party's page and the TV screen; null without a planned open. */
+    public static final String OPENS_AT = "opensAt";
+    /** The TV screen's line in Polish and in English (it shows both under a Polish panel). */
+    public static final String OPENS_AT_PL = "opensAtPl";
+    public static final String OPENS_AT_EN = "opensAtEn";
+
     // --- The party's staff (V30, V32) ---
     /** Whether the person owns the panel's party (else they are on its staff, {@link #ACCESS}). */
     public static final String IS_OWNER = "isOwner";

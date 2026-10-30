@@ -265,6 +265,41 @@ class MigrationIT extends PostgresIntegrationTest {
                 .hasMessageContaining("party_settings_poster_size_check");
     }
 
+    /**
+     * V55: when the party opens and closes by itself — two moments, none by default, each with a partial index the job of every minute
+     * finds the due ones by (nearly every party has none). The planner uses them when it may not read the whole table.
+     */
+    @Test
+    void aParty_mayOpenAndCloseByItself_andTheJobFindsItByIndex() {
+        String code = "V55" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForMap("SELECT next_open_at, next_close_at FROM party_settings WHERE party_code = ?", code))
+                .containsEntry("next_open_at", null).containsEntry("next_close_at", null);
+        assertThat(jdbc.queryForList("SELECT data_type FROM information_schema.columns WHERE table_name = 'party_settings'"
+                + " AND column_name IN ('next_open_at', 'next_close_at') AND is_nullable = 'YES'", String.class))
+                .containsExactly("timestamp with time zone", "timestamp with time zone");
+        assertThat(jdbc.queryForList("SELECT indexdef FROM pg_indexes WHERE tablename = 'party_settings'"
+                + " AND indexname IN ('idx_party_settings_next_open_at', 'idx_party_settings_next_close_at') ORDER BY indexname", String.class))
+                .hasSize(2).allSatisfy(def -> assertThat(def).containsPattern("WHERE \\(next_(open|close)_at IS NOT NULL\\)"));
+
+        String plan = String.join("\n", jdbc.execute((java.sql.Connection connection) -> {
+            try (java.sql.Statement statement = connection.createStatement()) {
+                statement.execute("SET enable_seqscan = off");
+                try (java.sql.ResultSet rows = statement.executeQuery("EXPLAIN SELECT id FROM party_settings"
+                        + " WHERE next_open_at <= now() OR next_close_at <= now()")) {
+                    java.util.List<String> lines = new java.util.ArrayList<>();
+                    while (rows.next()) {
+                        lines.add(rows.getString(1));
+                    }
+                    statement.execute("RESET enable_seqscan");
+                    return lines;
+                }
+            }
+        }));
+        assertThat(plan).contains("idx_party_settings_next_open_at", "idx_party_settings_next_close_at");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

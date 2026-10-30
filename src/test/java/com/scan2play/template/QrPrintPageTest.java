@@ -93,7 +93,7 @@ class QrPrintPageTest {
         when(sessionHelper.access(any(), any(), any())).thenReturn(access);
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
-                mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor());
+                mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts());
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "https://www.scan2play.com.pl/");
         controller.init();
 

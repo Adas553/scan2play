@@ -9,6 +9,7 @@ import com.scan2play.service.DemoParty;
 import com.scan2play.service.DjService;
 import com.scan2play.service.LogoImage;
 import com.scan2play.service.GuestRequestLimiter;
+import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
@@ -29,6 +30,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
@@ -78,6 +80,7 @@ public class DjDashboardController {
     private final StaffInvitationService staffInvitationService;
     private final PlanService planService;
     private final AiHealthMonitor aiHealthMonitor;
+    private final PartyScheduleService partyScheduleService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -101,6 +104,8 @@ public class DjDashboardController {
      * window, so a second window (the DJ's phone) shows the "party closed" banner without a reload.
      */
     static final String PARTY_ACTIVE_HEADER = "X-Party-Active";
+    /** The party's planned moments (V55), {@code PartyScheduleService.headerValue}: "open:<epoch s>,close:<epoch s>", either, or empty. */
+    static final String PARTY_SCHEDULE_HEADER = "X-Party-Schedule";
 
     /** The history shows this many requests at first, and this many more each time the DJ asks for more. */
     static final int HISTORY_PAGE_SIZE = 50;
@@ -240,6 +245,9 @@ public class DjDashboardController {
         // what the party works with — the comment style, the guests' limits — is the plan's (the saved values wait for Pro)
         model.addAttribute(PLAN, planService.view(settings, owner));
         PartySettingsEntity planned = planService.asPlanned(settings);
+
+        // --- When it opens and closes by itself (V55): the panel's line, the card "Godziny imprezy" ---
+        model.addAttribute(SCHEDULE, partyScheduleService.view(settings, LocaleContextHolder.getLocale()));
 
         // --- Party State ---
         model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
@@ -506,6 +514,8 @@ public class DjDashboardController {
         response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
                 + "," + guestRequestLimiter.partyRequestsUsed(partyCode));
         response.setHeader(PARTY_ACTIVE_HEADER, String.valueOf(settings.isActive()));
+        // …and its plan (V55): the panel hides a planned moment's line once it is applied, cancelled or made pointless
+        response.setHeader(PARTY_SCHEDULE_HEADER, PartyScheduleService.headerValue(settings));
 
         // --- Lightweight fingerprint check (avoids full query + render) ---
         // the hosts' lists too: a song becomes ⭐ when they add it, with the queue as it was (or 🚫, one the DJ added, V44)

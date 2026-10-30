@@ -9,9 +9,11 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.model.VibeType;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartyCodeService;
+import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlanService;
 import com.scan2play.util.CodeGenerator;
+import com.scan2play.util.PartySchedule;
 import com.scan2play.util.SocialLinks;
 import com.scan2play.util.SongList;
 import com.scan2play.util.Texts;
@@ -40,7 +42,7 @@ import static com.scan2play.controller.ViewAttributes.*;
  * <p>
  * Handles:
  * <ul>
- *     <li>Start / end party</li>
+ *     <li>Start / end party, and when it opens and closes by itself (V55)</li>
  *     <li>Vibe, who plays, and rate limits</li>
  *     <li>Account deletion (required by Google API Services User Data Policy)</li>
  * </ul>
@@ -64,28 +66,87 @@ public class DjPartySettingsController {
     private final PartyCodeService partyCodeService;
     private final DjSessionHelper sessionHelper;
     private final PlanService planService;
+    private final PartyScheduleService partyScheduleService;
 
     /**
-     * Re-activates the party session.
+     * Re-activates the party session. A planned open it made pointless goes (V55); a planned close stays.
      */
     @PostMapping("/start-party")
     public String startParty(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
                              HttpSession session) {
         PartySettingsEntity settings = sessionHelper.require(partyCode, StaffPermission.OPEN_CLOSE, authentication, session);
-        partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> s.setActive(true));
+        partyScheduleService.setActive(settings.getPartyCode(), true);
         return REDIRECT_DASHBOARD;
     }
 
     /**
-     * Ends the current party session without logging out the DJ.
+     * Ends the current party session without logging out the DJ. A planned close before the next open goes (it has happened, V55); a
+     * planned open stays.
      */
     @PostMapping("/end-party")
     public String endParty(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
                            HttpSession session) {
         PartySettingsEntity settings = sessionHelper.require(partyCode, StaffPermission.OPEN_CLOSE, authentication, session);
         log.info("Ending party {} by {}", settings.getPartyCode(), authentication.getName());
-        partySettingsCommandService.updateSettings(settings.getPartyCode(), p -> p.setActive(false));
+        partyScheduleService.setActive(settings.getPartyCode(), false);
         return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, in Polish time, either empty for
+     * none — or, with {@code cancel=open|close} (the "✕" beside a planned moment), that moment taken away. Whoever may open and close
+     * the party (OPEN_CLOSE), any plan. A page load (forms.js leaves it alone): the page "Ustawienia imprezy" again at the card, which
+     * says what was saved or why not ({@link PartySchedule.Problem}); nothing is saved then.
+     */
+    @PostMapping("/dashboard/schedule")
+    public String updateSchedule(@RequestParam String partyCode, @RequestParam(required = false) String openDate,
+                                 @RequestParam(required = false) String openTime, @RequestParam(required = false) String closeDate,
+                                 @RequestParam(required = false) String closeTime, @RequestParam(required = false) String cancel,
+                                 OAuth2AuthenticationToken authentication, HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
+        sessionHelper.require(partyCode, StaffPermission.OPEN_CLOSE, authentication, session);
+        String back = REDIRECT_SETTINGS + "?party=" + partyCode + "#partyHoursCard";
+        if (cancel != null) {
+            partyScheduleService.cancel(partyCode, cancelsOpen(cancel));
+            redirectAttributes.addFlashAttribute(SCHEDULE_SAVED, true);
+            return back;
+        }
+        try {
+            partyScheduleService.plan(partyCode, new PartySchedule.Plan(PartySchedule.moment(openDate, openTime),
+                    PartySchedule.moment(closeDate, closeTime)));
+            redirectAttributes.addFlashAttribute(SCHEDULE_SAVED, true);
+        } catch (PartySchedule.Refused e) {
+            log.info("Party [{}]: the plan not saved — {}", partyCode, e.problem());
+            redirectAttributes.addFlashAttribute(SCHEDULE_ERROR, e.problem().messageKey());
+            // what was typed comes back in the fields, to be put right
+            redirectAttributes.addFlashAttribute(SCHEDULE_TYPED,
+                    new String[]{nonNull(openDate), nonNull(openTime), nonNull(closeDate), nonNull(closeTime)});
+        }
+        return back;
+    }
+
+    /**
+     * The "✕" beside a planned moment on the panel (V55), sent in the background: that moment taken away — the panel's poll then hides
+     * its line ({@code X-Party-Schedule}).
+     */
+    @PostMapping("/dashboard/schedule/cancel")
+    public String cancelScheduled(@RequestParam String partyCode, @RequestParam String event,
+                                  OAuth2AuthenticationToken authentication, HttpSession session) {
+        sessionHelper.require(partyCode, StaffPermission.OPEN_CLOSE, authentication, session);
+        partyScheduleService.cancel(partyCode, cancelsOpen(event));
+        return REDIRECT_DASHBOARD;
+    }
+
+    private static boolean cancelsOpen(String event) {
+        return switch (event) {
+            case "open" -> true;
+            case "close" -> false;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        };
+    }
+
+    private static String nonNull(String value) {
+        return value == null ? "" : value.trim();
     }
 
     /**

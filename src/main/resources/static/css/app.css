@@ -1436,3 +1436,43 @@ th[data-sort].sort-desc::after {
     width: 18px;
     height: 18px;
 }
+
+/* When the party opens and closes by itself (V55). The panel's line under the heading: "⏰ Zamknie się dziś o 3:00 ✕" — the
+   moments side by side, one under the other on a narrow phone, "✕" a finger's target (44 px) beside each; the words a quiet link
+   to the card (no underline until pointed at). A moment no longer planned is hidden
+   by the poll ([hidden], polling.js). */
+.s2p-schedule-line { display: flex; flex-wrap: wrap; column-gap: 1.5rem; font-size: 0.9rem; }
+.s2p-schedule-line[hidden],
+.s2p-schedule-item[hidden] { display: none; }
+.s2p-schedule-item { display: flex; align-items: center; gap: 0.35rem; min-height: 44px; min-width: 0; }
+.s2p-schedule-text { color: var(--s2p-light); min-width: 0; overflow-wrap: anywhere; text-decoration: none; }
+a.s2p-schedule-text:hover,
+a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: underline; }
+.s2p-schedule-cancel,
+.s2p-hours-cancel {
+    min-width: 44px; min-height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    color: var(--s2p-text-muted); text-decoration: none; font-size: 1.1rem; flex: none;
+}
+.s2p-schedule-cancel:hover,
+.s2p-hours-cancel:hover { color: var(--s2p-danger-text); }
+
+/* The card "Godziny imprezy": the day and the time side by side (the day wider; half each on a phone, where a date field needs
+   about 140 px and a 12-hour time field as much). On a phone or a touch screen each field and button a finger's target (44 px); on a computer the
+   buttons are the cards' small ones (one height on the page). The quick choices a row of two (.s2p-btn-row), half each on a phone,
+   as the day and the time above them. */
+.s2p-hours-planned { display: flex; align-items: center; gap: 0.5rem; color: var(--s2p-light); margin-bottom: 0.25rem; }
+.s2p-hours-fields { display: flex; gap: 0.5rem; }
+.s2p-hours-day { flex: 3 1 0; min-width: 0; }
+.s2p-hours-time { flex: 2 1 0; min-width: 0; }
+@media (max-width: 575.98px) {
+    .s2p-hours-day,
+    .s2p-hours-time { flex: 1 1 0; }   /* a phone's 12-hour time ("08:00 PM") needs the room */
+}
+.s2p-hours .form-control { min-height: 44px; }
+@media (max-width: 575.98px), (pointer: coarse) {
+    .s2p-hours-quick,
+    .s2p-hours-save { min-height: 44px; }
+}
+@media (max-width: 575.98px) {
+    .s2p-btn-row > .s2p-hours-quick { flex: 1 1 0; }
+}
