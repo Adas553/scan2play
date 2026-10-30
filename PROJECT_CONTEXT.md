@@ -1227,6 +1227,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 |----------|-------|
 | `google.ai.model-name` / `google.ai.thinking-level` (`thinking-budget` for gemini-2.x) | `gemini-3.6-flash` / low (1024) |
 | `spring.jpa.hibernate.ddl-auto` | `validate` (Flyway owns the schema) |
+| `spring.task.scheduling.pool.size` | `2`: the job of every minute that opens and closes the parties (V55) never waits for a night's job (`PartyScheduleIT`) |
 | `server.forward-headers-strategy` | `FRAMEWORK` |
 | `server.compression.*` | gzip for HTML / CSS / JS / JSON from 2 KB |
 | `server.tomcat.max-http-form-post-size` | 10 KB |

@@ -35,6 +35,7 @@ class PartyScheduleIT extends PostgresIntegrationTest {
     @Autowired PartySettingsRepository parties;
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactions;
+    @Autowired org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler scheduler;
 
     private String party(boolean active, Instant openAt, Instant closeAt) {
         return parties.saveAndFlush(PartySettingsEntity.builder().partyCode(newPartyCode()).ownerId("schedule-" + System.nanoTime())
@@ -187,6 +188,12 @@ class PartyScheduleIT extends PostgresIntegrationTest {
         }
         assertThat(mine(commands.applyDueSchedule(now, 500), party)).as("the DJ closed it: nothing due").isEmpty();
         assertThat(row(party)).containsEntry("active", false).containsEntry("next_close_at", null);
+    }
+
+    /** The jobs have two threads (spring.task.scheduling.pool.size): a night's long clearing never holds the minute's job back. */
+    @Test
+    void theMinutesJob_hasAThreadOfItsOwn_besideTheNightsJobs() {
+        assertThat(scheduler.getPoolSize()).isEqualTo(2);
     }
 
     private static void await(CountDownLatch latch) {
