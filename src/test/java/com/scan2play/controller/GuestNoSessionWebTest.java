@@ -31,7 +31,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * form carries the CSRF token, which lives in the session.
  */
 @WebMvcTest(GuestController.class)
-@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
+@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
+        com.scan2play.service.PartySchedulesConfig.class})
 class GuestNoSessionWebTest {
 
     @Autowired

@@ -137,12 +137,19 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
-        String view = controller.dashboard(null, model, user, session);
+        // the request's language, as the app's LocaleResolver sets it (the plan's words, V55, are made in the controller)
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(locale);
+        String view;
+        try {
+            view = controller.dashboard(null, model, user, session);
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
         assertThat(view).isEqualTo("dashboard");
 
         MockServletContext servletContext = new MockServletContext();
@@ -251,6 +258,50 @@ class DashboardPageRenderTest {
         String en = renderDashboard(party, List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan")), Locale.ENGLISH);
         assertThat(en).contains(">First time? Write to us<", "href=\"/how-it-works\"");
         write("dashboard-welcome-en.html", en);
+    }
+
+    /** Friday 2026-10-30, 20:00 and Saturday 3:00 in Poland: the planned open and close of the tests (V55). */
+    static final Instant OPEN_FRIDAY_20 = Instant.parse("2026-10-30T19:00:00Z");
+    static final Instant CLOSE_SATURDAY_3 = Instant.parse("2026-10-31T02:00:00Z");
+
+    /**
+     * The party's plan on the panel (V55), on Friday at noon: a closed party that opens today at 20:00 and closes tomorrow at 3:00 — a
+     * line each under the heading, the open first, its words leading to the card, "✕" sent in the background with the moment. Written
+     * as {@code dashboard-schedule.html} for {@code scenarios/schedule.js}. Who may not open and close the party reads it, no "✕".
+     */
+    @Test
+    void thePlannedOpenAndClose_areUnderTheHeading() throws IOException {
+        PartySettingsEntity party = party();
+        party.setActive(false);
+        party.setNextOpenAt(OPEN_FRIDAY_20);
+        party.setNextCloseAt(CLOSE_SATURDAY_3);
+
+        String html = renderDashboard(party, List.of(song(1, "Wilki - Baśka")), PL);
+
+        assertWhatTheScriptsNeed(html);
+        String line = html.substring(html.indexOf("id=\"partySchedule\""), html.indexOf("id=\"djTabBar\""));
+        assertThat(line).contains("data-schedule-key=\"open:1793386800\"", ">Otworzy się dziś o 20:00<",
+                "data-schedule-key=\"close:1793412000\"", ">Zamknie się jutro o 3:00<",
+                "href=\"/dj/settings?party=HARN1#partyHoursCard\"", "action=\"/dj/dashboard/schedule/cancel\"",
+                "name=\"event\" value=\"open\"", "aria-label=\"Anuluj zaplanowane otwarcie\"");
+        assertThat(line.indexOf("open:")).as("the open first: it comes first").isLessThan(line.indexOf("close:"));
+        write("dashboard-schedule.html", html);
+
+        String en = renderDashboard(party, List.of(), Locale.ENGLISH);
+        assertThat(en).contains(">Opens today at 20:00<", ">Closes tomorrow at 3:00<", "aria-label=\"Cancel the planned closing\"");
+
+        party.setNextOpenAt(null);
+        party.setActive(true);
+        assertThat(renderDashboard(party, List.of(), PL)).contains(">Zamknie się jutro o 3:00<").doesNotContain("open:");
+        PartySettingsEntity planned = party();
+        planned.setNextCloseAt(CLOSE_SATURDAY_3);
+        String viewer = renderDashboard(planned, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
+                mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(planned, false, StaffRole.QUEUE.permissions().stream()
+                        .filter(p -> p != StaffPermission.OPEN_CLOSE).collect(java.util.stream.Collectors.toSet())), null);
+        assertThat(viewer).as("read, not changed, without OPEN_CLOSE").contains(">Zamknie się jutro o 3:00<")
+                .doesNotContain("/dj/dashboard/schedule/cancel", "#partyHoursCard");
+        assertThat(renderDashboard(party(), List.of(), PL)).as("nothing planned: no line").doesNotContain("id=\"partySchedule\"");
     }
 
     @Test
@@ -626,7 +677,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
@@ -695,7 +746,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class),
-                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor());
+                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
 
         ConcurrentModel model = new ConcurrentModel();
         assertThat(controller.historyView(50, null, PARTY, model, ownerToken(), new MockHttpSession())).isEqualTo("history");

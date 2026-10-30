@@ -113,6 +113,31 @@
         </div>
     </div>
 
+    <!--/* The party's plan (V55) on the panel, under the heading: "⏰ Zamknie się dziś o 3:00 ✕", the next moment first. The words
+         lead to the card "Godziny imprezy"; "✕" takes the moment away in the background — for whoever may open and close the party,
+         the others read it. The poll's X-Party-Schedule hides a moment no longer planned (applied, cancelled, made pointless by
+         "Zakończ" / "Wznów"; polling.js); one planned on another device shows after a reload. */-->
+    <div th:if="${activeTab == 'panel' and schedule != null and schedule.any()}" id="partySchedule"
+         class="s2p-schedule-line mb-2" th:with="mayChange=${access == null or access.may('OPEN_CLOSE')}">
+        <th:block th:each="kind : ${schedule.openFirst ? {'open', 'close'} : {'close', 'open'}}"
+                  th:with="isOpen=${kind == 'open'}, key=${isOpen ? schedule.openKey : schedule.closeKey},
+                           text=${isOpen ? schedule.openText : schedule.closeText}">
+        <div th:if="${key != null}" class="s2p-schedule-item" th:attr="data-schedule-key=${key}">
+            <span aria-hidden="true">⏰</span>
+            <a th:if="${mayChange}" class="s2p-schedule-text" th:href="@{/dj/settings(party=${partyCode})} + '#partyHoursCard'"
+               th:text="${text}">Closes today at 3:00</a>
+            <span th:unless="${mayChange}" class="s2p-schedule-text" th:text="${text}">Closes today at 3:00</span>
+            <form th:if="${mayChange}" th:action="@{/dj/dashboard/schedule/cancel}" method="POST" class="m-0">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="hidden" name="event" th:value="${kind}">
+                <button type="submit" class="btn btn-link s2p-schedule-cancel"
+                        th:attr="aria-label=${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}"
+                        th:title="${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}">✕</button>
+            </form>
+        </div>
+        </th:block>
+    </div>
+
     <!--/* The tab bar, the same on every page of the DJ's (the panel, the history, "Ustawienia imprezy", "Obsługa"), so the way
          around is one: the panel (the queue), the history, the settings. It stays in view (position: sticky, .dj-tabbar in app.css).
          On the panel tabs.js swaps the queue and the history without leaving the page (the DJ keeps their place) and the lit tab

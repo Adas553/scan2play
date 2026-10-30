@@ -164,6 +164,35 @@ class GuestPageRenderTest {
         assertThat(accepted.indexOf("id=\"djLogo\"")).isNotNegative().isLessThan(accepted.indexOf("class=\"s2p-logo\""));
     }
 
+    /**
+     * A closed party that opens by itself later (V55): its page says when — "Prośby od 20:00" today, "Prośby od soboty, 20:00" on
+     * another day, in the guest's language, Polish time — in place of "DJ nie przyjmuje teraz próśb"; without a planned open, as before.
+     * The words are the real service's, on Friday 2026-10-30 at noon. {@code party-ended-opens*.html} for the phone scenarios.
+     */
+    @Test
+    void aPartyThatOpensLater_saysWhen() {
+        com.scan2play.service.PartyScheduleService schedule = com.scan2play.service.PartySchedules.of(
+                org.mockito.Mockito.mock(com.scan2play.service.PartySettingsCommandService.class),
+                com.scan2play.service.PartySchedules.FRIDAY_NOON);
+        com.scan2play.entity.PartySettingsEntity today = com.scan2play.entity.PartySettingsEntity.builder()
+                .nextOpenAt(java.time.Instant.parse("2026-10-30T19:00:00Z")).build();
+        com.scan2play.entity.PartySettingsEntity saturday = com.scan2play.entity.PartySettingsEntity.builder()
+                .nextOpenAt(java.time.Instant.parse("2026-10-31T19:00:00Z")).build();
+
+        String html = renderEnded(PL, Map.of("opensAt", schedule.guestOpens(today, PL)));
+        assertThat(html).contains("id=\"partyEndedTitle\">Prośby od 20:00<", "id=\"partyOpensNote\"", "id=\"checkAgainBtn\"")
+                .doesNotContain("DJ nie przyjmuje teraz próśb", "Impreza mogła się skończyć");
+        writeForTheBrowserTests("party-ended-opens.html", html);
+
+        String en = renderEnded(Locale.ENGLISH, Map.of("opensAt", schedule.guestOpens(saturday, Locale.ENGLISH), "djName", "DJ Koko",
+                "instagramUrl", "https://www.instagram.com/dj.koko/"));
+        assertThat(en).contains("id=\"partyEndedTitle\">Requests from Saturday, 20:00<", ">The DJ starts taking requests then.");
+        writeForTheBrowserTests("party-ended-opens-en.html", en);
+        assertThat(renderEnded(PL, Map.of("opensAt", schedule.guestOpens(saturday, PL)))).contains(">Prośby od soboty, 20:00<");
+
+        assertThat(renderEnded(PL, Map.of())).contains(">DJ nie przyjmuje teraz próśb<").doesNotContain("partyOpensNote");
+    }
+
     /** No order to tell (the DJ plays from their own software): the guests' requests, unnumbered, and the guest's own "waits". */
     @Test
     void theGuestsRequests_areListed_andTheGuestsOwnWaitsForTheDj() {

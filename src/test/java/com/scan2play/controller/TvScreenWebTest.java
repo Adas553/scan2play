@@ -40,7 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code target/browser-harness/tv*.html}).
  */
 @WebMvcTest(TvScreenController.class)
-@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class})
+@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
+        com.scan2play.service.PartySchedulesConfig.class})
 class TvScreenWebTest {
 
     @Autowired
@@ -169,6 +170,23 @@ class TvScreenWebTest {
         String list = noSession(mockMvc.perform(get("/p/ENDED/tv/list")).andExpect(status().isOk()).andReturn());
         assertThat(list).contains("id=\"tvEnded\"");
         write("tv-list-ended.html", list);
+    }
+
+    /**
+     * A closed party that opens by itself today at 20:00 (V55, seen on Friday 2026-10-30 at noon — PartySchedulesConfig): the screen
+     * says "Prośby od 20:00" / "Requests from 20:00" in place of "nie przyjmuje", in both of its languages, or in English alone.
+     */
+    @Test
+    void aPartyThatOpensLater_saysWhen_onTheScreen() throws Exception {
+        doReturn(PartySettingsEntity.builder().partyCode("LATER").active(false)
+                .nextOpenAt(java.time.Instant.parse("2026-10-30T19:00:00Z")).build())
+                .when(partySettingsQueryService).getSettings("LATER");
+        String list = noSession(mockMvc.perform(get("/p/LATER/tv/list")).andExpect(status().isOk()).andReturn());
+        assertThat(list).contains("id=\"tvEnded\"", "<span lang=\"pl\">Prośby od 20:00</span>",
+                "<span lang=\"en\" class=\"second\">Requests from 20:00</span>").doesNotContain("nie przyjmuje");
+        write("tv-list-opens.html", list);
+        assertThat(noSession(mockMvc.perform(get("/p/LATER/tv/list").param("lang", "en")).andExpect(status().isOk()).andReturn()))
+                .contains("<span lang=\"en\">Requests from 20:00</span>").doesNotContain("lang=\"pl\"");
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.service.GuestQueueService;
+import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.QrCodeService;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Locale;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -37,6 +40,7 @@ public class TvScreenController {
     private final GuestQueueService guestQueueService;
     private final QrCodeService qrCodeService;
     private final PlanService planService;
+    private final PartyScheduleService partyScheduleService;
 
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
@@ -66,6 +70,10 @@ public class TvScreenController {
         model.addAttribute(IS_ACTIVE, settings.isActive());
         if (settings.isActive()) {
             model.addAttribute(TV_SONGS, guestQueueService.mostWanted(settings.getPartyCode()));
+        } else {
+            // "Prośby od 20:00" while it opens by itself later (V55), in both of the screen's languages
+            model.addAttribute(OPENS_AT_PL, partyScheduleService.guestOpens(settings, Locale.forLanguageTag("pl")));
+            model.addAttribute(OPENS_AT_EN, partyScheduleService.guestOpens(settings, Locale.ENGLISH));
         }
     }
 

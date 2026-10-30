@@ -45,6 +45,71 @@
          state beside it (as the panel's row) */-->
     <div class="d-flex flex-column gap-3" id="settingsCards">
 
+        <!--/* "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, Polish time, either empty —
+             for whoever may open and close it (OPEN_CLOSE), any plan. First: what a DJ sets before an evening. A page load (forms.js
+             leaves /dj/dashboard/schedule alone): the page comes back here, unfolded, with what was saved or why not (the fields as
+             typed). The quick choices fill the fields from the server's today and tomorrow (schedule.js); "✕" beside a planned moment
+             is a form of its own below the card's form, so Enter in a field saves rather than cancels. */-->
+        <details th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard"
+                 th:attr="open=${scheduleSaved != null or scheduleError != null} ? 'open' : null"
+                 th:with="typed=${scheduleTyped != null ? scheduleTyped : {schedule.openDate, schedule.openTime, schedule.closeDate, schedule.closeTime}}">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name" th:text="#{settings.hours.title}">Party hours</h2>
+                <span class="s2p-fold-state" id="partyHoursState"
+                      th:text="${!schedule.any()} ? #{settings.hours.none} : (${schedule.openFirst} ? ${schedule.openText} : ${schedule.closeText})">Not set</span>
+            </summary>
+            <div class="s2p-fold-body">
+            <div th:if="${scheduleError != null}" class="alert alert-danger py-2 mb-3" role="alert" id="partyHoursError"
+                 th:text="#{${scheduleError}}">That time has passed.</div>
+            <div th:if="${scheduleSaved != null and scheduleError == null}" class="alert alert-success py-2 mb-3" role="status"
+                 id="partyHoursSaved" th:text="#{settings.hours.saved}">Saved.</div>
+            <p class="s2p-card-help mb-1" th:text="#{settings.hours.help}">The party opens and closes by itself…</p>
+            <p class="small text-light mb-3" id="partyHoursNow"
+               th:text="${isActive} ? #{settings.hours.now.open} : #{settings.hours.now.closed}">The party is open now.</p>
+            <form th:action="@{/dj/dashboard/schedule}" method="POST" class="m-0" id="partyHoursForm"
+                  th:attr="data-today=${schedule.today},data-tomorrow=${schedule.tomorrow}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <!--/* the planned open first when it comes first: the order the party lives them */-->
+                <th:block th:each="kind : ${schedule.openFirst ? {'open', 'close'} : {'close', 'open'}}"
+                          th:with="isOpen=${kind == 'open'}, text=${isOpen ? schedule.openText : schedule.closeText}">
+                <fieldset class="mb-3" th:id="${kind} + 'Hours'">
+                    <legend class="small fw-semibold text-light mb-1" th:text="${isOpen} ? #{settings.hours.open} : #{settings.hours.close}">Open at</legend>
+                    <div th:if="${text != null}" class="s2p-hours-planned" th:id="${kind} + 'Planned'">
+                        <span th:text="'⏰ ' + ${text}">⏰ Opens on Saturday at 20:00</span>
+                        <button type="submit" class="btn btn-link s2p-hours-cancel" th:form="${kind} + 'HoursCancel'"
+                                th:attr="aria-label=${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}"
+                                th:title="${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}">✕</button>
+                    </div>
+                    <div class="s2p-hours-fields">
+                        <div class="s2p-hours-day">
+                            <label th:for="${kind} + 'Date'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.date}">Day</label>
+                            <input type="date" class="form-control bg-black text-light border-secondary" th:id="${kind} + 'Date'"
+                                   th:name="${kind} + 'Date'" th:value="${typed[isOpen ? 0 : 2]}" th:min="${schedule.today}">
+                        </div>
+                        <div class="s2p-hours-time">
+                            <label th:for="${kind} + 'Time'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.time}">Time</label>
+                            <input type="time" class="form-control bg-black text-light border-secondary" th:id="${kind} + 'Time'"
+                                   th:name="${kind} + 'Time'" th:value="${typed[isOpen ? 1 : 3]}" step="60">
+                        </div>
+                    </div>
+                    <div class="s2p-btn-row mt-2" th:with="first=${isOpen ? '20:00' : '23:00'}, second=${isOpen ? '20:00' : '3:00'}">
+                        <button type="button" class="btn btn-sm btn-outline-secondary s2p-hours-quick" th:attr="data-hours-fill=${kind}"
+                                data-day="today" th:data-time="${first}" th:text="#{settings.hours.today(${first})}">today 20:00</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary s2p-hours-quick" th:attr="data-hours-fill=${kind}"
+                                data-day="tomorrow" th:data-time="${second.length() < 5 ? '0' + second : second}" th:text="#{settings.hours.tomorrow(${second})}">tomorrow 20:00</button>
+                    </div>
+                </fieldset>
+                </th:block>
+                <button type="submit" class="btn btn-sm btn-outline-light s2p-hours-save" id="partyHoursSave" th:text="#{settings.hours.save}">Save</button>
+            </form>
+            <form th:each="kind : ${ {'open', 'close'} }" th:id="${kind} + 'HoursCancel'" th:action="@{/dj/dashboard/schedule}"
+                  method="POST" class="d-none">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="hidden" name="cancel" th:value="${kind}">
+            </form>
+            </div>
+        </details>
+
         <!--/* The hosts' lists (V29): songs not to play (a request for one never reaches the DJ) and songs to play (accepted whatever
              the AI says, ⭐ in the queue), one per line. The hosts fill them too, by the link made here (/h/{token}, HostController) —
              "Nowy link" makes the old one dead: a party code is for every event, a link for one. */-->

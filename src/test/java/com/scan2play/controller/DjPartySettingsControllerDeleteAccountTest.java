@@ -28,7 +28,7 @@ class DjPartySettingsControllerDeleteAccountTest {
         DjSessionHelper helper = mock(DjSessionHelper.class);
         DjPartySettingsController controller = new DjPartySettingsController(mock(PartySettingsCommandService.class), deletion,
                 mock(com.scan2play.service.PartyCodeService.class), helper,
-                Plans.off());
+                Plans.off(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class)));
         OAuth2AuthenticationToken dj = new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"),
                 Map.of("sub", "dj-42"), "sub"), AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
         MockHttpSession session = new MockHttpSession();

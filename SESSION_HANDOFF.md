@@ -74,6 +74,15 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    prints). To try on a phone: "Do internetu" opens the share sheet (Instagram) on Android and an iPhone.
 4. **To try on real devices** (the release of 2026-10-28): "Panel jako aplikacja" in an iPhone's Safari, the settings beside the queue
    on a monitor ≥ 1400 px, the history's "⋯" and folded line on a phone.
+5. **"Godziny imprezy" — the party opens and closes by itself** (V55; the owner, 2026-10-30) — **built on
+   `claude/serene-fermat-6gp9b8`, waiting for the owner's review** (then a PR to `dev`, a release; V55 on production: check Flyway's
+   line once, and the job's first "Party [...] opened by its plan" in Railway's log). The owner's picks: one-off "Otwórz o" / "Zamknij o"
+   first (a weekly plan for clubs later, its own migration, writing into the same two columns); a manual change wins until the next
+   planned moment; the guests read "Prośby od 20:00" / "Prośby od soboty, 20:00"; whoever has OPEN_CLOSE sets it, plan Free, the first
+   card of "Ustawienia imprezy" with the panel's line "⏰ Zamknie się jutro o 3:00 ✕", quick choices "dziś 20:00" / "jutro 3:00".
+   Details: `PROJECT_CONTEXT.md` 5.1. The idea of item 2 — closing a party by itself after hours without requests — fits this model:
+   a job that, after N hours without a request, closes the party through `PartyScheduleService.setActive` (or writes `next_close_at`);
+   not built. To try on a phone: the native day and time fields in an iPhone's Safari and on Android.
 
 ## Later (not now)
 

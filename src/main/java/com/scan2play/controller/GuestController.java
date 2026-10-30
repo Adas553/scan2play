@@ -7,6 +7,7 @@ import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
+import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.SiteCounter;
@@ -48,6 +49,7 @@ public class GuestController {
     private final MessageSource messageSource;
     private final PlanService planService;
     private final SiteCounter siteCounter;
+    private final PartyScheduleService partyScheduleService;
 
     /**
      * The party page. It takes no {@code HttpSession} of its own (review 2026-10-14 W3): a parameter of that type made a session — a
@@ -272,9 +274,11 @@ public class GuestController {
      * tego DJ-a na swoją imprezę" (an idea from Rekwest, 2026-10-16) — the guest who liked the night writes to the DJ there; Scan2Play
      * keeps no guest's address. As the organiser's plan has the profiles (V35).
      */
-    private static String partyEnded(Model model, String partyCode, PartySettingsEntity settings) {
+    private String partyEnded(Model model, String partyCode, PartySettingsEntity settings) {
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(DJ_NAME, settings.getDjName());
+        // "Prośby od 20:00" in place of "DJ nie przyjmuje teraz próśb" while the party opens by itself later (V55)
+        model.addAttribute(OPENS_AT, partyScheduleService.guestOpens(settings, LocaleContextHolder.getLocale()));
         addProfiles(model, settings);
         return "party_ended";
     }

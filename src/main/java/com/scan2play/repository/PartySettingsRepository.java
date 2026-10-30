@@ -64,6 +64,27 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
      * role is read under the lock: an organiser making a new link at that moment is waited for, and PostgreSQL then checks the token
      * again — the old link joins nobody, not even with its old role ({@code PartyStaffRepositoryIT}).
      */
+    /**
+     * Opens or closes, in one statement, the parties whose planned moment (V55) has come by {@code now}, at most {@code limit} of them:
+     * open by a due open, closed by a due close — both due (the server was down), as the later one left it —, and the due moments
+     * cleared. Each row is found by the partial indexes of {@code next_open_at} / {@code next_close_at}; a row someone holds (a DJ's
+     * write, another instance's run) is skipped until the next run, and after waiting for one PostgreSQL checks the outer condition
+     * again, so a moment is never applied twice ({@code PartyScheduleIT}). Only through
+     * {@code PartySettingsCommandService.applyDueSchedule}, which empties the cache.
+     *
+     * @return each party changed: its code and whether it is open now
+     */
+    @Query(value = "UPDATE party_settings p SET"
+            + " active = CASE WHEN p.next_open_at <= :now AND p.next_close_at <= :now THEN p.next_open_at > p.next_close_at"
+            + "               WHEN p.next_open_at <= :now THEN true ELSE false END,"
+            + " next_open_at = CASE WHEN p.next_open_at <= :now THEN NULL ELSE p.next_open_at END,"
+            + " next_close_at = CASE WHEN p.next_close_at <= :now THEN NULL ELSE p.next_close_at END"
+            + " WHERE (p.next_open_at <= :now OR p.next_close_at <= :now)"
+            + " AND p.id IN (SELECT d.id FROM party_settings d WHERE d.next_open_at <= :now OR d.next_close_at <= :now"
+            + "              LIMIT :limit FOR UPDATE SKIP LOCKED)"
+            + " RETURNING p.party_code, p.active", nativeQuery = true)
+    List<Object[]> applyDueSchedule(@Param("now") Instant now, @Param("limit") int limit);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM PartySettingsEntity p WHERE p.staffToken = :staffToken")
     Optional<PartySettingsEntity> lockByStaffToken(@Param("staffToken") String staffToken);

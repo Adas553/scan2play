@@ -42,9 +42,11 @@
                 <span th:if="${#locale.language == 'pl'}" lang="pl">Jeszcze nikt nie poprosił — zeskanuj kod i bądź pierwszy!</span>
                 <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">No requests yet — scan the code and be the first!</span></p>
         </th:block>
+        <!--/* a party that opens by itself later (V55): "Prośby od 20:00" in place of "nie przyjmuje" */-->
         <p th:unless="${isActive}" id="tvEnded" class="tv-note">
-            <span th:if="${#locale.language == 'pl'}" lang="pl">DJ nie przyjmuje teraz próśb</span>
-            <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">The DJ is not taking requests now</span></p>
+            <span th:if="${#locale.language == 'pl'}" lang="pl" th:text="${opensAtPl != null} ? ${opensAtPl} : 'DJ nie przyjmuje teraz próśb'">DJ nie przyjmuje teraz próśb</span>
+            <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'"
+                  th:text="${opensAtEn != null} ? ${opensAtEn} : 'The DJ is not taking requests now'">The DJ is not taking requests now</span></p>
     </section>
 </main>
 <script src="/js/tv.js" th:src="@{/js/tv.js}"></script>

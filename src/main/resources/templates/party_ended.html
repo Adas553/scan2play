@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
-    <title th:text="#{party.ended.title}">Party Ended - Scan2Play</title>
+    <title th:text="${opensAt != null} ? ${opensAt} : #{party.ended.title}">Party Ended - Scan2Play</title>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
@@ -18,9 +18,15 @@
                 <!--/* the DJ's logo (V45) in place of the wave */-->
                 <th:block th:replace="~{fragments/components :: djLogo}"></th:block>
                 <h1 th:if="${djLogo == null}" class="display-1 mb-3">👋</h1>
-                <h2 class="mb-4 fw-bold text-light-custom" th:text="#{party.ended.title}">This party has ended</h2>
+                <!--/* a party that opens by itself later (V55) says when: "Prośby od soboty, 20:00", in the guest's language */-->
+                <h2 class="mb-4 fw-bold text-light-custom" id="partyEndedTitle"
+                    th:text="${opensAt != null} ? ${opensAt} : #{party.ended.title}">This party has ended</h2>
+                <p th:if="${opensAt != null}" class="lead text-secondary-bright" id="partyOpensNote"
+                   th:text="#{party.opens.subtitle}">The DJ starts taking requests then.</p>
+                <th:block th:unless="${opensAt != null}">
                 <p class="lead text-secondary-bright" th:text="#{party.ended.subtitle}">Thanks for partying with Scan2Play!</p>
                 <p class="text-secondary-bright mt-3" th:text="#{party.ended.see_you}">See you at the next event.</p>
+                </th:block>
                 <!--/* The DJ may resume the party: "check again" opens the party's own link, so the guest is back at the form without
                      scanning the code again. The landing page is for DJs (a Google login) — only a small link to it. */-->
                 <div class="mt-4">

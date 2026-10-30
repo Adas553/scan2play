@@ -85,6 +85,8 @@ def default_state():
         'guestLimitsUse': '0,0',
         # The X-Party-Active header of every poll answer: false = the DJ ended the party (in any window)
         'partyActive': True,
+        # The X-Party-Schedule header of every poll answer (V55): the planned moments, "open:<epoch s>,close:<epoch s>" — None: no header
+        'partySchedule': None,
         # The poll's own answer (V32): e.g. 403 — the organiser took the person's access away (the page loads itself again)
         'updatesStatus': None,
         # The poll's body instead of the queue, answered 200 without an ETag: e.g. a Wi-Fi login page that took the request over
@@ -318,6 +320,8 @@ class Handler(BaseHTTPRequestHandler):
                           'X-Party-Active': 'true' if state['partyActive'] else 'false'}
                 if state['panelAccess'] is not None:
                     limits['X-Panel-Access'] = state['panelAccess']
+                if state['partySchedule'] is not None:
+                    limits['X-Party-Schedule'] = state['partySchedule']
             # Like the real server: the ETag is a fingerprint of the guest queue only. X-Guest-Limits(-Use) is on every answer, 304 too.
             etag = '"q-%08x"' % zlib.crc32(json.dumps(queue, sort_keys=True).encode('utf-8'))
             if self.headers.get('If-None-Match') == etag:
@@ -456,6 +460,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
         if path == '/dj/dashboard/welcome-dismiss':   # the welcome card closed for good (V48): nothing to say
             return self._send(204)
+        if path == '/dj/dashboard/schedule/cancel':   # a planned moment taken away on the panel (V55): the plan without it, a redirect
+            with stand.lock:
+                if state['partySchedule'] is not None:
+                    state['partySchedule'] = ','.join(k for k in state['partySchedule'].split(',')
+                                                      if k and not k.startswith(fields.get('event', '') + ':'))
+            return self._send(302, headers={'Location': '/dj/dashboard'})
         if path == '/dj/dashboard/party-code':        # a new party code (V49): the page "Ustawienia imprezy" again, as the real server
             return self._send(302, headers={'Location': '/dj/settings'})
         if path in ('/dj/dashboard/limits', '/dj/dashboard/vibe', '/dj/dashboard/party-words', '/dj/dashboard/comment-style',

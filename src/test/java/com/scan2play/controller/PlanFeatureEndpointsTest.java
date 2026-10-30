@@ -88,12 +88,12 @@ class PlanFeatureEndpointsTest {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), settings, mock(QrCodeService.class), helper,
-                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
+                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts());
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
                         new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class)),
-                        new DjPartySettingsController(settings, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, plans),
+                        new DjPartySettingsController(settings, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, plans, com.scan2play.service.PartySchedules.of(settings)),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans),
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),

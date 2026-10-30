@@ -46,7 +46,7 @@ class DjDashboardControllerGuestLimitsTest {
         sessionHelper = mock(DjSessionHelper.class);
         limiter = mock(GuestRequestLimiter.class);
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
-                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), aiHealth);
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), aiHealth, com.scan2play.service.PartySchedules.texts());
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getWaiting(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
@@ -156,7 +156,7 @@ class DjDashboardControllerGuestLimitsTest {
     private String etagWith(com.scan2play.service.PlanService plans) {
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
                 mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
-                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
+                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts());
         return poll(false).getHeader("ETag");
     }
 }

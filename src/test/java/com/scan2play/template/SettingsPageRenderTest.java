@@ -138,13 +138,20 @@ class SettingsPageRenderTest {
         when(push.publicKey()).thenReturn(PUBLIC_KEY);
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), limiter, push, staff,
-                mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor());
+                mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
         model.addAllAttributes(flash);
-        String view = controller.settingsPage(PARTY, model, user(access.owner() ? "owner" : "kasia"), new MockHttpSession());
+        // the request's language, as the app's LocaleResolver sets it (the plan's words, V55, are made in the controller)
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(locale);
+        String view;
+        try {
+            view = controller.settingsPage(PARTY, model, user(access.owner() ? "owner" : "kasia"), new MockHttpSession());
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
         assertThat(view).isEqualTo("settings");
 
         MockServletContext servletContext = new MockServletContext();
@@ -339,13 +346,72 @@ class SettingsPageRenderTest {
                 .doesNotContain("id=\"partyCodeCard\"", "/dj/dashboard/party-code");
     }
 
-    /** Someone of the staff with no settings ("Obsługa kolejki"): this device alone, no row of jumps. */
+    /**
+     * Someone of the staff with no settings ("Obsługa kolejki"): this device and, as they may open and close the party, its hours (V55)
+     * — no row of jumps.
+     */
     @Test
     void theStaffWithoutSettings_haveThisDeviceAlone() {
         String html = render(staff(StaffRole.QUEUE.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL);
 
-        assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"")
+        assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"", "id=\"partyHoursCard\"")
                 .doesNotContain("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"linksCard\"", "id=\"settingsJump\"", "id=\"joinStaffForm\"");
+    }
+
+    /** A closed party that opens today at 20:00 and closes tomorrow at 3:00 (V55), seen on Friday at noon. */
+    private static PartySettingsEntity planned() {
+        PartySettingsEntity party = party();
+        party.setActive(false);
+        party.setNextOpenAt(DashboardPageRenderTest.OPEN_FRIDAY_20);
+        party.setNextCloseAt(DashboardPageRenderTest.CLOSE_SATURDAY_3);
+        return party;
+    }
+
+    /**
+     * "Godziny imprezy" (V55): the first card, folded to the next moment; unfolded, the planned moments with "✕" (a form of its own,
+     * so Enter in a field saves), the day and the time of each in Polish time, the quick choices, one "Zapisz" — a page load, back
+     * here. Written as {@code settings-hours.html} for {@code scenarios/schedule.js}; nothing planned, it says "Nie ustawiono".
+     */
+    @Test
+    void thePartysHours_areTheFirstCard() throws IOException {
+        String html = render(new PartyStaffService.Access(planned(), true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+
+        String card = html.substring(html.indexOf("id=\"partyHoursCard\""), html.indexOf("id=\"hostListsCard\""));
+        assertThat(html.indexOf("id=\"partyHoursCard\"")).as("the first card").isLessThan(html.indexOf("id=\"hostListsCard\""));
+        assertThat(card).contains("id=\"partyHoursState\">Otworzy się dziś o 20:00<", ">Godziny imprezy<",
+                ">Teraz impreza jest zamknięta.<", "action=\"/dj/dashboard/schedule\"", "data-today=\"2026-10-30\"",
+                "data-tomorrow=\"2026-10-31\"",
+                "name=\"openDate\" value=\"2026-10-30\" min=\"2026-10-30\"", "name=\"openTime\" value=\"20:00\"",
+                "name=\"closeDate\" value=\"2026-10-31\"", "name=\"closeTime\" value=\"03:00\"",
+                ">⏰ Otworzy się dziś o 20:00<", ">⏰ Zamknie się jutro o 3:00<", "form=\"openHoursCancel\"",
+                "id=\"openHoursCancel\"", "name=\"cancel\" value=\"close\"",
+                "data-day=\"today\" data-time=\"20:00\" data-hours-fill=\"open\">dziś 20:00<",
+                "data-day=\"tomorrow\" data-time=\"03:00\" data-hours-fill=\"close\">jutro 3:00<")
+                .doesNotContain(" open=\"open\"", "id=\"partyHoursError\"");
+        assertThat(card.indexOf("id=\"partyHoursSave\"")).as("the save before the cancels: Enter saves")
+                .isLessThan(card.indexOf("id=\"openHoursCancel\""));
+        write("settings-hours.html", html);
+
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), Locale.ENGLISH))
+                .contains(">Party hours<", "id=\"partyHoursState\">Not set<", ">The party is open now.<", ">tomorrow 3:00<");
+        assertThat(render(staff(Set.of(StaffPermission.QUEUE)), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .as("without OPEN_CLOSE: no card").doesNotContain("id=\"partyHoursCard\"");
+    }
+
+    /** A plan refused (V55): the card open, why, and the fields as typed — not as saved. {@code settings-hours-error.html}. */
+    @Test
+    void aPlanRefused_saysWhy_withTheFieldsAsTyped() throws IOException {
+        String html = render(new PartyStaffService.Access(planned(), true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
+                PL, com.scan2play.service.Plans.off(), mock(DjService.class),
+                Map.of("scheduleError", "schedule.error.past", "scheduleTyped", new String[]{"2026-10-29", "20:00", "", ""}));
+
+        assertThat(html).contains("id=\"partyHoursCard\" open=\"open\"", ">Ta pora już minęła: wybierz późniejszą.<",
+                "name=\"openDate\" value=\"2026-10-29\"", "name=\"closeDate\" value=\"\"")
+                .doesNotContain("id=\"partyHoursSaved\"");
+        write("settings-hours-error.html", html);
+
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), mock(DjService.class),
+                Map.of("scheduleSaved", true))).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSaved\"", ">Zapisano.<");
     }
 
     @Test
