@@ -294,6 +294,22 @@
         }
     });
 
+    // The tent's sheet on a phone has the page's white margin around it (12 mm, as it comes out of the printer): made smaller to the
+    // sheet alone, that margin ran off the screen's left edge and the sheet sat off its middle (the owner's screenshot)
+    S2P.scenario({
+        name: 'poster-phone-preview-tent-centred',
+        page: 'qr-print-tent-logo',
+        viewport: '390,844',
+        title: 'the tent on a phone: the sheet and its white page margin inside the screen, in its middle',
+        run: async function (t) {
+            const tent = document.querySelector('.tent'), box = tent.getBoundingClientRect(), width = document.documentElement.clientWidth;
+            const margin = 12 * MM * box.width / tent.offsetWidth;
+            const left = box.left - margin, right = width - (box.right + margin);
+            t.check('the white margin inside the screen (' + Math.round(left) + ' px left, ' + Math.round(right) + ' px right)', left >= 8 && right >= 8);
+            t.check('in the middle (' + Math.round(left) + ' / ' + Math.round(right) + ')', Math.abs(left - right) <= 2);
+        }
+    });
+
     S2P.scenario({
         name: 'poster-phone-preview-cards',
         page: 'qr-print-cards',
