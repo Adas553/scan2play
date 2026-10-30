@@ -4,6 +4,7 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartySchedules;
+import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PartySettingsCommandService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 /**
  * "Godziny imprezy" (V55) and the manual open and close against them: whoever may open and close the party (OPEN_CLOSE) sets a day and
@@ -99,6 +102,31 @@ class DjPartySettingsControllerScheduleTest {
         mockMvc.perform(post("/dj/dashboard/schedule").param("partyCode", PARTY).param("openDate", "2026-10-31").param("openTime", "20:00")
                         .principal(token).session(new MockHttpSession()))
                 .andExpect(flash().attribute("scheduleError", "schedule.error.open_while_open"));
+    }
+
+    /**
+     * Sent in the background (schedule.js, {@code X-Requested-With: fetch}): no redirect — the card alone, with what was saved or why
+     * not, for the party as it is after the change; the page stays where it is.
+     */
+    @Test
+    void sentInTheBackground_theAnswerIsTheCardAlone() throws Exception {
+        row.setActive(false);
+        when(sessionHelper.access(eq(PARTY), any(), any())).thenAnswer(call -> new PartyStaffService.Access(row, true, StaffPermission.all()));
+        MvcResult saved = mockMvc.perform(post("/dj/dashboard/schedule").param("partyCode", PARTY).param("openDate", "2026-10-30")
+                        .param("openTime", "20:00").header("X-Requested-With", "fetch").locale(java.util.Locale.forLanguageTag("pl"))
+                        .principal(token).session(new MockHttpSession()))
+                .andExpect(status().isOk()).andExpect(view().name("settings :: partyHoursCard"))
+                .andExpect(model().attribute("scheduleSaved", true)).andExpect(model().attribute("isActive", false))
+                .andExpect(flash().attributeCount(0)).andReturn();
+        assertThat(((com.scan2play.service.PartyScheduleService.View) saved.getModelAndView().getModel().get("schedule")).openText())
+                .as("the card of the party as it is after the change").isEqualTo("Otworzy się dziś o 20:00");
+        assertThat(row.getNextOpenAt()).isEqualTo(Instant.parse("2026-10-30T19:00:00Z"));
+
+        mockMvc.perform(post("/dj/dashboard/schedule").param("partyCode", PARTY).param("closeDate", "2026-10-30").param("closeTime", "11:00")
+                        .header("X-Requested-With", "fetch").principal(token).session(new MockHttpSession()))
+                .andExpect(view().name("settings :: partyHoursCard"))
+                .andExpect(model().attribute("scheduleError", "schedule.error.past"))
+                .andExpect(model().attribute("scheduleTyped", new String[]{"", "", "2026-10-30", "11:00"}));
     }
 
     @Test

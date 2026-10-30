@@ -11,6 +11,7 @@ import com.scan2play.service.AccountDeletionService;
 import com.scan2play.service.PartyCodeService;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsCommandService;
+import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.PartySchedule;
@@ -22,11 +23,14 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -34,6 +38,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.scan2play.controller.ViewAttributes.*;
 
@@ -95,34 +101,46 @@ public class DjPartySettingsController {
     /**
      * "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, in Polish time, either empty for
      * none — or, with {@code cancel=open|close} (the "✕" beside a planned moment), that moment taken away. Whoever may open and close
-     * the party (OPEN_CLOSE), any plan. A page load (forms.js leaves it alone): the page "Ustawienia imprezy" again at the card, which
-     * says what was saved or why not ({@link PartySchedule.Problem}); nothing is saved then.
+     * the party (OPEN_CLOSE), any plan. Sent in the background ({@code X-Requested-With: fetch}, schedule.js): the answer is the card
+     * alone, saying what was saved or why not ({@link PartySchedule.Problem}; nothing is saved then) — the page stays where it is.
+     * Without the script: the page "Ustawienia imprezy" again at the card, the same words carried as flash attributes.
      */
     @PostMapping("/dashboard/schedule")
     public String updateSchedule(@RequestParam String partyCode, @RequestParam(required = false) String openDate,
                                  @RequestParam(required = false) String openTime, @RequestParam(required = false) String closeDate,
                                  @RequestParam(required = false) String closeTime, @RequestParam(required = false) String cancel,
-                                 OAuth2AuthenticationToken authentication, HttpSession session,
+                                 @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+                                 OAuth2AuthenticationToken authentication, HttpSession session, Model model,
                                  RedirectAttributes redirectAttributes) {
         sessionHelper.require(partyCode, StaffPermission.OPEN_CLOSE, authentication, session);
-        String back = REDIRECT_SETTINGS + "?party=" + partyCode + "#partyHoursCard";
+        Map<String, Object> outcome = new HashMap<>();
         if (cancel != null) {
             partyScheduleService.cancel(partyCode, cancelsOpen(cancel));
-            redirectAttributes.addFlashAttribute(SCHEDULE_SAVED, true);
-            return back;
+            outcome.put(SCHEDULE_SAVED, true);
+        } else {
+            try {
+                partyScheduleService.plan(partyCode, new PartySchedule.Plan(PartySchedule.moment(openDate, openTime),
+                        PartySchedule.moment(closeDate, closeTime)));
+                outcome.put(SCHEDULE_SAVED, true);
+            } catch (PartySchedule.Refused e) {
+                log.info("Party [{}]: the plan not saved — {}", partyCode, e.problem());
+                outcome.put(SCHEDULE_ERROR, e.problem().messageKey());
+                // what was typed comes back in the fields, to be put right
+                outcome.put(SCHEDULE_TYPED, new String[]{nonNull(openDate), nonNull(openTime), nonNull(closeDate), nonNull(closeTime)});
+            }
         }
-        try {
-            partyScheduleService.plan(partyCode, new PartySchedule.Plan(PartySchedule.moment(openDate, openTime),
-                    PartySchedule.moment(closeDate, closeTime)));
-            redirectAttributes.addFlashAttribute(SCHEDULE_SAVED, true);
-        } catch (PartySchedule.Refused e) {
-            log.info("Party [{}]: the plan not saved — {}", partyCode, e.problem());
-            redirectAttributes.addFlashAttribute(SCHEDULE_ERROR, e.problem().messageKey());
-            // what was typed comes back in the fields, to be put right
-            redirectAttributes.addFlashAttribute(SCHEDULE_TYPED,
-                    new String[]{nonNull(openDate), nonNull(openTime), nonNull(closeDate), nonNull(closeTime)});
+        if (!"fetch".equals(requestedWith)) {
+            outcome.forEach(redirectAttributes::addFlashAttribute);
+            return REDIRECT_SETTINGS + "?party=" + partyCode + "#partyHoursCard";
         }
-        return back;
+        // the card as the page shows it, the party read again after the change
+        PartyStaffService.Access access = sessionHelper.access(partyCode, authentication, session);
+        model.addAllAttributes(outcome);
+        model.addAttribute(ACCESS, access);
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(IS_ACTIVE, access.party().isActive());
+        model.addAttribute(SCHEDULE, partyScheduleService.view(access.party(), LocaleContextHolder.getLocale()));
+        return "settings :: partyHoursCard";
     }
 
     /**

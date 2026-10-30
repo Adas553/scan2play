@@ -87,6 +87,8 @@ def default_state():
         'partyActive': True,
         # The X-Party-Schedule header of every poll answer (V55): the planned moments, "open:<epoch s>,close:<epoch s>" — None: no header
         'partySchedule': None,
+        # what "Godziny imprezy" sent in the background is answered with (V55): a rendered card, settings-hours-answer-*.html
+        'scheduleAnswer': 'settings-hours-answer-saved',
         # The poll's own answer (V32): e.g. 403 — the organiser took the person's access away (the page loads itself again)
         'updatesStatus': None,
         # The poll's body instead of the queue, answered 200 without an ETag: e.g. a Wi-Fi login page that took the request over
@@ -392,6 +394,9 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and path.endswith('/vote'):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+        if path == '/dj/dashboard/schedule':           # "Godziny imprezy" sent by fetch (V55): with its headers
+            fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+            fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         self._note('POST', path, fields)
         state = stand.state
         refused = state['postStatus'].get(path)
@@ -460,6 +465,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
         if path == '/dj/dashboard/welcome-dismiss':   # the welcome card closed for good (V48): nothing to say
             return self._send(204)
+        if path == '/dj/dashboard/schedule':           # "Godziny imprezy" (V55): the card alone, as the real server answers a fetch
+            with open(os.path.join(stand.rendered, state['scheduleAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/schedule/cancel':   # a planned moment taken away on the panel (V55): the plan without it, a redirect
             with stand.lock:
                 if state['partySchedule'] is not None:

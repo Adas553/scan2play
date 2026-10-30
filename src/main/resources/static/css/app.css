@@ -1457,9 +1457,8 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-hours-cancel:hover { color: var(--s2p-danger-text); }
 
 /* The card "Godziny imprezy": the day and the time side by side (the day wider; half each on a phone, where a date field needs
-   about 140 px and a 12-hour time field as much). On a phone or a touch screen each field and button a finger's target (44 px); on a computer the
-   buttons are the cards' small ones (one height on the page). The quick choices a row of two (.s2p-btn-row), half each on a phone,
-   as the day and the time above them. */
+   about 140 px and a 12-hour time field as much). Its fields and buttons are every card's small ones — on a phone or a touch screen
+   44 px high by the rule for all of them. The quick choices a row of two (.s2p-btn-row), half each on a phone. */
 .s2p-hours-planned { display: flex; align-items: center; gap: 0.5rem; color: var(--s2p-light); margin-bottom: 0.25rem; }
 .s2p-hours-fields { display: flex; gap: 0.5rem; }
 .s2p-hours-day { flex: 3 1 0; min-width: 0; }
@@ -1467,11 +1466,6 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 @media (max-width: 575.98px) {
     .s2p-hours-day,
     .s2p-hours-time { flex: 1 1 0; }   /* a phone's 12-hour time ("08:00 PM") needs the room */
-}
-.s2p-hours .form-control { min-height: 44px; }
-@media (max-width: 575.98px), (pointer: coarse) {
-    .s2p-hours-quick,
-    .s2p-hours-save { min-height: 44px; }
 }
 @media (max-width: 575.98px) {
     .s2p-btn-row > .s2p-hours-quick { flex: 1 1 0; }
