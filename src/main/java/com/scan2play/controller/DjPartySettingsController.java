@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -149,42 +150,45 @@ public class DjPartySettingsController {
      * The QR print as the DJ sets it (V46, V47), from the print page (qr-print.js, in the background — 204): the DJ's own heading and
      * line (one line each, cut to {@value PartySettingsEntity#POSTER_HEADING_MAX} / {@value PartySettingsEntity#POSTER_LINE_MAX}; empty =
      * ours / none), the language, the look (the theme; the DJ's colour "#rrggbb", anything else the theme's own; the heading's font, V51,
-     * anything else the theme's; the paper's colour, V53, "#rrggbb", anything else the theme's), the number of tables
+     * anything else the theme's; the heading's size, V54, SMALL / NORMAL / LARGE, anything else NORMAL; the paper's colour, V53, "#rrggbb", anything else the theme's), the number of tables
      * (V50: 1 … {@value PartySettingsEntity#POSTER_TABLES_MAX}, more is the most; anything else none) and what of the DJ's it shows.
      * Whoever may change the party's card "Impreza" (VIBE), any plan: the words on paper are the party's, as its vibe note; the logo
      * shown stays the plan's (PlanService.asPlanned).
      */
     @PostMapping("/qr-print/settings")
     @ResponseBody
-    public ResponseEntity<Void> updatePoster(@RequestParam String partyCode, @RequestParam(required = false) String heading,
-                                             @RequestParam(required = false) String line, @RequestParam(required = false) String language,
-                                             @RequestParam(required = false) String theme, @RequestParam(required = false) String accent,
-                                             @RequestParam(required = false) String font,
-                                             @RequestParam(required = false) String paper,
-                                             @RequestParam(required = false) String tables,
-                                             @RequestParam(defaultValue = "false") boolean showLogo,
-                                             @RequestParam(defaultValue = "false") boolean showLinks,
-                                             @RequestParam(defaultValue = "false") boolean showTip,
-                                             @RequestParam(defaultValue = "false") boolean showAddress,
+    public ResponseEntity<Void> updatePoster(@RequestParam String partyCode, @ModelAttribute PosterForm form,
                                              OAuth2AuthenticationToken authentication, HttpSession session) {
         sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
-        String ownHeading = Texts.oneLine(heading, PartySettingsEntity.POSTER_HEADING_MAX);
-        String ownLine = Texts.oneLine(line, PartySettingsEntity.POSTER_LINE_MAX);
-        partySettingsCommandService.updateSettings(partyCode, s -> {
+        partySettingsCommandService.updateSettings(partyCode, form::applyTo);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * The print page's editor as sent (qr-print.html #posterForm): every field a text or a box, read leniently by {@link #applyTo} — a
+     * box not sent is off. A new field of the print is a component here and a line in {@code applyTo}.
+     */
+    public record PosterForm(String heading, String line, String language, String theme, String accent, String font, String size,
+                             String paper, String tables, Boolean showLogo, Boolean showLinks, Boolean showTip, Boolean showAddress) {
+
+        /** The party's print as the form says (one line each, cut to their columns; anything not understood is the default). */
+        void applyTo(PartySettingsEntity s) {
+            String ownHeading = Texts.oneLine(heading, PartySettingsEntity.POSTER_HEADING_MAX);
+            String ownLine = Texts.oneLine(line, PartySettingsEntity.POSTER_LINE_MAX);
             s.setPosterHeading(ownHeading.isEmpty() ? null : ownHeading);
             s.setPosterLine(ownLine.isEmpty() ? null : ownLine);
             s.setPosterLanguage(PosterLanguage.of(language));
             s.setPosterTheme(PosterTheme.of(theme));
             s.setPosterAccent(PosterTheme.accent(accent));
             s.setPosterFont(com.scan2play.model.PosterFont.of(font));
+            s.setPosterSize(com.scan2play.model.PosterSize.of(size));
             s.setPosterPaper(PosterTheme.accent(paper));
             s.setPosterTables(posterTables(tables));
-            s.setPosterShowLogo(showLogo);
-            s.setPosterShowLinks(showLinks);
-            s.setPosterShowTip(showTip);
-            s.setPosterShowAddress(showAddress);
-        });
-        return ResponseEntity.noContent().build();
+            s.setPosterShowLogo(Boolean.TRUE.equals(showLogo));
+            s.setPosterShowLinks(Boolean.TRUE.equals(showLinks));
+            s.setPosterShowTip(Boolean.TRUE.equals(showTip));
+            s.setPosterShowAddress(Boolean.TRUE.equals(showAddress));
+        }
     }
 
     /** The number of tables as kept (V50): a whole number from 1, more than the most is the most; anything else none. */

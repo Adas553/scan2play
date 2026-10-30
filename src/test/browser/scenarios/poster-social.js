@@ -46,6 +46,19 @@
 
     function rgb(css) { return (css.match(/[\d.]+/g) || []).slice(0, 3).map(Number); }
 
+    function far(a, b, d) { return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > (d || 60); }
+
+    /** Along a row from x0 to x1 at y: how many runs of pixels far from the paper (the frame's lines). */
+    function lines(made, x0, x1, y, paper) {
+        let runs = 0, inside = false;
+        for (let x = x0; x <= x1; x++) {
+            const ink = far(made.pixel(x, y), paper, 40);
+            if (ink && !inside) runs++;
+            inside = ink;
+        }
+        return runs;
+    }
+
     S2P.scenario({
         name: 'poster-social-story',
         page: 'qr-print-poster',
@@ -60,7 +73,7 @@
             t.check('the code at least 500 px (' + qr.size + ')', qr.size >= 500);
             const across = story.dark(qr.x, Math.round(qr.y + qr.size / 2), qr.size);
             t.check('its modules: black and white across its middle (' + across + ' dark of ' + qr.size + ')', across > qr.size * 0.15 && across < qr.size * 0.85);
-            t.step('the unsaved heading drawn', story.layout.heading.join(' '), 'Wesele Ani i Tomka');
+            t.step('the unsaved heading drawn', story.layout.heading.join(' ').replace(/\u00a0/g, ' '), 'Wesele Ani i Tomka');
             t.check('the party\'s code drawn large (' + story.layout.code + ')', story.layout.code === 'PRNT1');
             t.check('inside: ' + JSON.stringify([story.layout.left, story.layout.right, story.layout.top, story.layout.bottom]),
                 story.layout.left >= 60 && story.layout.right <= 1020 && story.layout.top >= 60 && story.layout.bottom <= 1860);
@@ -104,6 +117,78 @@
                 }
             }
             t.step('inside, large, with the logo, in every theme', out, []);
+        }
+    });
+
+    // A story's top and foot are under Instagram's own bars (the profile above, the reply field below — some 250 px each): the
+    // picture's words, logo and code stay between them; the frame, a decoration, may run under them.
+    S2P.scenario({
+        name: 'poster-social-story-safe',
+        page: 'qr-print-poster-logo',
+        title: 'the story with the longest words, the DJ\'s logo, three profiles and the tip, in every theme: nothing under Instagram\'s bars (250 px at the top and the foot), the code still at least 420 px',
+        run: async function (t) {
+            type('posterHeading', 'W'.repeat(40));
+            type('posterLine', 'W'.repeat(60));
+            await t.waitFor(function () { return document.querySelector('.poster .dj-logo').complete; }, 'the logo', 3000);
+            const out = [];
+            for (const theme of themes()) {
+                pickTheme(theme);
+                const l = (await make(t, 'story')).layout;
+                if (l.top < 250 || l.bottom > 1920 - 250) out.push(theme + ' ' + l.top + ' … ' + l.bottom);
+                if (l.qr.size < 420) out.push(theme + ' code ' + l.qr.size);
+            }
+            t.step('between the bars, the code large', out, []);
+        }
+    });
+
+    // The pictures in the print's look (qr-print.css): each theme's frame as on paper — the elegant double, the club and the pastel
+    // rounded, the rustic stitched, the gala's navy band with a gold line, the neon in a gradient, the confetti's dots —; the party's
+    // code in the print's font, not a typewriter's.
+    S2P.scenario({
+        name: 'poster-social-frames',
+        page: 'qr-print-poster',
+        title: '"Do internetu" in the print\'s look: every theme\'s frame as on paper, the party\'s code in the print\'s font',
+        run: async function (t) {
+            const bad = [];
+            for (const theme of themes()) {
+                pickTheme(theme);
+                const made = await make(t, 'story');
+                const paper = made.pixel(5, 5), mid = 960;
+                const across = lines(made, 10, 120, mid, paper);
+                if (/monospace/.test(made.layout.codeFont || 'monospace')) bad.push(theme + ' code in ' + made.layout.codeFont);
+                if (theme === 'CLASSIC' && across !== 0) bad.push('CLASSIC framed: ' + across);
+                if (theme === 'ELEGANT' && across !== 2) bad.push('ELEGANT not double: ' + across);
+                if ((theme === 'CLUB' || theme === 'PASTEL') && (across !== 1 || far(made.pixel(36, 36), paper, 40))) {
+                    bad.push(theme + ' not one rounded line: ' + across + ' corner ' + made.pixel(36, 36));
+                }
+                if (theme === 'RUSTIC') {
+                    let runs = 0, inside = false;
+                    for (let y = 300; y < 1600; y++) {
+                        const ink = far(made.pixel(34, y), paper, 40);
+                        if (ink && !inside) runs++;
+                        inside = ink;
+                    }
+                    if (runs < 20 || across < 1) bad.push('RUSTIC not stitched: ' + runs + ' stitches, ' + across + ' lines');
+                }
+                if (theme === 'GALA') {
+                    const band = made.pixel(42, mid);
+                    if (band.some(function (v) { return v > 90; }) || across !== 2) bad.push('GALA no dark band and gold line: ' + band + ', ' + across);
+                }
+                if (theme === 'NEON' && !far(made.pixel(42, 300), made.pixel(1038, 1620), 120)) {
+                    bad.push('NEON no gradient: ' + made.pixel(42, 300) + ' / ' + made.pixel(1038, 1620));
+                }
+                if (theme === 'CONFETTI') {
+                    const colours = new Set();
+                    for (let x = 20; x < 1060; x += 2) {
+                        for (let y = 15; y < 75; y += 2) {
+                            const p = made.pixel(x, y);
+                            if (far(p, paper, 120)) colours.add(p.map(function (v) { return Math.round(v / 64); }).join());
+                        }
+                    }
+                    if (colours.size < 3) bad.push('CONFETTI dots of ' + colours.size + ' colours');
+                }
+            }
+            t.step('every theme\'s frame as on paper; the code in the print\'s font', bad, []);
         }
     });
 })();

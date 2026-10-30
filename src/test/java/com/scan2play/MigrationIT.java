@@ -251,6 +251,20 @@ class MigrationIT extends PostgresIntegrationTest {
                 .hasMessageContaining("party_settings_poster_font_check");
     }
 
+    /** V54: the QR print's heading size — as the theme has it by default, and only a known one. */
+    @Test
+    void theQrPrint_hasAHeadingSize_asItIsByDefault() {
+        String code = "V54" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT poster_size FROM party_settings WHERE party_code = ?", String.class, code)).isEqualTo("NORMAL");
+        for (String size : List.of("SMALL", "LARGE", "NORMAL")) {
+            jdbc.update("UPDATE party_settings SET poster_size = ? WHERE party_code = ?", size, code);
+        }
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET poster_size = 'HUGE' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_poster_size_check");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

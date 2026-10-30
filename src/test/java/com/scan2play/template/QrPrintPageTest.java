@@ -129,7 +129,9 @@ class QrPrintPageTest {
         String html = render("poster", Locale.forLanguageTag("pl"));
 
         assertThat(html).contains("class=\"layout-poster theme-classic has-editor\"", "<main class=\"poster\">", "data:image/png;base64,");
-        assertThat(html).contains("https://www.scan2play.com.pl/p/" + PARTY, ">" + PARTY + "<");
+        // the address as a guest types it — no "https://" — the party's code whole after a possible line break (wbr)
+        assertThat(html).contains("<span>www.scan2play.com.pl/p/</span><wbr><span class=\"link-code\">" + PARTY + "</span>")
+                .doesNotContain("https://www.scan2play.com.pl/p/");
         // a Polish panel: Polish and English at once; "poproś", as the TV screen and the rest of the app ("prośba"), not "zamów"
         assertThat(html).contains("<span lang=\"pl\">Zeskanuj i poproś o piosenkę</span>", "<span lang=\"en\" class=\"second\">Scan to request a song</span>")
                 .doesNotContain("zamów");
@@ -275,8 +277,10 @@ class QrPrintPageTest {
                 "<option value=\"RUSTIC\">Rustykalny</option>", "<option value=\"GALA\">Gala</option>", "<option value=\"NEON\">Neon</option>",
                 "<option value=\"CONFETTI\">Konfetti</option>",
                 "value=\"#123abc\" checked=\"checked\"", "id=\"posterAccentPicker\" value=\"#123abc\"", "class=\"swatch-dot swatch-c2185b\"");
-        String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build());
-        assertThat(palette).contains("value=\"#c2185b\" aria-label=\"#c2185b\" checked=\"checked\"").doesNotContain("value=\"#123abc\"");
+        String palette = render("poster", Locale.forLanguageTag("pl"), party.toBuilder().posterAccent("#c2185b").build()).replaceAll("\\s+", " ");
+        // a colour of the palette told by its name (PosterColours), never by its code
+        assertThat(palette).contains("value=\"#c2185b\" aria-label=\"Malinowy\" checked=\"checked\"", "title=\"Malinowy\"")
+                .doesNotContain("value=\"#123abc\"", "aria-label=\"#");
         String none = render("poster", Locale.ENGLISH);
         assertThat(none).contains("class=\"layout-poster theme-classic has-editor\"", "<input type=\"radio\" name=\"accent\" value=\"\" checked=\"checked\">")
                 .doesNotContain("data-accent=");
@@ -362,7 +366,7 @@ class QrPrintPageTest {
     void thePaper_isTheColourTheDjPicked() throws IOException {
         String tint = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#e8f3fb").build())
                 .replaceAll("\\s+", " ");
-        assertThat(tint).contains("data-paper=\"#e8f3fb\"", "name=\"paper\" value=\"#e8f3fb\" aria-label=\"#e8f3fb\" checked=\"checked\"", "Kolor tła");
+        assertThat(tint).contains("data-paper=\"#e8f3fb\"", "name=\"paper\" value=\"#e8f3fb\" aria-label=\"B\u0142\u0119kitny\" checked=\"checked\"", "Kolor tła");
         String own = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#c2185b").build())
                 .replaceAll("\\s+", " ");
         assertThat(own).contains("data-paper=\"#c2185b\"", "id=\"posterPaperOwn\" value=\"#c2185b\" checked=\"checked\"",
@@ -386,6 +390,18 @@ class QrPrintPageTest {
                 "<option value=\"THEME\" selected=\"selected\">The theme&#39;s</option>").doesNotContain("font-");
     }
 
+    /** The heading's size (V54): the page's class and the picked radio; as the theme has it no class. */
+    @Test
+    void theHeadingsSize_isTheOneTheDjPicked() throws IOException {
+        String large = render("poster", Locale.forLanguageTag("pl"), PartySettingsEntity.builder().partyCode(PARTY)
+                .posterSize(com.scan2play.model.PosterSize.LARGE).build()).replaceAll("\\s+", " ");
+        assertThat(large).contains("class=\"layout-poster theme-classic size-large has-editor\"",
+                "name=\"size\" value=\"LARGE\" checked=\"checked\"", ">Większy</span>", ">Mniejszy</span>", ">Zwykły</span>",
+                "<details id=\"posterMoreLook\" class=\"editor-more\" open=\"open\">");
+        assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).contains("name=\"size\" value=\"NORMAL\" checked=\"checked\"")
+                .doesNotContain("size-");
+    }
+
     /**
      * "Nagłówek na okazję": six occasions, each text in the print's language — Polish, English, or both at once — and never longer than
      * the heading's column (the editor puts it in the heading as if typed).
@@ -406,6 +422,31 @@ class QrPrintPageTest {
             }
         }
         assertThat(render("poster", Locale.ENGLISH)).contains("<option value=\"WEDDING\"", ">Wedding</option>", ">Company party</option>");
+    }
+
+    /**
+     * "Wzór na okazję" sets the look too: each occasion's theme and font are the editor's, its colour one of the palette's or none (the
+     * theme's). The paper, the font and the colour are folded under "Więcej wyglądu" — open when the party has one of them set.
+     */
+    @Test
+    void theLooksForTheOccasion_areTheEditors_andTheMoreLookOpensWhenSet() throws IOException {
+        String html = render("poster", Locale.forLanguageTag("pl")).replaceAll("\\s+", " ");
+        List<java.util.regex.MatchResult> options = java.util.regex.Pattern
+                .compile("<option value=\"([A-Z]+)\" data-heading=\"[^\"]*\" data-theme=\"([A-Z]+)\" data-font=\"([A-Z]+)\"( data-colour=\"([^\"]*)\")?")
+                .matcher(html).results().toList();
+        assertThat(options).hasSize(6).allSatisfy(o -> {
+            assertThat(com.scan2play.model.PosterTheme.of(o.group(2)).name()).as(o.group(1)).isEqualTo(o.group(2));
+            assertThat(com.scan2play.model.PosterFont.of(o.group(3)).name()).as(o.group(1)).isEqualTo(o.group(3));
+            if (o.group(5) != null) {
+                assertThat(html).as(o.group(1)).contains("name=\"accent\" value=\"" + o.group(5) + "\"");
+            }
+        });
+        assertThat(html).contains("<details id=\"posterMoreLook\" class=\"editor-more\">");
+        for (PartySettingsEntity set : List.of(PartySettingsEntity.builder().partyCode(PARTY).posterPaper("#fbf3e2").build(),
+                PartySettingsEntity.builder().partyCode(PARTY).posterAccent("#1565c0").build(),
+                PartySettingsEntity.builder().partyCode(PARTY).posterFont(com.scan2play.model.PosterFont.SERIF).build())) {
+            assertThat(render("poster", Locale.forLanguageTag("pl"), set)).contains("<details id=\"posterMoreLook\" class=\"editor-more\" open=\"open\">");
+        }
     }
 
     @Test

@@ -1,6 +1,6 @@
-// The four themes of V52 (qr-print.css): "Rustykalny" (kraft, olive, a stitched — dashed — frame), "Gala" (ivory, gold, a double frame
-// with diamonds), "Neon" (white, a frame in a magenta → violet → cyan gradient — the club's colours without its ink), "Konfetti" (white,
-// coloured dots in the frame's band only). Each its paper and frame; the rustic and the gala headings in the serif (the theme's font);
+// The four themes of V52 (qr-print.css): "Rustykalny" (kraft, olive, a stitched — dashed — frame), "Gala" (white, a navy heading and
+// band with a gold line and gold diamonds), "Neon" (white, a violet heading, a frame in a pink → violet → cyan gradient — the club's
+// colours without its ink), "Konfetti" (a warm cream, coloured dots in the frame's band only). Each its paper and frame; the rustic and the gala headings in the serif (the theme's font);
 // the decoration never under the code or the words. The other scenarios of the themes (readable colours, A4, the cards, the tent, the
 // fonts, the pictures) take every theme of the editor, these four with them.
 (function () {
@@ -29,9 +29,9 @@
             });
             t.step('rustic, gala, neon, confetti: [the class, the paper, the frame, a gradient frame, dots, the heading\'s font]', seen, [
                 [true, 'rgb(244, 236, 220)', 'dashed', false, false, 'S2P Serif'],
-                [true, 'rgb(255, 253, 246)', 'double', false, false, 'S2P Serif'],
+                [true, 'rgb(255, 255, 255)', 'solid', false, false, 'S2P Serif'],
                 [true, 'rgb(255, 255, 255)', 'solid', true, false, 'S2P Sans'],
-                [true, 'rgb(255, 255, 255)', 'solid', false, true, 'S2P Sans']]);
+                [true, 'rgb(255, 248, 231)', 'solid', false, true, 'S2P Sans']]);
             pick('posterTheme', 'CONFETTI');
             const box = poster.getBoundingClientRect(), style = getComputedStyle(poster);
             const band = parseFloat(style.borderTopWidth);

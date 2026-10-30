@@ -51,7 +51,8 @@
             t.step('the editor says the changes are not saved', document.getElementById('posterAnswer').textContent, form.dataset.unsaved);
             clickSwitch();
             const kept = JSON.parse(sessionStorage.getItem(stashKey()) || '{}');
-            t.step('kept for the tab', [kept.heading, kept.line, kept.tables, kept.theme, kept.font, kept.accent, kept.paper, kept.parts && kept.parts.address],
+            const f = kept.fields || {};
+            t.step('kept for the tab', [f.heading, f.line, f.tables, f.theme, f.font, f.accent, f.paper, f.showAddress],
                 ['Wesele Ani i Tomka', 'Zatańczmy razem', '12', 'ELEGANT', 'SCRIPT', '#123abc', '#c2185b', false]);
             sessionStorage.removeItem(stashKey());
         }
@@ -62,8 +63,9 @@
         page: 'qr-print-cards',
         title: 'the cards after the switch: the kept changes in the editor and on the cards, "Niezapisane zmiany", the stash gone; "Zapisz" sends them',
         run: async function (t) {
-            sessionStorage.setItem(stashKey(), JSON.stringify({ heading: 'Wesele Ani i Tomka', line: 'Zatańczmy razem', tables: '12', theme: 'ELEGANT', font: 'SCRIPT', paper: '#e8f3fb', paperPicker: '#e8f3fb',
-                accent: '#123abc', picker: '#123abc', parts: { address: false } }));
+            sessionStorage.setItem(stashKey(), JSON.stringify({ fields: { heading: 'Wesele Ani i Tomka', line: 'Zatańczmy razem', tables: '12',
+                theme: 'ELEGANT', font: 'SCRIPT', paper: '#e8f3fb', accent: '#123abc', showAddress: false },
+                pickers: { posterAccentPicker: '#123abc' } }));
             const script = document.createElement('script');
             script.src = document.querySelector('script[src*="qr-print.js"]').src;
             await new Promise(function (resolve, reject) { script.onload = resolve; script.onerror = reject; document.body.appendChild(script); });
@@ -73,7 +75,7 @@
                 document.getElementById('posterAccentOwn').checked, document.getElementById('posterAccentPicker').value,
                 document.querySelector('[data-poster-toggle="address"]').checked],
                 ['Wesele Ani i Tomka', 'Zatańczmy razem', '12', 'ELEGANT', true, '#123abc', false]);
-            t.step('the cards show them', [heading.textContent, heading.hidden, document.querySelectorAll('.card').length,
+            t.step('the cards show them', [heading.textContent.replace(/\u00a0/g, ' '), heading.hidden, document.querySelectorAll('.card').length,
                 document.body.classList.contains('theme-elegant'), document.body.classList.contains('font-script'),
                 document.querySelector('.card [data-poster-part="address"]').hidden],
                 ['Wesele Ani i Tomka', false, 12, true, true, true]);

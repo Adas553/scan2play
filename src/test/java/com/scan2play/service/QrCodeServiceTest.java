@@ -37,6 +37,23 @@ class QrCodeServiceTest {
         assertThat(read).isEqualTo(link);
     }
 
+    /**
+     * The code's error correction is M (15 % of it may be lost): a table card gets creased, wet and laminated. For the guest link it
+     * takes no more modules than L — the same version, so on paper each module stays as large.
+     */
+    @Test
+    void theCode_correctsErrorsAtM_withNoMoreModulesThanL() throws Exception {
+        String link = "https://www.scan2play.com.pl/p/ABC12";
+
+        BufferedImage png = image(service.generateQrCodeBase64(link, 300, 300));
+
+        com.google.zxing.Result read = new QRCodeReader().decode(new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(png))));
+        assertThat(read.getResultMetadata().get(com.google.zxing.ResultMetadataType.ERROR_CORRECTION_LEVEL)).isEqualTo("M");
+        int m = com.google.zxing.qrcode.encoder.Encoder.encode(link, com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M).getVersion().getVersionNumber();
+        int l = com.google.zxing.qrcode.encoder.Encoder.encode(link, com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L).getVersion().getVersionNumber();
+        assertThat(m).isEqualTo(l).isEqualTo(3);
+    }
+
     @Test
     void aTextTooLongForAQrCode_givesAnEmptyString() {
         assertThat(service.generateQrCodeBase64("x".repeat(5000), 300, 300)).isEmpty();
