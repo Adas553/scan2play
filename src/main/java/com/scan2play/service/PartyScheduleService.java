@@ -117,12 +117,12 @@ public class PartyScheduleService {
 
     /**
      * What the guest of a closed party reads in place of "DJ nie przyjmuje teraz próśb" when it opens by itself: "Prośby od 20:00"
-     * (today), "Prośby od soboty, 20:00" (within six days), "Prośby od 14.11, 20:00"; null without a planned open.
+     * (today), "Prośby od soboty, 20:00" (within six days), "Prośby od 14.11, 20:00"; null without a planned open still to come.
      */
     public String guestOpens(PartySettingsEntity party, Locale locale) {
         Instant at = party.getNextOpenAt();
-        if (at == null) {
-            return null;
+        if (at == null || !at.isAfter(clock.instant())) {
+            return null;   // none, or due and not applied yet (the job is a minute away): no promise of a time that has passed
         }
         ZonedDateTime local = at.atZone(Times.DISPLAY_ZONE);
         long days = daysAhead(local);
@@ -144,7 +144,8 @@ public class PartyScheduleService {
         return new View(key("open", open), open == null ? null : panelText("schedule.opens", open, locale),
                 key("close", close), close == null ? null : panelText("schedule.closes", close, locale),
                 formDate(open), formTime(open), formDate(close), formTime(close),
-                today.toString(), today.plusDays(1).toString(), open != null && (close == null || open.isBefore(close)));
+                today.toString(), today.plusDays(1).toString(), open != null && (close == null || open.isBefore(close)),
+                guestOpens(party, locale));
     }
 
     /**
@@ -160,11 +161,12 @@ public class PartyScheduleService {
     /**
      * The plan as shown. {@code openKey} / {@code closeKey}: the moment as the poll's header names it (null: none); the texts: "Otworzy
      * się w sobotę o 20:00", "Zamknie się dziś o 3:00"; the form's fields in Polish time; today and tomorrow there for the quick
-     * choices; whether the open comes first (it is listed first).
+     * choices; whether the open comes first (it is listed first); what the guests read meanwhile ("Prośby od 20:00", or null) — the
+     * panel's "party closed" banner says it.
      */
     public record View(String openKey, String openText, String closeKey, String closeText,
                        String openDate, String openTime, String closeDate, String closeTime,
-                       String today, String tomorrow, boolean openFirst) {
+                       String today, String tomorrow, boolean openFirst, String guestOpensText) {
         public boolean any() {
             return openKey != null || closeKey != null;
         }

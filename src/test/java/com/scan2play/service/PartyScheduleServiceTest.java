@@ -148,6 +148,8 @@ class PartyScheduleServiceTest {
         assertThat(s.guestOpens(opens(SATURDAY_20), Locale.ENGLISH)).isEqualTo("Requests from Saturday, 20:00");
         assertThat(s.guestOpens(opens(TODAY_20), Locale.ENGLISH)).isEqualTo("Requests from 20:00");
         assertThat(s.guestOpens(PartySettingsEntity.builder().build(), PL)).isNull();
+        assertThat(at(TODAY_20).guestOpens(opens(TODAY_20), PL)).as("due, the job a minute away: no time that has passed").isNull();
+        assertThat(at(TODAY_20.plusSeconds(30)).guestOpens(opens(TODAY_20), PL)).isNull();
     }
 
     /** The panel: today, tomorrow, the day of the week, the date — and the form's fields, in Polish time. */
@@ -163,6 +165,7 @@ class PartyScheduleServiceTest {
         assertThat(List.of(view.today(), view.tomorrow())).containsExactly("2026-10-30", "2026-10-31");
         assertThat(List.of(view.openKey(), view.closeKey())).containsExactly("open:1793386800", "close:1793412000");
         assertThat(PartyScheduleService.headerValue(party)).isEqualTo("open:1793386800,close:1793412000");
+        assertThat(view.guestOpensText()).as("what the guests read meanwhile: the panel's banner says it").isEqualTo("Prośby od 20:00");
 
         party.setNextOpenAt(Instant.parse("2026-11-01T19:00:00Z"));
         assertThat(fridayNoon().view(party, PL).openText()).isEqualTo("Otworzy się w niedzielę o 20:00");

@@ -285,6 +285,9 @@ class DashboardPageRenderTest {
                 "href=\"/dj/settings?party=HARN1#partyHoursCard\"", "action=\"/dj/dashboard/schedule/cancel\"",
                 "name=\"event\" value=\"open\"", "aria-label=\"Anuluj zaplanowane otwarcie\"");
         assertThat(line.indexOf("open:")).as("the open first: it comes first").isLessThan(line.indexOf("close:"));
+        assertThat(html).as("the closed banner says what the guests read meanwhile, its plain words kept for the poll")
+                .contains("id=\"partyClosedDescription\"", ">Goście skanujący Twój kod QR zobaczą „Prośby od 20:00”. Do tego czasu nie mogą dodawać piosenek.<",
+                        "data-plain=\"Goście skanujący Twój kod QR zobaczą informację, że impreza się zakończyła. Nie mogą dodawać nowych piosenek.\"");
         write("dashboard-schedule.html", html);
 
         String en = renderDashboard(party, List.of(), Locale.ENGLISH);

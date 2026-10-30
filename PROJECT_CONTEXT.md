@@ -656,12 +656,14 @@ is the same time after the change; one they go through twice in autumn the first
 folded line names the next moment); a moment set beside its "✕" (a form of its own, so Enter saves). "Teraz impreza jest otwarta /
 zamknięta" follows "Zakończ / Wznów" pressed on that page, and with a moment planned the page loads again (the manual change may have
 dropped one; `common.js`). The panel shows each planned moment under the heading, the next first — "⏰ Zamknie się jutro o 3:00 ✕" (the words lead to
-the card, "✕" cancels in the background); the poll's `X-Party-Schedule` hides one no longer planned. **A manual change against the plan
+the card, "✕" cancels in the background); the poll's `X-Party-Schedule` hides one no longer planned. The "party closed" banner says
+what the guests read meanwhile ("Goście … zobaczą „Prośby od 20:00”"), its plain words back once the open is gone. **A manual change against the plan
 wins until the next planned moment** (the owner's rule): "Zakończ" drops a planned close that comes before the next open (it has
 happened), the open stays; "Wznów" drops the planned open, the close stays; a moment that would change nothing is never kept
 (`PartySchedule.settle`). **The job** (`PartyScheduleService.applyDue`, every minute at :00, `Times.SCHEDULE_ZONE`): one `UPDATE … WHERE
-next_open_at <= now OR next_close_at <= now` over at most 500 rows found by the partial indexes, `FOR UPDATE SKIP LOCKED` (a row a DJ
-or another instance holds is taken next minute), both due → as the later left it; through `PartySettingsCommandService.applyDueSchedule`,
+next_open_at <= now OR next_close_at <= now` over at most 500 rows found by the partial indexes, picked once in a CTE `FOR UPDATE SKIP
+LOCKED` (a row a DJ or another instance holds is taken next minute; as `id IN (SELECT … LIMIT …)` a nested-loop plan ran the subquery
+again per row and the limit was not kept — `PartyScheduleIT.aRun_isBounded` forces that plan), both due → as the later left it; through `PartySettingsCommandService.applyDueSchedule`,
 which empties the cache after the commit (`PartyScheduleIT`, also two runs at once). **The guests** of a closed party with a planned open
 read "Prośby od 20:00" (today), "Prośby od soboty, 20:00" (within six days), "Prośby od 06.11, 20:00" in place of "DJ nie przyjmuje teraz
 próśb", in their language — on `party_ended.html` and the TV screen (both languages there). Not built: a weekly plan for clubs (days and

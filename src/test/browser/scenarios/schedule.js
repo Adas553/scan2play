@@ -153,7 +153,7 @@
 
     S2P.scenario({
         name: 'schedule-panel-line-follows-the-poll',
-        title: 'the panel\'s line of the plan: a moment the poll no longer names is hidden (applied, cancelled elsewhere, made pointless) — then the whole line',
+        title: 'the panel\'s line of the plan: a moment the poll no longer names is hidden (applied, cancelled elsewhere, made pointless) — then the whole line; the closed banner\'s "Prośby od 20:00" goes with the open',
         page: 'dashboard-schedule',
         setup: { partyActive: false, partySchedule: PLAN },
         run: async function (t) {
@@ -163,10 +163,14 @@
                 document.getElementById('partySchedule').compareDocumentPosition(document.getElementById('djTabBar'))
                 & Node.DOCUMENT_POSITION_FOLLOWING], [true, true, Node.DOCUMENT_POSITION_FOLLOWING]);
             await t.sleep(3500);
-            t.step('a poll naming both changes nothing', [shows(open), shows(close)], [true, true]);
+            const banner = document.getElementById('partyClosedDescription');
+            t.step('a poll naming both changes nothing', [shows(open), shows(close), banner.textContent.trim()],
+                [true, true, 'Goście skanujący Twój kod QR zobaczą „Prośby od 20:00”. Do tego czasu nie mogą dodawać piosenek.']);
 
-            await t.stand.config({ partyActive: true, partySchedule: 'close:1793412000' });
-            await t.waitFor(function () { return !shows(open); }, 'the open applied: its line hidden', 8000);
+            await t.stand.config({ partySchedule: 'close:1793412000' });
+            await t.waitFor(function () { return !shows(open); }, 'the open cancelled elsewhere: its line hidden', 8000);
+            t.step('the closed banner\'s plain words again', banner.textContent.trim(),
+                'Goście skanujący Twój kod QR zobaczą informację, że impreza się zakończyła. Nie mogą dodawać nowych piosenek.');
             t.step('the close stays', shows(close), true);
             await t.stand.config({ partySchedule: '' });
             await t.waitFor(function () { return !shows(document.getElementById('partySchedule')); }, 'nothing planned: the line hidden', 8000);

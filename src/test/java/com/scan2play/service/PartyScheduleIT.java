@@ -100,13 +100,24 @@ class PartyScheduleIT extends PostgresIntegrationTest {
     void aRun_isBounded() {
         Instant now = Instant.parse("2103-06-01T20:00:00Z");
         List<String> codes = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 20; i++) {
             codes.add(party(false, now.minusSeconds(60), null));
         }
-        int first = mine(commands.applyDueSchedule(now, 3), codes.toArray(String[]::new)).size();
+        // the whole run, not only these parties: as "id IN (SELECT … LIMIT … SKIP LOCKED)" the planner once ran the subquery again per
+        // row and changed every due party
+        // the plan that showed it, forced (without these the planner picks it only with some statistics of the table)
+        int first = new TransactionTemplate(transactions).execute(status -> {
+            jdbc.execute("SET LOCAL enable_hashjoin = off");
+            jdbc.execute("SET LOCAL enable_mergejoin = off");
+            jdbc.execute("SET LOCAL enable_hashagg = off");
+            jdbc.execute("SET LOCAL enable_material = off");
+            jdbc.execute("SET LOCAL enable_sort = off");   // a nested loop with the subquery inside: run again for every row
+            return commands.applyDueSchedule(now, 3).size();
+        });
         int second = mine(commands.applyDueSchedule(now, 500), codes.toArray(String[]::new)).size();
         assertThat(first).isLessThanOrEqualTo(3);
-        assertThat(first + second).isEqualTo(5);
+        assertThat(second).isGreaterThanOrEqualTo(17);
+        assertThat(row(codes.get(0)).get("next_open_at")).isNull();
     }
 
     /**

@@ -68,7 +68,7 @@ function applyLimitsNear(network, party) {
  */
 function applySchedule(value) {
     const line = document.getElementById('partySchedule');
-    if (value === null || !line) return;
+    if (value === null || !line) return;   // no line: no plan when the page was made, the banner says the plain words
     const planned = value.split(',');
     let shown = 0;
     line.querySelectorAll('[data-schedule-key]').forEach(function (item) {
@@ -76,6 +76,11 @@ function applySchedule(value) {
         if (!item.hidden) shown++;
     });
     line.hidden = shown === 0;
+    // the "party closed" banner said what the guests read before the open ("Prośby od 20:00"): without it, its plain words again
+    const description = document.getElementById('partyClosedDescription');
+    if (description && !value.split(',').some(function (key) { return key.indexOf('open:') === 0; })) {
+        description.textContent = description.dataset.plain;
+    }
 }
 
 /** Whether the poll says other permissions than the page was made with (#panelAccess); a missing header changes nothing. */

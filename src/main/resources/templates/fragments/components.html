@@ -24,7 +24,10 @@
          th:classappend="${isActive} ? 'd-none' : ''"
          class="alert alert-warning text-center border-warning mb-4 shadow s2p-alert-closed">
         <h3 class="fw-bold mb-3" th:text="#{dashboard.alert.party_closed.title}">⚠️ Party is CLOSED</h3>
-        <p th:text="#{dashboard.alert.party_closed.description}">Guests scanning your QR code will see that the party has ended. They cannot add new songs.</p>
+        <!--/* with an open planned (V55) the guests read when ("Prośby od 20:00"): said here; the poll puts the plain words back once
+             the open is no longer planned (polling.js) */-->
+        <p id="partyClosedDescription" th:attr="data-plain=#{dashboard.alert.party_closed.description}"
+           th:text="${schedule != null and schedule.guestOpensText != null} ? #{dashboard.alert.party_closed.opens(${schedule.guestOpensText})} : #{dashboard.alert.party_closed.description}">Guests scanning your QR code will see that the party has ended. They cannot add new songs.</p>
 
         <!--/* every form of the panel names the party it shows (V32: two tabs, two parties) */-->
         <form th:if="${access == null or access.may('OPEN_CLOSE')}" th:action="@{/dj/start-party}" method="POST">
