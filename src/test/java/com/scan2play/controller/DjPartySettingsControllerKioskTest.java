@@ -65,14 +65,14 @@ class DjPartySettingsControllerKioskTest {
     void theLink_isMade_madeAgain_andTakenAway() {
         DjPartySettingsController controller = controller(helperAllowing(), Plans.off());
 
-        assertThat(controller.updateKioskLink(PARTY, "new", DJ, new MockHttpSession())).isEqualTo("redirect:/dj/settings?party=ABC12#kioskCard");
+        assertThat(controller.updateKioskLink(PARTY, "new", null, DJ, new MockHttpSession(), new org.springframework.ui.ExtendedModelMap())).isEqualTo("redirect:/dj/settings?party=ABC12#kioskCard");
         String first = row.getKioskToken();
         assertThat(first).hasSizeGreaterThanOrEqualTo(20);
-        controller.updateKioskLink(PARTY, "new", DJ, new MockHttpSession());
+        controller.updateKioskLink(PARTY, "new", null, DJ, new MockHttpSession(), new org.springframework.ui.ExtendedModelMap());
         assertThat(row.getKioskToken()).as("a new secret: the old tablet's link is dead").isNotEqualTo(first);
-        controller.updateKioskLink(PARTY, "off", DJ, new MockHttpSession());
+        controller.updateKioskLink(PARTY, "off", null, DJ, new MockHttpSession(), new org.springframework.ui.ExtendedModelMap());
         assertThat(row.getKioskToken()).isNull();
-        assertThatThrownBy(() -> controller.updateKioskLink(PARTY, "both", DJ, new MockHttpSession()))
+        assertThatThrownBy(() -> controller.updateKioskLink(PARTY, "both", null, DJ, new MockHttpSession(), new org.springframework.ui.ExtendedModelMap()))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -80,10 +80,10 @@ class DjPartySettingsControllerKioskTest {
     void withoutThePermission_orWithoutPro_noLink() {
         DjSessionHelper refusing = mock(DjSessionHelper.class);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN)).when(refusing).require(eq(PARTY), eq(StaffPermission.KIOSK), any(), any());
-        assertThatThrownBy(() -> controller(refusing, Plans.off()).updateKioskLink(PARTY, "new", DJ, new MockHttpSession()))
+        assertThatThrownBy(() -> controller(refusing, Plans.off()).updateKioskLink(PARTY, "new", null, DJ, new MockHttpSession(), new org.springframework.ui.ExtendedModelMap()))
                 .isInstanceOf(ResponseStatusException.class);
 
-        assertThatThrownBy(() -> controller(helperAllowing(), Plans.enforced()).updateKioskLink(PARTY, "new", DJ, new MockHttpSession()))
+        assertThatThrownBy(() -> controller(helperAllowing(), Plans.enforced()).updateKioskLink(PARTY, "new", null, DJ, new MockHttpSession(), new org.springframework.ui.ExtendedModelMap()))
                 .isInstanceOf(PlanRequiredException.class);
         assertThat(row.getKioskToken()).isNull();
     }

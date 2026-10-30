@@ -90,6 +90,8 @@ def default_state():
         'kioskList': 'kiosk-list',
         'kioskVoteAnswer': 'kiosk-list-voted',
         'kioskVoteStatus': None,
+        # what the kiosk's card on the settings page is answered with when sent in the background (cards-in-place.js)
+        'kioskLinkAnswer': 'settings-kiosk-answer',
         # The X-Party-Schedule header of every poll answer (V55): the planned moments, "open:<epoch s>,close:<epoch s>" — None: no header
         'partySchedule': None,
         # what "Godziny imprezy" sent in the background is answered with (V55): a rendered card, settings-hours-answer-*.html
@@ -404,6 +406,8 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path.startswith('/k/') and path.endswith('/vote'):   # a 👍 at the kiosk (V56), sent by fetch
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+        if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
+            fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/schedule':           # "Godziny imprezy" sent by fetch (V55): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
@@ -475,6 +479,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
         if path == '/dj/dashboard/welcome-dismiss':   # the welcome card closed for good (V48): nothing to say
             return self._send(204)
+        if path == '/dj/dashboard/kiosk-link':        # the kiosk's link (V56): the card alone, as the real server answers a fetch
+            with open(os.path.join(stand.rendered, state['kioskLinkAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/schedule':           # "Godziny imprezy" (V55): the card alone, as the real server answers a fetch
             with open(os.path.join(stand.rendered, state['scheduleAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')

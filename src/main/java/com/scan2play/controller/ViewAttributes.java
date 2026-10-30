@@ -142,6 +142,8 @@ public final class ViewAttributes {
     public static final String KIOSK_TOKEN = "kioskToken";
     /** The kiosk link to copy on "Ustawienia imprezy" ({@code https://…/k/{token}}), or null: none made. */
     public static final String KIOSK_LINK = "kioskLink";
+    /** A settings card answered in the background (cards-in-place.js): it comes back unfolded. */
+    public static final String CARD_SAVED = "cardSaved";
     /** The songs this guest's turn gave its 👍 at the kiosk. */
     public static final String KIOSK_MY_VOTES = "kioskMyVotes";
     /** The songs this guest's turn asked for at the kiosk (no 👍 on them). */

@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -73,6 +74,9 @@ public class DjPartySettingsController {
     private final DjSessionHelper sessionHelper;
     private final PlanService planService;
     private final PartyScheduleService partyScheduleService;
+
+    @Value("${scan2play.guest-url}")
+    private String rawBaseUrl;
 
     /**
      * Re-activates the party session. A planned open it made pointless goes (V55); a planned close stays.
@@ -372,12 +376,16 @@ public class DjPartySettingsController {
 
     /**
      * The venue's kiosk link (V56, {@code /k/{token}}, Pro): {@code link=new} makes one — a new secret, so the old tablet's link stops
-     * working —, {@code link=off} takes it away. Whoever has the permission KIOSK. A page load back to the card.
+     * working —, {@code link=off} takes it away. Whoever has the permission KIOSK. Sent in the background ({@code X-Requested-With:
+     * fetch}, cards-in-place.js): the answer is the card alone, with the new link — the page stays where it is. Without the script, a
+     * page load back to the card.
      */
     @PostMapping("/dashboard/kiosk-link")
     public String updateKioskLink(@RequestParam String partyCode, @RequestParam String link,
-                                  OAuth2AuthenticationToken authentication, HttpSession session) {
-        planService.require(sessionHelper.require(partyCode, StaffPermission.KIOSK, authentication, session), PlanFeature.KIOSK);
+                                  @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+                                  OAuth2AuthenticationToken authentication, HttpSession session, Model model) {
+        PartySettingsEntity party = planService.require(sessionHelper.require(partyCode, StaffPermission.KIOSK, authentication, session),
+                PlanFeature.KIOSK);
         String token = switch (link) {
             case "new" -> CodeGenerator.generateSecret();
             case "off" -> null;
@@ -385,7 +393,22 @@ public class DjPartySettingsController {
         };
         log.info("Party [{}]: the kiosk link {}", partyCode, token == null ? "taken away" : "made");
         partySettingsCommandService.updateSettings(partyCode, s -> s.setKioskToken(token));
-        return REDIRECT_SETTINGS + "?party=" + partyCode + "#kioskCard";
+        if (!"fetch".equals(requestedWith)) {
+            return REDIRECT_SETTINGS + "?party=" + partyCode + "#kioskCard";
+        }
+        // the card as the page shows it, after the change
+        PartyStaffService.Access access = sessionHelper.access(partyCode, authentication, session);
+        model.addAttribute(ACCESS, access);
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(PLAN, planService.view(party, access.owner()));
+        model.addAttribute(KIOSK_LINK, kioskLink(token));
+        model.addAttribute(CARD_SAVED, true);
+        return "settings :: kioskCard";
+    }
+
+    /** The kiosk's address to copy and open on the tablet ({@code https://…/k/{token}}), or null: none. */
+    String kioskLink(String token) {
+        return token == null ? null : Texts.withoutTrailingSlash(rawBaseUrl) + "/k/" + token;
     }
 
     /**

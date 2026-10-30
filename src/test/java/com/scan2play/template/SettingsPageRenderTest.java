@@ -216,13 +216,13 @@ class SettingsPageRenderTest {
                 "closeTime", "04:00"));
         assertThat(saved.trim()).startsWith("<details").endsWith("</details>").doesNotContain("<html", "djTabBar", "hostListsCard");
         assertThat(saved).doesNotContain("partyHoursError", "Zapisano");
-        assertThat(saved).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSave\"",
+        assertThat(saved).contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"", "id=\"partyHoursSave\"",
                 ">⏰ Otworzy się dziś o 21:00<", ">⏰ Zamknie się jutro o 4:00<", "name=\"openTime\" value=\"21:00\"",
                 "action=\"/dj/dashboard/schedule\"", "id=\"openHoursCancel\"");
         write("settings-hours-answer-saved.html", saved);
 
         String refused = renderHoursAnswer(party(), Map.of("openDate", "2026-10-30", "openTime", "11:30"));
-        assertThat(refused).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursError\"",
+        assertThat(refused).contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"", "id=\"partyHoursError\"",
                 ">Ta pora już minęła: wybierz późniejszą.<", "name=\"openTime\" value=\"11:30\"");
         write("settings-hours-answer-refused.html", refused);
     }
@@ -477,7 +477,7 @@ class SettingsPageRenderTest {
                 PL, com.scan2play.service.Plans.off(), mock(DjService.class),
                 Map.of("scheduleError", "schedule.error.past", "scheduleTyped", new String[]{"2026-10-29", "20:00", "", ""}));
 
-        assertThat(html).contains("id=\"partyHoursCard\" open=\"open\"", ">Ta pora już minęła: wybierz późniejszą.<",
+        assertThat(html).contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"", ">Ta pora już minęła: wybierz późniejszą.<",
                 "name=\"openDate\" value=\"2026-10-29\"", "name=\"closeDate\" value=\"\"",
                 "class=\"small text-danger mt-1\" role=\"alert\" id=\"partyHoursError\"");
         assertThat(html.indexOf("id=\"partyHoursError\"")).as("why: under \"Zapisz\", as every card")
@@ -486,7 +486,7 @@ class SettingsPageRenderTest {
 
         assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), mock(DjService.class),
                 Map.of("scheduleSaved", true))).as("saved: the card open, no sentence — \"✓\" on the button, as every card")
-                .contains("id=\"partyHoursCard\" open=\"open\"").doesNotContain("id=\"partyHoursError\"", "Zapisano");
+                .contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"").doesNotContain("id=\"partyHoursError\"", "Zapisano");
     }
 
     /**
@@ -513,6 +513,43 @@ class SettingsPageRenderTest {
                 .as("the queue's staff: not theirs").doesNotContain("id=\"kioskCard\"");
         assertThat(render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
                 .as("a co-organiser: theirs").contains("id=\"kioskCard\"");
+    }
+
+    /**
+     * "Nowy link" of the kiosk sent in the background: the answer is the card alone, unfolded, with the new link — rendered through the
+     * real controller as the view resolver would. {@code settings-kiosk-answer.html} for the stand-in.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void theKiosksLinkSentInTheBackground_isAnsweredWithTheCardAlone() throws IOException {
+        PartySettingsEntity row = party();
+        PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
+        when(commands.updateSettings(any(), any())).thenAnswer(call -> {
+            ((java.util.function.Consumer<PartySettingsEntity>) call.getArgument(1)).accept(row);
+            return row;
+        });
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(row);
+        when(sessionHelper.access(any(), any(), any())).thenReturn(new PartyStaffService.Access(row, true, StaffPermission.all()));
+        com.scan2play.controller.DjPartySettingsController controller = new com.scan2play.controller.DjPartySettingsController(commands,
+                mock(com.scan2play.service.AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper,
+                com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.texts());
+        ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
+        ConcurrentModel model = new ConcurrentModel();
+        assertThat(controller.updateKioskLink(PARTY, "new", "fetch", user("owner"), new MockHttpSession(), model))
+                .isEqualTo("settings :: kioskCard");
+
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String html = engine.process("settings", Set.of("kioskCard"), context);
+        assertThat(html.trim()).startsWith("<details").endsWith("</details>");
+        assertThat(html).contains("id=\"kioskCard\" data-saves-in-place open=\"open\"", "id=\"kioskState\">Włączony<",
+                "value=\"http://localhost:8080/k/" + row.getKioskToken() + "\"", "id=\"kioskLinkNewBtn\"", ">Nowy link<")
+                .doesNotContain("??");
+        write("settings-kiosk-answer.html", html);
     }
 
     @Test

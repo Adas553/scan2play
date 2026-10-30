@@ -679,7 +679,9 @@ hours — later, a migration of its own that writes the next moment into the sam
 **The venue's kiosk** (V56, "Kiosk dla gości", Pro; the owner, 2026-10-30 — Rekwest has one): a tablet at the bar where guests without a
 phone ask for a song and vote. The card of "Ustawienia imprezy" (whoever has the permission KIOSK; without Pro the organiser sees the
 offer): "Utwórz link kiosku" — a secret `/k/{token}` (`kioskToken`), to copy and open on the tablet —, "Nowy link" (asks first: the old
-tablet's link dies) and "Wyłącz", page loads; a tip for Guided Access (iPad) / screen pinning (Android). **The kiosk's page**
+tablet's link dies) and "Wyłącz", sent in the background — the server's card takes the old one's place, "✓" on the button, the page
+does not move (`cards-in-place.js`, as "Godziny imprezy": a card with `data-saves-in-place` whose endpoint answers a fetch with the card
+alone); a tip for Guided Access (iPad) / screen pinning (Android). **The kiosk's page**
 (`KioskController`, `kiosk.html`, `js/kiosk.js`; public, no login, `noindex`; a token that is no kiosk's, or a party without Pro, a 404):
 the request form as the party page's (the iTunes suggestions, the dedication when on) and beside it — on a tablet held across, else under
 it — the most wanted with 👍, as the TV screen; no link out (no profiles, tip link, footer). **A guest's turn is a session:** "Następny
@@ -1467,7 +1469,7 @@ GuestQueueService          → DjService
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
 | POST | `/dj/dashboard/schedule` | "Godziny imprezy" (V55, OPEN_CLOSE, any plan): `openDate`, `openTime`, `closeDate`, `closeTime` (Polish time, empty = none) or `cancel=open\|close`; with `X-Requested-With: fetch` (schedule.js) the card alone (`settings :: partyHoursCard`) with `scheduleSaved` or `scheduleError` (+ the fields as typed), else a page load back to `/dj/settings#partyHoursCard` with them as flash attributes |
 | POST | `/dj/dashboard/schedule/cancel` | the panel's "✕" beside a planned moment (`event=open\|close`, OPEN_CLOSE), in the background |
-| POST | `/dj/dashboard/kiosk-link` | the kiosk's link (V56, `link=new\|off`, KIOSK, Pro): a page load back to `/dj/settings#kioskCard` |
+| POST | `/dj/dashboard/kiosk-link` | the kiosk's link (V56, `link=new\|off`, KIOSK, Pro): with `X-Requested-With: fetch` (cards-in-place.js) the card alone (`settings :: kioskCard`), else a page load back to `/dj/settings#kioskCard` |
 
 ---
 

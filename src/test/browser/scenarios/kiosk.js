@@ -208,7 +208,7 @@
 
     S2P.scenario({
         name: 'settings-kiosk-card',
-        title: '"Kiosk dla gości" on the settings page: folded to "Włączony"; the link to copy and to open; "Nowy link" asks first; both buttons page loads',
+        title: '"Kiosk dla gości" on the settings page, on a phone: folded to "Włączony"; the link to copy and to open; "Nowy link" asks first, is sent in the background, the server\'s card with the new link takes the old one\'s place — "✓" on the button, the screen does not jump',
         page: 'settings-kiosk',
         viewport: '390,844',
         run: async function (t) {
@@ -218,13 +218,28 @@
             const card = document.getElementById('kioskCard');
             t.step('folded to its state', [!card.open, card.querySelector('#kioskState').textContent.trim()], [true, 'Włączony']);
             card.querySelector('summary').click();
-            t.step('the link, to copy and to open', [document.getElementById('kioskLinkInput').value,
-                shows(card.querySelector('[data-copy-target="kioskLinkInput"]')), document.getElementById('kioskOpen').getAttribute('target')],
-                ['http://localhost:8080/k/' + TOKEN, true, '_blank']);
-            document.getElementById('kioskLinkNewBtn').click();
-            await t.sleep(300);
-            t.step('"Nowy link": asked first, then a page load', [asked, loads.map(function (l) { return [l[0], l[1].link]; })],
-                [['Utworzyć nowy link? Tablet ze starym linkiem przestanie działać.'], [['/dj/dashboard/kiosk-link', 'new']]]);
+            const oldLink = document.getElementById('kioskLinkInput').value;
+            t.step('the link, to copy and to open', [oldLink, shows(card.querySelector('[data-copy-target="kioskLinkInput"]')),
+                document.getElementById('kioskOpen').getAttribute('target')], ['http://localhost:8080/k/' + TOKEN, true, '_blank']);
+
+            // scrolled so the card's buttons are in the middle of the screen, as a DJ who reached them has it
+            const button = document.getElementById('kioskLinkNewBtn');
+            window.scrollTo({ top: window.scrollY + button.getBoundingClientRect().top - window.innerHeight / 2, behavior: 'instant' });
+            const before = window.scrollY;
+            const cardTop = card.getBoundingClientRect().top;
+            button.click();
+            await t.waitFor(function () { return document.getElementById('kioskLinkInput').value !== oldLink; }, 'the new link in place', 3000);
+            t.step('asked first', asked, ['Utworzyć nowy link? Tablet ze starym linkiem przestanie działać.']);
+            const sent = await t.stand.requests('POST /dj/dashboard/kiosk-link');
+            t.step('sent once, in the background', sent.map(function (r) { return [r.q.partyCode, r.q.link, r.q['X-Requested-With']]; }),
+                [['HARN1', 'new', 'fetch']]);
+            const fresh = document.getElementById('kioskLinkNewBtn');
+            t.step('"✓" on the button, as every card; the card open', [fresh.textContent.trim(), fresh.classList.contains('btn-success'),
+                document.getElementById('kioskCard').open], ['✓', true, true]);
+            t.step('the page where it was (± 2 px), the card too', [Math.abs(window.scrollY - before) <= 2,
+                Math.abs(document.getElementById('kioskCard').getBoundingClientRect().top - cardTop) <= 2], [true, true]);
+            t.check('scrolled down first (a place to keep)', before > 100);
+            t.step('no page load', loads, []);
             t.step('nothing wider than the screen', fitsTheScreen(), true);
         }
     });

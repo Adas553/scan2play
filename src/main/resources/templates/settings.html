@@ -47,11 +47,11 @@
 
         <!--/* "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, Polish time, either empty —
              for whoever may open and close it (OPEN_CLOSE), any plan. First: what a DJ sets before an evening. Sent in the background
-             (schedule.js): the server answers with this card alone (the fragment), unfolded, the plan as saved — "✓" on "Zapisz" for a
+             (cards-in-place.js): the server answers with this card alone (the fragment), unfolded, the plan as saved — "✓" on "Zapisz" for a
              moment, as every card — or why not under it (the fields as typed), and it takes this one's place — the page does not move. Without the script, a page load back here. The
              quick choices fill the fields from the server's today and tomorrow (schedule.js); "✕" beside a planned moment is a form of
              its own below the card's form, so Enter in a field saves rather than cancels. */-->
-        <details th:fragment="partyHoursCard" th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard"
+        <details th:fragment="partyHoursCard" th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard" data-saves-in-place
                  th:attr="open=${scheduleSaved != null or scheduleError != null} ? 'open' : null"
                  th:with="typed=${scheduleTyped != null ? scheduleTyped : {schedule.openDate, schedule.openTime, schedule.closeDate, schedule.closeTime}}">
             <summary class="s2p-fold-summary">
@@ -101,7 +101,7 @@
                 </th:block>
                 <!--/* as every card: "✓" / "✗" on the button for a moment (schedule.js), why not in the red line under it */-->
                 <button type="submit" class="btn btn-sm btn-outline-light" id="partyHoursSave" th:text="#{settings.hours.save}">Save</button>
-                <div th:if="${scheduleError != null}" class="small text-danger mt-1" role="alert" id="partyHoursError" tabindex="-1"
+                <div th:if="${scheduleError != null}" class="small text-danger mt-1" role="alert" id="partyHoursError" tabindex="-1" data-card-error
                      th:text="#{${scheduleError}}">That time has passed.</div>
             </form>
             <form th:each="kind : ${ {'open', 'close'} }" th:id="${kind} + 'HoursCancel'" th:action="@{/dj/dashboard/schedule}"
@@ -186,10 +186,12 @@
 
         <!--/* The venue's kiosk (V56, Pro): a tablet at the bar for the guests without a phone — its secret link (/k/{token},
              KioskController) made here, made again (the old tablet's link dead: asks first) or taken away, copied or opened. Whoever
-             has the permission KIOSK; without Pro, the organiser sees the offer, the staff not the card. The forms are page loads
-             (forms.js leaves /kiosk-link alone), back to this card. */-->
-        <details th:if="${access.may('KIOSK') and (plan.allows('KIOSK') or plan.pro('KIOSK'))}"
-                 class="card bg-dark border-secondary s2p-fold" id="kioskCard">
+             has the permission KIOSK; without Pro, the organiser sees the offer, the staff not the card. Its forms are sent in the
+             background and the server's card takes this one's place (cards-in-place.js, data-saves-in-place): the page does not move.
+             Without the script, page loads back to this card. */-->
+        <details th:fragment="kioskCard" th:if="${access.may('KIOSK') and (plan.allows('KIOSK') or plan.pro('KIOSK'))}"
+                 class="card bg-dark border-secondary s2p-fold" id="kioskCard" data-saves-in-place
+                 th:attr="open=${cardSaved != null} ? 'open' : null">
             <summary class="s2p-fold-summary">
                 <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.kiosk.title}">Guest kiosk</span><th:block th:if="${plan.pro('KIOSK')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
                 <span class="s2p-fold-state" id="kioskState" th:unless="${plan.pro('KIOSK')}"
