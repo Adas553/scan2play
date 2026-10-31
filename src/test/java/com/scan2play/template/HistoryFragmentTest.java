@@ -122,6 +122,16 @@ class HistoryFragmentTest {
     }
 
     @Test
+    @DisplayName("V56: a request sent at the venue's kiosk is marked 🖥, as in the queue")
+    void shouldMarkARequestFromTheKiosk() {
+        HistoryEntry kiosk = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Kult - Arahja", null, "Pop", "played", null,
+                "kult arahja", 1, null, null, 3, 0, false, true);
+
+        String html = render(List.of(kiosk, guest(2, "Alpha", "played")), false, PL);
+        assertThat(html).containsOnlyOnce("s2p-via-kiosk").contains(">🖥 kiosk<", "title=\"Wysłana z kiosku\"").doesNotContain("??");
+    }
+
+    @Test
     @DisplayName("the vibe the AI judged by is the decision's title — \"Dowolny\" / \"Any\" for no genre, never the raw ANY; no column \"Klimat\" (the same in every row, the review of 2026-10-10)")
     void shouldNameTheVibeInTheDecisionsTitle() {
         HistoryEntry any = new HistoryEntry(1L, Instant.parse("2026-09-29T18:00:00Z"), "Song", null, "ANY", "played", null, null);

@@ -65,6 +65,16 @@ class PlayHistoryServiceTest {
     }
 
     @Test
+    @DisplayName("a request sent at the venue's kiosk (V56) stays the kiosk's in the history")
+    void shouldKeepTheKiosksMark() {
+        SongRequestEntity kiosk = song(7, "Wilki - Baśka", "played", NOON.minus(30, ChronoUnit.MINUTES), NOON);
+        kiosk.setViaKiosk(true);
+        givenRequests(PLAYED_AND_REJECTED, 51, kiosk);
+
+        assertThat(service.getHistory(PARTY, 50).entries().getFirst().viaKiosk()).isTrue();
+    }
+
+    @Test
     @DisplayName("a rejected request, and one played before V6 (no play time), are placed by when they were requested")
     void shouldFallBackToTheRequestTime() {
         Instant asked = NOON.minus(5, ChronoUnit.MINUTES);

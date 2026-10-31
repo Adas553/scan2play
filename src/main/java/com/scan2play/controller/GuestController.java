@@ -2,16 +2,15 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
-import com.scan2play.model.VibeType;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
+import com.scan2play.service.GuestRequestService;
+import com.scan2play.service.GuestRequestService.Sent;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
-import com.scan2play.service.SiteCounter;
-import com.scan2play.service.SongEvaluationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
@@ -25,14 +24,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
 import static com.scan2play.controller.ViewAttributes.*;
-import static com.scan2play.service.DjService.DECISION_REJECTED;
 
 @Controller
 @RequestMapping("/p")
@@ -40,7 +37,6 @@ import static com.scan2play.service.DjService.DECISION_REJECTED;
 @Slf4j
 public class GuestController {
 
-    private final SongEvaluationService songEvaluationService;
     private final GuestQueueService guestQueueService;
     private final PartySettingsQueryService partySettingsQueryService;
     private final GuestSessionService guestSessionService;
@@ -48,7 +44,7 @@ public class GuestController {
     private final GuestRequestLimiter guestRequestLimiter;
     private final MessageSource messageSource;
     private final PlanService planService;
-    private final SiteCounter siteCounter;
+    private final GuestRequestService guestRequestService;
     private final PartyScheduleService partyScheduleService;
 
     /**
@@ -202,57 +198,17 @@ public class GuestController {
                     return partyEnded(model, partyCode, settings);
                 }
 
-                // Nothing typed (only spaces get past the form's "required"; a POST may skip the form): back to the form before
-                // any limit is used or the AI is asked — with the AI down it would be an empty row in the DJ's queue
-                if (SongEvaluationService.asTyped(songName).isEmpty()) {
-                    return refuse(redirectAttributes, partyCode, "guest.error.empty");
+                Sent sent = guestRequestService.fromParty(partyCode, settings, songName, dedication, session, clientIp, locale);
+                if (sent instanceof Sent.Refused refused) {
+                    return refuse(redirectAttributes, partyCode, refused.messageKey(), refused.args());
                 }
-                siteCounter.count(SiteCounter.Event.GUEST_REQUEST);   // a guest's request sent, whatever comes of it (V40)
-                // The guest's own limit first (the DJ's setting), then the server's limits that do not need the cookie.
-                // Both count the request before the evaluation.
-                Optional<Long> waitTimeSeconds = guestSessionService.tryAcquire(session, partyCode, settings);
-                if (waitTimeSeconds.isPresent()) {
-                    return refuse(redirectAttributes, partyCode, "guest.error.rate_limit",
-                            settings.getRequestLimit(), waitText(waitTimeSeconds.get()));
-                }
-                Optional<GuestRequestLimiter.Refusal> refusal = guestRequestLimiter.tryAcquire(clientIp, partyCode);
-                if (refusal.isPresent()) {
-                    // the network's or the party's limit refused it, not the guest: their own limit is given back — it was used
-                    // up for a request never sent (review 2026-10-14 W2)
-                    guestSessionService.giveBack(session, partyCode);
-                    return switch (refusal.get().scope()) {
-                        case CLIENT -> refuse(redirectAttributes, partyCode, "guest.error.too_many_requests",
-                                waitText(refusal.get().waitSeconds()));
-                        case PARTY -> refuse(redirectAttributes, partyCode, "guest.error.party_daily_limit");
-                    };
-                }
-
-                // The guest's earlier requests and 👍: the same song asked for again while it waits is not one more vote
-                Set<Long> alreadyTheirs = new HashSet<>(guestSessionService.myRequestIds(session, partyCode));
-                alreadyTheirs.addAll(guestVoteService.myVotes(session, partyCode));
-                // the guest's dedication (V38) is checked by the AI in the same call; only the DJ sees it. Not while the DJ has them
-                // switched off: one sent anyway (an old page) is left out, the song judged as without it
-                String takenDedication = settings.isDedicationsOn() ? dedication : null;
-                DjResponse response = songEvaluationService.evaluateAndSaveSong(partyCode, songName,
-                        styleOf(settings, locale), alreadyTheirs, takenDedication);
-                // A request that came to nothing — a mood sent back to the form, a rejected song, the guest's own song asked for
-                // again — does not use the guest's limit up (the server's own limits keep counting it: against abuse)
-                if (response.isMood() || response.ownSong() || DECISION_REJECTED.equalsIgnoreCase(response.decision())) {
-                    guestSessionService.giveBack(session, partyCode);
-                }
-                if (response.isMood()) {
+                if (sent instanceof Sent.Mood mood) {
                     // A mood, not a song (the DJ sets the mood): nothing was saved. Back to the form with the text, asking for a song.
-                    redirectAttributes.addFlashAttribute(LAST_REQUEST, songName);
-                    redirectAttributes.addFlashAttribute(LAST_DEDICATION, takenDedication);
+                    redirectAttributes.addFlashAttribute(LAST_REQUEST, mood.songName());
+                    redirectAttributes.addFlashAttribute(LAST_DEDICATION, mood.dedication());
                     return refuse(redirectAttributes, partyCode, "guest.error.song_only");
                 }
-
-                // Remembered in the session, so the party page can say that the guest's songs wait. The result itself is about this
-                // request alone: another of the guest's waiting songs named here read as the AI's mix-up (the owner, 2026-10-07).
-                // A song that already had the guest's vote (their request or 👍) stays as it was: a 👍 stays one they can take back.
-                if (!response.ownSong()) {
-                    guestSessionService.rememberRequest(session, partyCode, response.requestId());
-                }
+                DjResponse response = ((Sent.Answered) sent).response();
                 model.addAttribute(RESPONSE, response);
                 model.addAttribute(PARTY_CODE, partyCode);
                 // the DJ's tip link under an accepted request: the moment a guest is glad (V27)
@@ -289,27 +245,6 @@ public class GuestController {
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
         model.addAttribute(DJ_LOGO, settings.logoPath());
-    }
-
-    /**
-     * The style the AI judges the request against (review item 4.6) — decided here, not by the form: the DJ's vibe when the DJ set
-     * one (by its name in the guest's language), otherwise {@code ANY} (the AI judges by the DJ's vibe note, if any). The guests
-     * pick no vibe: the DJ sets it.
-     */
-    String styleOf(PartySettingsEntity settings, Locale locale) {
-        VibeType partyVibe = settings.getGlobalVibe();
-        if (partyVibe != null && partyVibe != VibeType.ANY) {
-            return messageSource.getMessage("vibe." + partyVibe.name(), null, partyVibe.name(), locale);
-        }
-        return VibeType.ANY.name();
-    }
-
-    /**
-     * The guest's wait as people say it: from a minute on in whole minutes, rounded up ("3 min" — a phone at a party is not
-     * read to the second), below a minute in seconds ("45 s"). The same short units in every language of the app.
-     */
-    static String waitText(long seconds) {
-        return seconds < 60 ? seconds + " s" : (seconds + 59) / 60 + " min";
     }
 
     /** Back to the party page with the message of the limit that refused the request. */

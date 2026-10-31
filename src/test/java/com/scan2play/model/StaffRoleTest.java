@@ -44,4 +44,22 @@ class StaffRoleTest {
         assertThat(converter.convertToEntityAttribute(null)).isNull();
         assertThat(converter.convertToEntityAttribute(converter.convertToDatabaseColumn(StaffPermission.all()))).isEqualTo(StaffPermission.all());
     }
+
+    /**
+     * V56 gave KIOSK to the sets that were the whole set before it, matched as stored (the names in the enum's order): the migration's
+     * words must be what {@link StaffPermission#format} wrote for that set, or no co-organiser would get the kiosk. The next permission
+     * added the same way gets the same check.
+     */
+    @Test
+    void theKiosksMigration_matchesTheWholeSetAsItWasStored() throws java.io.IOException {
+        EnumSet<StaffPermission> before = EnumSet.allOf(StaffPermission.class);
+        before.remove(StaffPermission.KIOSK);
+        String sql;
+        try (java.io.InputStream in = getClass().getResourceAsStream("/db/migration/V56__kiosk.sql")) {
+            sql = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        assertThat(sql.split("= '" + StaffPermission.format(before) + "';", -1)).as("the three tables").hasSize(4);
+        before.add(StaffPermission.KIOSK);
+        assertThat(StaffRole.of(StaffPermission.parse(StaffPermission.format(before)))).isEqualTo(StaffRole.CO_ORGANISER);
+    }
 }

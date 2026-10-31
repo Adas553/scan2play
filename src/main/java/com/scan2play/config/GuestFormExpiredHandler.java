@@ -21,12 +21,15 @@ import java.util.regex.Pattern;
 /**
  * A guest's song request whose page was open longer than the session lives (30 minutes): the form's CSRF token went with the session,
  * and Spring Security refused it — the error page "403", the typed song lost (review 2026-10-14). Such a request goes back to the
- * party's page with what the guest typed — the song and the dedication — and a note to send it again; the page has a new session and token. Every
- * other refusal is Spring Security's own.
+ * party's page with what the guest typed — the song and the dedication — and a note to send it again; the page has a new session and token.
+ * The same at the venue's kiosk (V56, {@code /k/{token}}): a request back to the kiosk's page with what was typed, a 👍 or "Następny
+ * gość" back to it alone. Every other refusal is Spring Security's own.
  */
 class GuestFormExpiredHandler implements AccessDeniedHandler {
 
     private static final Pattern GUEST_REQUEST = Pattern.compile("/p/([A-Za-z0-9]{1,10})/request");
+    /** The venue's kiosk (V56): its request, its 👍 and "Następny gość" — the tablet's page back, a new session and token. */
+    private static final Pattern KIOSK_FORM = Pattern.compile("/k/([A-Za-z0-9_-]{1,64})/(request|vote|next)");
 
     private final AccessDeniedHandler otherwise = new AccessDeniedHandlerImpl();
     private final SessionFlashMapManager flashes = new SessionFlashMapManager();
@@ -41,12 +44,19 @@ class GuestFormExpiredHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException refused)
             throws IOException, ServletException {
-        Matcher guestRequest = GUEST_REQUEST.matcher(request.getRequestURI().substring(request.getContextPath().length()));
-        if (!(refused instanceof CsrfException) || !"POST".equals(request.getMethod()) || !guestRequest.matches()) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        Matcher guestRequest = GUEST_REQUEST.matcher(path);
+        Matcher kioskForm = KIOSK_FORM.matcher(path);
+        boolean kiosk = kioskForm.matches();
+        if (!(refused instanceof CsrfException) || !"POST".equals(request.getMethod()) || !(kiosk || guestRequest.matches())) {
             otherwise.handle(request, response, refused);
             return;
         }
-        String party = "/p/" + guestRequest.group(1);
+        if (kiosk && !"request".equals(kioskForm.group(2))) {
+            response.sendRedirect(request.getContextPath() + "/k/" + kioskForm.group(1));   // a 👍 or the next guest: the page again
+            return;
+        }
+        String party = kiosk ? "/k/" + kioskForm.group(1) : "/p/" + guestRequest.group(1);
         FlashMap flash = new FlashMap();
         flash.put(ViewAttributes.ERROR_MESSAGE, messages.getMessage("guest.form.expired", null, locales.resolveLocale(request)));
         String typed = request.getParameter("songName");

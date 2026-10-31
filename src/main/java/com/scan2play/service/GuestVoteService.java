@@ -117,6 +117,15 @@ public class GuestVoteService {
         return result[0];
     }
 
+    /**
+     * The guest's 👍 at the party forgotten in the same session — they stay on the songs, the next guest may give their own: the end
+     * of a guest's turn at the venue's kiosk (V56) in a session that is kept (a DJ logged in in that browser).
+     */
+    public void forget(HttpSession session, String partyCode) {
+        votes.invalidate(key(session.getId(), partyCode));
+        session.removeAttribute(MY_VOTES_PREFIX + partyCode);
+    }
+
     /** The newest {@link #MY_VOTES_KEPT}: an old 👍 forgotten can only be given again. */
     private static Set<Long> trim(Set<Long> ids) {
         if (ids.size() <= MY_VOTES_KEPT) {

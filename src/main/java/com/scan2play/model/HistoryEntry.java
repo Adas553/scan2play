@@ -23,10 +23,19 @@ import java.time.Instant;
  * @param requestNumber the song's number at the party (V28, "#27"); {@code null} for one the AI rejected
  * @param tips        how many tips the DJ counted for it (V28, "💸")
  * @param addedByDj   whether the DJ or the staff added it in the panel (V44): no guest's words, no AI's verdict
+ * @param viaKiosk    whether a guest sent it at the venue's kiosk (V56): marked as in the queue
  */
 public record HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
                            String guestText, Integer votes, Instant skippedAt, Instant clearedAt,
-                           Integer requestNumber, int tips, boolean addedByDj) {
+                           Integer requestNumber, int tips, boolean addedByDj, boolean viaKiosk) {
+
+    /** An entry not from the kiosk. */
+    public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,
+                        String guestText, Integer votes, Instant skippedAt, Instant clearedAt, Integer requestNumber, int tips,
+                        boolean addedByDj) {
+        this(id, at, title, trackUrl, style, decision, djComment, guestText, votes, skippedAt, clearedAt, requestNumber, tips, addedByDj,
+                false);
+    }
 
     /** An entry a guest asked for (not one the DJ added). */
     public HistoryEntry(Long id, Instant at, String title, String trackUrl, String style, String decision, String djComment,

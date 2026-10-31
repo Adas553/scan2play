@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(GuestController.class)
 @Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
-        com.scan2play.service.PartySchedulesConfig.class})
+        com.scan2play.service.PartySchedulesConfig.class, com.scan2play.service.GuestRequestService.class})
 class GuestNoSessionWebTest {
 
     @Autowired

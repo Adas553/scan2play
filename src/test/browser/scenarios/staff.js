@@ -236,7 +236,7 @@ S2P.scenario({
 
         select.value = 'CO_ORGANISER';
         select.dispatchEvent(new Event('change'));
-        t.step('"Współorganizator" ticks everything', ticked().length, 9);
+        t.step('"Współorganizator" ticks everything', ticked().length, 10);   // with KIOSK (V56)
         form.querySelector('details').open = true;   // the ticks, as a person opens them
         form.querySelector('[data-permission-box][value="LIMITS"]').click();
         t.step('a tick taken away: "Własne"', select.value, 'CUSTOM');
@@ -246,7 +246,7 @@ S2P.scenario({
         t.step('"Nowy link" is a page load, after the question (the old link stops working)',
             [link && link.action, link && link.inBackground, !!(link && link.asked)], ['/dj/staff/link', false, true]);
         t.step('…and sends the role with its ticks', link && [link.fields.link, link.fields.role, link.fields.permissions.length,
-            link.fields.permissions.indexOf('LIMITS')], ['new', 'CUSTOM', 8, -1]);
+            link.fields.permissions.indexOf('LIMITS')], ['new', 'CUSTOM', 9, -1]);
     }
 });
 

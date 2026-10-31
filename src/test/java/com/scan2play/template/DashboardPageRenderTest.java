@@ -307,6 +307,17 @@ class DashboardPageRenderTest {
         assertThat(renderDashboard(party(), List.of(), PL)).as("nothing planned: no line").doesNotContain("id=\"partySchedule\"");
     }
 
+    /** A request sent at the venue's kiosk (V56): marked in the queue, "🖥 kiosk", its title saying so; another is not. */
+    @Test
+    void aRequestFromTheKiosk_isMarkedInTheQueue() {
+        SongRequestEntity fromKiosk = numbered(21, 4, "Wilki - Baśka", "wilki baśka", 1, 0);
+        fromKiosk.setViaKiosk(true);
+        String html = renderDashboard(party(), List.of(fromKiosk, numbered(22, 5, "sanah - Szampan", "szampan", 1, 0)), PL);
+        assertThat(html.split("s2p-via-kiosk", -1)).as("one mark, on the kiosk's request").hasSize(2);
+        String row = html.substring(html.indexOf("data-song-id=\"21\""), html.indexOf("data-song-id=\"22\""));
+        assertThat(row).contains("title=\"Wysłana z kiosku\">🖥 kiosk<");
+    }
+
     @Test
     void aReturningOrganiser_andTheStaff_areNotWelcomed() {
         assertThat(renderDashboard(party(), List.of(), PL)).doesNotContain("id=\"welcomeCard\"", "Napisz do nas<");

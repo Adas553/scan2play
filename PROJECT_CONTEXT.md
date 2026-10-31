@@ -106,6 +106,8 @@ from `scan2playcontact@gmail.com` — the privacy policy says so; gone with the 
 panel's welcome card, null = shown; the parties of before closed by the migration),
 `nextOpenAt` / `nextCloseAt` (V55, timestamptz, null = none: when the party opens / closes by itself — "Godziny imprezy", 5.1; never one
 that would change nothing; a weekly plan, later, would write its next moment into them after each one),
+`kioskToken` (V56, ≤ 32, UNIQUE, null = no kiosk: the secret of the venue's kiosk link `/k/{token}` — 128 random bits, as the hosts'
+link; it does not run out, a new one makes the old link dead — "Kiosk dla gości", 5.1),
 `commentStyle` (V22, `CommentStyle`:
 CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
@@ -124,7 +126,7 @@ guest's "–" back as a backspace; the AI is given the guest's words with "-" to
 (150, V14: what the guest typed, as typed — one line, what the AI is given; null for older requests; the queue and the history always show
 it under the song — the DJ checks the AI, 2026-10-04; when the AI's song has none of the guest's words — `SongNames.sharesNoWord`: a
 word of 3+ letters, its stem — the first max(3, length − 2) letters — looked for in the `comparable` name — the queue and the history mark it
-"⚠ Sprawdź", `needsCheck()`, computed when shown; 2026-10-07 "orła cień" became another song by its mood), `checked` (V39, NOT NULL, default true: false when the AI could not be asked and the request went to the DJ with the guest's own words — the guests' list shows it only to the guest who sent it, the TV screen never, the DJ's row says "bez oceny AI"; an accepted request of the same name counted on it marks it checked, `SongRequestRepository.markChecked` — the review of 2026-10-21, S1), `addedByDj` (V44, NOT NULL, default false: the DJ or the staff added it in the panel — "Dodaj piosenkę", below), `votes` (V15, ≥ 1: how many guests asked for it — see below), `dedications` (V38: how many guests' dedications it has —
+"⚠ Sprawdź", `needsCheck()`, computed when shown; 2026-10-07 "orła cień" became another song by its mood), `checked` (V39, NOT NULL, default true: false when the AI could not be asked and the request went to the DJ with the guest's own words — the guests' list shows it only to the guest who sent it, the TV screen never, the DJ's row says "bez oceny AI"; an accepted request of the same name counted on it marks it checked, `SongRequestRepository.markChecked` — the review of 2026-10-21, S1), `addedByDj` (V44, NOT NULL, default false: the DJ or the staff added it in the panel — "Dodaj piosenkę", below), `viaKiosk` (V56, NOT NULL, default false: a guest sent it at the venue's kiosk — the queue marks it "🖥 kiosk"), `votes` (V15, ≥ 1: how many guests asked for it — see below), `dedications` (V38: how many guests' dedications it has —
 `SongRequestDedicationEntity`),
 `requestNumber` (V28: the song's number at its party, "#27" — given to a request that reaches the queue, from the party's
 `request_counter` raised in the same statement under the party's advisory lock (`UPDATE … RETURNING`; `SongRequestVotesIT`: 16 new
@@ -347,7 +349,7 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 - **Pro features** (`PlanFeature`): the hosts' lists and their link (`HOST_LISTS`), the profiles (`PROFILES`), the tip link and 💸
   (`TIPS`), the AI's comment styles but "Klasyczne" (`COMMENT_STYLES`), the guests' limits set by the DJ (`GUEST_LIMITS` — without Pro
   every party has a new party's 2 requests / 3 min / no repeats of the last 15, `PartySettingsEntity.DEFAULT_*`), "Podsumowanie
-  wieczoru" and its CSV (`SUMMARY`), the DJ's logo (`LOGO`, V45 — without Pro kept, not shown; deleting it needs no plan), the DJ's library and its marks in the queue (`LIBRARY`, V41 — without Pro the library is kept,
+  wieczoru" and its CSV (`SUMMARY`), the venue's kiosk (`KIOSK`, V56 — without Pro its link opens nothing; taking it away needs no plan), the DJ's logo (`LOGO`, V45 — without Pro kept, not shown; deleting it needs no plan), the DJ's library and its marks in the queue (`LIBRARY`, V41 — without Pro the library is kept,
   unmarked; deleting it needs no plan); and the staff's places (`Plan.staffPlaces`): 10 with Pro, 1 without (the invitations by e-mail
   waiting count, as before). **Everyone's**: the QR code and prints, the AI, the queue and its keys, the votes and 👍, the vibe, its
   note and "Kto gra", the history, the notifications, 1 person of staff.
@@ -371,12 +373,13 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 ### 4.2 Enums
 
 `StaffPermission` (V32) QUEUE ("Zagrane", "Pomiń", "Cofnij", "↩ Przywróć", "Dodaj piosenkę" — V44), TIPS (💸), CLEAR_QUEUE, OPEN_CLOSE (end / resume the
-party), HISTORY, VIBE (the card "Impreza"), LIMITS, HOST_LISTS (the lists and their link), SUMMARY (the evening summary and its CSV) ·
+party), HISTORY, VIBE (the card "Impreza"), LIMITS, HOST_LISTS (the lists and their link), SUMMARY (the evening summary and its CSV),
+KIOSK (V56: the kiosk's link; given by V56 to everyone who had all the rest — `KioskMigrationIT`) ·
 `StaffRole` (V32, ready sets by what the person does, not by their job) VIEWER "Podgląd" (HISTORY), QUEUE "Obsługa kolejki" (QUEUE,
 TIPS, CLEAR_QUEUE, OPEN_CLOSE, HISTORY — what every person of the staff could do before V32; `DEFAULT`: the role picked first for a new link and for "Zaproś", and what a link made before V33 gives), CO_ORGANISER
 "Współorganizator" (all of them), CUSTOM "Własne" (ticked one by one) ·
 `Plan` (V35) FREE (1 place of staff) / PRO (every `PlanFeature`, 10 places) · `PlanFeature` HOST_LISTS, PROFILES, TIPS, COMMENT_STYLES,
-GUEST_LIMITS, SUMMARY, LIBRARY, LOGO · `PlanSource` TRIAL / PAID / GIFT ·
+GUEST_LIMITS, SUMMARY, LIBRARY, LOGO, KIOSK (V56) · `PlanSource` TRIAL / PAID / GIFT ·
 `HistoryFilter` all / played / rejected (an old link's "guest" / "background" reads as all) · `VibeType` ANY and 16 genres (V16:
 Polish hits, 2000s/2010s, R&B & soul, folk / biesiada, kids added; bachata, salsa and reggaeton merged into LATINO — the rows moved
 by the migration).
@@ -599,8 +602,9 @@ and "▾"; a tap unfolds it, and unfolded its state goes (the fields say it). Th
 what can be set (no row of jumps above it); "Obsługa" is a line of the same look with "›", leading to its page (`#staffRow`). The card
 the address names unfolds by itself (`js/folds.js`: `#libraryCard`, "Nowy link" → `#hostListsCard`, "Zainstaluj" under an empty queue → `#deviceCard`, an element
 inside a card too), the others stay folded; a form saved in the background leaves its card unfolded, and the library's card brought
-again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are page loads that come
-back here, at the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
+again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are sent in the background and
+the link's box comes back from the settings page the server redirects to, the lists as typed, the page not moved — `cards-in-place.js`,
+`data-in-place="hostLinkBox"`; without the script page loads back to the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
 one line with their windows, "Limity serwera: sieć 4/30 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
 network is: "Jedna sieć to np. Wi-Fi lokalu — wszyscy goście w nim liczą się razem."), **"To urządzenie"** (everyone's:
 the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"), and last **"Kod imprezy"**
@@ -672,6 +676,34 @@ read "Prośby od 20:00" (today), "Prośby od soboty, 20:00" (within six days), "
 próśb", in their language — on `party_ended.html` and the TV screen (both languages there). Not built: a weekly plan for clubs (days and
 hours — later, a migration of its own that writes the next moment into the same columns); closing by itself after hours without requests
 (it would fit: a job that sets `next_close_at`, or closes at once, through the same service).
+
+**The venue's kiosk** (V56, "Kiosk dla gości", Pro; the owner, 2026-10-30 — Rekwest has one): a tablet at the bar where guests without a
+phone ask for a song and vote. The card of "Ustawienia imprezy" (whoever has the permission KIOSK; without Pro the organiser sees the
+offer): "Utwórz link kiosku" — a secret `/k/{token}` (`kioskToken`), to copy and open on the tablet —, "Nowy link" (asks first: the old
+tablet's link dies; Pro) and "Wyłącz" (any plan: without Pro a link made before opens nothing, and taken away it does not come back
+with Pro), sent in the background — the server's card takes the old one's place, "✓" on the button, the page
+does not move (`cards-in-place.js`, as "Godziny imprezy" and the hosts' link: a card with `data-saves-in-place` whose forms marked
+`data-in-place` are fetched; the answer — the card alone, or the settings page a redirect leads to — gives the card's state and its body,
+or the part the form names; a button gone with the answer leaves the focus in the card); a tip for Guided Access (iPad) / screen pinning (Android). **The kiosk's page**
+(`KioskController`, `kiosk.html`, `js/kiosk.js`; public, no login, `noindex`; a token that is no kiosk's, or a party without Pro, a 404):
+the request form as the party page's (the iTunes suggestions, the dedication when on) and beside it — on a tablet held across, else under
+it — the most wanted with 👍, as the TV screen; no link out (no profiles, tip link, footer). **A guest's turn is a session:** "Następny
+gość" (`POST /k/{token}/next`, sent in the background by kiosk.js and only then the kiosk's page loaded — a form's page load with the
+Wi-Fi down left the tablet on the browser's error page; lost, the kiosk stays and tries again) ends it (`session.invalidate()`), so the next guest has the DJ's limit and their own 👍 again — but a
+session with a login in it (the DJ opened the kiosk in their own browser) is kept, only the turn's limit, requests and 👍 at the party
+forgotten (`GuestSessionService.forget`, `GuestVoteService.forget`): ending it would log the DJ out; kiosk.js
+sends it by itself after a minute without a touch once the turn began (a typed song, a 👍 — or before the page loaded: a refused request
+back with its words, a 👍 given, `data-kiosk-turn`), 20 s after an answer; an untouched form loads
+itself again every 10 minutes (its session and CSRF token fresh), a closed party's page every minute. A 👍 lost goes back to the kiosk's
+own address (`data-kiosk-url`), never a reload: an answer is a POST's page, and a reload would send the request again. **Limits** (`GuestRequestLimiter`):
+not the address's (the tablet shares the venue's Wi-Fi with the phones) but the kiosk's own — 3 requests a minute, 20 👍 per 10 min,
+said as the kiosk's ("Kiosk dostał teraz dużo głosów") —; the party's day counts its requests as every guest's. A request goes the
+guests' way (`GuestRequestService`: `fromParty` for the party page, `fromKiosk`), marked `viaKiosk` — the queue and the history show
+"🖥 kiosk", the evening summary counts "Z kiosku" and its CSV says "tak" in the column "Z kiosku" (after "Dodana przez DJ-a"). The answer in the kiosk: the verdict, the AI's comment, "Gotowe — następny gość"
+(no number or tip: they are for a phone). 👍 in the background (`X-Requested-With: fetch`, the list comes back; its note read out by
+the page's own live region `#kioskAnnounce` and left 15 s on the screen); the list again every 10 s — not within 5 s of a touch (its
+rows move with the votes: a 👍 would land on another song), an answer asked for before a 👍 dropped, the focus kept on the same song's
+👍; a list that says the party closed (`data-active="false"`) sends the kiosk to its page. An expired form returns to the kiosk with what was typed (`GuestFormExpiredHandler`). `KioskWebTest`, browser scenarios `kiosk-*`.
 
 **The history** (`PlayHistoryService`): the party's requests that played or were rejected, by the DJ's moment —
 `COALESCE(played_at, skipped_at, cleared_at, requested_at)`, the time it shows too (a skip was placed by its request time until
@@ -919,6 +951,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
 | `LanguageSwitchAdvice` | every page's model: `langSwitch` — this page's address with `?lang=pl` / `?lang=en` for the footer's switch (2026-10-18); null for a POST |
 | `TvScreenController` | the screen for a TV `/p/{code}/tv` (Next 7 c, 2026-10-18): the party's QR code and the ten most wanted songs (`GuestQueueService.mostWanted`), public, no session; its list alone `/p/{code}/tv/list` |
+| `KioskController` | the venue's kiosk `/k/{token}` (V56, Pro): the request form and the most wanted with 👍 for guests without a phone, a guest's turn a session ("Następny gość"), the kiosk's own limits; a request through `GuestRequestService.fromKiosk` |
 | `FeedbackController` | `POST /dj/feedback` (JSON; 10 an hour per account, then 429) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation, at most 100 an hour |
@@ -940,6 +973,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); a song the DJ adds (`addByTheDj`, V44) under the same lock; evicts `dashboardQueue` after the commit |
 | `GuestSessionService` / `GuestRequestLimiter` | the guest limits (Section 5.2) |
+| `GuestRequestService` | a guest's request the same way from the party page and the kiosk (V56): the limits in their order, the style, the AI, the limit given back, the request remembered |
 | `PartySettingsQueryService` / `PartySettingsCommandService` | read (cached copy) / write (evicts after commit) of the party |
 | `PartyScheduleService` (+ `util/PartySchedule`) | "Godziny imprezy" (V55): the plan checked and saved, "Zakończ / Wznów" against it, the job of every minute, the words of the panel and the guests; time from an injected `Clock` |
 | `QrCodeService` | QR codes (ZXing, cached; error correction M — the same version 3 as L for the guest link, so as large on paper; `QrCodeServiceTest`) |
@@ -1309,6 +1343,7 @@ schema behind Flyway's back.
 | V53 | `party_settings.poster_paper` varchar(7), nullable (check `^#[0-9a-f]{6}$`): the QR print's paper colour (`MigrationIT`) |
 | V54 | `party_settings.poster_size` varchar(6) NOT NULL DEFAULT 'NORMAL' (check SMALL / NORMAL / LARGE): the QR print's heading size (`MigrationIT`) |
 | V55 | `party_settings.next_open_at`, `next_close_at` timestamptz, nullable; partial indexes `idx_party_settings_next_open_at` / `…_next_close_at` (WHERE … IS NOT NULL): the party opens and closes by itself (`MigrationIT`, `PartyScheduleIT`) |
+| V56 | `party_settings.kiosk_token` varchar(32) (unique index `uk_party_settings_kiosk_token`), `song_requests.via_kiosk` boolean NOT NULL DEFAULT false; data: `KIOSK` added to the staff's, the invitation link's and the invitations' permissions that were the whole set before (the co-organisers) — the venue's kiosk (`MigrationIT`, `KioskMigrationIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1339,7 +1374,9 @@ applied in 0.05 s, "Push notifications on"). Since:
 ## 11. Main Dependencies
 
 ```
-GuestController            → SongEvaluationService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartySettingsQueryService
+GuestController            → GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartySettingsQueryService
+GuestRequestService        → SongEvaluationService, GuestSessionService, GuestVoteService, GuestRequestLimiter, SiteCounter
+KioskController            → PartySettingsRepository, PlanService, GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter
 GuestVoteService           → SongRequestRepository, DjService
 DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsCommandService, DjSessionHelper, PushNotificationService, PartyStaffService, StaffInvitationService, PlanService
 DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper, PlanService
@@ -1381,6 +1418,9 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one, or one made more than 30 days ago (V37) |
+| GET | `/k/{token}` | the venue's kiosk (V56, Pro): the request form and the most wanted with 👍, or — closed — when it opens; a session (the guest's turn, the forms' CSRF token); 404 for an unknown token or a party without Pro; `noindex` |
+| GET | `/k/{token}/list` | the kiosk's list alone (`kiosk :: kioskList`), fetched by `kiosk.js` every 10 s |
+| POST | `/k/{token}/request`, `/k/{token}/vote`, `/k/{token}/next` | the kiosk's request (async, the guests' way, `viaKiosk`, the kiosk's limit), 👍 (`id`, `on`; with `X-Requested-With: fetch` the list), "Następny gość" (the session ends; with a login in it, only the turn's state at the party is forgotten); CSRF; an expired form back to the kiosk |
 | GET | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's → its invitation `/join/{token}`, else `/?staffLink=invalid#staffLogin` (`guests` for a guests' link); keeps nothing, no session (review 2026-10-21, S2) |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
 | POST | `/join/{token}` | "Dołącz" (V32): joins the logged-in person (not logged in: the login first) → their panel on that party; 409 when the staff is full |
@@ -1443,6 +1483,7 @@ GuestQueueService          → DjService
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
 | POST | `/dj/dashboard/schedule` | "Godziny imprezy" (V55, OPEN_CLOSE, any plan): `openDate`, `openTime`, `closeDate`, `closeTime` (Polish time, empty = none) or `cancel=open\|close`; with `X-Requested-With: fetch` (schedule.js) the card alone (`settings :: partyHoursCard`) with `scheduleSaved` or `scheduleError` (+ the fields as typed), else a page load back to `/dj/settings#partyHoursCard` with them as flash attributes |
 | POST | `/dj/dashboard/schedule/cancel` | the panel's "✕" beside a planned moment (`event=open\|close`, OPEN_CLOSE), in the background |
+| POST | `/dj/dashboard/kiosk-link` | the kiosk's link (V56, `link=new\|off`, KIOSK; `new` needs Pro): with `X-Requested-With: fetch` (cards-in-place.js) the card alone (`settings :: kioskCard`), else a page load back to `/dj/settings#kioskCard` |
 
 ---
 

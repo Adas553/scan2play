@@ -216,13 +216,13 @@ class SettingsPageRenderTest {
                 "closeTime", "04:00"));
         assertThat(saved.trim()).startsWith("<details").endsWith("</details>").doesNotContain("<html", "djTabBar", "hostListsCard");
         assertThat(saved).doesNotContain("partyHoursError", "Zapisano");
-        assertThat(saved).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursSave\"",
+        assertThat(saved).contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"", "id=\"partyHoursSave\"",
                 ">⏰ Otworzy się dziś o 21:00<", ">⏰ Zamknie się jutro o 4:00<", "name=\"openTime\" value=\"21:00\"",
                 "action=\"/dj/dashboard/schedule\"", "id=\"openHoursCancel\"");
         write("settings-hours-answer-saved.html", saved);
 
         String refused = renderHoursAnswer(party(), Map.of("openDate", "2026-10-30", "openTime", "11:30"));
-        assertThat(refused).contains("id=\"partyHoursCard\" open=\"open\"", "id=\"partyHoursError\"",
+        assertThat(refused).contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"", "id=\"partyHoursError\"",
                 ">Ta pora już minęła: wybierz późniejszą.<", "name=\"openTime\" value=\"11:30\"");
         write("settings-hours-answer-refused.html", refused);
     }
@@ -257,7 +257,7 @@ class SettingsPageRenderTest {
                 .doesNotContain("id=\"backToPanel\"");
         assertThat(html.split("<script src=\"/js/dj-nav.js\">", -1)).as("dj-nav.js once: a second copy would ask every question twice").hasSize(2);
         assertThat(html).as("every card folded to its heading and its state (the panel's rows'), the card the address names unfolded by folds.js")
-                .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\">",
+                .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\">",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"deviceCard\">",
                         "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · napiwki<",
@@ -477,7 +477,7 @@ class SettingsPageRenderTest {
                 PL, com.scan2play.service.Plans.off(), mock(DjService.class),
                 Map.of("scheduleError", "schedule.error.past", "scheduleTyped", new String[]{"2026-10-29", "20:00", "", ""}));
 
-        assertThat(html).contains("id=\"partyHoursCard\" open=\"open\"", ">Ta pora już minęła: wybierz późniejszą.<",
+        assertThat(html).contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"", ">Ta pora już minęła: wybierz późniejszą.<",
                 "name=\"openDate\" value=\"2026-10-29\"", "name=\"closeDate\" value=\"\"",
                 "class=\"small text-danger mt-1\" role=\"alert\" id=\"partyHoursError\"");
         assertThat(html.indexOf("id=\"partyHoursError\"")).as("why: under \"Zapisz\", as every card")
@@ -486,7 +486,95 @@ class SettingsPageRenderTest {
 
         assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), mock(DjService.class),
                 Map.of("scheduleSaved", true))).as("saved: the card open, no sentence — \"✓\" on the button, as every card")
-                .contains("id=\"partyHoursCard\" open=\"open\"").doesNotContain("id=\"partyHoursError\"", "Zapisano");
+                .contains("id=\"partyHoursCard\" data-saves-in-place open=\"open\"").doesNotContain("id=\"partyHoursError\"", "Zapisano");
+    }
+
+    /**
+     * The venue's kiosk (V56): a card folded to "Włączony" / "Wyłączony"; with a link — to copy, to open on the tablet, made again
+     * (asking first) or taken away, page loads; without — "Utwórz link kiosku". Whoever has KIOSK; not the queue's staff.
+     * {@code settings-kiosk.html} for the browser tests.
+     */
+    @Test
+    void theKiosk_hasACard_withItsLink() throws IOException {
+        PartySettingsEntity withKiosk = party();
+        withKiosk.setKioskToken("Kiosk_123-xyzKiosk_123-x");
+        String html = render(new PartyStaffService.Access(withKiosk, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        String card = html.substring(html.indexOf("id=\"kioskCard\""), html.indexOf("id=\"linksCard\""));
+        assertThat(card).contains(">Kiosk dla gości<", "id=\"kioskState\">Włączony<",
+                "value=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" id=\"kioskLinkInput\"", "data-copy-target=\"kioskLinkInput\"",
+                "id=\"kioskOpen\"", "href=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" target=\"_blank\"",
+                "action=\"/dj/dashboard/kiosk-link\"", "data-confirm=\"Utworzyć nowy link? Tablet ze starym linkiem przestanie działać.\"",
+                ">Nowy link<", "id=\"kioskLinkOffBtn\"", "Dostęp nadzorowany");
+        write("settings-kiosk.html", html);
+
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("id=\"kioskState\">Wyłączony<", ">Utwórz link kiosku<")
+                .doesNotContain("id=\"kioskLinkInput\"", "id=\"kioskLinkOffBtn\"");
+        assertThat(render(staff(StaffRole.QUEUE.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .as("the queue's staff: not theirs").doesNotContain("id=\"kioskCard\"");
+        assertThat(render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .as("a co-organiser: theirs").contains("id=\"kioskCard\"");
+    }
+
+    /**
+     * "Nowy link" of the kiosk sent in the background: the answer is the card alone, unfolded, with the new link — rendered through the
+     * real controller as the view resolver would. {@code settings-kiosk-answer.html} for the stand-in.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void theKiosksLinkSentInTheBackground_isAnsweredWithTheCardAlone() throws IOException {
+        PartySettingsEntity row = party();
+        PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
+        when(commands.updateSettings(any(), any())).thenAnswer(call -> {
+            ((java.util.function.Consumer<PartySettingsEntity>) call.getArgument(1)).accept(row);
+            return row;
+        });
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(row);
+        when(sessionHelper.access(any(), any(), any())).thenReturn(new PartyStaffService.Access(row, true, StaffPermission.all()));
+        com.scan2play.controller.DjPartySettingsController controller = new com.scan2play.controller.DjPartySettingsController(commands,
+                mock(com.scan2play.service.AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper,
+                com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.texts());
+        ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
+        ConcurrentModel model = new ConcurrentModel();
+        assertThat(controller.updateKioskLink(PARTY, "new", "fetch", user("owner"), new MockHttpSession(), model))
+                .isEqualTo("settings :: kioskCard");
+
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String html = engine.process("settings", Set.of("kioskCard"), context);
+        assertThat(html.trim()).startsWith("<details").endsWith("</details>");
+        assertThat(html).contains("id=\"kioskCard\" data-saves-in-place open=\"open\"", "id=\"kioskState\">Włączony<",
+                "value=\"http://localhost:8080/k/" + row.getKioskToken() + "\"", "id=\"kioskLinkNewBtn\"", ">Nowy link<")
+                .doesNotContain("??");
+        write("settings-kiosk-answer.html", html);
+
+        // "Wyłącz" then: the card without a link — for the stand-in, the answer after which the focus must stay in the card
+        ConcurrentModel off = new ConcurrentModel();
+        controller.updateKioskLink(PARTY, "off", "fetch", user("owner"), new MockHttpSession(), off);
+        WebContext offContext = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        offContext.setVariables(off.asMap());
+        offContext.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String offHtml = engine.process("settings", Set.of("kioskCard"), offContext);
+        assertThat(offHtml).contains("id=\"kioskState\">Wyłączony<", "id=\"kioskLinkNewBtn\"").doesNotContain("id=\"kioskLinkOffBtn\"");
+        write("settings-kiosk-answer-off.html", offHtml);
+    }
+
+    /**
+     * The hosts' link made again (V29): the page "Ustawienia imprezy" the server redirects to, with the new link — what
+     * cards-in-place.js takes the link's box from. {@code settings-host-link-answer.html} for the stand-in.
+     */
+    @Test
+    void theHostsLinkMadeAgain_isOnThePageTheServerAnswersWith() throws IOException {
+        PartySettingsEntity renewed = party();
+        renewed.setHostToken("New_456-abcNew_456-abc");
+        String html = render(new PartyStaffService.Access(renewed, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        assertThat(html).contains("id=\"hostListsCard\" data-saves-in-place", "id=\"hostLinkBox\"",
+                "value=\"http://localhost:8080/h/New_456-abcNew_456-abc\"", "data-in-place=\"hostLinkBox\"");
+        write("settings-host-link-answer.html", html);
     }
 
     @Test
@@ -534,6 +622,14 @@ class SettingsPageRenderTest {
         assertThat(html).as("the library: what it would do, no form")
                 .contains("id=\"libraryCard\"", "Wgraj swoją bibliotekę, a przy każdej prośbie zobaczysz, czy masz ten utwór.")
                 .doesNotContain("id=\"libraryForm\"", "action=\"/dj/library\"");
+        assertThat(html).as("the kiosk (V56): the offer, no link to make").contains("id=\"kioskCard\"",
+                "Kiosk dla gości bez telefonu — w planie Pro.").doesNotContain("action=\"/dj/dashboard/kiosk-link\"");
+        saved.setKioskToken("Kiosk_123-xyzKiosk_123-x");
+        String kept = render(new PartyStaffService.Access(saved, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
+                PL, com.scan2play.service.Plans.enforced());
+        String kiosk = kept.substring(kept.indexOf("id=\"kioskCard\""), kept.indexOf("id=\"linksCard\""));
+        assertThat(kiosk).as("a link made with Pro: it opens nothing now, and can be taken away").contains("Kiosk dla gości bez telefonu",
+                "id=\"kioskLinkOffBtn\"", "name=\"link\" value=\"off\"").doesNotContain("id=\"kioskLinkNewBtn\"", "id=\"kioskLinkInput\"");
         assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"");
         write("settings-free.html", html);
     }

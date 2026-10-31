@@ -101,6 +101,15 @@ public class GuestSessionService {
         });
     }
 
+    /**
+     * The guest starts again at the party in the same session: their limit and their requests forgotten. The end of a guest's turn
+     * at the venue's kiosk (V56) where the session is not the guest's alone — a DJ logged in in that browser — and so is kept.
+     */
+    public void forget(HttpSession session, String partyCode) {
+        requestTimes.invalidate(key(session.getId(), partyCode));
+        session.removeAttribute(MY_REQUESTS_PREFIX + partyCode);
+    }
+
     /** What {@link #tryAcquire} has counted for this session and party (tests). */
     List<Instant> countedRequests(String sessionId, String partyCode) {
         List<Instant> times = requestTimes.getIfPresent(key(sessionId, partyCode));
