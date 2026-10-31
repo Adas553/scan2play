@@ -109,7 +109,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    asked for before a 👍 dropped, the focus kept), "Następny gość" sent in the background (the Wi-Fi down: no browser error page), a
    party closed meanwhile sends the kiosk to its page, the kiosk's limit of 👍 said as the kiosk's, "Wyłącz" without Pro, the request's
    way in `GuestRequestService` (no controller in a controller), "🖥 kiosk" in the history and "Z kiosku" in the summary and a column of the CSV,
-   a guard test that V56's words are the stored whole set.
+   a guard test that V56's words are the stored whole set. Then the layout (the owner's screenshot): one screen, the page never
+   scrolls — the list scrolls in its card, "Następny gość" under the form (ten songs had pushed it under the screen of every tablet).
    Details: `PROJECT_CONTEXT.md` 5.1. To try on a real tablet: an iPad in Guided Access and an Android tablet
    with the screen pinned, the native keyboard over the form, the suggestions.
 
