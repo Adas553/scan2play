@@ -419,4 +419,76 @@
             t.step('the focus in the card, on the button that makes a link', document.activeElement.id, 'kioskLinkNewBtn');
         }
     });
+    /**
+     * The kiosk with the list as full as it gets (ten songs, long names) on one screen: the page does not scroll — a guest at the bar
+     * must not look for "Następny gość" (or "Gotowe") under the list —, the way on and "Wyślij" in full view, the list scrolls in its
+     * own card down to its last song.
+     */
+    function fitsOneScreen(t, way) {
+        const root = document.documentElement;
+        t.step('the page does not scroll', root.scrollHeight <= root.clientHeight + 1, true);
+        const within = function (el) {
+            const box = el.getBoundingClientRect();
+            return box.top >= 0 && box.bottom <= root.clientHeight && box.height > 0;
+        };
+        t.step('"' + way + '" in full view', within(document.getElementById(way)), true);
+        const send = document.getElementById('submitBtn');
+        if (send) t.step('"Wyślij prośbę" in full view', within(send), true);
+        const songs = document.querySelector('.s2p-kiosk-songs');
+        const last = songs.lastElementChild;
+        songs.scrollTop = songs.scrollHeight;
+        const card = document.getElementById('kioskList').getBoundingClientRect();
+        t.step('the list scrolls in its card to its last song', [last.getBoundingClientRect().bottom <= card.bottom + 1,
+            last.getBoundingClientRect().bottom <= root.clientHeight], [true, true]);
+        t.step('every target ≥ 48 px', smallTargets(48), []);
+        t.step('nothing wider than the screen', fitsTheScreen(), true);
+    }
+
+    S2P.scenario({
+        name: 'kiosk-full-fits-1180x820',
+        title: 'ten songs on the list, a tablet held across (1180 × 820): one screen — "Wyślij" and "Następny gość" in view, the list scrolling in its card',
+        page: 'kiosk-full',
+        viewport: '1180,820',
+        run: async function (t) { fitsOneScreen(t, 'kioskNext'); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-fits-1024x768',
+        title: 'ten songs on the list, a small tablet held across (1024 × 768): one screen — "Wyślij" and "Następny gość" in view, the list scrolling in its card',
+        page: 'kiosk-full',
+        viewport: '1024,768',
+        run: async function (t) { fitsOneScreen(t, 'kioskNext'); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-fits-1366x1024',
+        title: 'ten songs on the list, a big tablet held across (1366 × 1024): one screen — "Wyślij" and "Następny gość" in view, the list scrolling in its card',
+        page: 'kiosk-full',
+        viewport: '1366,1024',
+        run: async function (t) { fitsOneScreen(t, 'kioskNext'); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-fits-820x1180',
+        title: 'ten songs on the list, a tablet held upright (820 × 1180): one screen — "Wyślij" and "Następny gość" in view, the list scrolling in its card',
+        page: 'kiosk-full',
+        viewport: '820,1180',
+        run: async function (t) { fitsOneScreen(t, 'kioskNext'); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-fits-390x844',
+        title: 'ten songs on the list, a phone (390 × 844): one screen — "Wyślij" and "Następny gość" in view, the list scrolling in its card',
+        page: 'kiosk-full',
+        viewport: '390,844',
+        run: async function (t) { fitsOneScreen(t, 'kioskNext'); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-answer-fits',
+        title: 'an answer with ten songs on the list, a small tablet held across (1024 × 768): one screen — "Gotowe — następny gość" in view',
+        page: 'kiosk-result-full',
+        viewport: '1024,768',
+        run: async function (t) { fitsOneScreen(t, 'kioskDone'); }
+    });
 })();

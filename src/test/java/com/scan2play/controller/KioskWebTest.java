@@ -136,6 +136,11 @@ class KioskWebTest {
                 ">Najczęściej wybierane<", "data-url=\"" + KIOSK + "/list\"", "action=\"" + KIOSK + "/vote\"", "Wilki - Baśka",
                 "aria-label=\"Zagłosuj na Wilki - Baśka, głosów: 5\"", "action=\"" + KIOSK + "/next\"", ">Następny gość<",
                 "<script src=\"/js/kiosk.js\">", "🎧 <span>DJ Koko</span>");
+        String ask = html.substring(html.indexOf("class=\"s2p-kiosk-ask\""), html.indexOf("id=\"kioskList\""));
+        assertThat(ask).as("\"Następny gość\" under the form, in its column: always on the screen, never under a long list")
+                .contains("id=\"requestForm\"", "id=\"kioskNext\"", "data-kiosk-next");
+        assertThat(ask.indexOf("id=\"kioskNext\"")).isGreaterThan(ask.indexOf("id=\"submitBtn\""));
+        assertThat(html).as("no line under the field that says its placeholder again").doesNotContain("Wpisz wykonawcę i tytuł.");
         assertThat(html).as("a list read as one by a screen reader (no list-style), and a place outside it that reads a 👍's note out")
                 .contains("<ol role=\"list\" class=\"s2p-kiosk-songs\">", "id=\"kioskAnnounce\" class=\"visually-hidden\" role=\"status\"");
         assertThat(html.indexOf("id=\"kioskAnnounce\"")).as("outside the list, which is put in place anew").isGreaterThan(
@@ -303,5 +308,27 @@ class KioskWebTest {
         String closed = mockMvc.perform(get(KIOSK + "/list")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(closed).contains("id=\"kioskList\"", "data-active=\"false\"");
         write("kiosk-list-closed.html", closed);
+    }
+
+    /**
+     * The list as full as it gets (the ten most wanted, as the TV screen; long names among them): the pages of the browser tests that
+     * check the kiosk fits one screen of a tablet — the form, "Następny gość" (or "Gotowe") and the list, which scrolls in its card.
+     * Writes {@code kiosk-full.html} and {@code kiosk-result-full.html}.
+     */
+    @Test
+    void theFullList_isRenderedForTheScreenChecks() throws Exception {
+        String[] names = {"Golec uOrkiestra - Ściernisco", "Dua Lipa - Levitating", "Shakira - Whenever, Wherever",
+                "Gente de Zona - La Gozadera (feat. Marc Anthony)", "Beyoncé - Crazy in Love (feat. JAY-Z)", "Dua Lipa - Physical",
+                "Rihanna - Don't Stop The Music", "Shakira & Burna Boy - Dai Dai", "Eminem - Without Me",
+                "Varius Manx - Orła cień (Remastered 2024 Version)"};
+        List<SongRequestEntity> full = new java.util.ArrayList<>();
+        for (int i = 0; i < names.length; i++) {
+            full.add(song(20 + i, names[i], 12 - i));
+        }
+        when(guestQueueService.mostWanted(partyCode)).thenReturn(full);
+        String page = page(new MockHttpSession());
+        assertThat(page).contains("Varius Manx - Orła cień");
+        write("kiosk-full.html", page);
+        write("kiosk-result-full.html", send(new MockHttpSession(), "baśka wilki").getResponse().getContentAsString());
     }
 }

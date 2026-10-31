@@ -1475,14 +1475,21 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
    wanted side by side on a tablet held across (from 900 px), one under the other otherwise; big words, every target at least 56 px
    (a finger in a dim bar, not a careful thumb); the page fills the screen, nothing leads out of it. */
 .page-kiosk { min-height: 100vh; }
-.s2p-kiosk { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+/* One screen, the page never scrolls (a guest must not look for "Następny gość" under the list): the kiosk is the screen's height,
+   the list takes what is left and scrolls in its card. A screen too low for that (a phone held across) scrolls as a page. */
+.s2p-kiosk {
+    max-width: 1280px; margin: 0 auto; padding: 1rem 1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem;
+    height: 100vh; height: 100dvh;
+}
 .s2p-kiosk-head { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; }
 .s2p-kiosk-dj-logo { max-height: 72px; max-width: 220px; object-fit: contain; }
 .s2p-kiosk-logo { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--s2p-white); }
 .s2p-kiosk-dj { margin: 0; font-size: 1.25rem; color: var(--s2p-light); }
-.s2p-kiosk-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+.s2p-kiosk-head { flex: none; }
+.s2p-kiosk-grid { display: grid; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 1rem; flex: 1 1 auto; min-height: 0; }
 @media (min-width: 900px) {
-    .s2p-kiosk-grid { grid-template-columns: 1fr 1fr; align-items: start; }
+    .s2p-kiosk-grid { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); }
+    .s2p-kiosk-ask { align-self: start; }
 }
 .s2p-kiosk-ask,
 .s2p-kiosk-list,
@@ -1499,9 +1506,14 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-verdict.is-rejected { color: var(--s2p-warning); }
 .s2p-kiosk-comment { font-size: 1.15rem; color: var(--s2p-light); }
 .s2p-kiosk-note { color: var(--s2p-light); font-weight: 600; }
-.s2p-kiosk-hint { color: var(--s2p-text-muted); font-size: 0.95rem; margin: 0.75rem 0 0; }
+.s2p-kiosk-hint { color: var(--s2p-light); font-size: 1rem; margin: 0.75rem 0 0; }
+.s2p-kiosk-list { display: flex; flex-direction: column; min-height: 0; }
 .s2p-kiosk-list h2 { font-size: 1.5rem; font-weight: 700; color: var(--s2p-white); margin-bottom: 1rem; }
-.s2p-kiosk-songs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk; }
+.s2p-kiosk-songs {
+    list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk;
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+}
+.s2p-kiosk-song-row { flex: none; }
 .s2p-kiosk-song-row {
     display: flex; align-items: center; gap: 0.75rem; min-height: 64px; padding: 0.5rem 0.75rem;
     background: var(--s2p-bg-row); border-radius: var(--s2p-radius); counter-increment: kiosk;
@@ -1516,6 +1528,11 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-vote.is-given { color: var(--s2p-action-ink); background: var(--s2p-action); border-color: var(--s2p-action); }
 .s2p-kiosk-closed { text-align: center; padding: 3rem 1.5rem; }
 .s2p-kiosk-closed h1 { font-size: 2rem; color: var(--s2p-white); margin: 0; }
-.s2p-kiosk-foot { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; text-align: center; }
-.s2p-kiosk-foot .btn { min-height: 56px; min-width: 200px; font-size: 1.15rem; }
-.s2p-kiosk-foot .s2p-kiosk-hint { margin: 0; }
+.s2p-kiosk-next { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--s2p-border); }
+.s2p-kiosk-next .btn { min-height: 56px; font-size: 1.15rem; }
+.s2p-kiosk-next .s2p-kiosk-hint { display: block; margin-top: 0.5rem; text-align: center; }
+@media (max-height: 560px) {
+    .s2p-kiosk { height: auto; }
+    .s2p-kiosk-grid { grid-template-rows: auto; }
+    .s2p-kiosk-songs { overflow-y: visible; }
+}

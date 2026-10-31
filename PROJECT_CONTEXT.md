@@ -687,7 +687,9 @@ does not move (`cards-in-place.js`, as "Godziny imprezy" and the hosts' link: a 
 or the part the form names; a button gone with the answer leaves the focus in the card); a tip for Guided Access (iPad) / screen pinning (Android). **The kiosk's page**
 (`KioskController`, `kiosk.html`, `js/kiosk.js`; public, no login, `noindex`; a token that is no kiosk's, or a party without Pro, a 404):
 the request form as the party page's (the iTunes suggestions, the dedication when on) and beside it — on a tablet held across, else under
-it — the most wanted with 👍, as the TV screen; no link out (no profiles, tip link, footer). **A guest's turn is a session:** "Następny
+it — the most wanted with 👍, as the TV screen; "Następny gość" under the form, in its column; one screen, the page never scrolls (the
+list scrolls in its card — ten songs pushed "Następny gość" under a tablet's screen; scenarios `kiosk-full-*`); no link out (no
+profiles, tip link, footer). **A guest's turn is a session:** "Następny
 gość" (`POST /k/{token}/next`, sent in the background by kiosk.js and only then the kiosk's page loaded — a form's page load with the
 Wi-Fi down left the tablet on the browser's error page; lost, the kiosk stays and tries again) ends it (`session.invalidate()`), so the next guest has the DJ's limit and their own 👍 again — but a
 session with a login in it (the DJ opened the kiosk in their own browser) is kept, only the turn's limit, requests and 👍 at the party
