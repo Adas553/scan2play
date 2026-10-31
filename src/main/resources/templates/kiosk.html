@@ -14,8 +14,8 @@
 </head>
 <!--/*
     The venue's kiosk (KioskController, V56, Pro): a tablet at the bar for the guests without a phone. Beside the request form (on a
-    phone's width under it) the most wanted songs with 👍, as the TV screen shows them; at the bottom "Następny gość", which ends this
-    guest's turn (a new session: the DJ's limit and the 👍 again). After a request: its verdict and the AI's comment in place of the
+    phone's width under it) the most wanted songs with 👍, as the TV screen shows them; under the form "Następny gość", which ends this
+    guest's turn (a new session: the DJ's limit and the 👍 again). One screen, the page never scrolls: the list scrolls in its card. After a request: its verdict and the AI's comment in place of the
     form, and "Gotowe — następny gość". kiosk.js sends the 👍 in the background, fetches the list again every few seconds and goes to
     the next guest by itself after a while without a touch. No link leads out of the page (no profiles, no tip link, no footer): a
     guest at the tablet stays in the kiosk.
@@ -69,7 +69,6 @@
                         <input type="text" id="songInput" name="songName" class="form-control form-control-lg" required autocomplete="off"
                                data-autocomplete="songs" th:value="${lastRequest}" th:placeholder="#{home.form.input.placeholder}">
                     </div>
-                    <div class="form-text text-secondary mt-2" th:text="#{home.form.input.help.song}">The artist and the title</div>
                     <details th:if="${dedicationsOn != false}" id="dedicationBox" class="mt-3 s2p-dedication-box"
                              th:open="${!#strings.isEmpty(lastDedication)}">
                         <summary th:text="#{home.form.dedication.toggle}">💌 Add a dedication</summary>
@@ -79,6 +78,12 @@
                     </details>
                     <button type="submit" id="submitBtn" class="btn btn-action btn-lg w-100 mt-3"
                             th:attr="data-text-submitting=#{home.form.button.submitting}" th:text="#{home.form.button.submit}">Send to DJ!</button>
+                </form>
+                <!--/* this guest's turn ends: the next one starts afresh (a new session) — under the form, in its column, so it is on the
+                     screen however long the list */-->
+                <form th:action="@{/k/{t}/next(t=${kioskToken})}" method="POST" class="s2p-kiosk-next" data-kiosk-next>
+                    <button type="submit" id="kioskNext" class="btn btn-outline-light w-100" th:text="#{kiosk.next}">Next guest</button>
+                    <span class="s2p-kiosk-hint" th:text="#{kiosk.next.help}">Ends your turn: the next person starts afresh.</span>
                 </form>
             </th:block>
         </section>
@@ -110,12 +115,6 @@
     </div>
     <!--/* a 👍's note read out: the list above is put in place anew (kiosk.js), and a live region new with it is not announced */-->
     <p id="kioskAnnounce" class="visually-hidden" role="status"></p>
-
-    <!--/* this guest's turn ends: the next one starts afresh (a new session) */-->
-    <form th:if="${response == null}" th:action="@{/k/{t}/next(t=${kioskToken})}" method="POST" class="s2p-kiosk-foot" data-kiosk-next>
-        <button type="submit" id="kioskNext" class="btn btn-outline-light" th:text="#{kiosk.next}">Next guest</button>
-        <span class="s2p-kiosk-hint" th:text="#{kiosk.next.help}">Ends your turn: the next person starts afresh.</span>
-    </form>
     </th:block>
 </main>
 <script src="/js/kiosk.js" th:src="@{/js/kiosk.js}"></script>
