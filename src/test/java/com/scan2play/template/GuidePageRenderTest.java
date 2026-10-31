@@ -103,6 +103,12 @@ class GuidePageRenderTest {
         assertThat(html).as("the party's hours (V55), in the party's section").contains("id=\"guideHours\"", "Godziny imprezy", "Prośby od 20:00");
         assertThat(html.indexOf("id=\"guideHours\"")).isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"phone\""));
         assertThat(html).as("the venue's kiosk (V56)").contains("id=\"guideKiosk\"", "Kiosk dla gości", "Następny gość");
+        String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
+        assertThat(kiosk).as("the kiosk: set up on a tablet logged out, kept in the kiosk, its limits, a new link, its marks").contains(
+                "nie jesteś zalogowany", "Dostęp nadzorowany", "przypinanie ekranu", "3 prośby na minutę", "20 👍 na 10 minut",
+                "Nowy link", "🖥 kiosk", "Z kiosku");
+        assertThat(html.substring(html.indexOf("Współorganizator"), html.indexOf("Własne"))).as("a co-organiser has the kiosk (V56)")
+                .contains("kiosk dla gości");
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
     }
@@ -126,6 +132,10 @@ class GuidePageRenderTest {
         assertThat(html).contains("lang=\"en\"", ">How Scan2Play works</h1>", "the AI turned down are in the history",
                 "the people you play for", "scan2playcontact@gmail.com", ">▶ Played<", ">↩ Restore<", ">← Home<",
                 "id=\"start\"", "id=\"guests\"").doesNotContain("??");
+        String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
+        assertThat(kiosk).as("the kiosk, as in Polish").contains("not logged in", "Guided Access", "screen pinning",
+                "3 requests a minute", "20 👍 per 10 minutes", "New link", "🖥 kiosk", "From the kiosk");
+        assertThat(html.substring(html.indexOf("Co-organiser"), html.indexOf("Custom"))).contains("guest kiosk");
         assertThat(render(Locale.GERMAN, ANONYMOUS)).contains("lang=\"en\"", ">How Scan2Play works</h1>");
         write("guide-en.html", html);
     }

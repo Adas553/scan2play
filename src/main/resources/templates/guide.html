@@ -131,8 +131,16 @@
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">🖥 Guest kiosk</span>
             <p>Party settings → Guest kiosk (Pro): a link for a tablet at the bar. Guests without a phone type their requests and vote there,
                 with the most wanted beside them. "Next guest" starts afresh for the next person; the tablet does it by itself after a
-                while without a touch. Requests from the kiosk carry 🖥 in the queue.</p>
+                minute without a touch (20 seconds after the AI's answer).</p>
         </div>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>Setting up the tablet:</strong> "Make the kiosk link", copy it and open it on
+            the tablet in a browser where you are not logged in — logged in, the kiosk shows a warning, because a guest who leaves it
+            would find your panel. So that nobody leaves the kiosk, turn on Guided Access on an iPad (Settings → Accessibility),
+            screen pinning on Android. The address bar shows just "/k", without the link's secret.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>The kiosk has its own limits, since every guest types on one tablet:
+            3 requests a minute and 20 👍 per 10 minutes. Your limit per guest counts for each person on their own. "New link" turns the old tablet
+            off (e.g. when someone learned the link), "Turn off" takes the link away. Requests from the kiosk carry "🖥 kiosk" in the
+            queue and the history, and the evening summary counts them as "From the kiosk" (in the CSV too).</p></div>
     </section>
 
     <section id="phone">
@@ -174,7 +182,7 @@
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Co-organiser</span>
-            <p>The same, and the party's settings too: the vibe, the hosts' list and the guest limits.</p>
+            <p>The same, and the party's settings too: the vibe, the hosts' list, the guest limits and the guest kiosk.</p>
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Custom</span>
