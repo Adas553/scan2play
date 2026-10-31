@@ -71,9 +71,10 @@ jobs:
         run: google-chrome --version
 
       # run.py copies the repo to the work directory and builds there (as it does on a developer's machine); --no-sandbox because a runner
-      # may forbid the sandbox's user namespaces — the browser opens only pages of the stand-in on 127.0.0.1.
+      # may forbid the sandbox's user namespaces — the browser opens only pages of the stand-in on 127.0.0.1. Three scenarios at once
+      # on the runner's four cores (each its own browser and stand-in server): one core spare, so no scenario misses a page's timer.
       - name: Run every scenario
-        run: python src/test/browser/run.py --no-sandbox --work "$RUNNER_TEMP/scan2play-browser-tests"
+        run: python src/test/browser/run.py --no-sandbox --jobs 3 --work "$RUNNER_TEMP/scan2play-browser-tests"
 
       # What each scenario recorded (steps, expected and actual values, the requests): for a failure that cannot be reproduced at once.
       - name: Keep the verdicts of a failed run

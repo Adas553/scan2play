@@ -12,10 +12,14 @@ python src/test/browser/run.py --list
 python src/test/browser/run.py --no-render     # a quick loop while editing scenarios: copy the repo, skip Maven
 python src/test/browser/run.py --clean         # start from an empty work directory (a full build)
 python src/test/browser/run.py --no-sandbox    # Chrome without its sandbox: for a CI runner that forbids it (see "In CI")
+python src/test/browser/run.py --jobs 1        # one scenario at a time (default 3 at once, each with its own browser and stand-in server)
 ```
 
-A run takes about a minute (most of it waiting for real timers: the queue is polled every 3 s) and ends with one line per scenario,
-the failing steps with what was expected and what happened, and exit code 1 if anything failed. The `--chrome PATH` option (or
+The whole suite takes about 7 minutes on four cores, three scenarios at once (18 one at a time): most of a scenario's time is waiting
+for a page's real timers (the queue polled every 3 s, the kiosk's list every 10 s), so scenarios run side by side, each in its own
+browser against its own stand-in server (a scenario sets the server's state). A run ends with the verdicts — a scenario's lines
+together, the failing steps with what was expected and what happened —, the slowest scenarios and the run's time, and exit code 1 if
+anything failed. A scenario that waits for a timer needs a core: more scenarios at once than cores makes them miss their time. The `--chrome PATH` option (or
 `S2P_CHROME`) names another browser.
 
 **Never `mvnw` inside the repo** (`CLAUDE.md`): the app runs from IntelliJ out of `target/classes` and devtools restarts it whenever that

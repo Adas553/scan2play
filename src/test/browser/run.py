@@ -11,10 +11,12 @@ devtools restarts it whenever that changes; CLAUDE.md):
      run only copies what changed, so Maven there builds incrementally;
   2. runs DashboardPageRenderTest (and GuestPageRenderTest, QrPrintPageTest, StaffPageRenderTest, ForWhomPagesWebTest…) there with the copy's mvnw — they render the real
      dashboard.html, the guest page and the QR print page, and write the real Content-Security-Policy, into target/browser-harness/;
-  3. starts the stand-in server (server.py) on a free port of 127.0.0.1;
+  3. starts the stand-in server (server.py) on a free port of 127.0.0.1 — one for each scenario running at once (--jobs): a
+     scenario sets the server's state, so two at a time need two servers;
   4. for every scenario opens /dj/dashboard?scenario=NAME in a headless Chrome with a fresh profile; the page runs the scenario and
      POSTs its verdict to the stand-in server; the browser is closed when it has arrived (or after --timeout seconds);
-  5. prints the verdicts (the failing steps with what was expected and what happened) and exits with 1 if any scenario failed.
+  5. prints the verdicts (the failing steps with what was expected and what happened; a scenario's lines together), the slowest
+     scenarios and the time of the whole run, and exits with 1 if any scenario failed.
 
 Needs: Python 3 (standard library only), Java (the same one mvnw uses), Chrome or Edge. No Node, no new dependency.
 """
@@ -22,6 +24,7 @@ import argparse
 import base64
 import json
 import os
+import queue
 import re
 import socket
 import shutil
@@ -162,6 +165,11 @@ def print_pdf(devtools, stand, name, verdict, pages):
 
 
 DEFAULT_WINDOW = '1280,900'
+# Scenarios at once (--jobs). Each is a browser of its own; more than the cores slows every one of them, and a scenario waiting
+# for a page's timer then misses its time. Three on four cores: the whole suite about 2.7 times faster than one at a time, with a
+# core to spare (the app in IntelliJ beside it, a slower runner); --jobs 1 for a run to compare with.
+DEFAULT_JOBS = 3
+SLOWEST_SHOWN = 15
 
 # A headless browser's window is never narrower than about 500 px (measured: --window-size=390,844 gives innerWidth 496 … 504, in the
 # old headless mode and the new, with any scale factor) — a phone's width is set through the DevTools protocol instead.
@@ -321,6 +329,66 @@ def run_scenario(stand, port, name, chrome, timeout, no_sandbox=False, window=DE
     return stand.result_data.get(name)
 
 
+class PerThreadOutput:
+    """sys.stdout that a worker thread can take for itself while it runs a scenario, so that the scenario's lines are printed
+    together — never between the lines of another scenario running at the same time."""
+
+    def __init__(self, real):
+        self.real = real
+        self.local = threading.local()
+
+    def write(self, text):
+        taken = getattr(self.local, 'lines', None)
+        if taken is None:
+            return self.real.write(text)
+        taken.append(text)
+        return len(text)
+
+    def flush(self):
+        if getattr(self.local, 'lines', None) is None:
+            self.real.flush()
+
+    def __getattr__(self, name):
+        return getattr(self.real, name)
+
+
+def run_all(wanted, stands, chrome, args, viewports, pdfs):
+    """Runs the scenarios, as many at once as there are stand-in servers; returns {name: (passed, seconds)}."""
+    output = sys.stdout
+    todo = queue.Queue()
+    for name in wanted:
+        todo.put(name)
+    done = {}
+    lock = threading.Lock()
+
+    def worker(stand, port):
+        while True:
+            try:
+                name = todo.get_nowait()
+            except queue.Empty:
+                return
+            output.local.lines = []
+            started = time.monotonic()
+            try:
+                passed = show(name, run_scenario(stand, port, name, chrome, args.timeout, args.no_sandbox,
+                                                 viewports.get(name, DEFAULT_WINDOW), pdfs.get(name)))
+            except Exception as e:   # one scenario's runner failing must not stop the others, nor be taken for a pass
+                print('FAIL  %s  (the runner failed: %r)' % (name, e))
+                passed = False
+            lines, output.local.lines = output.local.lines, None
+            with lock:
+                output.real.write(''.join(lines))
+                output.real.flush()
+                done[name] = (passed, time.monotonic() - started)
+
+    workers = [threading.Thread(target=worker, args=(stand, port), daemon=True) for stand, port in stands]
+    for thread in workers:
+        thread.start()
+    for thread in workers:
+        thread.join()
+    return done
+
+
 def show(name, verdict):
     """Prints one verdict; returns whether the scenario passed."""
     if verdict is None:
@@ -365,6 +433,8 @@ def main():
     parser.add_argument('--chrome', help='path of chrome.exe / msedge.exe (else S2P_CHROME, else looked for)')
     parser.add_argument('--timeout', type=int, default=90, help='seconds to wait for one scenario')
     parser.add_argument('--no-sandbox', action='store_true', help="start Chrome with --no-sandbox (for a CI runner that forbids the sandbox; it only opens this stand-in's pages)")
+    parser.add_argument('--jobs', type=int, default=DEFAULT_JOBS,
+                        help='scenarios at once, each in its own browser on its own stand-in server (default %(default)s)')
     args = parser.parse_args()
 
     known = scenario_names()
@@ -394,18 +464,30 @@ def main():
         sys.exit('no rendered dashboard.html in ' + str(rendered))
 
     chrome = find_chrome(args.chrome)
-    stand = server.Stand(str(work), rendered=str(rendered))
-    httpd = server.make_server(stand)
-    port = httpd.server_address[1]
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    print('stand-in server on 127.0.0.1:%d, browser: %s\n' % (port, chrome), flush=True)
+    jobs = max(1, min(args.jobs, len(wanted)))
+    servers, stands = [], []
+    for _ in range(jobs):
+        stand = server.Stand(str(work), rendered=str(rendered))
+        httpd = server.make_server(stand)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        servers.append(httpd)
+        stands.append((stand, httpd.server_address[1]))
+    print('%d stand-in server(s) on 127.0.0.1:%s — %d scenario(s) at once; browser: %s\n'
+          % (jobs, ','.join(str(port) for _, port in stands), jobs, chrome), flush=True)
 
-    passed = True
-    for name in wanted:
-        passed = show(name, run_scenario(stand, port, name, chrome, args.timeout, args.no_sandbox,
-                                           viewports.get(name, DEFAULT_WINDOW), pdfs.get(name))) and passed
-    httpd.shutdown()
-    print('\n%s — results: %s' % ('all scenarios passed' if passed else 'SOME SCENARIOS FAILED', stand.results))
+    started = time.monotonic()
+    sys.stdout = PerThreadOutput(sys.stdout)
+    try:
+        done = run_all(wanted, stands, chrome, args, viewports, pdfs)
+    finally:
+        sys.stdout = sys.stdout.real
+    for httpd in servers:
+        httpd.shutdown()
+    passed = all(done.get(name, (False, 0))[0] for name in wanted)
+    slowest = sorted(done.items(), key=lambda item: -item[1][1])[:SLOWEST_SHOWN]
+    print('\nthe slowest: ' + ', '.join('%s %.0f s' % (name, seconds) for name, (_, seconds) in slowest))
+    print('%d scenario(s) in %.0f s, %d at once' % (len(done), time.monotonic() - started, jobs))
+    print('%s — results: %s' % ('all scenarios passed' if passed else 'SOME SCENARIOS FAILED', stands[0][0].results))
     return 0 if passed else 1
 
 
