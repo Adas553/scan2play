@@ -201,11 +201,14 @@
             <div class="s2p-fold-body">
             <th:block th:if="${plan.pro('KIOSK')}"><div th:replace="~{fragments/components :: proOffer(#{plan.kiosk.offer})}"></div>
                 <!--/* a link made with Pro opens nothing now; taken away here, it does not come back with Pro by itself */-->
-                <form th:if="${kioskLink != null}" th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0 mt-2" data-in-place>
+                <th:block th:if="${kioskLink != null}">
+                <p class="small text-secondary mt-2 mb-0" id="kioskOldHelp" th:text="#{settings.kiosk.old_help}">A kiosk link made with Pro opens nothing without it…</p>
+                <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0 mt-2" data-in-place>
                     <input type="hidden" name="partyCode" th:value="${partyCode}">
                     <input type="hidden" name="link" value="off">
-                    <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off}">Turn off</button>
+                    <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off_old}">Remove the old kiosk link</button>
                 </form>
+                </th:block>
             </th:block>
             <th:block th:unless="${plan.pro('KIOSK')}">
             <p class="s2p-card-help" th:text="#{settings.kiosk.help}">A tablet at the bar for guests without a phone…</p>

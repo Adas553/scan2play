@@ -681,11 +681,14 @@ hours — later, a migration of its own that writes the next moment into the sam
 phone ask for a song and vote. The card of "Ustawienia imprezy" (whoever has the permission KIOSK; without Pro the organiser sees the
 offer): "Utwórz link kiosku" — a secret `/k/{token}` (`kioskToken`), to copy and open on the tablet —, "Nowy link" (asks first: the old
 tablet's link dies; Pro) and "Wyłącz" (any plan: without Pro a link made before opens nothing, and taken away it does not come back
-with Pro), sent in the background — the server's card takes the old one's place, "✓" on the button, the page
+with Pro — the card without Pro says so and calls it "Usuń stary link kiosku"), sent in the background — the server's card takes the old one's place, "✓" on the button, the page
 does not move (`cards-in-place.js`, as "Godziny imprezy" and the hosts' link: a card with `data-saves-in-place` whose forms marked
 `data-in-place` are fetched; the answer — the card alone, or the settings page a redirect leads to — gives the card's state and its body,
 or the part the form names; a button gone with the answer leaves the focus in the card); a tip for Guided Access (iPad) / screen pinning (Android). **The kiosk's page**
-(`KioskController`, `kiosk.html`, `js/kiosk.js`; public, no login, `noindex`; a token that is no kiosk's, or a party without Pro, a 404):
+(`KioskController`, `kiosk.html`, `js/kiosk.js`; public, no login, `noindex`; a token that is no kiosk's, or a party without Pro, a 404;
+the secret kept out of the tablet's address bar, where a guest could read it and use the kiosk from home: the link leaves the kiosk's
+cookie `S2P_KIOSK` (HttpOnly, `Path=/k`, 90 days) and kiosk.js shows the address `/k`, which opens the same kiosk by the cookie — a pull
+to refresh too; the forms and kiosk.js's way back still go by the token):
 the request form as the party page's (the iTunes suggestions, the dedication when on) and beside it — on a tablet held across, else under
 it — the most wanted with 👍, as the TV screen; "Następny gość" under the form, in its column; one screen on a tablet, the page never
 scrolls (the list scrolls in its card, keeps its place there when it comes again and fades at the bottom while more is below — a
@@ -704,7 +707,7 @@ the kiosk's own address (`data-kiosk-url`), and only once it answers (asked for 
 down or the server failing would leave the tablet on the browser's error page, with no script; else again after 30 s) — never a
 reload: an answer is a POST's page, and a reload would send the request again. **Limits** (`GuestRequestLimiter`):
 not the address's (the tablet shares the venue's Wi-Fi with the phones) but the kiosk's own — 3 requests a minute, 20 👍 per 10 min,
-said as the kiosk's ("Kiosk dostał teraz dużo głosów") —; the party's day counts its requests as every guest's. A request goes the
+said as the kiosk's, with the real wait ("Kiosk dostał teraz dużo głosów — spróbuj za 7 min") —; the party's day counts its requests as every guest's. A request goes the
 guests' way (`GuestRequestService`: `fromParty` for the party page, `fromKiosk`), marked `viaKiosk` — the queue and the history show
 "🖥 kiosk", the evening summary counts "Z kiosku" and its CSV says "tak" in the column "Z kiosku" (after "Dodana przez DJ-a"). The answer in the kiosk: the verdict, the AI's comment, "Gotowe — następny gość"
 (no number or tip: they are for a phone). 👍 in the background (`X-Requested-With: fetch`, the list comes back; its note read out by
@@ -1384,7 +1387,7 @@ applied in 0.05 s, "Push notifications on"). Since:
 ```
 GuestController            → GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartySettingsQueryService
 GuestRequestService        → SongEvaluationService, GuestSessionService, GuestVoteService, GuestRequestLimiter, SiteCounter
-KioskController            → PartySettingsRepository, PlanService, GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter
+KioskController            → PartySettingsRepository, PlanService, GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartyScheduleService
 GuestVoteService           → SongRequestRepository, DjService
 DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsCommandService, DjSessionHelper, PushNotificationService, PartyStaffService, StaffInvitationService, PlanService
 DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper, PlanService
@@ -1426,7 +1429,8 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one, or one made more than 30 days ago (V37) |
-| GET | `/k/{token}` | the venue's kiosk (V56, Pro): the request form and the most wanted with 👍, or — closed — when it opens; a session (the guest's turn, the forms' CSRF token); 404 for an unknown token or a party without Pro; `noindex` |
+| GET | `/k/{token}` | the venue's kiosk (V56, Pro): the request form and the most wanted with 👍, or — closed — when it opens; a session (the guest's turn, the forms' CSRF token); the kiosk's cookie `S2P_KIOSK`; 404 for an unknown token or a party without Pro; `noindex` |
+| GET | `/k` | the same kiosk by its cookie (the address kiosk.js shows: the secret out of the address bar); 404 without it or with a token made new since |
 | GET | `/k/{token}/list` | the kiosk's list alone (`kiosk :: kioskList`), fetched by `kiosk.js` every 10 s |
 | POST | `/k/{token}/request`, `/k/{token}/vote`, `/k/{token}/next` | the kiosk's request (async, the guests' way, `viaKiosk`, the kiosk's limit), 👍 (`id`, `on`; with `X-Requested-With: fetch` the list), "Następny gość" (the session ends; with a login in it, only the turn's state at the party is forgotten); CSRF; an expired form back to the kiosk |
 | GET | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's → its invitation `/join/{token}`, else `/?staffLink=invalid#staffLogin` (`guests` for a guests' link); keeps nothing, no session (review 2026-10-21, S2) |

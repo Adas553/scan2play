@@ -630,6 +630,8 @@ class SettingsPageRenderTest {
         String kiosk = kept.substring(kept.indexOf("id=\"kioskCard\""), kept.indexOf("id=\"linksCard\""));
         assertThat(kiosk).as("a link made with Pro: it opens nothing now, and can be taken away").contains("Kiosk dla gości bez telefonu",
                 "id=\"kioskLinkOffBtn\"", "name=\"link\" value=\"off\"").doesNotContain("id=\"kioskLinkNewBtn\"", "id=\"kioskLinkInput\"");
+        assertThat(kiosk).as("the button says what it takes away, and why it is there").contains(">Usuń stary link kiosku<",
+                "id=\"kioskOldHelp\"", "Link kiosku utworzony w planie Pro bez niego nic nie otwiera.");
         assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"");
         write("settings-free.html", html);
     }

@@ -1472,9 +1472,8 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 }
 
 /* The venue's kiosk (kiosk.html, V56): a tablet at the bar, read from a step away and tapped by many hands. The form and the most
-   wanted side by side on a tablet held across (from 900 px), one under the other otherwise; big words, every target at least 56 px
-   (a finger in a dim bar, not a careful thumb); the page fills the screen, nothing leads out of it. */
-.page-kiosk { min-height: 100vh; }
+   wanted side by side on a tablet held across (from 900 px), one under the other otherwise; big words, every target at least 48 px
+   and the main ones 56–64 px (a finger in a dim bar, not a careful thumb); the page fills the screen, nothing leads out of it. */
 /* One screen, the page never scrolls (a guest must not look for "Następny gość" under the list): the kiosk is the screen's height,
    the list takes what is left and scrolls in its card. A screen too small for the form and a few songs at once (a phone, upright
    or held across) scrolls as a page: the form and "Następny gość" first, then the whole list. */
@@ -1482,11 +1481,10 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
     max-width: 1280px; margin: 0 auto; padding: 1rem 1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem;
     height: 100vh; height: 100dvh;
 }
-.s2p-kiosk-head { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+.s2p-kiosk-head { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; flex: none; }
 .s2p-kiosk-dj-logo { max-height: 72px; max-width: 220px; object-fit: contain; }
 .s2p-kiosk-logo { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--s2p-white); }
 .s2p-kiosk-dj { margin: 0; font-size: 1.25rem; color: var(--s2p-light); }
-.s2p-kiosk-head,
 .s2p-kiosk-login { flex: none; }
 .s2p-kiosk-grid { display: grid; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 1rem; flex: 1 1 auto; min-height: 0; }
 @media (min-width: 900px) {
@@ -1521,9 +1519,8 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
     -webkit-mask-image: linear-gradient(to bottom, var(--s2p-black) calc(100% - 3.5rem), transparent);
     mask-image: linear-gradient(to bottom, var(--s2p-black) calc(100% - 3.5rem), transparent);
 }
-.s2p-kiosk-song-row { flex: none; }
 .s2p-kiosk-song-row {
-    display: flex; align-items: center; gap: 0.75rem; min-height: 64px; padding: 0.5rem 0.75rem;
+    flex: none; display: flex; align-items: center; gap: 0.75rem; min-height: 64px; padding: 0.5rem 0.75rem;
     background: var(--s2p-bg-row); border-radius: var(--s2p-radius); counter-increment: kiosk;
 }
 .s2p-kiosk-song-row::before { content: counter(kiosk) "."; color: var(--s2p-text-muted); font-weight: 600; min-width: 1.75rem; }

@@ -3,7 +3,8 @@
  *
  * - The request form says "Wysyłanie…" and is sent once (the AI takes seconds; a second tap would send it again).
  * - A 👍 is sent in the background ([data-kiosk-vote], X-Requested-With: fetch); the answer is the list, put in place with the new
- *   votes and a note when the 👍 did not count — read out by #kioskAnnounce (a live region new with the list is not announced) and
+ *   votes and a note when the 👍 did not count — read out by #kioskAnnounce (a live region new with the list is not announced;
+ *   emptied first, so the same note twice is read twice) and
  *   left on the screen for NOTE_MS. Refused or lost: the kiosk's own page. Not while "Następny gość" is on its way: the 👍 would
  *   land in the next guest's turn.
  * - The list (#kioskList) is fetched again every LIST_MS — the room's votes and new songs, as the TV screen. Not under a finger (its
@@ -12,6 +13,7 @@
  *   given up after ANSWER_MS < NOTE_MS, such an answer always lands in that time. The list keeps its place in its card (it scrolls
  *   there) and the focus on the same song's 👍; a list longer than its card fades at the bottom (.has-more — a tablet hides the
  *   scrollbar). A list that says the party closed (data-active="false") sends the kiosk to its page, which says when it opens.
+ * - The address bar shows the kiosk's public address (body[data-kiosk-public], /k: the kiosk's cookie opens it), never its secret.
  * - The kiosk's own page (body[data-kiosk-url]) is the only page it loads, and only once that page answers (asked for first, in the
  *   background): a page load with the Wi-Fi down, or the server failing, would leave the tablet on the browser's error page, with
  *   no script to bring it back. Not answering, the kiosk stays and asks again after RETRY_MS. Never reload(): an answer is a POST's
@@ -37,6 +39,11 @@
     const RETRY_MS = 30000;
     const state = document.body.dataset.kioskState;
     const home = document.body.dataset.kioskUrl;
+    // The secret out of the address bar (a guest could read it there and use the kiosk from home): the address shown is the
+    // kiosk's public one, which opens the same kiosk by its cookie. The way back (home) still goes by the token.
+    if (document.body.dataset.kioskPublic) {
+        history.replaceState(history.state, '', document.body.dataset.kioskPublic);
+    }
     // a turn begun (a typed song, a 👍, an answer on the screen — or before this page loaded), a request on its way, the last touch,
     // and after a way out that got no answer: not before then
     let touched = state === 'result' || document.body.dataset.kioskTurn === 'begun';
@@ -144,7 +151,11 @@
                 holdUntil = Date.now() + NOTE_MS;
                 const note = document.getElementById('kioskVoteNote');
                 const live = document.getElementById('kioskAnnounce');
-                if (live) live.textContent = note ? note.textContent.trim() : '';
+                if (live) {
+                    // emptied first: the same words put in again (a second 👍 refused) would not be announced
+                    live.textContent = '';
+                    if (note) setTimeout(function () { live.textContent = note.textContent.trim(); }, 100);
+                }
             })
             .catch(function () {
                 backHome();   // the session ran out, or the network: the kiosk's page again

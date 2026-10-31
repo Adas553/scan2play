@@ -115,7 +115,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    while more is below; a fetch with no answer is given up after 10 s (a hung "Następny gość" held the kiosk for good); the kiosk loads
    its page only once that page answers (the reload every 10 minutes could leave it on the browser's error page); no 👍 while
    "Następny gość" is on its way; a phone scrolls as a page (on 360 × 640 the list had no height); a warning when the kiosk is opened
-   with a login (the DJ's panel on a tablet at the bar).
+   with a login (the DJ's panel on a tablet at the bar). Then the review's rest: the secret out of the tablet's address bar (a cookie
+   for `/k`, the page shows `/k`), the kiosk's limit of 👍 says the real wait, the same 👍's note read out twice, "Usuń stary link
+   kiosku" with a line why on the card without Pro.
    Details: `PROJECT_CONTEXT.md` 5.1. To try on a real tablet: an iPad in Guided Access and an Android tablet
    with the screen pinned, the native keyboard over the form, the suggestions.
 
