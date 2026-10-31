@@ -1476,7 +1476,8 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
    (a finger in a dim bar, not a careful thumb); the page fills the screen, nothing leads out of it. */
 .page-kiosk { min-height: 100vh; }
 /* One screen, the page never scrolls (a guest must not look for "Następny gość" under the list): the kiosk is the screen's height,
-   the list takes what is left and scrolls in its card. A screen too low for that (a phone held across) scrolls as a page. */
+   the list takes what is left and scrolls in its card. A screen too small for the form and a few songs at once (a phone, upright
+   or held across) scrolls as a page: the form and "Następny gość" first, then the whole list. */
 .s2p-kiosk {
     max-width: 1280px; margin: 0 auto; padding: 1rem 1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem;
     height: 100vh; height: 100dvh;
@@ -1485,7 +1486,8 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-dj-logo { max-height: 72px; max-width: 220px; object-fit: contain; }
 .s2p-kiosk-logo { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--s2p-white); }
 .s2p-kiosk-dj { margin: 0; font-size: 1.25rem; color: var(--s2p-light); }
-.s2p-kiosk-head { flex: none; }
+.s2p-kiosk-head,
+.s2p-kiosk-login { flex: none; }
 .s2p-kiosk-grid { display: grid; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 1rem; flex: 1 1 auto; min-height: 0; }
 @media (min-width: 900px) {
     .s2p-kiosk-grid { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); }
@@ -1513,6 +1515,12 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
     list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk;
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
 }
+/* more of the list below its card (kiosk.js): it fades at the bottom — a tablet hides the scrollbar, and a row ending at the card's
+   edge reads as the list's end */
+.s2p-kiosk-songs.has-more {
+    -webkit-mask-image: linear-gradient(to bottom, var(--s2p-black) calc(100% - 3.5rem), transparent);
+    mask-image: linear-gradient(to bottom, var(--s2p-black) calc(100% - 3.5rem), transparent);
+}
 .s2p-kiosk-song-row { flex: none; }
 .s2p-kiosk-song-row {
     display: flex; align-items: center; gap: 0.75rem; min-height: 64px; padding: 0.5rem 0.75rem;
@@ -1531,7 +1539,7 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-next { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--s2p-border); }
 .s2p-kiosk-next .btn { min-height: 56px; font-size: 1.15rem; }
 .s2p-kiosk-next .s2p-kiosk-hint { display: block; margin-top: 0.5rem; text-align: center; }
-@media (max-height: 560px) {
+@media (max-height: 560px), (max-width: 899.98px) and (max-height: 1000px) {
     .s2p-kiosk { height: auto; }
     .s2p-kiosk-grid { grid-template-rows: auto; }
     .s2p-kiosk-songs { overflow-y: visible; }

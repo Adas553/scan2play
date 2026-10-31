@@ -66,9 +66,9 @@ public class KioskController {
 
     /** The kiosk's page: the form and the most wanted, or — the party closed — when it opens. */
     @GetMapping("/{token}")
-    public String kiosk(@PathVariable String token, Model model, HttpSession session) {
+    public String kiosk(@PathVariable String token, Model model, HttpSession session, Principal loggedIn) {
         PartySettingsEntity party = party(token);
-        addPage(model, token, party, session);
+        addPage(model, token, party, session, loggedIn);
         return "kiosk";
     }
 
@@ -87,7 +87,7 @@ public class KioskController {
     @PostMapping("/{token}/request")
     public Callable<String> request(@PathVariable String token, @RequestParam String songName,
                                     @RequestParam(required = false) String dedication, Model model, HttpSession session,
-                                    RedirectAttributes redirectAttributes) {
+                                    Principal loggedIn, RedirectAttributes redirectAttributes) {
         Locale locale = LocaleContextHolder.getLocale();
         return () -> {
             PartySettingsEntity party = party(token);
@@ -109,7 +109,7 @@ public class KioskController {
                 return "redirect:/k/" + token;
             }
             model.addAttribute(RESPONSE, ((Sent.Answered) sent).response());
-            addPage(model, token, party, session);
+            addPage(model, token, party, session, loggedIn);
             return "kiosk";
         };
     }
@@ -165,9 +165,14 @@ public class KioskController {
         return "redirect:/k/" + token;
     }
 
-    private void addPage(Model model, String token, PartySettingsEntity party, HttpSession session) {
+    /**
+     * The kiosk's whole page. {@code loggedIn}: a login in this browser — said on the page, because on a tablet at the bar it is the
+     * DJ's panel for any guest who leaves the kiosk, and the list's fetches every few seconds keep it from running out.
+     */
+    private void addPage(Model model, String token, PartySettingsEntity party, HttpSession session, Principal loggedIn) {
         PartySettingsEntity planned = planService.asPlanned(party);
         model.addAttribute(KIOSK_TOKEN, token);
+        model.addAttribute(KIOSK_LOGGED_IN, loggedIn != null);
         model.addAttribute(PARTY_CODE, party.getPartyCode());
         model.addAttribute(DJ_NAME, party.getDjName());
         model.addAttribute(DJ_LOGO, planned.logoPath());

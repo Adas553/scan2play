@@ -213,7 +213,28 @@
             t.step('a minute: nothing', loads, []);
             later(10 * 60000 + 1000);
             await t.waitFor(function () { return loads.length > 0; }, 'loaded again', 3000);
-            t.step('a reload, not "Następny gość"', loads.map(function (l) { return [l[0].split('?')[0], l[2]]; })[0][1], 'reload');
+            t.step('the kiosk\'s page asked for first, then loaded by its address — not "Następny gość"',
+                [await t.stand.count('GET /k/' + TOKEN), await t.stand.count('POST /k/' + TOKEN + '/next'),
+                    loads.map(function (l) { return [l[0], l[2]]; })], [1, 0, [['/k/' + TOKEN, 'replace']]]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-reload-waits-for-the-server',
+        title: 'the kiosk loads itself again only when its page answers: the Wi-Fi down (or the server failing) at that moment leaves it on its page, never on the browser\'s error page — it asks again soon',
+        page: 'kiosk',
+        setup: { kioskPageStatus: 502 },
+        run: async function (t) {
+            const loads = catchLoads();
+            later(10 * 60000 + 1000);
+            await requested(t, 'GET /k/' + TOKEN, 1, 3000);
+            await t.sleep(1500);
+            t.step('the page did not answer: the kiosk stays', loads, []);
+            await t.stand.config({ kioskPageStatus: null });
+            later(31000);
+            await t.waitFor(function () { return loads.length > 0; }, 'loaded once the page answers', 3000);
+            t.step('asked again, then loaded by its address', [await t.stand.count('GET /k/' + TOKEN),
+                loads.map(function (l) { return [l[0], l[2]]; })], [2, [['/k/' + TOKEN, 'replace']]]);
         }
     });
 
@@ -244,7 +265,7 @@
             t.step('said, no form', [shows(document.getElementById('kioskClosed')), !!document.getElementById('requestForm')], [true, false]);
             later(61000);
             await t.waitFor(function () { return loads.length > 0; }, 'loaded again', 3000);
-            t.step('a reload', loads[0][2], 'reload');
+            t.step('its page again, by its address', loads.map(function (l) { return [l[0], l[2]]; }), [['/k/' + TOKEN, 'replace']]);
         }
     });
 
@@ -407,6 +428,104 @@
     });
 
     S2P.scenario({
+        name: 'kiosk-next-hangs',
+        title: '"Następny gość" whose answer never comes (a Wi-Fi that drops packets): given up after a while — the button usable again, and the turn ends again by itself, never a kiosk stuck with the last guest\'s words',
+        page: 'kiosk',
+        setup: { delays: { ['/k/' + TOKEN + '/next']: 30 } },
+        run: async function (t) {
+            const loads = catchLoads();
+            const input = document.getElementById('songInput');
+            input.value = 'wil';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            document.getElementById('kioskNext').click();
+            await requested(t, 'POST /k/' + TOKEN + '/next', 1, 3000);
+            await t.waitFor(function () { return !document.getElementById('kioskNext').disabled; }, 'given up, the button usable', 13000);
+            t.step('no page load', loads, []);
+            later(61000);
+            await requested(t, 'POST /k/' + TOKEN + '/next', 2, 3000);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-vote-hangs',
+        title: 'a 👍 whose answer never comes: given up after a while — the kiosk\'s page again, the list never frozen with its button off',
+        page: 'kiosk',
+        setup: { delays: { ['/k/' + TOKEN + '/vote']: 30 } },
+        run: async function (t) {
+            const loads = catchLoads();
+            document.querySelector('#kioskList [data-song-id="8"] button').click();
+            await t.waitFor(function () { return loads.length > 0; }, 'the kiosk\'s page again', 13000);
+            t.step('the kiosk\'s page, in place of this one', loads.map(function (l) { return [l[0], l[2]]; }), [['/k/' + TOKEN, 'replace']]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-no-vote-after-next',
+        title: 'a 👍 tapped while "Następny gość" is on its way: not sent — it would land in the next guest\'s turn',
+        page: 'kiosk',
+        setup: { delays: { ['/k/' + TOKEN + '/next']: 3 } },
+        run: async function (t) {
+            catchLoads();
+            document.getElementById('kioskNext').click();
+            await requested(t, 'POST /k/' + TOKEN + '/next', 1, 3000);
+            document.querySelector('#kioskList [data-song-id="8"] button').click();
+            await t.sleep(1000);
+            t.step('no 👍 sent', await t.stand.count('POST /k/' + TOKEN + '/vote'), 0);
+        }
+    });
+
+    /** The songs' own scroller and how far down it is. */
+    function songs() { return document.querySelector('#kioskList .s2p-kiosk-songs'); }
+
+    S2P.scenario({
+        name: 'kiosk-list-keeps-the-scroll',
+        title: 'the list scrolled down in its card stays where it is when it is fetched again, and after a 👍 on a song down there — never back at the top, the 👍 out of sight',
+        page: 'kiosk-full',
+        viewport: '1180,820',
+        setup: { kioskList: 'kiosk-list-full', kioskVoteAnswer: 'kiosk-list-full-voted' },
+        run: async function (t) {
+            songs().scrollTop = songs().scrollHeight;
+            const down = songs().scrollTop;
+            t.check('scrolled down (a place to keep)', down > 50);
+            const old = document.getElementById('kioskList');
+            await t.waitFor(function () { return document.getElementById('kioskList') !== old; }, 'the list fetched again', 13000);
+            t.step('fetched again: the same place', Math.abs(songs().scrollTop - down) <= 2, true);
+            document.querySelector('#kioskList [data-song-id="29"] button').click();
+            await t.waitFor(function () { return !!document.querySelector('#kioskList [data-song-id="29"] button.is-given'); }, 'the 👍', 3000);
+            const button = document.querySelector('#kioskList [data-song-id="29"] button').getBoundingClientRect();
+            const card = songs().getBoundingClientRect();
+            t.step('after the 👍: the same place, its button in sight', [Math.abs(songs().scrollTop - down) <= 2,
+                button.top >= card.top - 1 && button.bottom <= card.bottom + 1], [true, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-list-says-more',
+        title: 'a list longer than its card shows there is more below (it fades at the bottom — a tablet hides the scrollbar); scrolled to its end, it does not',
+        page: 'kiosk-full',
+        viewport: '1180,820',
+        run: async function (t) {
+            const fades = function () { return getComputedStyle(songs()).webkitMaskImage !== 'none'; };
+            t.step('more below: it fades', fades(), true);
+            songs().scrollTop = songs().scrollHeight;
+            await t.waitFor(function () { return !fades(); }, 'no fade at the end', 2000);
+            songs().scrollTop = 0;
+            await t.waitFor(fades, 'the fade again at the top', 2000);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-list-short-no-fade',
+        title: 'a list that fits its card: no fade — nothing is below',
+        page: 'kiosk',
+        viewport: '1180,820',
+        run: async function (t) {
+            t.check('the list fits its card', songs().scrollHeight <= songs().clientHeight);
+            t.step('no fade', getComputedStyle(songs()).webkitMaskImage, 'none');
+        }
+    });
+
+    S2P.scenario({
         name: 'settings-kiosk-off-keeps-the-focus',
         title: '"Wyłącz" of the kiosk\'s link: the button goes with the link — the focus stays in the card (on "Utwórz link kiosku"), never the page\'s top',
         page: 'settings-kiosk',
@@ -440,6 +559,13 @@
         const card = document.getElementById('kioskList').getBoundingClientRect();
         t.step('the list scrolls in its card to its last song', [last.getBoundingClientRect().bottom <= card.bottom + 1,
             last.getBoundingClientRect().bottom <= root.clientHeight], [true, true]);
+        songs.scrollTop = 0;
+        const box = songs.getBoundingClientRect();
+        const inSight = Array.from(songs.children).filter(function (row) {
+            const r = row.getBoundingClientRect();
+            return r.top >= box.top - 1 && r.bottom <= box.bottom + 1;
+        }).length;
+        t.step('at least three songs in sight at once', inSight >= 3, true);
         t.step('every target ≥ 48 px', smallTargets(48), []);
         t.step('nothing wider than the screen', fitsTheScreen(), true);
     }
@@ -476,12 +602,57 @@
         run: async function (t) { fitsOneScreen(t, 'kioskNext'); }
     });
 
+
+    /**
+     * A screen too small for the form and a few songs at once (a phone, upright or held across): the page scrolls as a page — the
+     * form and "Następny gość" first, in view without a scroll, then the whole list at its own height, none of it hidden in a card.
+     */
+    function scrollsAsAPage(t) {
+        const root = document.documentElement;
+        const next = document.getElementById('kioskNext').getBoundingClientRect();
+        t.step('"Następny gość" in view without a scroll', next.top >= 0 && next.bottom <= root.clientHeight, true);
+        const songs = document.querySelector('.s2p-kiosk-songs');
+        t.step('the list at its own height: every song on the page, none hidden in its card', songs.scrollHeight <= songs.clientHeight + 1, true);
+        const card = document.getElementById('kioskList').getBoundingClientRect();
+        t.step('the list\'s card holds its last song', songs.lastElementChild.getBoundingClientRect().bottom <= card.bottom + 1, true);
+        t.step('every target ≥ 48 px', smallTargets(48), []);
+        t.step('nothing wider than the screen', fitsTheScreen(), true);
+    }
+
     S2P.scenario({
-        name: 'kiosk-full-fits-390x844',
-        title: 'ten songs on the list, a phone (390 × 844): one screen — "Wyślij" and "Następny gość" in view, the list scrolling in its card',
+        name: 'kiosk-full-phone-390x844',
+        title: 'ten songs on the list, a phone (390 × 844): the page scrolls — "Następny gość" in view, the whole list under it, never one song in a card',
         page: 'kiosk-full',
         viewport: '390,844',
-        run: async function (t) { fitsOneScreen(t, 'kioskNext'); }
+        run: async function (t) { scrollsAsAPage(t); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-tablet-768x954',
+        title: 'ten songs on the list, a small tablet held upright (768 × 1024, 954 px under the browser\'s bars — under the form, room for two songs): the page scrolls — "Następny gość" in view, the whole list under it',
+        page: 'kiosk-full',
+        viewport: '768,954',
+        run: async function (t) { scrollsAsAPage(t); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-phone-360x640',
+        title: 'ten songs on the list, a small phone (360 × 640): the page scrolls — the list on it, never a card squeezed to nothing',
+        page: 'kiosk-full',
+        viewport: '360,640',
+        run: async function (t) { scrollsAsAPage(t); }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-full-phone-844x390',
+        title: 'ten songs on the list, a phone held across (844 × 390): the page scrolls — the whole list on it',
+        page: 'kiosk-full',
+        viewport: '844,390',
+        run: async function (t) {
+            const songs = document.querySelector('.s2p-kiosk-songs');
+            t.step('the list at its own height: every song on the page', songs.scrollHeight <= songs.clientHeight + 1, true);
+            t.step('nothing wider than the screen', fitsTheScreen(), true);
+        }
     });
 
     S2P.scenario({
