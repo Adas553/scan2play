@@ -152,6 +152,28 @@ class KioskWebTest {
                 .getContentAsString());
     }
 
+    /**
+     * The kiosk's secret out of the tablet's address bar (a guest could read it there and use the kiosk from home, out of the
+     * address limits): its link leaves a cookie of the kiosk ({@code S2P_KIOSK}, HttpOnly, only for {@code /k}) and the page shows
+     * the address {@code /k} (kiosk.js, {@code data-kiosk-public}), which opens the same kiosk by the cookie — a pull to refresh too.
+     * Without the cookie, or with a token made new since, a 404.
+     */
+    @Test
+    void theKiosksSecret_leavesACookie_andTheAddressWithoutIt_opensTheSameKiosk() throws Exception {
+        MvcResult opened = mockMvc.perform(get(KIOSK)).andExpect(status().isOk()).andReturn();
+        String cookie = opened.getResponse().getHeader("Set-Cookie");
+        assertThat(cookie).startsWith("S2P_KIOSK=" + TOKEN + ";").contains("Path=/k", "HttpOnly", "SameSite=Lax", "Max-Age=");
+        assertThat(opened.getResponse().getContentAsString()).contains("data-kiosk-public=\"/k\"", "data-kiosk-url=\"" + KIOSK + "\"");
+
+        String byCookie = mockMvc.perform(get("/k").cookie(new jakarta.servlet.http.Cookie("S2P_KIOSK", TOKEN)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(byCookie).contains("id=\"requestForm\"", "action=\"" + KIOSK + "/request\"", "data-kiosk-url=\"" + KIOSK + "\"");
+        mockMvc.perform(get("/k")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/k").cookie(new jakarta.servlet.http.Cookie("S2P_KIOSK", "old_token_made_new_since")))
+                .andExpect(status().isNotFound());
+        assertThat(mockMvc.perform(get("/k/nope")).andReturn().getResponse().getHeader("Set-Cookie")).as("no cookie for no kiosk").isNull();
+    }
+
     @Test
     void aCodeThatIsNoKiosk_isA404() throws Exception {
         mockMvc.perform(get("/k/nope")).andExpect(status().isNotFound());
@@ -293,6 +315,10 @@ class KioskWebTest {
                     .header("X-Requested-With", "fetch")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         }
         assertThat(list).contains("id=\"kioskVoteNote\"", "Kiosk dostał teraz dużo głosów").doesNotContain("z tej sieci");
+        assertThat(list).as("the real wait, not \"a moment\": the kiosk's window is minutes").containsPattern("spróbuj za \\d+ min\\.")
+                .doesNotContain("za chwilę");
+        assertThat(list).as("the note is read out by #kioskAnnounce alone: a live region here too would read it twice")
+                .doesNotContain("id=\"kioskVoteNote\" class=\"s2p-kiosk-note\" role=\"status\"");
         write("kiosk-list-note.html", list);
         verify(guestVoteService, times(GuestRequestLimiter.KIOSK_VOTES)).vote(any(), eq(partyCode), eq(8L));
     }

@@ -49,19 +49,18 @@ public class GuestRequestService {
     /** A request from the party page, from the client address {@code clientIp} (read on the request's thread). */
     public Sent fromParty(String partyCode, PartySettingsEntity settings, String songName, String dedication, HttpSession session,
                           String clientIp, Locale locale) {
-        return send(partyCode, settings, songName, dedication, session, clientIp, locale);
+        return send(partyCode, settings, songName, dedication, session, false, clientIp, locale);
     }
 
     /** A request from the party's kiosk: the kiosk's own limit in place of an address's; the request is marked as the kiosk's. */
     public Sent fromKiosk(String partyCode, PartySettingsEntity settings, String songName, String dedication, HttpSession session,
                           Locale locale) {
-        return send(partyCode, settings, songName, dedication, session, null, locale);
+        return send(partyCode, settings, songName, dedication, session, true, null, locale);
     }
 
-    /** {@code clientIp} null: the kiosk. */
+    /** {@code kiosk}: the kiosk's own limit and mark; else the limit of {@code clientIp}. */
     private Sent send(String partyCode, PartySettingsEntity settings, String songName, String dedication, HttpSession session,
-                      String clientIp, Locale locale) {
-        boolean kiosk = clientIp == null;
+                      boolean kiosk, String clientIp, Locale locale) {
         // Nothing typed (only spaces get past the form's "required"; a POST may skip the form): back to the form before
         // any limit is used or the AI is asked — with the AI down it would be an empty row in the DJ's queue
         if (SongEvaluationService.asTyped(songName).isEmpty()) {
@@ -129,7 +128,7 @@ public class GuestRequestService {
      * The guest's wait as people say it: from a minute on in whole minutes, rounded up ("3 min" — a phone at a party is not
      * read to the second), below a minute in seconds ("45 s"). The same short units in every language of the app.
      */
-    static String waitText(long seconds) {
+    public static String waitText(long seconds) {
         return seconds < 60 ? seconds + " s" : (seconds + 59) / 60 + " min";
     }
 }

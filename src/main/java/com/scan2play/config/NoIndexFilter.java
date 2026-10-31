@@ -27,7 +27,8 @@ public class NoIndexFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        if (PRIVATE.stream().anyMatch(path::startsWith)) {
+        // "/k" alone: the kiosk's page by its cookie (a prefix would take "/kluby" too)
+        if ("/k".equals(path) || PRIVATE.stream().anyMatch(path::startsWith)) {
             response.setHeader(HEADER, NO_INDEX);
         }
         chain.doFilter(request, response);

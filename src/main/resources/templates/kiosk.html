@@ -15,18 +15,20 @@
 <!--/*
     The venue's kiosk (KioskController, V56, Pro): a tablet at the bar for the guests without a phone. Beside the request form (on a
     phone's width under it) the most wanted songs with 👍, as the TV screen shows them; under the form "Następny gość", which ends this
-    guest's turn (a new session: the DJ's limit and the 👍 again). One screen, the page never scrolls: the list scrolls in its card. After a request: its verdict and the AI's comment in place of the
-    form, and "Gotowe — następny gość". kiosk.js sends the 👍 in the background, fetches the list again every few seconds and goes to
+    guest's turn (a new session: the DJ's limit and the 👍 again). One screen on a tablet, the page never scrolls: the list scrolls in
+    its card (a phone scrolls as a page). After a request: its verdict and the AI's comment in place of the form, and "Gotowe —
+    następny gość". kiosk.js sends the 👍 in the background, fetches the list again every few seconds and goes to
     the next guest by itself after a while without a touch. No link leads out of the page (no profiles, no tip link, no footer): a
     guest at the tablet stays in the kiosk.
 */-->
 <!--/* data-kiosk-turn: a guest's turn begun before this page loaded — a refused request back with its words, a 👍 given —, so kiosk.js
      ends it after a while without a touch; data-kiosk-url: the kiosk's own page, kiosk.js's way back (an answer is a POST's page:
-     a reload would send the request again) */-->
+     a reload would send the request again); data-kiosk-public: the address shown instead, without the secret (the kiosk's cookie
+     opens it) */-->
 <body class="page-kiosk" th:attr="data-kiosk-state=${!isActive} ? 'closed' : (${response != null} ? 'result' : 'form'),
       data-kiosk-turn=${errorMessage != null or lastRequest != null or (kioskMyVotes != null and !kioskMyVotes.isEmpty())
                        or (kioskMyRequests != null and !kioskMyRequests.isEmpty())} ? 'begun' : null,
-      data-kiosk-url=@{/k/{t}(t=${kioskToken})}">
+      data-kiosk-url=@{/k/{t}(t=${kioskToken})}, data-kiosk-public=@{/k}">
 <main class="s2p-kiosk">
     <header class="s2p-kiosk-head">
         <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="s2p-kiosk-dj-logo" id="djLogo" alt="DJ" th:alt="#{logo.dj.alt}">
@@ -95,7 +97,7 @@
         <section id="kioskList" class="s2p-kiosk-list" th:fragment="kioskList" aria-labelledby="kioskListTitle"
                  th:attr="data-url=@{/k/{t}/list(t=${kioskToken})},data-active=${isActive}">
             <h2 id="kioskListTitle"><span aria-hidden="true">🔥</span> <span th:text="#{kiosk.wanted}">Most wanted</span></h2>
-            <p th:if="${voteNote}" id="kioskVoteNote" class="s2p-kiosk-note" role="status" th:text="${voteNote}">One vote per song.</p>
+            <p th:if="${voteNote}" id="kioskVoteNote" class="s2p-kiosk-note" th:text="${voteNote}">One vote per song.</p>
             <th:block th:if="${isActive}">
             <ol th:unless="${#lists.isEmpty(tvSongs)}" role="list" class="s2p-kiosk-songs">
                 <li th:each="song : ${tvSongs}" class="s2p-kiosk-song-row" th:attr="data-song-id=${song.id}"

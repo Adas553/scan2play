@@ -15,9 +15,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,8 +30,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.security.Principal;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -47,12 +53,21 @@ import static com.scan2play.controller.ViewAttributes.*;
  * place of an address's — the tablet shares the venue's Wi-Fi with the phones —; the party's day counts its requests as every
  * guest's. A request goes the guests' way ({@link GuestRequestService#fromKiosk}), marked as the kiosk's for the DJ's queue. No link leads
  * out of the page: the DJ's profiles and tip link are for the guests' own phones.
+ * <p>
+ * The secret is kept out of the tablet's address bar, where a guest could read it and use the kiosk from home, out of every address's
+ * limit: its link leaves a cookie of the kiosk ({@link #COOKIE}) and the page shows {@code /k} (kiosk.js), which opens the same kiosk
+ * by the cookie — a pull to refresh too. The forms and kiosk.js's way back still go by the token: a cookie lost costs nothing.
  */
 @Controller
 @RequestMapping("/k")
 @RequiredArgsConstructor
 @Slf4j
 public class KioskController {
+
+    /** The kiosk's cookie: its token, for {@code /k} alone (HttpOnly — no script reads it). */
+    static final String COOKIE = "S2P_KIOSK";
+    /** Longer than any night: a tablet's kiosk is opened by its link again when the link is made new. */
+    private static final Duration COOKIE_KEPT = Duration.ofDays(90);
 
     private final PartySettingsRepository partySettingsRepository;
     private final PlanService planService;
@@ -64,9 +79,21 @@ public class KioskController {
     private final PartyScheduleService partyScheduleService;
     private final MessageSource messageSource;
 
-    /** The kiosk's page: the form and the most wanted, or — the party closed — when it opens. */
+    /** The kiosk's page: the form and the most wanted, or — the party closed — when it opens. Leaves the kiosk's cookie. */
     @GetMapping("/{token}")
-    public String kiosk(@PathVariable String token, Model model, HttpSession session, Principal loggedIn) {
+    public String kiosk(@PathVariable String token, Model model, HttpSession session, Principal loggedIn, HttpServletRequest request,
+                        HttpServletResponse response) {
+        PartySettingsEntity party = party(token);
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(COOKIE, token).path("/k").httpOnly(true)
+                .secure(request.isSecure()).sameSite("Lax").maxAge(COOKIE_KEPT).build().toString());
+        addPage(model, token, party, session, loggedIn);
+        return "kiosk";
+    }
+
+    /** The same page by the kiosk's cookie: the address the tablet shows. No cookie, or a token made new since: a 404. */
+    @GetMapping
+    public String kioskByCookie(@CookieValue(name = COOKIE, required = false) String token, Model model, HttpSession session,
+                                Principal loggedIn) {
         PartySettingsEntity party = party(token);
         addPage(model, token, party, session, loggedIn);
         return "kiosk";
@@ -126,12 +153,14 @@ public class KioskController {
         PartySettingsEntity party = party(token);
         String partyCode = party.getPartyCode();
         String note = null;
+        Object[] noteArgs = null;
         if (!party.isActive()) {
             note = "guest.vote.party_ended";
         } else if (!guestSessionService.myRequestIds(session, partyCode).contains(id)) {   // this turn's own song: no 👍 on it
             Optional<Long> wait = guestRequestLimiter.tryAcquireKioskVote(partyCode);
             if (wait.isPresent()) {
-                note = "kiosk.vote.too_many";   // the kiosk's limit, not a network's
+                note = "kiosk.vote.too_many";   // the kiosk's limit, not a network's — its wait is minutes
+                noteArgs = new Object[]{GuestRequestService.waitText(wait.get())};
             } else {
                 GuestVoteService.Result result = on ? guestVoteService.vote(session, partyCode, id)
                         : guestVoteService.takeBack(session, partyCode, id);
@@ -144,7 +173,7 @@ public class KioskController {
             return "redirect:/k/" + token;
         }
         addList(model, token, party, session);
-        model.addAttribute(VOTE_NOTE, note == null ? null : messageSource.getMessage(note, null, LocaleContextHolder.getLocale()));
+        model.addAttribute(VOTE_NOTE, note == null ? null : messageSource.getMessage(note, noteArgs, LocaleContextHolder.getLocale()));
         return "kiosk :: kioskList";
     }
 

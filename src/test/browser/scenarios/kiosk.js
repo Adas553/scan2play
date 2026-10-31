@@ -378,11 +378,43 @@
             document.querySelector('#kioskList [data-song-id="8"] button').click();
             await t.waitFor(function () { return !!document.getElementById('kioskVoteNote'); }, 'the note', 3000);
             const said = document.getElementById('kioskVoteNote').textContent.trim();
+            await t.waitFor(function () { return document.getElementById('kioskAnnounce').textContent.trim() !== ''; }, 'read out', 2000);
             t.step('read out by the page\'s own live region', document.getElementById('kioskAnnounce').textContent.trim(), said);
             await t.sleep(11000);
             t.step('a fetch of the list later: the note still there', !!document.getElementById('kioskVoteNote'), true);
             later(16000);
             await t.waitFor(function () { return !document.getElementById('kioskVoteNote'); }, 'the list again, without the note', 13000);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-vote-note-again',
+        title: 'the same note twice (two 👍 the kiosk\'s limit refused): read out the second time too — the live region emptied first (the same words put in again are not announced) — and only by it, not by the note in the list',
+        page: 'kiosk',
+        setup: { kioskVoteAnswer: 'kiosk-list-note' },
+        run: async function (t) {
+            const live = document.getElementById('kioskAnnounce');
+            document.querySelector('#kioskList [data-song-id="8"] button').click();
+            await t.waitFor(function () { return live.textContent.trim() !== ''; }, 'the note read out', 3000);
+            const said = live.textContent.trim();
+            t.step('the note in the list is no live region of its own', document.getElementById('kioskVoteNote').getAttribute('role'), null);
+            const seen = [];
+            new MutationObserver(function () { seen.push(live.textContent.trim()); })
+                .observe(live, { childList: true, characterData: true, subtree: true });
+            document.querySelector('#kioskList [data-song-id="8"] button').click();
+            await t.waitFor(function () { return seen.length >= 2 && seen[seen.length - 1] === said; }, 'read out again', 3000);
+            t.step('emptied, then said again', seen.slice(-2), ['', said]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-hides-its-secret',
+        title: 'the kiosk\'s secret is not in the address bar: the page shows /k (a guest could read the token there and use the kiosk from home); its forms and its way back still go by the token',
+        page: 'kiosk',
+        run: async function (t) {
+            t.step('the address shown', location.pathname + location.search, '/k');
+            t.step('the forms and the way back by the token', [document.getElementById('requestForm').getAttribute('action'),
+                document.body.dataset.kioskUrl], ['/k/' + TOKEN + '/request', '/k/' + TOKEN]);
         }
     });
 
