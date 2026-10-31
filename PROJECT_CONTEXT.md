@@ -699,7 +699,7 @@ own address (`data-kiosk-url`), never a reload: an answer is a POST's page, and 
 not the address's (the tablet shares the venue's Wi-Fi with the phones) but the kiosk's own — 3 requests a minute, 20 👍 per 10 min,
 said as the kiosk's ("Kiosk dostał teraz dużo głosów") —; the party's day counts its requests as every guest's. A request goes the
 guests' way (`GuestRequestService`: `fromParty` for the party page, `fromKiosk`), marked `viaKiosk` — the queue and the history show
-"🖥 kiosk", the evening summary counts "Z kiosku". The answer in the kiosk: the verdict, the AI's comment, "Gotowe — następny gość"
+"🖥 kiosk", the evening summary counts "Z kiosku" and its CSV says "tak" in the column "Z kiosku" (after "Dodana przez DJ-a"). The answer in the kiosk: the verdict, the AI's comment, "Gotowe — następny gość"
 (no number or tip: they are for a phone). 👍 in the background (`X-Requested-With: fetch`, the list comes back; its note read out by
 the page's own live region `#kioskAnnounce` and left 15 s on the screen); the list again every 10 s — not within 5 s of a touch (its
 rows move with the votes: a 👍 would land on another song), an answer asked for before a 👍 dropped, the focus kept on the same song's

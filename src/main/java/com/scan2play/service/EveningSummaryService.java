@@ -376,7 +376,8 @@ public class EveningSummaryService {
                     String.valueOf(request.getTips()),
                     cell(status),
                     cell(request.getDjComment()),
-                    request.isAddedByDj() ? cell(messages.getMessage("summary.csv.added_by_dj.yes", null, locale)) : ""));
+                    request.isAddedByDj() ? cell(messages.getMessage("summary.csv.added_by_dj.yes", null, locale)) : "",
+                    request.isViaKiosk() ? cell(messages.getMessage("summary.csv.kiosk.yes", null, locale)) : ""));
             if (!marks.isEmpty()) {
                 LibraryMark mark = marks.getOrDefault(request.getId(), LibraryMark.MISSING);
                 csv.append(';').append(cell(messages.getMessage("summary.csv.library." + mark.name(), null, locale)));

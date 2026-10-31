@@ -265,7 +265,7 @@ class SummaryPageTest {
 
             ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries),
                     sessionHelperOf(), messages, com.scan2play.service.Plans.off()).csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
-            assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0]).endsWith(";AI comment;Added by the DJ;In your library");
+            assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0]).endsWith(";AI comment;Added by the DJ;From the kiosk;In your library");
         } finally {
             libraries = mock(com.scan2play.service.DjLibraryService.class);
         }
