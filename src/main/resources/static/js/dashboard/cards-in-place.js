@@ -7,7 +7,8 @@
  * was on the screen. A page load scrolled to the card: the screen jumped (the owner, 2026-10-30, three times).
  *
  * As every card's "Zapisz" (forms.js flash): "✓" for a moment on the button that sent it — the same id in the new card —, or "✗" when
- * the card says why not ([data-card-error], focused: read out). A refused or lost answer (an answer without the card: the login page,
+ * the card says why not ([data-card-error], focused: read out). A button that went with the answer ("Wyłącz": no link, no button to
+ * take it away) leaves the focus in the card — on its first control, else its heading —, never on the page's top. A refused or lost answer (an answer without the card: the login page,
  * a Wi-Fi's page) leaves the card as it was and shows the page's notice (common.js showRefused). A form with data-confirm asks first
  * (dj-nav.js, before this). forms.js leaves these forms alone (RELOADS): without this script they are page loads back to the card.
  *
@@ -56,6 +57,9 @@ document.addEventListener('submit', function (e) {
             } else if (again) {
                 flash(again, true);
                 again.focus({ preventScroll: true });
+            } else {
+                const first = card.querySelector(part).querySelector('button:not([disabled]), a[href], input:not([type="hidden"])');
+                (first || card.querySelector('summary')).focus({ preventScroll: true });
             }
         })
         .catch(function (err) {

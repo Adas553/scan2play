@@ -54,7 +54,7 @@ public class GuestRequestLimiter {
      */
     static final int KIOSK_REQUESTS = 3;
     static final Duration KIOSK_WINDOW = Duration.ofMinutes(1);
-    static final int KIOSK_VOTES = 20;
+    public static final int KIOSK_VOTES = 20;
     /** Parties with open windows at once (only known parties count requests: GuestController reads the party first). */
     private static final int MAX_PARTIES = 10_000;
     /** Address windows of one party at once: a venue has hundreds; a flood beyond it drops that party's own oldest. */

@@ -375,8 +375,9 @@ public class DjPartySettingsController {
     }
 
     /**
-     * The venue's kiosk link (V56, {@code /k/{token}}, Pro): {@code link=new} makes one — a new secret, so the old tablet's link stops
-     * working —, {@code link=off} takes it away. Whoever has the permission KIOSK. Sent in the background ({@code X-Requested-With:
+     * The venue's kiosk link (V56, {@code /k/{token}}): {@code link=new} makes one — a new secret, so the old tablet's link stops
+     * working; Pro —, {@code link=off} takes it away — any plan, as the logo and the library are deleted: without Pro a link made
+     * before opens nothing, but it should not come back by itself with Pro. Whoever has the permission KIOSK. Sent in the background ({@code X-Requested-With:
      * fetch}, cards-in-place.js): the answer is the card alone, with the new link — the page stays where it is. Without the script, a
      * page load back to the card.
      */
@@ -384,15 +385,17 @@ public class DjPartySettingsController {
     public String updateKioskLink(@RequestParam String partyCode, @RequestParam String link,
                                   @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
                                   OAuth2AuthenticationToken authentication, HttpSession session, Model model) {
-        PartySettingsEntity party = planService.require(sessionHelper.require(partyCode, StaffPermission.KIOSK, authentication, session),
-                PlanFeature.KIOSK);
+        PartySettingsEntity party = sessionHelper.require(partyCode, StaffPermission.KIOSK, authentication, session);
         String token = switch (link) {
-            case "new" -> CodeGenerator.generateSecret();
+            case "new" -> {
+                planService.require(party, PlanFeature.KIOSK);
+                yield CodeGenerator.generateSecret();
+            }
             case "off" -> null;
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         };
         log.info("Party [{}]: the kiosk link {}", partyCode, token == null ? "taken away" : "made");
-        partySettingsCommandService.updateSettings(partyCode, s -> s.setKioskToken(token));
+        PartySettingsEntity saved = partySettingsCommandService.updateSettings(partyCode, s -> s.setKioskToken(token));
         if (!"fetch".equals(requestedWith)) {
             return REDIRECT_SETTINGS + "?party=" + partyCode + "#kioskCard";
         }
@@ -401,14 +404,9 @@ public class DjPartySettingsController {
         model.addAttribute(ACCESS, access);
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(PLAN, planService.view(party, access.owner()));
-        model.addAttribute(KIOSK_LINK, kioskLink(token));
+        model.addAttribute(KIOSK_LINK, saved.kioskLink(Texts.withoutTrailingSlash(rawBaseUrl)));
         model.addAttribute(CARD_SAVED, true);
         return "settings :: kioskCard";
-    }
-
-    /** The kiosk's address to copy and open on the tablet ({@code https://…/k/{token}}), or null: none. */
-    String kioskLink(String token) {
-        return token == null ? null : Texts.withoutTrailingSlash(rawBaseUrl) + "/k/" + token;
     }
 
     /**

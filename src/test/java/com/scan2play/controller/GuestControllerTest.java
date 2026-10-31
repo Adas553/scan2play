@@ -9,6 +9,7 @@ import com.scan2play.service.Plans;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestRequestLimiter.Refusal;
 import com.scan2play.service.GuestRequestLimiter.Scope;
+import com.scan2play.service.GuestRequestService;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartySettingsQueryService;
@@ -16,7 +17,6 @@ import com.scan2play.service.SongEvaluationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -73,8 +73,8 @@ class GuestControllerTest {
     @Spy
     private com.scan2play.service.PartyScheduleService partyScheduleService = com.scan2play.service.PartySchedules.texts();
 
-    @InjectMocks
     private GuestController controller;
+    private GuestRequestService requests;
 
     private PartySettingsEntity settings;
     private MockHttpSession session;
@@ -88,6 +88,11 @@ class GuestControllerTest {
         request = new MockHttpServletRequest();
         request.setSession(session);   // the guest's cookie: the party page reads their requests from it
         redirectAttributes = new RedirectAttributesModelMap();
+        // the guests' requests as the application makes them, over this test's mocks
+        requests = new GuestRequestService(songEvaluationService, guestSessionService, guestVoteService,
+                guestRequestLimiter, messageSource, siteCounter);
+        controller = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService, guestVoteService,
+                guestRequestLimiter, messageSource, planService, requests, partyScheduleService);
         org.mockito.Mockito.lenient().when(guestRequestLimiter.clientIp(request)).thenReturn(IP); // not read by the party page
         org.mockito.Mockito.lenient().when(partySettingsQueryService.getSettings(PARTY)).thenReturn(settings); // not read by styleOf
         org.mockito.Mockito.lenient().when(guestQueueService.view(any(), any(), any()))   // an empty list, unless a test says otherwise
@@ -176,16 +181,6 @@ class GuestControllerTest {
     }
 
     @Test
-    void theWait_isSaidInWholeMinutes_roundedUp_andInSecondsBelowAMinute() {
-        assertThat(GuestController.waitText(1)).isEqualTo("1 s");
-        assertThat(GuestController.waitText(59)).isEqualTo("59 s");
-        assertThat(GuestController.waitText(60)).isEqualTo("1 min");
-        assertThat(GuestController.waitText(61)).isEqualTo("2 min");
-        assertThat(GuestController.waitText(117)).isEqualTo("2 min");
-        assertThat(GuestController.waitText(600)).isEqualTo("10 min");
-    }
-
-    @Test
     void theGuestsOwnLimit_tellsTheWaitInMinutes() throws Exception {
         when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.of(150L));
         when(messageSource.getMessage(eq("guest.error.rate_limit"), any(), any())).thenReturn("wait");
@@ -271,15 +266,6 @@ class GuestControllerTest {
         } finally {
             org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
         }
-    }
-
-    /** The guests pick no vibe: without the DJ's vibe the AI judges by "any" (and the DJ's note, if any). */
-    @Test
-    void withoutTheDjsVibe_theStyleIsAny() {
-        settings.setGlobalVibe(VibeType.ANY);
-        assertThat(controller.styleOf(settings, java.util.Locale.ENGLISH)).isEqualTo("ANY");
-        settings.setGlobalVibe(null);
-        assertThat(controller.styleOf(settings, java.util.Locale.ENGLISH)).as("no vibe saved yet").isEqualTo("ANY");
     }
 
     /** A mood, not a song: nothing is saved, the guest is back at the form with the text, asked for a song; the place is given back. */
@@ -481,8 +467,8 @@ class GuestControllerTest {
         settings.setCooldownMinutes(30);
         settings.setInstagramUrl("https://www.instagram.com/dj/");
         settings.setTipUrl("https://buycoffee.to/dj");
-        GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
-                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter, com.scan2play.service.PartySchedules.texts());
+        GuestController free = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService,
+                guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts());
 
         ExtendedModelMap model = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, model, request)).isEqualTo("index");
@@ -528,8 +514,8 @@ class GuestControllerTest {
                     .containsEntry("facebookUrl", "https://www.facebook.com/dj").containsEntry("tiktokUrl", "https://www.tiktok.com/@dj");
         }
 
-        GuestController free = new GuestController(songEvaluationService, guestQueueService, partySettingsQueryService,
-                guestSessionService, guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), siteCounter, com.scan2play.service.PartySchedules.texts());
+        GuestController free = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService,
+                guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts());
         ExtendedModelMap freeEnded = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, freeEnded, request)).isEqualTo("party_ended");
         assertThat(freeEnded.get("instagramUrl")).isNull();

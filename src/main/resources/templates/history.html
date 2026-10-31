@@ -145,6 +145,9 @@
                             <!--/* added in the panel (V44): a guest asked at the booth — no guest's words, no AI's verdict */-->
                             <span th:if="${req.addedByDj}" class="badge text-bg-dark border border-info text-info align-self-start s2p-added-by-dj"
                                   th:title="#{dashboard.added_by_dj.title}" th:text="#{dashboard.added_by_dj}">🎧 Added by the DJ</span>
+                            <!--/* sent at the venue's kiosk (V56), as the queue marks it */-->
+                            <span th:if="${req.viaKiosk}" class="badge text-bg-dark border border-secondary text-light align-self-start s2p-via-kiosk"
+                                  th:title="#{dashboard.kiosk.mark.title}" th:text="#{dashboard.kiosk.mark}">🖥 kiosk</span>
                             <!--/* none of the guest's words in the AI's song: maybe another song in place of the one asked for */-->
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>

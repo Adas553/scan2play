@@ -105,6 +105,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    "🖥 kiosk" in the queue. After the review of 2026-10-30 (three fixes, each with a test seen red first): "Następny gość" keeps a
    session with a login (it logged the DJ out), a refused request ends its turn by itself too (the next guest found the last one's
    words and dedication), a lost 👍 goes to the kiosk's address instead of reloading (on an answer that sent the request again).
+   Then the review's other points: the list not put in place under a finger (5 s after a touch, 15 s after a 👍's note, an answer
+   asked for before a 👍 dropped, the focus kept), "Następny gość" sent in the background (the Wi-Fi down: no browser error page), a
+   party closed meanwhile sends the kiosk to its page, the kiosk's limit of 👍 said as the kiosk's, "Wyłącz" without Pro, the request's
+   way in `GuestRequestService` (no controller in a controller), "🖥 kiosk" in the history and "Z kiosku" in the summary (not the CSV),
+   a guard test that V56's words are the stored whole set.
    Details: `PROJECT_CONTEXT.md` 5.1. To try on a real tablet: an iPad in Guided Access and an Android tablet
    with the screen pinned, the native keyboard over the form, the suggestions.
 

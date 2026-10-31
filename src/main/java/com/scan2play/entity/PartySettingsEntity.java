@@ -302,6 +302,11 @@ public class PartySettingsEntity {
         return staffToken != null && linkWorks(staffTokenMadeAt, now);
     }
 
+    /** The kiosk's address to copy and open on the tablet ({@code cleanBaseUrl/k/{token}}, V56), or null: no kiosk link. */
+    public String kioskLink(String cleanBaseUrl) {
+        return kioskToken == null ? null : cleanBaseUrl + "/k/" + kioskToken;
+    }
+
     /** Until when a link made at {@code madeAt} works. */
     public static Instant linkWorksUntil(Instant madeAt) {
         return madeAt.plus(Duration.ofDays(LINK_DAYS));

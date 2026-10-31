@@ -5,6 +5,8 @@ import com.scan2play.model.PlanFeature;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
+import com.scan2play.service.GuestRequestService;
+import com.scan2play.service.GuestRequestService.Sent;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartyScheduleService;
@@ -43,7 +45,7 @@ import static com.scan2play.controller.ViewAttributes.*;
  * itself, after a while without a touch) ends the session, and the next guest has the DJ's limit and their own 👍 again. Against one
  * person at the tablet, the kiosk has its own limits ({@link GuestRequestLimiter#tryAcquireKiosk}, {@code tryAcquireKioskVote}) in
  * place of an address's — the tablet shares the venue's Wi-Fi with the phones —; the party's day counts its requests as every
- * guest's. A request goes the guests' way ({@link GuestController#send}), marked as the kiosk's for the DJ's queue. No link leads
+ * guest's. A request goes the guests' way ({@link GuestRequestService#fromKiosk}), marked as the kiosk's for the DJ's queue. No link leads
  * out of the page: the DJ's profiles and tip link are for the guests' own phones.
  */
 @Controller
@@ -54,7 +56,7 @@ public class KioskController {
 
     private final PartySettingsRepository partySettingsRepository;
     private final PlanService planService;
-    private final GuestController guests;
+    private final GuestRequestService guestRequestService;
     private final GuestQueueService guestQueueService;
     private final GuestSessionService guestSessionService;
     private final GuestVoteService guestVoteService;
@@ -93,20 +95,20 @@ public class KioskController {
                 return "redirect:/k/" + token;   // the page says it is closed
             }
             // the guest's limit as the organiser's plan has it (V35), as on the party page
-            GuestController.Sent sent = guests.send(party.getPartyCode(), planService.asPlanned(party), songName, dedication, session,
-                    null, true, locale);
-            if (sent instanceof GuestController.Sent.Refused refused) {
+            Sent sent = guestRequestService.fromKiosk(party.getPartyCode(), planService.asPlanned(party), songName, dedication, session,
+                    locale);
+            if (sent instanceof Sent.Refused refused) {
                 redirectAttributes.addFlashAttribute(ERROR_MESSAGE,
                         messageSource.getMessage(refused.messageKey(), refused.args(), locale));
                 return "redirect:/k/" + token;
             }
-            if (sent instanceof GuestController.Sent.Mood mood) {
+            if (sent instanceof Sent.Mood mood) {
                 redirectAttributes.addFlashAttribute(LAST_REQUEST, mood.songName());
                 redirectAttributes.addFlashAttribute(LAST_DEDICATION, mood.dedication());
                 redirectAttributes.addFlashAttribute(ERROR_MESSAGE, messageSource.getMessage("guest.error.song_only", null, locale));
                 return "redirect:/k/" + token;
             }
-            model.addAttribute(RESPONSE, ((GuestController.Sent.Answered) sent).response());
+            model.addAttribute(RESPONSE, ((Sent.Answered) sent).response());
             addPage(model, token, party, session);
             return "kiosk";
         };
@@ -129,7 +131,7 @@ public class KioskController {
         } else if (!guestSessionService.myRequestIds(session, partyCode).contains(id)) {   // this turn's own song: no 👍 on it
             Optional<Long> wait = guestRequestLimiter.tryAcquireKioskVote(partyCode);
             if (wait.isPresent()) {
-                note = "guest.vote.too_many";
+                note = "kiosk.vote.too_many";   // the kiosk's limit, not a network's
             } else {
                 GuestVoteService.Result result = on ? guestVoteService.vote(session, partyCode, id)
                         : guestVoteService.takeBack(session, partyCode, id);

@@ -88,6 +88,17 @@ class DjPartySettingsControllerKioskTest {
         assertThat(row.getKioskToken()).isNull();
     }
 
+    /** Without Pro an old link can still be taken away (as the logo and the library are deleted): making one needs Pro. */
+    @Test
+    void withoutPro_anOldLinkIsTakenAway() {
+        row.setKioskToken("Kiosk_123-xyzKiosk_123-x");
+        DjPartySettingsController free = controller(helperAllowing(), Plans.enforced());
+
+        free.updateKioskLink(PARTY, "off", null, DJ, new MockHttpSession(), new org.springframework.ui.ExtendedModelMap());
+
+        assertThat(row.getKioskToken()).isNull();
+    }
+
     /** A kiosk of a party without Pro opens nothing (a 404); with Pro it does. */
     @Test
     void aKiosk_opensOnlyWithPro() {
@@ -105,7 +116,7 @@ class DjPartySettingsControllerKioskTest {
     }
 
     private static KioskController kiosk(PartySettingsRepository parties, PlanService plans) {
-        return new KioskController(parties, plans, mock(GuestController.class), mock(com.scan2play.service.GuestQueueService.class),
+        return new KioskController(parties, plans, mock(com.scan2play.service.GuestRequestService.class), mock(com.scan2play.service.GuestQueueService.class),
                 mock(com.scan2play.service.GuestSessionService.class), mock(com.scan2play.service.GuestVoteService.class),
                 mock(com.scan2play.service.GuestRequestLimiter.class), PartySchedules.texts(), PartySchedules.messages());
     }

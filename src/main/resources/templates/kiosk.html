@@ -85,11 +85,11 @@
 
         <!--/* the most wanted with 👍 — the list the TV screen shows; this turn's own request without one */-->
         <section id="kioskList" class="s2p-kiosk-list" th:fragment="kioskList" aria-labelledby="kioskListTitle"
-                 th:attr="data-url=@{/k/{t}/list(t=${kioskToken})}">
+                 th:attr="data-url=@{/k/{t}/list(t=${kioskToken})},data-active=${isActive}">
             <h2 id="kioskListTitle"><span aria-hidden="true">🔥</span> <span th:text="#{kiosk.wanted}">Most wanted</span></h2>
             <p th:if="${voteNote}" id="kioskVoteNote" class="s2p-kiosk-note" role="status" th:text="${voteNote}">One vote per song.</p>
             <th:block th:if="${isActive}">
-            <ol th:unless="${#lists.isEmpty(tvSongs)}" class="s2p-kiosk-songs">
+            <ol th:unless="${#lists.isEmpty(tvSongs)}" role="list" class="s2p-kiosk-songs">
                 <li th:each="song : ${tvSongs}" class="s2p-kiosk-song-row" th:attr="data-song-id=${song.id}"
                     th:with="mine=${kioskMyRequests != null and kioskMyRequests.contains(song.id)},
                              given=${kioskMyVotes != null and kioskMyVotes.contains(song.id)}">
@@ -108,6 +108,8 @@
             </th:block>
         </section>
     </div>
+    <!--/* a 👍's note read out: the list above is put in place anew (kiosk.js), and a live region new with it is not announced */-->
+    <p id="kioskAnnounce" class="visually-hidden" role="status"></p>
 
     <!--/* this guest's turn ends: the next one starts afresh (a new session) */-->
     <form th:if="${response == null}" th:action="@{/k/{t}/next(t=${kioskToken})}" method="POST" class="s2p-kiosk-foot" data-kiosk-next>

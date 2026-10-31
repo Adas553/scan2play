@@ -54,9 +54,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * kiosk's own limit in place of an address's, "Następny gość" a new session, a code that is no kiosk's a 404. Writes the pages of
  * the browser tests ({@code target/browser-harness/kiosk*.html}).
  */
-@WebMvcTest({KioskController.class, GuestController.class})
+@WebMvcTest(KioskController.class)
 @Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class, com.scan2play.service.PartySchedulesConfig.class,
-        GuestRequestLimiter.class, GuestSessionService.class})
+        GuestRequestLimiter.class, GuestSessionService.class, com.scan2play.service.GuestRequestService.class})
 class KioskWebTest {
 
     private static final String TOKEN = "Kiosk_123-xyzKiosk_123-x";
@@ -136,6 +136,10 @@ class KioskWebTest {
                 ">Najczęściej wybierane<", "data-url=\"" + KIOSK + "/list\"", "action=\"" + KIOSK + "/vote\"", "Wilki - Baśka",
                 "aria-label=\"Zagłosuj na Wilki - Baśka, głosów: 5\"", "action=\"" + KIOSK + "/next\"", ">Następny gość<",
                 "<script src=\"/js/kiosk.js\">", "🎧 <span>DJ Koko</span>");
+        assertThat(html).as("a list read as one by a screen reader (no list-style), and a place outside it that reads a 👍's note out")
+                .contains("<ol role=\"list\" class=\"s2p-kiosk-songs\">", "id=\"kioskAnnounce\" class=\"visually-hidden\" role=\"status\"");
+        assertThat(html.indexOf("id=\"kioskAnnounce\"")).as("outside the list, which is put in place anew").isGreaterThan(
+                html.indexOf("</section>", html.indexOf("id=\"kioskList\"")));
         assertThat(html).as("no link leads out of the kiosk: no profiles, no tip link, no footer, no way to the DJ's pages")
                 .doesNotContain("<a ", "instagram", "buycoffee", "/dj/");
         write("kiosk.html", html);
@@ -271,5 +275,33 @@ class KioskWebTest {
 
         when(guestVoteService.myVotes(any(), eq(partyCode))).thenReturn(Set.of(8L));   // a 👍 given, then the page again
         assertThat(page(new MockHttpSession())).contains("data-kiosk-turn=\"begun\"");
+    }
+
+    /** The kiosk's limit of 👍 reached (one person piling votes turn after turn): said as the kiosk's, not "a network's". */
+    @Test
+    void theKiosksLimitOfVotes_isSaidAsTheKiosks() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = csrf(page(session));
+        String list = null;
+        for (int i = 0; i <= GuestRequestLimiter.KIOSK_VOTES; i++) {
+            list = mockMvc.perform(post(KIOSK + "/vote").session(session).param("id", "8").param("on", "true").param("_csrf", token)
+                    .header("X-Requested-With", "fetch")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        }
+        assertThat(list).contains("id=\"kioskVoteNote\"", "Kiosk dostał teraz dużo głosów").doesNotContain("z tej sieci");
+        write("kiosk-list-note.html", list);
+        verify(guestVoteService, times(GuestRequestLimiter.KIOSK_VOTES)).vote(any(), eq(partyCode), eq(8L));
+    }
+
+    /**
+     * The list fetched again says whether the party is still open (data-active): a party closed while the form is on the screen
+     * sends kiosk.js back to the kiosk's page, which says when it opens. Writes {@code kiosk-list-closed.html}.
+     */
+    @Test
+    void theListFetchedAgain_saysWhetherThePartyIsOpen() throws Exception {
+        assertThat(mockMvc.perform(get(KIOSK + "/list")).andReturn().getResponse().getContentAsString()).contains("data-active=\"true\"");
+        party.setActive(false);
+        String closed = mockMvc.perform(get(KIOSK + "/list")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(closed).contains("id=\"kioskList\"", "data-active=\"false\"");
+        write("kiosk-list-closed.html", closed);
     }
 }

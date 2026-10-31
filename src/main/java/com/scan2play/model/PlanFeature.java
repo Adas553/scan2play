@@ -30,7 +30,7 @@ public enum PlanFeature {
     LOGO,
     /**
      * The venue's kiosk (V56): a tablet where guests without a phone ask for a song and vote. Without Pro the link opens nothing (a
-     * 404) and the card offers Pro; a link made before is kept.
+     * 404) and the card offers Pro; a link made before is kept, and taking it away needs no plan.
      */
     KIOSK
 }

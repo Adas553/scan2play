@@ -310,7 +310,8 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
-        if path.startswith('/k/') and path.endswith('/list'):   # the kiosk fetches its list again (kiosk.js)
+        if path.startswith('/k/') and path.endswith('/list'):   # the kiosk fetches its list again (kiosk.js): logged, may be delayed
+            self._note('GET', path, {})
             with open(os.path.join(stand.rendered, state['kioskList'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path.startswith('/p/') and path.endswith('/tv/list'):   # the screen for a TV fetches its list again (tv.js)
@@ -493,6 +494,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/schedule':           # "Godziny imprezy" (V55): the card alone, as the real server answers a fetch
             with open(os.path.join(stand.rendered, state['scheduleAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/k/') and path.endswith('/next'):   # "Następny gość" sent by fetch (V56): the real server's redirect leads
+            return self._send(200, b'<!DOCTYPE html><title>kiosk</title>', 'text/html; charset=utf-8')   # to the kiosk's page
         if path.startswith('/k/') and path.endswith('/vote'):   # the kiosk's 👍 (V56): the list as the real server renders it
             if state['kioskVoteStatus']:
                 return self._send(state['kioskVoteStatus'])

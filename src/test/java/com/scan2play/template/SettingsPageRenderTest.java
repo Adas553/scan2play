@@ -550,6 +550,17 @@ class SettingsPageRenderTest {
                 "value=\"http://localhost:8080/k/" + row.getKioskToken() + "\"", "id=\"kioskLinkNewBtn\"", ">Nowy link<")
                 .doesNotContain("??");
         write("settings-kiosk-answer.html", html);
+
+        // "Wyłącz" then: the card without a link — for the stand-in, the answer after which the focus must stay in the card
+        ConcurrentModel off = new ConcurrentModel();
+        controller.updateKioskLink(PARTY, "off", "fetch", user("owner"), new MockHttpSession(), off);
+        WebContext offContext = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        offContext.setVariables(off.asMap());
+        offContext.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String offHtml = engine.process("settings", Set.of("kioskCard"), offContext);
+        assertThat(offHtml).contains("id=\"kioskState\">Wyłączony<", "id=\"kioskLinkNewBtn\"").doesNotContain("id=\"kioskLinkOffBtn\"");
+        write("settings-kiosk-answer-off.html", offHtml);
     }
 
     /**
@@ -613,6 +624,12 @@ class SettingsPageRenderTest {
                 .doesNotContain("id=\"libraryForm\"", "action=\"/dj/library\"");
         assertThat(html).as("the kiosk (V56): the offer, no link to make").contains("id=\"kioskCard\"",
                 "Kiosk dla gości bez telefonu — w planie Pro.").doesNotContain("action=\"/dj/dashboard/kiosk-link\"");
+        saved.setKioskToken("Kiosk_123-xyzKiosk_123-x");
+        String kept = render(new PartyStaffService.Access(saved, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
+                PL, com.scan2play.service.Plans.enforced());
+        String kiosk = kept.substring(kept.indexOf("id=\"kioskCard\""), kept.indexOf("id=\"linksCard\""));
+        assertThat(kiosk).as("a link made with Pro: it opens nothing now, and can be taken away").contains("Kiosk dla gości bez telefonu",
+                "id=\"kioskLinkOffBtn\"", "name=\"link\" value=\"off\"").doesNotContain("id=\"kioskLinkNewBtn\"", "id=\"kioskLinkInput\"");
         assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"");
         write("settings-free.html", html);
     }

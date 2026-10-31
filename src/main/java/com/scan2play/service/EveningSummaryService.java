@@ -87,12 +87,14 @@ public class EveningSummaryService {
      * {@code missed}: the wanted songs that did not play (waiting, skipped, cleared). The waits are the played requests' minutes
      * from the request to "played" — null when no request was marked as played. {@code tips}: the tips the DJ counted (V28, "💸").
      * {@code addedByDj}: how many of the requests the DJ added in the panel (V44) — counted in {@code requests}, but their first vote
-     * is the DJ's, not a guest's, so {@code votes} leaves it out.
+     * is the DJ's, not a guest's, so {@code votes} leaves it out. {@code viaKiosk}: how many guests sent at the venue's kiosk (V56),
+     * counted in {@code requests} too.
      */
     public record Summary(LocalDate evening, int requests, int played, int waiting, int skipped, int cleared, int rejectedByAi,
                           int votes, int tips, Instant first, Instant last, List<SongRequestEntity> top, List<SongRequestEntity> missed,
                           List<ArtistCount> artists, List<SongRequestEntity> setlist, List<TimeSlot> slots,
-                          Long averageWaitMinutes, Long longestWaitMinutes, boolean truncated, int addedByDj) {
+                          Long averageWaitMinutes, Long longestWaitMinutes, boolean truncated, int addedByDj,
+                          int viaKiosk) {
 
         /** How the request ended, "WAITING" — the page's text of it is {@code summary.csv.status.<this>}. */
         public String status(SongRequestEntity request) {
@@ -154,6 +156,7 @@ public class EveningSummaryService {
         int votes = 0;
         int tips = 0;
         int addedByDj = 0;
+        int viaKiosk = 0;
         List<SongRequestEntity> letThrough = new ArrayList<>();
         List<SongRequestEntity> missed = new ArrayList<>();
         List<SongRequestEntity> setlist = new ArrayList<>();
@@ -189,6 +192,9 @@ public class EveningSummaryService {
             if (request.isAddedByDj()) {
                 addedByDj++;
             }
+            if (request.isViaKiosk()) {
+                viaKiosk++;
+            }
             Instant at = request.getRequestedAt();
             if (at != null) {
                 perSlot[slotOf(at)]++;
@@ -209,7 +215,7 @@ public class EveningSummaryService {
                 slots(perSlot, first),
                 waits.isEmpty() ? null : Math.round(waits.stream().mapToLong(Long::longValue).average().orElse(0)),
                 waits.isEmpty() ? null : waits.stream().mapToLong(Long::longValue).max().orElse(0),
-                requests.size() >= MAX_REQUESTS, addedByDj);
+                requests.size() >= MAX_REQUESTS, addedByDj, viaKiosk);
     }
 
     /**

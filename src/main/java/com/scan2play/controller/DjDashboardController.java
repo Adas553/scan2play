@@ -270,7 +270,7 @@ public class DjDashboardController {
         model.addAttribute(HOST_LINK, hostLinkWorks ? cleanBaseUrl + "/h/" + settings.getHostToken() : null);
         model.addAttribute(HOST_LINK_UNTIL, hostLinkWorks ? Times.day(PartySettingsEntity.linkWorksUntil(settings.getHostTokenMadeAt())) : null);
         // the venue's kiosk (V56): its link to copy and open on the tablet, or none
-        model.addAttribute(KIOSK_LINK, settings.getKioskToken() == null ? null : cleanBaseUrl + "/k/" + settings.getKioskToken());
+        model.addAttribute(KIOSK_LINK, settings.kioskLink(cleanBaseUrl));
         model.addAttribute(REQUEST_LIMIT, planned.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, planned.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, planned.getDuplicateCheckWindow());

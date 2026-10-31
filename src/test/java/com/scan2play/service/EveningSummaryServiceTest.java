@@ -128,6 +128,19 @@ class EveningSummaryServiceTest {
         assertThat(summary.truncated()).isFalse();
     }
 
+    /** Requests sent at the venue's kiosk (V56): counted in the requests and apart, as the DJ's own. */
+    @Test
+    void theKiosksRequests_areCountedApart() {
+        SongRequestEntity kiosk = request("Kult - Arahja", "played", "21:00", "21:10", 1);
+        kiosk.setViaKiosk(true);
+        EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING,
+                List.of(request("Wilki - Baśka", "played", "20:00", "20:30", 2), kiosk));
+
+        assertThat(summary.requests()).isEqualTo(2);
+        assertThat(summary.viaKiosk()).isEqualTo(1);
+        assertThat(summary.votes()).as("a kiosk's guest's vote is a guest's").isEqualTo(3);
+    }
+
     /** A song the DJ added (V44): one of the requests, counted apart; its first vote is the DJ's, so the guests' votes leave it out. */
     @Test
     void aSongTheDjAdded_isCountedApart_andItsFirstVoteIsNotAGuests() {

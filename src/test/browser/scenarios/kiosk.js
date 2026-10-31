@@ -24,6 +24,33 @@
         Date.now = function () { return real() + ms; };
     }
 
+    /**
+     * "Następny gość" as kiosk.js sends it: in the background (a page load would leave the tablet on the browser's error page when
+     * the Wi-Fi is down), once, with the form's token — then the kiosk's own page in place of this one.
+     */
+    async function nextSent(t, loads) {
+        const sent = await t.stand.requests('POST /k/' + TOKEN + '/next');
+        t.step('"Następny gość" sent once, in the background, with the token', sent.map(function (r) { return !!r.q._csrf; }), [true]);
+        t.step('then the kiosk\'s page, in place of this one', loads.map(function (l) { return [l[0], l[2]]; }), [['/k/' + TOKEN, 'replace']]);
+    }
+
+    /** Waits (real time) until the stand-in has logged n requests of `match`. */
+    async function requested(t, match, n, ms) {
+        const started = performance.now();
+        while ((await t.stand.count(match)) < n) {
+            if (performance.now() - started > ms) {
+                t.step('TIMEOUT waiting for ' + n + ' × ' + match, false, true);
+                throw new Error('timeout: ' + match);
+            }
+            await t.sleep(100);
+        }
+    }
+
+    /** A finger on the screen (a tap, a scroll begun). */
+    function touch() {
+        document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    }
+
     function fitsTheScreen() {
         return document.documentElement.scrollWidth <= document.documentElement.clientWidth;
     }
@@ -138,7 +165,7 @@
             t.step('half a minute: still their turn', loads, []);
             later(61000);
             await t.waitFor(function () { return loads.length > 0; }, 'the next guest', 3000);
-            t.step('"Następny gość", sent once', loads.map(function (l) { return l[0]; }), ['/k/' + TOKEN + '/next']);
+            await nextSent(t, loads);
         }
     });
 
@@ -171,7 +198,7 @@
             t.step('half a minute: still their turn', loads, []);
             later(61000);
             await t.waitFor(function () { return loads.length > 0; }, 'the next guest', 3000);
-            t.step('"Następny gość", sent once', loads.map(function (l) { return l[0]; }), ['/k/' + TOKEN + '/next']);
+            await nextSent(t, loads);
         }
     });
 
@@ -203,7 +230,7 @@
             t.step('nothing leads out of the page', document.querySelectorAll('a[href]').length, 0);
             later(21000);
             await t.waitFor(function () { return loads.length > 0; }, 'the next guest', 3000);
-            t.step('"Następny gość" by itself', loads.map(function (l) { return l[0]; }), ['/k/' + TOKEN + '/next']);
+            await nextSent(t, loads);
         }
     });
 
@@ -271,6 +298,125 @@
             t.check('scrolled down first (a place to keep)', before > 100);
             t.step('no page load', loads, []);
             t.step('nothing wider than the screen', fitsTheScreen(), true);
+        }
+    });
+    S2P.scenario({
+        name: 'kiosk-next-tapped',
+        title: '"Następny gość" tapped: sent in the background, then the kiosk\'s page — never a form\'s page load',
+        page: 'kiosk',
+        run: async function (t) {
+            const loads = catchLoads();
+            document.getElementById('kioskNext').click();
+            await t.waitFor(function () { return loads.length > 0; }, 'the kiosk\'s page', 3000);
+            await nextSent(t, loads);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-next-lost-stays',
+        title: '"Następny gość" lost (the Wi-Fi down): the kiosk stays on its page, never the browser\'s error page, and tries again by itself',
+        page: 'kiosk-result',
+        setup: { postStatus: { ['/k/' + TOKEN + '/next']: 502 } },
+        run: async function (t) {
+            const loads = catchLoads();
+            later(21000);
+            await requested(t, 'POST /k/' + TOKEN + '/next', 1, 3000);
+            await t.sleep(1500);
+            t.step('no page load: the kiosk stays', loads, []);
+            t.step('"Gotowe" usable again', document.getElementById('kioskDone').disabled, false);
+            later(45000);
+            await requested(t, 'POST /k/' + TOKEN + '/next', 2, 3000);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-list-waits-for-the-finger',
+        title: 'the list is not put in place under a finger (its rows move with the votes: a 👍 would land on another song); a few seconds after the last touch it is',
+        page: 'kiosk',
+        setup: { kioskList: 'kiosk-list-voted' },
+        run: async function (t) {
+            const list = document.getElementById('kioskList');
+            for (let i = 0; i < 12; i++) {
+                touch();
+                await t.sleep(1000);
+            }
+            t.step('twelve seconds of touches: the list as it was', [document.getElementById('kioskList') === list,
+                !!document.querySelector('#kioskList [data-song-id="8"] button.is-given')], [true, false]);
+            later(6000);
+            await t.waitFor(function () { return !!document.querySelector('#kioskList [data-song-id="8"] button.is-given'); },
+                'the list fetched again', 13000);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-vote-note-stays',
+        title: 'a 👍 that did not count: its note stays to be read (the next fetch of the list does not take it away at once) and is read out',
+        page: 'kiosk',
+        setup: { kioskVoteAnswer: 'kiosk-list-note' },
+        run: async function (t) {
+            document.querySelector('#kioskList [data-song-id="8"] button').click();
+            await t.waitFor(function () { return !!document.getElementById('kioskVoteNote'); }, 'the note', 3000);
+            const said = document.getElementById('kioskVoteNote').textContent.trim();
+            t.step('read out by the page\'s own live region', document.getElementById('kioskAnnounce').textContent.trim(), said);
+            await t.sleep(11000);
+            t.step('a fetch of the list later: the note still there', !!document.getElementById('kioskVoteNote'), true);
+            later(16000);
+            await t.waitFor(function () { return !document.getElementById('kioskVoteNote'); }, 'the list again, without the note', 13000);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-list-stale-answer-dropped',
+        title: 'a fetch of the list asked before a 👍 and answered after it: dropped — the 👍 given stays shown',
+        page: 'kiosk',
+        setup: { delays: { ['/k/' + TOKEN + '/list']: 3 } },
+        run: async function (t) {
+            await requested(t, 'GET /k/' + TOKEN + '/list', 1, 13000);
+            document.querySelector('#kioskList [data-song-id="8"] button').click();
+            await t.waitFor(function () { return !!document.querySelector('#kioskList [data-song-id="8"] button.is-given'); }, 'the 👍', 2000);
+            await t.sleep(3500);
+            t.step('the 👍 still shown', !!document.querySelector('#kioskList [data-song-id="8"] button.is-given'), true);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-list-keeps-the-focus',
+        title: 'the list fetched again keeps the keyboard\'s (a screen reader\'s) focus on the same song\'s 👍, never the page\'s top',
+        page: 'kiosk',
+        setup: { kioskList: 'kiosk-list-voted' },
+        run: async function (t) {
+            document.querySelector('#kioskList [data-song-id="7"] button').focus();
+            await t.waitFor(function () { return !!document.querySelector('#kioskList [data-song-id="8"] button.is-given'); },
+                'the list fetched again', 13000);
+            const focused = document.activeElement;
+            t.step('the focus on the new list\'s 👍 of the same song', [document.getElementById('kioskList').contains(focused),
+                focused.closest('[data-song-id]') ? focused.closest('[data-song-id]').dataset.songId : null], [true, '7']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'kiosk-closed-meanwhile',
+        title: 'the party closed while the form is on the screen: the list fetched again says so, and the kiosk goes to its page (when it opens)',
+        page: 'kiosk',
+        setup: { kioskList: 'kiosk-list-closed' },
+        run: async function (t) {
+            const loads = catchLoads();
+            await t.waitFor(function () { return loads.length > 0; }, 'the kiosk\'s page', 13000);
+            t.step('the kiosk\'s page, in place of this one', loads.map(function (l) { return [l[0], l[2]]; }), [['/k/' + TOKEN, 'replace']]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'settings-kiosk-off-keeps-the-focus',
+        title: '"Wyłącz" of the kiosk\'s link: the button goes with the link — the focus stays in the card (on "Utwórz link kiosku"), never the page\'s top',
+        page: 'settings-kiosk',
+        setup: { kioskLinkAnswer: 'settings-kiosk-answer-off' },
+        run: async function (t) {
+            const card = document.getElementById('kioskCard');
+            card.querySelector('summary').click();
+            document.getElementById('kioskLinkOffBtn').click();
+            await t.waitFor(function () { return !document.getElementById('kioskLinkInput'); }, 'the card without the link', 3000);
+            t.step('the focus in the card, on the button that makes a link', document.activeElement.id, 'kioskLinkNewBtn');
         }
     });
 })();
