@@ -148,6 +148,8 @@ public final class ViewAttributes {
     public static final String KIOSK_MY_VOTES = "kioskMyVotes";
     /** The songs this guest's turn asked for at the kiosk (no 👍 on them). */
     public static final String KIOSK_MY_REQUESTS = "kioskMyRequests";
+    /** The kiosk opened in a browser with a login: the page warns (a guest who leaves the kiosk would find the DJ's panel). */
+    public static final String KIOSK_LOGGED_IN = "kioskLoggedIn";
 
     // --- When the party opens and closes by itself (V55) ---
     /** The plan as shown ({@code PartyScheduleService.View}): the panel's line, the card "Godziny imprezy" and its fields. */

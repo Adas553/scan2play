@@ -90,6 +90,8 @@ def default_state():
         'kioskList': 'kiosk-list',
         'kioskVoteAnswer': 'kiosk-list-voted',
         'kioskVoteStatus': None,
+        # what the kiosk's own page (/k/<token>) answers: kiosk.js asks for it before it loads it (None: 200, a page)
+        'kioskPageStatus': None,
         # what the kiosk's card on the settings page is answered with when sent in the background (cards-in-place.js)
         'kioskLinkAnswer': 'settings-kiosk-answer',
         # what the hosts' link sent in the background is answered with: the settings page the real server redirects to
@@ -310,6 +312,10 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/k/') and path.count('/') == 2:   # the kiosk's own page, asked for by kiosk.js before it is loaded
+            if state['kioskPageStatus']:
+                return self._send(state['kioskPageStatus'])
+            return self._send(200, b'<!DOCTYPE html><title>kiosk</title>', 'text/html; charset=utf-8')
         if path.startswith('/k/') and path.endswith('/list'):   # the kiosk fetches its list again (kiosk.js): logged, may be delayed
             self._note('GET', path, {})
             with open(os.path.join(stand.rendered, state['kioskList'] + '.html'), encoding='utf-8') as f:

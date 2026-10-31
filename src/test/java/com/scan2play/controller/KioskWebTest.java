@@ -330,5 +330,28 @@ class KioskWebTest {
         assertThat(page).contains("Varius Manx - Orła cień");
         write("kiosk-full.html", page);
         write("kiosk-result-full.html", send(new MockHttpSession(), "baśka wilki").getResponse().getContentAsString());
+        // the same list fetched again (kiosk.js), and as the answer to a 👍 on its last song: the scenarios that keep the list's place
+        write("kiosk-list-full.html", mockMvc.perform(get(KIOSK + "/list")).andExpect(status().isOk()).andReturn().getResponse()
+                .getContentAsString());
+        when(guestVoteService.myVotes(any(), eq(partyCode))).thenReturn(Set.of(29L));
+        write("kiosk-list-full-voted.html", mockMvc.perform(get(KIOSK + "/list")).andExpect(status().isOk()).andReturn().getResponse()
+                .getContentAsString());
+    }
+
+    /**
+     * The kiosk in a browser where the DJ is logged in: the page says so — on a tablet at the bar that login is the DJ's panel for
+     * any guest who leaves the kiosk, and the kiosk's own fetches keep it alive all night. A guest's browser: nothing.
+     */
+    @Test
+    void theKiosk_inABrowserWithALogin_saysSo() throws Exception {
+        assertThat(page(new MockHttpSession())).doesNotContain("id=\"kioskLoggedIn\"");
+        MockHttpSession session = new MockHttpSession();
+        org.springframework.security.core.context.SecurityContext login =
+                org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        login.setAuthentication(new org.springframework.security.authentication.TestingAuthenticationToken("dj", null, "ROLE_USER"));
+        session.setAttribute("SPRING_SECURITY_CONTEXT", login);
+        String html = page(session);
+        assertThat(html).contains("id=\"kioskLoggedIn\"", "zalogowana do panelu DJ-a");
+        write("kiosk-logged-in.html", html);
     }
 }

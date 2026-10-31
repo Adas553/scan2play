@@ -33,6 +33,9 @@
         <p th:if="${djLogo == null}" class="s2p-kiosk-logo"><span th:replace="~{fragments/components :: logo}">Scan2Play</span></p>
         <p th:if="${djName}" class="s2p-kiosk-dj" id="djName">🎧 <span th:text="${djName}">DJ Koko</span></p>
     </header>
+    <!--/* a login in this browser: on a tablet at the bar the DJ's panel is a tap away for a guest who leaves the kiosk */-->
+    <p th:if="${kioskLoggedIn}" id="kioskLoggedIn" class="alert alert-warning m-0 s2p-kiosk-login" role="note"
+       th:text="#{kiosk.logged_in}">This browser is logged in to the DJ panel…</p>
 
     <!--/* the party closed: when it opens, or "nie przyjmuje"; no form, no list */-->
     <section th:unless="${isActive}" class="s2p-kiosk-closed" id="kioskClosed">
