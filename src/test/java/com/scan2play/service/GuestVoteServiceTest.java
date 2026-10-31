@@ -159,4 +159,20 @@ class GuestVoteServiceTest {
         List<Long> kept = (List<Long>) session.getAttribute("myVotes_" + PARTY);
         assertThat(kept).hasSize(GuestVoteService.MY_VOTES_KEPT).startsWith(6L).endsWith((long) GuestVoteService.MY_VOTES_KEPT + 5);
     }
+
+    /** The end of a guest's turn at the kiosk in a session kept (V56): the 👍 stay on the songs, the next guest may give their own. */
+    @Test
+    void forget_letsTheNextGuestVote_andTheVotesStayOnTheSongs() {
+        service.vote(session, PARTY, 7L);
+        service.vote(session, "OTHER", 9L);
+
+        service.forget(session, PARTY);
+
+        assertThat(service.myVotes(session, PARTY)).isEmpty();
+        assertThat(session.getAttribute("myVotes_" + PARTY)).as("not brought back from the session either").isNull();
+        assertThat(service.myVotes(session, "OTHER")).containsExactly(9L);
+        verify(repository, never()).removeGuestVote(anyLong(), anyString());
+        assertThat(service.vote(session, PARTY, 7L)).isEqualTo(GuestVoteService.Result.COUNTED);
+        verify(repository, times(2)).addGuestVote(7L, PARTY);
+    }
 }

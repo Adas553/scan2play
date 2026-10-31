@@ -85,6 +85,17 @@ def default_state():
         'guestLimitsUse': '0,0',
         # The X-Party-Active header of every poll answer: false = the DJ ended the party (in any window)
         'partyActive': True,
+        # The venue's kiosk (V56): what its list's fetch (/k/<token>/list) and its 👍 (/k/<token>/vote) are answered with — rendered
+        # kiosk-list*.html; a status in place of the 👍's answer (e.g. 403: the turn's session ran out)
+        'kioskList': 'kiosk-list',
+        'kioskVoteAnswer': 'kiosk-list-voted',
+        'kioskVoteStatus': None,
+        # what the kiosk's own page (/k/<token>) answers: kiosk.js asks for it before it loads it (None: 200, a page)
+        'kioskPageStatus': None,
+        # what the kiosk's card on the settings page is answered with when sent in the background (cards-in-place.js)
+        'kioskLinkAnswer': 'settings-kiosk-answer',
+        # what the hosts' link sent in the background is answered with: the settings page the real server redirects to
+        'hostLinkAnswer': 'settings-host-link-answer',
         # The X-Party-Schedule header of every poll answer (V55): the planned moments, "open:<epoch s>,close:<epoch s>" — None: no header
         'partySchedule': None,
         # what "Godziny imprezy" sent in the background is answered with (V55): a rendered card, settings-hours-answer-*.html
@@ -301,6 +312,14 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/k/') and path.count('/') == 2:   # the kiosk's own page, asked for by kiosk.js before it is loaded
+            if state['kioskPageStatus']:
+                return self._send(state['kioskPageStatus'])
+            return self._send(200, b'<!DOCTYPE html><title>kiosk</title>', 'text/html; charset=utf-8')
+        if path.startswith('/k/') and path.endswith('/list'):   # the kiosk fetches its list again (kiosk.js): logged, may be delayed
+            self._note('GET', path, {})
+            with open(os.path.join(stand.rendered, state['kioskList'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path.startswith('/p/') and path.endswith('/tv/list'):   # the screen for a TV fetches its list again (tv.js)
             if state['tvListStatus']:
                 return self._send(state['tvListStatus'])
@@ -394,6 +413,12 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and path.endswith('/vote'):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+        if path.startswith('/k/') and path.endswith('/vote'):   # a 👍 at the kiosk (V56), sent by fetch
+            fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+        if path == '/dj/dashboard/host-link':         # the hosts' link: sent by fetch (cards-in-place.js) or as a page load
+            fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+        if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
+            fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/schedule':           # "Godziny imprezy" sent by fetch (V55): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
@@ -445,6 +470,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/dashboard/dj-links':           # the DJ's profiles: a redirect when saved, as the real server, or 400
             status = state.get('djLinksStatus', 302)
             return self._send(status, headers={'Location': '/dj/dashboard'}) if status == 302 else self._send(status)
+        if path == '/dj/dashboard/host-link' and fields.get('X-Requested-With') == 'fetch':
+            # the hosts' link sent in the background: the settings page the real server's redirect leads to (the box taken from it)
+            with open(os.path.join(stand.rendered, state['hostLinkAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path in ('/dj/dashboard/host-lists', '/dj/dashboard/host-link', '/dj/panel'):
             # the hosts' lists and link (V29), the panel switcher (V30): a redirect
             return self._send(302, headers={'Location': '/dj/dashboard'})
@@ -465,8 +494,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
         if path == '/dj/dashboard/welcome-dismiss':   # the welcome card closed for good (V48): nothing to say
             return self._send(204)
+        if path == '/dj/dashboard/kiosk-link':        # the kiosk's link (V56): the card alone, as the real server answers a fetch
+            with open(os.path.join(stand.rendered, state['kioskLinkAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/schedule':           # "Godziny imprezy" (V55): the card alone, as the real server answers a fetch
             with open(os.path.join(stand.rendered, state['scheduleAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/k/') and path.endswith('/next'):   # "Następny gość" sent by fetch (V56): the real server's redirect leads
+            return self._send(200, b'<!DOCTYPE html><title>kiosk</title>', 'text/html; charset=utf-8')   # to the kiosk's page
+        if path.startswith('/k/') and path.endswith('/vote'):   # the kiosk's 👍 (V56): the list as the real server renders it
+            if state['kioskVoteStatus']:
+                return self._send(state['kioskVoteStatus'])
+            with open(os.path.join(stand.rendered, state['kioskVoteAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/schedule/cancel':   # a planned moment taken away on the panel (V55): the plan without it, a redirect
             with stand.lock:

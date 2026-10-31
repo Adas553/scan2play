@@ -27,5 +27,10 @@ public enum PlanFeature {
      * The DJ's logo (V45) on the guest pages, the TV screen, the print and the summary. Without Pro the uploaded logo is kept but not
      * shown; deleting it needs no plan.
      */
-    LOGO
+    LOGO,
+    /**
+     * The venue's kiosk (V56): a tablet where guests without a phone ask for a song and vote. Without Pro the link opens nothing (a
+     * 404) and the card offers Pro; a link made before is kept, and taking it away needs no plan.
+     */
+    KIOSK
 }

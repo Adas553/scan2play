@@ -140,6 +140,14 @@ public class PartySettingsEntity {
     @ToString.Exclude
     private Instant hostTokenMadeAt;
 
+    /**
+     * The secret of the venue's kiosk link ({@code /k/{token}}, V56): a tablet where guests without a phone ask and vote; null = no
+     * link. It does not run out — a tablet stays in the venue —; a new one makes the old link dead.
+     */
+    @Column(length = 32, unique = true)
+    @ToString.Exclude
+    private String kioskToken;
+
     /** The secret of the staff's invitation link ({@code /join/{token}}, V30): a bartender joins with it; null = no link. */
     @Column(length = 32, unique = true)
     @ToString.Exclude
@@ -292,6 +300,11 @@ public class PartySettingsEntity {
     /** The invitation link lets someone join: there is one, and it was made less than {@value #LINK_DAYS} days ago. */
     public boolean staffLinkWorks(Instant now) {
         return staffToken != null && linkWorks(staffTokenMadeAt, now);
+    }
+
+    /** The kiosk's address to copy and open on the tablet ({@code cleanBaseUrl/k/{token}}, V56), or null: no kiosk link. */
+    public String kioskLink(String cleanBaseUrl) {
+        return kioskToken == null ? null : cleanBaseUrl + "/k/" + kioskToken;
     }
 
     /** Until when a link made at {@code madeAt} works. */

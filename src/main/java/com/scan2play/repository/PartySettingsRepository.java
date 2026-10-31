@@ -46,6 +46,9 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
     /** The party whose hosts' link (V29, {@code /h/{token}}) has this secret — the unique index of the column. */
     Optional<PartySettingsEntity> findByHostToken(String hostToken);
 
+    /** The party whose kiosk link (V56, {@code /k/{token}}) has this secret — the unique index of the column. */
+    Optional<PartySettingsEntity> findByKioskToken(String kioskToken);
+
     /** The party whose staff invitation link (V30, {@code /join/{token}}) has this secret — the unique index of the column. */
     Optional<PartySettingsEntity> findByStaffToken(String staffToken);
 

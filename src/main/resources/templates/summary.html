@@ -71,6 +71,9 @@
         <!--/* the songs the DJ added in the panel (V44), counted in the requests — only when there were some */-->
         <div th:if="${summary.addedByDj > 0}" class="stat" id="addedByDjStat"><strong th:text="${summary.addedByDj}">2</strong>
             <span th:text="#{summary.stat.added_by_dj}">Added by you</span><small th:text="#{summary.stat.added_by_dj.hint}">counted in the requests</small></div>
+        <!--/* the requests sent at the venue's kiosk (V56), counted in the requests — only when there were some */-->
+        <div th:if="${summary.viaKiosk > 0}" class="stat" id="viaKioskStat"><strong th:text="${summary.viaKiosk}">3</strong>
+            <span th:text="#{summary.stat.kiosk}">From the kiosk</span><small th:text="#{summary.stat.added_by_dj.hint}">counted in the requests</small></div>
     </section>
     <!--/* how long the played requests waited — only when the DJ marked some as played */-->
     <p th:if="${summary.averageWaitMinutes != null}" class="wait" id="wait"

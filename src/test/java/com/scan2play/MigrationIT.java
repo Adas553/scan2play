@@ -300,6 +300,19 @@ class MigrationIT extends PostgresIntegrationTest {
         assertThat(plan).contains("idx_party_settings_next_open_at", "idx_party_settings_next_close_at");
     }
 
+    /** V56: the venue's kiosk — a link's secret, unique, none by default; a request from it marked, none by default. */
+    @Test
+    void aParty_mayHaveAKiosk_andItsRequestsAreMarked() {
+        String code = "V56" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT kiosk_token FROM party_settings WHERE party_code = ?", String.class, code)).isNull();
+        assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE indexname = 'uk_party_settings_kiosk_token'"
+                + " AND indexdef LIKE 'CREATE UNIQUE INDEX%'", String.class)).hasSize(1);
+        jdbc.update("INSERT INTO song_requests (party_code, song_name, decision, requested_at) VALUES (?, 'Wilki - Baśka', 'accepted', now())", code);
+        assertThat(jdbc.queryForObject("SELECT via_kiosk FROM song_requests WHERE party_code = ?", Boolean.class, code)).isFalse();
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

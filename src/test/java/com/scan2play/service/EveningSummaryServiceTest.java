@@ -128,6 +128,19 @@ class EveningSummaryServiceTest {
         assertThat(summary.truncated()).isFalse();
     }
 
+    /** Requests sent at the venue's kiosk (V56): counted in the requests and apart, as the DJ's own. */
+    @Test
+    void theKiosksRequests_areCountedApart() {
+        SongRequestEntity kiosk = request("Kult - Arahja", "played", "21:00", "21:10", 1);
+        kiosk.setViaKiosk(true);
+        EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING,
+                List.of(request("Wilki - Baśka", "played", "20:00", "20:30", 2), kiosk));
+
+        assertThat(summary.requests()).isEqualTo(2);
+        assertThat(summary.viaKiosk()).isEqualTo(1);
+        assertThat(summary.votes()).as("a kiosk's guest's vote is a guest's").isEqualTo(3);
+    }
+
     /** A song the DJ added (V44): one of the requests, counted apart; its first vote is the DJ's, so the guests' votes leave it out. */
     @Test
     void aSongTheDjAdded_isCountedApart_andItsFirstVoteIsNotAGuests() {
@@ -145,8 +158,28 @@ class EveningSummaryServiceTest {
         messages.setDefaultEncoding("UTF-8");
         messages.setFallbackToSystemLocale(false);
         String[] lines = EveningSummaryService.toCsv(requests, messages, Locale.forLanguageTag("pl")).split("\r\n");
-        assertThat(lines[1]).endsWith(";");
-        assertThat(lines[2]).endsWith(";\"tak\"");
+        assertThat(lines[1]).endsWith(";;");
+        assertThat(lines[2]).endsWith(";\"tak\";");
+    }
+
+    /** A request sent at the venue's kiosk (V56): "tak" in the CSV's column "Z kiosku", after "Dodana przez DJ-a". */
+    @Test
+    void theCsv_saysWhichRequestsCameFromTheKiosk() {
+        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+        SongRequestEntity kiosk = request("Kult - Arahja", "played", "21:00", "21:10", 1);
+        kiosk.setViaKiosk(true);
+
+        String[] lines = EveningSummaryService.toCsv(List.of(request("Wilki - Baśka", "played", "20:00", "20:30", 2), kiosk), messages,
+                Locale.forLanguageTag("pl")).split("\r\n");
+
+        assertThat(lines[0]).endsWith(";Dodana przez DJ-a;Z kiosku");
+        assertThat(lines[1]).endsWith(";;");
+        assertThat(lines[2]).endsWith(";;\"tak\"");
+        assertThat(EveningSummaryService.toCsv(List.of(kiosk), messages, Locale.ENGLISH).split("\r\n")[0])
+                .endsWith(";Added by the DJ;From the kiosk");
     }
 
     @Test
@@ -227,12 +260,12 @@ class EveningSummaryServiceTest {
 
         String[] lines = csv.split("\r\n");
         assertThat(lines[0]).isEqualTo((char) 0xFEFF
-                + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI;Dodana przez DJ-a");
+                + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI;Dodana przez DJ-a;Z kiosku");
         assertThat(lines[1]).isEqualTo("27;\"2026-10-03 21:00\";\"2026-10-03 21:30\";\"Varius Manx - Orła cień\";"
-                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";");
+                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";;");
         // a request the AI rejected has no number
         assertThat(lines[2]).isEqualTo(";\"2026-10-03 22:00\";;\"'=HYPERLINK(\"\"http://x\"\")\";\"'@SUM(1;2)\";1;0;"
-                + "\"odrzucona przez AI\";;");
+                + "\"odrzucona przez AI\";;;");
         assertThat(lines).hasSize(3);
     }
 
@@ -299,7 +332,7 @@ class EveningSummaryServiceTest {
                 2L, com.scan2play.model.LibraryMark.SIMILAR, 3L, com.scan2play.model.LibraryMark.MISSING), messages,
                 Locale.forLanguageTag("pl")).split("\r\n");
 
-        assertThat(lines[0]).endsWith(";Komentarz AI;Dodana przez DJ-a;W bibliotece");
+        assertThat(lines[0]).endsWith(";Komentarz AI;Dodana przez DJ-a;Z kiosku;W bibliotece");
         assertThat(lines[1]).endsWith(";\"tak\"");
         assertThat(lines[2]).endsWith(";\"podobny\"");
         assertThat(lines[3]).endsWith(";\"nie\"");

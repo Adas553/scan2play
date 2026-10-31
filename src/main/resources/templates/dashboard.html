@@ -375,6 +375,9 @@
                             <!--/* added in the panel (V44): a guest asked at the booth — no guest's words, no AI's comment */-->
                             <span th:if="${req.addedByDj}" class="badge text-bg-dark border border-info text-info align-self-start s2p-added-by-dj"
                                   th:title="#{dashboard.added_by_dj.title}" th:text="#{dashboard.added_by_dj}">🎧 Added by the DJ</span>
+                            <!--/* sent at the venue's kiosk (V56): a guest without a phone, at the tablet */-->
+                            <span th:if="${req.viaKiosk}" class="badge text-bg-dark border border-secondary text-light align-self-start s2p-via-kiosk"
+                                  th:title="#{dashboard.kiosk.mark.title}" th:text="#{dashboard.kiosk.mark}">🖥 kiosk</span>
                             <!--/* on the hosts' "nie grać" list: only a song the DJ added anyway (the guests' are refused), or one asked
                                  for before the list said so — marked, not stopped: the DJ decides */-->
                             <span th:if="${blockedSongs != null and blockedSongs.matches(req.songName)}"

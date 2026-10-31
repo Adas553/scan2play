@@ -183,6 +183,12 @@ public class SongEvaluationService {
      */
     public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style, Set<Long> guestsOwnIds,
                                           String dedication) {
+        return evaluateAndSaveSong(partyCode, guestText, style, guestsOwnIds, dedication, false);
+    }
+
+    /** The same, from the venue's kiosk ({@code viaKiosk}, V56): a new request is marked so, the DJ's queue shows it. */
+    public DjResponse evaluateAndSaveSong(String partyCode, String guestText, String style, Set<Long> guestsOwnIds,
+                                          String dedication, boolean viaKiosk) {
         String songName = forPrompt(guestText);
         String dedicationText = asDedication(dedication);
         log.info("Party [{}]: Evaluating request: '{}' with style: '{}'", partyCode, songName, style);
@@ -238,7 +244,7 @@ public class SongEvaluationService {
 
         // 3. Database Operations: a new row, or one more vote on the same song waiting in the queue
         SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds,
-                toSave);
+                toSave, viaKiosk);
         if (saved.outcome() == SongRequestCommandService.Outcome.SKIPPED_BY_DJ) {
             // The DJ skipped this song lately (usually: they do not have it): nothing saved, the guest is told to pick another one
             return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.skipped_by_dj", null, locale),
@@ -428,7 +434,7 @@ public class SongEvaluationService {
 
     private SongRequestCommandService.Saved saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style,
                                                             String trackUrl, Set<Long> guestsOwnIds,
-                                                            SongRequestCommandService.Dedication dedication) {
+                                                            SongRequestCommandService.Dedication dedication, boolean viaKiosk) {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
                 .songName(aiResponse.songName())
@@ -439,6 +445,7 @@ public class SongEvaluationService {
                 .trackUrl(trackUrl)
                 // a visitor's request to the demo is theirs alone (DemoParty): the other visitors and the demo's TV never see it
                 .checked(!aiResponse.isUnchecked() && !DemoParty.isDemo(partyCode))
+                .viaKiosk(viaKiosk)
                 .requestedAt(Instant.now())
                 .build();
 

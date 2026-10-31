@@ -171,6 +171,9 @@ public class SecurityConfig {
                         .requestMatchers("/csp-report").permitAll()
                         // The hosts' lists (V29): a page opened by its secret link, without an account (HostController)
                         .requestMatchers("/h/*").permitAll()
+                        // the venue's kiosk (V56): a tablet without a login, its secret link and what its page sends; "/k" the
+                        // same page by the kiosk's cookie
+                        .requestMatchers("/k", "/k/*", "/k/*/*").permitAll()
                         // The staff's invitation (V30): opened before the login, it names the party (StaffController)
                         .requestMatchers("/join", "/join/*").permitAll()   // GET /join: the link pasted on the landing page
                         // Legal pages (Privacy Policy, Terms of Service) and the guide "Jak działa Scan2Play" (public: a DJ reads it before

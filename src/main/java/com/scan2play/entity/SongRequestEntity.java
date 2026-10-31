@@ -102,6 +102,11 @@ public class SongRequestEntity {
     @Builder.Default
     private boolean addedByDj = false;
 
+    /** Whether a guest sent it at the venue's kiosk (V56, {@code /k/{token}}): the queue marks it. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean viaKiosk = false;
+
     private String style;
     private String decision;
 
