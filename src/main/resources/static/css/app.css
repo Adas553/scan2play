@@ -70,6 +70,7 @@
     --s2p-warning:        #ffc107;                   /* a skip (⏭), "Pomiń" under the pointer, a warning's words */
     --s2p-action-45:      rgba(13, 202, 240, 0.45);
     --s2p-action-28:      rgba(13, 202, 240, 0.28);
+    --s2p-action-20:      rgba(13, 202, 240, 0.2);
     --s2p-action-12:      rgba(13, 202, 240, 0.12);
     --s2p-action-07:      rgba(13, 202, 240, 0.07);
     --s2p-action-00:      rgba(13, 202, 240, 0);
@@ -96,6 +97,24 @@ body {
     background-color: var(--s2p-bg);
     color: var(--s2p-text);
     font-family: var(--s2p-font);
+}
+/* The page's glow: the logo's cyan, faint, from the top-left corner and from the bottom-right one (the look of the Instagram
+   pictures). On a layer fixed to the screen, not on body itself: body's background scrolls away with a long page (the queue, the
+   guests' list), and `background-attachment: fixed` is ignored by Safari on an iPhone and repaints the page on every scroll on
+   Android. Sized by the screen, so a phone and a laptop see the same. The strongest tint under it is ~#0b3139: the muted text keeps
+   6 : 1 there. Not printed. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(95% 55% at 15% -10%, var(--s2p-action-20), var(--s2p-action-00) 70%),
+        radial-gradient(85% 55% at 110% 105%, var(--s2p-action-12), var(--s2p-action-00) 70%);
+}
+@media print {
+    body::before { display: none; }
 }
 
 /* ==========================================================================

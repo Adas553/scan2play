@@ -16,6 +16,7 @@ import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
 
 import java.time.Duration;
 import java.util.List;
@@ -61,6 +62,18 @@ public class AppConfig {
             mappings.add("webmanifest", "application/manifest+json");
             factory.setMimeMappings(mappings);
         };
+    }
+
+    /**
+     * The sessions' attributes written with PostgreSQL's {@code INSERT … ON CONFLICT DO UPDATE}. Spring Session inserts an attribute
+     * that was not in the session when the request read it, so two requests of one session at once that both add the same one
+     * (the CSRF token of a new session: a page and its first poll, a crawler fetching pages in parallel with one cookie) met the
+     * primary key, and the second request was a 500. Now the later write wins, as for an attribute that was there.
+     * {@code SessionStoreIT}.
+     */
+    @Bean
+    public PostgreSqlJdbcIndexedSessionRepositoryCustomizer sessionAttributesUpsert() {
+        return new PostgreSqlJdbcIndexedSessionRepositoryCustomizer();
     }
 
     private CaffeineCache buildCache(String name, Duration ttl, int maxSize) {
