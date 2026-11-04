@@ -284,7 +284,8 @@ uploaded again: "Wgraj kolekcję jeszcze raz…", `LibraryDetailsMigrationIT`). 
 (`party_code` FK to `dj_library` ON DELETE CASCADE, `title_key` ≤ 200, `artists` ≤ 200, `swapped` — V43), PK of the three — the
 queue's lookup, its titles at once (`title_key = ANY(?)`). Matched by the keys alone (`util/LibraryKey`): the title without a version in
 brackets or after a dash with a version's word ("- Original Mix",
-"- 2011 Remaster", "- Live") and without "feat. X"; the artists a sorted set (split at "," "&" "x" "and" "i" "feat." "vs" …, no
+"- 2011 Remaster", "- Live") and without "feat. X", one word's two spellings made one on the key (V59, `LibraryKey.SPELLINGS`: "ing"
+is "in" — "Livin'" and "Living" —, "number" is "no"; V59 changed the keys saved before the same way); the artists a sorted set (split at "," "&" "x" "and" "i" "feat." "vs" …, no
 leading "The"). Beside the key, only shown (V57, `DjLibraryParser.Track`, all null when the file does not say it): `artist_name` and
 `title_name` as the file writes them (one row per key: of a song's versions the shortest title, "One More Time" before "One More Time
 (Extended Mix)"; an M3U's artist is the part of its name before " - "), and from rekordbox `bpm` (numeric(5,2), `AverageBpm`; 0 is
@@ -1382,6 +1383,7 @@ schema behind Flyway's back.
 | V56 | `party_settings.kiosk_token` varchar(32) (unique index `uk_party_settings_kiosk_token`), `song_requests.via_kiosk` boolean NOT NULL DEFAULT false; data: `KIOSK` added to the staff's, the invitation link's and the invitations' permissions that were the whole set before (the co-organisers) — the venue's kiosk (`MigrationIT`, `KioskMigrationIT`) |
 | V57 | `dj_library_track.artist_name`, `title_name` varchar(200), `bpm` numeric(5,2), `tonality` varchar(10), `genre` varchar(100), `year` smallint, all nullable; `dj_library.with_details` boolean NOT NULL DEFAULT false: each song of the DJ's library as the file writes it, beside its key — only shown (the queue's tempo and key); the libraries of before stay, without them (`LibraryDetailsMigrationIT`, `DjLibraryIT`) |
 | V58 | `party_settings.library_hints` boolean NOT NULL DEFAULT true: the guests' song suggestions the DJ has first, "✓ DJ ma" — "Podpowiedzi gości" in the library's card (`MigrationIT`, `LibraryHintService`) |
+| V59 | data: `dj_library_track.title_key` with one word's two spellings made one, as `LibraryKey.SPELLINGS` makes the new keys ("ing" → "in", "number" → "no", on the key without spaces); two tracks of a party whose keys became one merged, the smaller key of before kept (`LibraryKeySpellingsMigrationIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on

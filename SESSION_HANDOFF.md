@@ -140,6 +140,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    "?" and ⭐ through, the nearest songs offered). Open: a real rekordbox export and an M3U of VirtualDJ / Serato to check the fields
    (the fixture is built by hand); whether the rating should filter anything. To try: the test files the owner was given
    (`biblioteka-test-rekordbox.xml`, `biblioteka-test.m3u8`), the guest page typing "wilki".
+   **Then V59** (the owner, 2026-11-04: "jeśli 3 jest łatwe … możesz zrobić"): one word's two spellings make one key — "Livin'" /
+   "Living", "Stayin'" / "Staying", "Mambo No 5" / "Number 5" were "✗" —, the keys saved before changed the same way by the migration.
+   Still apart (not done: the stored keys have no spaces, so such a rule cannot be applied to them): "&" / "and" in a title ("Rock &
+   Roll"). The owner has no library of their own: a Spotify playlist exported with Exportify (CSV) can be made an M3U8 to try the
+   matching on real titles; rekordbox's own format only from rekordbox (free) with a few files.
 
 ## Later (not now)
 

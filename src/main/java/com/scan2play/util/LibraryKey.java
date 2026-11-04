@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
  * <ul>
  *     <li>the title without a version: in brackets ("(Radio Edit)", "[Extended Mix]", "(feat. X)") or after a dash with a version's
  *     word ("- Original Mix", "- 2011 Remaster", "- Live"), and without a guest artist ("feat. X");</li>
+ *     <li>the spellings of one word made one (V59, {@link #SPELLINGS}): "Livin'" is "Living", "Mambo No. 5" is "Mambo Number 5";</li>
  *     <li>the artists a set, sorted and joined by "+": split at ",", "&amp;", "x", "and", "i", "feat.", "vs" …, each without a leading
  *     "The" — "Kygo &amp; Selena Gomez" is "Selena Gomez, Kygo".</li>
  * </ul>
@@ -46,6 +47,15 @@ public record LibraryKey(String title, String artists) {
             "(?i)\\s-\\s[^-]*\\b(?:mix|edit|remix|version|remaster(?:ed)?|radio|extended|original|club|live|acoustic|instrumental"
                     + "|rework|bootleg|vip|dub)\\b[^-]*$");
 
+    /**
+     * The spellings of one word written two ways, made one in a title's key — on the key as {@link SongNames#comparable} leaves it,
+     * without spaces, so that the keys saved before (V59 changes them the same way) can be changed too: "ing" is "in" ("Livin' On A
+     * Prayer" and "Living on a Prayer", "Stayin' Alive" and "Staying Alive" — a file's name drops the apostrophe as well), "number" is
+     * "no" ("Mambo No. 5", "Mambo Number 5"). In the same order as the migration's. Two titles of one artist made one by it ("Sing",
+     * "Sin") would say "✓" for each other: a song a DJ would have both of is rare, and the title alone of 3 letters is never "?".
+     */
+    static final String[][] SPELLINGS = {{"ing", "in"}, {"number", "no"}};
+
     /** The AI's one line, "Artist - Title" (the first dash parts them; none: a title alone). */
     public static LibraryKey of(String name) {
         String line = SongNames.tidy(name);
@@ -60,7 +70,7 @@ public record LibraryKey(String title, String artists) {
                 .filter(one -> !one.isEmpty()).distinct().sorted().collect(Collectors.joining("+"));
         String core = BRACKETS.matcher(SongNames.tidy(title)).replaceAll(" ");
         core = VERSION_AFTER_DASH.matcher(FEATURING.matcher(" " + core).replaceAll(" ").strip()).replaceAll("");
-        return new LibraryKey(cut(SongNames.comparable(core)), cut(artists));
+        return new LibraryKey(cut(spelledOne(SongNames.comparable(core))), cut(artists));
     }
 
     /** No title left to match: a line of punctuation, a version alone. */
@@ -117,6 +127,15 @@ public record LibraryKey(String title, String artists) {
 
     private boolean sharesAnArtistWith(Set<String> theirs) {
         return !artists.isEmpty() && Arrays.stream(artists.split("\\+")).anyMatch(theirs::contains);
+    }
+
+    /** A title's key with {@link #SPELLINGS} made one. */
+    static String spelledOne(String key) {
+        String one = key;
+        for (String[] spelling : SPELLINGS) {
+            one = one.replace(spelling[0], spelling[1]);
+        }
+        return one;
     }
 
     private static String cut(String key) {
