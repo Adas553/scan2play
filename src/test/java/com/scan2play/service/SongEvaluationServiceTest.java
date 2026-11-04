@@ -61,11 +61,15 @@ class SongEvaluationServiceTest {
     private final PromptBuilder promptBuilder = PromptBuilder.loaded(new DefaultResourceLoader());
     private final AiHealthMonitor aiHealth = new AiHealthMonitor();
 
+    /** The refusals before the AI, counted for the evening summary (V63). */
+    @Mock
+    private EveningRefusals refusals;
+
     @BeforeEach
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, PromptBuilder.loaded(new DefaultResourceLoader()), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off());
+                messageSource, PromptBuilder.loaded(new DefaultResourceLoader()), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off(), refusals);
         service.init();
     }
 
@@ -297,7 +301,7 @@ class SongEvaluationServiceTest {
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, PromptBuilder.loaded(new DefaultResourceLoader()),
-                new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans) {
+                new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans, refusals) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -542,6 +546,8 @@ class SongEvaluationServiceTest {
 
         assertThat(response.isMood()).isTrue();
         verify(songRequestRepository, never()).save(any());
+        // counted for the evening summary (V63): nothing of the guest's words
+        verify(refusals).count(PARTY_CODE, com.scan2play.model.RefusalReason.NOT_A_SONG);
     }
 
     @Test
@@ -594,6 +600,7 @@ class SongEvaluationServiceTest {
         assertThat(response.comment()).isEqualTo("Pick another one");
         assertThat(response.requestId()).isNull();
         verify(songRequestRepository, never()).save(any());
+        verify(refusals).count(PARTY_CODE, com.scan2play.model.RefusalReason.SKIPPED_BY_DJ);
     }
 
     // ---- The plans (V35): the party as its organiser's plan lets it work ----
@@ -644,6 +651,7 @@ class SongEvaluationServiceTest {
         assertThat(response.requestId()).isNull();
         assertThat(prompts).as("nothing for the AI to judge").isEmpty();
         verify(songRequestRepository, never()).save(any());
+        verify(refusals).count(PARTY_CODE, com.scan2play.model.RefusalReason.HOSTS_BLOCKED);
     }
 
     @Test
@@ -657,6 +665,7 @@ class SongEvaluationServiceTest {
         assertThat(response.decision()).isEqualTo("rejected");
         assertThat(response.songName()).isEqualTo("Akcent - Przez twe oczy zielone");
         verify(songRequestRepository, never()).save(any());
+        verify(refusals).count(PARTY_CODE, com.scan2play.model.RefusalReason.HOSTS_BLOCKED);
     }
 
     @Test
@@ -965,5 +974,22 @@ class SongEvaluationServiceTest {
         assertThat(saved.getValue().isChecked()).as("the visitor's alone").isFalse();
         verify(dedications).save(any());
         assertThat(aiHealth.takeSummary()).as("the AI's health: nothing to count").isNull();
+    }
+
+    /**
+     * Why the AI rejected a request (V62, for the evening summary), from what the code knows: a song of the recently played list
+     * the AI was given (any spelling of it) played already, any other refusal is off the vibe; a request let through has none.
+     */
+    @Test
+    void theRejectReason_isPlayedAlready_whenTheSongPlayedLately_elseOffTheVibe() {
+        List<String> played = List.of("Zenek Martyniuk - Przekorny los", "Sanah - Szampan");
+
+        assertThat(SongEvaluationService.rejectReason(new DjResponse("rejected", "Już leciała!", "zenek martyniuk – przekorny los", "title"), played))
+                .isEqualTo(com.scan2play.model.RejectReason.DUPLICATE);
+        assertThat(SongEvaluationService.rejectReason(new DjResponse("rejected", "Nie dziś.", "Nirvana - Smells Like Teen Spirit", "title"), played))
+                .isEqualTo(com.scan2play.model.RejectReason.OFF_VIBE);
+        assertThat(SongEvaluationService.rejectReason(new DjResponse("rejected", "Nie dziś.", "Sanah - Szampan", "title"), List.of()))
+                .as("no duplicate window: the AI was given no list").isEqualTo(com.scan2play.model.RejectReason.OFF_VIBE);
+        assertThat(SongEvaluationService.rejectReason(new DjResponse(DECISION_ACCEPTED, "Jasne!", "Sanah - Szampan", "title"), played)).isNull();
     }
 }

@@ -95,7 +95,7 @@ class PlanFeatureEndpointsTest {
                         new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class)),
                         new DjPartySettingsController(settings, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, plans, com.scan2play.service.PartySchedules.of(settings)),
                         dashboard,
-                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans),
+                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans, "https://www.scan2play.com.pl/"),
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),
                                 settings, DjLibraryController.MAX_BYTES),
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()))
@@ -119,6 +119,9 @@ class PlanFeatureEndpointsTest {
                         .param("cooldownMinutes", "1").param("duplicateCheckWindow", "30")),
                 Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary").param("party", PUB)),
                 Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary/csv").param("party", PUB)),
+                Arguments.of(PlanFeature.SUMMARY, true, post("/dj/summary/title").param("party", PUB).param("evening", "2026-10-10").param("title", "x")),
+                Arguments.of(PlanFeature.SUMMARY, true, post("/dj/summary/share").param("party", PUB).param("evening", "2026-10-10")),
+                Arguments.of(PlanFeature.SUMMARY, true, post("/dj/summary/share/off").param("party", PUB).param("evening", "2026-10-10")),
                 Arguments.of(PlanFeature.LIBRARY, false, post("/dj/library").param("partyCode", PUB)
                         .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM).content("#EXTM3U\nA - B.mp3\n")),
                 // the guests' suggestions marked by the library (V58): switched on only with Pro

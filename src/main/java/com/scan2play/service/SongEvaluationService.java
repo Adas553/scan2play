@@ -13,6 +13,8 @@ import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
+import com.scan2play.model.RefusalReason;
+import com.scan2play.model.RejectReason;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongList;
 import com.scan2play.util.SongNames;
@@ -127,6 +129,8 @@ public class SongEvaluationService {
     private final PushNotificationService pushNotificationService;
     private final PartyStaffService partyStaffService;
     private final PlanService planService;
+    /** The requests refused before the AI judged a song, counted for the evening summary (V63). */
+    private final EveningRefusals eveningRefusals;
 
     /** The answer's configs: the model, its thinking, the schema (with the dedication's field or without). */
     @PostConstruct
@@ -222,6 +226,7 @@ public class SongEvaluationService {
         }
         if (aiResponse.isMood()) {
             log.info("Party [{}]: '{}' reads as a mood, not a song — not saved", partyCode, songName);
+            eveningRefusals.count(partyCode, RefusalReason.NOT_A_SONG);
             return aiResponse;
         }
         // the song the AI worked out from a line of the lyrics or an artist may be one the hosts asked not to play
@@ -244,9 +249,10 @@ public class SongEvaluationService {
 
         // 3. Database Operations: a new row, or one more vote on the same song waiting in the queue
         SongRequestCommandService.Saved saved = saveSongRequest(partyCode, aiResponse, asTyped(guestText), style, trackUrl, guestsOwnIds,
-                toSave, viaKiosk);
+                toSave, viaKiosk, rejectReason(aiResponse, recentlyPlayed));
         if (saved.outcome() == SongRequestCommandService.Outcome.SKIPPED_BY_DJ) {
             // The DJ skipped this song lately (usually: they do not have it): nothing saved, the guest is told to pick another one
+            eveningRefusals.count(partyCode, RefusalReason.SKIPPED_BY_DJ);
             return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.skipped_by_dj", null, locale),
                     saved.request().getSongName(), aiResponse.requestKind());
         }
@@ -291,6 +297,7 @@ public class SongEvaluationService {
      */
     private DjResponse blockedByTheHosts(String partyCode, String songName, String requestKind, Locale locale) {
         log.info("Party [{}]: '{}' is on the hosts' do-not-play list — refused", partyCode, songName);
+        eveningRefusals.count(partyCode, RefusalReason.HOSTS_BLOCKED);
         return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.host_blocked", null, locale), songName,
                 requestKind);
     }
@@ -432,9 +439,22 @@ public class SongEvaluationService {
         return Texts.oneLine(guestText, GUEST_TEXT_MAX);
     }
 
+    /**
+     * Why the AI rejected the request (V62, for the evening summary): the song is one of the recently played ones the AI was given (the
+     * duplicate window) — else it was judged against the vibe. Null for a request let through.
+     */
+    static RejectReason rejectReason(DjResponse aiResponse, List<String> recentlyPlayed) {
+        if (!DECISION_REJECTED.equalsIgnoreCase(aiResponse.decision())) {
+            return null;
+        }
+        return recentlyPlayed.stream().anyMatch(played -> SongNames.same(played, aiResponse.songName()))
+                ? RejectReason.DUPLICATE : RejectReason.OFF_VIBE;
+    }
+
     private SongRequestCommandService.Saved saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style,
                                                             String trackUrl, Set<Long> guestsOwnIds,
-                                                            SongRequestCommandService.Dedication dedication, boolean viaKiosk) {
+                                                            SongRequestCommandService.Dedication dedication, boolean viaKiosk,
+                                                            RejectReason rejectReason) {
         SongRequestEntity entity = SongRequestEntity.builder()
                 .partyCode(partyCode)
                 .songName(aiResponse.songName())
@@ -446,6 +466,7 @@ public class SongEvaluationService {
                 // a visitor's request to the demo is theirs alone (DemoParty): the other visitors and the demo's TV never see it
                 .checked(!aiResponse.isUnchecked() && !DemoParty.isDemo(partyCode))
                 .viaKiosk(viaKiosk)
+                .rejectReason(rejectReason)
                 .requestedAt(Instant.now())
                 .build();
 

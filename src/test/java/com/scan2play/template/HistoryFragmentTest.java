@@ -180,12 +180,12 @@ class HistoryFragmentTest {
     }
 
     @Test
-    @DisplayName("\"Podsumowanie wieczoru\" opens in a new tab beside \"Wyczyść historię\", whose question points to it")
+    @DisplayName("\"Podsumowanie wieczoru\" opens in a new tab beside \"Wyczyść historię\", whose question says the summary keeps the songs")
     void shouldOfferTheEveningSummary_beforeTheHistoryIsCleared() {
         String html = render(List.of(guest(1, "Alpha", "played")), false, PL);
 
         assertThat(html).contains("href=\"/dj/summary\" target=\"_blank\" rel=\"noopener\" id=\"summaryLink\"", ">Podsumowanie wieczoru<",
-                "Najpierw otwórz podsumowanie wieczoru.");
+                "Podsumowanie wieczoru zachowa ich piosenki (bez słów gości).");
         assertThat(html.indexOf("id=\"summaryLink\"")).isLessThan(html.indexOf("id=\"clearHistoryBtn\""));
         assertThat(render(List.of(), false, PL)).doesNotContain("summaryLink");
     }
