@@ -34,3 +34,7 @@ build/
 
 ### Database copies (docs/database-backup.md): personal data, never in the repo ###
 *.dump
+
+### Python (the browser tests run.py / server.py): compiled files ###
+__pycache__/
+*.pyc
