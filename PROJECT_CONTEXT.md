@@ -1091,6 +1091,11 @@ What every page shares, so a new screen looks like the others:
   Roboto, Helvetica Neue, then Arial (the TV the same) — the old list fell to Verdana on an iPhone (`one-font`). Not `system-ui` first:
   on a Linux without those fonts (GitHub's runner) it is DejaVu Sans, a tenth wider than Arial, and three one-line layouts broke. Messages (`.alert-*`) are a tint of their
   colour with a coloured edge and light text — Bootstrap's pale boxes were the brightest things on a dark page.
+- **The background** of every page of `app.css`: `--s2p-bg` with a faint glow of the action's cyan from the top-left corner
+  (`--s2p-action-20`) and the bottom-right one (`--s2p-action-12`) — `body::before`, a layer fixed to the screen under the page (the
+  glow stays while a long page scrolls; `background-attachment: fixed` is ignored by Safari on an iPhone), sized by the screen, not
+  printed. The cards keep their own background over it; the muted text keeps 6 : 1 on its strongest tint. The look of the Instagram
+  pictures. The TV (`tv.css`), the summary and the QR print have their own.
 - **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
   field, tab and menu item is **at least 44 px high** (browser scenarios `guest-touch-targets`, `dashboard-touch-targets`).
 - **Cards** of the settings: `.s2p-card-title` and one line of `.s2p-card-help`, then the fields, then one "Zapisz". The help line
