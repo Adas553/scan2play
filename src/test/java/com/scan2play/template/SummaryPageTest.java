@@ -43,13 +43,16 @@ import static org.mockito.Mockito.when;
 
 /**
  * The evening summary page ({@code summary.html}, {@link DjSummaryController}): rendered through the real controller, the real
- * service (over a mocked repository) and the real message bundles. Written to {@code target/summary/} for a look in a browser.
+ * service (over a mocked repository) and the real message bundles. Written to {@code target/summary/} for a look in a browser, and
+ * as {@code summary-<name>.html} to {@code target/browser-harness/} for the browser tests ({@code src/test/browser}, scenarios
+ * {@code summary-*}).
  */
 class SummaryPageTest {
 
     private static final String PARTY = "SUMM1";
     private static final LocalDate EVENING = LocalDate.of(2026, 10, 3);
     private static final Path OUT = Path.of("target", "summary");
+    private static final Path HARNESS = Path.of("target", "browser-harness");
 
     private static SpringTemplateEngine engine;
     private static ResourceBundleMessageSource messages;
@@ -98,6 +101,32 @@ class SummaryPageTest {
         return requests;
     }
 
+    /**
+     * A long wedding: 60 songs asked for from 19:00 to 02:00, 40 of them played (names up to "Dawid Podsiadło - Szczęśliwej drogi,
+     * już czas"), 8 rejected by the AI, 4 skipped, 8 waiting — what the hosts' version must fit on one A4 page.
+     */
+    private static List<SongRequestEntity> longWedding() {
+        String[] artists = {"Zenek Martyniuk", "Sanah", "Dawid Podsiadło", "Golec uOrkiestra", "Kwiat Jabłoni", "Daria Zawiałow",
+                "Maryla Rodowicz", "Varius Manx", "Lady Pank", "Kombii"};
+        String[] titles = {"Przekorny los", "Szampan", "Małomiasteczkowy", "Ściernisko", "Dziś późno pójdę spać", "Kinga",
+                "Niech żyje bal", "Orła cień", "Mniej niż zero", "Pokolenie", "Ale jazz!", "Nie ma fal", "Wszystko czego dziś chcę",
+                "Szczęśliwej drogi, już czas", "Jak zapomnieć", "Królowa łez", "Ta ostatnia niedziela", "Sto lat"};
+        List<SongRequestEntity> requests = new ArrayList<>();
+        for (int i = 0; i < 60; i++) {
+            int minutes = 19 * 60 + i * 7;   // 19:00 … 01:53
+            Instant asked = at(minutes / 60 % 24, minutes % 60);
+            String name = artists[i % artists.length] + " - " + titles[i % titles.length];   // 60 different pairs
+            String decision = i < 40 ? "played" : i < 48 ? "rejected" : "accepted";
+            SongRequestEntity request = request(name, decision, asked, i < 40 ? asked.plusSeconds(600L + i * 20L) : null, 1 + (i * 7) % 9);
+            if (i >= 48 && i < 52) {
+                request.setDecision("rejected");
+                request.setSkippedAt(asked.plusSeconds(300));
+            }
+            requests.add(request);
+        }
+        return requests;
+    }
+
     /** The party's library (V42): none, unless a test gives one. */
     private static com.scan2play.service.DjLibraryService libraries = mock(com.scan2play.service.DjLibraryService.class);
 
@@ -122,15 +151,22 @@ class SummaryPageTest {
     @Test
     void theDjsLogo_headsTheSummary() throws IOException {
         String html = render(Locale.forLanguageTag("pl"), null, List.of(), List.of(), "summary-logo");
+        // our logo at the foot
         assertThat(html).contains("class=\"dj-logo\"", "src=\"/p/" + PARTY + "/logo.png?v=0123456789abcdef\"");
         assertThat(html.indexOf("class=\"dj-logo\"")).isLessThan(html.indexOf("class=\"logo\""));
+        assertThat(html.indexOf("class=\"logo\"")).isGreaterThan(html.indexOf("<footer"));
     }
 
     private static String render(Locale locale, String evening, List<EveningSummaryService.Evening> evenings,
                                  List<SongRequestEntity> requests, String file) throws IOException {
+        return render(locale, evening, null, evenings, requests, file);
+    }
+
+    private static String render(Locale locale, String evening, String view, List<EveningSummaryService.Evening> evenings,
+                                 List<SongRequestEntity> requests, String file) throws IOException {
         SongRequestRepository repository = mock(SongRequestRepository.class);
         when(repository.findEvenings(eq(PARTY), anyInt())).thenReturn(evenings.stream()
-                .map(e -> new Object[]{e.day().toString(), e.requests()}).toList());
+                .map(e -> new Object[]{e.day().toString(), e.votes()}).toList());
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(requests);
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any()))
@@ -138,14 +174,16 @@ class SummaryPageTest {
         DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries), sessionHelper, messages, com.scan2play.service.Plans.off());
 
         ConcurrentModel model = new ConcurrentModel();
-        String view = controller.summary(evening, null, model, null, new MockHttpSession());
-        assertThat(view).isEqualTo("summary");
+        String template = controller.summary(evening, null, view, model, null, new MockHttpSession());
+        assertThat(template).isEqualTo("summary");
 
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
         context.setVariables(model.asMap());
-        String html = engine.process(view, context);
+        String html = engine.process(template, context);
+        Files.createDirectories(HARNESS);
+        Files.writeString(HARNESS.resolve("summary-" + file + ".html"), html, StandardCharsets.UTF_8);
         Files.createDirectories(OUT);
         // the stylesheet and the logo by a relative path, so that the file can be opened straight from target/
         Files.writeString(OUT.resolve(file + ".html"), html
@@ -156,58 +194,131 @@ class SummaryPageTest {
     }
 
     private static final List<EveningSummaryService.Evening> TWO_EVENINGS = List.of(
-            new EveningSummaryService.Evening(EVENING, 8), new EveningSummaryService.Evening(LocalDate.of(2026, 9, 26), 3));
+            new EveningSummaryService.Evening(EVENING, 34), new EveningSummaryService.Evening(LocalDate.of(2026, 9, 26), 3));
 
     @Test
     void theLatestEvening_withItsCounts_theTopSongs_theHours_andTheSetlist() throws IOException {
         String html = render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "wedding-pl");
 
-        assertThat(html).contains("<h1>Podsumowanie wieczoru</h1>", "sobota, 03.10.2026", "· 19:05–00:55", "🎧 DJ Koko");
-        // the evenings to pick, the shown one selected
-        assertThat(html).contains("<option value=\"2026-10-03\" selected=\"selected\">sobota, 03.10 (8)</option>",
-                "<option value=\"2026-09-26\">sobota, 26.09 (3)</option>");
+        assertThat(html).contains("<h1>Podsumowanie wieczoru</h1>", "sobota, 03.10.2026", "· prośby 19:05–00:55", "🎧 DJ Koko");
+        // the evenings to pick with their guests' votes, the shown one selected
+        assertThat(html).contains("<option value=\"2026-10-03\" selected=\"selected\">sobota, 03.10 · 👍 34</option>",
+                "<option value=\"2026-09-26\">sobota, 26.09 · 👍 3</option>");
         assertThat(html).contains("href=\"/dj/summary/csv?evening=2026-10-03&amp;party=" + PARTY + "\"", "id=\"printBtn\"");
-        // 8 requests, 6 played, the votes of the 7 the AI let through, 1 rejected by it, 1 waiting; no skipped, no cleared
-        assertThat(html).contains("<strong>8</strong><span>Prośby</span>", "<strong>6</strong><span>Zagrane</span>",
-                "<strong>34</strong><span>Głosy gości</span>", "<strong>1</strong><span>Odrzucone przez AI</span>",
-                "<span>Czekają</span>").doesNotContain("Pominięte przez DJ-a", "Wyczyszczone z kolejką");
+        // the version: the DJ's lit, the hosts' a link with view=hosts
+        assertThat(html).contains("aria-current=\"page\" class=\"on\">Dla mnie</a>",
+                "href=\"/dj/summary?evening=2026-10-03&amp;party=" + PARTY + "&amp;view=hosts\" id=\"viewHosts\">Dla gospodarzy</a>")
+                .doesNotContain("id=\"hostsHint\"");
+        // four counts: 6 played, the votes of the 7 songs the AI let through, 1 rejected by it; the rest in one line
+        assertThat(html).contains("<strong>6</strong><span>Zagrane</span>", "<strong>34</strong><span>Głosy gości</span>",
+                "<strong>7</strong><span>Piosenek chcianych</span>", "<strong>1</strong><span>Odrzucone przez AI</span>");
+        assertThat(html).contains("<span id=\"waitingCount\">czekają: 1</span>", "<span id=\"tipsStat\">💸 napiwki: 3</span>")
+                .doesNotContain("Pominięte", "pominięte przez DJ-a:", "wyczyszczone z kolejką:", "id=\"dedicationsStat\"");
         // the most wanted first; the rejected song is not one of them
         assertThat(html.indexOf("Przekorny los")).isLessThan(html.indexOf("Dancing Queen"));
         String top = html.substring(html.indexOf("id=\"top\""), html.indexOf("id=\"missed\"")).replaceAll("\\s+", " ");
-        // the tips the DJ counted (V28): a stat, and "💸 3" at the song
-        assertThat(html).contains("id=\"tipsStat\"", "<strong>3</strong>", "Napiwki");
         assertThat(top).contains("<span class=\"tips\">💸 3</span>");
         assertThat(top).contains("👍 9", "<span class=\"played\" title=\"zagrana\"><span class=\"icon\">✓</span> <span class=\"label\">zagrana</span></span>")
                 .doesNotContain("Smells Like Teen Spirit");
         // how long the played ones waited: 35, 15, 18, 15, 80 and 15 minutes
         assertThat(html).contains("Zagrane prośby czekały średnio 30 min (najdłużej 80 min).");
         // wanted, not heard: the one still waiting, with its status
-        String missed = html.substring(html.indexOf("id=\"missed\""), html.indexOf("id=\"artists\"")).replaceAll("\\s+", " ");
+        String missed = html.substring(html.indexOf("id=\"missed\""), html.indexOf("id=\"slots\"")).replaceAll("\\s+", " ");
         // the status: an icon and its word (a phone shows the icon alone, summary.css), the word as the title, a legend of the icons
         assertThat(missed).contains("Lady Pank - Mniej niż zero",
                 "<span class=\"status\" title=\"czeka\"><span class=\"icon\">⏳</span> <span class=\"label\">czeka</span></span>",
                 "<p class=\"legend\">⏳ czeka · ⏭ pominięta przez DJ-a · 🧹 wyczyszczona z kolejką</p>").doesNotContain("Szampan");
-        // the artists: Zenek's 9 votes first
-        String artists = html.substring(html.indexOf("id=\"artists\""), html.indexOf("id=\"slots\""));
-        assertThat(artists.indexOf("Zenek Martyniuk")).isLessThan(artists.indexOf("ABBA"));
-        assertThat(artists).contains("piosenek: 1").doesNotContain("Nirvana");
-        // the half-hours from 19:00 to 00:30, the busiest one named
-        assertThat(html).contains("<th>19:00</th>", "<th>19:30</th>", "<th>00:30</th>", "Najwięcej: 22:30–23:00")
-                .doesNotContain("<th>01:00</th>");
-        // the setlist in the order played, with the time each played
+        // every artist of one song: no list of artists
+        assertThat(html).doesNotContain("id=\"artists\"");
+        // the half-hours from 19:00 to 00:30: twelve bars, the busiest in the accent, a label every two hours
+        String slots = html.substring(html.indexOf("id=\"slots\""), html.indexOf("id=\"setlist\""));
+        assertThat(slots).contains(">Nowe prośby co pół godziny<", "Najwięcej: 22:30–23:00 (2)", "viewBox=\"0 0 120 60\"",
+                "<title>22:30 · 2</title>", "<span>19:00</span>", "<span>21:00</span>", "<span>23:00</span>",
+                "Pierwsza prośba o każdą piosenkę");
+        assertThat(slots.split("<rect", -1)).hasSize(13);
+        assertThat(slots.split("busiest-bar", -1)).hasSize(2);
+        // the setlist in the order played, with the time each played, folded on a phone (summary.js)
         String setlist = html.substring(html.indexOf("id=\"setlist\""));
+        assertThat(setlist).contains("<details id=\"setlistFold\" open>", ">Zagrane po kolei (6)<");
         assertThat(setlist.indexOf("Orła cień")).isLessThan(setlist.indexOf("Biała armia"));
         assertThat(setlist.indexOf("Biała armia")).isLessThan(setlist.indexOf("Szampan"));
         assertThat(setlist).contains("<span class=\"time\">23:50</span>").doesNotContain("Mniej niż zero");
         assertThat(html).doesNotContain("??", "id=\"noEvenings\"", "id=\"emptyEvening\"");
     }
 
+    /**
+     * A song asked for again after it played (out of the AI's duplicate window) is one line of the most wanted with the votes of
+     * both, not "wanted, not heard"; an artist of two songs is listed.
+     */
+    @Test
+    void aSongAskedForAgain_isOneLine() throws IOException {
+        List<SongRequestEntity> requests = new ArrayList<>(wedding());
+        SongRequestEntity again = request("Zenek Martyniuk - Przekorny los", "rejected", at(1, 30), null, 4);
+        again.setClearedAt(at(1, 50));
+        requests.add(again);
+        requests.add(request("Sanah - Ale jazz!", "accepted", at(1, 40), null, 1));
+
+        String html = render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, requests, "again-pl");
+
+        String top = html.substring(html.indexOf("id=\"top\""), html.indexOf("id=\"missed\""));
+        assertThat(top.split("Przekorny los", -1)).as("once").hasSize(2);
+        assertThat(top).contains("👍 13");
+        String missed = html.substring(html.indexOf("id=\"missed\""), html.indexOf("id=\"artists\""));
+        assertThat(missed).contains("Ale jazz!").doesNotContain("Przekorny los");
+        String artists = html.substring(html.indexOf("id=\"artists\""), html.indexOf("id=\"slots\""));
+        assertThat(artists).contains(">Wykonawcy kilku piosenek<", ">Sanah<", "piosenek: 2").doesNotContain("Zenek");
+        assertThat(html).contains("<span id=\"clearedCount\">wyczyszczone z kolejką: 1</span>");
+    }
+
+    /**
+     * The hosts' version (view=hosts): what to give the couple or the client — three big numbers, the first and the last song, the
+     * most wanted, when the guests asked, what played; nothing of what is the DJ's own (the AI's rejections, the skipped, the wanted
+     * ones that did not play, the library, the tips, the votes of each played song).
+     */
+    @Test
+    void theHostsVersion_leavesOutWhatIsTheDjsOwn() throws IOException {
+        libraries = aLibrary();
+        try {
+            String html = render(Locale.forLanguageTag("pl"), null, "hosts", TWO_EVENINGS, wedding(), "hosts-pl");
+
+            assertThat(html).contains("aria-current=\"page\" class=\"on\">Dla gospodarzy</a>", "id=\"viewDj\">Dla mnie</a>", "id=\"hostsHint\"",
+                    "<input type=\"hidden\" name=\"view\" value=\"hosts\">", "<main class=\"hosts\">");
+            assertThat(html).contains("<strong>34</strong><span>razy goście poprosili o piosenkę albo dali jej 👍</span>",
+                    "<strong>6</strong><span>piosenek zagranych na życzenie</span>",
+                    "<strong>22:30</strong>", "najwięcej próśb, 22:30–23:00");
+            String firstLast = html.substring(html.indexOf("id=\"firstLast\""), html.indexOf("id=\"top\""));
+            assertThat(firstLast).contains("Pierwsza prośba, 19:05", "Varius Manx - Orła cień", "Ostatnia zagrana, 00:35", "Sanah - Szampan");
+            assertThat(html).contains(">Najczęściej proszone<", ">Kiedy goście prosili<", ">Zagrane na życzenie, po kolei (6)<");
+            assertThat(html).doesNotContain("Odrzucone przez AI", "Głosy gości", "💸", "id=\"missed\"", "id=\"libraryGaps\"",
+                    "id=\"artists\"", "id=\"moreCounts\"", "id=\"wait\"", "Nirvana", "class=\"played\"", "class=\"tips\"",
+                    "· prośby 19:05", "Pierwsza prośba o każdą piosenkę", "??");
+            String setlist = html.substring(html.indexOf("id=\"setlist\""));
+            assertThat(setlist).doesNotContain("👍");
+        } finally {
+            libraries = mock(com.scan2play.service.DjLibraryService.class);
+        }
+    }
+
+    /** The long wedding for the browser tests: the hosts' version printed (one A4 page), the DJ's on a phone. */
+    @Test
+    void aLongWedding_forTheBrowserTests() throws IOException {
+        String hosts = render(Locale.forLanguageTag("pl"), null, "hosts", TWO_EVENINGS, longWedding(), "long-hosts-pl");
+        String dj = render(Locale.forLanguageTag("pl"), null, null, TWO_EVENINGS, longWedding(), "long-pl");
+
+        assertThat(hosts).contains(">Zagrane na życzenie, po kolei (40)<").doesNotContain("??");
+        assertThat(dj).contains(">Zagrane po kolei (40)<", "<strong>8</strong><span>Odrzucone przez AI</span>",
+                "<span id=\"skippedCount\">pominięte przez DJ-a: 4</span>").doesNotContain("??");
+    }
+
     @Test
     void inEnglish() throws IOException {
         String html = render(Locale.ENGLISH, "2026-10-03", TWO_EVENINGS, wedding(), "wedding-en");
 
-        assertThat(html).contains("<h1>Evening summary</h1>", "Saturday, 03.10.2026", "Most wanted", "Busiest: 22:30–23:00", "Wanted, not heard", "Most wanted artists", "songs: 1",
-                "Played, in order").doesNotContain("??");
+        assertThat(html).contains("<h1>Evening summary</h1>", "Saturday, 03.10.2026", "· requests 19:05–00:55", "Most wanted",
+                "Busiest: 22:30–23:00 (2)", "Wanted, not heard", "New requests every half-hour", "Played, in order (6)", "For me",
+                "For the hosts", "Songs wanted").doesNotContain("??");
+        assertThat(render(Locale.ENGLISH, "2026-10-03", "hosts", TWO_EVENINGS, wedding(), "hosts-en"))
+                .contains("When the guests asked", "Played on request, in order (6)", "The first request, 19:05").doesNotContain("??");
     }
 
     @Test
@@ -265,7 +376,11 @@ class SummaryPageTest {
 
             ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries),
                     sessionHelperOf(), messages, com.scan2play.service.Plans.off()).csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
-            assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0]).endsWith(";AI comment;Added by the DJ;From the kiosk;In your library");
+            assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0])
+                    .endsWith(";AI comment;Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications;In your library");
+            // "Kopiuj listę": the songs one a line, shown by summary.js
+            assertThat(gaps).contains("id=\"copyLibrary\" hidden", "data-copy-select=\"libraryList\"", "data-copied=\"Skopiowano\"",
+                    ">Kopiuj listę<");
         } finally {
             libraries = mock(com.scan2play.service.DjLibraryService.class);
         }

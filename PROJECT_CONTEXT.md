@@ -799,15 +799,31 @@ history's filters, the search the whole width under them: two rows above the fir
 (`DjSummaryController`, `EveningSummaryService`, `summary.html`) — one evening of the DJ's own party (no party code asked for) on a
 white page to print or save as PDF ("🖨 Drukuj / PDF", `js/summary.js`, `css/summary.css`): an **evening runs from 6:00 to 6:00 Polish
 time** (`EVENING_STARTS`; a wedding past midnight is one evening); the evenings with requests to pick (≤ 31, latest first, with their
-counts — `SongRequestRepository.findEvenings`, native SQL with the same 6 hours); the counts — requests (rows: a song asked for again
-is a vote), played, the guests' votes (of what the AI let through), rejected by the AI, skipped, cleared, still waiting —, a line of how long the played requests waited (from the request to "played": the
-average and the longest), the 10 most wanted (votes, then the earlier), "🙋 Chcieli, a nie usłyszeli" (the wanted ones that did not
-play — waiting, skipped, cleared — with their status), "🎤 Najczęściej proszeni wykonawcy" (the artist of the AI's "Artist - Title",
-grouped by `SongNames.comparable`, the most votes first, then the most songs), the requests every half-hour (`<meter>` bars, the quiet
-half-hours between too, the busiest named), what played in the order it played, the DJ's name and our logo. All from one bounded read of the evening's requests (`findRequestedBetween`,
-≤ 2000) — so it lasts as `song_requests` do (30 days) and goes with "Wyczyść historię". `/dj/summary/csv`: the same evening as a CSV
+guests' votes, "sobota, 03.10 · 👍 34" — `SongRequestRepository.findEvenings`, native SQL with the same 6 hours, the votes as the page
+counts them; `SongRequestRepositoryIT`). **A song is counted once:** one asked for again — after it played (out of the AI's duplicate
+window), after "Wyczyść kolejkę", two hours after a skip — is a row of its own, and the lists put its rows together by `LibraryKey`
+(`EveningSummaryService.Song`: the votes and tips added, how often it played, its best end — played, waiting, skipped, cleared), so a song
+that played and was asked for again is one line of the most wanted and never "wanted, not heard". **Two versions** (the bar's "Dla mnie" /
+"Dla gospodarzy", `view=hosts`). **The DJ's:** four counts — played, the guests' votes (requests and 👍 of what the AI let through, the
+DJ's own first vote of a song they added left out), the songs wanted (let through, each once), rejected by the AI —, the rest in one line
+when there are some (skipped, cleared, waiting, from the kiosk, added by the DJ, 💸 tips, 💌 dedications — a count, never their words), how
+long the played requests waited (from the request to "played": the average and the longest), the 10 most wanted (votes, then the earlier;
+"✓ ×2" when it played twice), "Chcieli, a nie usłyszeli" (the wanted ones that never played, with their status), "Nie masz w bibliotece"
+(with a library, V42) and its "Kopiuj listę" (the songs one a line — `dj-nav.js`'s "Kopiuj", shown by `summary.js`), "Wykonawcy kilku
+piosenek" (the artist of the AI's "Artist - Title", grouped by `SongNames.comparable`, only those of two songs or more), "Nowe prośby co
+pół godziny" (each song's first request — the later votes and 👍 have no time of their own; bars of an SVG — attributes, not inline
+styles, for the CSP —, the busiest in the accent, the quiet half-hours between too; counted in time from 6:00, so the hour the clocks go
+back is two bars of "02:00"), what played in the order it played (folded on a phone, unfolded to print, two columns on paper). **The
+hosts'** (the couple, the client): three big numbers (the votes, the songs played on request, the busiest half-hour), the first request and
+the last song played, the 10 most wanted (votes only), "Kiedy goście prosili", what played — nothing of the AI's rejections, the skipped
+and cleared, the library, the tips, the dedications; one A4 page for about forty played songs (browser scenario `summary-hosts-one-a4`).
+The DJ's logo beside the title, our logo at the foot; the bar (not printed): the evening, the version, "Drukuj / PDF", and under "⋯" the
+CSV, the way back and the hint (`summary-phone-compact`, `summary-wide-one-row`, `summary-copy-library`). All from one bounded read of the
+evening's requests (`findRequestedBetween`, ≤ 2000) — so it lasts as `song_requests` do (30 days) and goes with "Wyczyść historię" (its
+question says to open the summary first). `/dj/summary/csv`: the same evening as a CSV
 file (`scan2play-<day>.csv`; BOM and ";" for Excel, the DJ's language, every value quoted, and one that starts with `= + - @` or a tab
-gets an apostrophe — a guest's text is never a formula).
+gets an apostrophe — a guest's text is never a formula); a row a request, after the columns of before how long a played one waited, its
+artist and title apart and the count of its dedications, then "W bibliotece" with a library.
 
 **The party's staff** (V30, the owner 2026-10-09; roles and permissions V32, 2026-10-10 after the review of the staff's flows,
 https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx): a bartender, a second DJ, the venue's manager works the owner's party with their
@@ -1109,7 +1125,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/qr-print.js`, `js/qr-social.js`, `css/qr-print.css`, `fonts/*.woff2`, `css/app.css` | the print page (`qr-social.js`: its pictures for Instagram, for whom has the editor; `fonts/`: its own fonts, Source Sans 3, Playfair Display and Dancing Script, OFL — their licences `fonts/OFL-*.txt`); the shared styles — the look of Section 6.7 |
 | `css/guest-themes.css`, `images/themes/*.svg`, `fonts/nosifer-*.woff2` | the guests' themes (V59, "Motyw dla gości"): the tokens of each theme under `[data-guest-theme]`, its ornament (our SVGs), the faces of "🎧 Gra: …" (Playfair Display; Nosifer for the scary one, OFL — `fonts/OFL-nosifer.txt`); loaded by the guests' pages of a party with a theme and by "Ustawienia imprezy" (the card's thumbnails) |
 | `js/tv.js`, `css/tv.css` | the screen for a TV: its list fetched again every 10 s (put in place only when it changed; a failed fetch or an answer that is not the list keeps it), the screen kept awake (Screen Wake Lock); dark, sized by the screen's height, nothing to scroll in landscape |
-| `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
+| `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once, what played folded on a phone and unfolded to print, "Kopiuj listę" shown; white, for A4 (the font of `app.css`) |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
 | `images/og-image.png` | the picture of a shared link (Open Graph, 1200×630: the mark, "Scan2Play", "Prośby o piosenki od gości przez kod QR"; 2026-10-14) |
 | `images/landing/*.webp` | the landing page's pictures of the app (2026-10-17): the DJ's panel (1920 × 1140) and the guest's page (780 × 1560), PL and EN, of a made-up party — `src/test/browser/screenshots.py` writes them |
@@ -1561,7 +1577,7 @@ GuestQueueService          → DjService
 | POST | `/dj/logo/delete` | `partyCode`: the logo deleted (the organiser, any plan); back to `/dj/settings#logoCard` |
 | POST | `/dj/library/delete` | `partyCode`: the library deleted (the organiser, any plan); back to `/dj/settings#libraryCard` |
 | POST | `/dj/library/hints` | `partyCode`, `on`: "Podpowiedzi gości" (V58, the organiser; `on=true` needs Pro); back to `/dj/settings#libraryCard` |
-| GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
+| GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests), on the page `view` ("hosts": the hosts' version): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
 | POST | `/dj/dashboard/guest-theme` | "Motyw dla gości" (V59, VIBE, any plan): `partyCode`, `theme` (CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING, anything else CLASSIC); with `X-Requested-With: fetch` the card alone (`settings :: guestThemeCard`, `guestThemeSaved`), else back to `/dj/settings#guestThemeCard` |

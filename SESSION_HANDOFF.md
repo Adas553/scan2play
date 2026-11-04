@@ -157,6 +157,21 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    measured, the feel is not), Nosifer's "Gra: …" with a long DJ name, the TV at the venue; a photo of the TV in "Straszny" for Instagram.
    Next, only if DJs ask: the DJ's own colours (Pro, on the same tokens: a contrast fix and the statuses' hues kept away), more themes
    (each a block of tokens and an SVG; `GuestThemesCssTest` checks it), a summer one once a hue far from the statuses and the cyan is found.
+9. **"Podsumowanie wieczoru" — v1 of the analysis** (the artifact https://claude.ai/artifact/C9kWpRuZ8h5pbnbPDS6Fvx; the owner,
+   2026-11-04: "Zrób v1 w całości, potem zaczniemy v2", the open questions left to me) — **built on `claude/vibrant-maxwell-j5kxed`,
+   waiting for the owner's review** (no migration). The numbers: a song asked for again is one line (`EveningSummaryService.Song`, by
+   `LibraryKey`) — it was twice in the most wanted and in "Chcieli, a nie usłyszeli" though it played; four counts (played, the guests'
+   votes, the songs wanted, rejected by the AI), the rest in a line; the evenings' list with the votes (`findEvenings`,
+   `SongRequestRepositoryIT`); the half-hours counted in time (the night the clocks go back). The look: the bar in three rows on a phone
+   (the counts at ~300 px, were ~560), bars of an SVG in the accent, artists of two songs or more only, what played folded on a phone and
+   in two columns on paper. "Dla mnie / Dla gospodarzy" (`view=hosts`): the hosts' version without the DJ's own — one A4 page for ~40
+   played. "Kopiuj listę" of the library's gaps; the CSV with four columns at the end. My picks: the switch on the same page; the hosts'
+   version without "Chcieli, a nie usłyszeli"; no title from the poster (its heading is a call like "Piosenka dla Pary", and today's, not
+   that evening's) — a title typed by the DJ comes with v2's snapshot. Details: `PROJECT_CONTEXT.md` 5.1. **Next — v2:** a snapshot
+   `evening_summary` (V61; counts and song names only, no guests' words; written by a job at 06:30 and before "Wyczyść historię";
+   kept 13 months, gone with the account; written for Free too, read with Pro), the evenings' list up to 52, the title typed by the DJ,
+   and a read-only link for the hosts (`/s/{token}`, 30 days, one an evening, the DJ can switch it off, `noindex`); then v3 (the
+   picture "Do internetu" — Pro —, comparing evenings, the AI's reasons in categories).
 
 ## Later (not now)
 

@@ -9,42 +9,61 @@
     <link href="/css/summary.css" th:href="@{/css/summary.css}" rel="stylesheet">
 </head>
 <!--/*
-    "📊 Podsumowanie wieczoru" (DjSummaryController, EveningSummaryService): one evening of the DJ's party — the counts, the waits,
-    the most wanted songs, the wanted ones that did not play, the artists, the requests every half-hour and what played — on a white page to print or save as PDF. The bar at the top is not
-    printed: the evening to show, print, the CSV file.
+    "📊 Podsumowanie wieczoru" (DjSummaryController, EveningSummaryService): one evening of the DJ's party on a white page to print or
+    save as PDF. Two versions: the DJ's ("Dla mnie": the counts, the waits, the most wanted songs, the wanted ones that did not play, the
+    library's gaps, the artists of several songs, the new requests every half-hour, what played) and the hosts' ("Dla gospodarzy",
+    view=hosts: what to give the couple or the client — the votes, the played, the busiest half-hour, the first and the last song, the
+    most wanted, when the guests asked, what played; nothing of the AI's rejections, the skipped and cleared, the library, the tips).
+    The bar at the top is not printed: the evening to show, the version, print, and under "⋯" the CSV file and the way back.
 */-->
-<body th:with="times=${T(com.scan2play.util.Times)}">
+<body th:with="times=${T(com.scan2play.util.Times)}, hostsView=${hostsView == true}">
 
 <nav class="toolbar no-print">
-    <strong th:text="#{summary.title}">Evening summary</strong>
     <form th:unless="${#lists.isEmpty(evenings)}" action="/dj/summary" th:action="@{/dj/summary}" method="get" class="pick">
         <input type="hidden" name="party" th:value="${partyCode}">
-        <label for="eveningSelect" th:text="#{summary.evening}">Evening:</label>
+        <input th:if="${hostsView}" type="hidden" name="view" value="hosts">
+        <label for="eveningSelect" class="visually-hidden" th:text="#{summary.evening}">Evening:</label>
         <select id="eveningSelect" name="evening">
             <option th:each="e : ${evenings}" th:value="${e.day}" th:selected="${e.day == evening}"
-                    th:text="${#temporals.format(e.day, 'EEEE, dd.MM', #locale) + ' (' + e.requests + ')'}">sobota, 03.10 (42)</option>
+                    th:text="${#temporals.format(e.day, 'EEEE, dd.MM', #locale) + ' · 👍 ' + e.votes}">sobota, 03.10 · 👍 34</option>
         </select>
         <button type="submit" th:text="#{summary.show}">Show</button>
     </form>
-    <th:block th:if="${summary != null}">
-        <button type="button" id="printBtn" th:text="#{summary.print}">Print / PDF</button>
-        <a th:href="@{/dj/summary/csv(evening=${evening},party=${partyCode})}" id="csvLink" th:text="#{summary.csv}">CSV (Excel)</a>
-    </th:block>
-    <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" th:text="#{summary.back}">Back to the dashboard</a>
-    <p class="hint" th:text="#{summary.hint}">This bar is not printed.</p>
+    <!--/* the version: the DJ's own, or the one to give the hosts — two links, the shown one lit */-->
+    <div th:if="${summary != null}" class="views" id="views" role="group" th:aria-label="#{summary.view.label}">
+        <a th:href="@{/dj/summary(evening=${evening},party=${partyCode})}" href="/dj/summary" id="viewDj"
+           th:classappend="${hostsView} ? '' : 'on'" th:attr="aria-current=${hostsView} ? null : 'page'"
+           th:text="#{summary.view.dj}">For me</a>
+        <a th:href="@{/dj/summary(evening=${evening},party=${partyCode},view='hosts')}" href="/dj/summary?view=hosts" id="viewHosts"
+           th:classappend="${hostsView} ? 'on' : ''" th:attr="aria-current=${hostsView} ? 'page' : null"
+           th:text="#{summary.view.hosts}">For the hosts</a>
+    </div>
+    <button th:if="${summary != null}" type="button" id="printBtn" th:text="#{summary.print}">Print / PDF</button>
+    <details class="more" id="moreMenu">
+        <summary th:aria-label="#{summary.more}" title="More">⋯</summary>
+        <div class="more-items">
+            <a th:if="${summary != null}" th:href="@{/dj/summary/csv(evening=${evening},party=${partyCode})}" id="csvLink"
+               th:text="#{summary.csv}">CSV (Excel)</a>
+            <a th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" th:text="#{summary.back}">Back to the dashboard</a>
+            <p class="hint" th:text="#{summary.hint}">This bar is not printed.</p>
+        </div>
+    </details>
+    <p th:if="${hostsView and summary != null}" class="hint view-hint" id="hostsHint" th:text="#{summary.view.hosts.hint}">
+        Without the AI's rejections, the skipped, your library and the tips.</p>
 </nav>
 
-<main>
+<main th:classappend="${hostsView} ? 'hosts' : ''">
     <header class="head">
         <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" id="djLogo" alt="DJ">
-        <p class="logo"><img src="/images/logo-small.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
-        <h1 th:text="#{summary.title}">Evening summary</h1>
-        <p th:if="${evening != null}" class="when">
-            <span th:text="${#temporals.format(evening, 'EEEE, dd.MM.yyyy', #locale)}">sobota, 03.10.2026</span>
-            <span th:if="${summary != null and summary.first != null}"
-                  th:text="${'· ' + times.clock(summary.first) + '–' + times.clock(summary.last)}">· 19:02–03:41</span>
-        </p>
-        <p th:unless="${#strings.isEmpty(djName)}" class="dj" th:text="${'🎧 ' + djName}">🎧 DJ Koko</p>
+        <div class="titles">
+            <h1 th:text="#{summary.title}">Evening summary</h1>
+            <p th:if="${evening != null}" class="when">
+                <span th:text="${#temporals.format(evening, 'EEEE, dd.MM.yyyy', #locale)}">sobota, 03.10.2026</span>
+                <span th:if="${!hostsView and summary != null and summary.first != null}"
+                      th:text="${'· ' + #messages.msg('summary.when.requests', times.clock(summary.first), times.clock(summary.last))}">· prośby 19:02–03:41</span>
+            </p>
+            <p th:unless="${#strings.isEmpty(djName)}" class="dj" th:text="${'🎧 ' + djName}">🎧 DJ Koko</p>
+        </div>
     </header>
 
     <p th:if="${#lists.isEmpty(evenings)}" class="empty" id="noEvenings" th:text="#{summary.none}">No requests yet.</p>
@@ -52,57 +71,80 @@
        th:text="#{summary.empty_evening}">No requests that evening.</p>
 
     <th:block th:if="${summary != null and summary.requests > 0}">
+
+    <!--/* ===== the DJ's version: four counts, the rest in one line ===== */-->
+    <th:block th:unless="${hostsView}">
     <section class="stats" id="stats">
-        <div class="stat"><strong th:text="${summary.requests}">42</strong><span th:text="#{summary.stat.requests}">Requests</span>
-            <small th:text="#{summary.stat.requests.hint}">a song asked for again is a vote</small></div>
         <div class="stat"><strong th:text="${summary.played}">30</strong><span th:text="#{summary.stat.played}">Played</span></div>
-        <div class="stat"><strong th:text="${summary.votes}">58</strong><span th:text="#{summary.stat.votes}">Guests' votes</span>
+        <div class="stat"><strong th:text="${summary.votes}">58</strong><span th:text="#{summary.stat.votes}">Guest votes</span>
             <small th:text="#{summary.stat.votes.hint}">requests and 👍</small></div>
+        <div class="stat"><strong th:text="${summary.songs}">42</strong><span th:text="#{summary.stat.songs}">Songs wanted</span>
+            <small th:text="#{summary.stat.songs.hint}">let through by the AI, each once</small></div>
         <div class="stat"><strong th:text="${summary.rejectedByAi}">5</strong><span th:text="#{summary.stat.rejected}">Rejected by the AI</span></div>
-        <div th:if="${summary.skipped > 0}" class="stat"><strong th:text="${summary.skipped}">3</strong>
-            <span th:text="#{summary.stat.skipped}">Skipped</span></div>
-        <div th:if="${summary.cleared > 0}" class="stat"><strong th:text="${summary.cleared}">2</strong>
-            <span th:text="#{summary.stat.cleared}">Cleared</span></div>
-        <div th:if="${summary.waiting > 0}" class="stat"><strong th:text="${summary.waiting}">2</strong>
-            <span th:text="#{summary.stat.waiting}">Still waiting</span></div>
-        <!--/* the tips the DJ counted (V28) — only when there were some */-->
-        <div th:if="${summary.tips > 0}" class="stat" id="tipsStat"><strong th:text="${summary.tips}">4</strong>
-            <span th:text="#{summary.stat.tips}">Tips</span><small th:text="#{summary.stat.tips.hint}">counted by you</small></div>
-        <!--/* the songs the DJ added in the panel (V44), counted in the requests — only when there were some */-->
-        <div th:if="${summary.addedByDj > 0}" class="stat" id="addedByDjStat"><strong th:text="${summary.addedByDj}">2</strong>
-            <span th:text="#{summary.stat.added_by_dj}">Added by you</span><small th:text="#{summary.stat.added_by_dj.hint}">counted in the requests</small></div>
-        <!--/* the requests sent at the venue's kiosk (V56), counted in the requests — only when there were some */-->
-        <div th:if="${summary.viaKiosk > 0}" class="stat" id="viaKioskStat"><strong th:text="${summary.viaKiosk}">3</strong>
-            <span th:text="#{summary.stat.kiosk}">From the kiosk</span><small th:text="#{summary.stat.added_by_dj.hint}">counted in the requests</small></div>
     </section>
+    <!--/* the rest, each only when there were some: skipped, cleared, waiting, from the kiosk (V56), added by the DJ (V44), the tips
+         the DJ counted (V28), the dedications (V38: a count, never their words) */-->
+    <p class="counts" id="moreCounts"
+       th:if="${summary.skipped + summary.cleared + summary.waiting + summary.viaKiosk + summary.addedByDj + summary.tips + summary.dedications > 0}">
+        <span th:if="${summary.skipped > 0}" id="skippedCount" th:text="#{summary.count.skipped(${summary.skipped})}">skipped by the DJ: 3</span>
+        <span th:if="${summary.cleared > 0}" id="clearedCount" th:text="#{summary.count.cleared(${summary.cleared})}">cleared with the queue: 2</span>
+        <span th:if="${summary.waiting > 0}" id="waitingCount" th:text="#{summary.count.waiting(${summary.waiting})}">still waiting: 2</span>
+        <span th:if="${summary.viaKiosk > 0}" id="viaKioskStat" th:text="#{summary.count.kiosk(${summary.viaKiosk})}">from the kiosk: 3</span>
+        <span th:if="${summary.addedByDj > 0}" id="addedByDjStat" th:text="#{summary.count.added_by_dj(${summary.addedByDj})}">added by you: 2</span>
+        <span th:if="${summary.tips > 0}" id="tipsStat" th:text="#{summary.count.tips(${summary.tips})}">💸 tips: 4</span>
+        <span th:if="${summary.dedications > 0}" id="dedicationsStat" th:text="#{summary.count.dedications(${summary.dedications})}">💌 dedications: 12</span>
+    </p>
     <!--/* how long the played requests waited — only when the DJ marked some as played */-->
     <p th:if="${summary.averageWaitMinutes != null}" class="wait" id="wait"
        th:text="#{summary.wait(${summary.averageWaitMinutes}, ${summary.longestWaitMinutes})}">Played requests waited 14 min on average.</p>
+    </th:block>
 
+    <!--/* ===== the hosts' version: three big numbers, the first and the last song ===== */-->
+    <th:block th:if="${hostsView}">
+    <section class="stats big" id="stats">
+        <div class="stat"><strong th:text="${summary.votes}">112</strong><span th:text="#{summary.hosts.votes}">times the guests asked or gave a 👍</span></div>
+        <div class="stat"><strong th:text="${summary.played}">31</strong><span th:text="#{summary.hosts.played}">songs played on request</span></div>
+        <div th:if="${summary.busiestSlot() != null}" class="stat" id="busiestStat"><strong th:text="${summary.busiestSlotStart()}">22:30</strong>
+            <span th:text="#{summary.hosts.busiest(${summary.busiestSlot()})}">the busiest half-hour</span></div>
+    </section>
+    <section class="first-last" id="firstLast" th:if="${summary.firstWanted != null}">
+        <div><span class="label" th:text="#{summary.hosts.first(${times.clock(summary.firstWanted.requestedAt)})}">The first request, 19:05</span>
+            <strong th:text="${summary.firstWanted.songName}">Artist - Title</strong></div>
+        <div th:if="${summary.lastPlayed() != null}"><span class="label"
+                th:text="#{summary.hosts.last(${times.clock(summary.lastPlayed().playedAt != null ? summary.lastPlayed().playedAt : summary.lastPlayed().requestedAt)})}">The last one played, 02:31</span>
+            <strong th:text="${summary.lastPlayed().songName}">Artist - Title</strong></div>
+    </section>
+    </th:block>
+
+    <!--/* the most wanted songs, each once (its requests of the evening together) */-->
     <section th:unless="${#lists.isEmpty(summary.top)}" id="top">
         <h2 th:text="#{summary.top}">Most wanted</h2>
-        <ol class="songs">
+        <ol class="songs top-songs">
             <li th:each="song : ${summary.top}">
-                <span class="song" th:text="${song.songName}">Artist - Title</span>
-                <span th:if="${song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
+                <span class="song" th:text="${song.name}">Artist - Title</span>
+                <span th:if="${!hostsView and song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
                 <span class="votes" th:text="${'👍 ' + song.votes}">👍 5</span>
-                <span th:if="${song.decision == 'played'}" class="played" th:title="#{summary.top.played}"><span
-                        class="icon" th:text="#{summary.icon.PLAYED}">✓</span> <span class="label" th:text="#{summary.top.played}">played</span></span>
+                <th:block th:if="${!hostsView and song.played()}" th:with="label=${song.timesPlayed > 1 ? #messages.msg('summary.top.played_times', song.timesPlayed) : #messages.msg('summary.top.played')}">
+                <span class="played" th:title="${label}"><span class="icon"
+                        th:text="${song.timesPlayed > 1 ? #messages.msg('summary.icon.PLAYED') + ' ×' + song.timesPlayed : #messages.msg('summary.icon.PLAYED')}">✓</span> <span
+                        class="label" th:text="${label}">played</span></span>
+                </th:block>
             </li>
         </ol>
     </section>
 
-    <!--/* the wanted songs that did not play — waiting, skipped or cleared: what to have ready next time */-->
+    <th:block th:unless="${hostsView}">
+    <!--/* the wanted songs that never played — waiting, skipped or cleared: what to have ready next time */-->
     <section th:unless="${#lists.isEmpty(summary.missed)}" id="missed">
         <h2 th:text="#{summary.missed}">Wanted, not heard</h2>
         <p class="legend" th:text="#{summary.missed.legend}">⏳ waiting · ⏭ skipped · 🧹 cleared</p>
         <ol class="songs">
             <li th:each="song : ${summary.missed}">
-                <span class="song" th:text="${song.songName}">Artist - Title</span>
+                <span class="song" th:text="${song.name}">Artist - Title</span>
                 <span th:if="${song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
                 <span class="votes" th:text="${'👍 ' + song.votes}">👍 3</span>
                 <!--/* on a phone the icon alone (summary.css), the legend under the heading says what each one means */-->
-                <span class="status" th:with="status=${summary.status(song)}" th:title="#{summary.csv.status.__${status}__}"><span
+                <span class="status" th:with="status=${song.status.name()}" th:title="#{summary.csv.status.__${status}__}"><span
                         class="icon" th:text="#{summary.icon.__${status}__}">⏳</span> <span class="label"
                         th:text="#{summary.csv.status.__${status}__}">waiting</span></span>
             </li>
@@ -110,22 +152,28 @@
     </section>
 
     <!--/* the DJ's library (V42): what the AI let through and the library has not ("?" only by another artist) — by the library as it
-         is now, the most wanted first: what to get before the next party */-->
+         is now, the most wanted first: what to get before the next party. "Kopiuj listę" (dj-nav.js), shown by summary.js */-->
     <section th:if="${libraryGaps != null}" id="libraryGaps">
         <h2 th:text="#{summary.library}">Not in your library</h2>
         <p class="legend library-legend" th:text="#{summary.library.legend}">Songs the AI let through that are not in your library</p>
         <p th:if="${#lists.isEmpty(libraryGaps)}" th:text="#{summary.library.none}">Everything asked for is in your library.</p>
-        <ol th:unless="${#lists.isEmpty(libraryGaps)}" class="songs">
+        <th:block th:unless="${#lists.isEmpty(libraryGaps)}">
+        <ol class="songs" id="libraryList">
             <li th:each="gap : ${libraryGaps}">
                 <span class="song" th:text="${gap.name}">Artist - Title</span>
                 <span th:if="${gap.mark.name() == 'SIMILAR'}" class="library-similar" th:text="#{summary.library.similar}">? similar</span>
                 <span class="votes" th:text="${'👍 ' + gap.votes}">👍 3</span>
             </li>
         </ol>
+        <button type="button" class="copy no-print" id="copyLibrary" hidden data-copy-select="libraryList"
+                th:attr="data-copy-text=${libraryCopy},data-copied=#{summary.library.copied}"
+                th:text="#{summary.library.copy}">Copy the list</button>
+        </th:block>
     </section>
 
+    <!--/* the artists of two songs or more: one of one song says no more than the song in the list above */-->
     <section th:unless="${#lists.isEmpty(summary.artists)}" id="artists">
-        <h2 th:text="#{summary.artists}">Most wanted artists</h2>
+        <h2 th:text="#{summary.artists}">Artists of several songs</h2>
         <ol class="songs">
             <li th:each="artist : ${summary.artists}">
                 <span class="song" th:text="${artist.name}">Eminem</span>
@@ -134,39 +182,53 @@
             </li>
         </ol>
     </section>
+    </th:block>
 
+    <!--/* the new requests every half-hour: bars of an SVG (its attributes, not inline styles — the Content-Security-Policy), the busiest
+         in the accent; each bar's title says its half-hour and count; under them the labels every two hours */-->
     <section th:unless="${#lists.isEmpty(summary.slots)}" id="slots">
-        <h2 th:text="#{summary.slots}">Requests every half-hour</h2>
-        <p th:if="${summary.busiestSlot() != null}" class="busiest"
-           th:text="#{summary.slots.busiest(${summary.busiestSlot()})}">Busiest: 22:30–23:00</p>
-        <table class="hours">
-            <tr th:each="slot : ${summary.slots}">
-                <th th:text="${slot.label()}">22:30</th>
-                <td><meter min="0" th:max="${summary.busiestSlotRequests()}" th:value="${slot.requests}">12</meter></td>
-                <td class="count" th:text="${slot.requests}">12</td>
-            </tr>
-        </table>
+        <h2 th:text="${hostsView} ? #{summary.slots.hosts} : #{summary.slots}">New requests every half-hour</h2>
+        <!--/* the hosts' version says it among its big numbers */-->
+        <p th:if="${!hostsView and summary.busiestSlot() != null}" class="busiest"
+           th:text="#{summary.slots.busiest(${summary.busiestSlot()}, ${summary.busiestSlotRequests()})}">Busiest: 22:30–23:00 (12)</p>
+        <svg class="chart" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" role="img"
+             th:attr="viewBox=${summary.chartViewBox()},aria-label=${summary.busiestSlot() != null ? #messages.msg('summary.slots.busiest', summary.busiestSlot(), summary.busiestSlotRequests()) : #messages.msg('summary.slots')}">
+            <rect th:each="slot, i : ${summary.slots}" width="8" th:with="h=${summary.barHeight(slot)}"
+                  th:attr="x=${i.index * 10 + 1},y=${summary.barY(slot)},height=${h}"
+                  th:classappend="${summary.isBusiest(slot)} ? 'busiest-bar' : ''"><title th:text="${slot.label() + ' · ' + slot.requests}">22:30 · 12</title></rect>
+        </svg>
+        <div class="axis" aria-hidden="true">
+            <span th:each="slot, i : ${summary.slots}" th:text="${i.index % 4 == 0} ? ${slot.label()} : ''">22:30</span>
+        </div>
+        <p th:unless="${hostsView}" class="legend library-legend" th:text="#{summary.slots.hint}">Each song's first request.</p>
     </section>
 
+    <!--/* what played, in order: folded on a phone (summary.js), unfolded to print; two columns on paper */-->
     <section id="setlist">
-        <h2 th:text="#{summary.setlist}">Played, in order</h2>
-        <p th:if="${#lists.isEmpty(summary.setlist)}" class="empty" th:text="#{summary.setlist.none}">Nothing marked as played.</p>
-        <ol th:unless="${#lists.isEmpty(summary.setlist)}" class="songs setlist">
-            <li th:each="song : ${summary.setlist}">
-                <span class="time" th:text="${times.clock(song.playedAt != null ? song.playedAt : song.requestedAt)}">22:14</span>
-                <span class="song" th:text="${song.songName}">Artist - Title</span>
-                <span th:if="${song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
-                <span class="votes" th:text="${'👍 ' + song.votes}">👍 3</span>
-            </li>
-        </ol>
+        <details id="setlistFold" open>
+            <summary><h2 th:text="${hostsView} ? #{summary.setlist.hosts(${#lists.size(summary.setlist)})} : #{summary.setlist(${#lists.size(summary.setlist)})}">Played, in order (6)</h2></summary>
+            <p th:if="${#lists.isEmpty(summary.setlist)}" class="empty" th:text="#{summary.setlist.none}">Nothing marked as played.</p>
+            <ol th:unless="${#lists.isEmpty(summary.setlist)}" class="songs setlist">
+                <li th:each="song : ${summary.setlist}">
+                    <span class="time" th:text="${times.clock(song.playedAt != null ? song.playedAt : song.requestedAt)}">22:14</span>
+                    <span class="song" th:text="${song.songName}">Artist - Title</span>
+                    <span th:if="${!hostsView and song.tips > 0}" class="tips" th:text="${'💸 ' + song.tips}">💸 1</span>
+                    <span th:unless="${hostsView}" class="votes" th:text="${'👍 ' + song.votes}">👍 3</span>
+                </li>
+            </ol>
+        </details>
     </section>
 
     <p th:if="${summary.truncated}" class="note" th:text="#{summary.truncated(${summary.requests})}">Only the first 2000.</p>
     </th:block>
 
-    <footer class="foot" th:text="#{summary.footer}">Made with Scan2Play — www.scan2play.com.pl</footer>
+    <footer class="foot">
+        <p class="logo"><img src="/images/logo-small.svg" alt=""><span>Scan<span class="two">2</span>Play</span></p>
+        <p th:text="#{summary.footer}">Made with Scan2Play — www.scan2play.com.pl</p>
+    </footer>
 </main>
 
+<script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 <script src="/js/summary.js" th:src="@{/js/summary.js}"></script>
 </body>
 </html>

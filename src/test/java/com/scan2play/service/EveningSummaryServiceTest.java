@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -103,10 +104,16 @@ class EveningSummaryServiceTest {
                 request("Waiting", "accepted", "01:00", null, 1),
                 request("Rejected by the AI", "rejected", "22:00", null, 1),
                 withTips(skipped, 1), cleared);
+        requests.get(1).setDedications(2);
+        requests.get(3).setDedications(5);   // rejected by the AI: never counted
 
         EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING, requests);
 
         assertThat(summary.requests()).isEqualTo(6);
+        assertThat(summary.songs()).as("the songs the AI let through").isEqualTo(5);
+        assertThat(summary.dedications()).isEqualTo(2);
+        assertThat(summary.firstWanted().getSongName()).isEqualTo("Played early");
+        assertThat(summary.lastPlayed().getSongName()).isEqualTo("Played late");
         assertThat(summary.played()).isEqualTo(2);
         assertThat(summary.waiting()).isEqualTo(1);
         assertThat(summary.skipped()).isEqualTo(1);
@@ -118,10 +125,12 @@ class EveningSummaryServiceTest {
         assertThat(summary.first()).isEqualTo(at("20:10"));
         assertThat(summary.last()).isEqualTo(at("01:15"));
         assertThat(summary.setlist()).extracting(SongRequestEntity::getSongName).containsExactly("Played early", "Played late");
-        assertThat(summary.top()).extracting(SongRequestEntity::getSongName)
+        assertThat(summary.top()).extracting(EveningSummaryService.Song::name)
                 .containsExactly("Played late", "Played early", "Skipped", "Cleared", "Waiting");
         // wanted, not heard: what the AI let through and did not play
-        assertThat(summary.missed()).extracting(SongRequestEntity::getSongName).containsExactly("Skipped", "Cleared", "Waiting");
+        assertThat(summary.missed()).extracting(EveningSummaryService.Song::name).containsExactly("Skipped", "Cleared", "Waiting");
+        assertThat(summary.missed()).extracting(EveningSummaryService.Song::status).containsExactly(
+                EveningSummaryService.Status.SKIPPED, EveningSummaryService.Status.CLEARED, EveningSummaryService.Status.WAITING);
         // the played ones waited 20 and 295 minutes
         assertThat(summary.averageWaitMinutes()).isEqualTo(158);
         assertThat(summary.longestWaitMinutes()).isEqualTo(295);
@@ -158,8 +167,8 @@ class EveningSummaryServiceTest {
         messages.setDefaultEncoding("UTF-8");
         messages.setFallbackToSystemLocale(false);
         String[] lines = EveningSummaryService.toCsv(requests, messages, Locale.forLanguageTag("pl")).split("\r\n");
-        assertThat(lines[1]).endsWith(";;");
-        assertThat(lines[2]).endsWith(";\"tak\";");
+        assertThat(lines[1]).endsWith(";;;30;\"Wilki\";\"Baśka\";0");
+        assertThat(lines[2]).endsWith(";\"tak\";;10;\"Kult\";\"Arahja\";0");
     }
 
     /** A request sent at the venue's kiosk (V56): "tak" in the CSV's column "Z kiosku", after "Dodana przez DJ-a". */
@@ -175,11 +184,11 @@ class EveningSummaryServiceTest {
         String[] lines = EveningSummaryService.toCsv(List.of(request("Wilki - Baśka", "played", "20:00", "20:30", 2), kiosk), messages,
                 Locale.forLanguageTag("pl")).split("\r\n");
 
-        assertThat(lines[0]).endsWith(";Dodana przez DJ-a;Z kiosku");
-        assertThat(lines[1]).endsWith(";;");
-        assertThat(lines[2]).endsWith(";;\"tak\"");
+        assertThat(lines[0]).endsWith(";Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje");
+        assertThat(lines[1]).endsWith(";;;30;\"Wilki\";\"Baśka\";0");
+        assertThat(lines[2]).endsWith(";;\"tak\";10;\"Kult\";\"Arahja\";0");
         assertThat(EveningSummaryService.toCsv(List.of(kiosk), messages, Locale.ENGLISH).split("\r\n")[0])
-                .endsWith(";Added by the DJ;From the kiosk");
+                .endsWith(";Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications");
     }
 
     @Test
@@ -189,8 +198,87 @@ class EveningSummaryServiceTest {
             requests.add(request("Song " + i, "accepted", "%02d:%02d".formatted(20 + i / 6, (i % 6) * 10), null, i == 7 ? 9 : 1));
         }
 
-        assertThat(EveningSummaryService.summarize(EVENING, requests).top()).extracting(SongRequestEntity::getSongName)
+        assertThat(EveningSummaryService.summarize(EVENING, requests).top()).extracting(EveningSummaryService.Song::name)
                 .hasSize(10).startsWith("Song 7", "Song 0", "Song 1");
+    }
+
+    /**
+     * A song asked for again — after it played (out of the AI's duplicate window), after the queue was cleared, two hours after a
+     * skip — is a row of its own. The lists count it once: one line of the most wanted with the votes of both, never "wanted, not
+     * heard" when one of them played, one song of its artist; and "played" says how often.
+     */
+    @Test
+    void aSongAskedForAgain_isOneSong() {
+        SongRequestEntity clearedAgain = request("Zenek Martyniuk - Przekorny los", "rejected", "00:30", null, 4);
+        clearedAgain.setClearedAt(at("01:00"));
+        SongRequestEntity skipped = request("Daria Zawiałow - Kinga", "rejected", "21:00", null, 2);
+        skipped.setSkippedAt(at("21:10"));
+        List<SongRequestEntity> requests = List.of(
+                request("Zenek Martyniuk - Przekorny los", "played", "20:00", "20:30", 6),
+                request("ABBA - Dancing Queen", "played", "21:00", "21:10", 2),
+                skipped,
+                request("Daria Zawiałow - Kinga", "accepted", "23:30", null, 1),
+                request("Sanah - Szampan", "played", "22:00", "22:10", 3),
+                request("sanah – Szampan", "played", "01:00", "01:20", 1),   // an older name, with "–": the same song
+                request("Sanah - Ale jazz!", "accepted", "23:00", null, 1),
+                clearedAgain);
+
+        EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING, requests);
+
+        assertThat(summary.songs()).isEqualTo(5);
+        assertThat(summary.top()).extracting(EveningSummaryService.Song::name, EveningSummaryService.Song::votes,
+                EveningSummaryService.Song::timesPlayed).containsExactly(
+                org.assertj.core.groups.Tuple.tuple("Zenek Martyniuk - Przekorny los", 10, 1),
+                org.assertj.core.groups.Tuple.tuple("Sanah - Szampan", 4, 2),
+                org.assertj.core.groups.Tuple.tuple("Daria Zawiałow - Kinga", 3, 0),
+                org.assertj.core.groups.Tuple.tuple("ABBA - Dancing Queen", 2, 1),
+                org.assertj.core.groups.Tuple.tuple("Sanah - Ale jazz!", 1, 0));
+        assertThat(summary.top().getFirst().played()).isTrue();
+        // the skipped song asked for again waits: waiting is its best end yet
+        assertThat(summary.missed()).extracting(EveningSummaryService.Song::name, EveningSummaryService.Song::status).containsExactly(
+                org.assertj.core.groups.Tuple.tuple("Daria Zawiałow - Kinga", EveningSummaryService.Status.WAITING),
+                org.assertj.core.groups.Tuple.tuple("Sanah - Ale jazz!", EveningSummaryService.Status.WAITING));
+        // the artists of two songs or more: Sanah's two (Szampan once), not Zenek's one
+        assertThat(summary.artists()).containsExactly(new EveningSummaryService.ArtistCount("Sanah", 2, 5));
+        // the setlist keeps every time a song played
+        assertThat(summary.setlist()).hasSize(4);
+    }
+
+    /**
+     * The night the clocks go back (25.10.2026, 03:00 → 02:00): the hour from 02:00 is there twice, so are its half-hours — two
+     * requests at 02:15 an hour apart are two bars, not one counted twice.
+     */
+    @Test
+    void theHalfHours_theNightTheClocksGoBack_countTheHourTwice() {
+        LocalDate night = LocalDate.of(2026, 10, 24);
+        Instant first = ZonedDateTime.of(2026, 10, 25, 2, 15, 0, 0, Times.DISPLAY_ZONE).withEarlierOffsetAtOverlap().toInstant();
+        Instant second = ZonedDateTime.of(2026, 10, 25, 2, 15, 0, 0, Times.DISPLAY_ZONE).withLaterOffsetAtOverlap().toInstant();
+        List<SongRequestEntity> requests = List.of(
+                SongRequestEntity.builder().partyCode("SUMM1").songName("A - a").decision("accepted").requestedAt(first).votes(1).build(),
+                SongRequestEntity.builder().partyCode("SUMM1").songName("B - b").decision("accepted").requestedAt(second).votes(1).build());
+
+        EveningSummaryService.Summary summary = EveningSummaryService.summarize(night, requests);
+
+        assertThat(summary.slots()).extracting(EveningSummaryService.TimeSlot::label).containsExactly("02:00", "02:30", "02:00");
+        assertThat(summary.slots()).extracting(EveningSummaryService.TimeSlot::requests).containsExactly(1L, 0L, 1L);
+        assertThat(summary.busiestSlot()).isEqualTo("02:00–02:30");
+    }
+
+    /** The bars of the half-hours: the busiest one the full height, a quiet one none, one request at least a sliver. */
+    @Test
+    void theBars_areMeasuredByTheBusiestHalfHour() {
+        List<SongRequestEntity> requests = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            requests.add(request("Song " + i, "accepted", "22:0" + (i % 10), null, 1));
+        }
+        requests.add(request("Late", "accepted", "23:10", null, 1));
+
+        EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING, requests);
+
+        assertThat(summary.slots()).extracting(summary::barHeight).containsExactly(EveningSummaryService.BAR_HEIGHT, 0, 3);
+        assertThat(summary.isBusiest(summary.slots().getFirst())).isTrue();
+        assertThat(summary.isBusiest(summary.slots().get(2))).isFalse();
+        assertThat(summary.busiestSlotStart()).isEqualTo("22:00");
     }
 
     @Test
@@ -214,7 +302,7 @@ class EveningSummaryServiceTest {
     }
 
     @Test
-    void theArtists_ofWhatTheAiLetThrough_theMostVotesFirst_thenTheMostSongs() {
+    void theArtists_ofWhatTheAiLetThrough_ofTwoSongsOrMore() {
         List<SongRequestEntity> requests = List.of(
                 request("Eminem - Lose Yourself", "played", "20:00", "20:10", 1),
                 request("eminem – Without Me", "accepted", "20:05", null, 1),   // an older name, with "–"
@@ -223,10 +311,9 @@ class EveningSummaryServiceTest {
                 request("Nirvana - Smells Like Teen Spirit", "rejected", "20:20", null, 5),
                 request("no artist here", "accepted", "20:25", null, 9));
 
+        // an artist of one song says no more than the song: only those of two or more
         assertThat(EveningSummaryService.summarize(EVENING, requests).artists()).containsExactly(
-                new EveningSummaryService.ArtistCount("Eminem", 2, 2),
-                new EveningSummaryService.ArtistCount("Sanah", 1, 2),
-                new EveningSummaryService.ArtistCount("Wilki", 1, 1));
+                new EveningSummaryService.ArtistCount("Eminem", 2, 2));
     }
 
     @Test
@@ -259,14 +346,25 @@ class EveningSummaryServiceTest {
         String csv = EveningSummaryService.toCsv(List.of(played, formula), messages, Locale.forLanguageTag("pl"));
 
         String[] lines = csv.split("\r\n");
-        assertThat(lines[0]).isEqualTo((char) 0xFEFF
-                + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI;Dodana przez DJ-a;Z kiosku");
+        assertThat(lines[0]).isEqualTo((char) 0xFEFF + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI;"
+                + "Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje");
+        // after the columns of before: the minutes it waited, the artist and the title apart, the dedications counted
         assertThat(lines[1]).isEqualTo("27;\"2026-10-03 21:00\";\"2026-10-03 21:30\";\"Varius Manx - Orła cień\";"
-                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";;");
-        // a request the AI rejected has no number
+                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";;;30;\"Varius Manx\";\"Orła cień\";0");
+        // a request the AI rejected has no number, waited for nothing; a name without " - " has no artist, its title a formula kept as text
         assertThat(lines[2]).isEqualTo(";\"2026-10-03 22:00\";;\"'=HYPERLINK(\"\"http://x\"\")\";\"'@SUM(1;2)\";1;0;"
-                + "\"odrzucona przez AI\";;;");
+                + "\"odrzucona przez AI\";;;;;;\"'=HYPERLINK(\"\"http://x\"\")\";0");
         assertThat(lines).hasSize(3);
+    }
+
+    /** "Kopiuj listę": the library's gaps one a line, as asked for. */
+    @Test
+    void theListToCopy_isASongALine() {
+        assertThat(EveningSummaryService.copyList(List.of(
+                new EveningSummaryService.LibraryGap("Wilki - Baśka", 5, 2, com.scan2play.model.LibraryMark.MISSING),
+                new EveningSummaryService.LibraryGap("Dżem - Baśka", 1, 1, com.scan2play.model.LibraryMark.SIMILAR))))
+                .isEqualTo("Wilki - Baśka\nDżem - Baśka");
+        assertThat(EveningSummaryService.copyList(List.of())).isEmpty();
     }
 
     @Test
@@ -332,7 +430,7 @@ class EveningSummaryServiceTest {
                 2L, com.scan2play.model.LibraryMark.SIMILAR, 3L, com.scan2play.model.LibraryMark.MISSING), messages,
                 Locale.forLanguageTag("pl")).split("\r\n");
 
-        assertThat(lines[0]).endsWith(";Komentarz AI;Dodana przez DJ-a;Z kiosku;W bibliotece");
+        assertThat(lines[0]).endsWith(";Komentarz AI;Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje;W bibliotece");
         assertThat(lines[1]).endsWith(";\"tak\"");
         assertThat(lines[2]).endsWith(";\"podobny\"");
         assertThat(lines[3]).endsWith(";\"nie\"");

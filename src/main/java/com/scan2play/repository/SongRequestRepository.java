@@ -70,13 +70,17 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                         Pageable pageable);
 
     /**
-     * The party's evenings, the latest first: each day ({@code "2026-10-03"}) a request was made on, with how many — the day in
-     * Polish time, moved back by {@code EveningSummaryService.EVENING_STARTS} (6 hours), so a request at 01:30 belongs to the evening
-     * before. A row is {@code [day as text, count]}. Bounded by {@code limit}; the retention keeps 30 days of one party's rows
-     * (≤ 300 a day), {@code idx_party_decision_time} finds them by its first column.
+     * The party's evenings, the latest first: each day ({@code "2026-10-03"}) a request was made on, with the guests' votes of it —
+     * the day in Polish time, moved back by {@code EveningSummaryService.EVENING_STARTS} (6 hours), so a request at 01:30 belongs to
+     * the evening before. The votes as the summary counts them: of the songs the AI let through (a skipped or cleared one too, not
+     * one it rejected), without the DJ's own first vote of a song they added (V44); an evening of rejections alone is there with 0.
+     * A row is {@code [day as text, votes]}. Bounded by {@code limit}; the retention keeps 30 days of one party's rows (≤ 300 a day),
+     * {@code idx_party_decision_time} finds them by its first column.
      */
     @Query(value = "SELECT to_char(CAST((requested_at AT TIME ZONE 'Europe/Warsaw') - INTERVAL '6 hours' AS date), 'YYYY-MM-DD'),"
-            + " COUNT(*) FROM song_requests WHERE party_code = :partyCode GROUP BY 1 ORDER BY 1 DESC LIMIT :limit",
+            + " COALESCE(SUM(votes - CASE WHEN added_by_dj THEN 1 ELSE 0 END) FILTER (WHERE decision IS DISTINCT FROM 'rejected'"
+            + " OR skipped_at IS NOT NULL OR cleared_at IS NOT NULL), 0)"
+            + " FROM song_requests WHERE party_code = :partyCode GROUP BY 1 ORDER BY 1 DESC LIMIT :limit",
             nativeQuery = true)
     List<Object[]> findEvenings(@Param("partyCode") String partyCode, @Param("limit") int limit);
 

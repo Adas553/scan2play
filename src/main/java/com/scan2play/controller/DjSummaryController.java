@@ -32,13 +32,17 @@ import static com.scan2play.controller.ViewAttributes.DJ_LOGO;
 import static com.scan2play.controller.ViewAttributes.DJ_NAME;
 import static com.scan2play.controller.ViewAttributes.EVENING;
 import static com.scan2play.controller.ViewAttributes.EVENINGS;
+import static com.scan2play.controller.ViewAttributes.HOSTS_VIEW;
+import static com.scan2play.controller.ViewAttributes.LIBRARY_COPY;
 import static com.scan2play.controller.ViewAttributes.LIBRARY_GAPS;
 import static com.scan2play.controller.ViewAttributes.PARTY_CODE;
 import static com.scan2play.controller.ViewAttributes.SUMMARY;
 
 /**
- * "📊 Podsumowanie wieczoru" ({@link EveningSummaryService}): a page of one evening of the DJ's own party to print or save as PDF,
- * and the same evening's requests as CSV. Only the logged-in DJ's party — there is no party code to ask for.
+ * "📊 Podsumowanie wieczoru" ({@link EveningSummaryService}): a page of one evening of the DJ's own party to print or save as PDF —
+ * the DJ's version, or with {@code view=hosts} the one to give the couple or the client (the evening's songs without what is the
+ * DJ's own: the AI's rejections, the skipped and cleared, the library, the tips) —, and the same evening's requests as CSV. Only the
+ * logged-in DJ's party — there is no party code to ask for.
  */
 @Controller
 @RequestMapping("/dj/summary")
@@ -50,9 +54,16 @@ public class DjSummaryController {
     private final MessageSource messageSource;
     private final PlanService planService;
 
-    /** The evening {@code evening} ("2026-10-03"); none, or one that is not a date, is the latest evening with requests. */
+    /** The value of {@code view} that shows the hosts' version; anything else is the DJ's. */
+    static final String VIEW_HOSTS = "hosts";
+
+    /**
+     * The evening {@code evening} ("2026-10-03"); none, or one that is not a date, is the latest evening with requests. {@code view}
+     * "hosts": the hosts' version.
+     */
     @GetMapping
     public String summary(@RequestParam(required = false) String evening, @RequestParam(required = false) String party,
+                          @RequestParam(required = false) String view,
                           Model model, OAuth2AuthenticationToken authentication, HttpSession session) {
         PartySettingsEntity settings = planService.require(sessionHelper.require(party, StaffPermission.SUMMARY, authentication,
                 session), PlanFeature.SUMMARY);
@@ -63,11 +74,15 @@ public class DjSummaryController {
         model.addAttribute(DJ_LOGO, planService.asPlanned(settings).logoPath());
         model.addAttribute(EVENINGS, evenings);
         model.addAttribute(EVENING, shown);
+        boolean hosts = VIEW_HOSTS.equals(view);
+        model.addAttribute(HOSTS_VIEW, hosts);
         List<SongRequestEntity> requests = shown == null ? List.of() : eveningSummaryService.requests(settings.getPartyCode(), shown);
         model.addAttribute(SUMMARY, shown == null ? null : EveningSummaryService.summarize(shown, requests));
-        // "Nie masz w bibliotece" (V42): with the plan that marks by the library, and a library
-        model.addAttribute(LIBRARY_GAPS, shown != null && planService.allows(settings, PlanFeature.LIBRARY)
-                ? eveningSummaryService.libraryGaps(settings.getPartyCode(), requests).orElse(null) : null);
+        // "Nie masz w bibliotece" (V42): the DJ's version, with the plan that marks by the library, and a library
+        List<EveningSummaryService.LibraryGap> gaps = shown != null && !hosts && planService.allows(settings, PlanFeature.LIBRARY)
+                ? eveningSummaryService.libraryGaps(settings.getPartyCode(), requests).orElse(null) : null;
+        model.addAttribute(LIBRARY_GAPS, gaps);
+        model.addAttribute(LIBRARY_COPY, gaps == null ? null : EveningSummaryService.copyList(gaps));
         return "summary";
     }
 

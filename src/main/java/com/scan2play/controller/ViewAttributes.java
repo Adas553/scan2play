@@ -73,6 +73,8 @@ public final class ViewAttributes {
     public static final String EVENINGS = "evenings";
     public static final String EVENING = "evening";
     public static final String SUMMARY = "summary";
+    /** The evening summary's version for the hosts (the couple, the client): without what is the DJ's own. */
+    public static final String HOSTS_VIEW = "hostsView";
     public static final String REQUEST_LIMIT = "requestLimit";
     public static final String COOLDOWN_MINUTES = "cooldownMinutes";
     public static final String DUPLICATE_CHECK_WINDOW = "duplicateCheckWindow";
@@ -127,6 +129,8 @@ public final class ViewAttributes {
     public static final String LIBRARY_ON = "libraryOn";
     /** The evening summary's songs not in the DJ's library (V42); null without a library or without the plan. */
     public static final String LIBRARY_GAPS = "libraryGaps";
+    /** The library's gaps one a line: what the summary's "Kopiuj listę" copies. */
+    public static final String LIBRARY_COPY = "libraryCopy";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";
