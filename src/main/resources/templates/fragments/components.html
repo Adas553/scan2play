@@ -376,6 +376,11 @@
     </th:block>
 </th:block>
 
+<!--/* The DJ's name on the guests' pages ("🎧 Gra: <name>"): a span of its own, so a guests' theme (V59) sets the name alone in its face
+     (the scary theme's capitals are wide: "Gra:" stays in the page's font); a long name marked, so the wide face is set smaller. */-->
+<span th:fragment="djNameText" class="s2p-dj-name" th:text="${djName}"
+      th:classappend="${#strings.length(djName) > 26} ? 's2p-dj-longer' : (${#strings.length(djName) > 16} ? 's2p-dj-long' : '')">DJ Koko</span>
+
 <!--/* The guests' look (V59, "Motyw dla gości"): the themes' stylesheet, after app.css (or tv.css) — only when the party has a theme
      (the classic look is app.css alone, nothing more to load on a guest's phone). The page's <body> names the theme
      (data-guest-theme), and the stylesheet's tokens follow it. */-->

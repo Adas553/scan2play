@@ -210,22 +210,48 @@ body[data-guest-theme] .tv::after {
     background-size: auto 100%;
 }
 
-/* ---- "🎧 Gra: …" in the theme's face: the party page, the result, the kiosk (#djName), the TV (.tv-dj) ---- */
-[data-guest-theme] :is(#djName, .tv-dj) {
+/* ---- "🎧 Gra: …" in the theme's face: the party page, the result, the kiosk (#djName), the TV (.tv-dj). The serif themes set the
+   whole line in the serif; the scary one the DJ's name alone (.s2p-dj-name, components :: djNameText) — Nosifer's capitals are wide and
+   their drips crowd a line, so "Gra:" stays in the page's font and a long name is set smaller (.s2p-dj-long: over 16 letters,
+   .s2p-dj-longer: over 26). The name is one block: on a narrow screen it goes under "Gra:" whole, never broken after "DJ". ---- */
+:is([data-guest-theme="CHRISTMAS"], [data-guest-theme="WEDDING"]) :is(#djName, .tv-dj) {
     font-family: var(--s2p-theme-font, inherit);
-}
-[data-guest-theme="SCARY"] #djName {
-    font-size: 1.05rem !important;   /* Nosifer is wide: "🎧 GRA: DJ NOCNY MAREK" on one line of a phone */
-    font-weight: 400 !important;
-    line-height: 1.6;
-}
-[data-guest-theme="SCARY"] .tv-dj {
-    font-size: 2.4vh;
-    font-weight: 400;
 }
 :is([data-guest-theme="CHRISTMAS"], [data-guest-theme="WEDDING"]) #djName {
     font-size: 1.4rem !important;
     letter-spacing: 0.01em;
+}
+[data-guest-theme="SCARY"] .s2p-dj-name {
+    display: inline-block;
+    max-width: 100%;
+    font-family: var(--s2p-theme-font, inherit);
+    font-weight: 400;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+[data-guest-theme="SCARY"] .s2p-dj-name.s2p-dj-long { font-size: 0.85rem; }
+[data-guest-theme="SCARY"] .s2p-dj-name.s2p-dj-longer { font-size: 0.72rem; }
+[data-guest-theme="SCARY"] .tv-dj .s2p-dj-name { font-size: 2.4vh; }
+[data-guest-theme="SCARY"] .tv-dj .s2p-dj-name.s2p-dj-long { font-size: 2vh; }
+[data-guest-theme="SCARY"] .tv-dj .s2p-dj-name.s2p-dj-longer { font-size: 1.7vh; }
+
+/* ---- The fields (the song, the dedication, the search of the list, the kiosk's): dark in every theme — Bootstrap's white field was
+   the brightest thing on the page, brighter than the action, in a dark hall too. The page's own background, the text's colours, an
+   edge in the second text's colour (an edge of the card's colour could not be told from the card: WCAG asks 3 : 1 for a field's edge),
+   the accent's ring when typed in. The classic look keeps Bootstrap's white field. ---- */
+body[data-guest-theme] .form-control,
+body[data-guest-theme] .form-control:focus {
+    background-color: var(--s2p-bg);
+    color: var(--s2p-text);
+    border-color: var(--s2p-text-muted);
+}
+body[data-guest-theme] .form-control:focus {
+    border-color: var(--s2p-action);
+    box-shadow: 0 0 0 0.2rem var(--s2p-action-28);
+}
+body[data-guest-theme] .form-control::placeholder {
+    color: var(--s2p-text-muted);
+    opacity: 1;
 }
 
 @media print {

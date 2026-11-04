@@ -253,6 +253,10 @@ class GuestPageRenderTest {
         assertThat(render(PL, Map.of())).as("a page without the attribute (the demo, the tests of before): the classic look")
                 .doesNotContain("guest-themes", "data-guest-theme");
 
+        // a long name in the scary theme's wide face: set smaller, under "Gra:" whole if it must
+        writeForTheBrowserTests("guest-theme-scary-long.html", render(PL, Map.of("guestTheme", com.scan2play.model.GuestTheme.SCARY,
+                "djName", "DJ Krzysztof Wiśniewski", "guestQueue", queue(List.of(numbered(1, "Michael Jackson - Thriller", 22)), Set.of(), null))));
+
         String ended = renderEnded(PL, Map.of("guestTheme", com.scan2play.model.GuestTheme.WEDDING, "djName", "DJ Kuba"));
         assertThat(ended).contains("data-guest-theme=\"WEDDING\"", "/css/guest-themes.css");
         writeForTheBrowserTests("party-ended-theme.html", ended);
@@ -696,12 +700,17 @@ class GuestPageRenderTest {
         assertThat(render(PL, Map.of("partyCode", "DEMO"))).contains("← Wróć do panelu demo").doesNotContain("??");
     }
 
-    /** Who plays (V17): "🎧 Gra: DJ Koko" under the title, escaped; nothing when the DJ wrote nothing. */
+    /**
+     * Who plays (V17): "🎧 Gra: DJ Koko" under the title, escaped; nothing when the DJ wrote nothing. The name a span of its own (a guests'
+     * theme sets it alone in its face, V59), marked when long: over 16 letters, over 26.
+     */
     @Test
     void whoPlays_isShownUnderTheTitle() {
         assertThat(render(PL, Map.of("djName", "DJ <b>Koko</b>")))
-                .contains("id=\"djName\"", "🎧 Gra: DJ &lt;b&gt;Koko&lt;/b&gt;").doesNotContain("??");
-        assertThat(render(Locale.ENGLISH, Map.of("djName", "DJ Koko"))).contains("🎧 Playing: DJ Koko");
+                .contains("id=\"djName\"", ">🎧 Gra:</span> <span class=\"s2p-dj-name\">DJ &lt;b&gt;Koko&lt;/b&gt;</span>").doesNotContain("??");
+        assertThat(render(Locale.ENGLISH, Map.of("djName", "DJ Koko"))).contains(">🎧 Playing:</span> <span class=\"s2p-dj-name\">DJ Koko</span>");
+        assertThat(render(PL, Map.of("djName", "DJ Krzysztof Wiśniewski"))).contains("class=\"s2p-dj-name s2p-dj-long\"");
+        assertThat(render(PL, Map.of("djName", "DJ Krzysztof Wiśniewski-Kowalczyk"))).contains("class=\"s2p-dj-name s2p-dj-longer\"");
         assertThat(render(PL, Map.of())).doesNotContain("id=\"djName\"");
     }
 

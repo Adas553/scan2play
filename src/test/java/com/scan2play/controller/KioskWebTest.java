@@ -149,7 +149,7 @@ class KioskWebTest {
                 "action=\"" + KIOSK + "/request\"", "name=\"_csrf\"", "data-autocomplete=\"songs\"", "id=\"dedicationBox\"",
                 ">Najczęściej wybierane<", "data-url=\"" + KIOSK + "/list\"", "action=\"" + KIOSK + "/vote\"", "Wilki - Baśka",
                 "aria-label=\"Zagłosuj na Wilki - Baśka, głosów: 5\"", "action=\"" + KIOSK + "/next\"", ">Następny gość<",
-                "<script src=\"/js/kiosk.js\">", "🎧 <span>DJ Koko</span>");
+                "<script src=\"/js/kiosk.js\">", "🎧 <span class=\"s2p-dj-name\">DJ Koko</span>");
         String ask = html.substring(html.indexOf("class=\"s2p-kiosk-ask\""), html.indexOf("id=\"kioskList\""));
         assertThat(ask).as("\"Następny gość\" under the form, in its column: always on the screen, never under a long list")
                 .contains("id=\"requestForm\"", "id=\"kioskNext\"", "data-kiosk-next");

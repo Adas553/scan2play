@@ -709,8 +709,11 @@ zmień" → the card): the two are set apart — six of the print's eight themes
 **What a theme changes** (`static/css/guest-themes.css`, loaded after `app.css` / `tv.css` only when the party has a theme —
 `components :: guestThemeCss` —, `<body data-guest-theme="SCARY">`): the colour tokens (the page, the card, the edges, the two texts, the
 action and its tints — the page's glow follows —, the TV's), one ornament (our SVG, `static/images/themes/`) in a band of 56 px at the top
-of the page — the card comes 36 px lower; none in the kiosk, a band in the TV's top padding —, and the face of "🎧 Gra: …" (`#djName`,
-`.tv-dj`; our fonts, `font-display: swap`). **What it never changes:** the statuses — the green "Twoja", the yellow 👍, the red "NIE" —
+of the page — the card comes 36 px lower; none in the kiosk, a band in the TV's top padding —, the face of "🎧 Gra: …" (`#djName`,
+`.tv-dj`; our fonts, `font-display: swap`: the serif themes the whole line, the scary one the DJ's name alone — `components ::
+djNameText`, a span marked `s2p-dj-long` over 16 letters, `s2p-dj-longer` over 26, set smaller and moved under "Gra:" whole), and the
+fields — dark (the page's background, the text's colours, an edge in the second text's colour, the accent's ring when typed in):
+Bootstrap's white field was the brightest thing on the page. **What it never changes:** the statuses — the green "Twoja", the yellow 👍, the red "NIE" —
 and no accent may look like them (a Christmas red or gold, a summer coral did; the red of Świąteczny is in a bauble only), the logo's
 cyan "2" (ours), the layout, 44 px, one action, no animation. `GuestThemesCssTest`: a block sets only tokens `app.css` / `tv.css` have
 (and its own `--s2p-ornament`, `--s2p-theme-font`), every theme the whole set, no colour outside the blocks, WCAG AA (the texts on the card

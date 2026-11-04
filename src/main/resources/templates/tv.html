@@ -26,7 +26,7 @@
             <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan to request a song</span></h1>
         <img th:if="${qrCodeBase64}" class="tv-qr" th:src="${'data:image/png;base64,' + qrCodeBase64}" alt="QR code / kod QR" th:alt="${#locale.language == 'pl' ? 'QR code / kod QR' : 'QR code'}">
         <p class="tv-link" th:text="${permanentLink}">www.scan2play.com.pl/p/ABCDE</p>
-        <p th:if="${djName}" class="tv-dj">🎧 <span th:text="${djName}">DJ Koko</span></p>
+        <p th:if="${djName}" class="tv-dj">🎧 <span th:replace="~{fragments/components :: djNameText}">DJ Koko</span></p>
     </section>
 
     <section id="tvList" class="tv-list" th:fragment="tvList" th:attr="data-url=@{/p/{code}/tv/list(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}">

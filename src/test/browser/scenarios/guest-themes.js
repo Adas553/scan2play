@@ -37,6 +37,12 @@
         return colour;
     }
 
+    function ratio(first, second) {
+        const a = luminance(parse(first));
+        const b = luminance(parse(second));
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+
     function contrast(el) {
         const a = luminance(parse(getComputedStyle(el).color));
         const b = luminance(behind(el));
@@ -113,9 +119,18 @@
         t.step('the words on the green read at 4.5 : 1', unreadable('.s2p-vote-mine, .s2p-badge-mine', 4.5), []);
         const action = getComputedStyle(document.getElementById('submitBtn')).backgroundColor;
         t.check('the action is the theme\'s colour, not the classic cyan (' + action + ')', action !== 'rgb(13, 202, 240)');
+        const field = document.getElementById('songInput');
+        const look = getComputedStyle(field);
+        const card = 'rgb(' + behind(field.closest('.card')).slice(0, 3).join(', ') + ')';
+        t.check('the field is dark, not Bootstrap\'s white (' + look.backgroundColor + ')', luminance(parse(look.backgroundColor)) < 0.05);
+        t.step('the field\'s words and its placeholder read at 4.5 : 1, its edge at 3 : 1 on the card', [
+            ratio(look.color, look.backgroundColor) >= 4.5, ratio(getComputedStyle(field, '::placeholder').color, look.backgroundColor) >= 4.5,
+            ratio(look.borderTopColor, card) >= 3], [true, true, true]);
         const face = FACES[theme];
         if (face) {
-            t.check('"🎧 Gra: …" in ' + face, getComputedStyle(document.getElementById('djName')).fontFamily.indexOf(face) >= 0);
+            // the serif themes set the whole line, the scary one the name alone (its capitals are wide)
+            const named = theme === 'SCARY' ? document.querySelector('#djName .s2p-dj-name') : document.getElementById('djName');
+            t.check('"🎧 Gra: …" in ' + face, getComputedStyle(named).fontFamily.indexOf(face) >= 0);
             t.check(face + ' loaded from our server (the Polish letters too)', Array.from(document.fonts).some(function (f) {
                 return f.family.replace(/"/g, '') === face && f.status === 'loaded';
             }));
@@ -168,7 +183,28 @@
                 !!document.querySelector('link[href*="guest-themes"]')], [false, false]);
             t.step('no band', ornament().content, 'none');
             t.step('the action is the logo\'s cyan', getComputedStyle(document.getElementById('submitBtn')).backgroundColor, 'rgb(13, 202, 240)');
+            t.step('the field Bootstrap\'s white, as before', getComputedStyle(document.getElementById('songInput')).backgroundColor, 'rgb(255, 255, 255)');
             t.step('the card where it was (the page\'s 20 px)', Math.round(document.querySelector('.card').getBoundingClientRect().top), 20);
+        }
+    });
+
+    S2P.scenario({
+        name: 'guest-theme-scary-long-name',
+        title: 'the scary theme with a long DJ\'s name ("DJ Krzysztof Wiśniewski"): only the name in the dripping face, set smaller, never broken inside, the line inside the card',
+        page: 'guest-theme-scary-long',
+        viewport: '390,844',
+        run: async function (t) {
+            await document.fonts.ready;
+            const line = document.getElementById('djName');
+            const name = line.querySelector('.s2p-dj-name');
+            t.step('"Gra:" in the page\'s font, the name in Nosifer', [getComputedStyle(line).fontFamily.indexOf('S2P Scary') >= 0,
+                getComputedStyle(name).fontFamily.indexOf('S2P Scary') >= 0], [false, true]);
+            t.step('the name is one line of its own (not broken after "DJ")',
+                Math.round(name.getBoundingClientRect().height / parseFloat(getComputedStyle(name).lineHeight)), 1);
+            const card = line.closest('.card').getBoundingClientRect();
+            const box = name.getBoundingClientRect();
+            t.check('the name inside the card', box.left >= card.left && box.right <= card.right);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
         }
     });
 
