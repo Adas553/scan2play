@@ -91,17 +91,27 @@ public final class ViewAttributes {
     public static final String LAST_REQUEST = "lastRequest";
     /** The dedication of a request sent back to the form (V38), as the guest typed it. */
     public static final String LAST_DEDICATION = "lastDedication";
+    /**
+     * The guest's song field asks which suggestions the DJ has (V58, {@code LibraryHintService.on}); the organiser's library card: the
+     * switch as saved ({@code PartySettingsEntity.libraryHints}).
+     */
+    public static final String LIBRARY_HINTS = "libraryHints";
     /** Whether the guests may add a dedication (V38, {@code PartySettingsEntity.dedicationsOn}). */
     public static final String DEDICATIONS_ON = "dedicationsOn";
     /** The newest dedications of the queue's songs (V38), by the song's id ({@code DjService.dedicationsOf}). */
     public static final String DEDICATIONS = "dedications";
-    /** The queue's marks of the DJ's library (V41, V42): song id → "✓" / "?" / "✗"; none without a library or without Pro. */
+    /**
+     * The queue's marks of the DJ's library (V41, V42): song id → "✓" / "?" / "✗" with the tempo and the key of the DJ's track (V57,
+     * {@code DjLibraryService.Match}); none without a library or without Pro.
+     */
     public static final String LIBRARY_MARKS = "libraryMarks";
     /** The settings' card of the DJ's library (V41): how many tracks (null: none uploaded) and the day of the upload. */
     public static final String LIBRARY_TRACKS = "libraryTracks";
     public static final String LIBRARY_UPLOADED = "libraryUploaded";
     /** The rekordbox playlist the library is (V42), null for a whole collection or an M3U. */
     public static final String LIBRARY_PLAYLIST = "libraryPlaylist";
+    /** A rekordbox library uploaded before V57 (keys alone): the card asks for it again, for the tempo and the key in the queue. */
+    public static final String LIBRARY_OLD = "libraryOld";
     /** The largest file the server reads (DjLibraryController): library.js says "too large" before it reads or sends one. */
     public static final String LIBRARY_MAX_BYTES = "libraryMaxBytes";
     public static final String LIBRARY_MAX_MB = "libraryMaxMb";

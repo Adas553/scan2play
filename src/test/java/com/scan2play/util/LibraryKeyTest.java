@@ -82,6 +82,22 @@ class LibraryKeyTest {
     }
 
     @Test
+    @DisplayName("the match names the track that gave the mark: the one with an artist in common before another of the title")
+    void matchNamesTheTrack() {
+        LibraryKey dzem = LibraryKey.of("Dżem - Baśka");
+        LibraryKey wilki = LibraryKey.of("Wilki - Baśka");
+        LibraryKey swapped = LibraryKey.of("Baśka - Wilki");
+
+        assertThat(wilki.matchIn(List.of(dzem, wilki), List.of())).isEqualTo(new LibraryKey.Match(LibraryMark.HAVE, wilki));
+        assertThat(LibraryKey.of("Lady Pank - Baśka").matchIn(List.of(dzem, wilki), List.of()))
+                .isEqualTo(new LibraryKey.Match(LibraryMark.SIMILAR, dzem));
+        assertThat(LibraryKey.of("Baśka - Wilki").matchIn(List.of(), List.of(swapped)))
+                .isEqualTo(new LibraryKey.Match(LibraryMark.HAVE, swapped));
+        assertThat(LibraryKey.of("ABBA - SOS").matchIn(List.of(dzem), List.of()))
+                .isEqualTo(new LibraryKey.Match(LibraryMark.MISSING, null));
+    }
+
+    @Test
     @DisplayName("nothing to compare is empty; a long name is cut to the columns")
     void emptyAndLong() {
         assertThat(LibraryKey.of(null).isEmpty()).isTrue();

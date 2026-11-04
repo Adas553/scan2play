@@ -6,6 +6,7 @@ import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryParser.Library;
 import com.scan2play.service.DjLibraryParser.UnreadableLibraryException;
 import com.scan2play.service.DjLibraryService;
+import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlanService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -56,14 +57,17 @@ public class DjLibraryController {
     private final DjSessionHelper sessionHelper;
     private final PlanService planService;
     private final MessageSource messageSource;
+    private final PartySettingsCommandService partySettingsCommandService;
     private final long maxBytes;
 
     public DjLibraryController(DjLibraryService libraryService, DjSessionHelper sessionHelper, PlanService planService,
-                               MessageSource messageSource, @Value("${scan2play.library.max-bytes:" + MAX_BYTES + "}") long maxBytes) {
+                               MessageSource messageSource, PartySettingsCommandService partySettingsCommandService,
+                               @Value("${scan2play.library.max-bytes:" + MAX_BYTES + "}") long maxBytes) {
         this.libraryService = libraryService;
         this.sessionHelper = sessionHelper;
         this.planService = planService;
         this.messageSource = messageSource;
+        this.partySettingsCommandService = partySettingsCommandService;
         this.maxBytes = maxBytes;
     }
 
@@ -104,11 +108,31 @@ public class DjLibraryController {
         return answer(HttpStatus.OK, "settings.library.uploaded", locale, library.tracks());
     }
 
+    /**
+     * "Podpowiedzi gości" (V58): whether the guests' suggestions are marked by the library, "✓ DJ ma" first. Saved as soon as picked
+     * (forms.js). Switching it on needs the plan; switching it off never does.
+     */
+    @PostMapping("/hints")
+    public String hints(@RequestParam String partyCode, @RequestParam boolean on, OAuth2AuthenticationToken authentication,
+                        HttpSession session) {
+        PartySettingsEntity party = sessionHelper.requireOwner(partyCode, authentication, session);
+        if (on) {
+            planService.require(party, PlanFeature.LIBRARY);
+        }
+        partySettingsCommandService.updateSettings(party.getPartyCode(), settings -> settings.setLibraryHints(on));
+        return toTheCard(party);
+    }
+
     /** "Usuń bibliotekę": the organiser's own data goes whatever the plan. */
     @PostMapping("/delete")
     public String delete(@RequestParam String partyCode, OAuth2AuthenticationToken authentication, HttpSession session) {
         PartySettingsEntity party = sessionHelper.requireOwner(partyCode, authentication, session);
         libraryService.delete(party.getPartyCode());
+        return toTheCard(party);
+    }
+
+    /** Back to the library's card of "Ustawienia imprezy". */
+    private static String toTheCard(PartySettingsEntity party) {
         return "redirect:" + UriComponentsBuilder.fromPath("/dj/settings").queryParam("party", party.getPartyCode())
                 .fragment("libraryCard").build().toUriString();
     }

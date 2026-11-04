@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  *     "The" — "Kygo &amp; Selena Gomez" is "Selena Gomez, Kygo".</li>
  * </ul>
  * A request is "✓" when the library has its title with an artist in common, "? Podobny" with the title alone ({@link #markIn}).
- * Nothing but these keys is kept of the DJ's file: no title as written, no path.
+ * The match is by these keys alone; the names as the file writes them ({@code DjLibraryParser.Track}) are only shown.
  */
 public record LibraryKey(String title, String artists) {
 
@@ -82,25 +82,37 @@ public record LibraryKey(String title, String artists) {
      * Sheeran - Perfect" is no song like the band Perfect's.
      */
     public LibraryMark markIn(Collection<LibraryKey> library, Collection<LibraryKey> swapped) {
+        return matchIn(library, swapped).mark();
+    }
+
+    /** The mark of a request and the library's track that gave it (null for "✗"): the queue shows that track's tempo and key. */
+    public record Match(LibraryMark mark, LibraryKey track) {
+    }
+
+    /** {@link #markIn(Collection, Collection)} with the track it found: "✓" the one with an artist in common, "?" one of the title. */
+    public Match matchIn(Collection<LibraryKey> library, Collection<LibraryKey> swapped) {
         if (isEmpty()) {
-            return LibraryMark.MISSING;
+            return new Match(LibraryMark.MISSING, null);
         }
         Set<String> mine = artists.isEmpty() ? Set.of() : new HashSet<>(Arrays.asList(artists.split("\\+")));
-        boolean sameTitle = false;
+        LibraryKey sameTitle = null;
         for (LibraryKey track : library) {
             if (title.equals(track.title)) {
-                sameTitle = true;
                 if (track.sharesAnArtistWith(mine)) {
-                    return LibraryMark.HAVE;
+                    return new Match(LibraryMark.HAVE, track);
+                }
+                if (sameTitle == null) {
+                    sameTitle = track;
                 }
             }
         }
         for (LibraryKey track : swapped) {
             if (title.equals(track.title) && track.sharesAnArtistWith(mine)) {
-                return LibraryMark.HAVE;
+                return new Match(LibraryMark.HAVE, track);
             }
         }
-        return sameTitle && title.length() >= SHORTEST_TITLE ? LibraryMark.SIMILAR : LibraryMark.MISSING;
+        return sameTitle != null && title.length() >= SHORTEST_TITLE ? new Match(LibraryMark.SIMILAR, sameTitle)
+                : new Match(LibraryMark.MISSING, null);
     }
 
     private boolean sharesAnArtistWith(Set<String> theirs) {

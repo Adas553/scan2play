@@ -11,6 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,8 +27,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The DJ's library (V41, V42) on a real PostgreSQL: an upload replaces the whole library, two at the same moment end as one of them
- * (never a mix, never an error), the queue asks for its few keys at once, and the library goes with the party.
+ * The DJ's library (V41, V42, V57) on a real PostgreSQL: an upload replaces the whole library, two at the same moment end as one of
+ * them (never a mix, never an error), each song is kept as the file writes it beside its key, the queue asks for its few keys at once
+ * and gets the tempo and the key of the DJ's tracks, and the library goes with the party.
  */
 class DjLibraryIT extends PostgresIntegrationTest {
 
@@ -121,6 +126,63 @@ class DjLibraryIT extends PostgresIntegrationTest {
                 .containsEntry(key("Ed Sheeran - Perfect"), LibraryMark.MISSING)
                 .containsEntry(key("Autobiografia - Perfect"), LibraryMark.HAVE)
                 .containsEntry(key("Perfect - Autobiografia"), LibraryMark.HAVE);
+    }
+
+    /**
+     * A rekordbox collection read and saved (V57): each song with its artist and title as written — the shortest of its versions —,
+     * its tempo, key, genre and year; a track never tagged ("Wilki - Baśka" for its name) by its name both ways round. The queue's
+     * "✓" and "?" get the tempo and the key of the track they were found as; "✗" none.
+     */
+    @Test
+    void aCollection_keepsItsTracksAsWritten_andTheQueueGetsTheirTempoAndKey() throws IOException {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <DJ_PLAYLISTS Version="1.0.0"><COLLECTION Entries="4">
+                  <TRACK TrackID="1" Name="One More Time (Extended Mix)" Artist="Daft Punk" AverageBpm="122.00" Tonality="5A" Genre="House" Year="2000"/>
+                  <TRACK TrackID="2" Name="One More Time" Artist="Daft Punk" AverageBpm="122.50" Tonality="5A" Genre="House" Year="2000"/>
+                  <TRACK TrackID="3" Name="Wilki - Baśka" Artist="" AverageBpm="128.00" Tonality="8B" Year="0"/>
+                  <TRACK TrackID="4" Name="Sen o Victorii" Artist="Dżem" AverageBpm="0.00" Tonality="" Genre=""/>
+                </COLLECTION></DJ_PLAYLISTS>
+                """;
+        Library collection = DjLibraryParser.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)), 100, null);
+        String code = party();
+        libraries.replace(code, collection);
+
+        assertThat(libraries.info(code)).hasValueSatisfying(info -> assertThat(info.withDetails()).isTrue());
+        assertThat(jdbc.queryForMap("SELECT artist_name, title_name, bpm, tonality, genre, year FROM dj_library_track"
+                + " WHERE party_code = ? AND title_key = 'onemoretime'", code))
+                .containsEntry("artist_name", "Daft Punk").containsEntry("title_name", "One More Time")
+                .containsEntry("bpm", new BigDecimal("122.50")).containsEntry("tonality", "5A").containsEntry("genre", "House")
+                .containsEntry("year", 2000);
+        assertThat(jdbc.queryForMap("SELECT artist_name, title_name, bpm, tonality, genre, year FROM dj_library_track"
+                + " WHERE party_code = ? AND title_key = 'senovictorii'", code))
+                .as("what the file does not say is null: a tempo of 0, an empty key and genre")
+                .containsEntry("artist_name", "Dżem").containsEntry("bpm", null).containsEntry("tonality", null)
+                .containsEntry("genre", null).containsEntry("year", null);
+        assertThat(jdbc.queryForList("SELECT artist_name || ' / ' || title_name || ' / ' || swapped FROM dj_library_track"
+                + " WHERE party_code = ? AND bpm = 128", String.class, code))
+                .as("an untagged track by its name, both ways round").containsExactlyInAnyOrder("Wilki / Baśka / false", "Baśka / Wilki / true");
+
+        var matches = libraries.matches(code, List.of(key("Daft Punk - One More Time"), key("Lady Pank - Sen o Victorii"),
+                key("Wilki - Baśka"), key("ABBA - SOS")));
+        assertThat(matches.get(key("Daft Punk - One More Time"))).isEqualTo(new DjLibraryService.Match(LibraryMark.HAVE, new BigDecimal("122.50"), "5A"));
+        assertThat(matches.get(key("Lady Pank - Sen o Victorii"))).isEqualTo(new DjLibraryService.Match(LibraryMark.SIMILAR, null, null));
+        assertThat(matches.get(key("Wilki - Baśka"))).isEqualTo(new DjLibraryService.Match(LibraryMark.HAVE, new BigDecimal("128.00"), "8B"));
+        assertThat(matches.get(key("ABBA - SOS"))).isEqualTo(new DjLibraryService.Match(LibraryMark.MISSING, null, null));
+        assertThat(libraries.marks(code, List.of(key("Wilki - Baśka"))))
+                .as("the marks alone, as the summary asks for them").containsEntry(key("Wilki - Baśka"), LibraryMark.HAVE);
+    }
+
+    /** A library uploaded before V57 (its keys alone): its marks as before, no tempo nor key, and it says it has no details. */
+    @Test
+    void aLibraryOfBefore_marksAsItDid() {
+        String code = party();
+        jdbc.update("INSERT INTO dj_library (party_code, track_count, format, uploaded_at) VALUES (?, 1, 'REKORDBOX', now())", code);
+        jdbc.update("INSERT INTO dj_library_track (party_code, title_key, artists) VALUES (?, 'baska', 'wilki')", code);
+
+        assertThat(libraries.info(code)).hasValueSatisfying(info -> assertThat(info.withDetails()).isFalse());
+        assertThat(libraries.matches(code, List.of(key("Wilki - Baśka"))))
+                .containsEntry(key("Wilki - Baśka"), new DjLibraryService.Match(LibraryMark.HAVE, null, null));
     }
 
     /** A playlist's name is only shown: one longer than its column is cut, never an error of the upload. */

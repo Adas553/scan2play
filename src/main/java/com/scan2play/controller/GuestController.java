@@ -8,6 +8,7 @@ import com.scan2play.service.GuestRequestService;
 import com.scan2play.service.GuestRequestService.Sent;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
+import com.scan2play.service.LibraryHintService;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
@@ -24,6 +25,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -46,6 +48,7 @@ public class GuestController {
     private final PlanService planService;
     private final GuestRequestService guestRequestService;
     private final PartyScheduleService partyScheduleService;
+    private final LibraryHintService libraryHintService;
 
     /**
      * The party page. It takes no {@code HttpSession} of its own (review 2026-10-14 W3): a parameter of that type made a session — a
@@ -67,6 +70,7 @@ public class GuestController {
             model.addAttribute(VIBE_NOTE, settings.getVibeNote());
             model.addAttribute(DJ_NAME, settings.getDjName());
             model.addAttribute(DEDICATIONS_ON, settings.isDedicationsOn());
+            model.addAttribute(LIBRARY_HINTS, libraryHintService.on(settings));   // the suggestions marked "✓ DJ ma" (V58)
             addProfiles(model, settings);
             model.addAttribute(TIP_URL, settings.getTipUrl());
             model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, request.getSession(false)));
@@ -79,6 +83,27 @@ public class GuestController {
             // old poster learned nothing there (the review of 2026-10-21, C3)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+    }
+
+    /**
+     * Which of the guest's suggestions the DJ has (V58, {@link LibraryHintService}): {@code song} once for each, "Artist - Title";
+     * the answer a list of as many true / false, in their order (song-autocomplete.js puts those first, "✓ DJ ma"). 404 when the party
+     * has none to tell — ended, no library, no plan, switched off — or is no party; at most {@value LibraryHintService#MOST_SONGS}
+     * songs are looked at. No session is made: it is asked as the guest types.
+     */
+    @GetMapping("/{partyCode}/library/has")
+    @ResponseBody
+    public List<Boolean> libraryHas(@PathVariable String partyCode, @RequestParam(name = "song", required = false) List<String> songs) {
+        PartySettingsEntity settings;
+        try {
+            settings = partySettingsQueryService.getSettings(partyCode);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (!libraryHintService.on(settings)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return libraryHintService.have(partyCode, songs == null ? List.of() : songs);
     }
 
     /**

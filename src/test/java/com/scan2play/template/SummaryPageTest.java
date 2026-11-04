@@ -105,7 +105,7 @@ class SummaryPageTest {
     private static com.scan2play.service.DjLibraryService aLibrary() {
         com.scan2play.service.DjLibraryService library = mock(com.scan2play.service.DjLibraryService.class);
         when(library.info(PARTY)).thenReturn(java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(2,
-                com.scan2play.service.DjLibraryParser.Format.M3U, java.time.Instant.now(), null)));
+                com.scan2play.service.DjLibraryParser.Format.M3U, java.time.Instant.now(), null, true)));
         when(library.marks(eq(PARTY), org.mockito.ArgumentMatchers.anyCollection())).thenAnswer(call -> {
             java.util.Map<com.scan2play.util.LibraryKey, com.scan2play.model.LibraryMark> marks = new java.util.HashMap<>();
             for (Object key : (java.util.Collection<?>) call.getArgument(1)) {

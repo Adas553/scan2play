@@ -97,7 +97,7 @@ class PlanFeatureEndpointsTest {
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans),
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),
-                                DjLibraryController.MAX_BYTES),
+                                settings, DjLibraryController.MAX_BYTES),
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
@@ -121,6 +121,8 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.SUMMARY, true, get("/dj/summary/csv").param("party", PUB)),
                 Arguments.of(PlanFeature.LIBRARY, false, post("/dj/library").param("partyCode", PUB)
                         .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM).content("#EXTM3U\nA - B.mp3\n")),
+                // the guests' suggestions marked by the library (V58): switched on only with Pro
+                Arguments.of(PlanFeature.LIBRARY, false, post("/dj/library/hints").param("partyCode", PUB).param("on", "true")),
                 Arguments.of(PlanFeature.LOGO, false, post("/dj/logo").param("partyCode", PUB)
                         .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
                         .content(com.scan2play.service.TestImages.png(40, 20))));
@@ -172,6 +174,8 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(post("/dj/qr-print/settings").param("partyCode", PUB).param("heading", "Osiemnastka")),
                 // deleting the library needs no Pro: the organiser's own data goes whatever the plan
                 Arguments.of(post("/dj/library/delete").param("partyCode", PUB)),
+                // nor switching the guests' marked suggestions off (V58)
+                Arguments.of(post("/dj/library/hints").param("partyCode", PUB).param("on", "false")),
                 // nor deleting the logo (V45)
                 Arguments.of(post("/dj/logo/delete").param("partyCode", PUB)));
     }

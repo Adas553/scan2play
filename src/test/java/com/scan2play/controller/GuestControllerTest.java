@@ -51,6 +51,8 @@ class GuestControllerTest {
     @Mock
     private GuestQueueService guestQueueService;
     @Mock
+    private com.scan2play.service.LibraryHintService libraryHintService;
+    @Mock
     private SongEvaluationService songEvaluationService;
     @Mock
     private PartySettingsQueryService partySettingsQueryService;
@@ -92,7 +94,7 @@ class GuestControllerTest {
         requests = new GuestRequestService(songEvaluationService, guestSessionService, guestVoteService,
                 guestRequestLimiter, messageSource, siteCounter);
         controller = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService, guestVoteService,
-                guestRequestLimiter, messageSource, planService, requests, partyScheduleService);
+                guestRequestLimiter, messageSource, planService, requests, partyScheduleService, libraryHintService);
         org.mockito.Mockito.lenient().when(guestRequestLimiter.clientIp(request)).thenReturn(IP); // not read by the party page
         org.mockito.Mockito.lenient().when(partySettingsQueryService.getSettings(PARTY)).thenReturn(settings); // not read by styleOf
         org.mockito.Mockito.lenient().when(guestQueueService.view(any(), any(), any()))   // an empty list, unless a test says otherwise
@@ -468,7 +470,8 @@ class GuestControllerTest {
         settings.setInstagramUrl("https://www.instagram.com/dj/");
         settings.setTipUrl("https://buycoffee.to/dj");
         GuestController free = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService,
-                guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts());
+                guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts(),
+                libraryHintService);
 
         ExtendedModelMap model = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, model, request)).isEqualTo("index");
@@ -515,7 +518,8 @@ class GuestControllerTest {
         }
 
         GuestController free = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService,
-                guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts());
+                guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts(),
+                libraryHintService);
         ExtendedModelMap freeEnded = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, freeEnded, request)).isEqualTo("party_ended");
         assertThat(freeEnded.get("instagramUrl")).isNull();

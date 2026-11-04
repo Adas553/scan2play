@@ -495,7 +495,7 @@ class DashboardPageRenderTest {
     /** The guests' dedications the dashboard's queue shows (V38), by the song's id: none, unless a test gives them. */
     private static Map<Long, List<com.scan2play.entity.SongRequestDedicationEntity>> dedications = Map.of();
     /** The queue's marks of the DJ's library (V41), by the song's id: none, unless a test gives them. */
-    private static Map<Long, com.scan2play.model.LibraryMark> libraryMarks = Map.of();
+    private static Map<Long, com.scan2play.service.DjLibraryService.Match> libraryMarks = Map.of();
     /** The party's library (V41): none, unless a test gives one. */
     private static java.util.Optional<com.scan2play.service.DjLibraryService.Info> library = java.util.Optional.empty();
 
@@ -980,13 +980,16 @@ class DashboardPageRenderTest {
      */
     @Test
     void theLibrary_marksEachSong() throws IOException {
-        libraryMarks = Map.of(1L, com.scan2play.model.LibraryMark.HAVE, 2L, com.scan2play.model.LibraryMark.MISSING,
-                4L, com.scan2play.model.LibraryMark.SIMILAR);
+        libraryMarks = Map.of(1L, match(com.scan2play.model.LibraryMark.HAVE, "128.00", "5A"),
+                2L, match(com.scan2play.model.LibraryMark.MISSING, null, null),
+                4L, match(com.scan2play.model.LibraryMark.SIMILAR, "122.50", null),
+                5L, match(com.scan2play.model.LibraryMark.HAVE, null, "8B"),
+                6L, match(com.scan2play.model.LibraryMark.HAVE, null, null));
         library = java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(3,
-                com.scan2play.service.DjLibraryParser.Format.M3U, java.time.Instant.now(), null));
+                com.scan2play.service.DjLibraryParser.Format.M3U, java.time.Instant.now(), null, true));
         try {
             String html = renderDashboard(party(), List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan"), song(3, "ABBA - SOS"),
-                    song(4, "Dżem - Baśka")), PL);
+                    song(4, "Dżem - Baśka"), song(5, "Akcent - Przez Twe Oczy Zielone"), song(6, "ABBA - Mamma Mia")), PL);
 
             assertWhatTheScriptsNeed(html);
             assertThat(rowFor(html, 1)).contains("data-library=\"have\"", "text-bg-success", ">✓ Masz<", "title=\"Ten utwór jest w Twojej bibliotece\"");
@@ -994,6 +997,13 @@ class DashboardPageRenderTest {
             assertThat(rowFor(html, 3)).doesNotContain("data-library", "s2p-library");
             assertThat(rowFor(html, 4)).contains("data-library=\"similar\"", ">? Podobny<",
                     "title=\"Masz utwór o tym tytule, ale innego wykonawcy albo zapisany inaczej — sprawdź\"");
+            // the tempo and the key of the DJ's track beside its mark (V57), as the file says them: either alone, or none
+            assertThat(rowFor(html, 1)).contains("class=\"small text-secondary s2p-library-tempo\"",
+                    "title=\"Tempo i tonacja Twojego utworu, z Twojej biblioteki\"", ">128 BPM · 5A<");
+            assertThat(rowFor(html, 4)).contains(">122.5 BPM<");
+            assertThat(rowFor(html, 5)).contains("s2p-library-tempo", ">8B<").doesNotContain("BPM");
+            assertThat(rowFor(html, 6)).contains("data-library=\"have\"").doesNotContain("s2p-library-tempo");
+            assertThat(rowFor(html, 2)).doesNotContain("s2p-library-tempo");
             assertThat(html).as("the switch \"Ukryj „Nie masz”\" beside the search, for a party with marks: it says the mark it hides")
                     .contains("id=\"libraryOnly\"", ">Ukryj „Nie masz”<", ">Ukryj ✗<", "aria-label=\"Ukryj „Nie masz”\"", "aria-pressed=\"false\"",
                             ">+ Dodaj<", "aria-label=\"Dodaj piosenkę\"");
@@ -1002,6 +1012,10 @@ class DashboardPageRenderTest {
             libraryMarks = Map.of();
             library = java.util.Optional.empty();
         }
+    }
+
+    private static com.scan2play.service.DjLibraryService.Match match(com.scan2play.model.LibraryMark mark, String bpm, String tonality) {
+        return new com.scan2play.service.DjLibraryService.Match(mark, bpm == null ? null : new java.math.BigDecimal(bpm), tonality);
     }
 
     @Test

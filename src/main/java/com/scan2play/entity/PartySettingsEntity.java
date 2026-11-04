@@ -101,6 +101,15 @@ public class PartySettingsEntity {
     private boolean dedicationsOn = true;
 
     /**
+     * Whether the guests' song suggestions are marked by the DJ's library (V58): the songs the DJ has first, "✓ DJ ma"
+     * ({@code LibraryHintService}). On by default; it works only with a library and the plan that has it. The organiser switches it in
+     * the card "Twoja biblioteka".
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean libraryHints = true;
+
+    /**
      * The DJ's profiles (V24), for the guests to follow: an https address on Instagram / Facebook / TikTok as
      * {@code util.SocialLinks} wrote it from what the DJ typed; null = not shown.
      */

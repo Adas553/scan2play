@@ -6,6 +6,8 @@ import com.scan2play.model.HistoryFilter;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.AiHealthMonitor;
 import com.scan2play.service.DemoParty;
+import com.scan2play.service.DjLibraryParser;
+import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
 import com.scan2play.service.LogoImage;
 import com.scan2play.service.GuestRequestLimiter;
@@ -17,8 +19,8 @@ import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
-import com.scan2play.model.LibraryMark;
 import com.scan2play.model.PlanFeature;
+import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.util.SongList;
 import com.scan2play.util.Texts;
@@ -197,8 +199,11 @@ public class DjDashboardController {
         return "dashboard";
     }
 
-    /** The queue's marks of the DJ's library (V41): only with the plan that has it — without Pro the library waits, unmarked. */
-    private Map<Long, LibraryMark> libraryMarks(PartySettingsEntity settings, List<SongRequestEntity> songs) {
+    /**
+     * The queue's marks of the DJ's library (V41), with the tempo and the key of the DJ's track (V57): only with the plan that has it —
+     * without Pro the library waits, unmarked.
+     */
+    private Map<Long, DjLibraryService.Match> libraryMarks(PartySettingsEntity settings, List<SongRequestEntity> songs) {
         return planService.allows(settings, PlanFeature.LIBRARY) ? djService.libraryMarksOf(settings.getPartyCode(), songs) : Map.of();
     }
 
@@ -233,6 +238,10 @@ public class DjDashboardController {
             model.addAttribute(LIBRARY_TRACKS, library.map(DjLibraryService.Info::tracks).orElse(null));
             model.addAttribute(LIBRARY_UPLOADED, library.map(info -> Times.day(info.uploadedAt())).orElse(null));
             model.addAttribute(LIBRARY_PLAYLIST, library.map(DjLibraryService.Info::playlist).orElse(null));
+            // a rekordbox library uploaded before V57: its keys alone — uploaded again, the queue shows the tempo and the key
+            model.addAttribute(LIBRARY_HINTS, settings.isLibraryHints());   // "Podpowiedzi gości" (V58)
+            model.addAttribute(LIBRARY_OLD, library.map(info -> !info.withDetails() && info.format() == DjLibraryParser.Format.REKORDBOX)
+                    .orElse(false));
             model.addAttribute(LIBRARY_MAX_BYTES, DjLibraryController.MAX_BYTES);
             model.addAttribute(LIBRARY_MAX_MB, DjLibraryController.MAX_BYTES / (1024 * 1024));
             // the DJ's logo (V45): the organiser's card shows the one saved, whatever the plan shows the guests

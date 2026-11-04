@@ -54,6 +54,7 @@ class DjLibraryControllerTest {
 
     private final PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PUB).ownerId(ORGANISER).active(true).build();
     private DjLibraryService libraries;
+    private PartySettingsCommandService settings;
     private MockMvc mvc;
 
     private static OAuth2AuthenticationToken user(String sub) {
@@ -75,7 +76,8 @@ class DjLibraryControllerTest {
         StaticMessageSource messages = new StaticMessageSource();
         messages.setUseCodeAsDefaultMessage(true);
         libraries = mock(DjLibraryService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new DjLibraryController(libraries, helper, Plans.off(), messages, 8192)).build();
+        settings = mock(PartySettingsCommandService.class);
+        mvc = MockMvcBuilders.standaloneSetup(new DjLibraryController(libraries, helper, Plans.off(), messages, settings, 8192)).build();
     }
 
     private String upload(String who, byte[] file, int status) throws Exception {
@@ -185,5 +187,21 @@ class DjLibraryControllerTest {
                         .contentType(MediaType.APPLICATION_OCTET_STREAM).content(collection).principal(user(ORGANISER)).session(new MockHttpSession()))
                 .andExpect(status().is(422)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(answer).isEqualTo("settings.library.error.NO_PLAYLIST");
+    }
+
+    /** "Podpowiedzi gości" (V58): the organiser's switch, saved as picked; back to the library's card. */
+    @Test
+    void theGuestsSuggestions_areSwitchedByTheOrganiser() throws Exception {
+        mvc.perform(post("/dj/library/hints").param("partyCode", PUB).param("on", "false").principal(user(ORGANISER))
+                        .session(new MockHttpSession()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/dj/settings?party=PUB01#libraryCard"));
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<java.util.function.Consumer<PartySettingsEntity>> change = ArgumentCaptor.forClass(java.util.function.Consumer.class);
+        verify(settings).updateSettings(eq(PUB), change.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PUB).build();
+        assertThat(party.isLibraryHints()).as("on by default").isTrue();
+        change.getValue().accept(party);
+        assertThat(party.isLibraryHints()).isFalse();
     }
 }
