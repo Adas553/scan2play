@@ -322,6 +322,20 @@ class MigrationIT extends PostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT library_hints FROM party_settings WHERE party_code = ?", Boolean.class, code)).isTrue();
     }
 
+    /** V59: the guests' theme — the classic one for every party of before, and only a known one. */
+    @Test
+    void aPartysGuestTheme_isClassicByDefault_andOnlyAKnownOne() {
+        String code = "V59" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT guest_theme FROM party_settings WHERE party_code = ?", String.class, code)).isEqualTo("CLASSIC");
+        for (String theme : List.of("CHRISTMAS", "SCARY", "CONFETTI", "WEDDING", "CLASSIC")) {
+            jdbc.update("UPDATE party_settings SET guest_theme = ? WHERE party_code = ?", theme, code);
+        }
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET guest_theme = 'SUMMER' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_guest_theme_check");
+    }
+
     @Test
     void theDatabaseIsAThrowAwayOne() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).startsWith("s2p_it_");

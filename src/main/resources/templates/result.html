@@ -8,8 +8,9 @@
     <meta name="color-scheme" content="dark">
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <link th:replace="~{fragments/components :: guestThemeCss}">
 </head>
-<body class="page-guest">
+<body class="page-guest" th:attr="data-guest-theme=${guestTheme != null and guestTheme.themed()} ? ${guestTheme.name()} : null">
 <div class="container d-flex flex-column align-items-center text-center">
     <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
     <div class="card p-4 p-sm-5 shadow-lg text-white">

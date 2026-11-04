@@ -141,6 +141,18 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    (the fixture is built by hand); whether the rating should filter anything. To try: the test files the owner was given
    (`biblioteka-test-rekordbox.xml`, `biblioteka-test.m3u8`), the guest page typing "wilki".
 
+8. **"Motyw dla gości" (V59) — variant A′ of the analysis** (the artifact https://claude.ai/artifact/T8uNK1tcQm4nynE53DK1uU; the
+   owner, 2026-11-04: "zróbmy A′, Free") — **built on `claude/stoic-galileo-uaywih`, waiting for the owner's review** (then a release;
+   V59 on production: check Flyway's line once). The owner's picks: Free; whoever has VIBE sets it (the staff too); the New Year's theme
+   made a universal one, a birthday too ("Konfetti"); "Świąteczny" for the winter one; "Straszny" for Halloween, scarier (the analysis's
+   orange kept, a near-black page, a violet mist above and a dark red one below, a dark drip with a bat and a spider, the DJ's name in
+   Nosifer's dripping capitals); the TV in the same change; the print's choice apart, its editor saying the guests' theme ("Strona
+   gościa: … · zmień"); the ornament's band (56 px above the card, the card 36 px lower; none in the kiosk) and our logo's cyan "2" kept —
+   left to me, as recommended. Details: `PROJECT_CONTEXT.md` 5.1, 6.7. To try on real phones: each theme in a dark room (the contrast is
+   measured, the feel is not), Nosifer's "Gra: …" with a long DJ name, the TV at the venue; a photo of the TV in "Straszny" for Instagram.
+   Next, only if DJs ask: the DJ's own colours (Pro, on the same tokens: a contrast fix and the statuses' hues kept away), more themes
+   (each a block of tokens and an SVG; `GuestThemesCssTest` checks it), a summer one once a hue far from the statuses and the cyan is found.
+
 ## Later (not now)
 
 A. **The library for guests:** first suggestions from the DJ's library before iTunes; a full "library only" mode (no AI, karaoke) only

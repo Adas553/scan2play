@@ -228,6 +228,40 @@ class GuestPageRenderTest {
         assertThat(html.substring(html.indexOf("Newest"), html.indexOf(">Mine<"))).doesNotContain("Twoja");
     }
 
+    /**
+     * The guests' theme (V59): the themes' stylesheet after app.css and the theme on <body> — the party page, the result, the "party
+     * ended" page; nothing more for the classic look (app.css alone, as before). Written as {@code guest-theme-<theme>.html} (the list
+     * and the guest's own song, so the browser tests see the statuses in each theme), {@code result-theme.html} and
+     * {@code party-ended-theme.html}.
+     */
+    @Test
+    void theGuestsTheme_isOnEveryGuestsPage_andTheClassicOneLoadsNothingMore() {
+        for (com.scan2play.model.GuestTheme theme : com.scan2play.model.GuestTheme.values()) {
+            String html = render(PL, Map.of("guestTheme", theme, "djName", "DJ Łukasz Żółć", "guestQueue",
+                    queue(List.of(numbered(3, "Wham! - Last Christmas", 20), numbered(2, "Dawid Podsiadło - Małomiasteczkowy", 21),
+                            numbered(1, "Michael Jackson - Thriller", 22)), Set.of(2L), "Dawid Podsiadło - Małomiasteczkowy")));
+            String key = theme.name().toLowerCase(Locale.ROOT);
+            writeForTheBrowserTests("guest-theme-" + key + ".html", html);
+            if (theme.themed()) {
+                assertThat(html).contains("<body class=\"page-guest\" data-guest-theme=\"" + theme.name() + "\">",
+                        "<link href=\"/css/guest-themes.css\"");
+                assertThat(html.indexOf("/css/guest-themes.css")).as("after app.css: its tokens win").isGreaterThan(html.indexOf("/css/app.css"));
+            } else {
+                assertThat(html).contains("<body class=\"page-guest\">").doesNotContain("guest-themes", "data-guest-theme");
+            }
+        }
+        assertThat(render(PL, Map.of())).as("a page without the attribute (the demo, the tests of before): the classic look")
+                .doesNotContain("guest-themes", "data-guest-theme");
+
+        String ended = renderEnded(PL, Map.of("guestTheme", com.scan2play.model.GuestTheme.WEDDING, "djName", "DJ Kuba"));
+        assertThat(ended).contains("data-guest-theme=\"WEDDING\"", "/css/guest-themes.css");
+        writeForTheBrowserTests("party-ended-theme.html", ended);
+        String result = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie tym razem.", "Zenek - Przez twe oczy", "title"),
+                Map.of("guestTheme", com.scan2play.model.GuestTheme.SCARY, "djName", "DJ Nocny Marek"));
+        assertThat(result).contains("data-guest-theme=\"SCARY\"", "/css/guest-themes.css");
+        writeForTheBrowserTests("result-theme.html", result);
+    }
+
     /** Several of the guest's songs wait: counted, none named — naming one read as the AI's mix-up (the owner, 2026-10-07). */
     @Test
     void severalOfTheGuestsSongsWaiting_areCounted_notNamed() {

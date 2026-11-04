@@ -11,7 +11,8 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 // reload would take the DJ away from their place in the list (and, on a
 // phone, fold the settings away).
 //
-// Excluded: logout, delete-account, the hosts' link, the party's new code (V49), the party's hours (V55) and the kiosk's link (V56) —
+// Excluded: logout, delete-account, the hosts' link, the party's new code (V49), the party's hours (V55), the kiosk's link (V56) and
+// the guests' theme (V59) —
 // cards-in-place.js sends them and puts the server's card in place; without that script, page loads back to the card —, the panel
 // switcher, a pasted invitation, leaving a
 // staff (V30) — a page reload / redirect is expected: the new link or code, the list or the other party's panel is shown at once — and
@@ -24,7 +25,8 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 
 /** The forms sent as a page load, not by fetch(). */
 const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host-link', '/dj/panel', '/dj/join', '/dj/staff/leave',
-    '/dj/library/delete', '/dj/logo/delete', '/dj/dashboard/party-code', '/dj/dashboard/schedule', '/dj/dashboard/kiosk-link']);
+    '/dj/library/delete', '/dj/logo/delete', '/dj/dashboard/party-code', '/dj/dashboard/schedule', '/dj/dashboard/kiosk-link',
+    '/dj/dashboard/guest-theme']);
 /** The forms after which the queue is fetched at once (a song played, skipped, put back; the hosts' lists; a tip; ...). */
 const CHANGE_THE_QUEUE = new Set(['/dj/dashboard/play', '/dj/dashboard/dismiss', '/dj/dashboard/clear-queue', '/dj/dashboard/restore',
     '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count', '/dj/dashboard/add-song',
@@ -229,8 +231,10 @@ if (undoButton) {
     });
 }
 
-// A select that saves as soon as the DJ picks (the party's vibe): requestSubmit, so the form goes through the submit listener
-// above (fetch) — data-auto-submit instead of an inline onchange (CSP, review 5.1).
-document.querySelectorAll('select[data-auto-submit]').forEach(function (select) {
-    select.addEventListener('change', function () { select.form.requestSubmit(); });
+// A select or a radio that saves as soon as the DJ picks (the party's vibe, "Motyw dla gości" — V59): requestSubmit, so the form
+// goes through a submit listener (this file's fetch, or cards-in-place.js for a card answered in place) — data-auto-submit instead
+// of an inline onchange (CSP, review 5.1). Listened for on the document: a card answered in place brings new radios.
+document.addEventListener('change', function (e) {
+    const field = e.target.closest('[data-auto-submit]');
+    if (field && field.form) field.form.requestSubmit();
 });

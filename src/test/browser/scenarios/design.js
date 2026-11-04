@@ -6,6 +6,8 @@
     const tooSmall = function (root) {
         return Array.from(root.querySelectorAll('a.btn, button, input:not([type="hidden"]):not([type="checkbox"]), select, textarea, summary, '
             + '.s2p-row, .s2p-chips a'))
+            // a control hidden for the eye (the radios of "Motyw dla gości", V59) is tapped by its label: the label is measured
+            .map(function (el) { return el.matches('input.visually-hidden') && el.closest('label') ? el.closest('label') : el; })
             // drawn: not in a folded card (laid out, not drawn) nor transparent (the file input under its label, which is the target)
             .filter(function (el) { return el.checkVisibility({ opacityProperty: true, visibilityProperty: true }); })
             .filter(function (el) { return el.getBoundingClientRect().height < 44 - 0.5; })

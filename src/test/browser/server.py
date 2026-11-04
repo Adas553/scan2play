@@ -100,6 +100,8 @@ def default_state():
         'partySchedule': None,
         # what "Godziny imprezy" sent in the background is answered with (V55): a rendered card, settings-hours-answer-*.html
         'scheduleAnswer': 'settings-hours-answer-saved',
+        # "Motyw dla gości" (V59): the rendered card the real server answers a picked theme with
+        'guestThemeAnswer': 'settings-guest-theme-answer',
         # The poll's own answer (V32): e.g. 403 — the organiser took the person's access away (the page loads itself again)
         'updatesStatus': None,
         # The poll's body instead of the queue, answered 200 without an ETag: e.g. a Wi-Fi login page that took the request over
@@ -419,7 +421,7 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
-        if path == '/dj/dashboard/schedule':           # "Godziny imprezy" sent by fetch (V55): with its headers
+        if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme'):   # sent by fetch (V55, V59): with their headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         self._note('POST', path, fields)
@@ -499,6 +501,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/schedule':           # "Godziny imprezy" (V55): the card alone, as the real server answers a fetch
             with open(os.path.join(stand.rendered, state['scheduleAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path == '/dj/dashboard/guest-theme':        # "Motyw dla gości" (V59): the card alone, as the real server answers a fetch
+            with open(os.path.join(stand.rendered, state['guestThemeAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path.startswith('/k/') and path.endswith('/next'):   # "Następny gość" sent by fetch (V56): the real server's redirect leads
             return self._send(200, b'<!DOCTYPE html><title>kiosk</title>', 'text/html; charset=utf-8')   # to the kiosk's page

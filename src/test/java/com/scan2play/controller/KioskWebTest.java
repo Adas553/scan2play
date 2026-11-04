@@ -128,6 +128,18 @@ class KioskWebTest {
         return started.getRequest().isAsyncStarted() ? mockMvc.perform(asyncDispatch(started)).andReturn() : started;
     }
 
+    /** The guests' theme (V59) at the kiosk too: the stylesheet after app.css and the theme on <body> ({@code kiosk-scary.html}). */
+    @Test
+    void theGuestsTheme_isTheKiosksToo() throws Exception {
+        party.setGuestTheme(com.scan2play.model.GuestTheme.SCARY);
+        String html = page(new MockHttpSession());
+        assertThat(html).contains("data-guest-theme=\"SCARY\"", "/css/guest-themes.css\"");
+        assertThat(html.indexOf("/css/guest-themes.css")).isGreaterThan(html.indexOf("/css/app.css"));
+        write("kiosk-scary.html", html);
+        party.setGuestTheme(com.scan2play.model.GuestTheme.CLASSIC);
+        assertThat(page(new MockHttpSession())).doesNotContain("guest-themes", "data-guest-theme");
+    }
+
     @Test
     void theKiosk_opensWithoutALogin_withTheFormAndTheMostWanted_andNothingThatLeadsOut() throws Exception {
         MvcResult result = mockMvc.perform(get(KIOSK)).andExpect(status().isOk())

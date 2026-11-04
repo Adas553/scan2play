@@ -446,6 +446,77 @@ class SettingsPageRenderTest {
                 .doesNotContain("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"linksCard\"", "id=\"settingsJump\"", "id=\"joinStaffForm\"");
     }
 
+    /**
+     * "Motyw dla gości" (V59): the second card, for whoever may change the vibe (VIBE) — the organiser, a co-organiser —, folded to
+     * the theme's name; unfolded, a radio per theme on a thumbnail drawn by the theme's own tokens (the page loads guest-themes.css),
+     * the party's checked; "Zapisz" only without the script; "Podejrzyj stronę gościa" opens the party page in a new tab. The staff
+     * without VIBE never see it. {@code settings.html} carries it for the browser tests; {@code settings-guest-theme.html} a party with
+     * the scary theme.
+     */
+    @Test
+    void theGuestsTheme_hasACard_forWhoeverMayChangeTheVibe() throws IOException {
+        PartySettingsEntity scary = party();
+        scary.setGuestTheme(com.scan2play.model.GuestTheme.SCARY);
+        String html = render(new PartyStaffService.Access(scary, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+        assertThat(html).contains("<link href=\"/css/guest-themes.css\" rel=\"stylesheet\">");
+        String card = html.substring(html.indexOf("id=\"guestThemeCard\""), html.indexOf("id=\"hostListsCard\""));
+        assertThat(html.indexOf("id=\"guestThemeCard\"")).as("after the hours").isGreaterThan(html.indexOf("id=\"partyHoursCard\""));
+        assertThat(card).contains("data-saves-in-place", ">Motyw dla gości<", "id=\"guestThemeState\">Straszny<",
+                ">Goście widzą go na stronie prośby, wyniku, w kiosku i na ekranie TV.<", "action=\"/dj/dashboard/guest-theme\"",
+                "data-in-place", "<noscript><button type=\"submit\"", "href=\"/p/" + PARTY + "\"", "target=\"_blank\" rel=\"noopener\"",
+                ">Podejrzyj stronę gościa<", ">Klasyczny<", ">Świąteczny<", ">Straszny<", ">Konfetti<", ">Weselny<")
+                .doesNotContain("id=\"guestThemeSaved\"", "PRO");
+        assertThat(card.split("type=\"radio\"", -1)).as("one radio per theme").hasSize(com.scan2play.model.GuestTheme.values().length + 1);
+        for (com.scan2play.model.GuestTheme theme : com.scan2play.model.GuestTheme.values()) {
+            assertThat(card).contains("data-guest-theme=\"" + theme.name() + "\"");
+        }
+        assertThat(card).containsPattern("id=\"guestTheme-scary\" value=\"SCARY\"[^>]*checked=\"checked\"");
+        assertThat(card.split("checked=\"checked\"", -1)).as("one picked").hasSize(2);
+        write("settings-guest-theme.html", html);
+
+        assertThat(render(staff(StaffRole.CO_ORGANISER.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .contains("id=\"guestThemeCard\"");
+        assertThat(render(staff(StaffRole.QUEUE.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
+                .doesNotContain("id=\"guestThemeCard\"");
+    }
+
+    /**
+     * A theme picked (V59): the server answers with the card alone, unfolded, the new theme picked and "✓ Zapisane" — as the hours'
+     * card. {@code settings-guest-theme-answer.html} for the stand-in.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void aThemePicked_isAnsweredWithTheCardAlone() throws IOException {
+        PartySettingsEntity party = party();
+        PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
+        when(commands.updateSettings(any(), any())).thenAnswer(call -> {
+            ((java.util.function.Consumer<PartySettingsEntity>) call.getArgument(1)).accept(party);
+            return party;
+        });
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(party);
+        when(sessionHelper.access(any(), any(), any())).thenReturn(new PartyStaffService.Access(party, true, StaffPermission.all()));
+        com.scan2play.controller.DjPartySettingsController controller = new com.scan2play.controller.DjPartySettingsController(commands,
+                mock(com.scan2play.service.AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper,
+                com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.of(commands, com.scan2play.service.PartySchedules.FRIDAY_NOON));
+        ConcurrentModel model = new ConcurrentModel();
+        String view = controller.updateGuestTheme(PARTY, "WEDDING", "fetch", user("owner"), new MockHttpSession(), model);
+        assertThat(view).isEqualTo("settings :: guestThemeCard");
+        assertThat(party.getGuestTheme()).isEqualTo(com.scan2play.model.GuestTheme.WEDDING);
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String html = engine.process("settings", Set.of("guestThemeCard"), context);
+        assertThat(html).doesNotContain("??");
+        DashboardPageRenderTest.assertNothingInline(html);
+        assertThat(html.trim()).startsWith("<details").endsWith("</details>").doesNotContain("<html", "partyHoursCard");
+        assertThat(html).contains("id=\"guestThemeCard\" data-saves-in-place open=\"open\"", "id=\"guestThemeState\">Weselny<",
+                "id=\"guestThemeSaved\">✓ Zapisane<").containsPattern("id=\"guestTheme-wedding\" value=\"WEDDING\"[^>]*checked=\"checked\"");
+        write("settings-guest-theme-answer.html", html);
+    }
+
     /** A closed party that opens today at 20:00 and closes tomorrow at 3:00 (V55), seen on Friday at noon. */
     private static PartySettingsEntity planned() {
         PartySettingsEntity party = party();

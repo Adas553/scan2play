@@ -268,6 +268,8 @@ public class DjDashboardController {
         model.addAttribute(TIP_URL, settings.getTipUrl());
         model.addAttribute(COMMENT_STYLE, planned.getCommentStyle());
         model.addAttribute(DEDICATIONS_ON, settings.isDedicationsOn());   // the guests' dedications on or off (V38)
+        model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // "Motyw dla gości" (V59)
+        model.addAttribute(GUEST_THEMES, com.scan2play.model.GuestTheme.values());
         // --- The hosts' lists (V29) and the link that lets them fill the lists ---
         model.addAttribute(HOST_BLOCKED, settings.getHostBlocked());
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
@@ -429,6 +431,7 @@ public class DjDashboardController {
         model.addAttribute(POSTER_EDIT, access.may(StaffPermission.VIBE));
         model.addAttribute(POSTER_THEMES, com.scan2play.model.PosterTheme.values());
         model.addAttribute(POSTER_FONTS, com.scan2play.model.PosterFont.values());
+        model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // the editor's line: the guests' look is set apart (V59)
         return "qr-print";
     }
 

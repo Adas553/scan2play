@@ -207,6 +207,7 @@ public class KioskController {
         model.addAttribute(PARTY_CODE, party.getPartyCode());
         model.addAttribute(DJ_NAME, party.getDjName());
         model.addAttribute(DJ_LOGO, planned.logoPath());
+        model.addAttribute(GUEST_THEME, party.getGuestTheme());   // the party's look (V59), as on the guests' phones
         model.addAttribute(DEDICATIONS_ON, party.isDedicationsOn());
         model.addAttribute(LIBRARY_HINTS, libraryHintService.on(party));   // the suggestions marked "✓ DJ ma" (V58)
         model.addAttribute(IS_ACTIVE, party.isActive());
