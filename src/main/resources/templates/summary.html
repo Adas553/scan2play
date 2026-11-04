@@ -97,6 +97,17 @@
         <input type="hidden" name="party" th:value="${partyCode}">
         <button type="submit" id="shareMake" th:text="#{summary.share.make}">Make a link for the hosts</button>
     </form>
+    <!--/* "Do internetu": a picture of the evening drawn in the page (summary-social.js) from what the page shows — the title, the day,
+         the DJ, two numbers, the five most wanted; the words the picture says come from here. Nothing is sent. */-->
+    <div class="social" id="summarySocial" hidden
+         th:attr="data-name=${'scan2play-' + evening},data-votes-label=#{summary.social.votes},data-played-label=#{summary.social.played},data-top-label=#{summary.social.top},data-made=#{summary.social.made}">
+        <h3 th:text="#{summary.social}">For social media</h3>
+        <p class="help" th:text="#{summary.social.help}">A picture with the title, the numbers and the top 5.</p>
+        <div class="row">
+            <button type="button" id="summaryStory" th:text="#{summary.social.story}">Story (9:16)</button>
+            <button type="button" id="summaryPost" th:text="#{summary.social.post}">Post (4:5)</button>
+        </div>
+    </div>
 </section>
 
 <main th:classappend="${hostsView} ? 'hosts' : ''">
@@ -129,7 +140,10 @@
             <small th:text="#{summary.stat.votes.hint}">requests and 👍</small></div>
         <div class="stat"><strong th:text="${summary.songs}">42</strong><span th:text="#{summary.stat.songs}">Songs wanted</span>
             <small th:text="#{summary.stat.songs.hint}">let through by the AI, each once</small></div>
-        <div class="stat"><strong th:text="${summary.rejectedByAi}">5</strong><span th:text="#{summary.stat.rejected}">Rejected by the AI</span></div>
+        <div class="stat"><strong th:text="${summary.rejectedByAi}">5</strong><span th:text="#{summary.stat.rejected}">Rejected by the AI</span>
+            <!--/* why (V62): the song played lately, or off the vibe — the requests of before are neither */-->
+            <small th:if="${summary.rejectedAsPlayed + summary.rejectedOffVibe > 0}" id="rejectSplit"
+                   th:text="#{summary.reject.split(${summary.rejectedAsPlayed}, ${summary.rejectedOffVibe})}">played already: 2 · off the vibe: 3</small></div>
     </section>
     <!--/* the rest, each only when there were some: skipped, cleared, waiting, from the kiosk (V56), added by the DJ (V44), the tips
          the DJ counted (V28), the dedications (V38: a count, never their words) */-->
@@ -196,6 +210,22 @@
                 <span class="status" th:with="status=${song.status.name()}" th:title="#{summary.csv.status.__${status}__}"><span
                         class="icon" th:text="#{summary.icon.__${status}__}">⏳</span> <span class="label"
                         th:text="#{summary.csv.status.__${status}__}">waiting</span></span>
+            </li>
+        </ol>
+    </section>
+
+    <!--/* the songs the AI rejected (V62: why), the most asked first — what the guests wanted that the vibe kept out; a song kept of a
+         deleted request has no name, so it is not here */-->
+    <section th:unless="${#lists.isEmpty(summary.rejected)}" id="rejected">
+        <h2 th:text="#{summary.rejected}">Rejected by the AI</h2>
+        <p class="legend library-legend" th:text="#{summary.rejected.legend}">🔁 played already · ✗ off the vibe</p>
+        <ol class="songs">
+            <li th:each="song : ${summary.rejected}">
+                <span class="song" th:text="${song.name}">Artist - Title</span>
+                <span th:if="${song.reason != null}" class="status" th:title="#{summary.reject.__${song.reason.name()}__}"><span
+                        class="icon" th:text="#{summary.reject.icon.__${song.reason.name()}__}">🔁</span> <span class="label"
+                        th:text="#{summary.reject.__${song.reason.name()}__}">played already</span></span>
+                <span class="votes" th:text="#{summary.rejected.requests(${song.requests})}">requests: 2</span>
             </li>
         </ol>
     </section>
@@ -269,6 +299,34 @@
     </section>
 
     <p th:if="${summary.truncated}" class="note" th:text="#{summary.truncated(${summary.requests})}">Only the first 2000.</p>
+
+    <!--/* "Ostatnie wieczory": this evening beside its neighbours (up to 8), counted in the evenings' query — a club's Fridays side by
+         side; the DJ's version, on the screen only (each row leads to its evening) */-->
+    <section th:if="${!hostsView and comparedEvenings != null and #lists.size(comparedEvenings) > 1}" id="compare" class="no-print">
+        <h2 th:text="#{summary.compare}">Recent evenings</h2>
+        <div class="compare-scroll">
+        <table class="compare">
+            <thead><tr>
+                <th scope="col" th:text="#{summary.compare.evening}">Evening</th>
+                <th scope="col" class="n" th:text="#{summary.compare.votes}">Votes</th>
+                <th scope="col" class="n" th:text="#{summary.compare.played}">Played</th>
+                <th scope="col" class="n" th:text="#{summary.compare.rejected}">Rejected</th>
+                <th scope="col" th:text="#{summary.compare.hours}">Requests</th>
+            </tr></thead>
+            <tbody>
+            <tr th:each="e : ${comparedEvenings}" th:classappend="${e.day == evening} ? 'shown' : ''">
+                <th scope="row"><a th:href="@{/dj/summary(evening=${e.day},party=${partyCode})}" href="/dj/summary"
+                       th:attr="aria-current=${e.day == evening} ? 'page' : null"
+                       th:text="${#temporals.format(e.day, 'EEE dd.MM', #locale)}">sob. 03.10</a></th>
+                <td class="n" th:text="${e.votes}">34</td>
+                <td class="n" th:text="${e.played}">6</td>
+                <td class="n" th:text="${e.rejectedByAi}">1</td>
+                <td th:text="${e.first != null ? times.clock(e.first) + '–' + times.clock(e.last) : ''}">19:05–00:55</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
     </th:block>
 
     <footer class="foot">
@@ -279,5 +337,6 @@
 
 <script th:unless="${shared}" src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 <script src="/js/summary.js" th:src="@{/js/summary.js}"></script>
+<script th:if="${hostsView and !shared and summary != null}" src="/js/summary-social.js" th:src="@{/js/summary-social.js}"></script>
 </body>
 </html>

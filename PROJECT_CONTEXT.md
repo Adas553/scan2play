@@ -139,7 +139,10 @@ tips" below),
 DJ's browser opens, no API; a `lyrics` request, and a song with none of the guest's words, is searched by the guest's own words,
 everything else by the AI's name — decided when saved), `playedAt`
 (V6; set only when the DJ marks it played), `skippedAt` (V20, "Pomiń"), `clearedAt` (V25: cleared with the whole queue — the AI's
-comment kept, the history says "WYCZYSZCZONE" — on a phone 🧹; unlike a skip, no song kept out and no "↩ Przywróć"). Index `idx_party_decision_time (party_code, decision, requested_at DESC)`. `@PrePersist`
+comment kept, the history says "WYCZYSZCZONE" — on a phone 🧹; unlike a skip, no song kept out and no "↩ Przywróć"), `rejectReason`
+(V62, `RejectReason`: DUPLICATE — the song was on the recently played list the AI was given —, OFF_VIBE — any other refusal; set by
+`SongEvaluationService.rejectReason` when an AI's rejection is saved, the prompt unchanged; null otherwise and before V62; the evening
+summary counts them). Index `idx_party_decision_time (party_code, decision, requested_at DESC)`. `@PrePersist`
 truncates the long fields. **Retention: 30 days from `requestedAt`** — `SongRequestRetentionService` deletes nightly at 04:45 Polish time (`@Scheduled(zone = Times.SCHEDULE_ZONE)` — without it the hours were the JVM's, UTC on Railway) in
 batches of 1000, at most 200 batches a night; and with the account. **A request waits at most a day:** at 04:40 (Polish time) the same service clears from every queue what has waited
 more than 24 h (`clearOldWaitingRequests` → `clearWaitingRequestedBefore`: rejected with `cleared_at`, as "Wyczyść kolejkę" — the history
@@ -832,7 +835,11 @@ long the played requests waited (from the request to "played": the average and t
 piosenek" (the artist of the AI's "Artist - Title", grouped by `SongNames.comparable`, only those of two songs or more), "Nowe prośby co
 pół godziny" (each song's first request — the later votes and 👍 have no time of their own; bars of an SVG — attributes, not inline
 styles, for the CSP —, the busiest in the accent, the quiet half-hours between too; counted in time from 6:00, so the hour the clocks go
-back is two bars of "02:00"), what played in the order it played (folded on a phone, unfolded to print, two columns on paper). **The
+back is two bars of "02:00"), what played in the order it played (folded on a phone, unfolded to print, two columns on paper); **why
+the AI rejected** (V62): "już grały: 4 · nie pasowały: 5" under its count, and "Odrzucone przez AI" — the songs it rejected each once,
+how many asked, 🔁 / ✗ (a kept one has no name, so it is not there); **"Ostatnie wieczory"** (screen only, `#compare`): the shown evening
+among up to 8 neighbours (`EveningSummaryService.compared`) — the votes, the played, the rejected, the first and last request, each row
+a link — from the evenings' own query (no read more). **The
 hosts'** (the couple, the client): three big numbers (the votes, the songs played on request, the busiest half-hour), the first request and
 the last song played, the 10 most wanted (votes only), "Kiedy goście prosili", what played — nothing of the AI's rejections, the skipped
 and cleared, the library, the tips, the dedications; one A4 page for about forty played songs (browser scenario `summary-hosts-one-a4`).
@@ -840,7 +847,11 @@ and cleared, the library, the tips, the dedications; one A4 page for about forty
 /dj/summary/title`; the page's heading then, "Podsumowanie wieczoru" small above it — the DJ's version too) and **the hosts' read-only
 link** — "Utwórz link dla gospodarzy" (`POST /dj/summary/share`: a secret of 128 bits, `evening_summary.share_token`, works 30 days,
 `SHARE_DAYS`), then the address with "Kopiuj" (`dj-nav.js`), "Działa do 24.11.", "Nowy link" (the old one stops) and "Wyłącz link"
-(asks first; `POST /dj/summary/share/off`). Title and link: one row of `evening_summary` an evening (upserts on `(party_code, evening)`),
+(asks first; `POST /dj/summary/share/off`); **"Do internetu"** (`js/summary-social.js`, the hosts' version only): a story 1080 × 1920
+or a post 1080 × 1350 drawn on a canvas in the page from what the page shows — the day, the title, the DJ, the votes and the songs
+played, the top 5, the DJ's logo on a white badge, "Działa na Scan2Play" —, dark with the cyan glows of every Scan2Play picture, a
+story's words between Instagram's bars (250 px), shrunk to fit; shared (a phone's share sheet) or saved as
+`scan2play-<day>-story.png`; nothing sent, no guest's words (`summary-social-pictures`, `summary-social-longest`). Title and link: one row of `evening_summary` an evening (upserts on `(party_code, evening)`),
 only for an evening the party has (else 404), with the permission SUMMARY and Pro. **`/s/{token}`** (`SharedSummaryController`, public
 GET): the hosts' version alone — no bar, no panel, no `dj-nav.js` —, `X-Robots-Tag: noindex` (`NoIndexFilter`) and a robots meta,
 `Referrer-Policy: no-referrer`, `Cache-Control: no-store`; an unknown, old or switched-off link, or a party whose plan has no summary any
@@ -849,7 +860,7 @@ printed): the evening (300 px on a computer), the version, "Drukuj / PDF", and u
 row on a computer, three on a phone (`summary-phone-compact`, `summary-wide-one-row`, `summary-copy-library`). `/dj/summary/csv`: the same evening as a CSV
 file (`scan2play-<day>.csv`; BOM and ";" for Excel, the DJ's language, every value quoted, and one that starts with `= + - @` or a tab
 gets an apostrophe — a guest's text is never a formula); a row a request, after the columns of before how long a played one waited, its
-artist and title apart and the count of its dedications, then "W bibliotece" with a library.
+artist and title apart, the count of its dedications and why the AI rejected it (V62), then "W bibliotece" with a library.
 
 **The party's staff** (V30, the owner 2026-10-09; roles and permissions V32, 2026-10-10 after the review of the staff's flows,
 https://claude.ai/artifact/XMPNxcn9e4NswLfmLdcMyx): a bartender, a second DJ, the venue's manager works the owner's party with their
@@ -1153,6 +1164,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `css/guest-themes.css`, `images/themes/*.svg`, `fonts/nosifer-*.woff2` | the guests' themes (V59, "Motyw dla gości"): the tokens of each theme under `[data-guest-theme]`, its ornament (our SVGs), the faces of "🎧 Gra: …" (Playfair Display; Nosifer for the scary one, OFL — `fonts/OFL-nosifer.txt`); loaded by the guests' pages of a party with a theme and by "Ustawienia imprezy" (the card's thumbnails) |
 | `js/tv.js`, `css/tv.css` | the screen for a TV: its list fetched again every 10 s (put in place only when it changed; a failed fetch or an answer that is not the list keeps it), the screen kept awake (Screen Wake Lock); dark, sized by the screen's height, nothing to scroll in landscape |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once, what played folded on a phone and unfolded to print, "Kopiuj listę" shown; white, for A4 (the font of `app.css`) |
+| `js/summary-social.js` | the evening summary's "Do internetu": a story or a post of the evening drawn on a canvas, shared or saved |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
 | `images/og-image.png` | the picture of a shared link (Open Graph, 1200×630: the mark, "Scan2Play", "Prośby o piosenki od gości przez kod QR"; 2026-10-14) |
 | `images/landing/*.webp` | the landing page's pictures of the app (2026-10-17): the DJ's panel (1920 × 1140) and the guest's page (780 × 1560), PL and EN, of a made-up party — `src/test/browser/screenshots.py` writes them |
@@ -1466,6 +1478,7 @@ schema behind Flyway's back.
 | V57 | `dj_library_track.artist_name`, `title_name` varchar(200), `bpm` numeric(5,2), `tonality` varchar(10), `genre` varchar(100), `year` smallint, all nullable; `dj_library.with_details` boolean NOT NULL DEFAULT false: each song of the DJ's library as the file writes it, beside its key — only shown (the queue's tempo and key); the libraries of before stay, without them (`LibraryDetailsMigrationIT`, `DjLibraryIT`) |
 | V58 | `party_settings.library_hints` boolean NOT NULL DEFAULT true: the guests' song suggestions the DJ has first, "✓ DJ ma" — "Podpowiedzi gości" in the library's card (`MigrationIT`, `LibraryHintService`) |
 | V59 | `party_settings.guest_theme` varchar(10) NOT NULL DEFAULT 'CLASSIC' (check CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING): the look of the guests' pages, "Motyw dla gości" (`MigrationIT`, `GuestThemeTest` — the check is the enum) |
+| V62 | `song_requests.reject_reason` and `evening_song.reject_reason` varchar(16), null or DUPLICATE / OFF_VIBE (checks `song_requests_reject_reason_check`, `evening_song_reject_reason_check`): why the AI rejected a request, for the evening summary (`EveningSummaryIT`) |
 | V61 | tables `evening_song` (what the evening summary keeps of a deleted request: `song_request_id` PK, `party_code` FK → `party_settings` ON DELETE / UPDATE CASCADE, `song_name` nullable, `requested_at` NOT NULL, `played_at`, `status` with a check of the five, `votes`, `tips`, `dedications`, `added_by_dj`, `via_kiosk`; indexes `idx_evening_song_party_time`, `idx_evening_song_time`) and `evening_summary` (`id` bigserial PK, `party_code` FK as above, `evening` date, `title` varchar(60), `share_token` varchar(32) with `uk_evening_summary_share_token`, `share_expires_at`, `updated_at`; `uk_evening_summary_party_evening`) — the summary for 13 months, its title and the hosts' link (`EveningSummaryIT`) |
 | V60 | data: `dj_library_track.title_key` with one word's two spellings made one, as `LibraryKey.SPELLINGS` makes the new keys ("ing" → "in", "number" → "no", on the key without spaces); two tracks of a party whose keys became one merged, the smaller key of before kept (`LibraryKeySpellingsMigrationIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |

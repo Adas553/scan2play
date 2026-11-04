@@ -20,13 +20,14 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * What "Podsumowanie wieczoru" keeps of the requests a statement deletes (V61): appended to a {@code WITH gone AS (DELETE …
      * RETURNING *)}, it copies each deleted request into {@code evening_song} — its song's name (none for a request the AI rejected:
      * that name is what the guest typed), its times, how it ended (as {@code EveningSummaryService.statusOf}), its votes, tips and
-     * counts; never a guest's words. Only a party's that is still there (a request without a party row has no evening to keep). Its
+     * counts, why the AI rejected it (V62); never a guest's words. Only a party's that is still there (a request without a party row has no evening to keep). Its
      * own CTE: PostgreSQL runs it whether the final SELECT reads it or not.
      */
     String KEEP_FOR_THE_SUMMARY = ", kept AS (INSERT INTO evening_song (song_request_id, party_code, song_name, requested_at,"
-            + " played_at, status, votes, tips, dedications, added_by_dj, via_kiosk)"
+            + " played_at, status, votes, tips, dedications, added_by_dj, via_kiosk, reject_reason)"
             + " SELECT g.id, g.party_code, CASE WHEN g.status = 'REJECTED_BY_AI' THEN NULL ELSE g.song_name END, g.requested_at,"
-            + " g.played_at, g.status, g.votes, g.tips, g.dedications, g.added_by_dj, g.via_kiosk FROM (SELECT gone.*, CASE"
+            + " g.played_at, g.status, g.votes, g.tips, g.dedications, g.added_by_dj, g.via_kiosk,"
+            + " CASE WHEN g.status = 'REJECTED_BY_AI' THEN g.reject_reason END FROM (SELECT gone.*, CASE"
             + " WHEN gone.decision = 'played' THEN 'PLAYED'"
             + " WHEN gone.decision = 'rejected' AND gone.skipped_at IS NOT NULL THEN 'SKIPPED'"
             + " WHEN gone.decision = 'rejected' AND gone.cleared_at IS NOT NULL THEN 'CLEARED'"
@@ -89,19 +90,23 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                         Pageable pageable);
 
     /**
-     * The party's evenings, the latest first: each day ({@code "2026-10-03"}) a request was made on, with the guests' votes of it —
+     * The party's evenings, the latest first: each day ({@code "2026-10-03"}) a request was made on, with the guests' votes of it, its
+     * played requests, the ones the AI rejected and its first and last request (the summary's "Ostatnie wieczory") —
      * the day in Polish time, moved back by {@code EveningSummaryService.EVENING_STARTS} (6 hours), so a request at 01:30 belongs to
      * the evening before. Its requests and the songs kept of the ones gone ({@code evening_song}, V61; a request is in one of them,
      * never in both). The votes as the summary counts them: of the songs the AI let through (a skipped or cleared one too, not one it
      * rejected), without the DJ's own first vote of a song they added (V44); an evening of rejections alone is there with 0. A row
-     * is {@code [day as text, votes]}. Bounded by {@code limit}; a party's rows are what 30 days of requests (≤ 300 a day) and
+     * is {@code [day as text, votes, played, rejected by the AI, first request, last request]}. Bounded by {@code limit}; a party's rows are what 30 days of requests (≤ 300 a day) and
      * 13 months of kept songs are, found by {@code idx_party_decision_time} and {@code idx_evening_song_party_time}.
      */
     @Query(value = "SELECT to_char(CAST((r.requested_at AT TIME ZONE 'Europe/Warsaw') - INTERVAL '6 hours' AS date), 'YYYY-MM-DD'),"
-            + " COALESCE(SUM(r.votes - CASE WHEN r.added_by_dj THEN 1 ELSE 0 END) FILTER (WHERE r.let_through), 0)"
-            + " FROM (SELECT requested_at, votes, added_by_dj, (decision IS DISTINCT FROM 'rejected' OR skipped_at IS NOT NULL"
-            + " OR cleared_at IS NOT NULL) AS let_through FROM song_requests WHERE party_code = :partyCode AND requested_at IS NOT NULL"
-            + " UNION ALL SELECT requested_at, votes, added_by_dj, status <> 'REJECTED_BY_AI' FROM evening_song"
+            + " COALESCE(SUM(r.votes - CASE WHEN r.added_by_dj THEN 1 ELSE 0 END) FILTER (WHERE r.status <> 'REJECTED_BY_AI'), 0),"
+            + " COUNT(*) FILTER (WHERE r.status = 'PLAYED'), COUNT(*) FILTER (WHERE r.status = 'REJECTED_BY_AI'),"
+            + " MIN(r.requested_at), MAX(r.requested_at)"
+            + " FROM (SELECT requested_at, votes, added_by_dj, CASE WHEN decision = 'played' THEN 'PLAYED'"
+            + " WHEN decision = 'rejected' AND skipped_at IS NULL AND cleared_at IS NULL THEN 'REJECTED_BY_AI' ELSE 'OTHER' END AS status"
+            + " FROM song_requests WHERE party_code = :partyCode AND requested_at IS NOT NULL"
+            + " UNION ALL SELECT requested_at, votes, added_by_dj, status FROM evening_song"
             + " WHERE party_code = :partyCode) r GROUP BY 1 ORDER BY 1 DESC LIMIT :limit",
             nativeQuery = true)
     List<Object[]> findEvenings(@Param("partyCode") String partyCode, @Param("limit") int limit);

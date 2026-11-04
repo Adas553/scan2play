@@ -45,9 +45,10 @@ public interface EveningSummaryRepository extends JpaRepository<EveningSummaryEn
     /**
      * The songs of one evening whose requests are gone (the 30 days' purge, "Wyczyść historię"), the first asked first, at most
      * {@code limit}. A row: id, song name (null for a request the AI rejected), requested at, played at, status, votes, tips,
-     * dedications, added by the DJ, from the kiosk. {@code idx_evening_song_party_time} finds them.
+     * dedications, added by the DJ, from the kiosk, why the AI rejected it. {@code idx_evening_song_party_time} finds them.
      */
-    @Query(value = "SELECT song_request_id, song_name, requested_at, played_at, status, votes, tips, dedications, added_by_dj, via_kiosk"
+    @Query(value = "SELECT song_request_id, song_name, requested_at, played_at, status, votes, tips, dedications, added_by_dj, via_kiosk,"
+            + " reject_reason"
             + " FROM evening_song WHERE party_code = :partyCode AND requested_at >= :from AND requested_at < :to"
             + " ORDER BY requested_at, song_request_id LIMIT :limit", nativeQuery = true)
     List<Object[]> findSongsBetween(@Param("partyCode") String partyCode, @Param("from") Instant from, @Param("to") Instant to,

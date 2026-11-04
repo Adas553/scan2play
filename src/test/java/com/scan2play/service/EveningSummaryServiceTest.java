@@ -99,7 +99,7 @@ class EveningSummaryServiceTest {
         when(repository.findRequestedBetween(eq("SUMM1"), any(), any(), any())).thenReturn(List.of(live, both));
         when(kept.findSongsBetween(eq("SUMM1"), any(), any(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(List.of(
                 new Object[]{1L, "Varius Manx - Orła cień", java.sql.Timestamp.from(at("20:00")), java.sql.Timestamp.from(at("20:30")), "PLAYED", 4, 1, 2, false, true},
-                new Object[]{2L, null, java.time.OffsetDateTime.ofInstant(at("20:10"), Times.DISPLAY_ZONE), null, "REJECTED_BY_AI", 1, 0, 0, false, false},
+                new Object[]{2L, null, java.time.OffsetDateTime.ofInstant(at("20:10"), Times.DISPLAY_ZONE), null, "REJECTED_BY_AI", 1, 0, 0, false, false, "DUPLICATE"},
                 new Object[]{3L, "Wilki - Baśka", at("21:00"), null, "WAITING", 1, 0, 0, false, false},
                 new Object[]{4L, "Kult - Arahja", at("22:00"), null, "SKIPPED", 3, 0, 0, true, false},
                 new Object[]{5L, "Bajm - Biała armia", at("22:30"), null, "CLEARED", 2, 0, 0, false, false}));
@@ -115,9 +115,68 @@ class EveningSummaryServiceTest {
                 .containsExactly(at("20:30"), 4, 1, 2, true, true);
         assertThat(requests.get(2).getVotes()).as("the request still there counts, not its copy").isEqualTo(5);
         assertThat(requests.get(3).isAddedByDj()).isTrue();
+        assertThat(requests.get(1).getRejectReason()).isEqualTo(com.scan2play.model.RejectReason.DUPLICATE);
         EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING, requests);
         assertThat(List.of(summary.played(), summary.rejectedByAi(), summary.skipped(), summary.cleared(), summary.waiting()))
                 .containsExactly(2, 1, 1, 1, 1);
+    }
+
+    /**
+     * Why the AI rejected (V62): counted apart — played already, off the vibe, the requests of before neither —, and the songs it
+     * rejected each once with how many asked, the last reason, the most asked first; a kept one without a name left out.
+     */
+    @Test
+    void theAisRejections_byWhy_andTheSongsItRejected() {
+        SongRequestEntity again = request("Zenek Martyniuk - Przekorny los", "rejected", "22:00", null, 1);
+        again.setRejectReason(com.scan2play.model.RejectReason.DUPLICATE);
+        SongRequestEntity againLater = request("zenek martyniuk – przekorny los", "rejected", "23:00", null, 1);
+        againLater.setRejectReason(com.scan2play.model.RejectReason.DUPLICATE);
+        SongRequestEntity offVibe = request("Nirvana - Smells Like Teen Spirit", "rejected", "21:00", null, 1);
+        offVibe.setRejectReason(com.scan2play.model.RejectReason.OFF_VIBE);
+        SongRequestEntity before = request("Metallica - One", "rejected", "20:30", null, 1);
+        SongRequestEntity keptWithoutName = request(null, "rejected", "20:40", null, 1);
+        keptWithoutName.setRejectReason(com.scan2play.model.RejectReason.OFF_VIBE);
+        SongRequestEntity skipped = request("Kult - Arahja", "rejected", "21:30", null, 1);
+        skipped.setSkippedAt(at("21:40"));
+        skipped.setRejectReason(com.scan2play.model.RejectReason.OFF_VIBE);   // not the AI's: skipped by the DJ
+
+        EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING,
+                List.of(request("Zenek Martyniuk - Przekorny los", "played", "20:00", "20:10", 3), again, againLater, offVibe, before,
+                        keptWithoutName, skipped));
+
+        assertThat(List.of(summary.rejectedByAi(), summary.rejectedAsPlayed(), summary.rejectedOffVibe())).containsExactly(5, 2, 2);
+        assertThat(summary.rejected()).extracting(EveningSummaryService.RejectedSong::name, EveningSummaryService.RejectedSong::requests,
+                EveningSummaryService.RejectedSong::reason).containsExactly(
+                org.assertj.core.groups.Tuple.tuple("Zenek Martyniuk - Przekorny los", 2, com.scan2play.model.RejectReason.DUPLICATE),
+                org.assertj.core.groups.Tuple.tuple("Metallica - One", 1, null),
+                org.assertj.core.groups.Tuple.tuple("Nirvana - Smells Like Teen Spirit", 1, com.scan2play.model.RejectReason.OFF_VIBE));
+    }
+
+    /** "Ostatnie wieczory": up to eight around the shown one — the latest eight when it is among them, else it in the middle. */
+    @Test
+    void theComparedEvenings_areEightAroundTheShownOne() {
+        List<EveningSummaryService.Evening> evenings = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            evenings.add(new EveningSummaryService.Evening(EVENING.minusWeeks(i), i));
+        }
+        assertThat(EveningSummaryService.compared(evenings, EVENING)).extracting(EveningSummaryService.Evening::votes)
+                .containsExactly(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L);
+        assertThat(EveningSummaryService.compared(evenings, EVENING.minusWeeks(10))).extracting(EveningSummaryService.Evening::votes)
+                .containsExactly(6L, 7L, 8L, 9L, 10L, 11L, 12L, 13L);
+        assertThat(EveningSummaryService.compared(evenings, EVENING.minusWeeks(19))).extracting(EveningSummaryService.Evening::votes)
+                .containsExactly(12L, 13L, 14L, 15L, 16L, 17L, 18L, 19L);
+        assertThat(EveningSummaryService.compared(evenings.subList(0, 3), EVENING)).hasSize(3);
+    }
+
+    /** The evenings' rows carry what "Ostatnie wieczory" shows: the votes, the played, the rejected, the first and last request. */
+    @Test
+    void theEvenings_carryWhatTheComparisonShows() {
+        SongRequestRepository repository = mock(SongRequestRepository.class);
+        when(repository.findEvenings("SUMM1", EveningSummaryService.MAX_EVENINGS)).thenReturn(List.<Object[]>of(
+                new Object[]{"2026-10-03", 42L, 30L, 5L, java.sql.Timestamp.from(at("19:05")), java.sql.Timestamp.from(at("02:40"))}));
+
+        assertThat(new EveningSummaryService(repository, mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class))
+                .evenings("SUMM1")).containsExactly(new EveningSummaryService.Evening(EVENING, 42, 30, 5, at("19:05"), at("02:40")));
     }
 
     /** The evenings by month for the page's list, the latest first, as the query gives them. */
@@ -249,8 +308,8 @@ class EveningSummaryServiceTest {
         messages.setDefaultEncoding("UTF-8");
         messages.setFallbackToSystemLocale(false);
         String[] lines = EveningSummaryService.toCsv(requests, messages, Locale.forLanguageTag("pl")).split("\r\n");
-        assertThat(lines[1]).endsWith(";;;30;\"Wilki\";\"Baśka\";0");
-        assertThat(lines[2]).endsWith(";\"tak\";;10;\"Kult\";\"Arahja\";0");
+        assertThat(lines[1]).endsWith(";;;30;\"Wilki\";\"Baśka\";0;");
+        assertThat(lines[2]).endsWith(";\"tak\";;10;\"Kult\";\"Arahja\";0;");
     }
 
     /** A request sent at the venue's kiosk (V56): "tak" in the CSV's column "Z kiosku", after "Dodana przez DJ-a". */
@@ -266,11 +325,11 @@ class EveningSummaryServiceTest {
         String[] lines = EveningSummaryService.toCsv(List.of(request("Wilki - Baśka", "played", "20:00", "20:30", 2), kiosk), messages,
                 Locale.forLanguageTag("pl")).split("\r\n");
 
-        assertThat(lines[0]).endsWith(";Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje");
-        assertThat(lines[1]).endsWith(";;;30;\"Wilki\";\"Baśka\";0");
-        assertThat(lines[2]).endsWith(";;\"tak\";10;\"Kult\";\"Arahja\";0");
+        assertThat(lines[0]).endsWith(";Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje;Powód odrzucenia");
+        assertThat(lines[1]).endsWith(";;;30;\"Wilki\";\"Baśka\";0;");
+        assertThat(lines[2]).endsWith(";;\"tak\";10;\"Kult\";\"Arahja\";0;");
         assertThat(EveningSummaryService.toCsv(List.of(kiosk), messages, Locale.ENGLISH).split("\r\n")[0])
-                .endsWith(";Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications");
+                .endsWith(";Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications;Why the AI rejected it");
     }
 
     @Test
@@ -424,18 +483,19 @@ class EveningSummaryServiceTest {
         played.setTips(2);
         SongRequestEntity formula = request("=HYPERLINK(\"http://x\")", "rejected", "22:00", null, 1);
         formula.setGuestText("@SUM(1;2)");
+        formula.setRejectReason(com.scan2play.model.RejectReason.OFF_VIBE);
 
         String csv = EveningSummaryService.toCsv(List.of(played, formula), messages, Locale.forLanguageTag("pl"));
 
         String[] lines = csv.split("\r\n");
         assertThat(lines[0]).isEqualTo((char) 0xFEFF + "Numer;Prośba;Zagrana;Piosenka;Gość napisał;Głosy;Napiwki;Status;Komentarz AI;"
-                + "Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje");
+                + "Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje;Powód odrzucenia");
         // after the columns of before: the minutes it waited, the artist and the title apart, the dedications counted
         assertThat(lines[1]).isEqualTo("27;\"2026-10-03 21:00\";\"2026-10-03 21:30\";\"Varius Manx - Orła cień\";"
-                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";;;30;\"Varius Manx\";\"Orła cień\";0");
+                + "\"orła cień \"\"ten\"\"\";4;2;\"zagrana\";\"Klasyk!\";;;30;\"Varius Manx\";\"Orła cień\";0;");
         // a request the AI rejected has no number, waited for nothing; a name without " - " has no artist, its title a formula kept as text
         assertThat(lines[2]).isEqualTo(";\"2026-10-03 22:00\";;\"'=HYPERLINK(\"\"http://x\"\")\";\"'@SUM(1;2)\";1;0;"
-                + "\"odrzucona przez AI\";;;;;;\"'=HYPERLINK(\"\"http://x\"\")\";0");
+                + "\"odrzucona przez AI\";;;;;;\"'=HYPERLINK(\"\"http://x\"\")\";0;\"nie pasowała do klimatu\"");
         assertThat(lines).hasSize(3);
     }
 
@@ -512,7 +572,7 @@ class EveningSummaryServiceTest {
                 2L, com.scan2play.model.LibraryMark.SIMILAR, 3L, com.scan2play.model.LibraryMark.MISSING), messages,
                 Locale.forLanguageTag("pl")).split("\r\n");
 
-        assertThat(lines[0]).endsWith(";Komentarz AI;Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje;W bibliotece");
+        assertThat(lines[0]).endsWith(";Komentarz AI;Dodana przez DJ-a;Z kiosku;Czekała (min);Wykonawca;Tytuł;Dedykacje;Powód odrzucenia;W bibliotece");
         assertThat(lines[1]).endsWith(";\"tak\"");
         assertThat(lines[2]).endsWith(";\"podobny\"");
         assertThat(lines[3]).endsWith(";\"nie\"");

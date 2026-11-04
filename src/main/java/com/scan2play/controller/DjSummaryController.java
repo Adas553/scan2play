@@ -38,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.scan2play.controller.ViewAttributes.COMPARED_EVENINGS;
 import static com.scan2play.controller.ViewAttributes.DJ_LOGO;
 import static com.scan2play.controller.ViewAttributes.DJ_NAME;
 import static com.scan2play.controller.ViewAttributes.EVENING;
@@ -97,6 +98,7 @@ public class DjSummaryController {
         boolean hosts = VIEW_HOSTS.equals(view);
         model.addAttribute(EVENINGS, evenings);
         model.addAttribute(EVENING_MONTHS, EveningSummaryService.byMonth(evenings));
+        model.addAttribute(COMPARED_EVENINGS, shown == null ? List.of() : EveningSummaryService.compared(evenings, shown));
         model.addAttribute(HOSTS_VIEW, hosts);
         model.addAttribute(SHARED, false);
         Optional<EveningSummaryEntity> named = shown == null ? Optional.empty()

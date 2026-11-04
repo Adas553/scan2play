@@ -77,6 +77,8 @@ public final class ViewAttributes {
     public static final String HOSTS_VIEW = "hostsView";
     /** The summary's evenings by month ({@code EveningSummaryService.Month}): the list's groups. */
     public static final String EVENING_MONTHS = "eveningMonths";
+    /** The evenings "Ostatnie wieczory" compares, the shown one among them. */
+    public static final String COMPARED_EVENINGS = "comparedEvenings";
     /** The DJ's title of the evening (V61); null: "Podsumowanie wieczoru". */
     public static final String EVENING_TITLE = "eveningTitle";
     /** The evening's hosts' link (V61, {@code /s/{token}}) while it works, and the day it stops. */

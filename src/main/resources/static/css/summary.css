@@ -274,6 +274,65 @@ body {
     }
 }
 
+/* "Do internetu" inside the panel: a heading of its own under a line */
+.hosts-panel .social {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #b9e6f0;
+}
+
+.hosts-panel h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+}
+
+/* ---- "Ostatnie wieczory": the shown evening among its neighbours (screen only) ---- */
+
+.compare-scroll {
+    overflow-x: auto;
+}
+
+.compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.compare th,
+.compare td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eeeeee;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.compare thead th {
+    color: #555555;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.compare .n {
+    text-align: right;
+}
+
+.compare tbody th a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: #075c6e;
+    font-weight: 400;
+}
+
+.compare tr.shown th a,
+.compare tr.shown td {
+    font-weight: 700;
+}
+
+.compare tr.shown {
+    background: #f2fbfd;
+}
+
 /* ---- The summary ---- */
 
 main {

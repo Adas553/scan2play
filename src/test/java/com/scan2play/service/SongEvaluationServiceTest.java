@@ -966,4 +966,21 @@ class SongEvaluationServiceTest {
         verify(dedications).save(any());
         assertThat(aiHealth.takeSummary()).as("the AI's health: nothing to count").isNull();
     }
+
+    /**
+     * Why the AI rejected a request (V62, for the evening summary), from what the code knows: a song of the recently played list
+     * the AI was given (any spelling of it) played already, any other refusal is off the vibe; a request let through has none.
+     */
+    @Test
+    void theRejectReason_isPlayedAlready_whenTheSongPlayedLately_elseOffTheVibe() {
+        List<String> played = List.of("Zenek Martyniuk - Przekorny los", "Sanah - Szampan");
+
+        assertThat(SongEvaluationService.rejectReason(new DjResponse("rejected", "Już leciała!", "zenek martyniuk – przekorny los", "title"), played))
+                .isEqualTo(com.scan2play.model.RejectReason.DUPLICATE);
+        assertThat(SongEvaluationService.rejectReason(new DjResponse("rejected", "Nie dziś.", "Nirvana - Smells Like Teen Spirit", "title"), played))
+                .isEqualTo(com.scan2play.model.RejectReason.OFF_VIBE);
+        assertThat(SongEvaluationService.rejectReason(new DjResponse("rejected", "Nie dziś.", "Sanah - Szampan", "title"), List.of()))
+                .as("no duplicate window: the AI was given no list").isEqualTo(com.scan2play.model.RejectReason.OFF_VIBE);
+        assertThat(SongEvaluationService.rejectReason(new DjResponse(DECISION_ACCEPTED, "Jasne!", "Sanah - Szampan", "title"), played)).isNull();
+    }
 }

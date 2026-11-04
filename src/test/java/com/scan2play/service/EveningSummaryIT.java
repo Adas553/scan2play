@@ -71,6 +71,7 @@ class EveningSummaryIT extends PostgresIntegrationTest {
         requests.saveAndFlush(played);
         SongRequestEntity rejected = save(party, "dla Ani od Marka", "rejected", at(20, 10), null, 1);
         rejected.setDjComment("Nie tym razem");
+        rejected.setRejectReason(com.scan2play.model.RejectReason.DUPLICATE);
         requests.saveAndFlush(rejected);
         SongRequestEntity skippedLongAgo = save(party, "Kult - Arahja", "rejected", at(21, 0), null, 2);
         skippedLongAgo.setSkippedAt(at(21, 5));
@@ -93,6 +94,8 @@ class EveningSummaryIT extends PostgresIntegrationTest {
                 .containsExactly(played.getId(), rejected.getId(), skippedLongAgo.getId(), cleared.getId());
         assertThat(kept).extracting(row -> row.get("status")).containsExactly("PLAYED", "REJECTED_BY_AI", "SKIPPED", "CLEARED");
         assertThat(kept.get(1).get("song_name")).as("what the guest typed, rejected by the AI: not kept").isNull();
+        assertThat(kept).extracting(row -> row.get("reject_reason")).as("why the AI rejected it (V62), kept; none for the rest")
+                .containsExactly(null, "DUPLICATE", null, null);
         assertThat(kept.getFirst()).containsEntry("song_name", "Varius Manx - Orła cień").containsEntry("votes", 4)
                 .containsEntry("tips", 2).containsEntry("dedications", 1);
         assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns WHERE table_name = 'evening_song'", String.class))
@@ -107,6 +110,11 @@ class EveningSummaryIT extends PostgresIntegrationTest {
         // the evenings' list counts both tables: 4 + 2 + 3 + 5 of what the AI let through, the evening of the recent skip apart
         assertThat(requests.findEvenings(party, 52)).extracting(row -> row[0] + " " + ((Number) row[1]).longValue())
                 .contains("2026-10-03 14");
+        // "Ostatnie wieczory" (v3): the played, the rejected by the AI, the first and the last request, of both tables
+        EveningSummaryService.Evening counted = summaries.evenings(party).stream().filter(e -> e.day().equals(EVENING)).findFirst().orElseThrow();
+        assertThat(List.of(counted.votes(), counted.played(), counted.rejectedByAi())).containsExactly(14L, 1L, 1L);
+        assertThat(List.of(counted.first(), counted.last())).containsExactly(at(20, 0), at(23, 30));
+        assertThat(after.rejectedAsPlayed()).isEqualTo(1);
     }
 
     /**
@@ -157,6 +165,16 @@ class EveningSummaryIT extends PostgresIntegrationTest {
         jdbc.update("INSERT INTO evening_summary (party_code, evening, share_token, updated_at) VALUES (?, ?, 'same', now())", other, EVENING);
         assertThatThrownBy(() -> jdbc.update("INSERT INTO evening_summary (party_code, evening, share_token, updated_at)"
                 + " VALUES (?, ?, 'same', now())", other, EVENING.plusDays(1))).hasMessageContaining("uk_evening_summary_share_token");
+    }
+
+    /** V62: a reason is one of the two, or none. */
+    @Test
+    void aRejectReason_isOneOfTheTwo() {
+        String party = party();
+        SongRequestEntity request = save(party, "Kult - Arahja", "rejected", at(20, 0), null, 1);
+        jdbc.update("UPDATE song_requests SET reject_reason = 'OFF_VIBE' WHERE id = ?", request.getId());
+        assertThatThrownBy(() -> jdbc.update("UPDATE song_requests SET reject_reason = 'BORING' WHERE id = ?", request.getId()))
+                .hasMessageContaining("song_requests_reject_reason_check");
     }
 
     /** 13 months after the evening its kept songs, its title and its link go (the nightly purge). */

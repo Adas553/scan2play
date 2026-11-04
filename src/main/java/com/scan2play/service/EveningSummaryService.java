@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.EveningSummaryEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.LibraryMark;
+import com.scan2play.model.RejectReason;
 import com.scan2play.repository.EveningSummaryRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.CodeGenerator;
@@ -61,6 +62,9 @@ public class EveningSummaryService {
     static final int MAX_REQUESTS = 2000;
     static final int TOP_SONGS = 10;
     static final int TOP_ARTISTS = 10;
+    static final int TOP_REJECTED = 10;
+    /** The evenings "Ostatnie wieczory" compares, the shown one among them. */
+    public static final int COMPARED_EVENINGS = 8;
     /** The requests are counted by this many minutes of the evening. */
     static final int SLOT_MINUTES = 30;
     /** The tallest bar of the half-hours' chart, in the units of its viewBox (summary.html). */
@@ -71,8 +75,15 @@ public class EveningSummaryService {
     private static final char BYTE_ORDER_MARK = 0xFEFF;
     private static final DateTimeFormatter CSV_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(Times.DISPLAY_ZONE);
 
-    /** One evening the party had requests, and the guests' votes of it — {@link Summary#votes()}, counted in SQL. */
-    public record Evening(LocalDate day, long votes) {
+    /**
+     * One evening the party had requests, counted in SQL as the summary counts it: the guests' votes ({@link Summary#votes()}), the
+     * played requests, the ones the AI rejected, the first and the last request — the list to pick from and "Ostatnie wieczory".
+     */
+    public record Evening(LocalDate day, long votes, long played, long rejectedByAi, Instant first, Instant last) {
+
+        public Evening(LocalDate day, long votes) {
+            this(day, votes, 0, 0, null, null);
+        }
     }
 
     /** The evenings of one month, for the page's list (its {@code <optgroup>}): {@code first} names the month. */
@@ -96,6 +107,13 @@ public class EveningSummaryService {
      * ({@code SIMILAR}): its name as first asked for, the votes and the requests of the evening — what to get before the next one.
      */
     public record LibraryGap(String name, int votes, int requests, LibraryMark mark) {
+    }
+
+    /**
+     * A song the AI rejected, its requests of the evening together (by {@link LibraryKey}): the name as first asked, how many times
+     * it was asked for and why it was rejected the last time it was ({@code null}: a request of before V62).
+     */
+    public record RejectedSong(String name, int requests, RejectReason reason, Instant firstAsked) {
     }
 
     /** An artist of the songs the AI let through: how many of their songs the guests asked for, and those songs' votes. */
@@ -125,13 +143,14 @@ public class EveningSummaryService {
      * {@code addedByDj}: how many of the requests the DJ added in the panel (V44) — counted in {@code requests}, but their first vote
      * is the DJ's, not a guest's, so {@code votes} leaves it out. {@code viaKiosk}: how many guests sent at the venue's kiosk (V56),
      * counted in {@code requests} too. {@code firstWanted}: the earliest request the AI let through; {@code artists}: the artists of
-     * two songs or more.
+     * two songs or more. {@code rejectedAsPlayed} / {@code rejectedOffVibe}: the AI's rejections by why (V62; the ones of before are
+     * neither); {@code rejected}: the songs it rejected that have a name (a kept one has none), the most asked first.
      */
     public record Summary(LocalDate evening, int requests, int songs, int played, int waiting, int skipped, int cleared,
                           int rejectedByAi, int votes, int tips, int dedications, Instant first, Instant last, List<Song> top,
                           List<Song> missed, List<ArtistCount> artists, List<SongRequestEntity> setlist, List<TimeSlot> slots,
                           Long averageWaitMinutes, Long longestWaitMinutes, boolean truncated, int addedByDj, int viaKiosk,
-                          SongRequestEntity firstWanted) {
+                          SongRequestEntity firstWanted, int rejectedAsPlayed, int rejectedOffVibe, List<RejectedSong> rejected) {
 
         /** The most requests of one half-hour. */
         public long busiestSlotRequests() {
@@ -189,7 +208,9 @@ public class EveningSummaryService {
     @Transactional(readOnly = true)
     public List<Evening> evenings(String partyCode) {
         return songRequestRepository.findEvenings(partyCode, MAX_EVENINGS).stream()
-                .map(row -> new Evening(LocalDate.parse((String) row[0]), ((Number) row[1]).longValue()))
+                .map(row -> new Evening(LocalDate.parse((String) row[0]), ((Number) row[1]).longValue(),
+                        row.length > 2 ? ((Number) row[2]).longValue() : 0, row.length > 3 ? ((Number) row[3]).longValue() : 0,
+                        row.length > 4 ? instant(row[4]) : null, row.length > 5 ? instant(row[5]) : null))
                 .toList();
     }
 
@@ -259,6 +280,7 @@ public class EveningSummaryService {
                 .dedications(((Number) row[7]).intValue())
                 .addedByDj(Boolean.TRUE.equals(row[8]))
                 .viaKiosk(Boolean.TRUE.equals(row[9]))
+                .rejectReason(row.length > 10 && row[10] != null ? RejectReason.valueOf((String) row[10]) : null)
                 .build();
     }
 
@@ -337,6 +359,9 @@ public class EveningSummaryService {
         int votes = 0;
         int tips = 0;
         int dedications = 0;
+        int rejectedAsPlayed = 0;
+        int rejectedOffVibe = 0;
+        List<SongRequestEntity> rejectedRows = new ArrayList<>();
         int addedByDj = 0;
         int viaKiosk = 0;
         List<SongRequestEntity> letThrough = new ArrayList<>();
@@ -361,7 +386,15 @@ public class EveningSummaryService {
                 case WAITING -> waiting++;
                 case SKIPPED -> skipped++;
                 case CLEARED -> cleared++;
-                case REJECTED_BY_AI -> rejectedByAi++;
+                case REJECTED_BY_AI -> {
+                    rejectedByAi++;
+                    rejectedRows.add(request);
+                    if (request.getRejectReason() == RejectReason.DUPLICATE) {
+                        rejectedAsPlayed++;
+                    } else if (request.getRejectReason() == RejectReason.OFF_VIBE) {
+                        rejectedOffVibe++;
+                    }
+                }
             }
             if (status != Status.REJECTED_BY_AI) {
                 letThrough.add(request);
@@ -397,7 +430,41 @@ public class EveningSummaryService {
                 slots(perSlot, eveningStart),
                 waits.isEmpty() ? null : Math.round(waits.stream().mapToLong(Long::longValue).average().orElse(0)),
                 waits.isEmpty() ? null : waits.stream().mapToLong(Long::longValue).max().orElse(0),
-                requests.size() >= MAX_REQUESTS, addedByDj, viaKiosk, firstWanted);
+                requests.size() >= MAX_REQUESTS, addedByDj, viaKiosk, firstWanted, rejectedAsPlayed, rejectedOffVibe,
+                rejectedSongs(rejectedRows));
+    }
+
+    /**
+     * The songs the AI rejected, each once (by {@link LibraryKey}), with how many times they were asked for and the last reason; the
+     * ones without a name (kept of a deleted request: the name was the guest's) left out — the most asked first, at most
+     * {@value #TOP_REJECTED}.
+     */
+    static List<RejectedSong> rejectedSongs(List<SongRequestEntity> rejected) {
+        Map<String, RejectedSong> byKey = new LinkedHashMap<>();
+        rejected.stream()
+                .filter(request -> request.getSongName() != null && !request.getSongName().isBlank())
+                .sorted(Comparator.comparing(SongRequestEntity::getRequestedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .forEach(request -> byKey.merge(songKey(request.getSongName()),
+                        new RejectedSong(request.getSongName(), 1, request.getRejectReason(), request.getRequestedAt()),
+                        (had, again) -> new RejectedSong(had.name(), had.requests() + 1,
+                                again.reason() != null ? again.reason() : had.reason(), had.firstAsked())));
+        return byKey.values().stream()
+                .sorted(Comparator.comparingInt(RejectedSong::requests).reversed()
+                        .thenComparing(RejectedSong::firstAsked, Comparator.nullsLast(Comparator.naturalOrder())))
+                .limit(TOP_REJECTED)
+                .toList();
+    }
+
+    /** The evenings "Ostatnie wieczory" compares: up to {@value #COMPARED_EVENINGS} from the list, the shown one among them. */
+    public static List<Evening> compared(List<Evening> evenings, LocalDate shown) {
+        int at = 0;
+        for (int i = 0; i < evenings.size(); i++) {
+            if (evenings.get(i).day().equals(shown)) {
+                at = i;
+            }
+        }
+        int from = Math.max(0, Math.min(at - COMPARED_EVENINGS / 2, evenings.size() - COMPARED_EVENINGS));
+        return List.copyOf(evenings.subList(from, Math.min(evenings.size(), from + COMPARED_EVENINGS)));
     }
 
     /**
@@ -602,7 +669,8 @@ public class EveningSummaryService {
     /**
      * The evening's requests as CSV for a spreadsheet: a byte order mark and ";" between the columns (what Excel set to Polish
      * reads without asking), the texts of the DJ's language. A row a request; after the columns of before (a sheet made from them
-     * keeps working) how long a played one waited, its artist and title apart and the count of its dedications (never their words). Every value a guest or the AI wrote is quoted, and one that a
+     * keeps working) how long a played one waited, its artist and title apart, the count of its dedications (never their words) and
+     * why the AI rejected it (V62). Every value a guest or the AI wrote is quoted, and one that a
      * spreadsheet would take for a formula ({@code = + - @}, a tab) starts with an apostrophe — a guest's "=HYPERLINK(…)" stays
      * text.
      */
@@ -632,7 +700,9 @@ public class EveningSummaryService {
                     waitedMinutes(request),
                     cell(artistOf(request.getSongName())),
                     cell(titleOf(request.getSongName())),
-                    String.valueOf(request.getDedications())));
+                    String.valueOf(request.getDedications()),
+                    request.getRejectReason() == null || statusOf(request) != Status.REJECTED_BY_AI ? ""
+                            : cell(messages.getMessage("summary.csv.reject." + request.getRejectReason().name(), null, locale))));
             if (!marks.isEmpty()) {
                 LibraryMark mark = marks.getOrDefault(request.getId(), LibraryMark.MISSING);
                 csv.append(';').append(cell(messages.getMessage("summary.csv.library." + mark.name(), null, locale)));

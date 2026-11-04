@@ -160,7 +160,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 9. **"Podsumowanie wieczoru" — v1 and v2 of the analysis** (the artifact https://claude.ai/artifact/C9kWpRuZ8h5pbnbPDS6Fvx; the owner,
    2026-11-04: "Zrób v1 w całości, potem zaczniemy v2", the open questions left to me; then "zrób razem z v2" for the bar's width on a
    computer) — **both on `claude/vibrant-maxwell-j5kxed`** (v1 pushed as `40f7f89`; v2 after it), **waiting for the owner's review**,
-   then a release with **V61** (check Flyway's line once). **v2:** an evening lasts 13 months — instead of a snapshot of the counts
+   then a release with **V61 and V62** (check Flyway's lines once). **v2:** an evening lasts 13 months — instead of a snapshot of the counts
    (planned), the statement that deletes requests ("Wyczyść historię", the 30 days' purge) copies what the summary needs of each into
    `evening_song` (`KEEP_FOR_THE_SUMMARY`; no guest's words, no name of a request the AI rejected): a clear in the middle of a party
    loses nothing and no 06:30 job is needed; the page reads both tables. The evenings' list up to 52, by month; the DJ's title of the
@@ -176,9 +176,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    in two columns on paper. "Dla mnie / Dla gospodarzy" (`view=hosts`): the hosts' version without the DJ's own — one A4 page for ~40
    played. "Kopiuj listę" of the library's gaps; the CSV with four columns at the end. My picks: the switch on the same page; the hosts'
    version without "Chcieli, a nie usłyszeli"; no title from the poster (its heading is a call like "Piosenka dla Pary", and today's, not
-   that evening's) — the title is the DJ's, typed (v2). Details: `PROJECT_CONTEXT.md` 5.1. **Next — v3, when the owner says:** the
-   picture "Do internetu" (story / post from the hosts' version, as `qr-social.js`; Pro), comparing evenings (the last 8, for a club),
-   the AI's reasons in categories; the morning e-mail with the link waits for item 1c's sender.
+   that evening's) — the title is the DJ's, typed (v2). Details: `PROJECT_CONTEXT.md` 5.1. **v3** (the owner: "ok, rób v3"; after v2
+   on the same branch, **V62**): why the AI rejected — saved with the request from what the code knows (on the recently played list
+   the AI was given: "już grała"; else "nie pasowała"; the prompt unchanged), counted under the rejections, "Odrzucone przez AI" listed,
+   a CSV column; "Ostatnie wieczory" (up to 8 around the shown one, from the evenings' query); "Do internetu" in the hosts' panel — a
+   story or a post drawn in the page (`summary-social.js`, as the poster's), shared or saved. **Later:** the morning e-mail with the
+   summary's link waits for item 1c's sender; what the guests asked and was refused before the AI (the hosts' list, a song the DJ
+   skipped, a mood) is never saved, so the summary cannot count it — only if the owner wants those counted.
 
 ## Later (not now)
 

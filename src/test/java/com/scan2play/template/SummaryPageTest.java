@@ -95,7 +95,9 @@ class SummaryPageTest {
         requests.add(request("Golec uOrkiestra - Ściernisko", "played", at(21, 2), at(21, 20), 4));
         requests.add(request("ABBA - Dancing Queen", "played", at(22, 10), at(22, 25), 7));
         requests.add(request("Bajm - Biała armia", "played", at(22, 30), at(23, 50), 2));
-        requests.add(request("Nirvana - Smells Like Teen Spirit", "rejected", at(22, 45), null, 1));
+        SongRequestEntity nirvana = request("Nirvana - Smells Like Teen Spirit", "rejected", at(22, 45), null, 1);
+        nirvana.setRejectReason(com.scan2play.model.RejectReason.OFF_VIBE);
+        requests.add(nirvana);
         requests.add(request("Sanah - Szampan", "played", at(0, 20), at(0, 35), 5));
         requests.add(request("Lady Pank - Mniej niż zero", "accepted", at(0, 55), null, 1));
         return requests;
@@ -243,6 +245,16 @@ class SummaryPageTest {
                 "<p class=\"legend\">⏳ czeka · ⏭ pominięta przez DJ-a · 🧹 wyczyszczona z kolejką</p>").doesNotContain("Szampan");
         // every artist of one song: no list of artists
         assertThat(html).doesNotContain("id=\"artists\"");
+        // why the AI rejected (V62): under its count, and the song it rejected with its reason
+        assertThat(html).contains("<small id=\"rejectSplit\">już grały: 0 · nie pasowały: 1</small>");
+        String rejected = html.substring(html.indexOf("id=\"rejected\""), html.indexOf("id=\"slots\"")).replaceAll("\\s+", " ");
+        assertThat(rejected).contains(">Odrzucone przez AI<", "Nirvana - Smells Like Teen Spirit",
+                "<span class=\"status\" title=\"nie pasowała do klimatu\"><span class=\"icon\">✗</span>", "próśb: 1");
+        // "Ostatnie wieczory": the two evenings, this one marked, each leading to its summary; not printed
+        String compare = html.substring(html.indexOf("id=\"compare\""));
+        assertThat(compare).contains("class=\"no-print\"", ">Ostatnie wieczory<", "<tr class=\"shown\">",
+                "href=\"/dj/summary?evening=2026-09-26&amp;party=" + PARTY + "\"", "aria-current=\"page\"");
+        assertThat(html).doesNotContain("summary-social.js", "id=\"summarySocial\"");
         // the half-hours from 19:00 to 00:30: twelve bars, the busiest in the accent, a label every two hours
         String slots = html.substring(html.indexOf("id=\"slots\""), html.indexOf("id=\"setlist\""));
         assertThat(slots).contains(">Nowe prośby co pół godziny<", "Najwięcej: 22:30–23:00 (2)", "viewBox=\"0 0 120 60\"",
@@ -332,8 +344,11 @@ class SummaryPageTest {
     void theHostsPanel_namesTheEvening_andMakesItsLink() throws IOException {
         String none = render(Locale.forLanguageTag("pl"), null, "hosts", TWO_EVENINGS, wedding(), "hosts-panel-pl");
         assertThat(none).contains("id=\"hostsPanel\"", ">Dla gospodarzy<", "action=\"/dj/summary/title\"", "name=\"title\" maxlength=\"60\"",
-                "placeholder=\"np. Wesele Ani i Tomka\"", "id=\"shareMake\">Utwórz link dla gospodarzy<", "<h1>Podsumowanie wieczoru</h1>")
-                .doesNotContain("id=\"shareLinkInput\"", "class=\"kind\"");
+                "placeholder=\"np. Wesele Ani i Tomka\"", "id=\"shareMake\">Utwórz link dla gospodarzy<", "<h1>Podsumowanie wieczoru</h1>",
+                // "Do internetu": the picture's words from the panel, its script on the hosts' version only
+                "id=\"summarySocial\" hidden", "data-name=\"scan2play-2026-10-03\"", "data-top-label=\"Top 5 parkietu\"",
+                "data-made=\"Działa na\"", "id=\"summaryStory\">Story (9:16)<", "/js/summary-social.js")
+                .doesNotContain("id=\"shareLinkInput\"", "class=\"kind\"", "id=\"compare\"", "id=\"rejected\"", "id=\"rejectSplit\"");
 
         kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
         try {
@@ -384,7 +399,8 @@ class SummaryPageTest {
             assertThat(html).contains("<meta name=\"robots\" content=\"noindex, nofollow\">", "<h1>Wesele Ani i Tomka</h1>",
                     "<main class=\"hosts\">", "<strong>34</strong><span>razy goście poprosili", ">Zagrane na życzenie, po kolei (6)<",
                     "/js/summary.js")
-                    .doesNotContain("class=\"toolbar", "id=\"hostsPanel\"", "/js/dj-nav.js", "id=\"noEvenings\"", "Odrzucone przez AI",
+                    .doesNotContain("class=\"toolbar", "id=\"hostsPanel\"", "/js/dj-nav.js", "summary-social.js", "id=\"compare\"",
+                            "id=\"noEvenings\"", "Odrzucone przez AI",
                             "💸", "/dj/", "??");
             for (String token : new String[]{"old", "unknown", "x".repeat(33)}) {
                 org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.shared(token, new ConcurrentModel(), new MockHttpServletResponse()))
@@ -462,7 +478,7 @@ class SummaryPageTest {
             ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries, kept),
                     sessionHelperOf(), messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl").csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
             assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0])
-                    .endsWith(";AI comment;Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications;In your library");
+                    .endsWith(";AI comment;Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications;Why the AI rejected it;In your library");
             // "Kopiuj listę": the songs one a line, shown by summary.js
             assertThat(gaps).contains("id=\"copyLibrary\" hidden", "data-copy-select=\"libraryList\"", "data-copied=\"Skopiowano\"",
                     ">Kopiuj listę<");

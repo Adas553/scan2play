@@ -123,4 +123,63 @@
             t.step('"Skopiowano" for a moment', button.textContent.trim(), 'Skopiowano');
         }
     });
+    /** One tap on "Story" or "Post": the PNG the page saves (its download caught), as an image to read pixels of. */
+    async function picture(t, kind) {
+        const caught = {};
+        const create = URL.createObjectURL, click = HTMLAnchorElement.prototype.click;
+        URL.createObjectURL = function (blob) { caught.blob = blob; return create.call(URL, blob); };
+        HTMLAnchorElement.prototype.click = function () { caught.name = this.download; };
+        try {
+            document.getElementById(kind === 'story' ? 'summaryStory' : 'summaryPost').click();
+            await t.waitFor(function () { return caught.name; }, 'the ' + kind + ' saved', 5000);
+        } finally {
+            URL.createObjectURL = create;
+            HTMLAnchorElement.prototype.click = click;
+        }
+        const bitmap = await createImageBitmap(caught.blob);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        return { name: caught.name, type: caught.blob.type, width: bitmap.width, height: bitmap.height,
+            layout: JSON.parse(document.getElementById('summarySocial').dataset.lastLayout),
+            light: function (x, y, w, h) { let n = 0; const d = ctx.getImageData(x, y, w, h).data; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 200) n++; return n; } };
+    }
+
+    async function socialFits(t, kind, w, h) {
+        const made = await picture(t, kind);
+        t.step(kind + ': a PNG of ' + w + ' × ' + h + ', named by the evening', [made.type, made.width, made.height, made.name],
+            ['image/png', w, h, 'scan2play-2026-10-03-' + kind + '.png']);
+        t.check(kind + ': the words end above the foot (between Instagram\'s bars on a story)', made.layout.bottom <= made.layout.room);
+        const songs = Array.prototype.slice.call(document.querySelectorAll('#top .song'), 0, 5).map(function (s) { return s.textContent.trim(); });
+        // a line each as drawn: the title may wrap
+        t.check(kind + ': the title and the first of the top 5 are in it', made.layout.lines.join(' ').indexOf(document.querySelector('main h1').textContent.trim()) >= 0
+            && made.layout.lines.some(function (line) { return line.indexOf('1. ' + songs[0].slice(0, 10)) === 0; }));
+        t.check(kind + ': nothing drawn in the top bar of a story', kind !== 'story' || made.light(0, 0, 1080, 240) === 0);
+        t.check(kind + ': light text drawn below it', made.light(0, made.layout.top, 1080, 400) > 500);
+        return made;
+    }
+
+    S2P.scenario({
+        name: 'summary-social-pictures',
+        title: '"Do internetu" of the hosts\' version: a story 1080 × 1920 and a post 1080 × 1350 — the title, two numbers, the top 5 — saved, nothing sent',
+        page: 'summary-hosts-panel-pl',
+        run: async function (t) {
+            t.step('the panel shown by its script', shows(document.getElementById('summarySocial')), true);
+            await socialFits(t, 'story', 1080, 1920);
+            await socialFits(t, 'post', 1080, 1350);
+        }
+    });
+
+    S2P.scenario({
+        name: 'summary-social-longest',
+        title: '"Do internetu" of a long wedding (long titles in the top 5): both pictures still fit, the words shrunk if they must',
+        page: 'summary-long-hosts-pl',
+        run: async function (t) {
+            await socialFits(t, 'story', 1080, 1920);
+            const post = await socialFits(t, 'post', 1080, 1350);
+            t.check('the post\'s words at least half their size', post.layout.scale >= 0.5);
+        }
+    });
 })();
