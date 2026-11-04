@@ -228,6 +228,44 @@ class GuestPageRenderTest {
         assertThat(html.substring(html.indexOf("Newest"), html.indexOf(">Mine<"))).doesNotContain("Twoja");
     }
 
+    /**
+     * The guests' theme (V59): the themes' stylesheet after app.css and the theme on <body> — the party page, the result, the "party
+     * ended" page; nothing more for the classic look (app.css alone, as before). Written as {@code guest-theme-<theme>.html} (the list
+     * and the guest's own song, so the browser tests see the statuses in each theme), {@code result-theme.html} and
+     * {@code party-ended-theme.html}.
+     */
+    @Test
+    void theGuestsTheme_isOnEveryGuestsPage_andTheClassicOneLoadsNothingMore() {
+        for (com.scan2play.model.GuestTheme theme : com.scan2play.model.GuestTheme.values()) {
+            String html = render(PL, Map.of("guestTheme", theme, "djName", "DJ Łukasz Żółć", "guestQueue",
+                    queue(List.of(numbered(3, "Wham! - Last Christmas", 20), numbered(2, "Dawid Podsiadło - Małomiasteczkowy", 21),
+                            numbered(1, "Michael Jackson - Thriller", 22)), Set.of(2L), "Dawid Podsiadło - Małomiasteczkowy")));
+            String key = theme.name().toLowerCase(Locale.ROOT);
+            writeForTheBrowserTests("guest-theme-" + key + ".html", html);
+            if (theme.themed()) {
+                assertThat(html).contains("<body class=\"page-guest\" data-guest-theme=\"" + theme.name() + "\">",
+                        "<link href=\"/css/guest-themes.css\"");
+                assertThat(html.indexOf("/css/guest-themes.css")).as("after app.css: its tokens win").isGreaterThan(html.indexOf("/css/app.css"));
+            } else {
+                assertThat(html).contains("<body class=\"page-guest\">").doesNotContain("guest-themes", "data-guest-theme");
+            }
+        }
+        assertThat(render(PL, Map.of())).as("a page without the attribute (the demo, the tests of before): the classic look")
+                .doesNotContain("guest-themes", "data-guest-theme");
+
+        // a long name in the scary theme's wide face: set smaller, under "Gra:" whole if it must
+        writeForTheBrowserTests("guest-theme-scary-long.html", render(PL, Map.of("guestTheme", com.scan2play.model.GuestTheme.SCARY,
+                "djName", "DJ Krzysztof Wiśniewski", "guestQueue", queue(List.of(numbered(1, "Michael Jackson - Thriller", 22)), Set.of(), null))));
+
+        String ended = renderEnded(PL, Map.of("guestTheme", com.scan2play.model.GuestTheme.WEDDING, "djName", "DJ Kuba"));
+        assertThat(ended).contains("data-guest-theme=\"WEDDING\"", "/css/guest-themes.css");
+        writeForTheBrowserTests("party-ended-theme.html", ended);
+        String result = renderResult(new com.scan2play.model.DjResponse("rejected", "Nie tym razem.", "Zenek - Przez twe oczy", "title"),
+                Map.of("guestTheme", com.scan2play.model.GuestTheme.SCARY, "djName", "DJ Nocny Marek"));
+        assertThat(result).contains("data-guest-theme=\"SCARY\"", "/css/guest-themes.css");
+        writeForTheBrowserTests("result-theme.html", result);
+    }
+
     /** Several of the guest's songs wait: counted, none named — naming one read as the AI's mix-up (the owner, 2026-10-07). */
     @Test
     void severalOfTheGuestsSongsWaiting_areCounted_notNamed() {
@@ -662,12 +700,17 @@ class GuestPageRenderTest {
         assertThat(render(PL, Map.of("partyCode", "DEMO"))).contains("← Wróć do panelu demo").doesNotContain("??");
     }
 
-    /** Who plays (V17): "🎧 Gra: DJ Koko" under the title, escaped; nothing when the DJ wrote nothing. */
+    /**
+     * Who plays (V17): "🎧 Gra: DJ Koko" under the title, escaped; nothing when the DJ wrote nothing. The name a span of its own (a guests'
+     * theme sets it alone in its face, V59), marked when long: over 16 letters, over 26.
+     */
     @Test
     void whoPlays_isShownUnderTheTitle() {
         assertThat(render(PL, Map.of("djName", "DJ <b>Koko</b>")))
-                .contains("id=\"djName\"", "🎧 Gra: DJ &lt;b&gt;Koko&lt;/b&gt;").doesNotContain("??");
-        assertThat(render(Locale.ENGLISH, Map.of("djName", "DJ Koko"))).contains("🎧 Playing: DJ Koko");
+                .contains("id=\"djName\"", ">🎧 Gra:</span> <span class=\"s2p-dj-name\">DJ &lt;b&gt;Koko&lt;/b&gt;</span>").doesNotContain("??");
+        assertThat(render(Locale.ENGLISH, Map.of("djName", "DJ Koko"))).contains(">🎧 Playing:</span> <span class=\"s2p-dj-name\">DJ Koko</span>");
+        assertThat(render(PL, Map.of("djName", "DJ Krzysztof Wiśniewski"))).contains("class=\"s2p-dj-name s2p-dj-long\"");
+        assertThat(render(PL, Map.of("djName", "DJ Krzysztof Wiśniewski-Kowalczyk"))).contains("class=\"s2p-dj-name s2p-dj-longer\"");
         assertThat(render(PL, Map.of())).doesNotContain("id=\"djName\"");
     }
 

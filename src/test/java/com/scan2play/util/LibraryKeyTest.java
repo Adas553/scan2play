@@ -36,7 +36,7 @@ class LibraryKeyTest {
             "Avicii - Levels                                 | Avicii - Levels - Original Mix",
             "Queen - Don't Stop Me Now                       | Queen - Don't Stop Me Now - 2011 Remaster",
             "Lady Pank - Mniej niż zero - Live               | Lady Pank - Mniej niż zero",
-            // one word's two spellings (V59, LibraryKey.SPELLINGS)
+            // one word's two spellings (V60, LibraryKey.SPELLINGS)
             "Bon Jovi - Living on a Prayer                   | Bon Jovi - Livin' On A Prayer",
             "Bee Gees - Stayin' Alive                        | Bee Gees - Staying Alive",
             "Bee Gees - Stayin' Alive                        | Bee Gees - Stayin Alive",
@@ -104,7 +104,7 @@ class LibraryKeyTest {
     }
 
     /**
-     * The spellings made one on the key without its spaces — as V59 changes the keys saved before, by the same two replaces in the
+     * The spellings made one on the key without its spaces — as V60 changes the keys saved before, by the same two replaces in the
      * same order (the migration's SQL is checked against this in LibraryKeySpellingsMigrationIT). Other songs stay apart.
      */
     @Test

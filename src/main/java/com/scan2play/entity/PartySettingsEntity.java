@@ -4,6 +4,7 @@ import com.scan2play.model.CommentStyle;
 import com.scan2play.model.PosterFont;
 import com.scan2play.model.PosterSize;
 import com.scan2play.model.PosterLanguage;
+import com.scan2play.model.GuestTheme;
 import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.model.StaffRole;
@@ -275,6 +276,12 @@ public class PartySettingsEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 6)
     private PosterSize posterSize = PosterSize.NORMAL;
+
+    /** The look of the guests' pages (V59, "Motyw dla gości"): the party page, the result, the kiosk, the TV — not the print's. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private GuestTheme guestTheme = GuestTheme.CLASSIC;
 
     /** The most tables the print numbers (V50): 50 tents are 50 sheets. */
     public static final int POSTER_TABLES_MAX = 50;

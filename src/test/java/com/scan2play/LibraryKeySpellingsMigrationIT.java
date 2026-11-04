@@ -18,10 +18,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * V59 on a database with libraries uploaded before it: their titles' keys get the spellings made one ("livingonaprayer" is
+ * V60 on a database with libraries uploaded before it: their titles' keys get the spellings made one ("livingonaprayer" is
  * "livinonaprayer", "mambonumber5" "mambono5") as {@link com.scan2play.util.LibraryKey} makes the new ones — the same key for the same
  * title, checked against the Java itself —; two tracks of one artist whose keys become one are one, the other parties' untouched. A
- * throw-away database of its own, migrated to V58, given libraries, and then to the end.
+ * throw-away database of its own, migrated to V59, given libraries, and then to the end.
  */
 @ExtendWith(PostgresIntegrationTest.OnlyUnderFailsafe.class)
 class LibraryKeySpellingsMigrationIT {
@@ -47,7 +47,7 @@ class LibraryKeySpellingsMigrationIT {
     @Test
     void theKeysOfBefore_areSpelledAsTheNewOnes_andTheirDoublesMerged() throws SQLException {
         String url = "jdbc:postgresql://" + HOST + ":" + PORT + "/" + database;
-        Flyway.configure().dataSource(url, USER, PASSWORD).target("58").load().migrate();
+        Flyway.configure().dataSource(url, USER, PASSWORD).target("59").load().migrate();
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
             for (String party : new String[]{"WED01", "WED02"}) {
                 statement.execute("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"

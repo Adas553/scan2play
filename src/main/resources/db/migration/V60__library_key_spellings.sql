@@ -1,4 +1,4 @@
--- V59 — the DJ's library: one word's two spellings make one key (LibraryKey.SPELLINGS) — "ing" is "in" ("Livin' On A Prayer" and
+-- V60 — the DJ's library: one word's two spellings make one key (LibraryKey.SPELLINGS) — "ing" is "in" ("Livin' On A Prayer" and
 -- "Living on a Prayer", "Stayin' Alive" and "Staying Alive"), "number" is "no" ("Mambo No. 5" and "Mambo Number 5"). The new keys are
 -- made so; the keys saved before are changed here the same way, in the same order, so that the libraries uploaded before match as the
 -- new ones do (a title's key has no spaces: the change needs none). Two tracks of a party whose keys become one (the same artists,

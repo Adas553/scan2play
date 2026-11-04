@@ -1,5 +1,6 @@
 /**
- * The cards of "Ustawienia imprezy" answered in place ([data-saves-in-place]: "Godziny imprezy", V55; "Kiosk dla gości", V56; the hosts'
+ * The cards of "Ustawienia imprezy" answered in place ([data-saves-in-place]: "Godziny imprezy", V55; "Kiosk dla gości", V56; "Motyw dla
+ * gości", V59 — sent by its radios, the focus kept on the one picked; the hosts'
  * link of "Lista gospodarzy", V29): a form of such a card marked [data-in-place] is sent in the background (X-Requested-With: fetch).
  * The server answers with the card alone (the same id), or with the page "Ustawienia imprezy" its redirect leads to — the card is
  * taken from it either way. The card's folded line takes the answer's state, and its body — or only the part the form names
@@ -24,6 +25,8 @@ document.addEventListener('submit', function (e) {
     e.preventDefault();
     const sender = e.submitter;
     if (sender) sender.disabled = true;
+    // a form sent without a button (a radio picked: "Motyw dla gości", V59) keeps the focus on that control in the new card
+    const focused = card.contains(document.activeElement) && document.activeElement.id ? document.activeElement.id : null;
     const headers = csrfHeaders();
     headers['X-Requested-With'] = 'fetch';
     fetch(form.action, { method: 'POST', headers: headers, body: new FormData(form) })
@@ -58,8 +61,9 @@ document.addEventListener('submit', function (e) {
                 flash(again, true);
                 again.focus({ preventScroll: true });
             } else {
+                const kept = focused ? card.querySelector('#' + CSS.escape(focused)) : null;
                 const first = card.querySelector(part).querySelector('button:not([disabled]), a[href], input:not([type="hidden"])');
-                (first || card.querySelector('summary')).focus({ preventScroll: true });
+                (kept || first || card.querySelector('summary')).focus({ preventScroll: true });
             }
         })
         .catch(function (err) {

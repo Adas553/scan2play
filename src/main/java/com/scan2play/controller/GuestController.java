@@ -264,8 +264,12 @@ public class GuestController {
         return "party_ended";
     }
 
-    /** The DJ's profiles (V24): https addresses as SocialLinks wrote them, or null; and the DJ's logo (V45). */
+    /**
+     * The DJ's profiles (V24): https addresses as SocialLinks wrote them, or null; the DJ's logo (V45); and the look the DJ picked
+     * for the guests' pages (V59) — every page that shows the profiles is a guest's page of the party.
+     */
     private static void addProfiles(Model model, PartySettingsEntity settings) {
+        model.addAttribute(GUEST_THEME, settings.getGuestTheme());
         model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());

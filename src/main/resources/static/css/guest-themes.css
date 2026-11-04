@@ -1,0 +1,260 @@
+/* ==========================================================================
+ * Scan2Play — the guests' themes (V59, "Motyw dla gości")
+ *
+ * Loaded after app.css (or tv.css) by the guests' pages of a party with a theme (components :: guestThemeCss): the party page, the
+ * result, the "party ended" page, the kiosk, the TV — and by "Ustawienia imprezy", whose card draws each theme as a small phone.
+ * <body data-guest-theme="SCARY"> (or a thumbnail's own attribute) picks the block.
+ *
+ * Every theme is dark: the pages are read in a dark hall, and the templates keep Bootstrap's dark classes. A theme changes ONLY:
+ *   1. the colour tokens of app.css (the page, the card, the edges, the texts, the action and its tints — the page's glow follows) and
+ *      of tv.css;
+ *   2. one ornament (an SVG of ours, /images/themes/) in a band above the card — never under a text: the list and its messages have no
+ *      card of their own, so a pattern over the whole page ran under them;
+ *   3. the face of "🎧 Gra: …" (our fonts, /fonts/).
+ * The statuses are the same in every theme — the green "Twoja", the yellow 👍, the red "NIE" — and no accent may look like them: the
+ * Christmas red and gold live in the ornament only. GuestThemesCssTest checks every block: only tokens app.css / tv.css have (and the
+ * theme's own two), all of them, WCAG AA for the texts and the action, the accent far from the statuses' hues. No animation.
+ * ========================================================================== */
+
+@font-face {
+    font-family: "S2P Serif";
+    font-style: normal;
+    font-display: swap;   /* the guest must not wait for a heading's font (the print waits: block) */
+    font-weight: 400 900;
+    src: url("/fonts/playfair-display-5.3.0-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+        U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "S2P Serif";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400 900;
+    src: url("/fonts/playfair-display-5.3.0-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+        U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Nosifer (OFL): dripping capitals, for the scary theme's "🎧 Gra: …" only — it has the Polish letters (latin-ext) */
+@font-face {
+    font-family: "S2P Scary";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400;
+    src: url("/fonts/nosifer-5.3.0-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+        U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "S2P Scary";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400;
+    src: url("/fonts/nosifer-5.3.0-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+        U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---- The themes: tokens only (GuestThemesCssTest). CLASSIC sets none: app.css's own. ---- */
+
+/* Świąteczny: a winter night — navy, ice blue, snowflakes and baubles */
+[data-guest-theme="CHRISTMAS"] {
+    --s2p-bg: #07111d;
+    --s2p-bg-elevated: #132233;
+    --s2p-border: #2a3d52;
+    --s2p-text: #e6eef6;
+    --s2p-text-muted: #a9bacb;
+    --s2p-action: #9adcff;
+    --s2p-action-hover: #b5e6ff;
+    --s2p-action-active: #c4ebff;
+    --s2p-action-ink: #06263a;
+    --s2p-action-glow: rgba(154, 220, 255, 0.25);
+    --s2p-action-45: rgba(154, 220, 255, 0.45);
+    --s2p-action-28: rgba(154, 220, 255, 0.28);
+    --s2p-action-20: rgba(154, 220, 255, 0.2);
+    --s2p-action-12: rgba(154, 220, 255, 0.12);
+    --s2p-action-07: rgba(154, 220, 255, 0.07);
+    --s2p-action-00: rgba(154, 220, 255, 0);
+    --tv-bg: #07111d;
+    --tv-card: #132233;
+    --tv-border: #2a3d52;
+    --tv-text: #e6eef6;
+    --tv-muted: #a9bacb;
+    --tv-accent: #9adcff;
+    --s2p-ornament: url("/images/themes/christmas.svg");
+    --s2p-theme-font: "S2P Serif", Georgia, serif;
+}
+
+/* Straszny (Halloween): almost black, a violet mist from above and a dark red one from below, pumpkin orange, a drip with a bat and a
+   spider, the DJ's name in dripping capitals */
+[data-guest-theme="SCARY"] {
+    --s2p-bg: #07050a;
+    --s2p-bg-elevated: #160f1b;
+    --s2p-border: #3a2541;
+    --s2p-text: #ece4f0;
+    --s2p-text-muted: #b3a6bd;
+    --s2p-action: #ff9142;
+    --s2p-action-hover: #ffa463;
+    --s2p-action-active: #ffb07a;
+    --s2p-action-ink: #2b1300;
+    --s2p-action-glow: rgba(255, 145, 66, 0.3);
+    --s2p-action-45: rgba(255, 145, 66, 0.45);
+    --s2p-action-28: rgba(255, 145, 66, 0.28);
+    --s2p-action-20: rgba(120, 40, 170, 0.34);   /* the page's glow from above: a violet mist (the orange is the action's alone) */
+    --s2p-action-12: rgba(150, 16, 32, 0.22);    /* and from below: a dark red one */
+    --s2p-action-07: rgba(255, 145, 66, 0.07);
+    --s2p-action-00: rgba(120, 40, 170, 0);
+    --tv-bg: #07050a;
+    --tv-card: #160f1b;
+    --tv-border: #3a2541;
+    --tv-text: #ece4f0;
+    --tv-muted: #b3a6bd;
+    --tv-accent: #ff9142;
+    --s2p-ornament: url("/images/themes/scary.svg");
+    --s2p-theme-font: "S2P Scary", Impact, sans-serif;
+}
+
+/* Konfetti: any party, a birthday — lilac, confetti and streamers, a gold glow from below */
+[data-guest-theme="CONFETTI"] {
+    --s2p-bg: #0b0a12;
+    --s2p-bg-elevated: #1a1726;
+    --s2p-border: #352f4a;
+    --s2p-text: #ece9f5;
+    --s2p-text-muted: #aea8c3;
+    --s2p-action: #e9a6ff;
+    --s2p-action-hover: #f0bfff;
+    --s2p-action-active: #f4ccff;
+    --s2p-action-ink: #2a0d36;
+    --s2p-action-glow: rgba(233, 166, 255, 0.25);
+    --s2p-action-45: rgba(233, 166, 255, 0.45);
+    --s2p-action-28: rgba(233, 166, 255, 0.28);
+    --s2p-action-20: rgba(233, 166, 255, 0.2);
+    --s2p-action-12: rgba(214, 178, 90, 0.14);   /* the glow from below: champagne */
+    --s2p-action-07: rgba(233, 166, 255, 0.07);
+    --s2p-action-00: rgba(233, 166, 255, 0);
+    --tv-bg: #0b0a12;
+    --tv-card: #1a1726;
+    --tv-border: #352f4a;
+    --tv-text: #ece9f5;
+    --tv-muted: #aea8c3;
+    --tv-accent: #e9a6ff;
+    --s2p-ornament: url("/images/themes/confetti.svg");
+    --s2p-theme-font: inherit;
+}
+
+/* Weselny: plum black, powder pink (a touch of lilac in it: a pure pink was close to the red of "NIE"), a sprig, the DJ's name in the
+   serif */
+[data-guest-theme="WEDDING"] {
+    --s2p-bg: #110c0f;
+    --s2p-bg-elevated: #211a1e;
+    --s2p-border: #3d3037;
+    --s2p-text: #f1e8eb;
+    --s2p-text-muted: #bcaab1;
+    --s2p-action: #f2b8d6;
+    --s2p-action-hover: #f6cbe2;
+    --s2p-action-active: #f8d5e8;
+    --s2p-action-ink: #3a1420;
+    --s2p-action-glow: rgba(242, 184, 214, 0.25);
+    --s2p-action-45: rgba(242, 184, 214, 0.45);
+    --s2p-action-28: rgba(242, 184, 214, 0.28);
+    --s2p-action-20: rgba(242, 184, 214, 0.16);
+    --s2p-action-12: rgba(242, 184, 214, 0.1);
+    --s2p-action-07: rgba(242, 184, 214, 0.07);
+    --s2p-action-00: rgba(242, 184, 214, 0);
+    --tv-bg: #110c0f;
+    --tv-card: #211a1e;
+    --tv-border: #3d3037;
+    --tv-text: #f1e8eb;
+    --tv-muted: #bcaab1;
+    --tv-accent: #f2b8d6;
+    --s2p-ornament: url("/images/themes/wedding.svg");
+    --s2p-theme-font: "S2P Serif", Georgia, serif;
+}
+
+/* ---- The ornament: a band at the top of the page, above the card. 56 px: the card comes 36 px lower than in the classic look (its
+   page's padding was 20 px). Not fixed — it scrolls away with the page. None in the kiosk: its page is one screen. ---- */
+body:is(.page-guest, .page-ended)[data-guest-theme] {
+    padding-top: 56px;
+}
+body:is(.page-guest, .page-ended)[data-guest-theme]::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--s2p-ornament, none);
+    background-repeat: repeat-x;
+    background-position: top center;
+    background-size: auto 100%;
+}
+
+/* The TV: the band in the screen's top padding — made 6vh for it (tv.css's 3.5vh drew the ornament as specks across the hall), the
+   band 5.5vh, the list's heading right under it; over the page's background (tv.css paints <body> itself) */
+body[data-guest-theme] .tv { position: relative; padding-top: 6vh; }
+body[data-guest-theme] .tv::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5.5vh;
+    pointer-events: none;
+    background-image: var(--s2p-ornament, none);
+    background-repeat: repeat-x;
+    background-position: top center;
+    background-size: auto 100%;
+}
+
+/* ---- "🎧 Gra: …" in the theme's face: the party page, the result, the kiosk (#djName), the TV (.tv-dj). The serif themes set the
+   whole line in the serif; the scary one the DJ's name alone (.s2p-dj-name, components :: djNameText) — Nosifer's capitals are wide and
+   their drips crowd a line, so "Gra:" stays in the page's font and a long name is set smaller (.s2p-dj-long: over 16 letters,
+   .s2p-dj-longer: over 26). The name is one block: on a narrow screen it goes under "Gra:" whole, never broken after "DJ". ---- */
+:is([data-guest-theme="CHRISTMAS"], [data-guest-theme="WEDDING"]) :is(#djName, .tv-dj) {
+    font-family: var(--s2p-theme-font, inherit);
+}
+:is([data-guest-theme="CHRISTMAS"], [data-guest-theme="WEDDING"]) #djName {
+    font-size: 1.4rem !important;
+    letter-spacing: 0.01em;
+}
+[data-guest-theme="SCARY"] .s2p-dj-name {
+    display: inline-block;
+    max-width: 100%;
+    font-family: var(--s2p-theme-font, inherit);
+    font-weight: 400;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+[data-guest-theme="SCARY"] .s2p-dj-name.s2p-dj-long { font-size: 0.85rem; }
+[data-guest-theme="SCARY"] .s2p-dj-name.s2p-dj-longer { font-size: 0.72rem; }
+[data-guest-theme="SCARY"] .tv-dj .s2p-dj-name { font-size: 2.4vh; }
+[data-guest-theme="SCARY"] .tv-dj .s2p-dj-name.s2p-dj-long { font-size: 2vh; }
+[data-guest-theme="SCARY"] .tv-dj .s2p-dj-name.s2p-dj-longer { font-size: 1.7vh; }
+
+/* ---- The fields (the song, the dedication, the search of the list, the kiosk's): dark in every theme — Bootstrap's white field was
+   the brightest thing on the page, brighter than the action, in a dark hall too. The page's own background, the text's colours, an
+   edge in the second text's colour (an edge of the card's colour could not be told from the card: WCAG asks 3 : 1 for a field's edge),
+   the accent's ring when typed in. The classic look keeps Bootstrap's white field. ---- */
+body[data-guest-theme] .form-control,
+body[data-guest-theme] .form-control:focus {
+    background-color: var(--s2p-bg);
+    color: var(--s2p-text);
+    border-color: var(--s2p-text-muted);
+}
+body[data-guest-theme] .form-control:focus {
+    border-color: var(--s2p-action);
+    box-shadow: 0 0 0 0.2rem var(--s2p-action-28);
+}
+body[data-guest-theme] .form-control::placeholder {
+    color: var(--s2p-text-muted);
+    opacity: 1;
+}
+
+@media print {
+    body[data-guest-theme]::after,
+    body[data-guest-theme] .tv::after { display: none; }
+}
