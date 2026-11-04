@@ -338,7 +338,9 @@ Pro: `owner_hash` (PK, the SHA-256 of the Google subject in hex, `PlanService.tr
 `encode(sha256(convert_to(owner_id, 'UTF8')), 'hex')`), `used_at`. **Not deleted with the account** — that is what it is for: the
 same Google account after "Usuń konto" gets no second trial; nothing else of the account (the privacy policy, section 5).
 **`spring_session`, `spring_session_attributes`** (V11, Spring Session's own schema, no entity) — the HTTP sessions; expired ones are
-deleted every minute.
+deleted every minute. An attribute is written with `INSERT … ON CONFLICT DO UPDATE` (`AppConfig.sessionAttributesUpsert`): two requests
+of one session at once that both added the same one (a new session's CSRF token) met the primary key, and one was a 500
+(`SessionStoreIT`).
 
 **Plans — Free and Pro** (V35, the owner 2026-10-14; the review and its mockups: https://claude.ai/artifact/32eMmdwz9pTGLs8pRQzLBv —
 the owner picked variant B). The app stays free; the foundation is there to make some features paid one day, **without payments yet**.

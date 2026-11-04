@@ -61,6 +61,37 @@ class SessionStoreIT extends PostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM spring_session WHERE session_id = ?", Integer.class, id)).isZero();
     }
 
+    /**
+     * Two requests of one session at once (a page and its first poll; a crawler fetching pages in parallel with one cookie, as on
+     * 2026-11-01): each reads the session before the other writes, and each adds the same attribute — the CSRF token. Spring
+     * Session writes an attribute that was not there when the session was read with an INSERT, so the second one met the primary
+     * key and its request was a 500. With {@code AppConfig.sessionAttributesUpsert} the second write replaces the first.
+     */
+    @Test
+    void twoRequestsOfOneSession_addingTheSameAttribute_bothSucceed() {
+        String csrf = "org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository.CSRF_TOKEN";
+
+        String id = addTheSameAttributeTwiceAtOnce(sessions, csrf);
+
+        Session read = ((SessionRepository<?>) sessions).findById(id);
+        assertThat(read.<DefaultCsrfToken>getAttribute(csrf).getToken()).isEqualTo("second");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM spring_session_attributes WHERE session_primary_id = "
+                + "(SELECT primary_id FROM spring_session WHERE session_id = ?)", Integer.class, id)).isEqualTo(1);
+    }
+
+    /** Two copies of one session, read before either is written (two requests at once), each adding the attribute; saved in turn. */
+    private static <S extends Session> String addTheSameAttributeTwiceAtOnce(SessionRepository<S> repository, String name) {
+        S created = repository.createSession();
+        repository.save(created);
+        S first = repository.findById(created.getId());
+        S second = repository.findById(created.getId());
+        first.setAttribute(name, new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "first"));
+        second.setAttribute(name, new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "second"));
+        repository.save(first);
+        repository.save(second);
+        return created.getId();
+    }
+
     /** A session with the DJ's login (Google), as Spring Security keeps it, and what the controllers add. */
     private static <S extends Session> String saveASessionOfTheApplication(SessionRepository<S> repository) {
         S session = repository.createSession();
