@@ -51,6 +51,7 @@ public class TvScreenController {
         String guestUrl = Texts.withoutTrailingSlash(rawBaseUrl) + "/p/" + partyCode;
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(DJ_NAME, settings.getDjName());
+        model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // the party's look (V59), as on the guests' phones
         model.addAttribute(DJ_LOGO, planService.asPlanned(settings).logoPath());
         model.addAttribute(QR_CODE_BASE64, qrCodeService.generateQrCodeBase64(guestUrl, QR_SIZE, QR_SIZE));
         model.addAttribute(PERMANENT_LINK, guestUrl.replaceFirst("^https?://", ""));   // to read and type: the code holds the rest

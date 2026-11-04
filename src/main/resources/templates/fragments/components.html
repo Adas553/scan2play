@@ -376,6 +376,17 @@
     </th:block>
 </th:block>
 
+<!--/* The DJ's name on the guests' pages ("🎧 Gra: <name>"): a span of its own, so a guests' theme (V59) sets the name alone in its face
+     (the scary theme's capitals are wide: "Gra:" stays in the page's font); a long name marked, so the wide face is set smaller. */-->
+<span th:fragment="djNameText" class="s2p-dj-name" th:text="${djName}"
+      th:classappend="${#strings.length(djName) > 26} ? 's2p-dj-longer' : (${#strings.length(djName) > 16} ? 's2p-dj-long' : '')">DJ Koko</span>
+
+<!--/* The guests' look (V59, "Motyw dla gości"): the themes' stylesheet, after app.css (or tv.css) — only when the party has a theme
+     (the classic look is app.css alone, nothing more to load on a guest's phone). The page's <body> names the theme
+     (data-guest-theme), and the stylesheet's tokens follow it. */-->
+<link th:fragment="guestThemeCss" th:if="${guestTheme != null and guestTheme.themed()}" href="/css/guest-themes.css"
+      th:href="@{/css/guest-themes.css}" rel="stylesheet">
+
 <!--/* The DJ's logo (V45, Pro): the head of the guests' pages in place of ours — the party is the DJ's; ours goes to a quiet
      "Działa na Scan2Play" over the footer (poweredBy). On a light badge: a dark logo with a transparent background would vanish on
      our dark pages. Only with a logo the organiser's plan shows (djLogo, PartySettingsEntity.logoPath). */-->

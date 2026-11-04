@@ -36,6 +36,12 @@ class LibraryKeyTest {
             "Avicii - Levels                                 | Avicii - Levels - Original Mix",
             "Queen - Don't Stop Me Now                       | Queen - Don't Stop Me Now - 2011 Remaster",
             "Lady Pank - Mniej niż zero - Live               | Lady Pank - Mniej niż zero",
+            // one word's two spellings (V60, LibraryKey.SPELLINGS)
+            "Bon Jovi - Living on a Prayer                   | Bon Jovi - Livin' On A Prayer",
+            "Bee Gees - Stayin' Alive                        | Bee Gees - Staying Alive",
+            "Bee Gees - Stayin' Alive                        | Bee Gees - Stayin Alive",
+            "Lou Bega - Mambo Number 5                       | Lou Bega - Mambo No. 5 (A Little Bit of...)",
+            "Lou Bega - Mambo No 5                           | Lou Bega - Mambo Number 5",
     })
     void theSameSong(String asked, String inLibrary) {
         assertThat(mark(asked, inLibrary)).isEqualTo(LibraryMark.HAVE);
@@ -95,6 +101,21 @@ class LibraryKeyTest {
                 .isEqualTo(new LibraryKey.Match(LibraryMark.HAVE, swapped));
         assertThat(LibraryKey.of("ABBA - SOS").matchIn(List.of(dzem), List.of()))
                 .isEqualTo(new LibraryKey.Match(LibraryMark.MISSING, null));
+    }
+
+    /**
+     * The spellings made one on the key without its spaces — as V60 changes the keys saved before, by the same two replaces in the
+     * same order (the migration's SQL is checked against this in LibraryKeySpellingsMigrationIT). Other songs stay apart.
+     */
+    @Test
+    @DisplayName("the spellings are made one on the key, as the migration does; other songs stay apart")
+    void spellings() {
+        assertThat(LibraryKey.spelledOne("livingonaprayer")).isEqualTo("livinonaprayer");
+        assertThat(LibraryKey.spelledOne("mambonumber5")).isEqualTo("mambono5");
+        assertThat(LibraryKey.of("Bon Jovi - Livin' On A Prayer").title()).isEqualTo("livinonaprayer");
+        assertThat(mark("Ed Sheeran - Perfect", "Ed Sheeran - Perfect Symphony")).isEqualTo(LibraryMark.MISSING);
+        assertThat(mark("Queen - Bohemian Rhapsody", "Queen - Bohemian Rhapsody")).isEqualTo(LibraryMark.HAVE);
+        assertThat(mark("Ed Sheeran - Sing", "Nine Inch Nails - Sin")).as("a title of 3 letters alone is never \"?\"").isEqualTo(LibraryMark.MISSING);
     }
 
     @Test

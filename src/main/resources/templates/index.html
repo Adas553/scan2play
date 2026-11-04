@@ -8,8 +8,9 @@
     <meta name="color-scheme" content="dark">
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <link th:replace="~{fragments/components :: guestThemeCss}">
 </head>
-<body class="page-guest">
+<body class="page-guest" th:attr="data-guest-theme=${guestTheme != null and guestTheme.themed()} ? ${guestTheme.name()} : null">
 <div class="container d-flex flex-column align-items-center">
 
     <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
@@ -22,7 +23,7 @@
             <h1 class="display-5 fw-bold mb-2"><th:block th:replace="~{fragments/components :: djLogo}"></th:block><th:block
                     th:if="${djLogo == null}"><th:block th:replace="~{fragments/components :: logo}"></th:block></th:block></h1>
             <!--/* Who plays, as the DJ wrote it (V17) */-->
-            <p th:if="${djName != null}" id="djName" class="fs-5 fw-bold mb-1" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</p>
+            <p th:if="${djName != null}" id="djName" class="fs-5 fw-bold mb-1"><span th:text="#{party.dj.label}">🎧 Gra:</span> <span th:replace="~{fragments/components :: djNameText}">DJ Koko</span></p>
             <!--/* The party's vibe as the DJ set it: the vibe of the list (when not "any") and the DJ's own words (V16) — a line of
                  text, not a box: it tells the guest what fits, the form is what they came for */-->
             <p class="mb-0 s2p-party-vibe" id="partyVibe" th:if="${vibeNote != null or globalVibe.name() != 'ANY'}">
