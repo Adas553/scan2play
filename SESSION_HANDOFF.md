@@ -150,7 +150,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    owner, 2026-11-04: "zróbmy A′, Free") — **built on `claude/stoic-galileo-uaywih`, waiting for the owner's review** (then a release;
    V59 on production: check Flyway's line once). The owner's picks: Free; whoever has VIBE sets it (the staff too); the New Year's theme
    made a universal one, a birthday too ("Konfetti"); "Świąteczny" for the winter one; "Straszny" for Halloween, scarier (the analysis's
-   orange kept, a near-black page, a violet mist above and a dark red one below, a dark drip with a bat and a spider, the DJ's name in
+   orange kept, a near-black page, a violet mist above and a dark red one below, a dark drip with a small ghost, a bat and a spider, the DJ's name in
    Nosifer's dripping capitals); the TV in the same change; the print's choice apart, its editor saying the guests' theme ("Strona
    gościa: … · zmień"); the ornament's band (56 px above the card, the card 36 px lower; none in the kiosk) and our logo's cyan "2" kept —
    left to me, as recommended. Details: `PROJECT_CONTEXT.md` 5.1, 6.7. To try on real phones: each theme in a dark room (the contrast is

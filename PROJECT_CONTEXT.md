@@ -701,7 +701,7 @@ the kiosk and the TV screen; the panel, the hosts' page and the print keep their
 may change the vibe (VIBE — the organiser, a co-organiser), any plan. Five themes, every one dark (a dark hall; the templates keep
 Bootstrap's dark classes, so the light theme of "Later F" is not needed): **Klasyczny** (as before, the default), **Świąteczny** (navy,
 ice blue, snowflakes and baubles, the serif), **Straszny** (Halloween: almost black, a violet mist from above and a dark red one from below,
-pumpkin orange, a drip with a bat and a spider, the DJ's name in dripping capitals — Nosifer), **Konfetti** (any party, a birthday: lilac,
+pumpkin orange, a drip with a small ghost, a bat and a spider, the DJ's name in dripping capitals — Nosifer), **Konfetti** (any party, a birthday: lilac,
 confetti, a gold glow), **Weselny** (plum black, powder pink, a sprig, the serif). Each theme a small phone in the card, drawn by the
 theme's own tokens (`data-guest-theme` on the thumbnail), its name under it; a tap saves at once (the radio's `data-auto-submit`,
 `cards-in-place.js`: the server's card in place, "✓ Zapisane", the focus kept on the theme; without the script a "Zapisz" in `<noscript>`);
