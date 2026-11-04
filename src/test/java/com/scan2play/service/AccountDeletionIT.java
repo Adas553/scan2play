@@ -163,8 +163,11 @@ class AccountDeletionIT extends PostgresIntegrationTest {
         jdbc.update("INSERT INTO evening_summary (party_code, evening, title, share_token, share_expires_at, updated_at)"
                 + " VALUES (?, current_date, 'Wesele Ani i Tomka', ?, now() + interval '1 day', now())", partyCode, "t" + System.nanoTime());
 
+        jdbc.update("INSERT INTO evening_refusal (party_code, evening, reason, count) VALUES (?, current_date, 'HOSTS_BLOCKED', 1)", partyCode);
+
         deletion.deleteAllUserData(owner);
 
+        assertThat(count("evening_refusal", partyCode)).isZero();
         assertThat(count("evening_song", partyCode)).isZero();
         assertThat(count("evening_summary", partyCode)).isZero();
     }

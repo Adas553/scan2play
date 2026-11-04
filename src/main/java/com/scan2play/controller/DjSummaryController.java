@@ -49,6 +49,7 @@ import static com.scan2play.controller.ViewAttributes.HOSTS_VIEW;
 import static com.scan2play.controller.ViewAttributes.LIBRARY_COPY;
 import static com.scan2play.controller.ViewAttributes.LIBRARY_GAPS;
 import static com.scan2play.controller.ViewAttributes.PARTY_CODE;
+import static com.scan2play.controller.ViewAttributes.REFUSALS;
 import static com.scan2play.controller.ViewAttributes.SHARED;
 import static com.scan2play.controller.ViewAttributes.SHARE_LINK;
 import static com.scan2play.controller.ViewAttributes.SHARE_UNTIL;
@@ -113,6 +114,8 @@ public class DjSummaryController {
                 ? eveningSummaryService.libraryGaps(settings.getPartyCode(), requests).orElse(null) : null;
         model.addAttribute(LIBRARY_GAPS, gaps);
         model.addAttribute(LIBRARY_COPY, gaps == null ? null : EveningSummaryService.copyList(gaps));
+        // the requests refused before the AI (V63): the DJ's version
+        model.addAttribute(REFUSALS, shown == null || hosts ? Map.of() : eveningSummaryService.refusals(settings.getPartyCode(), shown));
         return "summary";
     }
 

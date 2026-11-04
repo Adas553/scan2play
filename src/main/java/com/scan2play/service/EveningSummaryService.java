@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.entity.EveningSummaryEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.LibraryMark;
+import com.scan2play.model.RefusalReason;
 import com.scan2play.model.RejectReason;
 import com.scan2play.repository.EveningSummaryRepository;
 import com.scan2play.repository.SongRequestRepository;
@@ -293,6 +294,15 @@ public class EveningSummaryService {
             case java.sql.Timestamp moment -> moment.toInstant();
             default -> throw new IllegalArgumentException("Not a moment: " + value.getClass());
         };
+    }
+
+    /** The evening's requests refused before the AI judged a song (V63), by reason; empty when there were none. */
+    @Transactional(readOnly = true)
+    public Map<RefusalReason, Integer> refusals(String partyCode, LocalDate evening) {
+        Map<RefusalReason, Integer> counts = new java.util.EnumMap<>(RefusalReason.class);
+        eveningSummaryRepository.findRefusals(partyCode, evening)
+                .forEach(row -> counts.put(RefusalReason.valueOf((String) row[0]), ((Number) row[1]).intValue()));
+        return counts;
     }
 
     // ---- the evening's title and the hosts' link (V61) ----

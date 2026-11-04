@@ -13,6 +13,7 @@ import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.CommentStyle;
 import com.scan2play.model.DjResponse;
+import com.scan2play.model.RefusalReason;
 import com.scan2play.model.RejectReason;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongList;
@@ -128,6 +129,8 @@ public class SongEvaluationService {
     private final PushNotificationService pushNotificationService;
     private final PartyStaffService partyStaffService;
     private final PlanService planService;
+    /** The requests refused before the AI judged a song, counted for the evening summary (V63). */
+    private final EveningRefusals eveningRefusals;
 
     /** The answer's configs: the model, its thinking, the schema (with the dedication's field or without). */
     @PostConstruct
@@ -223,6 +226,7 @@ public class SongEvaluationService {
         }
         if (aiResponse.isMood()) {
             log.info("Party [{}]: '{}' reads as a mood, not a song — not saved", partyCode, songName);
+            eveningRefusals.count(partyCode, RefusalReason.NOT_A_SONG);
             return aiResponse;
         }
         // the song the AI worked out from a line of the lyrics or an artist may be one the hosts asked not to play
@@ -248,6 +252,7 @@ public class SongEvaluationService {
                 toSave, viaKiosk, rejectReason(aiResponse, recentlyPlayed));
         if (saved.outcome() == SongRequestCommandService.Outcome.SKIPPED_BY_DJ) {
             // The DJ skipped this song lately (usually: they do not have it): nothing saved, the guest is told to pick another one
+            eveningRefusals.count(partyCode, RefusalReason.SKIPPED_BY_DJ);
             return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.skipped_by_dj", null, locale),
                     saved.request().getSongName(), aiResponse.requestKind());
         }
@@ -292,6 +297,7 @@ public class SongEvaluationService {
      */
     private DjResponse blockedByTheHosts(String partyCode, String songName, String requestKind, Locale locale) {
         log.info("Party [{}]: '{}' is on the hosts' do-not-play list — refused", partyCode, songName);
+        eveningRefusals.count(partyCode, RefusalReason.HOSTS_BLOCKED);
         return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.host_blocked", null, locale), songName,
                 requestKind);
     }

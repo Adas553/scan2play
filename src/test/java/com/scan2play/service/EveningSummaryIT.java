@@ -38,6 +38,7 @@ class EveningSummaryIT extends PostgresIntegrationTest {
     @Autowired SongRequestRepository requests;
     @Autowired EveningSummaryRepository evenings;
     @Autowired PartySettingsRepository parties;
+    @Autowired EveningRefusals refusals;
     @Autowired JdbcTemplate jdbc;
 
     private static Instant at(int hour, int minute) {
@@ -165,6 +166,30 @@ class EveningSummaryIT extends PostgresIntegrationTest {
         jdbc.update("INSERT INTO evening_summary (party_code, evening, share_token, updated_at) VALUES (?, ?, 'same', now())", other, EVENING);
         assertThatThrownBy(() -> jdbc.update("INSERT INTO evening_summary (party_code, evening, share_token, updated_at)"
                 + " VALUES (?, ?, 'same', now())", other, EVENING.plusDays(1))).hasMessageContaining("uk_evening_summary_share_token");
+    }
+
+    /**
+     * V63: a request refused before the AI is counted for the party's evening and reason — twice is 2, a demo party's never —, read
+     * back by reason; a reason is one of the three.
+     */
+    @Test
+    void theRefusalsBeforeTheAi_areCountedForTheEvening() {
+        String party = party();
+        refusals.count(party, com.scan2play.model.RefusalReason.NOT_A_SONG);
+        refusals.count(party, com.scan2play.model.RefusalReason.NOT_A_SONG);
+        refusals.count(party, com.scan2play.model.RefusalReason.HOSTS_BLOCKED);
+        refusals.count(DemoParty.CODE, com.scan2play.model.RefusalReason.NOT_A_SONG);
+
+        LocalDate tonight = EveningSummaryService.eveningOf(Instant.now());
+        assertThat(summaries.refusals(party, tonight)).containsExactly(
+                Map.entry(com.scan2play.model.RefusalReason.HOSTS_BLOCKED, 1), Map.entry(com.scan2play.model.RefusalReason.NOT_A_SONG, 2));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM evening_refusal WHERE party_code = ?", Integer.class, DemoParty.CODE)).isZero();
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO evening_refusal (party_code, evening, reason, count) VALUES (?, current_date, 'SPAM', 1)", party))
+                .hasMessageContaining("evening_refusal_reason_check");
+
+        LocalDate before = tonight.plusDays(1);
+        retention.purgeSummariesBefore(before);
+        assertThat(summaries.refusals(party, tonight)).as("13 months later: gone with the evening").isEmpty();
     }
 
     /** V62: a reason is one of the two, or none. */

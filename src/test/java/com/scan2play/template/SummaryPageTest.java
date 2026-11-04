@@ -372,6 +372,29 @@ class SummaryPageTest {
     }
 
     /**
+     * The requests refused before the AI (V63): counted, never saved — one line in the DJ's version, by reason; none in the hosts'.
+     */
+    @Test
+    void theRefusalsBeforeTheAi_areOneLine_ofTheDjsVersion() throws IOException {
+        kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        try {
+            when(kept.findRefusals(PARTY, EVENING)).thenReturn(List.<Object[]>of(new Object[]{"NOT_A_SONG", 4}, new Object[]{"HOSTS_BLOCKED", 3}));
+            String dj = render(Locale.forLanguageTag("pl"), null, null, TWO_EVENINGS, wedding(), "refusals-pl").replaceAll("\\s+", " ");
+            assertThat(dj).contains("<p class=\"counts\" id=\"refusals\"><strong>Zatrzymane, zanim zapytano AI:</strong>",
+                    "<span>z listy „nie grać” gospodarzy: 3</span>", "<span>nie piosenka (nastrój, wiadomość): 4</span>")
+                    .doesNotContain("niedawno pominięte przez Ciebie");
+            assertThat(dj.indexOf("gospodarzy: 3")).as("in the reasons' order").isLessThan(dj.indexOf("nie piosenka"));
+            assertThat(render(Locale.forLanguageTag("pl"), null, "hosts", TWO_EVENINGS, wedding(), "refusals-hosts-pl"))
+                    .doesNotContain("id=\"refusals\"");
+            assertThat(render(Locale.ENGLISH, null, null, TWO_EVENINGS, wedding(), "refusals-en"))
+                    .contains("Stopped before the AI:", "on the hosts’ do-not-play list: 3", "not a song (a mood, a message): 4");
+        } finally {
+            kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        }
+        assertThat(render(Locale.forLanguageTag("pl"), null, null, TWO_EVENINGS, wedding(), "wedding-pl")).doesNotContain("id=\"refusals\"");
+    }
+
+    /**
      * The hosts' link (V61, {@code /s/{token}}): the hosts' version alone — no bar, no DJ's panel, no DJ's script, never indexed;
      * an unknown or old link a 404.
      */

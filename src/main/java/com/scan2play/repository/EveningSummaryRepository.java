@@ -69,4 +69,24 @@ public interface EveningSummaryRepository extends JpaRepository<EveningSummaryEn
     @Modifying
     @Query(value = "DELETE FROM evening_summary WHERE evening < :before", nativeQuery = true)
     int deleteEveningsBefore(@Param("before") LocalDate before);
+
+    /**
+     * One more guest's request refused before the AI judged a song (V63), counted for the party's evening and the reason: one upsert,
+     * two at once both counted (the row's lock).
+     */
+    @Transactional
+    @Modifying
+    @Query(value = "INSERT INTO evening_refusal (party_code, evening, reason, count) VALUES (:partyCode, :evening, :reason, 1)"
+            + " ON CONFLICT (party_code, evening, reason) DO UPDATE SET count = evening_refusal.count + 1", nativeQuery = true)
+    int countRefusal(@Param("partyCode") String partyCode, @Param("evening") LocalDate evening, @Param("reason") String reason);
+
+    /** The evening's refusals before the AI: a row {@code [reason, count]}, at most one a reason (the primary key finds them). */
+    @Query(value = "SELECT reason, count FROM evening_refusal WHERE party_code = :partyCode AND evening = :evening", nativeQuery = true)
+    List<Object[]> findRefusals(@Param("partyCode") String partyCode, @Param("evening") LocalDate evening);
+
+    /** The refusals' counts of the evenings before {@code before} ({@code idx_evening_refusal_evening}). */
+    @Transactional
+    @Modifying
+    @Query(value = "DELETE FROM evening_refusal WHERE evening < :before", nativeQuery = true)
+    int deleteRefusalsBefore(@Param("before") LocalDate before);
 }

@@ -107,6 +107,7 @@ public class SongRequestRetentionService {
             }
         }
         int evenings = eveningSummaryRepository.deleteEveningsBefore(before);
+        eveningSummaryRepository.deleteRefusalsBefore(before);   // the counts of the requests refused before the AI (V63)
         log.info("Evening summary cleanup: deleted {} song(s) and {} evening(s) of before {}", deleted, evenings, before);
         return deleted;
     }

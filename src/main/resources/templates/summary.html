@@ -157,6 +157,10 @@
         <span th:if="${summary.tips > 0}" id="tipsStat" th:text="#{summary.count.tips(${summary.tips})}">💸 tips: 4</span>
         <span th:if="${summary.dedications > 0}" id="dedicationsStat" th:text="#{summary.count.dedications(${summary.dedications})}">💌 dedications: 12</span>
     </p>
+    <!--/* the requests refused before the AI judged a song (V63): never saved, only counted — the hosts' list, a song skipped lately, a
+         mood or a message */-->
+    <p class="counts" id="refusals" th:unless="${refusals == null or #maps.isEmpty(refusals)}"><strong th:text="#{summary.refusals}">Stopped
+        before the AI:</strong> <span th:each="r : ${refusals}" th:text="#{summary.refusal.__${r.key.name()}__(${r.value})}">not a song: 4</span></p>
     <!--/* how long the played requests waited — only when the DJ marked some as played */-->
     <p th:if="${summary.averageWaitMinutes != null}" class="wait" id="wait"
        th:text="#{summary.wait(${summary.averageWaitMinutes}, ${summary.longestWaitMinutes})}">Played requests waited 14 min on average.</p>
