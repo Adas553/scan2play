@@ -193,6 +193,21 @@ class GuestPageRenderTest {
         assertThat(renderEnded(PL, Map.of())).contains(">DJ nie przyjmuje teraz próśb<").doesNotContain("partyOpensNote");
     }
 
+    /**
+     * The suggestions marked by the DJ's library (V58): the song field names the address that tells which the DJ has, and the mark's
+     * words — only when the party has something to tell. Written for the browser tests as {@code guest-library.html}.
+     */
+    @Test
+    void theSongField_asksTheLibrary_onlyWhenThePartyTellsIt() {
+        String html = render(PL, Map.of("libraryHints", true));
+        assertThat(tag(html, "songInput")).contains("data-autocomplete=\"songs\"", "data-library-url=\"/p/ABC12/library/has\"",
+                "data-library-label=\"✓ DJ ma\"");
+        assertThat(tag(render(Locale.ENGLISH, Map.of("libraryHints", true)), "songInput")).contains("data-library-label=\"✓ The DJ has it\"");
+        assertThat(tag(render(PL, Map.of("libraryHints", false)), "songInput")).doesNotContain("data-library");
+        assertThat(tag(render(PL, Map.of()), "songInput")).doesNotContain("data-library");
+        writeForTheBrowserTests("guest-library.html", html);
+    }
+
     /** No order to tell (the DJ plays from their own software): the guests' requests, unnumbered, and the guest's own "waits". */
     @Test
     void theGuestsRequests_areListed_andTheGuestsOwnWaitsForTheDj() {

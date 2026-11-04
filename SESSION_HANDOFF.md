@@ -1,4 +1,4 @@
-# Session Handoff — 2026-10-30
+# Session Handoff — 2026-11-04
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`,
@@ -121,12 +121,32 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    Details: `PROJECT_CONTEXT.md` 5.1. To try on a real tablet: an iPad in Guided Access and an Android tablet
    with the screen pinned, the native keyboard over the form, the suggestions.
 
+7. **The library's details (V57) — variant B of the analysis "Tryb „tylko z biblioteki”"** (the artifact
+   https://claude.ai/artifact/7nEtKmgJkVMUie3K5dBT2u; the owner, 2026-11-04: "zróbmy na razie B") — **built on
+   `claude/wonderful-edison-wud546`, waiting for the owner's review** (then a release; V57 on production: check Flyway's line once,
+   upload a rekordbox collection again and see "128 BPM · 5A" beside "✓" in the queue). Each song is kept as the file writes it beside
+   its key (artist, title, from rekordbox the tempo, key, genre, year; never a path, notes, rating or play count); the queue shows the
+   tempo and the key beside "✓" / "?"; the libraries of before stay (their marks as they were; a rekordbox one is asked for again on
+   its card). Two causes of a false "✗" fixed with it: a rekordbox track never tagged (no artist, "Wilki - Baśka" for its name) is read
+   by its name, both ways round; an M3U's file name loses a track's number ("01 - ") and its underscores. The privacy policy PL / EN
+   says what is kept now. The owner tried it locally (2026-11-04, a screenshot): "✓ Masz 128 BPM · 5A" in the queue.
+   **Then D0 (V58; the owner, 2026-11-04: "zrób D0")** — on the same branch: the guests' suggestions (iTunes's, as before) with the
+   songs the DJ has first, "✓ DJ ma" — the party page and the kiosk ask `GET /p/{code}/library/has` for the suggestions shown (at
+   most 10, "✓" only, waited for at most 600 ms); nothing is refused, free text stays. "Podpowiedzi gości" in the library's card, on
+   by default (`party_settings.library_hints`); the privacy policy PL / EN says it. Chosen over the full D because Railway's
+   PostgreSQL volume is 500 MB (121 MB used, 2026-11-04): a trigram index of whole libraries would fill it after a dozen large ones.
+   Next, only if DJs ask: the full D (the library searched — `pg_trgm` + `btree_gin`, which Railway's image `postgres-ssl:18` on
+   `postgres:18-trixie` should have: check with the query of the analysis; a bigger volume), then "tylko z biblioteki" (✗ refused,
+   "?" and ⭐ through, the nearest songs offered). Open: a real rekordbox export and an M3U of VirtualDJ / Serato to check the fields
+   (the fixture is built by hand); whether the rating should filter anything. To try: the test files the owner was given
+   (`biblioteka-test-rekordbox.xml`, `biblioteka-test.m3u8`), the guest page typing "wilki".
+
 ## Later (not now)
 
 A. **The library for guests:** first suggestions from the DJ's library before iTunes; a full "library only" mode (no AI, karaoke) only
-   after talks with DJs. `dj_library_track` keeps keys only — names need a migration and a new upload; server-side search (`pg_trgm`,
-   a rate limit); the DJ's consent to a public list. Asked again 2026-10-28 ("gość widzi tylko piosenki z biblioteki?" — and the cheaper
-   "przyjmuj tylko z biblioteki", ✗ refused at once): the owner, "jednak nie warto" — the library stays the DJ's marks only.
+   after talks with DJs. Asked again 2026-10-28 ("gość widzi tylko piosenki z biblioteki?" — and the cheaper "przyjmuj tylko z
+   biblioteki", ✗ refused at once): the owner, "jednak nie warto". Analysed again 2026-11-04 (item 7): B (V57) and D0 (V58, the
+   suggestions the DJ has marked) built; the full D (the library searched) and the hard mode wait for the owner.
 B. "Opis klimatu" → "Opis imprezy" with a note in the panel that the AI reads it (the guide says it since 2026-10-28: optional, counts
    for more than the vibe, adds to it or — with the vibe "Dowolny" — replaces it).
 C. (Done 2026-10-28: on a phone "Ukryj ✗", "+ Dodaj" and the search on one line.)

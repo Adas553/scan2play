@@ -39,6 +39,8 @@ class GuestNoSessionWebTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private com.scan2play.service.LibraryHintService libraryHintService;
+    @MockitoBean
     private com.scan2play.service.SiteCounter siteCounter;
     @MockitoBean
     private SongEvaluationService songEvaluationService;
@@ -122,5 +124,24 @@ class GuestNoSessionWebTest {
         assertThat(html).contains("id=\"langSwitch\"", "href=\"/p/ENDED?lang=pl\"", "href=\"/p/ENDED?lang=en\"", ">Polski<", ">English<");
         assertThat(html).containsPattern("<a [^>]*href=\"/p/ENDED\\?lang=pl\"[^>]*aria-current=\"true\"")
                 .doesNotContainPattern("<a [^>]*href=\"/p/ENDED\\?lang=en\"[^>]*aria-current");
+    }
+
+    /**
+     * "Which of these does the DJ have" (V58): asked as the guest types, so never a session; a code that is no party, or a party with
+     * nothing to tell, a 404; otherwise the true / false of each song, in their order.
+     */
+    @Test
+    void theLibrarysHints_areAnsweredWithoutASession_orA404() throws Exception {
+        noSession(mockMvc.perform(get("/p/X7Q2Z/library/has").param("song", "Wilki - Baśka")).andExpect(status().isNotFound()).andReturn());
+        noSession(mockMvc.perform(get("/p/ENDED/library/has").param("song", "Wilki - Baśka")).andExpect(status().isNotFound()).andReturn());
+
+        PartySettingsEntity open = PartySettingsEntity.builder().partyCode("OPEN1").active(true).build();
+        doReturn(open).when(partySettingsQueryService).getSettings("OPEN1");
+        doReturn(true).when(libraryHintService).on(open);
+        doReturn(java.util.List.of(true, false)).when(libraryHintService).have("OPEN1", java.util.List.of("Wilki - Baśka", "ABBA - SOS"));
+        MvcResult answer = mockMvc.perform(get("/p/OPEN1/library/has").param("song", "Wilki - Baśka", "ABBA - SOS"))
+                .andExpect(status().isOk()).andReturn();
+        noSession(answer);
+        assertThat(answer.getResponse().getContentAsString()).isEqualTo("[true,false]");
     }
 }

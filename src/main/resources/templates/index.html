@@ -49,8 +49,12 @@
                 <label for="songInput" class="form-label fw-bold fs-5" th:text="#{home.subtitle}">What do you want to hear?</label>
                 <div class="song-autocomplete-wrapper">
                     <!--/* the placeholder in the suggestions' own format ("Artist – Title", song-autocomplete.js) — the owner, 2026-10-07 */-->
+                    <!--/* data-library-*: the suggestions the DJ has come first, "✓ DJ ma" (V58, song-autocomplete.js); none when the party
+                         has none to tell (no library, no Pro, switched off) */-->
                     <input type="text" id="songInput" name="songName" class="form-control form-control-lg" required
-                           data-autocomplete="songs" th:value="${lastRequest}" th:placeholder="#{home.form.input.placeholder}">
+                           data-autocomplete="songs" th:value="${lastRequest}" th:placeholder="#{home.form.input.placeholder}"
+                           th:data-library-url="${libraryHints == true} ? @{/p/{c}/library/has(c=${partyCode})} : null"
+                           th:data-library-label="${libraryHints == true} ? #{guest.suggestions.dj_has} : null">
                     <!-- Dropdown injected here by song-autocomplete.js -->
                 </div>
                 <div id="songInputHelp" class="form-text text-secondary mt-2"

@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.util.LibraryKey;
+import com.scan2play.util.SongNames;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
@@ -10,6 +11,8 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -18,16 +21,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * The DJ's library as their program exports it — a rekordbox collection ("File > Export Collection in xml format"), whole or one of
  * its playlists, or a playlist (M3U / M3U8, which every program writes) — read as it streams in, so a collection of tens of
- * thousands of tracks never sits in memory as text. What is kept is each song's {@link LibraryKey}: never a path, which names the
- * DJ's computer and account.
+ * thousands of tracks never sits in memory as text. What is kept is each song's {@link LibraryKey}, which the queue is matched by,
+ * and its {@link Track} as the file writes it — the artist, the title, the tempo, the key, the genre, the year (V57) —: never a path,
+ * which names the DJ's computer and account, nor the DJ's own notes, ratings or play counts.
  */
 public final class DjLibraryParser {
 
@@ -35,16 +40,131 @@ public final class DjLibraryParser {
     public enum Format { M3U, REKORDBOX }
 
     /**
-     * The tracks read and their keys (fewer than the tracks: the same song in two versions is one key); {@code swapped} the keys of an
-     * M3U's names read the other way round ("Baśka - Wilki" for "Wilki - Baśka"), none of them among {@code keys}: such a key has an
-     * artist's name for its title, so it may only say "✓", never "? Podobny" ({@link LibraryKey#markIn}); {@code playlist} the
-     * rekordbox playlist they are, by its folders ("Kluby / Piątek"), null for the whole collection or an M3U.
+     * A song as the DJ's file writes it (V57), for showing — the queue shows the tempo and the key of a song the DJ has; never matched
+     * by (that is its {@link LibraryKey}). What the file does not say is null: an M3U has no tempo, no key, no genre, no year, and its
+     * artist is a guess (the part of the name before " - "). Each field cut to its column.
      */
-    public record Library(Format format, int tracks, Set<LibraryKey> keys, Set<LibraryKey> swapped, String playlist) {
+    public record Track(String artist, String title, BigDecimal bpm, String tonality, String genre, Integer year) {
 
-        /** A library without swapped keys: a rekordbox collection, whose artist and title are fields of their own. */
+        /** Nothing known but the key: a library made from keys alone (the tests'). */
+        public static final Track NONE = new Track(null, null, null, null, null, null);
+
+        public Track {
+            artist = cut(artist, LibraryKey.MAX);
+            title = cut(title, LibraryKey.MAX);
+            tonality = cut(tonality, TONALITY_MAX);
+            genre = cut(genre, GENRE_MAX);
+            bpm = bpm == null || bpm.signum() <= 0 || bpm.compareTo(BPM_LIMIT) >= 0 ? null : bpm.setScale(2, RoundingMode.HALF_UP);
+            year = year == null || year < 1 || year > 9999 ? null : year;
+        }
+
+        /** The same song under another artist and title (an M3U's name, an untagged track read as "Artist - Title"). */
+        Track named(String newArtist, String newTitle) {
+            return new Track(newArtist, newTitle, bpm, tonality, genre, year);
+        }
+
+        /**
+         * Of two tracks of one key (the versions of a song), the one kept: the shorter title — "One More Time" before "One More Time
+         * (Extended Mix)" —, the first read when they are as long.
+         */
+        static Track shorter(Track first, Track second) {
+            return length(second.title) < length(first.title) ? second : first;
+        }
+
+        private static int length(String text) {
+            return text == null ? Integer.MAX_VALUE : text.length();
+        }
+
+        private static String cut(String text, int max) {
+            String line = text == null ? "" : SongNames.tidy(text);
+            return line.isEmpty() ? null : line.length() > max ? line.substring(0, max) : line;
+        }
+    }
+
+    /** The longest key of a song ("5A", "F#m", "Abmaj"), as the column {@code dj_library_track.tonality}. */
+    static final int TONALITY_MAX = 10;
+
+    /** The longest genre kept, as the column {@code dj_library_track.genre}. */
+    static final int GENRE_MAX = 100;
+
+    /** A tempo of this or more is no song's (the column holds 999.99). */
+    private static final BigDecimal BPM_LIMIT = BigDecimal.valueOf(1000);
+
+    /**
+     * The songs read: each key with the track it is shown as ({@link Track}; the same song in two versions is one key, so there are
+     * fewer than the tracks); {@code swappedSongs} the keys of names read the other way round ("Baśka - Wilki" for "Wilki - Baśka" —
+     * an M3U's, an untagged track's), none of them among the songs: such a key has an artist's name for its title, so it may only say
+     * "✓", never "? Podobny" ({@link LibraryKey#markIn}); {@code playlist} the rekordbox playlist they are, by its folders ("Kluby /
+     * Piątek"), null for the whole collection or an M3U.
+     */
+    public record Library(Format format, int tracks, Map<LibraryKey, Track> songs, Map<LibraryKey, Track> swappedSongs,
+                          String playlist) {
+
+        /** A library of keys alone, nothing known of their tracks. */
+        public Library(Format format, int tracks, Set<LibraryKey> keys, Set<LibraryKey> swapped, String playlist) {
+            this(format, tracks, unknown(keys), unknown(swapped), playlist);
+        }
+
+        /** A library of keys alone without swapped ones. */
         public Library(Format format, int tracks, Set<LibraryKey> keys, String playlist) {
             this(format, tracks, keys, Set.of(), playlist);
+        }
+
+        public Set<LibraryKey> keys() {
+            return songs.keySet();
+        }
+
+        public Set<LibraryKey> swapped() {
+            return swappedSongs.keySet();
+        }
+
+        private static Map<LibraryKey, Track> unknown(Set<LibraryKey> keys) {
+            Map<LibraryKey, Track> songs = new LinkedHashMap<>();
+            keys.forEach(key -> songs.put(key, Track.NONE));
+            return songs;
+        }
+    }
+
+    /** The songs of a file as they are read: a song's versions are one key, shown as the shortest ({@link Track#shorter}). */
+    private static final class Songs {
+
+        private final Map<LibraryKey, Track> songs = new HashMap<>();
+        private final Map<LibraryKey, Track> swapped = new HashMap<>();
+
+        /** A track by its artist and title, as a rekordbox collection has them; none without a title to match. */
+        void add(Track track) {
+            LibraryKey key = LibraryKey.of(track.artist(), track.title());
+            if (!key.isEmpty()) {
+                songs.merge(key, track, Track::shorter);
+            }
+        }
+
+        /**
+         * A track known only by a name "Artist - Title" (an M3U's line, a collection's track without its tags): the programs write
+         * "Artist - Title" or "Title - Artist", so a name with one " - " is kept the other way round too, as a swapped key. None
+         * without a title to match.
+         */
+        void addName(String name, Track details) {
+            String line = SongNames.tidy(name);
+            LibraryKey key = LibraryKey.of(line);
+            if (key.isEmpty()) {
+                return;
+            }
+            int dash = line.indexOf(" - ");
+            songs.merge(key, dash < 0 ? details.named(null, line) : details.named(line.substring(0, dash), line.substring(dash + 3)),
+                    Track::shorter);
+            String[] halves = line.split(" - ");
+            if (halves.length == 2) {
+                LibraryKey other = LibraryKey.of(halves[1] + " - " + halves[0]);
+                if (!other.isEmpty()) {
+                    swapped.merge(other, details.named(halves[1], halves[0]), Track::shorter);
+                }
+            }
+        }
+
+        Library library(Format format, int tracks, String playlist) {
+            swapped.keySet().removeAll(songs.keySet());   // a song the file has both ways round is one the DJ has as it is
+            return new Library(format, tracks, songs, swapped, playlist);
         }
     }
 
@@ -136,8 +256,7 @@ public final class DjLibraryParser {
      * name with one " - " is kept the other way round too, as a swapped key.
      */
     private static Library m3u(InputStream in, int maxTracks) throws IOException {
-        Set<LibraryKey> keys = new HashSet<>();
-        Set<LibraryKey> swapped = new HashSet<>();
+        Songs songs = new Songs();
         int tracks = 0;
         String title = null;
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -162,14 +281,9 @@ public final class DjLibraryParser {
             if (++tracks > maxTracks) {
                 throw new UnreadableLibraryException(UnreadableLibraryException.Reason.TOO_MANY);
             }
-            add(keys, LibraryKey.of(name));
-            String[] halves = name.split(" - ");
-            if (halves.length == 2) {
-                add(swapped, LibraryKey.of(halves[1] + " - " + halves[0]));
-            }
+            songs.addName(name, Track.NONE);
         }
-        swapped.removeAll(keys);   // a song the playlist has both ways round is one the DJ has as it is
-        return new Library(Format.M3U, tracks, keys, swapped, null);
+        return songs.library(Format.M3U, tracks, null);
     }
 
     /**
@@ -198,15 +312,26 @@ public final class DjLibraryParser {
         }
     }
 
-    /** "C:\Music\Wilki - Baśka.mp3" is "Wilki - Baśka". */
-    private static String fileName(String path) {
+    /** A track's number before a file's name: "01 - ", "01. ", "01) ", "01-" — when an "Artist - Title" follows it. */
+    private static final Pattern TRACK_NUMBER = Pattern.compile("^\\d{1,3}\\s*[-.)]\\s*(?=\\S.*\\s-\\s)");
+
+    /**
+     * "C:\Music\Wilki - Baśka.mp3" is "Wilki - Baśka"; so are "01 - Wilki - Baśka.mp3" (a track's number: the artist would be "01")
+     * and "Wilki_-_Baśka.mp3" (underscores for spaces). A number followed by a space alone stays: "50 Cent - In da Club".
+     */
+    static String fileName(String path) {
         String name = path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
         int dot = name.lastIndexOf('.');
-        return dot > 0 && name.length() - dot <= 5 ? name.substring(0, dot) : name;
+        name = dot > 0 && name.length() - dot <= 5 ? name.substring(0, dot) : name;
+        name = name.replace('_', ' ').replaceAll("\\s+", " ").strip();
+        return TRACK_NUMBER.matcher(name).replaceFirst("");
     }
 
     /**
-     * A rekordbox collection: the {@code TRACK}s of its {@code COLLECTION}, by their {@code Artist} and {@code Name}; or, with a
+     * A rekordbox collection: the {@code TRACK}s of its {@code COLLECTION}, by their {@code Artist} and {@code Name} (with its
+     * {@code Mix} when the name does not say it) — a track without an artist, whose name is "Artist - Title" (a file never tagged:
+     * rekordbox names it by the file), read as an M3U's name —, with their {@code AverageBpm}, {@code Tonality}, {@code Genre} and
+     * {@code Year} for showing; or, with a
      * playlist, the tracks its {@code TRACK Key}s point at — the {@code PLAYLISTS} after the collection are a tree of {@code NODE}s,
      * folders ({@code Type="0"}, the tree's own "ROOT" not named) and playlists ({@code Type="1"}), named as rekordbox shows them:
      * "Kluby / Piątek". The DTD and the entities of the file are never read (XXE): the file is the DJ's, not ours. The JDK's own StAX,
@@ -218,9 +343,9 @@ public final class DjLibraryParser {
         XMLInputFactory factory = XMLInputFactory.newDefaultFactory();
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
-        Set<LibraryKey> keys = new HashSet<>();
-        Map<Integer, LibraryKey> byId = new HashMap<>();   // the collection by TrackID, when a playlist is chosen
-        Deque<String> folders = new ArrayDeque<>();        // the NODEs open: their names, "" for the ROOT and the playlists
+        Songs songs = new Songs();
+        Map<Integer, Track> byId = new HashMap<>();   // the collection by TrackID, when a playlist is chosen
+        Deque<String> folders = new ArrayDeque<>();   // the NODEs open: their names, "" for the ROOT and the playlists
         int tracks = 0;
         int named = 0;   // the playlists of the chosen name so far
         boolean found = false;
@@ -240,9 +365,8 @@ public final class DjLibraryParser {
                     if ("COLLECTION".equals(element)) {
                         inCollection = true;
                     } else if (inCollection && "TRACK".equals(element)) {
-                        String title = xml.getAttributeValue(null, "Name");
-                        LibraryKey key = LibraryKey.of(xml.getAttributeValue(null, "Artist"), title);
-                        if (key.isEmpty()) {
+                        Track track = trackOf(xml);
+                        if (LibraryKey.of(track.artist(), track.title()).isEmpty()) {
                             continue;
                         }
                         if (playlist != null) {
@@ -253,12 +377,12 @@ public final class DjLibraryParser {
                             if (byId.size() >= maxCollection) {
                                 throw new UnreadableLibraryException(UnreadableLibraryException.Reason.COLLECTION_TOO_LARGE);
                             }
-                            byId.put(id, key);
+                            byId.put(id, track);
                         } else {
                             if (++tracks > maxTracks) {
                                 throw new UnreadableLibraryException(UnreadableLibraryException.Reason.TOO_MANY);
                             }
-                            keys.add(key);
+                            add(songs, track);
                         }
                     } else if (playlist != null && "NODE".equals(element)) {
                         String name = xml.getAttributeValue(null, "Name");
@@ -273,12 +397,12 @@ public final class DjLibraryParser {
                         folders.push(isPlaylist || isRoot || name == null ? "" : name);
                     } else if (inChosen && "TRACK".equals(element)) {
                         Integer id = trackId(xml.getAttributeValue(null, "Key"));
-                        LibraryKey key = id == null ? null : byId.get(id);
-                        if (key != null) {
+                        Track track = id == null ? null : byId.get(id);
+                        if (track != null) {
                             if (++tracks > maxTracks) {
                                 throw new UnreadableLibraryException(UnreadableLibraryException.Reason.TOO_MANY);
                             }
-                            keys.add(key);
+                            add(songs, track);
                         }
                     }
                 } else if (event == XMLStreamConstants.END_ELEMENT) {
@@ -308,7 +432,40 @@ public final class DjLibraryParser {
         if (playlist != null && !found) {
             throw new UnreadableLibraryException(UnreadableLibraryException.Reason.NO_PLAYLIST);
         }
-        return new Library(Format.REKORDBOX, tracks, keys, playlist);
+        return songs.library(Format.REKORDBOX, tracks, playlist);
+    }
+
+    /**
+     * A collection's {@code TRACK} as it is shown: its artist and its name — with its {@code Mix} in brackets when the name does not
+     * say it already ("Levels" of the mix "Skrillex Remix" is "Levels (Skrillex Remix)"; the key leaves a bracket out anyway) —, its
+     * tempo, key, genre and year. A number that is no number is left out, not the track.
+     */
+    private static Track trackOf(XMLStreamReader xml) {
+        String name = xml.getAttributeValue(null, "Name");
+        String mix = xml.getAttributeValue(null, "Mix");
+        String title = name == null || mix == null || mix.isBlank()
+                || name.toLowerCase(Locale.ROOT).contains(mix.strip().toLowerCase(Locale.ROOT)) ? name : name + " (" + mix.strip() + ")";
+        return new Track(xml.getAttributeValue(null, "Artist"), title, decimal(xml.getAttributeValue(null, "AverageBpm")),
+                xml.getAttributeValue(null, "Tonality"), xml.getAttributeValue(null, "Genre"),
+                trackId(xml.getAttributeValue(null, "Year")));
+    }
+
+    /** A collection's track among the songs: by its artist and title, or — no artist, a name "Artist - Title" — by its name. */
+    private static void add(Songs songs, Track track) {
+        if (track.artist() == null && track.title() != null && track.title().contains(" - ")) {
+            songs.addName(track.title(), track);
+        } else {
+            songs.add(track);
+        }
+    }
+
+    /** A decimal of the file ("128.00"); null when it is none. */
+    private static BigDecimal decimal(String value) {
+        try {
+            return value == null || value.isBlank() ? null : new BigDecimal(value.strip());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /** A playlist's name with the folders it is in, from the outermost: "Kluby / Piątek". */
@@ -322,7 +479,7 @@ public final class DjLibraryParser {
         return path.append(name == null ? "" : name).toString();
     }
 
-    /** A track's number in the collection ({@code TrackID}, a playlist's {@code Key}); null when it is none. */
+    /** A whole number of the file: a track's number in the collection ({@code TrackID}, a playlist's {@code Key}), a year; null when it is none. */
     private static Integer trackId(String value) {
         try {
             return value == null ? null : Integer.valueOf(value.strip());
@@ -334,11 +491,5 @@ public final class DjLibraryParser {
     /** StAX keeps the failure of the reading as its "nested exception", not always as its cause. */
     private static Throwable nested(Throwable e) {
         return e instanceof XMLStreamException xml && xml.getNestedException() != e ? xml.getNestedException() : null;
-    }
-
-    private static void add(Set<LibraryKey> keys, LibraryKey key) {
-        if (!key.isEmpty()) {
-            keys.add(key);
-        }
     }
 }

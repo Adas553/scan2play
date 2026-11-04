@@ -664,6 +664,17 @@ th[data-sort].sort-desc::after {
 .song-autocomplete-item.is-active .ac-artist {
     color: var(--s2p-action);
 }
+/* "✓ DJ ma" (V58): a suggestion of a song in the DJ's library — a status, so green (section 6.7), a tag, not a button */
+.song-autocomplete-item .ac-library {
+    display: inline-block;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--s2p-green-12);
+    color: var(--s2p-green);
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
 
 /* --- Mobile overrides: larger touch targets & wrapping text --- */
 @media (max-width: 576px) {

@@ -388,14 +388,22 @@
                                   class="badge text-bg-info align-self-start s2p-host-wanted"
                                   th:title="#{dashboard.host.wanted.title}" th:text="#{dashboard.host.wanted}">⭐ The hosts want it</span>
                             <!--/* the DJ's library (V41, V42, Pro): "✓" the same title with an artist in common, "?" the title alone, "✗"
-                                 no song of the title — none without a library ("Ukryj „Nie masz”" hides the "✗" ones, list-tools.js) */-->
+                                 no song of the title — none without a library ("Ukryj „Nie masz”" hides the "✗" ones, list-tools.js); beside
+                                 "✓" and "?" the tempo and the key of the DJ's track, as the file says them (V57: rekordbox; none for an M3U) */-->
                             <span th:if="${libraryMarks != null and libraryMarks.containsKey(req.id)}"
-                                  th:with="mark=${#strings.toLowerCase(libraryMarks.get(req.id).name())}"
-                                  class="badge align-self-start s2p-library"
-                                  th:classappend="${mark == 'have'} ? 'text-bg-success' : (${mark == 'similar'} ? 'text-bg-dark border border-warning text-warning' : 'text-bg-dark border border-secondary')"
-                                  th:attr="data-library=${mark}"
-                                  th:title="#{${'dashboard.library.' + mark + '.title'}}"
-                                  th:text="#{${'dashboard.library.' + mark}}">✓ In library</span>
+                                  th:with="match=${libraryMarks.get(req.id)},mark=${#strings.toLowerCase(match.mark().name())}"
+                                  class="d-flex flex-wrap align-items-center gap-2 align-self-start s2p-library-line">
+                                <span class="badge s2p-library"
+                                      th:classappend="${mark == 'have'} ? 'text-bg-success' : (${mark == 'similar'} ? 'text-bg-dark border border-warning text-warning' : 'text-bg-dark border border-secondary')"
+                                      th:attr="data-library=${mark}"
+                                      th:title="#{${'dashboard.library.' + mark + '.title'}}"
+                                      th:text="#{${'dashboard.library.' + mark}}">✓ In library</span>
+                                <span th:if="${match.bpm() != null or match.tonality() != null}" class="small text-secondary s2p-library-tempo"
+                                      th:title="#{dashboard.library.tempo.title}"
+                                      th:text="${match.bpm() == null} ? ${match.tonality()} : (${match.tonality() == null}
+                                               ? #{dashboard.library.bpm(${match.bpmText()})}
+                                               : #{dashboard.library.bpm(${match.bpmText()})} + ' · ' + ${match.tonality()})">128 BPM · 5A</span>
+                            </span>
                             <!--/* none of the guest's words in the AI's song: maybe another song in place of the one asked for */-->
                             <span th:if="${req.needsCheck()}" class="badge text-bg-warning align-self-start s2p-check-song"
                                   th:title="#{dashboard.check_song.title}" th:text="#{dashboard.check_song}">⚠ Check</span>

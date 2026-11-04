@@ -69,6 +69,8 @@ class KioskWebTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private com.scan2play.service.LibraryHintService libraryHintService;
+    @MockitoBean
     private PartySettingsRepository partySettingsRepository;
     @MockitoBean
     private PartySettingsQueryService partySettingsQueryService;

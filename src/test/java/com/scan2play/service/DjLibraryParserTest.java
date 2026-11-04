@@ -2,6 +2,7 @@ package com.scan2play.service;
 
 import com.scan2play.service.DjLibraryParser.Format;
 import com.scan2play.service.DjLibraryParser.Library;
+import com.scan2play.service.DjLibraryParser.Track;
 import com.scan2play.service.DjLibraryParser.UnreadableLibraryException;
 import com.scan2play.util.LibraryKey;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.springframework.core.io.ClassPathResource;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,7 +19,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The DJ's library as the programs export it: a rekordbox collection (XML) — whole, or one of its playlists — or a playlist
- * (M3U / M3U8). Only the songs' keys are kept ({@link LibraryKey}) — never the paths, which name the DJ's computer and account.
+ * (M3U / M3U8). Each song's key ({@link LibraryKey}) and its track as the file writes it ({@link Track}: the artist, the title, the
+ * tempo, the key, the genre, the year — V57) — never the paths, which name the DJ's computer and account.
  */
 class DjLibraryParserTest {
 
@@ -229,6 +232,115 @@ class DjLibraryParserTest {
                 .as("a name the playlist has both ways round is a key as it is, not a swapped one")
                 .doesNotContain(key("Kombi - Słodkiego miłego życia"), key("Słodkiego miłego życia - Kombi"));
         assertThat(parse("rekordbox.xml").swapped()).as("a collection's artist and title are fields of their own").isEmpty();
+    }
+
+    // ---- each song as the file writes it (V57) ----
+
+    private static Library xml(String tracks) throws IOException {
+        return parse("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DJ_PLAYLISTS Version=\"1.0.0\"><COLLECTION>" + tracks
+                + "</COLLECTION></DJ_PLAYLISTS>", 100);
+    }
+
+    @Test
+    void aCollectionsTrack_keepsItsArtistTitleTempoKeyGenreAndYear() throws IOException {
+        assertThat(parse("rekordbox.xml").songs().get(key("Daft Punk - One More Time")))
+                .isEqualTo(new Track("Daft Punk", "One More Time (Radio Edit)", new BigDecimal("122.00"), "5A", "House", null));
+        assertThat(xml("<TRACK TrackID=\"1\" Name=\"Baśka\" Artist=\"Wilki\" AverageBpm=\"128.5\" Tonality=\"Am\" Genre=\"Rock\" Year=\"1992\""
+                + " Comments=\"na koniec wesela\" Rating=\"255\" PlayCount=\"40\" Location=\"file://localhost/C:/Users/dj/w.mp3\"/>")
+                .songs().get(key("Wilki - Baśka")))
+                .as("its notes, rating, play count and path are never read")
+                .isEqualTo(new Track("Wilki", "Baśka", new BigDecimal("128.50"), "Am", "Rock", 1992));
+    }
+
+    /** What the file does not say, or says as no number, is null — the track is kept all the same. */
+    @Test
+    void aTracksMissingOrWrongNumbers_areNone_notARefusal() throws IOException {
+        Library library = xml("<TRACK TrackID=\"1\" Name=\"Baśka\" Artist=\"Wilki\" AverageBpm=\"0.00\" Tonality=\"\" Genre=\" \" Year=\"0\"/>"
+                + "<TRACK TrackID=\"2\" Name=\"SOS\" Artist=\"ABBA\" AverageBpm=\"fast\" Year=\"1975a\"/>"
+                + "<TRACK TrackID=\"3\" Name=\"Kiler\" Artist=\"Elektryczne Gitary\" AverageBpm=\"1200\" Year=\"-5\"/>");
+
+        assertThat(library.songs().values()).hasSize(3).allSatisfy(track -> {
+            assertThat(track.bpm()).isNull();
+            assertThat(track.tonality()).isNull();
+            assertThat(track.genre()).isNull();
+            assertThat(track.year()).isNull();
+        });
+    }
+
+    /** A song in several versions is one key, shown as the shortest title: the plain song, not one of its mixes. */
+    @Test
+    void aSongsVersions_areOneSong_shownAsTheShortest() throws IOException {
+        Library library = xml("<TRACK TrackID=\"1\" Name=\"Levels (Extended Mix)\" Artist=\"Avicii\" AverageBpm=\"126.00\"/>"
+                + "<TRACK TrackID=\"2\" Name=\"Levels\" Artist=\"Avicii\" AverageBpm=\"126.00\"/>"
+                + "<TRACK TrackID=\"3\" Name=\"Levels - Skrillex Remix\" Artist=\"Avicii\" AverageBpm=\"140.00\"/>");
+
+        assertThat(library.tracks()).isEqualTo(3);
+        assertThat(library.songs()).hasSize(1).containsEntry(key("Avicii - Levels"),
+                new Track("Avicii", "Levels", new BigDecimal("126.00"), null, null, null));
+    }
+
+    /** rekordbox's own field of the mix: added to the title when the title does not say it, so the DJ sees which version it is. */
+    @Test
+    void aTracksMix_isAddedToItsTitle_once() throws IOException {
+        Library library = xml("<TRACK TrackID=\"1\" Name=\"Believe\" Mix=\"Almighty Definitive Mix\" Artist=\"Cher\"/>"
+                + "<TRACK TrackID=\"2\" Name=\"Get Lucky (Radio Edit)\" Mix=\"Radio Edit\" Artist=\"Daft Punk\"/>");
+
+        assertThat(library.songs().get(key("Cher - Believe")).title()).isEqualTo("Believe (Almighty Definitive Mix)");
+        assertThat(library.songs().get(key("Daft Punk - Get Lucky")).title()).isEqualTo("Get Lucky (Radio Edit)");
+    }
+
+    /**
+     * A file never tagged: rekordbox names it by the file ("Wilki - Baśka") and has no artist. It was "✗" for every request; read as
+     * an M3U's name, both ways round, it is the song it names.
+     */
+    @Test
+    void anUntaggedTrack_isReadByItsName_bothWaysRound() throws IOException {
+        Library library = xml("<TRACK TrackID=\"1\" Name=\"Wilki - Baśka\" Artist=\"\" AverageBpm=\"128.00\"/>"
+                + "<TRACK TrackID=\"2\" Name=\"Sen o Victorii - Dżem\"/>");
+
+        assertThat(library.songs().get(key("Wilki - Baśka")))
+                .isEqualTo(new Track("Wilki", "Baśka", new BigDecimal("128.00"), null, null, null));
+        assertThat(key("Wilki - Baśka").markIn(library.keys(), library.swapped())).isEqualTo(com.scan2play.model.LibraryMark.HAVE);
+        assertThat(key("Dżem - Sen o Victorii").markIn(library.keys(), library.swapped()))
+                .as("the title first: the swapped key").isEqualTo(com.scan2play.model.LibraryMark.HAVE);
+        assertThat(library.swapped()).contains(key("Dżem - Sen o Victorii"));
+    }
+
+    /** One playlist of a collection keeps its tracks' details too. */
+    @Test
+    void aPlaylistsTracks_keepTheirDetails() throws IOException {
+        assertThat(parsePlaylist("rekordbox.xml", "Wesele").songs().get(key("Wilki - Baśka")))
+                .isEqualTo(new Track("Wilki", "Baśka", new BigDecimal("128.00"), null, "Rock", null));
+    }
+
+    @Test
+    void anM3usName_isShownAsArtistAndTitle_itsSwappedKeyTheOtherWayRound() throws IOException {
+        Library library = parse("#EXTM3U\n#EXTINF:200,Perfect - Autobiografia\nC:\\a.mp3\nC:\\m\\Intro.mp3\n", 10);
+
+        assertThat(library.songs()).containsEntry(key("Perfect - Autobiografia"), new Track("Perfect", "Autobiografia", null, null, null, null))
+                .containsEntry(key("Intro"), new Track(null, "Intro", null, null, null, null));
+        assertThat(library.swappedSongs()).containsEntry(key("Autobiografia - Perfect"),
+                new Track("Autobiografia", "Perfect", null, null, null, null));
+    }
+
+    /**
+     * A file's name as M3U playlists of file names write them: a track's number before it was taken for the artist ("01"), underscores
+     * kept the dash from parting artist and title — both made every request "✗". A number followed by a space alone is a name's.
+     */
+    @Test
+    void anM3usFileName_losesItsTrackNumberAndUnderscores() throws IOException {
+        assertThat(DjLibraryParser.fileName("C:\\Muzyka\\01 - Wilki - Baśka.mp3")).isEqualTo("Wilki - Baśka");
+        assertThat(DjLibraryParser.fileName("/m/07. Dżem - Sen o Victorii.flac")).isEqualTo("Dżem - Sen o Victorii");
+        assertThat(DjLibraryParser.fileName("/m/12-ABBA - SOS.mp3")).isEqualTo("ABBA - SOS");
+        assertThat(DjLibraryParser.fileName("/m/Wilki_-_Baska.mp3")).isEqualTo("Wilki - Baska");
+        assertThat(DjLibraryParser.fileName("/m/50 Cent - In da Club.mp3")).isEqualTo("50 Cent - In da Club");
+        assertThat(DjLibraryParser.fileName("/m/4 Non Blondes - What's Up.mp3")).isEqualTo("4 Non Blondes - What's Up");
+        assertThat(DjLibraryParser.fileName("/m/1999.mp3")).as("a number alone: no artist and title after it").isEqualTo("1999");
+
+        Library library = parse("#EXTM3U\nC:\\Muzyka\\01 - Wilki - Baśka.mp3\nC:\\Muzyka\\Golec_uOrkiestra_-_Sciernisco.mp3\n", 10);
+        assertThat(key("Wilki - Baśka").markIn(library.keys(), library.swapped())).isEqualTo(com.scan2play.model.LibraryMark.HAVE);
+        assertThat(key("Golec uOrkiestra - Ściernisco").markIn(library.keys(), library.swapped()))
+                .isEqualTo(com.scan2play.model.LibraryMark.HAVE);
     }
 
     @Test
