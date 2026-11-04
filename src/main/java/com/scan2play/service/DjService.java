@@ -5,7 +5,6 @@ import com.scan2play.entity.SongRequestDedicationEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.repository.SongRequestDedicationRepository;
 import com.scan2play.repository.SongRequestRepository;
-import com.scan2play.model.LibraryMark;
 import com.scan2play.util.LibraryKey;
 import com.scan2play.util.SongNames;
 import lombok.RequiredArgsConstructor;
@@ -116,18 +115,19 @@ public class DjService {
     }
 
     /**
-     * For each of the songs, by its id: "✓", "?" or "✗" by the party's library (V41, V42; {@link LibraryKey#markIn}). One lookup
-     * for all of them (the queue is at most its 300); none, and no marks, when the party has no library.
+     * For each of the songs, by its id: "✓", "?" or "✗" by the party's library (V41, V42; {@link LibraryKey#markIn}), with the tempo
+     * and the key of the DJ's track (V57). One lookup for all of them (the queue is at most its 300); none, and no marks, when the
+     * party has no library.
      */
-    public Map<Long, LibraryMark> libraryMarksOf(String partyCode, List<SongRequestEntity> songs) {
+    public Map<Long, DjLibraryService.Match> libraryMarksOf(String partyCode, List<SongRequestEntity> songs) {
         if (songs.isEmpty() || libraryService.info(partyCode).isEmpty()) {
             return Map.of();
         }
         Map<Long, LibraryKey> keys = new LinkedHashMap<>();
         songs.forEach(song -> keys.put(song.getId(), LibraryKey.of(song.getSongName())));
-        Map<LibraryKey, LibraryMark> found = libraryService.marks(partyCode, new HashSet<>(keys.values()));
-        Map<Long, LibraryMark> marks = new LinkedHashMap<>();
-        keys.forEach((id, key) -> marks.put(id, found.getOrDefault(key, LibraryMark.MISSING)));
+        Map<LibraryKey, DjLibraryService.Match> found = libraryService.matches(partyCode, new HashSet<>(keys.values()));
+        Map<Long, DjLibraryService.Match> marks = new LinkedHashMap<>();
+        keys.forEach((id, key) -> marks.put(id, found.getOrDefault(key, DjLibraryService.Match.MISSING)));
         return marks;
     }
 

@@ -250,19 +250,22 @@ class DjServiceTest {
     }
 
     @Test
-    void libraryMarks_sayForEachSong_whetherTheDjHasIt_inOneLookup() {
-        when(libraryService.info(PARTY_CODE)).thenReturn(Optional.of(new DjLibraryService.Info(2, DjLibraryParser.Format.M3U, Instant.now(), null)));
+    void libraryMarks_sayForEachSong_whetherTheDjHasIt_withTheTracksTempo_inOneLookup() {
+        when(libraryService.info(PARTY_CODE)).thenReturn(Optional.of(new DjLibraryService.Info(2, DjLibraryParser.Format.M3U, Instant.now(), null, true)));
         var have = com.scan2play.util.LibraryKey.of("Daft Punk - One More Time");
         var similar = com.scan2play.util.LibraryKey.of("Dżem - Baśka");
-        when(libraryService.marks(eq(PARTY_CODE), anyCollection())).thenReturn(java.util.Map.of(have, com.scan2play.model.LibraryMark.HAVE,
-                similar, com.scan2play.model.LibraryMark.SIMILAR));
+        var haveMatch = new DjLibraryService.Match(com.scan2play.model.LibraryMark.HAVE, new java.math.BigDecimal("122.00"), "5A");
+        var similarMatch = new DjLibraryService.Match(com.scan2play.model.LibraryMark.SIMILAR, null, null);
+        when(libraryService.matches(eq(PARTY_CODE), anyCollection())).thenReturn(java.util.Map.of(have, haveMatch, similar, similarMatch));
 
         var marks = djService.libraryMarksOf(PARTY_CODE, List.of(waiting(1, "Daft Punk - One More Time"), waiting(2, "Wilki - Baśka"),
                 waiting(3, "Daft Punk - One More Time (Radio Edit)"), waiting(4, "Dżem - Baśka")));
 
-        assertThat(marks).containsEntry(1L, com.scan2play.model.LibraryMark.HAVE).containsEntry(2L, com.scan2play.model.LibraryMark.MISSING)
-                .containsEntry(3L, com.scan2play.model.LibraryMark.HAVE).containsEntry(4L, com.scan2play.model.LibraryMark.SIMILAR).hasSize(4);
-        verify(libraryService, times(1)).marks(eq(PARTY_CODE), anyCollection());
+        assertThat(marks).containsEntry(1L, haveMatch).containsEntry(3L, haveMatch).containsEntry(4L, similarMatch).hasSize(4);
+        assertThat(marks.get(2L).mark()).as("a song the library has not").isEqualTo(com.scan2play.model.LibraryMark.MISSING);
+        assertThat(marks.get(2L).bpm()).isNull();
+        assertThat(marks.get(1L).bpmText()).as("the tempo as a DJ reads it").isEqualTo("122");
+        verify(libraryService, times(1)).matches(eq(PARTY_CODE), anyCollection());
     }
 
     @Test
@@ -271,6 +274,6 @@ class DjServiceTest {
 
         assertThat(djService.libraryMarksOf(PARTY_CODE, List.of(waiting(1, "Wilki - Baśka")))).isEmpty();
         assertThat(djService.libraryMarksOf(PARTY_CODE, List.of())).isEmpty();
-        verify(libraryService, never()).marks(anyString(), anyCollection());
+        verify(libraryService, never()).matches(anyString(), anyCollection());
     }
 }

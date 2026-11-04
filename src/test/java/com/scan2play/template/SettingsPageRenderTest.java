@@ -312,7 +312,7 @@ class SettingsPageRenderTest {
         DjService djService = mock(DjService.class);
         Instant uploaded = Instant.now();
         when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(
-                new com.scan2play.service.DjLibraryService.Info(1234, com.scan2play.service.DjLibraryParser.Format.REKORDBOX, uploaded, "Kluby / Piątek")));
+                new com.scan2play.service.DjLibraryService.Info(1234, com.scan2play.service.DjLibraryParser.Format.REKORDBOX, uploaded, "Kluby / Piątek", true)));
 
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), djService);
 
@@ -322,8 +322,29 @@ class SettingsPageRenderTest {
                 "class=\"btn btn-sm btn-link text-danger s2p-library-delete\">Usuń<",
                 "data-confirm=\"Usunąć bibliotekę? Znaczniki znikną z kolejki",
                 "<label for=\"libraryFile\" class=\"s2p-file-drop\" id=\"libraryDrop\">", ">Wybierz plik<", ">XML, M3U lub M3U8 · do 64 MB<",
-                "id=\"libraryUpload\" disabled", ">Jak przygotować plik?<");
+                "id=\"libraryUpload\" disabled", ">Jak przygotować plik?<",
+                ">Przy każdej prośbie w kolejce zobaczysz, czy masz ten utwór, a z kolekcji rekordboxa także jego tempo i tonację.")
+                .as("uploaded with its tempo and key (V57): nothing to ask").doesNotContain("s2p-library-old");
         write("settings-library.html", html);
+    }
+
+    /**
+     * A rekordbox library uploaded before V57 has its keys alone: the card asks for it again, for the tempo and the key in the queue.
+     * An M3U's would gain neither: not asked.
+     */
+    @Test
+    void anOldRekordboxLibrary_isAskedForAgain_anOldM3uNot() {
+        DjService rekordbox = mock(DjService.class);
+        when(rekordbox.libraryOf(PARTY)).thenReturn(java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(1234,
+                com.scan2play.service.DjLibraryParser.Format.REKORDBOX, Instant.now(), null, false)));
+        DjService m3u = mock(DjService.class);
+        when(m3u.libraryOf(PARTY)).thenReturn(java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(12,
+                com.scan2play.service.DjLibraryParser.Format.M3U, Instant.now(), null, false)));
+
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), rekordbox))
+                .contains("class=\"small text-secondary mb-3 s2p-library-old\">Wgraj kolekcję jeszcze raz, a kolejka pokaże też tempo i tonację Twoich utworów.<");
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), m3u))
+                .doesNotContain("s2p-library-old");
     }
 
     /**
@@ -660,7 +681,7 @@ class SettingsPageRenderTest {
     void aFreeOrganisersLibrary_waits_andCanBeDeleted() {
         DjService djService = mock(DjService.class);
         when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(
-                new com.scan2play.service.DjLibraryService.Info(10, com.scan2play.service.DjLibraryParser.Format.M3U, Instant.now(), null)));
+                new com.scan2play.service.DjLibraryService.Info(10, com.scan2play.service.DjLibraryParser.Format.M3U, Instant.now(), null, true)));
 
         String html = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.enforced(), djService);
 

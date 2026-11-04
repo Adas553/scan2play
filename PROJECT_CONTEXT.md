@@ -273,24 +273,35 @@ same address again changes the role and gives it 30 days again —, index by `em
 `StaffInvitationEntity.MAX_AGE_DAYS` = 30 days: an older one counts for nothing (every read takes `invited_at` after now − 30 days) and
 `StaffInvitationService.purgeOldInvitations` deletes it at 04:50 (Polish time) and after every start. Gone when answered ("Dołącz": it becomes a row of `party_staff`,
 without the address; "Nie, dziękuję"), cancelled by the organiser, or with the party.
-**The DJ's library → `dj_library`, `dj_library_track`** (V41 – V43, plan Pro; plain SQL in `DjLibraryService`, no entity) — the
-songs of the organiser's own collection, so the queue marks each waiting request "✓ Masz", "? Podobny" or "✗ Nie masz".
+**The DJ's library → `dj_library`, `dj_library_track`** (V41 – V43, V57, plan Pro; plain SQL in `DjLibraryService`, no entity) — the
+songs of the organiser's own collection, so the queue marks each waiting request "✓ Masz", "? Podobny" or "✗ Nie masz", with the tempo
+and the key of the DJ's track beside "✓" and "?" ("128 BPM · 5A", V57).
 `dj_library`: one row per party (`party_code` PK, FK ON DELETE CASCADE), `track_count`, `format` (`M3U` / `REKORDBOX`), `uploaded_at`
 (part of the panel's ETag: a new upload marks the same queue anew), `playlist` (V42: the rekordbox playlist it is, by its folders —
-"Kluby / Piątek"; null for a whole collection or an M3U; cut to its 200 characters — it is only shown). `dj_library_track` (V42):
+"Kluby / Piątek"; null for a whole collection or an M3U; cut to its 200 characters — it is only shown), `with_details` (V57: uploaded
+with the columns below; false for the libraries of before — their marks work as they did, and the card asks a rekordbox one to be
+uploaded again: "Wgraj kolekcję jeszcze raz…", `LibraryDetailsMigrationIT`). `dj_library_track` (V42):
 (`party_code` FK to `dj_library` ON DELETE CASCADE, `title_key` ≤ 200, `artists` ≤ 200, `swapped` — V43), PK of the three — the
-queue's lookup, its titles at once (`title_key = ANY(?)`). Only
-keys are kept (`util/LibraryKey`): the title without a version in brackets or after a dash with a version's word ("- Original Mix",
+queue's lookup, its titles at once (`title_key = ANY(?)`). Matched by the keys alone (`util/LibraryKey`): the title without a version in
+brackets or after a dash with a version's word ("- Original Mix",
 "- 2011 Remaster", "- Live") and without "feat. X"; the artists a sorted set (split at "," "&" "x" "and" "i" "feat." "vs" …, no
-leading "The") — no title as written, no path. The mark (`LibraryKey.markIn`, `LibraryMark`): the same title with an artist in common
-"✓"; the same title alone (a title of at least 4 letters) "?"; else "✗". A **swapped** key (V43: an M3U's name read the other way
+leading "The"). Beside the key, only shown (V57, `DjLibraryParser.Track`, all null when the file does not say it): `artist_name` and
+`title_name` as the file writes them (one row per key: of a song's versions the shortest title, "One More Time" before "One More Time
+(Extended Mix)"; an M3U's artist is the part of its name before " - "), and from rekordbox `bpm` (numeric(5,2), `AverageBpm`; 0 is
+none), `tonality` (`Tonality`), `genre`, `year` (0 is none) — never a path, the DJ's `Comments`, `Rating` or `PlayCount`. The mark
+(`LibraryKey.markIn` / `matchIn`, `LibraryMark`; `DjLibraryService.matches` adds the tempo and key of the track it was found as): the
+same title with an artist in common "✓"; the same title alone (a title of at least 4 letters) "?"; else "✗". A **swapped** key (V43: an M3U's name read the other way
 round — its title is an artist's name) only says "✓" (the title and an artist both the same), never "?": "Ed Sheeran - Perfect" is no
 song like the band Perfect's. The file (`DjLibraryParser`, streamed: the JDK's own StAX (`newDefaultFactory`) with no DTD and no
-entities for a rekordbox collection — its `COLLECTION`'s `TRACK`s by `Artist` + `Name`, or with `playlist` only the tracks that
+entities for a rekordbox collection — its `COLLECTION`'s `TRACK`s by `Artist` + `Name` (its `Mix` added in brackets when the name
+does not say it; a track with no artist whose name has " - " — a file never tagged, named by the file — read as an M3U's name, both
+ways round), or with `playlist` only the tracks that
 playlist's `TRACK Key`s point at (the `occurrence`th playlist of that path: rekordbox lets two of a folder share a name), the `PLAYLISTS`
 tree read as rekordbox shows it, at most `MAX_DEPTH` = 32 folders deep; with a playlist the collection is held until the playlists,
 so it may have at most `MAX_COLLECTION` = 100 000 tracks (`COLLECTION_TOO_LARGE`: unlimited, 64 MB of tiny tracks were half a
-gigabyte of the heap, which is 512 MB on Railway); an M3U's `#EXTINF` titles or its files' names, line by line in UTF-8 or else
+gigabyte of the heap, which is 512 MB on Railway; with V57's details such a collection of 100 000 with a playlist of 50 000 is read in
+~4 s within 100 MB); an M3U's `#EXTINF` titles or its files' names — without a track's number before them ("01 - ", "01. ", not "50 Cent")
+and with underscores read as spaces —, line by line in UTF-8 or else
 Windows-1250 (an old Windows playlist), a name with one " - " kept the other way round too, as a swapped key) of at most
 `DjLibraryService.MAX_TRACKS` = 50 000 tracks kept and 64 MB replaces the whole library in one transaction under the party row's lock
 (`DjLibraryIT`: two uploads at once end as one of them). One file is read at a time on the whole server (`DjLibraryController`, a
@@ -302,7 +313,8 @@ or with the party; V42 deleted the libraries of V41 (their single key could not 
 browser before it is read or sent, only an `.xml` is read for its playlists, and only a plain-text answer is shown as the server's
 sentence (a proxy's HTML page for a status never is). "Usuń bibliotekę" asks first (`data-confirm`). The card (2026-10-25): one line of what it does and "Jak przygotować plik?" folded under it; what the party has in a quiet box with a small "Usuń" at its end; the file's field is our own — the browser's input hidden (its button never filled a 44 px field on a phone), the label `#libraryDrop` the tap target, "Wybierz plik", then the file's name and size, a file dropped on it chosen too — and "Wgraj" the card's one action, enabled only with a file the server would read. Where the marks show: the queue (with "Ukryj „Nie masz”" beside the search — on a phone "Ukryj ✗", and "+ Dodaj" for "+ Dodaj piosenkę",
 the whole words their `aria-label`, so the two and the search share one line, 2026-10-28, `library-tools-one-row-phone`, `list-tools.js`:
-the "✗" rows hidden), and "Podsumowanie wieczoru" — "Nie masz w bibliotece" (the songs the AI let through with "✗" or "?", each once,
+the "✗" rows hidden; the tempo and the key beside the mark, on its line also in a phone's folded card,
+`library-tempo-beside-mark*`), and "Podsumowanie wieczoru" — "Nie masz w bibliotece" (the songs the AI let through with "✗" or "?", each once,
 the most wanted first) and the CSV's column "W bibliotece" — by the library as it is now.
 **The DJ's logo → `party_logo`** (V45, plan Pro; plain SQL in `PartyLogoService`, no entity) — one row per party (`party_code` PK,
 FK ON DELETE CASCADE — gone with the party and the account, `PartyLogoIT`): `png` (bytea: our own PNG, never the file uploaded), `width`,
@@ -1000,7 +1012,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `SiteCounter` | the site's counter (V40, 2026-10-24): per day (Polish time) the landing page seen (PL / EN), "Zacznij", logins, new DJs, guests' requests — numbers only, no address, browser or account; a robot's browser (search engines, Facebook's link previews, scanners, curl) is not counted; one atomic `INSERT … ON CONFLICT` per event, a failure only a WARN (`SiteCounterIT`) |
 | `DemoParty` | the demo parties, one per language (the owner, 2026-10-24): `DEMO` Polish, `DEME` English — four characters, never a real party's; owners `scan2play-demo` / `scan2play-demo-en`, no Google accounts. Each with its own vibe note, ⭐ and ten example requests with their comments (waiting ones with votes, dedications, a "⚠ Sprawdź", a ⭐ of the hosts; played, rejected, skipped), put back at every start and every night (04:55), the visitors' requests dropped, the party's daily limit started again. Their guest pages `/p/DEMO`, `/p/DEME` work, but no AI is asked: `SongEvaluationService.demoAnswer` — accepted, a ready comment (`demo.ai.comment.*`, "(demo: no AI check)"), saved unchecked, so only the visitor who sent it sees it (`DemoPartyIT`) |
 | `LogoImage` / `PartyLogoService` | the DJ's logo (V45): a file made our own PNG or refused, and why (`LogoImageTest`) / the PNG and `party_settings.logo_version` written together under the party row's lock, `partySettings` evicted after the commit (`PartyLogoIT`) |
-| `DjLibraryParser` / `DjLibraryService` | the DJ's library (V41 – V43): the file read into `LibraryKey`s (a rekordbox collection whole or one playlist of it, an M3U / M3U8 playlist with its swapped keys; a binary file, another XML, a tree too deep or a collection too large for one playlist refused) / the keys saved whole, under the party row's lock, `Info` cached (`djLibrary`), and the marks of a queue's or an evening's songs in one lookup (`marks`, `DjLibraryIT`); `DjService.libraryMarksOf` gives the queue's marks, `EveningSummaryService.libraryGaps` the summary's |
+| `DjLibraryParser` / `DjLibraryService` | the DJ's library (V41 – V43, V57): the file read into `LibraryKey`s, each with its `Track` as the file writes it — artist, title, tempo, key, genre, year (a rekordbox collection whole or one playlist of it, an M3U / M3U8 playlist with its swapped keys; a binary file, another XML, a tree too deep or a collection too large for one playlist refused) / the keys and their tracks saved whole, under the party row's lock, `Info` cached (`djLibrary`), and the marks of a queue's or an evening's songs in one lookup (`marks`; `matches` with the tempo and the key of the track found, `DjLibraryIT`); `DjService.libraryMarksOf` gives the queue's marks and tempos, `EveningSummaryService.libraryGaps` the summary's |
 | `PlanService` | the plans (V35, Section 4.1 "Plans"): the organiser's `Plan` (the switch `scan2play.plans.enforce`, `pro-owners`, the row of `dj_plan`, cached), `require(party, PlanFeature)` (a 403), `asPlanned` (the party as its plan lets it work: for the guests, the AI, the queue's marks, the print — never saved), `view` (what the pages show: `plan.allows(…)`, `plan.pro(…)`), the staff's places, the trial |
 
 ### 6.3 Configuration
@@ -1362,6 +1374,7 @@ schema behind Flyway's back.
 | V54 | `party_settings.poster_size` varchar(6) NOT NULL DEFAULT 'NORMAL' (check SMALL / NORMAL / LARGE): the QR print's heading size (`MigrationIT`) |
 | V55 | `party_settings.next_open_at`, `next_close_at` timestamptz, nullable; partial indexes `idx_party_settings_next_open_at` / `…_next_close_at` (WHERE … IS NOT NULL): the party opens and closes by itself (`MigrationIT`, `PartyScheduleIT`) |
 | V56 | `party_settings.kiosk_token` varchar(32) (unique index `uk_party_settings_kiosk_token`), `song_requests.via_kiosk` boolean NOT NULL DEFAULT false; data: `KIOSK` added to the staff's, the invitation link's and the invitations' permissions that were the whole set before (the co-organisers) — the venue's kiosk (`MigrationIT`, `KioskMigrationIT`) |
+| V57 | `dj_library_track.artist_name`, `title_name` varchar(200), `bpm` numeric(5,2), `tonality` varchar(10), `genre` varchar(100), `year` smallint, all nullable; `dj_library.with_details` boolean NOT NULL DEFAULT false: each song of the DJ's library as the file writes it, beside its key — only shown (the queue's tempo and key); the libraries of before stay, without them (`LibraryDetailsMigrationIT`, `DjLibraryIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on

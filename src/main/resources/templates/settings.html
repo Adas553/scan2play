@@ -440,6 +440,9 @@
                     <button type="submit" class="btn btn-sm btn-link text-danger s2p-library-delete" th:text="#{settings.library.delete.short}">Delete</button>
                 </form>
             </div>
+            <!--/* a rekordbox library uploaded before V57 has its keys alone: uploaded again, the queue shows the tempo and the key too */-->
+            <p th:if="${libraryOld == true}" class="small text-secondary mb-3 s2p-library-old" th:text="#{settings.library.old}">Upload your
+                collection again: the queue will show your tracks' tempo and key.</p>
             <!--/* data-max-bytes / data-too-large: a larger file is refused here, before the browser reads or sends it */-->
             <form th:action="@{/dj/library}" method="POST" class="m-0" id="libraryForm"
                   th:attr="data-sending=#{settings.library.sending},data-refused=#{settings.library.error.other},
