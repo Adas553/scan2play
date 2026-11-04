@@ -127,6 +127,9 @@ class SummaryPageTest {
         return requests;
     }
 
+    /** The evenings' titles, links and kept songs (V61): none, unless a test gives some. */
+    private static com.scan2play.repository.EveningSummaryRepository kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+
     /** The party's library (V42): none, unless a test gives one. */
     private static com.scan2play.service.DjLibraryService libraries = mock(com.scan2play.service.DjLibraryService.class);
 
@@ -171,17 +174,22 @@ class SummaryPageTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any()))
                 .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").logoVersion("0123456789abcdef".repeat(4)).build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries), sessionHelper, messages, com.scan2play.service.Plans.off());
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries, kept), sessionHelper, messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
 
         ConcurrentModel model = new ConcurrentModel();
         String template = controller.summary(evening, null, view, model, null, new MockHttpSession());
         assertThat(template).isEqualTo("summary");
 
+        return process(locale, model, file);
+    }
+
+    /** The summary template with {@code model}, written as {@code file} for a look and for the browser tests. */
+    private static String process(Locale locale, ConcurrentModel model, String file) throws IOException {
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
         context.setVariables(model.asMap());
-        String html = engine.process(template, context);
+        String html = engine.process("summary", context);
         Files.createDirectories(HARNESS);
         Files.writeString(HARNESS.resolve("summary-" + file + ".html"), html, StandardCharsets.UTF_8);
         Files.createDirectories(OUT);
@@ -204,6 +212,11 @@ class SummaryPageTest {
         // the evenings to pick with their guests' votes, the shown one selected
         assertThat(html).contains("<option value=\"2026-10-03\" selected=\"selected\">sobota, 03.10 · 👍 34</option>",
                 "<option value=\"2026-09-26\">sobota, 26.09 · 👍 3</option>");
+        // by month: 13 months of evenings are kept, a long list stays one to find a month in
+        assertThat(html).contains("<optgroup label=\"październik 2026\">", "<optgroup label=\"wrzesień 2026\">");
+        assertThat(html.indexOf("październik 2026")).isLessThan(html.indexOf("wrzesień 2026"));
+        // the hosts' panel is the hosts' version's
+        assertThat(html).doesNotContain("id=\"hostsPanel\"", "name=\"robots\"");
         assertThat(html).contains("href=\"/dj/summary/csv?evening=2026-10-03&amp;party=" + PARTY + "\"", "id=\"printBtn\"");
         // the version: the DJ's lit, the hosts' a link with view=hosts
         assertThat(html).contains("aria-current=\"page\" class=\"on\">Dla mnie</a>",
@@ -310,6 +323,78 @@ class SummaryPageTest {
                 "<span id=\"skippedCount\">pominięte przez DJ-a: 4</span>").doesNotContain("??");
     }
 
+    /**
+     * The hosts' version on the DJ's page (V61): the panel to name the evening and make its hosts' link — without a link "Utwórz link
+     * dla gospodarzy"; with one, the address to copy, the day it stops, "Nowy link" and "Wyłącz link" (asked first). The DJ's title
+     * heads the page, "Podsumowanie wieczoru" small above it.
+     */
+    @Test
+    void theHostsPanel_namesTheEvening_andMakesItsLink() throws IOException {
+        String none = render(Locale.forLanguageTag("pl"), null, "hosts", TWO_EVENINGS, wedding(), "hosts-panel-pl");
+        assertThat(none).contains("id=\"hostsPanel\"", ">Dla gospodarzy<", "action=\"/dj/summary/title\"", "name=\"title\" maxlength=\"60\"",
+                "placeholder=\"np. Wesele Ani i Tomka\"", "id=\"shareMake\">Utwórz link dla gospodarzy<", "<h1>Podsumowanie wieczoru</h1>")
+                .doesNotContain("id=\"shareLinkInput\"", "class=\"kind\"");
+
+        kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        try {
+            when(kept.findByPartyCodeAndEvening(PARTY, EVENING)).thenReturn(java.util.Optional.of(com.scan2play.entity.EveningSummaryEntity.builder()
+                    .partyCode(PARTY).evening(EVENING).title("Wesele Ani i Tomka").shareToken("aBcD1234aBcD1234aBcD12")
+                    .shareExpiresAt(Instant.now().plus(java.time.Duration.ofDays(20))).updatedAt(Instant.now()).build()));
+            String linked = render(Locale.forLanguageTag("pl"), null, "hosts", TWO_EVENINGS, wedding(), "hosts-linked-pl");
+
+            assertThat(linked).contains("<title>Wesele Ani i Tomka · Podsumowanie wieczoru</title>", "<p class=\"kind\">Podsumowanie wieczoru</p>",
+                    "<h1>Wesele Ani i Tomka</h1>", "value=\"Wesele Ani i Tomka\"",
+                    "id=\"shareLinkInput\" readonly value=\"https://www.scan2play.com.pl/s/aBcD1234aBcD1234aBcD12\"",
+                    "data-copy-target=\"shareLinkInput\"", "id=\"shareUntil\">Działa do ", ">Nowy link<", "action=\"/dj/summary/share/off\"",
+                    "data-confirm=\"Wyłączyć link? Gospodarze nie otworzą już podsumowania.\"")
+                    .doesNotContain("id=\"shareMake\"");
+            // the DJ's version: the title, no panel
+            String dj = render(Locale.forLanguageTag("pl"), null, null, TWO_EVENINGS, wedding(), "linked-pl");
+            assertThat(dj).contains("<h1>Wesele Ani i Tomka</h1>").doesNotContain("id=\"hostsPanel\"");
+        } finally {
+            kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        }
+    }
+
+    /**
+     * The hosts' link (V61, {@code /s/{token}}): the hosts' version alone — no bar, no DJ's panel, no DJ's script, never indexed;
+     * an unknown or old link a 404.
+     */
+    @Test
+    void theHostsLink_opensTheHostsVersionAlone() throws IOException {
+        kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        try {
+            when(kept.findByShareToken("aBcD1234aBcD1234aBcD12")).thenReturn(java.util.Optional.of(com.scan2play.entity.EveningSummaryEntity.builder()
+                    .partyCode(PARTY).evening(EVENING).title("Wesele Ani i Tomka").shareToken("aBcD1234aBcD1234aBcD12")
+                    .shareExpiresAt(Instant.now().plus(java.time.Duration.ofDays(20))).updatedAt(Instant.now()).build()));
+            when(kept.findByShareToken("old")).thenReturn(java.util.Optional.of(com.scan2play.entity.EveningSummaryEntity.builder()
+                    .partyCode(PARTY).evening(EVENING).shareToken("old").shareExpiresAt(Instant.now().minusSeconds(1)).updatedAt(Instant.now()).build()));
+            com.scan2play.repository.PartySettingsRepository parties = mock(com.scan2play.repository.PartySettingsRepository.class);
+            when(parties.findByPartyCode(PARTY)).thenReturn(java.util.Optional.of(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").build()));
+            com.scan2play.controller.SharedSummaryController controller = new com.scan2play.controller.SharedSummaryController(
+                    new EveningSummaryService(repositoryOf(wedding()), libraries, kept), parties, com.scan2play.service.Plans.off());
+
+            ConcurrentModel model = new ConcurrentModel();
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            assertThat(controller.shared("aBcD1234aBcD1234aBcD12", model, response)).isEqualTo("summary");
+            assertThat(response.getHeader("Referrer-Policy")).isEqualTo("no-referrer");
+            assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
+            String html = process(Locale.forLanguageTag("pl"), model, "shared-pl");
+
+            assertThat(html).contains("<meta name=\"robots\" content=\"noindex, nofollow\">", "<h1>Wesele Ani i Tomka</h1>",
+                    "<main class=\"hosts\">", "<strong>34</strong><span>razy goście poprosili", ">Zagrane na życzenie, po kolei (6)<",
+                    "/js/summary.js")
+                    .doesNotContain("class=\"toolbar", "id=\"hostsPanel\"", "/js/dj-nav.js", "id=\"noEvenings\"", "Odrzucone przez AI",
+                            "💸", "/dj/", "??");
+            for (String token : new String[]{"old", "unknown", "x".repeat(33)}) {
+                org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.shared(token, new ConcurrentModel(), new MockHttpServletResponse()))
+                        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class).hasMessageContaining("404");
+            }
+        } finally {
+            kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        }
+    }
+
     @Test
     void inEnglish() throws IOException {
         String html = render(Locale.ENGLISH, "2026-10-03", TWO_EVENINGS, wedding(), "wedding-en");
@@ -343,7 +428,7 @@ class SummaryPageTest {
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(wedding());
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries), sessionHelper, messages, com.scan2play.service.Plans.off());
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries, kept), sessionHelper, messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
 
         ResponseEntity<byte[]> csv = controller.csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
 
@@ -374,8 +459,8 @@ class SummaryPageTest {
                     ">Bajm - Biała armia<", "class=\"library-similar\"").doesNotContain("Sanah - Szampan", "Nirvana");
             assertThat(gaps.indexOf("Zenek Martyniuk")).as("the most wanted first").isLessThan(gaps.indexOf("Varius Manx"));
 
-            ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries),
-                    sessionHelperOf(), messages, com.scan2play.service.Plans.off()).csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
+            ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries, kept),
+                    sessionHelperOf(), messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl").csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
             assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0])
                     .endsWith(";AI comment;Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications;In your library");
             // "Kopiuj listę": the songs one a line, shown by summary.js

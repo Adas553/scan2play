@@ -75,6 +75,15 @@ public final class ViewAttributes {
     public static final String SUMMARY = "summary";
     /** The evening summary's version for the hosts (the couple, the client): without what is the DJ's own. */
     public static final String HOSTS_VIEW = "hostsView";
+    /** The summary's evenings by month ({@code EveningSummaryService.Month}): the list's groups. */
+    public static final String EVENING_MONTHS = "eveningMonths";
+    /** The DJ's title of the evening (V61); null: "Podsumowanie wieczoru". */
+    public static final String EVENING_TITLE = "eveningTitle";
+    /** The evening's hosts' link (V61, {@code /s/{token}}) while it works, and the day it stops. */
+    public static final String SHARE_LINK = "shareLink";
+    public static final String SHARE_UNTIL = "shareUntil";
+    /** The summary opened by its hosts' link: no bar, no DJ's controls. */
+    public static final String SHARED = "shared";
     public static final String REQUEST_LIMIT = "requestLimit";
     public static final String COOLDOWN_MINUTES = "cooldownMinutes";
     public static final String DUPLICATE_CHECK_WINDOW = "duplicateCheckWindow";

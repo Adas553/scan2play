@@ -41,7 +41,7 @@ class PartyCodeChangeIT extends PostgresIntegrationTest {
     @Autowired PlatformTransactionManager transactions;
 
     private static final List<String> TABLES = List.of("song_requests", "feedback", "party_staff", "staff_invitation", "dj_library",
-            "dj_library_track", "party_logo");
+            "dj_library_track", "party_logo", "evening_song", "evening_summary");
 
     private PartySettingsEntity party(String owner) {
         return parties.saveAndFlush(PartySettingsEntity.builder().partyCode(newPartyCode()).ownerId(owner).active(true)
@@ -64,6 +64,10 @@ class PartyCodeChangeIT extends PostgresIntegrationTest {
         jdbc.update("INSERT INTO party_logo (party_code, png, width, height, version, updated_at) VALUES (?, ?, 1, 1, 'v1', now())",
                 code, new byte[]{1});
         jdbc.update("UPDATE party_settings SET logo_version = 'v1' WHERE party_code = ?", code);
+        // the evening summary's kept song and its evening's title (V61): their foreign keys follow the code
+        jdbc.update("INSERT INTO evening_song (song_request_id, party_code, song_name, requested_at, status, votes, tips, dedications,"
+                + " added_by_dj, via_kiosk) VALUES (?, ?, 'Wilki - Baśka', now(), 'PLAYED', 1, 0, 0, false, false)", -System.nanoTime(), code);
+        jdbc.update("INSERT INTO evening_summary (party_code, evening, title, updated_at) VALUES (?, current_date, 'Wesele', now())", code);
     }
 
     @Test

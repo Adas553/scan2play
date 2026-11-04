@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.SongRequestEntity;
+import com.scan2play.repository.EveningSummaryRepository;
 import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -23,7 +25,9 @@ import java.time.temporal.ChronoUnit;
  * the next night. So the first run over a long backlog cannot hold locks for long or run for ever.
  * <p>
  * It also removes the DJ history for good (played and rejected requests are the same rows), which is why that history reaches
- * back 30 days at most.
+ * back 30 days at most. What the evening summary needs of a deleted request goes to {@code evening_song} in the same statement
+ * (V61, {@code SongRequestRepository.KEEP_FOR_THE_SUMMARY}); those songs, the evenings' titles and their hosts' links are deleted
+ * {@value #SUMMARY_MONTHS} months after the evening, the same way.
  */
 @Service
 @RequiredArgsConstructor
@@ -36,10 +40,14 @@ public class SongRequestRetentionService {
     /** Batches per run: at most {@code BATCH_SIZE * MAX_BATCHES} rows a night (200 000), the rest goes the next night. */
     static final int MAX_BATCHES = 200;
 
+    /** How long the evening summary keeps an evening's songs, its title and its link (V61): a year of parties and a month more. */
+    static final int SUMMARY_MONTHS = 13;
+
     /** How long a request may wait in the queue: past it, it is not the evening's any more (W10). */
     static final Duration WAITING_KEPT = Duration.ofHours(24);
 
     private final SongRequestRepository songRequestRepository;
+    private final EveningSummaryRepository eveningSummaryRepository;
 
     /**
      * Both cleanups after a start as well: a night the app was down at 04:40 (a deploy, a crash, a sleeping service) would leave
@@ -79,6 +87,28 @@ public class SongRequestRetentionService {
     @Scheduled(cron = "0 45 4 * * *", zone = Times.SCHEDULE_ZONE)
     public void purgeStaleRequests() {
         purgeRequestedBefore(Instant.now().minus(SongRequestEntity.MAX_AGE_DAYS, ChronoUnit.DAYS));
+        purgeSummariesBefore(LocalDate.now(Times.DISPLAY_ZONE).minusMonths(SUMMARY_MONTHS));
+    }
+
+    /**
+     * Deletes the evenings' kept songs (V61) asked for before {@code before} (its start, Polish time), batch by batch as the requests,
+     * and the evenings' titles and links of before it.
+     *
+     * @return how many songs were deleted
+     */
+    int purgeSummariesBefore(LocalDate before) {
+        Instant cutoff = before.atStartOfDay(Times.DISPLAY_ZONE).toInstant();
+        int deleted = 0;
+        for (int batch = 0; batch < MAX_BATCHES; batch++) {
+            int n = eveningSummaryRepository.deleteSongsRequestedBefore(cutoff, BATCH_SIZE);
+            deleted += n;
+            if (n < BATCH_SIZE) {
+                break;
+            }
+        }
+        int evenings = eveningSummaryRepository.deleteEveningsBefore(before);
+        log.info("Evening summary cleanup: deleted {} song(s) and {} evening(s) of before {}", deleted, evenings, before);
+        return deleted;
     }
 
     /**

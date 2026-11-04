@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -76,10 +77,91 @@ class EveningSummaryServiceTest {
     @Test
     void theRequestsOfAnEvening_areReadFromSixToSix_bounded() {
         SongRequestRepository repository = mock(SongRequestRepository.class);
-        new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class)).requests("SUMM1", EVENING);
+        new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class)).requests("SUMM1", EVENING);
 
         verify(repository).findRequestedBetween(eq("SUMM1"), eq(at("06:00")), eq(at("05:59").plusSeconds(60)),
                 eq(Pageable.ofSize(EveningSummaryService.MAX_REQUESTS)));
+    }
+
+    /**
+     * An evening is its requests still there and the songs kept of the ones gone (V61): together, the first asked first, a song
+     * kept back as the request the summary counts — its status as the decision and the moments, no guest's words — and a request
+     * in both counted once, as it is now.
+     */
+    @Test
+    void anEvening_isItsRequests_andTheSongsKeptOfTheOnesGone() {
+        SongRequestRepository repository = mock(SongRequestRepository.class);
+        com.scan2play.repository.EveningSummaryRepository kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        SongRequestEntity live = request("Sanah - Szampan", "accepted", "23:00", null, 2);
+        live.setId(9L);
+        SongRequestEntity both = request("Wilki - Baśka", "played", "21:00", "21:10", 5);
+        both.setId(3L);
+        when(repository.findRequestedBetween(eq("SUMM1"), any(), any(), any())).thenReturn(List.of(live, both));
+        when(kept.findSongsBetween(eq("SUMM1"), any(), any(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(List.of(
+                new Object[]{1L, "Varius Manx - Orła cień", java.sql.Timestamp.from(at("20:00")), java.sql.Timestamp.from(at("20:30")), "PLAYED", 4, 1, 2, false, true},
+                new Object[]{2L, null, java.time.OffsetDateTime.ofInstant(at("20:10"), Times.DISPLAY_ZONE), null, "REJECTED_BY_AI", 1, 0, 0, false, false},
+                new Object[]{3L, "Wilki - Baśka", at("21:00"), null, "WAITING", 1, 0, 0, false, false},
+                new Object[]{4L, "Kult - Arahja", at("22:00"), null, "SKIPPED", 3, 0, 0, true, false},
+                new Object[]{5L, "Bajm - Biała armia", at("22:30"), null, "CLEARED", 2, 0, 0, false, false}));
+
+        List<SongRequestEntity> requests = new EveningSummaryService(repository, mock(DjLibraryService.class), kept).requests("SUMM1", EVENING);
+
+        assertThat(requests).extracting(SongRequestEntity::getId).containsExactly(1L, 2L, 3L, 4L, 5L, 9L);
+        assertThat(requests).extracting(EveningSummaryService::statusOf).containsExactly(EveningSummaryService.Status.PLAYED,
+                EveningSummaryService.Status.REJECTED_BY_AI, EveningSummaryService.Status.PLAYED, EveningSummaryService.Status.SKIPPED,
+                EveningSummaryService.Status.CLEARED, EveningSummaryService.Status.WAITING);
+        SongRequestEntity first = requests.getFirst();
+        assertThat(List.of(first.getPlayedAt(), first.getVotes(), first.getTips(), first.getDedications(), first.isViaKiosk(), first.getGuestText() == null))
+                .containsExactly(at("20:30"), 4, 1, 2, true, true);
+        assertThat(requests.get(2).getVotes()).as("the request still there counts, not its copy").isEqualTo(5);
+        assertThat(requests.get(3).isAddedByDj()).isTrue();
+        EveningSummaryService.Summary summary = EveningSummaryService.summarize(EVENING, requests);
+        assertThat(List.of(summary.played(), summary.rejectedByAi(), summary.skipped(), summary.cleared(), summary.waiting()))
+                .containsExactly(2, 1, 1, 1, 1);
+    }
+
+    /** The evenings by month for the page's list, the latest first, as the query gives them. */
+    @Test
+    void theEvenings_byMonth() {
+        List<EveningSummaryService.Month> months = EveningSummaryService.byMonth(List.of(
+                new EveningSummaryService.Evening(LocalDate.of(2026, 11, 4), 3), new EveningSummaryService.Evening(LocalDate.of(2026, 10, 31), 13),
+                new EveningSummaryService.Evening(LocalDate.of(2026, 10, 3), 8)));
+
+        assertThat(months).extracting(EveningSummaryService.Month::first).containsExactly(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 10, 1));
+        assertThat(months.get(1).evenings()).hasSize(2);
+        assertThat(EveningSummaryService.byMonth(List.of())).isEmpty();
+    }
+
+    /** The DJ's title of an evening: one line, at most 60 characters (an emoji one), empty none. */
+    @Test
+    void theTitle_isOneLine_atMostSixtyCharacters() {
+        assertThat(EveningSummaryService.tidyTitle("  Wesele\n Ani   i Tomka ")).isEqualTo("Wesele Ani i Tomka");
+        assertThat(EveningSummaryService.tidyTitle("   ")).isNull();
+        assertThat(EveningSummaryService.tidyTitle(null)).isNull();
+        assertThat(EveningSummaryService.tidyTitle("💍".repeat(70))).isEqualTo("💍".repeat(60));
+        assertThat(EveningSummaryService.tidyTitle("a".repeat(61))).hasSize(60);
+    }
+
+    /** A hosts' link opens while it works: an unknown, too long, old or switched-off one does not. */
+    @Test
+    void aHostsLink_opensWhileItWorks() {
+        com.scan2play.repository.EveningSummaryRepository kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
+        com.scan2play.entity.EveningSummaryEntity works = com.scan2play.entity.EveningSummaryEntity.builder().partyCode("SUMM1").evening(EVENING)
+                .shareToken("good").shareExpiresAt(Instant.now().plusSeconds(60)).build();
+        when(kept.findByShareToken("good")).thenReturn(java.util.Optional.of(works));
+        when(kept.findByShareToken("old")).thenReturn(java.util.Optional.of(com.scan2play.entity.EveningSummaryEntity.builder().partyCode("SUMM1")
+                .evening(EVENING).shareToken("old").shareExpiresAt(Instant.now().minusSeconds(1)).build()));
+        EveningSummaryService service = new EveningSummaryService(mock(SongRequestRepository.class), mock(DjLibraryService.class), kept);
+
+        assertThat(service.shared("good")).contains(works);
+        assertThat(service.shared("old")).isEmpty();
+        assertThat(service.shared("unknown")).isEmpty();
+        assertThat(service.shared("x".repeat(33))).isEmpty();
+        assertThat(service.shared(null)).isEmpty();
+        // a new link: 22 characters of base64url, 30 days
+        String token = service.share("SUMM1", EVENING);
+        assertThat(token).matches("[A-Za-z0-9_-]{22}");
+        verify(kept).saveShare(eq("SUMM1"), eq(EVENING), eq(token), any(), any());
     }
 
     @Test
@@ -88,7 +170,7 @@ class EveningSummaryServiceTest {
         when(repository.findEvenings("SUMM1", EveningSummaryService.MAX_EVENINGS))
                 .thenReturn(List.of(new Object[]{"2026-10-03", 42L}, new Object[]{"2026-09-26", 7L}));
 
-        assertThat(new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class)).evenings("SUMM1")).containsExactly(
+        assertThat(new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class)).evenings("SUMM1")).containsExactly(
                 new EveningSummaryService.Evening(EVENING, 42), new EveningSummaryService.Evening(LocalDate.of(2026, 9, 26), 7));
     }
 

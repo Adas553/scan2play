@@ -155,6 +155,26 @@ body {
     flex-basis: 100%;
 }
 
+/* On a computer the bar is one compact row: the evening as wide as its longest line, the version as wide as its words — not
+   stretched across half the screen */
+@media (min-width: 576px) {
+    .toolbar .pick {
+        flex: 0 1 auto;
+    }
+
+    .toolbar select {
+        width: 300px;
+    }
+
+    .toolbar .views {
+        flex: 0 0 auto;
+    }
+
+    .toolbar .views a {
+        flex: 0 0 auto;
+    }
+}
+
 /* On a phone: the evening and "⋯" on one row, the version on the next, print the whole width under them */
 @media (max-width: 575.98px) {
     .toolbar .pick {
@@ -178,6 +198,79 @@ body {
 
     .toolbar .view-hint {
         order: 4;
+    }
+}
+
+/* ---- The hosts' version on the DJ's page: the evening's title and its hosts' link (V61; not printed) ---- */
+
+.hosts-panel {
+    max-width: 760px;
+    margin: 16px auto 0;
+    padding: 12px 16px;
+    border: 1px solid #0aa2c0;
+    border-radius: 12px;
+    background: #f2fbfd;
+}
+
+.hosts-panel h2 {
+    margin: 0 0 4px;
+    border: 0;
+    padding: 0;
+}
+
+.hosts-panel .help {
+    margin: 0 0 8px;
+    color: #444444;
+    font-size: 0.9rem;
+}
+
+.hosts-panel .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+}
+
+.hosts-panel .row form {
+    margin: 0;
+}
+
+.hosts-panel label {
+    flex-basis: 100%;
+    font-weight: 600;
+}
+
+.hosts-panel input[type="text"] {
+    flex: 1 1 220px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #999999;
+    border-radius: 8px;
+    font: inherit;
+}
+
+/* outlines: the page's one action is "Drukuj" */
+.hosts-panel button {
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 1px solid #0aa2c0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #075c6e;
+    font: inherit;
+    cursor: pointer;
+}
+
+.hosts-panel button.danger {
+    border-color: #b02a37;
+    color: #b02a37;
+}
+
+@media (max-width: 575.98px) {
+    .hosts-panel {
+        margin: 12px 16px 0;
     }
 }
 
@@ -205,6 +298,17 @@ h1 {
     margin: 0;
     font-size: 1.6rem;
     line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+/* "Podsumowanie wieczoru" small above the DJ's title of the evening */
+.kind {
+    margin: 0;
+    color: #0a7f97;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .when,

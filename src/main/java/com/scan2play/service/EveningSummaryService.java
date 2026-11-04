@@ -1,8 +1,11 @@
 package com.scan2play.service;
 
+import com.scan2play.entity.EveningSummaryEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.LibraryMark;
+import com.scan2play.repository.EveningSummaryRepository;
 import com.scan2play.repository.SongRequestRepository;
+import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.LibraryKey;
 import com.scan2play.util.SongNames;
 import com.scan2play.util.Times;
@@ -14,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -27,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.scan2play.service.DjService.DECISION_ACCEPTED;
 import static com.scan2play.service.DjService.DECISION_PLAYED;
 import static com.scan2play.service.DjService.DECISION_REJECTED;
 
@@ -37,7 +43,9 @@ import static com.scan2play.service.DjService.DECISION_REJECTED;
  * one asked for again after it played (out of the AI's duplicate window), after the queue was cleared or two hours after a skip is a
  * row of its own, and its rows are one {@link Song} ({@link LibraryKey}, as the library's marks). An evening runs from
  * {@link #EVENING_STARTS} to the same time the next day, Polish time, so a party that goes past midnight is one evening. Read from
- * {@code song_requests}, so it lasts as long as they do (30 days) and is gone with "Wyczyść historię".
+ * {@code song_requests} and from what was kept of the requests already deleted ({@code evening_song}, V61: the 30 days' purge and
+ * "Wyczyść historię" copy it in the statement that deletes them), so an evening lasts 13 months, without the guests' words. The DJ
+ * may name an evening and give its hosts a read-only link ({@code evening_summary}).
  */
 @Service
 @RequiredArgsConstructor
@@ -45,8 +53,10 @@ public class EveningSummaryService {
 
     /** When an evening starts (and the one before ends), Polish time; the same 6 hours are in {@code findEvenings}. */
     public static final LocalTime EVENING_STARTS = LocalTime.of(6, 0);
-    /** The evenings offered: the retention keeps 30 days. */
-    static final int MAX_EVENINGS = 31;
+    /** The evenings offered: a year of weekly parties (the summary keeps 13 months, SongRequestRetentionService). */
+    static final int MAX_EVENINGS = 52;
+    /** How long a hosts' link works after the DJ made it. */
+    public static final int SHARE_DAYS = 30;
     /** The most requests one evening counts — the party's own limit is 300 a day, but a DJ can switch it off. */
     static final int MAX_REQUESTS = 2000;
     static final int TOP_SONGS = 10;
@@ -63,6 +73,10 @@ public class EveningSummaryService {
 
     /** One evening the party had requests, and the guests' votes of it — {@link Summary#votes()}, counted in SQL. */
     public record Evening(LocalDate day, long votes) {
+    }
+
+    /** The evenings of one month, for the page's list (its {@code <optgroup>}): {@code first} names the month. */
+    public record Month(LocalDate first, List<Evening> evenings) {
     }
 
     /**
@@ -169,6 +183,7 @@ public class EveningSummaryService {
 
     private final SongRequestRepository songRequestRepository;
     private final DjLibraryService libraryService;
+    private final EveningSummaryRepository eveningSummaryRepository;
 
     /** The party's evenings with requests, the latest first. */
     @Transactional(readOnly = true)
@@ -186,12 +201,126 @@ public class EveningSummaryService {
         return moment.atZone(Times.DISPLAY_ZONE).toLocalDateTime().minusHours(EVENING_STARTS.getHour()).toLocalDate();
     }
 
-    /** The party's requests of one evening, the first asked first, at most {@value #MAX_REQUESTS}. */
+    /** The evenings by month, the latest first, as {@link #evenings} gives them. */
+    public static List<Month> byMonth(List<Evening> evenings) {
+        Map<YearMonth, List<Evening>> months = new LinkedHashMap<>();
+        evenings.forEach(evening -> months.computeIfAbsent(YearMonth.from(evening.day()), month -> new ArrayList<>()).add(evening));
+        return months.entrySet().stream().map(month -> new Month(month.getKey().atDay(1), List.copyOf(month.getValue()))).toList();
+    }
+
+    /**
+     * The party's requests of one evening, the first asked first, at most {@value #MAX_REQUESTS}: the ones still there and the ones
+     * kept of the requests gone ({@link #fromKept}) — a request is in one of them; were it in both, the one still there counts.
+     */
     @Transactional(readOnly = true)
     public List<SongRequestEntity> requests(String partyCode, LocalDate evening) {
         Instant from = evening.atTime(EVENING_STARTS).atZone(Times.DISPLAY_ZONE).toInstant();
         Instant to = evening.plusDays(1).atTime(EVENING_STARTS).atZone(Times.DISPLAY_ZONE).toInstant();
-        return songRequestRepository.findRequestedBetween(partyCode, from, to, PageRequest.of(0, MAX_REQUESTS));
+        List<SongRequestEntity> live = songRequestRepository.findRequestedBetween(partyCode, from, to, PageRequest.of(0, MAX_REQUESTS));
+        List<Object[]> kept = eveningSummaryRepository.findSongsBetween(partyCode, from, to, MAX_REQUESTS);
+        if (kept.isEmpty()) {
+            return live;
+        }
+        Map<Long, SongRequestEntity> byId = new LinkedHashMap<>();
+        kept.forEach(row -> {
+            SongRequestEntity request = fromKept(partyCode, row);
+            byId.put(request.getId(), request);
+        });
+        live.forEach(request -> byId.put(request.getId(), request));
+        return byId.values().stream()
+                .sorted(Comparator.comparing(SongRequestEntity::getRequestedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(SongRequestEntity::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .limit(MAX_REQUESTS)
+                .toList();
+    }
+
+    /**
+     * A song kept of a deleted request ({@code EveningSummaryRepository.findSongsBetween}'s row) as a request the summary counts:
+     * never saved — its status back as the decision and the moments {@link #statusOf} reads, no guest's words, no number.
+     */
+    static SongRequestEntity fromKept(String partyCode, Object[] row) {
+        Status status = Status.valueOf((String) row[4]);
+        Instant requestedAt = instant(row[2]);
+        return SongRequestEntity.builder()
+                .id(((Number) row[0]).longValue())
+                .partyCode(partyCode)
+                .songName((String) row[1])
+                .requestedAt(requestedAt)
+                .playedAt(instant(row[3]))
+                .decision(switch (status) {
+                    case PLAYED -> DECISION_PLAYED;
+                    case WAITING -> DECISION_ACCEPTED;
+                    case SKIPPED, CLEARED, REJECTED_BY_AI -> DECISION_REJECTED;
+                })
+                .skippedAt(status == Status.SKIPPED ? requestedAt : null)
+                .clearedAt(status == Status.CLEARED ? requestedAt : null)
+                .votes(((Number) row[5]).intValue())
+                .tips(((Number) row[6]).intValue())
+                .dedications(((Number) row[7]).intValue())
+                .addedByDj(Boolean.TRUE.equals(row[8]))
+                .viaKiosk(Boolean.TRUE.equals(row[9]))
+                .build();
+    }
+
+    /** A {@code timestamptz} of a native query's row, as the driver gives it. */
+    private static Instant instant(Object value) {
+        return switch (value) {
+            case null -> null;
+            case Instant moment -> moment;
+            case OffsetDateTime moment -> moment.toInstant();
+            case java.sql.Timestamp moment -> moment.toInstant();
+            default -> throw new IllegalArgumentException("Not a moment: " + value.getClass());
+        };
+    }
+
+    // ---- the evening's title and the hosts' link (V61) ----
+
+    /** How the DJ named the evening and whether it has a hosts' link; empty when neither was ever given. */
+    @Transactional(readOnly = true)
+    public Optional<EveningSummaryEntity> evening(String partyCode, LocalDate evening) {
+        return eveningSummaryRepository.findByPartyCodeAndEvening(partyCode, evening);
+    }
+
+    /** The DJ's title of the evening: one line, at most {@value EveningSummaryEntity#TITLE_MAX} characters; empty clears it. */
+    @Transactional
+    public void saveTitle(String partyCode, LocalDate evening, String title) {
+        eveningSummaryRepository.saveTitle(partyCode, evening, tidyTitle(title), Instant.now());
+    }
+
+    static String tidyTitle(String title) {
+        if (title == null) {
+            return null;
+        }
+        String line = title.replaceAll("\\s+", " ").strip();
+        if (line.isEmpty()) {
+            return null;
+        }
+        return line.codePointCount(0, line.length()) <= EveningSummaryEntity.TITLE_MAX ? line
+                : line.substring(0, line.offsetByCodePoints(0, EveningSummaryEntity.TITLE_MAX)).strip();
+    }
+
+    /** A new hosts' link of the evening, working {@value #SHARE_DAYS} days — an old one stops; its secret. */
+    @Transactional
+    public String share(String partyCode, LocalDate evening) {
+        String token = CodeGenerator.generateSecret();
+        Instant now = Instant.now();
+        eveningSummaryRepository.saveShare(partyCode, evening, token, now.plus(Duration.ofDays(SHARE_DAYS)), now);
+        return token;
+    }
+
+    /** The evening's hosts' link switched off. */
+    @Transactional
+    public void stopSharing(String partyCode, LocalDate evening) {
+        eveningSummaryRepository.saveShare(partyCode, evening, null, null, Instant.now());
+    }
+
+    /** The evening a hosts' link opens, while it works; empty for an unknown, old or switched-off one. */
+    @Transactional(readOnly = true)
+    public Optional<EveningSummaryEntity> shared(String token) {
+        if (token == null || token.isEmpty() || token.length() > 32) {
+            return Optional.empty();
+        }
+        return eveningSummaryRepository.findByShareToken(token).filter(evening -> evening.shareWorks(Instant.now()));
     }
 
     @Transactional(readOnly = true)

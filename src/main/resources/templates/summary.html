@@ -2,8 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
 <head>
     <meta charset="UTF-8">
-    <title th:text="#{summary.title}">Evening summary - Scan2Play</title>
+    <title th:text="${eveningTitle != null ? eveningTitle + ' · ' + #messages.msg('summary.title') : #messages.msg('summary.title')}">Evening summary - Scan2Play</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- the hosts' link (V61): a page of its secret address, never indexed -->
+    <meta th:if="${shared}" name="robots" content="noindex, nofollow">
     <!-- a white page to print: a browser's own dark mode (Samsung Internet) must not darken it -->
     <meta name="color-scheme" content="only light">
     <link href="/css/summary.css" th:href="@{/css/summary.css}" rel="stylesheet">
@@ -14,18 +16,23 @@
     library's gaps, the artists of several songs, the new requests every half-hour, what played) and the hosts' ("Dla gospodarzy",
     view=hosts: what to give the couple or the client — the votes, the played, the busiest half-hour, the first and the last song, the
     most wanted, when the guests asked, what played; nothing of the AI's rejections, the skipped and cleared, the library, the tips).
-    The bar at the top is not printed: the evening to show, the version, print, and under "⋯" the CSV file and the way back.
+    The bar at the top is not printed: the evening to show (by month), the version, print, and under "⋯" the CSV file and the way back.
+    In the hosts' version the DJ names the evening and makes its hosts' read-only link (V61, not printed). Opened by that link
+    (shared, SharedSummaryController) the page is the hosts' version alone: no bar, no DJ's controls, no DJ's script.
 */-->
-<body th:with="times=${T(com.scan2play.util.Times)}, hostsView=${hostsView == true}">
+<body th:with="times=${T(com.scan2play.util.Times)}, hostsView=${hostsView == true}, shared=${shared == true}">
 
-<nav class="toolbar no-print">
+<nav th:unless="${shared}" class="toolbar no-print">
     <form th:unless="${#lists.isEmpty(evenings)}" action="/dj/summary" th:action="@{/dj/summary}" method="get" class="pick">
         <input type="hidden" name="party" th:value="${partyCode}">
         <input th:if="${hostsView}" type="hidden" name="view" value="hosts">
         <label for="eveningSelect" class="visually-hidden" th:text="#{summary.evening}">Evening:</label>
+        <!--/* the evenings by month (up to 52: 13 months of them are kept) — a long list stays one to find a month in */-->
         <select id="eveningSelect" name="evening">
-            <option th:each="e : ${evenings}" th:value="${e.day}" th:selected="${e.day == evening}"
-                    th:text="${#temporals.format(e.day, 'EEEE, dd.MM', #locale) + ' · 👍 ' + e.votes}">sobota, 03.10 · 👍 34</option>
+            <optgroup th:each="month : ${eveningMonths}" th:label="${#temporals.format(month.first, 'LLLL yyyy', #locale)}" label="październik 2026">
+                <option th:each="e : ${month.evenings}" th:value="${e.day}" th:selected="${e.day == evening}"
+                        th:text="${#temporals.format(e.day, 'EEEE, dd.MM', #locale) + ' · 👍 ' + e.votes}">sobota, 03.10 · 👍 34</option>
+            </optgroup>
         </select>
         <button type="submit" th:text="#{summary.show}">Show</button>
     </form>
@@ -52,11 +59,53 @@
         Without the AI's rejections, the skipped, your library and the tips.</p>
 </nav>
 
+<!--/* the hosts' version on the DJ's page: the evening's title and its hosts' link (V61) — the DJ's controls, never printed */-->
+<section th:if="${hostsView and !shared and summary != null}" class="hosts-panel no-print" id="hostsPanel">
+    <h2 th:text="#{summary.hosts.panel}">For the hosts</h2>
+    <p class="help" th:text="#{summary.hosts.panel.help}">Name the evening and give the hosts a link.</p>
+    <form action="/dj/summary/title" th:action="@{/dj/summary/title}" method="post" class="row" id="titleForm">
+        <input type="hidden" name="evening" th:value="${evening}">
+        <input type="hidden" name="party" th:value="${partyCode}">
+        <label for="eveningTitle" th:text="#{summary.title.label}">The evening's title</label>
+        <input type="text" id="eveningTitle" name="title" maxlength="60" th:value="${eveningTitle}"
+               th:placeholder="#{summary.title.placeholder}" placeholder="e.g. Anna and Tom's wedding">
+        <button type="submit" th:text="#{summary.title.save}">Save</button>
+    </form>
+    <th:block th:if="${shareLink != null}">
+        <div class="row" id="shareRow">
+            <label for="shareLinkInput" th:text="#{summary.share.label}">The hosts' link</label>
+            <input type="text" id="shareLinkInput" readonly th:value="${shareLink}" value="https://www.scan2play.com.pl/s/abc">
+            <button type="button" data-copy-target="shareLinkInput" th:attr="data-copied=#{summary.share.copied}"
+                    th:text="#{summary.share.copy}">Copy</button>
+        </div>
+        <p class="help" id="shareUntil" th:text="#{summary.share.until(${shareUntil})}">Works until 04.12.</p>
+        <div class="row">
+            <form action="/dj/summary/share" th:action="@{/dj/summary/share}" method="post">
+                <input type="hidden" name="evening" th:value="${evening}">
+                <input type="hidden" name="party" th:value="${partyCode}">
+                <button type="submit" th:text="#{summary.share.new}">New link</button>
+            </form>
+            <form action="/dj/summary/share/off" th:action="@{/dj/summary/share/off}" method="post" th:attr="data-confirm=#{summary.share.off.confirm}">
+                <input type="hidden" name="evening" th:value="${evening}">
+                <input type="hidden" name="party" th:value="${partyCode}">
+                <button type="submit" class="danger" id="shareOff" th:text="#{summary.share.off}">Switch the link off</button>
+            </form>
+        </div>
+    </th:block>
+    <form th:unless="${shareLink != null}" action="/dj/summary/share" th:action="@{/dj/summary/share}" method="post" id="shareForm">
+        <input type="hidden" name="evening" th:value="${evening}">
+        <input type="hidden" name="party" th:value="${partyCode}">
+        <button type="submit" id="shareMake" th:text="#{summary.share.make}">Make a link for the hosts</button>
+    </form>
+</section>
+
 <main th:classappend="${hostsView} ? 'hosts' : ''">
     <header class="head">
         <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="dj-logo" id="djLogo" alt="DJ">
         <div class="titles">
-            <h1 th:text="#{summary.title}">Evening summary</h1>
+            <!--/* the DJ's title of the evening (V61) heads the page, "Podsumowanie wieczoru" small above it */-->
+            <p th:if="${eveningTitle != null}" class="kind" th:text="#{summary.title}">Evening summary</p>
+            <h1 th:text="${eveningTitle != null ? eveningTitle : #messages.msg('summary.title')}">Evening summary</h1>
             <p th:if="${evening != null}" class="when">
                 <span th:text="${#temporals.format(evening, 'EEEE, dd.MM.yyyy', #locale)}">sobota, 03.10.2026</span>
                 <span th:if="${!hostsView and summary != null and summary.first != null}"
@@ -66,8 +115,8 @@
         </div>
     </header>
 
-    <p th:if="${#lists.isEmpty(evenings)}" class="empty" id="noEvenings" th:text="#{summary.none}">No requests yet.</p>
-    <p th:if="${!#lists.isEmpty(evenings) and summary != null and summary.requests == 0}" class="empty" id="emptyEvening"
+    <p th:if="${!shared and #lists.isEmpty(evenings)}" class="empty" id="noEvenings" th:text="#{summary.none}">No requests yet.</p>
+    <p th:if="${(shared or !#lists.isEmpty(evenings)) and summary != null and summary.requests == 0}" class="empty" id="emptyEvening"
        th:text="#{summary.empty_evening}">No requests that evening.</p>
 
     <th:block th:if="${summary != null and summary.requests > 0}">
@@ -228,7 +277,7 @@
     </footer>
 </main>
 
-<script src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
+<script th:unless="${shared}" src="/js/dj-nav.js" th:src="@{/js/dj-nav.js}"></script>
 <script src="/js/summary.js" th:src="@{/js/summary.js}"></script>
 </body>
 </html>

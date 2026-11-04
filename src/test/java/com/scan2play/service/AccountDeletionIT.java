@@ -153,6 +153,22 @@ class AccountDeletionIT extends PostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM feedback WHERE owner_id = ?", Integer.class, owner)).isZero();
     }
 
+    /** The evening summary's kept songs, titles and hosts' links (V61) go with the account: the party's row takes them along. */
+    @Test
+    void theEveningsKeptSongs_goWithTheAccount() {
+        String owner = "deleted-" + System.nanoTime();
+        String partyCode = party(owner).getPartyCode();
+        jdbc.update("INSERT INTO evening_song (song_request_id, party_code, song_name, requested_at, status, votes, tips, dedications,"
+                + " added_by_dj, via_kiosk) VALUES (?, ?, 'Wilki - Baśka', now(), 'PLAYED', 1, 0, 0, false, false)", -System.nanoTime(), partyCode);
+        jdbc.update("INSERT INTO evening_summary (party_code, evening, title, share_token, share_expires_at, updated_at)"
+                + " VALUES (?, current_date, 'Wesele Ani i Tomka', ?, now() + interval '1 day', now())", partyCode, "t" + System.nanoTime());
+
+        deletion.deleteAllUserData(owner);
+
+        assertThat(count("evening_song", partyCode)).isZero();
+        assertThat(count("evening_summary", partyCode)).isZero();
+    }
+
     /** The organiser's address (V48), kept to write to them, goes with the account — nowhere in the database afterwards. */
     @Test
     void theOrganisersAddress_goesWithTheAccount() {

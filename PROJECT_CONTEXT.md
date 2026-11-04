@@ -251,6 +251,14 @@ the queue reads the table (`findNewest`, the newest 3 a song, a window query on 
 one. Only the DJ sees them (the queue), never the other guests; plan Free (the owner); the DJ can switch them off
 (`party_settings.dedications_on`, the owner 2026-10-17).
 
+**`EveningSummaryEntity` → `evening_summary`** (V61) — one evening of a party the DJ named or shared: `partyCode` (FK, `ON DELETE /
+UPDATE CASCADE`), `evening` (a date; UNIQUE with the party), `title` (≤ 60, the DJ's), `shareToken` (≤ 32, UNIQUE, the hosts' link
+`/s/{token}`) and `shareExpiresAt`, `updatedAt`; written by upserts (`EveningSummaryRepository.saveTitle`, `saveShare`). **`evening_song`**
+(V61, no entity — native SQL only): what "Podsumowanie wieczoru" keeps of a deleted request — `song_request_id` (PK), `party_code` (FK,
+cascades as above), `song_name` (null for one the AI rejected), `requested_at`, `played_at`, `status` (PLAYED / WAITING / SKIPPED / CLEARED
+/ REJECTED_BY_AI), `votes`, `tips`, `dedications`, `added_by_dj`, `via_kiosk`; indexes `(party_code, requested_at)` and `(requested_at)`
+(the purge). Both kept 13 months (Section 5.1).
+
 **`FeedbackEntity` → `feedback`** — the DJ's bug reports and ideas (`message` ≤ 2000).
 
 **`PushSubscriptionEntity` → `push_subscription`** (V21) — one of the DJ's browsers that takes notifications of new requests:
@@ -791,16 +799,27 @@ one's heading). **"Wyczyść historię"** (shown while the history is not empty;
 `POST /dj/dashboard/clear-history` (`DjService.clearHistory`, under the party's lock "S2PR"): the party's played and rejected requests
 are **deleted**, the guests' words with them — never a waiting one, and never one the DJ skipped within the last 2 hours (it keeps its
 song out of the queue and stays in the history until that ends). The AI's duplicate rule reads the played songs, so after it the AI no
-longer knows what played. The History tab sends it in the background and loads itself again (`s2p:history-changed`).
+longer knows what played. The evening summary keeps their songs (V61, `evening_song`, copied by the same statement — below). The
+History tab sends it in the background and loads itself again (`s2p:history-changed`).
 
 **"Podsumowanie wieczoru"** (beside "Wyczyść historię", a new tab; its question points to it — on a phone both under one "⋯" beside the
 history's filters, the search the whole width under them: two rows above the first entry, not three, 2026-10-28;
 `.s2p-history-more`, `history-actions-menu-phone`, `history-actions-row-wide`): `/dj/summary`
 (`DjSummaryController`, `EveningSummaryService`, `summary.html`) — one evening of the DJ's own party (no party code asked for) on a
 white page to print or save as PDF ("🖨 Drukuj / PDF", `js/summary.js`, `css/summary.css`): an **evening runs from 6:00 to 6:00 Polish
-time** (`EVENING_STARTS`; a wedding past midnight is one evening); the evenings with requests to pick (≤ 31, latest first, with their
-guests' votes, "sobota, 03.10 · 👍 34" — `SongRequestRepository.findEvenings`, native SQL with the same 6 hours, the votes as the page
-counts them; `SongRequestRepositoryIT`). **A song is counted once:** one asked for again — after it played (out of the AI's duplicate
+time** (`EVENING_STARTS`; a wedding past midnight is one evening); the evenings with requests to pick (≤ 52, latest first, grouped by
+month — `<optgroup>` "listopad 2026" —, with their guests' votes, "sobota, 03.10 · 👍 34" — `SongRequestRepository.findEvenings`, native
+SQL with the same 6 hours over both tables below, the votes as the page counts them; `SongRequestRepositoryIT`, `EveningSummaryIT`).
+**An evening lasts 13 months** (V61): what the summary needs of a request is copied into `evening_song` by the very statement that deletes
+it — "Wyczyść historię" (`deleteHistory`) and the 30 days' purge (`deleteRequestedBefore`), `WITH gone AS (DELETE … RETURNING *)` +
+`SongRequestRepository.KEEP_FOR_THE_SUMMARY`: the song's name (none for a request the AI rejected — that is what the guest typed), the
+times, the status, votes, tips, the count of dedications, added by the DJ, from the kiosk; never a guest's words, an AI comment, a
+dedication's text or who asked. So clearing the history, even in the middle of a party, loses nothing of the summary, and no job is
+needed. `EveningSummaryService.requests` reads an evening from both tables (`findSongsBetween`, ≤ 2000; a request is in one of them) and
+turns a kept song back into the request the summary counts (`fromKept`). The nightly purge (`SongRequestRetentionService`, 04:45) deletes
+the kept songs and the evenings' rows 13 months after the evening (`SUMMARY_MONTHS`); the party's row takes both along (the account's
+deletion, `AccountDeletionIT`) and a new party code moves them (`ON UPDATE CASCADE`, `PartyCodeChangeIT`). The privacy policy (PL / EN,
+section 5) says so. **A song is counted once:** one asked for again — after it played (out of the AI's duplicate
 window), after "Wyczyść kolejkę", two hours after a skip — is a row of its own, and the lists put its rows together by `LibraryKey`
 (`EveningSummaryService.Song`: the votes and tips added, how often it played, its best end — played, waiting, skipped, cleared), so a song
 that played and was asked for again is one line of the most wanted and never "wanted, not heard". **Two versions** (the bar's "Dla mnie" /
@@ -817,10 +836,17 @@ back is two bars of "02:00"), what played in the order it played (folded on a ph
 hosts'** (the couple, the client): three big numbers (the votes, the songs played on request, the busiest half-hour), the first request and
 the last song played, the 10 most wanted (votes only), "Kiedy goście prosili", what played — nothing of the AI's rejections, the skipped
 and cleared, the library, the tips, the dedications; one A4 page for about forty played songs (browser scenario `summary-hosts-one-a4`).
-The DJ's logo beside the title, our logo at the foot; the bar (not printed): the evening, the version, "Drukuj / PDF", and under "⋯" the
-CSV, the way back and the hint (`summary-phone-compact`, `summary-wide-one-row`, `summary-copy-library`). All from one bounded read of the
-evening's requests (`findRequestedBetween`, ≤ 2000) — so it lasts as `song_requests` do (30 days) and goes with "Wyczyść historię" (its
-question says to open the summary first). `/dj/summary/csv`: the same evening as a CSV
+**In the hosts' version, the panel "Dla gospodarzy"** (not printed, `#hostsPanel`): "Tytuł wieczoru" (≤ 60, one line; `POST
+/dj/summary/title`; the page's heading then, "Podsumowanie wieczoru" small above it — the DJ's version too) and **the hosts' read-only
+link** — "Utwórz link dla gospodarzy" (`POST /dj/summary/share`: a secret of 128 bits, `evening_summary.share_token`, works 30 days,
+`SHARE_DAYS`), then the address with "Kopiuj" (`dj-nav.js`), "Działa do 24.11.", "Nowy link" (the old one stops) and "Wyłącz link"
+(asks first; `POST /dj/summary/share/off`). Title and link: one row of `evening_summary` an evening (upserts on `(party_code, evening)`),
+only for an evening the party has (else 404), with the permission SUMMARY and Pro. **`/s/{token}`** (`SharedSummaryController`, public
+GET): the hosts' version alone — no bar, no panel, no `dj-nav.js` —, `X-Robots-Tag: noindex` (`NoIndexFilter`) and a robots meta,
+`Referrer-Policy: no-referrer`, `Cache-Control: no-store`; an unknown, old or switched-off link, or a party whose plan has no summary any
+more, is a 404 (`summary-shared-page`, `summary-hosts-panel-phone`). The DJ's logo beside the title, our logo at the foot; the bar (not
+printed): the evening (300 px on a computer), the version, "Drukuj / PDF", and under "⋯" the CSV, the way back and the hint — one compact
+row on a computer, three on a phone (`summary-phone-compact`, `summary-wide-one-row`, `summary-copy-library`). `/dj/summary/csv`: the same evening as a CSV
 file (`scan2play-<day>.csv`; BOM and ";" for Excel, the DJ's language, every value quoted, and one that starts with `= + - @` or a tab
 gets an apostrophe — a guest's text is never a formula); a row a request, after the columns of before how long a played one waited, its
 artist and title apart and the count of its dedications, then "W bibliotece" with a library.
@@ -1021,7 +1047,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `StaffController` | the staff's invitation `/join/{token}` (public; "Dołącz" a POST), the panel switcher `POST /dj/panel`, leaving a staff, a pasted link (V30); the owner's page "Obsługa" `/dj/staff`: permissions, the link and its role (V33), removing (V32), invitations by e-mail and their answer `/dj/invitation` (V34) |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
 | `DjSongController` | add a song by hand ("Dodaj piosenkę", V44), mark played, skip, clear the queue, count a tip ("💸", V28) |
-| `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`) |
+| `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`), the evening's title and hosts' link (`/dj/summary/title`, `/dj/summary/share`, `/dj/summary/share/off`) |
 | `PartyLogoController` | the DJ's logo (V45, Pro, the organiser alone): `POST /dj/logo` — the picture as the request's body (`js/dashboard/logo.js`), ≤ 2 MB, made our own PNG by `LogoImage`, answered with one sentence (200 saved, 413 too large, 422 not a PNG / JPEG, too many pixels, unreadable, 503 busy); `POST /dj/logo/delete` (no plan needed); `GET /p/{code}/logo.png` (public, ETag, an hour's cache) |
 | `DjLibraryController` | the DJ's library (V41, Pro, the organiser alone): `POST /dj/library` — the file as the request's body (`application/octet-stream`, `js/dashboard/library.js`; not a form's upload: Spring Security reads a form's body for the CSRF token before anything checks the login, so a large upload would be anyone's to send), read up to 64 MB, one file at a time on the server, answered with one sentence (200 saved, 413 too large, 422 not a library / no song / too many / a collection too large for one playlist, 503 another file being read); `POST /dj/library/delete` (no plan needed); `POST /dj/library/hints` (V58, "Podpowiedzi gości" — `on`; switched on only with Pro) |
 | `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days, and under it the organisers new in the last 7 days with their address (V48, `PartySettingsRepository.newOrganisers`, at most 50) — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
@@ -1029,6 +1055,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍; `GET /p/{code}/library/has` (V58: which of the guest's suggestions the DJ has, JSON, no session) |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account |
+| `SharedSummaryController` | an evening summary's hosts' link `/s/{token}` (V61): the hosts' version, without an account |
 | `LanguageSwitchAdvice` | every page's model: `langSwitch` — this page's address with `?lang=pl` / `?lang=en` for the footer's switch (2026-10-18); null for a POST |
 | `TvScreenController` | the screen for a TV `/p/{code}/tv` (Next 7 c, 2026-10-18): the party's QR code and the ten most wanted songs (`GuestQueueService.mostWanted`), public, no session; its list alone `/p/{code}/tv/list` |
 | `KioskController` | the venue's kiosk `/k/{token}` (V56, Pro): the request form and the most wanted with 👍 for guests without a phone, a guest's turn a session ("Następny gość"), the kiosk's own limits; a request through `GuestRequestService.fromKiosk` |
@@ -1048,7 +1075,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `PromptBuilder` | the prompt of a request (`src/main/resources/prompts`, per language): the request, the genre, the DJ's note, the songs played lately, the comment style, the dedication — pure text, out of `SongEvaluationService` since the review of 2026-10-21 (R1); `GeminiComparison` builds the same prompts, or a proposed rewrite of them |
 | `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
-| `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings, one evening's counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1); with a library (V42, Pro) "Nie masz w bibliotece" and the CSV's column "W bibliotece" |
+| `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings (by month), one evening's requests from `song_requests` and `evening_song` (V61), its counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1); with a library (V42, Pro) "Nie masz w bibliotece" and the CSV's column "W bibliotece"; the evening's title and hosts' link |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes — but a request the AI did not judge, V39, only to the guest who sent it); `mostWanted`: the first ten of that order, for the screen for a TV, only requests the AI judged |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |
 | `SongRequestCommandService` | saves a guest's request, or counts it as a vote on the same waiting song (advisory lock); a song the DJ adds (`addByTheDj`, V44) under the same lock; evicts `dashboardQueue` after the commit |
@@ -1439,6 +1466,7 @@ schema behind Flyway's back.
 | V57 | `dj_library_track.artist_name`, `title_name` varchar(200), `bpm` numeric(5,2), `tonality` varchar(10), `genre` varchar(100), `year` smallint, all nullable; `dj_library.with_details` boolean NOT NULL DEFAULT false: each song of the DJ's library as the file writes it, beside its key — only shown (the queue's tempo and key); the libraries of before stay, without them (`LibraryDetailsMigrationIT`, `DjLibraryIT`) |
 | V58 | `party_settings.library_hints` boolean NOT NULL DEFAULT true: the guests' song suggestions the DJ has first, "✓ DJ ma" — "Podpowiedzi gości" in the library's card (`MigrationIT`, `LibraryHintService`) |
 | V59 | `party_settings.guest_theme` varchar(10) NOT NULL DEFAULT 'CLASSIC' (check CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING): the look of the guests' pages, "Motyw dla gości" (`MigrationIT`, `GuestThemeTest` — the check is the enum) |
+| V61 | tables `evening_song` (what the evening summary keeps of a deleted request: `song_request_id` PK, `party_code` FK → `party_settings` ON DELETE / UPDATE CASCADE, `song_name` nullable, `requested_at` NOT NULL, `played_at`, `status` with a check of the five, `votes`, `tips`, `dedications`, `added_by_dj`, `via_kiosk`; indexes `idx_evening_song_party_time`, `idx_evening_song_time`) and `evening_summary` (`id` bigserial PK, `party_code` FK as above, `evening` date, `title` varchar(60), `share_token` varchar(32) with `uk_evening_summary_share_token`, `share_expires_at`, `updated_at`; `uk_evening_summary_party_evening`) — the summary for 13 months, its title and the hosts' link (`EveningSummaryIT`) |
 | V60 | data: `dj_library_track.title_key` with one word's two spellings made one, as `LibraryKey.SPELLINGS` makes the new keys ("ing" → "in", "number" → "no", on the key without spaces); two tracks of a party whose keys became one merged, the smaller key of before kept (`LibraryKeySpellingsMigrationIT`) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
@@ -1485,6 +1513,7 @@ HostController             → PartySettingsRepository, PartySettingsCommandServ
 TvScreenController         → PartySettingsQueryService, GuestQueueService, QrCodeService, PlanService
 DjSongController           → DjService, DjSessionHelper, PlanService
 DjSummaryController        → EveningSummaryService, DjSessionHelper, MessageSource, PlanService
+SharedSummaryController    → EveningSummaryService, PartySettingsRepository, PlanService
 DjLibraryController        → DjLibraryService, DjSessionHelper, PlanService, MessageSource
 PartyLogoController        → PartyLogoService, PartySettingsQueryService, DjSessionHelper, PlanService, MessageSource
 DjService                  → SongRequestRepository, SongRequestDedicationRepository, CacheManager, DjLibraryService (the queue's library marks)
@@ -1515,6 +1544,7 @@ GuestQueueService          → DjService
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |
 | POST | `/p/{partyCode}/vote` | a guest's 👍: `id`, `on` (false = take it back); with `X-Requested-With: fetch` that song's row (or a note), else a redirect to the party page |
 | GET | `/h/{token}` | the hosts' lists (V29): no account, the secret is the key; 404 for an unknown or old one, or one made more than 30 days ago (V37) |
+| GET | `/s/{token}` | an evening summary's hosts' link (V61): the hosts' version, no account; 404 for an unknown, old or switched-off one, or without the summary in the party's plan |
 | GET | `/k/{token}` | the venue's kiosk (V56, Pro): the request form and the most wanted with 👍, or — closed — when it opens; a session (the guest's turn, the forms' CSRF token); the kiosk's cookie `S2P_KIOSK`; 404 for an unknown token or a party without Pro; `noindex` |
 | GET | `/k` | the same kiosk by its cookie (the address kiosk.js shows: the secret out of the address bar); 404 without it or with a token made new since |
 | GET | `/k/{token}/list` | the kiosk's list alone (`kiosk :: kioskList`), fetched by `kiosk.js` every 10 s |
@@ -1578,6 +1608,7 @@ GuestQueueService          → DjService
 | POST | `/dj/library/delete` | `partyCode`: the library deleted (the organiser, any plan); back to `/dj/settings#libraryCard` |
 | POST | `/dj/library/hints` | `partyCode`, `on`: "Podpowiedzi gości" (V58, the organiser; `on=true` needs Pro); back to `/dj/settings#libraryCard` |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests), on the page `view` ("hosts": the hosts' version): the evening summary, its CSV (404 with no evening) |
+| POST | `/dj/summary/title`, `/dj/summary/share`, `/dj/summary/share/off` | `evening` (one the party has, else 404), `title`: the evening's title, a new hosts' link (30 days), the link switched off (V61); back to the hosts' version |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
 | POST | `/dj/dashboard/guest-theme` | "Motyw dla gości" (V59, VIBE, any plan): `partyCode`, `theme` (CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING, anything else CLASSIC); with `X-Requested-With: fetch` the card alone (`settings :: guestThemeCard`, `guestThemeSaved`), else back to `/dj/settings#guestThemeCard` |

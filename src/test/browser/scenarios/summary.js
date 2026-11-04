@@ -47,6 +47,48 @@
             const bar = ['eveningSelect', 'viewHosts', 'printBtn'].map(function (id) { return document.getElementById(id).getBoundingClientRect().top; });
             t.check('the evening, the version and "Drukuj" in one row', Math.max.apply(null, bar) - Math.min.apply(null, bar) < 8);
             t.step('what played unfolded', document.getElementById('setlistFold').open, true);
+            // one compact row: the evening as wide as its line, the version as wide as its words — not half the screen each
+            t.check('the evening\'s list at most 320 px wide', document.getElementById('eveningSelect').getBoundingClientRect().width <= 320);
+            t.check('the version at most 360 px wide', document.getElementById('views').getBoundingClientRect().width <= 360);
+            const groups = Array.prototype.map.call(document.querySelectorAll('#eveningSelect optgroup'), function (g) { return g.label; });
+            t.step('the evenings by month', groups, ['październik 2026', 'wrzesień 2026']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'summary-hosts-panel-phone',
+        title: 'the hosts\' version on a phone: the evening\'s title and its link in a panel above the page (not printed), every control 44 px, "Kopiuj" copies the link',
+        page: 'summary-hosts-linked-pl',
+        viewport: '390,844',
+        run: async function (t) {
+            const html = document.documentElement;
+            t.check('nothing wider than the screen', html.scrollWidth <= html.clientWidth);
+            const panel = document.getElementById('hostsPanel');
+            const controls = panel.querySelectorAll('input[type="text"], button');
+            t.check('every field and button of the panel at least 44 px high',
+                Array.prototype.every.call(controls, function (c) { return c.getBoundingClientRect().height >= 44; }));
+            t.step('the title heads the page', document.querySelector('main h1').textContent.trim(), 'Wesele Ani i Tomka');
+            const written = [];
+            Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+                writeText: function (text) { written.push(text); return Promise.resolve(); }
+            } });
+            panel.querySelector('button[data-copy-target="shareLinkInput"]').click();
+            await t.waitFor(function () { return written.length > 0; }, 'the clipboard written', 2000);
+            t.step('"Kopiuj" copies the link', written, [document.getElementById('shareLinkInput').value]);
+            t.step('the panel is not printed', getComputedStyle(panel).getPropertyValue('display') !== 'none'
+                && panel.classList.contains('no-print'), true);
+        }
+    });
+
+    S2P.scenario({
+        name: 'summary-shared-page',
+        title: 'the hosts\' link (/s/…): the hosts\' version alone — no bar, no panel — on one A4 page, under the real policy',
+        page: 'summary-shared-pl',
+        pdf: 1,
+        run: async function (t) {
+            t.step('no bar, no panel', [!!document.querySelector('.toolbar'), !!document.getElementById('hostsPanel')], [false, false]);
+            t.step('the title heads the page', document.querySelector('main h1').textContent.trim(), 'Wesele Ani i Tomka');
+            t.step('what played unfolded', document.getElementById('setlistFold').open, true);
         }
     });
 

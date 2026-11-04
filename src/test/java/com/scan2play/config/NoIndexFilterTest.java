@@ -18,7 +18,7 @@ class NoIndexFilterTest {
 
     @Test
     void thePagesOfOneParty_orOnePerson_areNotIndexed() throws Exception {
-        for (String path : new String[]{"/p/ABC12", "/p/ABC12/queue/more", "/h/token", "/k", "/k/token", "/join", "/join/token", "/dj/dashboard", "/dj/settings"}) {
+        for (String path : new String[]{"/p/ABC12", "/p/ABC12/queue/more", "/h/token", "/s/token", "/k", "/k/token", "/join", "/join/token", "/dj/dashboard", "/dj/settings"}) {
             assertThat(robotsOf(path)).as(path).isEqualTo("noindex, nofollow");
         }
     }

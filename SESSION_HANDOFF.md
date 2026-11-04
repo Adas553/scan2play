@@ -157,9 +157,18 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    measured, the feel is not), Nosifer's "Gra: …" with a long DJ name, the TV at the venue; a photo of the TV in "Straszny" for Instagram.
    Next, only if DJs ask: the DJ's own colours (Pro, on the same tokens: a contrast fix and the statuses' hues kept away), more themes
    (each a block of tokens and an SVG; `GuestThemesCssTest` checks it), a summer one once a hue far from the statuses and the cyan is found.
-9. **"Podsumowanie wieczoru" — v1 of the analysis** (the artifact https://claude.ai/artifact/C9kWpRuZ8h5pbnbPDS6Fvx; the owner,
-   2026-11-04: "Zrób v1 w całości, potem zaczniemy v2", the open questions left to me) — **built on `claude/vibrant-maxwell-j5kxed`,
-   waiting for the owner's review** (no migration). The numbers: a song asked for again is one line (`EveningSummaryService.Song`, by
+9. **"Podsumowanie wieczoru" — v1 and v2 of the analysis** (the artifact https://claude.ai/artifact/C9kWpRuZ8h5pbnbPDS6Fvx; the owner,
+   2026-11-04: "Zrób v1 w całości, potem zaczniemy v2", the open questions left to me; then "zrób razem z v2" for the bar's width on a
+   computer) — **both on `claude/vibrant-maxwell-j5kxed`** (v1 pushed as `40f7f89`; v2 after it), **waiting for the owner's review**,
+   then a release with **V61** (check Flyway's line once). **v2:** an evening lasts 13 months — instead of a snapshot of the counts
+   (planned), the statement that deletes requests ("Wyczyść historię", the 30 days' purge) copies what the summary needs of each into
+   `evening_song` (`KEEP_FOR_THE_SUMMARY`; no guest's words, no name of a request the AI rejected): a clear in the middle of a party
+   loses nothing and no 06:30 job is needed; the page reads both tables. The evenings' list up to 52, by month; the DJ's title of the
+   evening and the hosts' read-only link `/s/{token}` (30 days, one an evening, "Nowy link", "Wyłącz link", `noindex`, no referrer) in
+   the panel "Dla gospodarzy" of the hosts' version (`evening_summary`); the bar one compact row on a computer (the owner's screenshot:
+   the list half the screen wide); the privacy policy's section 5 and "Wyczyść historię"'s question say the summary keeps the songs.
+   Tests: `EveningSummaryIT` (seen red without the copy), `AccountDeletionIT`, `PartyCodeChangeIT`, browser scenarios
+   `summary-hosts-panel-phone`, `summary-shared-page`. Kept for Free too (the copy does not ask the plan), read with Pro. **v1:** (no migration). The numbers: a song asked for again is one line (`EveningSummaryService.Song`, by
    `LibraryKey`) — it was twice in the most wanted and in "Chcieli, a nie usłyszeli" though it played; four counts (played, the guests'
    votes, the songs wanted, rejected by the AI), the rest in a line; the evenings' list with the votes (`findEvenings`,
    `SongRequestRepositoryIT`); the half-hours counted in time (the night the clocks go back). The look: the bar in three rows on a phone
@@ -167,11 +176,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    in two columns on paper. "Dla mnie / Dla gospodarzy" (`view=hosts`): the hosts' version without the DJ's own — one A4 page for ~40
    played. "Kopiuj listę" of the library's gaps; the CSV with four columns at the end. My picks: the switch on the same page; the hosts'
    version without "Chcieli, a nie usłyszeli"; no title from the poster (its heading is a call like "Piosenka dla Pary", and today's, not
-   that evening's) — a title typed by the DJ comes with v2's snapshot. Details: `PROJECT_CONTEXT.md` 5.1. **Next — v2:** a snapshot
-   `evening_summary` (V61; counts and song names only, no guests' words; written by a job at 06:30 and before "Wyczyść historię";
-   kept 13 months, gone with the account; written for Free too, read with Pro), the evenings' list up to 52, the title typed by the DJ,
-   and a read-only link for the hosts (`/s/{token}`, 30 days, one an evening, the DJ can switch it off, `noindex`); then v3 (the
-   picture "Do internetu" — Pro —, comparing evenings, the AI's reasons in categories).
+   that evening's) — the title is the DJ's, typed (v2). Details: `PROJECT_CONTEXT.md` 5.1. **Next — v3, when the owner says:** the
+   picture "Do internetu" (story / post from the hosts' version, as `qr-social.js`; Pro), comparing evenings (the last 8, for a club),
+   the AI's reasons in categories; the morning e-mail with the link waits for item 1c's sender.
 
 ## Later (not now)
 
