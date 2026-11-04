@@ -239,6 +239,7 @@ public class DjDashboardController {
             model.addAttribute(LIBRARY_UPLOADED, library.map(info -> Times.day(info.uploadedAt())).orElse(null));
             model.addAttribute(LIBRARY_PLAYLIST, library.map(DjLibraryService.Info::playlist).orElse(null));
             // a rekordbox library uploaded before V57: its keys alone — uploaded again, the queue shows the tempo and the key
+            model.addAttribute(LIBRARY_HINTS, settings.isLibraryHints());   // "Podpowiedzi gości" (V58)
             model.addAttribute(LIBRARY_OLD, library.map(info -> !info.withDetails() && info.format() == DjLibraryParser.Format.REKORDBOX)
                     .orElse(false));
             model.addAttribute(LIBRARY_MAX_BYTES, DjLibraryController.MAX_BYTES);

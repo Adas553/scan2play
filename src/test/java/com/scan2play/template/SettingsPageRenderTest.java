@@ -302,7 +302,7 @@ class SettingsPageRenderTest {
                         "action=\"/dj/library\"", "id=\"libraryFile\"", "accept=\".xml,.m3u,.m3u8\"", "data-sending=\"Wgrywanie…\"",
                         "data-refused=\"Nie udało się wgrać pliku.", "id=\"libraryAnswer\" role=\"status\" hidden",
                         "Plik → Eksportuj kolekcję w formacie XML", ">Nie masz jeszcze wgranej biblioteki.<")
-                .doesNotContain("action=\"/dj/library/delete\"");
+                .doesNotContain("action=\"/dj/library/delete\"", "libraryHintsForm");
         write("settings.html", html);
     }
 
@@ -325,6 +325,11 @@ class SettingsPageRenderTest {
                 "id=\"libraryUpload\" disabled", ">Jak przygotować plik?<",
                 ">Przy każdej prośbie w kolejce zobaczysz, czy masz ten utwór, a z kolekcji rekordboxa także jego tempo i tonację.")
                 .as("uploaded with its tempo and key (V57): nothing to ask").doesNotContain("s2p-library-old");
+        // "Podpowiedzi gości" (V58): saved as picked, on by default, and it says that nothing is refused by it
+        assertThat(html).contains("action=\"/dj/library/hints\"", "id=\"libraryHintsForm\"", ">Podpowiedzi gości<",
+                "<option value=\"true\" selected=\"selected\">Najpierw Twoje utwory, z „✓ DJ ma”</option>",
+                "<option value=\"false\">Bez zaznaczania</option>", "Prośby o inne przyjmujemy jak dotąd.");
+        assertThat(html.indexOf("id=\"libraryHintsSelect\" name=\"on\" data-auto-submit")).isPositive();
         write("settings-library.html", html);
     }
 

@@ -91,6 +91,11 @@ public final class ViewAttributes {
     public static final String LAST_REQUEST = "lastRequest";
     /** The dedication of a request sent back to the form (V38), as the guest typed it. */
     public static final String LAST_DEDICATION = "lastDedication";
+    /**
+     * The guest's song field asks which suggestions the DJ has (V58, {@code LibraryHintService.on}); the organiser's library card: the
+     * switch as saved ({@code PartySettingsEntity.libraryHints}).
+     */
+    public static final String LIBRARY_HINTS = "libraryHints";
     /** Whether the guests may add a dedication (V38, {@code PartySettingsEntity.dedicationsOn}). */
     public static final String DEDICATIONS_ON = "dedicationsOn";
     /** The newest dedications of the queue's songs (V38), by the song's id ({@code DjService.dedicationsOf}). */

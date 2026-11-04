@@ -19,6 +19,11 @@
  *
  * Only the answer for what the field says now is shown: one that comes after the guest typed on (or cleared the field) is
  * dropped. The field is an ARIA combobox: aria-expanded, aria-controls, aria-activedescendant on the chosen suggestion.
+ *
+ * The DJ's library (V58): a field with data-library-url (the party page and the kiosk, when the party has a library and its DJ lets
+ * the suggestions be marked) asks our server which of the suggestions the DJ has, and shows those first with data-library-label
+ * ("✓ DJ ma"), each part in iTunes's order. The list waits for that answer at most LIBRARY_WAIT_MS: a slow or failed one leaves the
+ * suggestions as iTunes gave them — a guest is never held up by it, and nothing is refused by it.
  */
 
 (function () {
@@ -35,6 +40,8 @@
     const STORE         = 'PL';
     const MIN_CHARS     = 2;
     const CACHE_MAX_SIZE = 50;  // evict oldest entries beyond this limit
+    const LIBRARY_WAIT_MS = 600;       // the longest the list waits for "which does the DJ have"
+    const LIBRARY_CACHE_MAX = 500;     // songs remembered as had / not had
 
     // -------------------------------------------------------------------------
     // Module-level result cache  (query string → results array)
@@ -42,6 +49,9 @@
     // second one gets the cached answer instantly without a network round-trip.
     // -------------------------------------------------------------------------
     const resultCache = new Map();
+
+    /** Whether the DJ has a song, by the field's library address and the song ("…|Wilki - Baśka" → true): asked once for each. */
+    const libraryCache = new Map();
 
     /** Lower case, without accents ("Żółta" → "zolta"; ł has none to take away): what a guest types without Polish letters. */
     function plain(text) {
@@ -80,6 +90,18 @@
         resultCache.set(key, value);
     }
 
+    function libraryCacheSet(key, value) {
+        if (libraryCache.size >= LIBRARY_CACHE_MAX) {
+            libraryCache.delete(libraryCache.keys().next().value);
+        }
+        libraryCache.set(key, value);
+    }
+
+    /** A suggestion as our server reads a song: "Artist - Title". */
+    function songOf(track) {
+        return (track.artistName || '') + ' - ' + (track.trackName || '');
+    }
+
     // -------------------------------------------------------------------------
     // Module-level debounce utility — standard pattern with own timer closure.
     // -------------------------------------------------------------------------
@@ -112,6 +134,8 @@
         let activeIndex       = -1;
         let currentController = null;
         let touchingDropdown  = false; // true while a touch sequence is on the dropdown
+        const libraryUrl      = input.dataset.libraryUrl || null;    // the DJ's library to ask (V58), none: suggestions unmarked
+        const libraryLabel    = input.dataset.libraryLabel || '';
 
         // --- Build dropdown element and append into input's wrapper ---
         function buildDropdown() {
@@ -168,7 +192,43 @@
             };
             const byTitle = begun ? answers[1].filter(function (track) { return starts(track.trackName); }) : [];
             const byArtist = begun ? answers[1].filter(function (track) { return !starts(track.trackName) && starts(track.artistName); }) : [];
-            return onceEach(byTitle.concat(byArtist, answers[0])).slice(0, MAX_RESULTS);
+            return withTheDjsFirst(onceEach(byTitle.concat(byArtist, answers[0])).slice(0, MAX_RESULTS), signal);
+        }
+
+        /**
+         * The suggestions with the songs the DJ has first, marked (djHas), each part in its order (V58); as they are without a library
+         * to ask, or when its answer is slow or fails. Null when the query was cancelled meanwhile.
+         */
+        async function withTheDjsFirst(tracks, signal) {
+            if (!libraryUrl || tracks.length === 0) return tracks;
+            const songs = tracks.map(songOf);
+            const unknown = songs.filter(function (song) { return !libraryCache.has(libraryUrl + '|' + song); });
+            if (unknown.length > 0) {
+                const url = new URL(libraryUrl, location.href);
+                unknown.forEach(function (song) { url.searchParams.append('song', song); });
+                const wait = new AbortController();
+                const stop = function () { wait.abort(); };
+                const timer = setTimeout(stop, LIBRARY_WAIT_MS);
+                signal.addEventListener('abort', stop);
+                try {
+                    const response = await fetch(url, { signal: wait.signal, headers: { Accept: 'application/json' } });
+                    const have = response.ok ? await response.json() : null;
+                    if (Array.isArray(have)) {
+                        unknown.forEach(function (song, i) { libraryCacheSet(libraryUrl + '|' + song, have[i] === true); });
+                    }
+                } catch (err) {
+                    // too slow, cancelled or failed: the suggestions unmarked — asked again with the next query
+                } finally {
+                    clearTimeout(timer);
+                    signal.removeEventListener('abort', stop);
+                }
+            }
+            if (signal.aborted) return null;
+            const marked = tracks.map(function (track, i) {
+                return Object.assign({}, track, { djHas: libraryCache.get(libraryUrl + '|' + songs[i]) === true });
+            });
+            return marked.filter(function (track) { return track.djHas; })
+                .concat(marked.filter(function (track) { return !track.djHas; }));
         }
 
         // --- Render results ---
@@ -193,8 +253,12 @@
                 item.setAttribute('aria-selected', 'false');
                 item.setAttribute('data-label', label);
 
+                // "✓ DJ ma" (V58) at the start of the artist's part: on a phone the artist has a line of its own, on a wide screen a long
+                // title is cut at its end — never the mark
+                const djHas = track.djHas ? `<span class="ac-library">${escapeHtml(libraryLabel)}</span> ` : '';
+                if (track.djHas) item.classList.add('is-djs');
                 item.innerHTML =
-                    `<span class="ac-artist">${escapeHtml(artist)}</span>` +
+                    `<span class="ac-artist">${djHas}${escapeHtml(artist)}</span>` +
                     `<span class="ac-sep"> \u2013 </span>` +
                     `<span class="ac-title">${escapeHtml(title)}</span>`;
 

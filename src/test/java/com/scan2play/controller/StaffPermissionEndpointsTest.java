@@ -87,7 +87,8 @@ class StaffPermissionEndpointsTest {
                                 mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off()),
                         new FeedbackController(mock(com.scan2play.repository.FeedbackRepository.class), helper),
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper,
-                                com.scan2play.service.Plans.off(), codesAsTexts(), DjLibraryController.MAX_BYTES),
+                                com.scan2play.service.Plans.off(), codesAsTexts(), mock(PartySettingsCommandService.class),
+                                DjLibraryController.MAX_BYTES),
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper,
                                 com.scan2play.service.Plans.off(), codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
@@ -195,6 +196,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(post("/dj/library").param("partyCode", PUB).contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
                         .content("#EXTM3U\nA - B.mp3\n")),
                 Arguments.of(post("/dj/library/delete").param("partyCode", PUB)),
+                Arguments.of(post("/dj/library/hints").param("partyCode", PUB).param("on", "false")),
                 // the DJ's logo (V45)
                 Arguments.of(post("/dj/logo").param("partyCode", PUB).contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
                         .content(com.scan2play.service.TestImages.png(40, 20))),

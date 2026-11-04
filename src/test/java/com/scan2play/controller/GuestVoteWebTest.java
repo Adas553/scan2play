@@ -48,6 +48,8 @@ class GuestVoteWebTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private com.scan2play.service.LibraryHintService libraryHintService;
+    @MockitoBean
     private com.scan2play.service.SiteCounter siteCounter;
     @MockitoBean
     private SongEvaluationService songEvaluationService;

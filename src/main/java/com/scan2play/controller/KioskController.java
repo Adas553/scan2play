@@ -9,6 +9,7 @@ import com.scan2play.service.GuestRequestService;
 import com.scan2play.service.GuestRequestService.Sent;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
+import com.scan2play.service.LibraryHintService;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PlanService;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +79,7 @@ public class KioskController {
     private final GuestRequestLimiter guestRequestLimiter;
     private final PartyScheduleService partyScheduleService;
     private final MessageSource messageSource;
+    private final LibraryHintService libraryHintService;
 
     /** The kiosk's page: the form and the most wanted, or — the party closed — when it opens. Leaves the kiosk's cookie. */
     @GetMapping("/{token}")
@@ -206,6 +208,7 @@ public class KioskController {
         model.addAttribute(DJ_NAME, party.getDjName());
         model.addAttribute(DJ_LOGO, planned.logoPath());
         model.addAttribute(DEDICATIONS_ON, party.isDedicationsOn());
+        model.addAttribute(LIBRARY_HINTS, libraryHintService.on(party));   // the suggestions marked "✓ DJ ma" (V58)
         model.addAttribute(IS_ACTIVE, party.isActive());
         model.addAttribute(OPENS_AT, party.isActive() ? null : partyScheduleService.guestOpens(party, LocaleContextHolder.getLocale()));
         addList(model, token, party, session);
