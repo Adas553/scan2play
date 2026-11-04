@@ -116,6 +116,7 @@ the person", no profanity and no song's name in an accepted one; the dashboard's
 may add a dedication; a select "Dedykacje gości" in the card "Impreza", `POST /dj/dashboard/dedications`, permission VIBE; off, the
 party page has no field and a dedication sent anyway is left out),
 `posterHeading` (V46, ≤ 40) / `posterLine` (≤ 60) / `posterLanguage` (`PosterLanguage`: AUTO — the panel's —, BOTH, PL, EN) / `posterShowLogo`, `posterShowLinks`, `posterShowTip`, `posterShowAddress` (NOT NULL, default true), `posterTheme` (V47, V52, `PosterTheme`: CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI) / `posterAccent` (V47, "#rrggbb", null = the theme's) / `posterPaper` (V53, "#rrggbb", null = the theme's paper; printed as a light tint) / `posterFont` (V51, `PosterFont`: THEME — the theme's —, SANS, SERIF, SCRIPT) / `posterSize` (V54, `PosterSize`: SMALL, NORMAL — as the theme has it —, LARGE) / `posterTables` (V50, 1 … `POSTER_TABLES_MAX` = 50, null = no numbers): the QR print as the DJ sets it — see "The QR print" in 5.1;
+`guestTheme` (V59, `GuestTheme`: CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING): the look of the guests' pages — "Motyw dla gości" in 5.1;
 `requestLimit` / `cooldownMinutes`
 (the guest's own limit, 1–100 / 1–1440), `duplicateCheckWindow` (0–50 recently played songs the AI must not repeat). The column
 `request_counter` (V28, not mapped — written only by `SongRequestRepository.nextRequestNumber`, so a save of the settings never
@@ -693,6 +694,36 @@ próśb", in their language — on `party_ended.html` and the TV screen (both la
 hours — later, a migration of its own that writes the next moment into the same columns); closing by itself after hours without requests
 (it would fit: a job that sets `next_close_at`, or closes at once, through the same service).
 
+**"Motyw dla gości"** (V59, `party_settings.guest_theme`, `GuestTheme`; the owner, 2026-11-04, variant A′ of the analysis
+https://claude.ai/artifact/T8uNK1tcQm4nynE53DK1uU): the look of the guests' pages — the party page, the result, the "party ended" page,
+the kiosk and the TV screen; the panel, the hosts' page and the print keep theirs. The second card of "Ustawienia imprezy", for whoever
+may change the vibe (VIBE — the organiser, a co-organiser), any plan. Five themes, every one dark (a dark hall; the templates keep
+Bootstrap's dark classes, so the light theme of "Later F" is not needed): **Klasyczny** (as before, the default), **Świąteczny** (navy,
+ice blue, snowflakes and baubles, the serif), **Straszny** (Halloween: almost black, a violet mist from above and a dark red one from below,
+pumpkin orange, a drip with a bat and a spider, the DJ's name in dripping capitals — Nosifer), **Konfetti** (any party, a birthday: lilac,
+confetti, a gold glow), **Weselny** (plum black, powder pink, a sprig, the serif). Each theme a small phone in the card, drawn by the
+theme's own tokens (`data-guest-theme` on the thumbnail), its name under it; a tap saves at once (the radio's `data-auto-submit`,
+`cards-in-place.js`: the server's card in place, "✓ Zapisane", the focus kept on the theme; without the script a "Zapisz" in `<noscript>`);
+"Podejrzyj stronę gościa" opens `/p/{code}` in a new tab. The print's editor says the guests' theme under its own ("Strona gościa: Straszny ·
+zmień" → the card): the two are set apart — six of the print's eight themes are light paper, the guests' pages must stay dark.
+**What a theme changes** (`static/css/guest-themes.css`, loaded after `app.css` / `tv.css` only when the party has a theme —
+`components :: guestThemeCss` —, `<body data-guest-theme="SCARY">`): the colour tokens (the page, the card, the edges, the two texts, the
+action and its tints — the page's glow follows —, the TV's), one ornament (our SVG, `static/images/themes/`) in a band of 56 px at the top
+of the page — the card comes 36 px lower; none in the kiosk, a band in the TV's top padding —, the face of "🎧 Gra: …" (`#djName`,
+`.tv-dj`; our fonts, `font-display: swap`: the serif themes the whole line, the scary one the DJ's name alone — `components ::
+djNameText`, a span marked `s2p-dj-long` over 16 letters, `s2p-dj-longer` over 26, set smaller and moved under "Gra:" whole), and the
+fields — dark (the page's background, the text's colours, an edge in the second text's colour, the accent's ring when typed in):
+Bootstrap's white field was the brightest thing on the page. **What it never changes:** the statuses — the green "Twoja", the yellow 👍, the red "NIE" —
+and no accent may look like them (a Christmas red or gold, a summer coral did; the red of Świąteczny is in a bauble only), the logo's
+cyan "2" (ours), the layout, 44 px, one action, no animation. `GuestThemesCssTest`: a block sets only tokens `app.css` / `tv.css` have
+(and its own `--s2p-ornament`, `--s2p-theme-font`), every theme the whole set, no colour outside the blocks, WCAG AA (the texts on the card
+and on the page, the action's words, the accent as a text, the TV's), CIEDE2000 ≥ 20 between the accent and each status. Browser
+scenarios `guest-theme-*` (each theme on a phone: the ornament above every text, the contrast of the computed styles, the statuses'
+colours, 44 px, one action, no animation, the face loaded; the classic page as before; the result, "party ended", the kiosk in one screen,
+the TV; the card). Not built: the DJ's own colours (later, as Pro, on the same tokens — a contrast fix and the statuses' hues kept away),
+a theme by the date (a surprise the DJ did not pick), a photo behind the page, a summer theme (no hue far enough from the statuses and the
+classic cyan yet).
+
 **The venue's kiosk** (V56, "Kiosk dla gości", Pro; the owner, 2026-10-30 — Rekwest has one): a tablet at the bar where guests without a
 phone ask for a song and vote. The card of "Ustawienia imprezy" (whoever has the permission KIOSK; without Pro the organiser sees the
 offer): "Utwórz link kiosku" — a secret `/k/{token}` (`kioskToken`), to copy and open on the tablet —, "Nowy link" (asks first: the old
@@ -900,7 +931,9 @@ the Home Screen) the guest page, the result page and the "party ended" page have
 a DJ testing their QR code landed on the guest page in it with no address bar and no "back". Only a DJ can have the app (the
 manifest is on the dashboard alone); the link leads to whoever is logged in. `scope: "/dj/"` was not chosen: the Google login
 passes through addresses outside it, and an iPhone's Home Screen app opens those apart, with its own cookies (an iPhone tried by the owner 2026-10-09: it works). An ended party shows
-"DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs.
+"DJ nie przyjmuje teraz próśb" with "↻ Sprawdź ponownie" (the party's link) — the landing page is for DJs. The party page, the result
+and the "party ended" page wear the theme the DJ picked ("Motyw dla gości", V59, 5.1): the same page in the theme's colours, an
+ornament above the card, the DJ's name in the theme's face; nothing else changes.
 
 **What reaches the AI:** the guest's text as one line ≤ 150 characters, `"` made `'` (`SongEvaluationService.forPrompt`); the style
 decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else `ANY` — the guests pick no vibe.
@@ -1073,6 +1106,7 @@ attributes. **No inline script, no `on…=` handler and no `style="…"`** on an
 | `js/song-list-count.js` | the hosts' lists ("Ustawienia imprezy", `/h/…`): the entries each holds of `SongList.MAX_LINES`, a warning over it |
 | `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side, the Polish store; iTunes matches whole words only, so a word being typed is completed here — the words before it are asked too, 50 songs kept in memory while the word grows, both asks at once — and the songs whose title, then artist, has a word starting so come first ("shakira da" → "Dai Dai"); each song once; an answer for what the field no longer says is dropped; an ARIA combobox — `aria-expanded`, `aria-controls`, `aria-activedescendant`); a field with `data-library-url` (V58: the guest page and the kiosk, when `LibraryHintService.on`) asks which of the suggestions shown the DJ has and puts them first with `data-library-label` ("✓ DJ ma", at the start of the artist's part; the song picked without it), each part in iTunes's order, every song asked once (500 kept), the answer waited for at most 600 ms (`song-suggestions-library-*`) |
 | `js/qr-print.js`, `js/qr-social.js`, `css/qr-print.css`, `fonts/*.woff2`, `css/app.css` | the print page (`qr-social.js`: its pictures for Instagram, for whom has the editor; `fonts/`: its own fonts, Source Sans 3, Playfair Display and Dancing Script, OFL — their licences `fonts/OFL-*.txt`); the shared styles — the look of Section 6.7 |
+| `css/guest-themes.css`, `images/themes/*.svg`, `fonts/nosifer-*.woff2` | the guests' themes (V59, "Motyw dla gości"): the tokens of each theme under `[data-guest-theme]`, its ornament (our SVGs), the faces of "🎧 Gra: …" (Playfair Display; Nosifer for the scary one, OFL — `fonts/OFL-nosifer.txt`); loaded by the guests' pages of a party with a theme and by "Ustawienia imprezy" (the card's thumbnails) |
 | `js/tv.js`, `css/tv.css` | the screen for a TV: its list fetched again every 10 s (put in place only when it changed; a failed fetch or an answer that is not the list keeps it), the screen kept awake (Screen Wake Lock); dark, sized by the screen's height, nothing to scroll in landscape |
 | `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once; white, for A4 |
 | `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
@@ -1116,6 +1150,11 @@ What every page shares, so a new screen looks like the others:
   glow stays while a long page scrolls; `background-attachment: fixed` is ignored by Safari on an iPhone), sized by the screen, not
   printed. The cards keep their own background over it; the muted text keeps 6 : 1 on its strongest tint. The look of the Instagram
   pictures. The TV (`tv.css`), the summary and the QR print have their own.
+- **The guests' themes** (V59, "Motyw dla gości", 5.1): a theme redefines tokens only (`guest-themes.css`, `[data-guest-theme]`) — the
+  page, the card, the edges, the texts, the action and its tints, the TV's — and adds one ornament in a band above the card and a face for
+  "🎧 Gra: …". Every theme is dark. The statuses (green "Twoja", yellow 👍, red "NIE"), the logo's cyan "2", the layout, 44 px and one
+  action are the same in every theme; the accent is the theme's one accent, never a status's hue (`GuestThemesCssTest`). A new token of
+  the guests' pages that a theme should follow: add it to every theme and to the test's set.
 - **Sizes.** Radius 8 px for buttons and fields, 12–15 px for cards. On a phone (narrower than 768 px, or a touch screen) every button,
   field, tab and menu item is **at least 44 px high** (browser scenarios `guest-touch-targets`, `dashboard-touch-targets`).
 - **Cards** of the settings: `.s2p-card-title` and one line of `.s2p-card-help`, then the fields, then one "Zapisz". The help line
@@ -1382,6 +1421,7 @@ schema behind Flyway's back.
 | V56 | `party_settings.kiosk_token` varchar(32) (unique index `uk_party_settings_kiosk_token`), `song_requests.via_kiosk` boolean NOT NULL DEFAULT false; data: `KIOSK` added to the staff's, the invitation link's and the invitations' permissions that were the whole set before (the co-organisers) — the venue's kiosk (`MigrationIT`, `KioskMigrationIT`) |
 | V57 | `dj_library_track.artist_name`, `title_name` varchar(200), `bpm` numeric(5,2), `tonality` varchar(10), `genre` varchar(100), `year` smallint, all nullable; `dj_library.with_details` boolean NOT NULL DEFAULT false: each song of the DJ's library as the file writes it, beside its key — only shown (the queue's tempo and key); the libraries of before stay, without them (`LibraryDetailsMigrationIT`, `DjLibraryIT`) |
 | V58 | `party_settings.library_hints` boolean NOT NULL DEFAULT true: the guests' song suggestions the DJ has first, "✓ DJ ma" — "Podpowiedzi gości" in the library's card (`MigrationIT`, `LibraryHintService`) |
+| V59 | `party_settings.guest_theme` varchar(10) NOT NULL DEFAULT 'CLASSIC' (check CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING): the look of the guests' pages, "Motyw dla gości" (`MigrationIT`, `GuestThemeTest` — the check is the enum) |
 | V35 | table `dj_plan` (`owner_id` varchar(255) PK, `plan` FREE / PRO and `source` TRIAL / PAID / GIFT — check constraints `dj_plan_plan_check`, `dj_plan_source_check` —, `valid_until` timestamptz nullable, `updated_at` NOT NULL DEFAULT now()): a DJ's plan; empty — no row is Free (`MigrationIT`, `DjPlanIT`) |
 
 Checked by `MigrationIT` (`mvnw verify -Pit`, Section 13) on an empty PostgreSQL 18, locally and on GitHub; V16, V18 and V19 also on
@@ -1522,6 +1562,7 @@ GuestQueueService          → DjService
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests): the evening summary, its CSV (404 with no evening) |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
+| POST | `/dj/dashboard/guest-theme` | "Motyw dla gości" (V59, VIBE, any plan): `partyCode`, `theme` (CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING, anything else CLASSIC); with `X-Requested-With: fetch` the card alone (`settings :: guestThemeCard`, `guestThemeSaved`), else back to `/dj/settings#guestThemeCard` |
 | POST | `/dj/dashboard/schedule` | "Godziny imprezy" (V55, OPEN_CLOSE, any plan): `openDate`, `openTime`, `closeDate`, `closeTime` (Polish time, empty = none) or `cancel=open\|close`; with `X-Requested-With: fetch` (schedule.js) the card alone (`settings :: partyHoursCard`) with `scheduleSaved` or `scheduleError` (+ the fields as typed), else a page load back to `/dj/settings#partyHoursCard` with them as flash attributes |
 | POST | `/dj/dashboard/schedule/cancel` | the panel's "✕" beside a planned moment (`event=open\|close`, OPEN_CLOSE), in the background |
 | POST | `/dj/dashboard/kiosk-link` | the kiosk's link (V56, `link=new\|off`, KIOSK; `new` needs Pro): with `X-Requested-With: fetch` (cards-in-place.js) the card alone (`settings :: kioskCard`), else a page load back to `/dj/settings#kioskCard` |

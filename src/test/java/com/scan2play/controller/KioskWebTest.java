@@ -128,6 +128,18 @@ class KioskWebTest {
         return started.getRequest().isAsyncStarted() ? mockMvc.perform(asyncDispatch(started)).andReturn() : started;
     }
 
+    /** The guests' theme (V59) at the kiosk too: the stylesheet after app.css and the theme on <body> ({@code kiosk-scary.html}). */
+    @Test
+    void theGuestsTheme_isTheKiosksToo() throws Exception {
+        party.setGuestTheme(com.scan2play.model.GuestTheme.SCARY);
+        String html = page(new MockHttpSession());
+        assertThat(html).contains("data-guest-theme=\"SCARY\"", "/css/guest-themes.css\"");
+        assertThat(html.indexOf("/css/guest-themes.css")).isGreaterThan(html.indexOf("/css/app.css"));
+        write("kiosk-scary.html", html);
+        party.setGuestTheme(com.scan2play.model.GuestTheme.CLASSIC);
+        assertThat(page(new MockHttpSession())).doesNotContain("guest-themes", "data-guest-theme");
+    }
+
     @Test
     void theKiosk_opensWithoutALogin_withTheFormAndTheMostWanted_andNothingThatLeadsOut() throws Exception {
         MvcResult result = mockMvc.perform(get(KIOSK)).andExpect(status().isOk())
@@ -137,7 +149,7 @@ class KioskWebTest {
                 "action=\"" + KIOSK + "/request\"", "name=\"_csrf\"", "data-autocomplete=\"songs\"", "id=\"dedicationBox\"",
                 ">Najczęściej wybierane<", "data-url=\"" + KIOSK + "/list\"", "action=\"" + KIOSK + "/vote\"", "Wilki - Baśka",
                 "aria-label=\"Zagłosuj na Wilki - Baśka, głosów: 5\"", "action=\"" + KIOSK + "/next\"", ">Następny gość<",
-                "<script src=\"/js/kiosk.js\">", "🎧 <span>DJ Koko</span>");
+                "<script src=\"/js/kiosk.js\">", "🎧 <span class=\"s2p-dj-name\">DJ Koko</span>");
         String ask = html.substring(html.indexOf("class=\"s2p-kiosk-ask\""), html.indexOf("id=\"kioskList\""));
         assertThat(ask).as("\"Następny gość\" under the form, in its column: always on the screen, never under a long list")
                 .contains("id=\"requestForm\"", "id=\"kioskNext\"", "data-kiosk-next");

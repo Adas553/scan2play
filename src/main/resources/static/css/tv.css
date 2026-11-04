@@ -8,7 +8,8 @@
     --tv-text: #e0e0e0;
     --tv-muted: #a3acb6;
     --tv-white: #ffffff;
-    --tv-cyan: #0dcaf0;
+    --tv-cyan: #0dcaf0;      /* the logo's "2": ours in every theme */
+    --tv-accent: #0dcaf0;    /* the address under the code: the guests' theme's accent (guest-themes.css, V59) */
     --tv-yellow: #ffc107;
 }
 
@@ -95,7 +96,7 @@ body {
 
 .tv-link {
     margin: 0;
-    color: var(--tv-cyan);
+    color: var(--tv-accent);
     font-size: 2.6vh;
     overflow-wrap: anywhere;
 }

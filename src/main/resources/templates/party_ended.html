@@ -8,8 +8,9 @@
     <title th:text="${opensAt != null} ? ${opensAt} : #{party.ended.title}">Party Ended - Scan2Play</title>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <link th:replace="~{fragments/components :: guestThemeCss}">
 </head>
-<body class="page-status page-ended">
+<body class="page-status page-ended" th:attr="data-guest-theme=${guestTheme != null and guestTheme.themed()} ? ${guestTheme.name()} : null">
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">

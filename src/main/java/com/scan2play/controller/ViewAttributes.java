@@ -30,6 +30,14 @@ public final class ViewAttributes {
     public static final String POSTER_THEMES = "posterThemes";
     /** The heading's fonts the print's editor offers (V51). */
     public static final String POSTER_FONTS = "posterFonts";
+
+    // --- The look of the guests' pages (V59, "Motyw dla gości") ---
+    /** The party's theme ({@code GuestTheme}): the guests' pages (data-guest-theme) and the card in "Ustawienia imprezy". */
+    public static final String GUEST_THEME = "guestTheme";
+    /** The themes the card offers, in their order. */
+    public static final String GUEST_THEMES = "guestThemes";
+    /** The card "Motyw dla gości" saved in the background: it says so ("✓ Zapisane"). */
+    public static final String GUEST_THEME_SAVED = "guestThemeSaved";
     /** The card "Twoje logo": the largest file, in bytes and MB, and the longest side kept (V45, {@code LogoImage}). */
     public static final String LOGO_MAX_BYTES = "logoMaxBytes";
     public static final String LOGO_MAX_MB = "logoMaxMb";

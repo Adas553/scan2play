@@ -17,6 +17,8 @@
     <!--/* the menu "Konto" and the window "Pomoc i kontakt" of the heading (dj-nav) */-->
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <!--/* the thumbnails of "Motyw dla gości" are drawn by the themes' own tokens (V59) */-->
+    <link href="/css/guest-themes.css" th:href="@{/css/guest-themes.css}" rel="stylesheet">
     <!--/* the app on the Home Screen: "Zainstaluj aplikację" is here (install.js), and a browser offers it only on a page with the manifest */-->
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
@@ -108,6 +110,43 @@
                   method="POST" class="d-none" data-in-place>
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <input type="hidden" name="cancel" th:value="${kind}">
+            </form>
+            </div>
+        </details>
+
+        <!--/* "Motyw dla gości" (V59): the look of the guests' pages — the party page, the result, the "party ended" page, the kiosk, the
+             TV — for whoever may change the party's vibe (VIBE), any plan. Each theme a small phone drawn by its own tokens
+             (guest-themes.css: data-guest-theme on the thumbnail), its name under it. Saved as soon as one is picked: the radio sends the
+             form (forms.js data-auto-submit) and the server answers with this card (cards-in-place.js), "✓ Zapisane" in it; without the
+             script the "Zapisz" of <noscript>. "Podejrzyj stronę gościa" opens the party page in a new tab. */-->
+        <details th:fragment="guestThemeCard" th:if="${access.may('VIBE')}" class="card bg-dark border-secondary s2p-fold"
+                 id="guestThemeCard" data-saves-in-place th:attr="open=${guestThemeSaved != null} ? 'open' : null">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name" th:text="#{settings.guest_theme.title}">Guest theme</h2>
+                <span class="s2p-fold-state" id="guestThemeState" th:text="#{${guestTheme.messageKey()}}">Classic</span>
+            </summary>
+            <div class="s2p-fold-body">
+            <p class="s2p-card-help mb-3" th:text="#{settings.guest_theme.help}">Your guests see it on the party page, the result, the kiosk and the TV.</p>
+            <form th:action="@{/dj/dashboard/guest-theme}" method="POST" class="m-0" id="guestThemeForm" data-in-place>
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <fieldset class="s2p-theme-grid">
+                    <legend class="visually-hidden" th:text="#{settings.guest_theme.title}">Guest theme</legend>
+                    <label th:each="t : ${guestThemes}" class="s2p-theme-pick" th:with="key=${t.name().toLowerCase()}">
+                        <input type="radio" name="theme" class="visually-hidden" th:id="'guestTheme-' + ${key}" th:value="${t.name()}"
+                               th:checked="${t == guestTheme}" data-auto-submit>
+                        <span class="s2p-theme-thumb" aria-hidden="true" th:attr="data-guest-theme=${t.name()}"><span
+                                class="s2p-theme-thumb-card"><span class="s2p-theme-thumb-line"></span><span
+                                class="s2p-theme-thumb-line s2p-theme-thumb-line-short"></span><span class="s2p-theme-thumb-button"></span></span></span>
+                        <span class="s2p-theme-name" th:text="#{${t.messageKey()}}">Classic</span>
+                    </label>
+                </fieldset>
+                <div class="s2p-theme-foot mt-3">
+                    <noscript><button type="submit" class="btn btn-sm btn-outline-light" th:text="#{settings.guest_theme.save}">Save</button></noscript>
+                    <span th:if="${guestThemeSaved != null}" class="small text-light" role="status" id="guestThemeSaved"
+                          th:text="#{settings.guest_theme.saved}">✓ Saved</span>
+                    <a class="btn btn-sm btn-outline-light ms-auto" id="guestThemePreview" th:href="@{/p/{c}(c=${partyCode})}"
+                       target="_blank" rel="noopener" th:text="#{settings.guest_theme.preview}">See the guest page</a>
+                </div>
             </form>
             </div>
         </details>

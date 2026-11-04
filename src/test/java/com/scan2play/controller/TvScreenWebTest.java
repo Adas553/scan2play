@@ -100,6 +100,23 @@ class TvScreenWebTest {
                 .doesNotContain("tv-dj-logo", "tv-logo-small");
     }
 
+    /**
+     * The guests' theme (V59) on the TV too: the themes' stylesheet after tv.css and the theme on <body> — the screen the hall
+     * photographs. None for the classic look ({@code tv-scary.html} for the browser tests).
+     */
+    @Test
+    void theGuestsTheme_isTheScreensToo() throws Exception {
+        doReturn(PartySettingsEntity.builder().partyCode("SCARY").active(true).djName("DJ Nocny Marek")
+                .guestTheme(com.scan2play.model.GuestTheme.SCARY).build()).when(partySettingsQueryService).getSettings("SCARY");
+        when(guestQueueService.mostWanted("SCARY")).thenReturn(songs(0));
+        String html = mockMvc.perform(get("/p/SCARY/tv")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("<body data-guest-theme=\"SCARY\">", "/css/guest-themes.css\"");
+        assertThat(html.indexOf("/css/guest-themes.css")).as("after tv.css: its tokens win").isGreaterThan(html.indexOf("/css/tv.css"));
+        write("tv-scary.html", html);
+        assertThat(mockMvc.perform(get("/p/ABC12/tv")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .contains("<body>").doesNotContain("guest-themes", "data-guest-theme");
+    }
+
     /** A page of the browser tests: the stand-in serves the files at /js/, /css/ — not under the deploy's version ("/dev/js/"). */
     private static void write(String name, String html) throws IOException {
         Path out = Path.of("target", "browser-harness", name);

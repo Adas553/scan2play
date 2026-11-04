@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.CommentStyle;
+import com.scan2play.model.GuestTheme;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.PosterLanguage;
 import com.scan2play.model.PosterTheme;
@@ -207,6 +208,30 @@ public class DjPartySettingsController {
         sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
         partySettingsCommandService.updateSettings(partyCode, s -> s.setDedicationsOn(on));
         return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * "Motyw dla gości" (V59): the look of the guests' pages — the party page, the result, the "party ended" page, the kiosk, the TV.
+     * Whoever may change the party's vibe (VIBE): the look is the party's mood as the vibe is. Any plan. An unknown value is the classic
+     * look. Sent in the background as soon as a theme is picked (cards-in-place.js, {@code X-Requested-With: fetch}): the answer is the
+     * card alone, saying it is saved; without the script the page "Ustawienia imprezy" again at the card.
+     */
+    @PostMapping("/dashboard/guest-theme")
+    public String updateGuestTheme(@RequestParam String partyCode, @RequestParam(required = false) String theme,
+                                   @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+                                   OAuth2AuthenticationToken authentication, HttpSession session, Model model) {
+        sessionHelper.require(partyCode, StaffPermission.VIBE, authentication, session);
+        GuestTheme picked = GuestTheme.of(theme);
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setGuestTheme(picked));
+        if (!"fetch".equals(requestedWith)) {
+            return REDIRECT_SETTINGS + "?party=" + partyCode + "#guestThemeCard";
+        }
+        model.addAttribute(ACCESS, sessionHelper.access(partyCode, authentication, session));
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(GUEST_THEME, picked);
+        model.addAttribute(GUEST_THEMES, GuestTheme.values());
+        model.addAttribute(GUEST_THEME_SAVED, true);
+        return "settings :: guestThemeCard";
     }
 
     /**
