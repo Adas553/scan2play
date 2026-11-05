@@ -131,6 +131,8 @@ public class SongEvaluationService {
     private final PlanService planService;
     /** The requests refused before the AI judged a song, counted for the evening summary (V63). */
     private final EveningRefusals eveningRefusals;
+    /** The Free plan's AI checks an evening: past it a request goes to the DJ unchecked. */
+    private final FreeAiLimit freeAiLimit;
 
     /** The answer's configs: the model, its thinking, the schema (with the dedication's field or without). */
     @PostConstruct
@@ -214,10 +216,16 @@ public class SongEvaluationService {
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
         // the demo party (DemoParty) asks no AI: a ready verdict — no Gemini call to pay for, and no free AI for anyone
-        DjResponse aiResponse = DemoParty.isDemo(partyCode) ? demoAnswer(songName, dedicationText, locale)
+        // past the Free plan's AI checks of the evening (FreeAiLimit) no call: the request reaches the DJ unchecked, the party goes on
+        boolean demo = DemoParty.isDemo(partyCode);
+        boolean beyondTheFreeLimit = !demo && !freeAiLimit.tryAcquire(settings);
+        DjResponse aiResponse = demo ? demoAnswer(songName, dedicationText, locale)
+                : beyondTheFreeLimit ? beyondTheFreeLimit(partyCode, songName, locale)
                 : evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(), dedicationText, locale);
-        if (DemoParty.isDemo(partyCode)) {
+        if (demo) {
             log.info("Party [{}]: the demo's ready answer, no AI", partyCode);
+        } else if (beyondTheFreeLimit) {
+            // not an outage: the AI's health is not touched
         } else if (aiResponse == null) {
             aiHealthMonitor.recordUnchecked();
             aiResponse = withoutTheAi(partyCode, songName, locale);
@@ -379,6 +387,13 @@ public class SongEvaluationService {
      * instead of the AI's comment) — the DJ looks at every request anyway, and a wedding should not lose requests while the AI is
      * down.
      */
+    /** Past the Free plan's AI checks of the evening: unchecked, as {@link #withoutTheAi}; the guest is told nothing of a limit. */
+    DjResponse beyondTheFreeLimit(String partyCode, String songName, Locale locale) {
+        log.info("Party [{}]: '{}' goes to the DJ unchecked — the Free plan's AI checks of the evening are used", partyCode, songName);
+        return new DjResponse(DECISION_ACCEPTED, messageSource.getMessage("ai.limit.to_dj", null, locale), songName,
+                DjResponse.KIND_UNCHECKED);
+    }
+
     DjResponse withoutTheAi(String partyCode, String songName, Locale locale) {
         log.warn("Party [{}]: the AI could not be asked — '{}' goes to the DJ unchecked", partyCode, songName);
         return new DjResponse(DECISION_ACCEPTED, messageSource.getMessage("ai.unavailable.to_dj", null, locale), songName,

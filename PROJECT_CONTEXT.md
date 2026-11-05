@@ -1049,6 +1049,20 @@ the row "Limity gości" in yellow from 80 % ("Impreza 250/300", "Sieć 26/30"), 
 80 % of the party's limit and "⚠ Limit 300 próśb na dobę wyczerpany — goście nie mogą teraz wysyłać." while it stops guest songs (both
 follow every poll's headers).
 
+**The Free plan's AI checks** (`FreeAiLimit`, the owner 2026-11-05: 150, soft): `guest.limit.free-ai-per-party` (env
+`GUEST_LIMIT_FREE_AI_PER_PARTY`, 150; 0 = off) requests a party an evening (`EveningSummaryService.eveningOf`, 6:00 to 6:00 Polish time)
+go to Gemini — only while the plans are enforced and for an organiser without Pro (Pro's bound: the 300 a day above). Counted in
+`SongEvaluationService` just before the call — moods and a song asked again too (they cost a call); not 👍, not the refusals before the AI
+(the limits, the hosts' list by the guest's words), not the demo; the kiosk as every guest. Past it: no call, the request reaches the DJ
+unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —; the
+guest reads "Twoja prośba trafiła do DJ-a, który sam ją oceni." (`ai.limit.to_dj`), nothing of a limit. The panel: from 80 % the line
+"120 z 150 próśb ocenionych dziś przez AI. Kolejne przyjdą bez oceny." (`data-limit-near="ai"`), at it the bar "⚠ Oceny AI na ten wieczór
+wykorzystane …" (`data-guest-limit="ai-limit"`), both from every poll (`X-Guest-Limits` "ai-limit", `X-Guest-Limits-Use`'s third
+number; scenario `free-ai-limit-follows-the-poll`); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
+the party: the next day the organiser alone sees above the queue "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150 …" with
+"Zobacz, co daje Pro" (`freeAiYesterday`, only when the limit was reached). In memory (two evenings kept): a restart starts the count
+again, in the DJ's favour. The pricing page names it — change both together.
+
 ### 5.3 (Spotify — removed 2026-10-04, migration V18)
 
 ### 5.4 (The YouTube player, Auto-Pilot and the background playlist — removed 2026-10-04, migration V19)
@@ -1292,8 +1306,7 @@ What every page shares, so a new screen looks like the others:
   Pro ends; the staff; the guests) (`.s2p-product-*`, `.s2p-plan*`, `.s2p-compare*`, `.s2p-faq`). Linked, only while the plans are
   enforced: the footer's "Cennik" (`plansEnforced` — `HomeController`, `ForWhomController`, `LegalController`), the landing page's "Ile to
   kosztuje?" ("Zobacz cennik →"), the account menu's "Twój plan: Free · Cennik" (the organiser only, `PlanService.View.offered`). It names
-  the Free plan's 150 AI checks an evening and Pro's 300 — **the Free limit is not built yet** (SESSION_HANDOFF, "Pricing"): build it
-  before the plans are enforced. **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
+  the Free plan's 150 AI checks an evening and Pro's 300 (`FreeAiLimit`, Section 5.2). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
   permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
   see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
   `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`, `pro-page-phone`, `pro-page-wide`.
@@ -1461,7 +1474,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 | `server.shutdown` | graceful, 30 s |
 | `spring.task.execution.pool.*` | 16 core / 32 max threads, queue 50 (env `ASYNC_POOL_*`) — the guests' requests (`Callable`) |
 | `spring.datasource.hikari.*` | 15 max, 5 idle, 5 s connect timeout |
-| `guest.limit.*` | 30 per 10 min per address + party, 300 per 24 h per party (env `GUEST_LIMIT_*`) |
+| `guest.limit.*` | 30 per 10 min per address + party, 300 per 24 h per party, the Free plan's 150 AI checks an evening (`free-ai-per-party`) (env `GUEST_LIMIT_*`) |
 | `guest.client-ip-header` | empty (env `GUEST_CLIENT_IP_HEADER`) |
 | `security.csp.enforce` | `false` = report only (env `CSP_ENFORCE`) |
 | `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` | `false` / empty / 0 (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`; V35) |

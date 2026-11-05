@@ -10,6 +10,7 @@ import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
 import com.scan2play.service.LogoImage;
+import com.scan2play.service.FreeAiLimit;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.Mailer;
 import com.scan2play.service.PartyScheduleService;
@@ -86,6 +87,8 @@ public class DjDashboardController {
     private final AiHealthMonitor aiHealthMonitor;
     private final PartyScheduleService partyScheduleService;
     private final WelcomeEmailService welcomeEmailService;
+    /** The Free plan's AI checks an evening: the panel's line near it, its bar at it, the organiser's note the next day. */
+    private final FreeAiLimit freeAiLimit;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -96,11 +99,14 @@ public class DjDashboardController {
     static final String GUEST_LIMITS_HEADER = "X-Guest-Limits";
     static final String FLAG_PARTY_FULL = "party-full";
     static final String FLAG_AI_DOWN = "ai-down";
+    /** The Free plan's AI checks of the evening are used: the requests come unchecked ({@code FreeAiLimit}). */
+    static final String FLAG_AI_LIMIT = "ai-limit";
     static final String FLAG_NONE = "none";
 
     /**
      * On every answer of the queue poll, 304 too: how many requests the server limits have used now,
-     * {@code <busiest network>,<party>} — the dashboard keeps its badges current by it, without a reload.
+     * {@code <busiest network>,<party>,<the Free plan's AI checks this evening>} — the dashboard keeps its badges current by it,
+     * without a reload.
      */
     static final String GUEST_LIMITS_USE_HEADER = "X-Guest-Limits-Use";
 
@@ -298,6 +304,11 @@ public class DjDashboardController {
         model.addAttribute(BUSIEST_NETWORK_REQUESTS_USED, guestRequestLimiter.busiestClientRequestsUsed(partyCode));
         model.addAttribute(PARTY_LIMIT_REACHED, guestRequestLimiter.isPartyLimitReached(partyCode));
         model.addAttribute(AI_DOWN, aiDown(partyCode));
+        // the Free plan's AI checks of the evening (FreeAiLimit): the line near it, the bar at it; yesterday's, to the organiser only
+        // and only when it was reached — the offer of Pro the next day, never during the party
+        model.addAttribute(FREE_AI, freeAiLimit.today(settings));
+        FreeAiLimit.Use yesterday = owner ? freeAiLimit.yesterday(settings) : null;
+        model.addAttribute(FREE_AI_YESTERDAY, yesterday != null && yesterday.reached() ? yesterday : null);
 
         // --- Notifications on the DJ's devices (offered only when the server has the keys) ---
         model.addAttribute(PUSH_PUBLIC_KEY, pushNotificationService.publicKey());
@@ -535,9 +546,10 @@ public class DjDashboardController {
         PartySettingsEntity settings = access.party();
         response.setHeader(PANEL_ACCESS_HEADER, accessValue(access));
         // Not part of the ETag: the warnings follow the limits even while the queue stays the same
-        response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode));
+        FreeAiLimit.Use freeAi = freeAiLimit.today(settings);
+        response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode, freeAi));
         response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
-                + "," + guestRequestLimiter.partyRequestsUsed(partyCode));
+                + "," + guestRequestLimiter.partyRequestsUsed(partyCode) + "," + freeAi.asked());
         response.setHeader(PARTY_ACTIVE_HEADER, String.valueOf(settings.isActive()));
         // …and its plan (V55): the panel hides a planned moment's line once it is applied, cancelled or made pointless
         response.setHeader(PARTY_SCHEDULE_HEADER, PartyScheduleService.headerValue(settings));
@@ -593,13 +605,16 @@ public class DjDashboardController {
     }
 
     /** The value of {@link #GUEST_LIMITS_HEADER}. */
-    private String guestLimitFlags(String partyCode) {
-        List<String> flags = new ArrayList<>(2);
+    private String guestLimitFlags(String partyCode, FreeAiLimit.Use freeAi) {
+        List<String> flags = new ArrayList<>(3);
         if (guestRequestLimiter.isPartyLimitReached(partyCode)) {
             flags.add(FLAG_PARTY_FULL);
         }
         if (aiDown(partyCode)) {
             flags.add(FLAG_AI_DOWN);
+        }
+        if (freeAi.reached()) {
+            flags.add(FLAG_AI_LIMIT);
         }
         return flags.isEmpty() ? FLAG_NONE : String.join(",", flags);
     }

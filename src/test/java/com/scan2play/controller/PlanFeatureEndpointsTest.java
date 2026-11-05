@@ -88,7 +88,7 @@ class PlanFeatureEndpointsTest {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), settings, mock(QrCodeService.class), helper,
-                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class));
+                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(

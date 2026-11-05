@@ -328,6 +328,10 @@
                  refused; the review of 2026-10-21, O2): every new request reaches the list "bez oceny AI", the DJ looks them over */-->
             <div class="alert alert-danger small py-2 mb-2" role="status" data-guest-limit="ai-down"
                  th:classappend="${aiDown} ? '' : 'd-none'" th:text="#{dashboard.warning.ai_down}">The AI is not judging requests right now</div>
+            <!--/* the Free plan's AI checks of the evening are used (FreeAiLimit): the requests still come, "bez oceny AI" — no offer of
+                 Pro here, during the party (that is the organiser's note the next day, below) */-->
+            <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="ai-limit" th:if="${freeAi != null and freeAi.limit() > 0}"
+                 th:classappend="${freeAi.reached()} ? '' : 'd-none'" th:text="#{dashboard.warning.ai_limit(${freeAi.limit()})}">The AI checks of this evening are used</div>
             <!--/* near a server limit (from 80 %, under it): how much is used — the DJ sees it coming (polling.js keeps it current);
                  the party's day (at it, "wyczerpany" above takes over), then one network's ten minutes (a venue's Wi-Fi: its guests
                  count together; at it too — it has no warning of its own, and it passes by itself) */-->
@@ -341,6 +345,18 @@
                  th:attr="data-limit=${serverLimitPerNetwork},data-template=#{dashboard.warning.network_near('{used}', '{limit}')}"
                  th:hidden="${busiestNetworkRequestsUsed * 5 < serverLimitPerNetwork * 4}"
                  th:text="#{dashboard.warning.network_near(${busiestNetworkRequestsUsed}, ${serverLimitPerNetwork})}">One network: 26 of 30 requests in 10 minutes</div>
+            <!--/* near the Free plan's AI checks of the evening (from 80 %, under it; at it the bar above takes over) */-->
+            <div class="alert alert-secondary small py-2 mb-2" role="status" data-limit-near="ai"
+                 th:if="${freeAi != null and freeAi.limit() > 0}"
+                 th:attr="data-limit=${freeAi.limit()},data-below=true,data-template=#{dashboard.warning.ai_near('{used}', '{limit}')}"
+                 th:hidden="${freeAi.asked() * 5 < freeAi.limit() * 4 or freeAi.reached()}"
+                 th:text="#{dashboard.warning.ai_near(${freeAi.asked()}, ${freeAi.limit()})}">120 of 150 requests checked by the AI tonight</div>
+        </div>
+        <!--/* the organiser's note the day after the Free plan's AI checks ran out (FreeAiLimit.yesterday): what came unchecked, and the
+             way to Pro — the next day, never during the party */-->
+        <div th:if="${freeAiYesterday != null}" class="mb-2" data-free-ai-yesterday
+             th:with="proLimit=${serverLimitPerParty > 0 ? serverLimitPerParty : 300}">
+            <div th:replace="~{fragments/components :: proOffer(#{dashboard.free_ai.yesterday(${freeAiYesterday.asked()}, ${freeAiYesterday.checked()}, ${proLimit})})}"></div>
         </div>
         <div class="table-responsive list-scroll">
         <table class="table table-dark table-hover table-sm align-middle">

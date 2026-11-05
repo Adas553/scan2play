@@ -69,7 +69,7 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, PromptBuilder.loaded(new DefaultResourceLoader()), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off(), refusals);
+                messageSource, PromptBuilder.loaded(new DefaultResourceLoader()), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off(), refusals, freeAi);
         service.init();
     }
 
@@ -297,11 +297,12 @@ class SongEvaluationServiceTest {
     private final List<GenerateContentConfig> configs = new ArrayList<>();
     /** The plans as the test sets them: not enforced unless it says (V35). */
     private PlanService plans = Plans.off();
+    private FreeAiLimit freeAi = FreeAiLimit.off();
 
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, PromptBuilder.loaded(new DefaultResourceLoader()),
-                new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans, refusals) {
+                new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans, refusals, freeAi) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -635,6 +636,46 @@ class SongEvaluationServiceTest {
         verify(songRequestRepository, org.mockito.Mockito.atLeastOnce())
                 .findRecentlyPlayed(eq(PARTY_CODE), eq(org.springframework.data.domain.PageRequest.of(0, 15)));
         assertThat(party.getHostBlocked()).as("kept for when Pro is back").isEqualTo("Akcent");
+    }
+
+    /**
+     * The Free plan's AI checks of the evening (FreeAiLimit): past them the request reaches the DJ unchecked, with no Gemini call and
+     * nothing of a limit for the guest — and it is no outage: the AI's alarm is not touched.
+     */
+    @Test
+    void pastTheFreePlansAiChecks_theRequestGoesToTheDjUnchecked_withoutAskingTheAi() {
+        PartySettingsEntity party = aParty(0);
+        party.setOwnerId("owner");
+        savesWithId();
+        plans = Plans.enforced();
+        freeAi = new FreeAiLimit(1, plans, java.time.Clock.systemUTC());
+        when(messageSource.getMessage(eq("ai.limit.to_dj"), any(), any(Locale.class))).thenReturn("It went to the DJ");
+
+        DjResponse first = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baśka", "ANY");
+        DjResponse second = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baśka", "ANY");
+
+        assertThat(prompts).as("one AI check, the Free plan's one").hasSize(1);
+        assertThat(first.isUnchecked()).isFalse();
+        assertThat(second.isUnchecked()).as("past the limit: to the DJ, unchecked").isTrue();
+        assertThat(second.decision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(second.comment()).isEqualTo("It went to the DJ");
+        assertThat(aiHealth.isAiDown()).as("not an outage").isFalse();
+        assertThat(freeAi.today(party).asked()).isEqualTo(2);
+    }
+
+    /** With Pro (and while the plans are not enforced) there is no such limit: every request is asked. */
+    @Test
+    void withPro_theFreeLimitDoesNotApply() {
+        PartySettingsEntity party = aParty(0);
+        party.setOwnerId("owner");
+        savesWithId();
+        plans = Plans.enforced("owner");
+        freeAi = new FreeAiLimit(1, plans, java.time.Clock.systemUTC());
+
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baśka", "ANY");
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baśka", "ANY");
+
+        assertThat(prompts).hasSize(2);
     }
 
     // ---- The hosts' lists (V29) ----

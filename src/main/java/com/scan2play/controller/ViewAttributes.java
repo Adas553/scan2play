@@ -102,6 +102,10 @@ public final class ViewAttributes {
     public static final String PARTY_LIMIT_REACHED = "partyLimitReached";
     /** Whether the AI has stopped judging the requests (AiHealthMonitor): the bar above the queue. */
     public static final String AI_DOWN = "aiDown";
+    /** The Free plan's AI checks an evening ({@code FreeAiLimit.Use}): its limit (0: none applies) and what this evening used. */
+    public static final String FREE_AI = "freeAi";
+    /** Yesterday's use of the Free plan's AI checks, for the organiser's note — only when the limit was reached; else null. */
+    public static final String FREE_AI_YESTERDAY = "freeAiYesterday";
     /** The VAPID public key (base64url) for the switch of notifications on this device; null = notifications are off on the server. */
     public static final String PUSH_PUBLIC_KEY = "pushPublicKey";
 
