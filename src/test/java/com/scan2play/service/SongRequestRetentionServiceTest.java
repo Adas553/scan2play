@@ -33,6 +33,9 @@ class SongRequestRetentionServiceTest {
     @Mock
     private SongRequestRepository repository;
 
+    @Mock
+    private com.scan2play.repository.EveningSummaryRepository eveningSummaryRepository;
+
     @InjectMocks
     private SongRequestRetentionService service;
 

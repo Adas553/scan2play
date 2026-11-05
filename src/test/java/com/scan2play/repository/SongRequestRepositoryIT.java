@@ -324,7 +324,9 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
 
     /**
      * The evening summary: an evening is a day in Polish time from 6:00 to 6:00 — a request at 01:30 is the evening before's, one at
-     * 06:00 the next day's —, the latest first, bounded; the evening's requests in the order asked, every decision, only the party's.
+     * 06:00 the next day's —, the latest first, bounded, each with the guests' votes as the summary counts them (of what the AI let
+     * through, a skipped one too; not a rejected one; without the DJ's own first vote of a song they added); the evening's requests in
+     * the order asked, every decision, only the party's.
      */
     @Test
     void theEvenings_runFromSixToSix_inPolishTime() {
@@ -341,13 +343,28 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         save(party, "sunday", "accepted", sunday0600, null);
         save(party, "a week before", "played", friday23, null);
         save(newPartyCode(), "another party", "played", saturday20, null);
+        // the votes: 3 of a song asked for thrice, 2 of a skipped one, the DJ's song 1 + the guests' 2, none of a rejected one
+        SongRequestEntity asked = save(party, "asked thrice", "accepted", saturday20.plus(1, ChronoUnit.HOURS), null);
+        jdbc.update("UPDATE song_requests SET votes = 3 WHERE id = ?", asked.getId());
+        SongRequestEntity skipped = save(party, "skipped", "rejected", saturday20.plus(2, ChronoUnit.HOURS), null,
+                saturday20.plus(3, ChronoUnit.HOURS));
+        jdbc.update("UPDATE song_requests SET votes = 2 WHERE id = ?", skipped.getId());
+        SongRequestEntity added = save(party, "the DJ's", "played", saturday20.plus(30, ChronoUnit.MINUTES), null);
+        jdbc.update("UPDATE song_requests SET votes = 3, added_by_dj = true WHERE id = ?", added.getId());
+        SongRequestEntity rejected = save(party, "rejected, voted", "rejected", saturday20.plus(40, ChronoUnit.MINUTES), null);
+        jdbc.update("UPDATE song_requests SET votes = 4 WHERE id = ?", rejected.getId());
+        // an evening of rejections alone is there, with no votes
+        java.time.Instant thursday21 = java.time.LocalDateTime.of(2026, 9, 24, 21, 0).atZone(warsaw).toInstant();
+        save(party, "only rejected", "rejected", thursday21, null);
 
-        assertThat(requests.findEvenings(party, 10)).extracting(row -> row[0] + " " + row[1])
-                .containsExactly("2026-10-04 1", "2026-10-03 3", "2026-09-25 1");
+        // 2026-10-03: saturday 1 + after midnight 1 + asked thrice 3 + skipped 2 + the DJ's 2 = 9
+        assertThat(requests.findEvenings(party, 10)).extracting(row -> row[0] + " " + ((Number) row[1]).longValue())
+                .containsExactly("2026-10-04 1", "2026-10-03 9", "2026-09-25 1", "2026-09-24 0");
         assertThat(requests.findEvenings(party, 2)).hasSize(2);
         Instant from = java.time.LocalDateTime.of(2026, 10, 3, 6, 0).atZone(warsaw).toInstant();
         assertThat(requests.findRequestedBetween(party, from, sunday0600, PageRequest.of(0, 10)))
-                .extracting(SongRequestEntity::getSongName).containsExactly("saturday", "after midnight", "just before six");
+                .extracting(SongRequestEntity::getSongName).containsExactly("saturday", "the DJ's", "rejected, voted", "asked thrice",
+                        "skipped", "after midnight", "just before six");
         assertThat(requests.findRequestedBetween(party, from, sunday0600, PageRequest.of(0, 2))).hasSize(2);
     }
 

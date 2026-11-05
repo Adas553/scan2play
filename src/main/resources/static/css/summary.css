@@ -1,4 +1,5 @@
-/* The evening summary (templates/summary.html): white, black and one accent, to read on the screen and to print on A4. */
+/* The evening summary (templates/summary.html): white, black and one accent, to read on the screen and to print on A4. The DJ's
+   version and the hosts' (main.hosts) share it; the hosts' fits one A4 page for an evening of about forty played songs. */
 
 @page {
     size: A4;
@@ -13,27 +14,43 @@ body {
     margin: 0;
     background: #ffffff;
     color: #111111;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    /* the font of every page (app.css, --s2p-font): the device's own, named — system-ui fell to a wider DejaVu Sans on a Linux */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.4;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
 
-/* ---- The bar on the screen (not printed) ---- */
+/* what a script hides stays hidden, whatever display a rule gives it ("Pokaż" of the bar, "Kopiuj listę" without a script) */
+[hidden] {
+    display: none !important;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* ---- The bar on the screen (not printed): the evening, the version, print, and "⋯" (the CSV, the way back, the hint) ---- */
 
 .toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 10px 16px;
     background: #212529;
     color: #f8f9fa;
 }
 
 .toolbar .pick {
     display: flex;
-    flex-wrap: wrap;
+    flex: 1 1 220px;
+    min-width: 0;
     align-items: center;
     gap: 6px;
     margin: 0;
@@ -41,7 +58,8 @@ body {
 
 .toolbar a,
 .toolbar button,
-.toolbar select {
+.toolbar select,
+.toolbar summary {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
@@ -56,8 +74,37 @@ body {
 }
 
 .toolbar select {
+    flex: 1 1 auto;
+    min-width: 0;
     max-width: 100%;
     background: #000000;
+}
+
+/* the version: two halves of one control, the shown one filled light */
+.toolbar .views {
+    display: flex;
+    flex: 1 1 260px;
+}
+
+.toolbar .views a {
+    flex: 1 1 50%;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.toolbar .views a:first-child {
+    border-radius: 8px 0 0 8px;
+}
+
+.toolbar .views a:last-child {
+    border-left: 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.toolbar .views a.on {
+    background: #f8f9fa;
+    color: #111111;
+    font-weight: 600;
 }
 
 /* the page's one main action in the colour of Scan2Play's actions (the cyan of the "2"), dark text — as on every other page */
@@ -68,11 +115,222 @@ body {
     font-weight: 600;
 }
 
+.toolbar .more {
+    position: relative;
+}
+
+.toolbar .more summary {
+    list-style: none;
+    justify-content: center;
+    min-width: 44px;
+    font-weight: 700;
+}
+
+.toolbar .more summary::-webkit-details-marker {
+    display: none;
+}
+
+.toolbar .more-items {
+    position: absolute;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: min(320px, calc(100vw - 32px));
+    margin-top: 6px;
+    padding: 10px;
+    border: 1px solid #6c757d;
+    border-radius: 8px;
+    background: #212529;
+}
+
 .toolbar .hint {
-    flex-basis: 100%;
     margin: 0;
     color: #adb5bd;
     font-size: 0.85rem;
+}
+
+.toolbar .view-hint {
+    flex-basis: 100%;
+}
+
+/* On a computer the bar is one compact row: the evening as wide as its longest line, the version as wide as its words — not
+   stretched across half the screen */
+@media (min-width: 576px) {
+    .toolbar .pick {
+        flex: 0 1 auto;
+    }
+
+    .toolbar select {
+        width: 300px;
+    }
+
+    .toolbar .views {
+        flex: 0 0 auto;
+    }
+
+    .toolbar .views a {
+        flex: 0 0 auto;
+    }
+}
+
+/* On a phone: the evening and "⋯" on one row, the version on the next, print the whole width under them */
+@media (max-width: 575.98px) {
+    .toolbar .pick {
+        flex-basis: calc(100% - 60px);
+    }
+
+    .toolbar .more {
+        order: 1;
+    }
+
+    .toolbar .views {
+        order: 2;
+        flex-basis: 100%;
+    }
+
+    .toolbar #printBtn {
+        order: 3;
+        flex-basis: 100%;
+        justify-content: center;
+    }
+
+    .toolbar .view-hint {
+        order: 4;
+    }
+}
+
+/* ---- The hosts' version on the DJ's page: the evening's title and its hosts' link (V61; not printed) ---- */
+
+.hosts-panel {
+    max-width: 760px;
+    margin: 16px auto 0;
+    padding: 12px 16px;
+    border: 1px solid #0aa2c0;
+    border-radius: 12px;
+    background: #f2fbfd;
+}
+
+.hosts-panel h2 {
+    margin: 0 0 4px;
+    border: 0;
+    padding: 0;
+}
+
+.hosts-panel .help {
+    margin: 0 0 8px;
+    color: #444444;
+    font-size: 0.9rem;
+}
+
+.hosts-panel .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+}
+
+.hosts-panel .row form {
+    margin: 0;
+}
+
+.hosts-panel label {
+    flex-basis: 100%;
+    font-weight: 600;
+}
+
+.hosts-panel input[type="text"] {
+    flex: 1 1 220px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #999999;
+    border-radius: 8px;
+    font: inherit;
+}
+
+/* outlines: the page's one action is "Drukuj" */
+.hosts-panel button {
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 1px solid #0aa2c0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #075c6e;
+    font: inherit;
+    cursor: pointer;
+}
+
+.hosts-panel button.danger {
+    border-color: #b02a37;
+    color: #b02a37;
+}
+
+@media (max-width: 575.98px) {
+    .hosts-panel {
+        margin: 12px 16px 0;
+    }
+}
+
+/* "Do internetu" inside the panel: a heading of its own under a line */
+.hosts-panel .social {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #b9e6f0;
+}
+
+.hosts-panel h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+}
+
+/* ---- "Ostatnie wieczory": the shown evening among its neighbours (screen only) ---- */
+
+.compare-scroll {
+    overflow-x: auto;
+}
+
+.compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.compare th,
+.compare td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eeeeee;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.compare thead th {
+    color: #555555;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.compare .n {
+    text-align: right;
+}
+
+.compare tbody th a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: #075c6e;
+    font-weight: 400;
+}
+
+.compare tr.shown th a,
+.compare tr.shown td {
+    font-weight: 700;
+}
+
+.compare tr.shown {
+    background: #f2fbfd;
 }
 
 /* ---- The summary ---- */
@@ -80,52 +338,55 @@ body {
 main {
     max-width: 760px;
     margin: 0 auto;
-    padding: 24px 16px 32px;
+    padding: 20px 16px 32px;
 }
 
+/* the DJ's logo beside the title, the date and the DJ under it — the counts within the first screen of a phone */
 .head {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.logo {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 0 0 8px;
-    font-weight: 700;
-    font-size: 1.1rem;
+    gap: 14px;
+    margin-bottom: 14px;
 }
 
-.logo img {
-    width: 32px;
-    height: 32px;
-}
-
-.logo .two {
-    color: #0aa2c0;
+.titles {
+    min-width: 0;
 }
 
 h1 {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
 }
 
-.when {
-    margin: 4px 0 0;
+/* "Podsumowanie wieczoru" small above the DJ's title of the evening */
+.kind {
+    margin: 0;
+    color: #0a7f97;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.when,
+.dj {
+    margin: 2px 0 0;
     color: #444444;
 }
 
 .dj {
-    margin: 4px 0 0;
+    color: #111111;
     font-weight: 600;
 }
 
 h2 {
-    margin: 24px 0 8px;
-    font-size: 1.2rem;
+    margin: 22px 0 8px;
+    font-size: 1.15rem;
     border-bottom: 2px solid #0aa2c0;
     padding-bottom: 4px;
+    break-after: avoid;
 }
 
 .empty,
@@ -136,33 +397,77 @@ h2 {
 
 .stats {
     display: grid;
-    /* six counts: one row on A4 and a computer, two rows of three on a phone — never five and one left alone */
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 10px;
+    /* four counts: one row on A4 and a computer, two rows of two on a phone */
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
 }
 
 .stat {
     display: flex;
     flex-direction: column;
-    padding: 10px 12px;
+    padding: 8px 12px;
     border: 1px solid #dddddd;
     border-radius: 8px;
     break-inside: avoid;
 }
 
 .stat strong {
-    font-size: 1.8rem;
+    font-size: 1.7rem;
     line-height: 1.1;
+    font-variant-numeric: tabular-nums;
 }
 
 .stat small {
     color: #666666;
 }
 
+/* the hosts' three numbers: larger, the same three columns on a phone and on paper */
+.stats.big {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.stats.big strong {
+    font-size: 2rem;
+}
+
+.stats.big span {
+    font-size: 0.9rem;
+}
+
+/* the rest of the DJ's counts, one line: "pominięte przez DJ-a: 3 · z kiosku: 6 · …" */
+.counts {
+    margin: 8px 0 0;
+    color: #555555;
+    font-size: 0.9rem;
+}
+
+.counts span + span::before {
+    content: " · ";
+}
+
 .wait {
-    margin: 12px 0 0;
-    text-align: center;
+    margin: 8px 0 0;
     font-weight: 600;
+}
+
+/* the hosts' first and last song */
+.first-last {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px 16px;
+    margin-top: 12px;
+}
+
+.first-last div {
+    display: flex;
+    flex-direction: column;
+    padding-left: 8px;
+    border-left: 3px solid #0aa2c0;
+}
+
+.first-last .label {
+    color: #555555;
+    font-size: 0.9rem;
 }
 
 /* One row per song: the number, the name taking what is left (it wraps there), then the votes and the status as columns on the
@@ -238,7 +543,20 @@ h2 {
     white-space: nowrap;
 }
 
-/* what "Nie masz w bibliotece" counts by: always said, not an icons' legend */
+/* "Kopiuj listę": an outline, the page's action is "Drukuj" */
+.copy {
+    min-height: 44px;
+    margin-top: 8px;
+    padding: 6px 14px;
+    border: 1px solid #0aa2c0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #075c6e;
+    font: inherit;
+    cursor: pointer;
+}
+
+/* what "Nie masz w bibliotece" and the chart count by: always said, not an icons' legend */
 .legend.library-legend {
     display: block;
 }
@@ -264,43 +582,110 @@ h2 {
     }
 }
 
+/* ---- The half-hours: bars side by side, the busiest in the accent, the labels every two hours under them ---- */
+
 .busiest {
-    margin: 0 0 8px;
+    margin: 0 0 6px;
     font-weight: 600;
 }
 
-.hours {
+.chart {
+    display: block;
     width: 100%;
-    border-collapse: collapse;
+    height: 72px;
 }
 
-.hours th {
-    width: 4.5em;
-    text-align: left;
-    font-weight: 400;
+.chart rect {
+    fill: #b9e6f0;
+}
+
+.chart rect.busiest-bar {
+    fill: #0aa2c0;
+}
+
+.axis {
+    display: flex;
+    margin-bottom: 4px;
+    color: #555555;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
 }
 
-.hours td {
-    padding: 2px 0;
+/* a label at its bar's left edge, running over the next bars' empty labels */
+.axis span {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: visible;
+    white-space: nowrap;
 }
 
-.hours meter {
-    width: 100%;
-    height: 14px;
+/* ---- What played, in order: a fold whose heading is the summary's (summary.js folds it on a phone, unfolds it to print) ---- */
+
+#setlistFold > summary {
+    list-style: none;
+    cursor: pointer;
 }
 
-.hours .count {
-    width: 3em;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
+#setlistFold > summary::-webkit-details-marker {
+    display: none;
+}
+
+#setlistFold > summary h2::after {
+    content: " ▾";
+    color: #0aa2c0;
+}
+
+#setlistFold[open] > summary h2::after {
+    content: " ▴";
 }
 
 .foot {
-    margin-top: 32px;
+    margin-top: 28px;
     text-align: center;
     color: #777777;
     font-size: 0.85rem;
+}
+
+.foot p {
+    margin: 0;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #111111;
+    font-weight: 700;
+}
+
+.logo img {
+    width: 22px;
+    height: 22px;
+}
+
+.logo .two {
+    color: #0aa2c0;
+}
+
+/* The DJ's logo (V45, Pro) beside the title */
+.dj-logo {
+    display: block;
+    flex: none;
+    max-width: 96px;
+    max-height: 64px;
+    object-fit: contain;
+}
+
+/* on a phone the title on one line beside a smaller logo */
+@media (max-width: 575.98px) {
+    h1 {
+        font-size: 1.3rem;
+    }
+
+    .dj-logo {
+        max-width: 64px;
+        max-height: 48px;
+    }
 }
 
 @media print {
@@ -312,13 +697,60 @@ h2 {
         max-width: none;
         padding: 0;
     }
-}
 
-/* The DJ's logo (V45, Pro) above ours */
-.dj-logo {
-    display: block;
-    max-width: 240px;
-    max-height: 96px;
-    margin: 0 auto 8px;
-    object-fit: contain;
+    body {
+        font-size: 10pt;
+        line-height: 1.3;
+    }
+
+    h1 {
+        font-size: 17pt;
+    }
+
+    h2 {
+        margin: 10px 0 4px;
+        font-size: 12pt;
+    }
+
+    .dj-logo {
+        max-height: 48px;
+    }
+
+    .stat {
+        padding: 5px 10px;
+    }
+
+    .stat strong,
+    .stats.big strong {
+        font-size: 18pt;
+    }
+
+    /* the fold's sign is the screen's: paper has the list unfolded */
+    #setlistFold > summary h2::after,
+    #setlistFold[open] > summary h2::after {
+        content: none;
+    }
+
+    /* paper is wide enough for two columns of songs: what played, and the hosts' ten most wanted */
+    .setlist,
+    .hosts .top-songs {
+        column-count: 2;
+        column-gap: 8mm;
+    }
+
+    .songs li {
+        padding: 1px 0;
+    }
+
+    .setlist {
+        font-size: 9pt;
+    }
+
+    .chart {
+        height: 16mm;
+    }
+
+    .foot {
+        margin-top: 12px;
+    }
 }

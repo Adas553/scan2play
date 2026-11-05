@@ -136,6 +136,11 @@ public class SongRequestEntity {
      */
     private Instant clearedAt;
 
+    /** Why the AI rejected it (V62): the song played lately, or against the vibe; {@code null} for every other request. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private com.scan2play.model.RejectReason rejectReason;
+
     /** Whether the AI's song has none of the guest's words in it: the queue marks it "⚠ Sprawdź" ({@code SongNames.sharesNoWord}). */
     public boolean needsCheck() {
         return SongNames.sharesNoWord(guestText, songName);

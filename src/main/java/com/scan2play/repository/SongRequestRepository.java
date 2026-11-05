@@ -17,6 +17,26 @@ import java.util.List;
 public interface SongRequestRepository extends JpaRepository<SongRequestEntity, Long> {
 
     /**
+     * What "Podsumowanie wieczoru" keeps of the requests a statement deletes (V61): appended to a {@code WITH gone AS (DELETE …
+     * RETURNING *)}, it copies each deleted request into {@code evening_song} — its song's name (none for a request the AI rejected:
+     * that name is what the guest typed), its times, how it ended (as {@code EveningSummaryService.statusOf}), its votes, tips and
+     * counts, why the AI rejected it (V62); never a guest's words. Only a party's that is still there (a request without a party row has no evening to keep). Its
+     * own CTE: PostgreSQL runs it whether the final SELECT reads it or not.
+     */
+    String KEEP_FOR_THE_SUMMARY = ", kept AS (INSERT INTO evening_song (song_request_id, party_code, song_name, requested_at,"
+            + " played_at, status, votes, tips, dedications, added_by_dj, via_kiosk, reject_reason)"
+            + " SELECT g.id, g.party_code, CASE WHEN g.status = 'REJECTED_BY_AI' THEN NULL ELSE g.song_name END, g.requested_at,"
+            + " g.played_at, g.status, g.votes, g.tips, g.dedications, g.added_by_dj, g.via_kiosk,"
+            + " CASE WHEN g.status = 'REJECTED_BY_AI' THEN g.reject_reason END FROM (SELECT gone.*, CASE"
+            + " WHEN gone.decision = 'played' THEN 'PLAYED'"
+            + " WHEN gone.decision = 'rejected' AND gone.skipped_at IS NOT NULL THEN 'SKIPPED'"
+            + " WHEN gone.decision = 'rejected' AND gone.cleared_at IS NOT NULL THEN 'CLEARED'"
+            + " WHEN gone.decision = 'rejected' THEN 'REJECTED_BY_AI' ELSE 'WAITING' END AS status FROM gone) g"
+            + " WHERE g.requested_at IS NOT NULL AND EXISTS (SELECT 1 FROM party_settings p WHERE p.party_code = g.party_code)"
+            + " ON CONFLICT (song_request_id) DO NOTHING)";
+
+
+    /**
      * Finds the 300 oldest song requests for the DJ dashboard queue (FIFO order) — as many as a party may send in a day
      * ({@code guest.limit.per-party-daily}), so every waiting request is in it: the DJ's queue, the guests' list and their 👍, and
      * the match of a request for a song that waits already (a vote, not a second row). It was 100 until 2026-10-08: a song asked
@@ -70,13 +90,24 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
                                         Pageable pageable);
 
     /**
-     * The party's evenings, the latest first: each day ({@code "2026-10-03"}) a request was made on, with how many — the day in
-     * Polish time, moved back by {@code EveningSummaryService.EVENING_STARTS} (6 hours), so a request at 01:30 belongs to the evening
-     * before. A row is {@code [day as text, count]}. Bounded by {@code limit}; the retention keeps 30 days of one party's rows
-     * (≤ 300 a day), {@code idx_party_decision_time} finds them by its first column.
+     * The party's evenings, the latest first: each day ({@code "2026-10-03"}) a request was made on, with the guests' votes of it, its
+     * played requests, the ones the AI rejected and its first and last request (the summary's "Ostatnie wieczory") —
+     * the day in Polish time, moved back by {@code EveningSummaryService.EVENING_STARTS} (6 hours), so a request at 01:30 belongs to
+     * the evening before. Its requests and the songs kept of the ones gone ({@code evening_song}, V61; a request is in one of them,
+     * never in both). The votes as the summary counts them: of the songs the AI let through (a skipped or cleared one too, not one it
+     * rejected), without the DJ's own first vote of a song they added (V44); an evening of rejections alone is there with 0. A row
+     * is {@code [day as text, votes, played, rejected by the AI, first request, last request]}. Bounded by {@code limit}; a party's rows are what 30 days of requests (≤ 300 a day) and
+     * 13 months of kept songs are, found by {@code idx_party_decision_time} and {@code idx_evening_song_party_time}.
      */
-    @Query(value = "SELECT to_char(CAST((requested_at AT TIME ZONE 'Europe/Warsaw') - INTERVAL '6 hours' AS date), 'YYYY-MM-DD'),"
-            + " COUNT(*) FROM song_requests WHERE party_code = :partyCode GROUP BY 1 ORDER BY 1 DESC LIMIT :limit",
+    @Query(value = "SELECT to_char(CAST((r.requested_at AT TIME ZONE 'Europe/Warsaw') - INTERVAL '6 hours' AS date), 'YYYY-MM-DD'),"
+            + " COALESCE(SUM(r.votes - CASE WHEN r.added_by_dj THEN 1 ELSE 0 END) FILTER (WHERE r.status <> 'REJECTED_BY_AI'), 0),"
+            + " COUNT(*) FILTER (WHERE r.status = 'PLAYED'), COUNT(*) FILTER (WHERE r.status = 'REJECTED_BY_AI'),"
+            + " MIN(r.requested_at), MAX(r.requested_at)"
+            + " FROM (SELECT requested_at, votes, added_by_dj, CASE WHEN decision = 'played' THEN 'PLAYED'"
+            + " WHEN decision = 'rejected' AND skipped_at IS NULL AND cleared_at IS NULL THEN 'REJECTED_BY_AI' ELSE 'OTHER' END AS status"
+            + " FROM song_requests WHERE party_code = :partyCode AND requested_at IS NOT NULL"
+            + " UNION ALL SELECT requested_at, votes, added_by_dj, status FROM evening_song"
+            + " WHERE party_code = :partyCode) r GROUP BY 1 ORDER BY 1 DESC LIMIT :limit",
             nativeQuery = true)
     List<Object[]> findEvenings(@Param("partyCode") String partyCode, @Param("limit") int limit);
 
@@ -268,7 +299,8 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
     int clearWaitingRequestedBefore(@Param("cutoff") Instant cutoff, @Param("clearedAt") Instant clearedAt);
 
     /**
-     * The DJ clears the history: the party's requests that played or were rejected are deleted, guests' words with them. Never a
+     * The DJ clears the history: the party's requests that played or were rejected are deleted, guests' words with them — what the
+     * evening summary needs of them kept in {@code evening_song} by the same statement ({@link #KEEP_FOR_THE_SUMMARY}). Never a
      * waiting one, and never one the DJ skipped after {@code skippedAfter}: it keeps its song out of the queue
      * ({@link #findSkippedByTheDj}) and stays in the history until that ends. One statement over one party's rows — at most what
      * the retention keeps of it (30 days, ≤ 300 requests a day), found by {@code idx_party_decision_time}.
@@ -276,9 +308,9 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
      * @return number of deleted requests
      */
     @Transactional
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("DELETE FROM SongRequestEntity s WHERE s.partyCode = :partyCode AND s.decision IN ('played', 'rejected') "
-            + "AND (s.skippedAt IS NULL OR s.skippedAt <= :skippedAfter)")
+    @Query(value = "WITH gone AS (DELETE FROM song_requests WHERE party_code = :partyCode AND decision IN ('played', 'rejected')"
+            + " AND (skipped_at IS NULL OR skipped_at <= :skippedAfter) RETURNING *)" + KEEP_FOR_THE_SUMMARY
+            + " SELECT COUNT(*) FROM gone", nativeQuery = true)
     int deleteHistory(@Param("partyCode") String partyCode, @Param("skippedAfter") Instant skippedAfter);
 
     /**
@@ -306,15 +338,16 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
 
     /**
      * Deletes at most {@code batchSize} song requests that were requested before {@code cutoff} — the retention purge
-     * ({@code SongRequestRetentionService}); any decision, played or not. A request without a {@code requested_at} has no age
+     * ({@code SongRequestRetentionService}); any decision, played or not — what the evening summary needs of them kept in
+     * {@code evening_song} by the same statement ({@link #KEEP_FOR_THE_SUMMARY}). A request without a {@code requested_at} has no age
      * and is left alone. Bounded on purpose: the caller repeats it until a batch comes back short, so that a first run over
      * a long backlog is many short transactions (short locks) and not one huge DELETE. Each call is its own transaction.
      *
      * @return number of deleted rows (less than {@code batchSize} when nothing older is left)
      */
     @Transactional
-    @Modifying
-    @Query(value = "DELETE FROM song_requests WHERE id IN "
-            + "(SELECT id FROM song_requests WHERE requested_at < :cutoff LIMIT :batchSize)", nativeQuery = true)
+    @Query(value = "WITH gone AS (DELETE FROM song_requests WHERE id IN "
+            + "(SELECT id FROM song_requests WHERE requested_at < :cutoff LIMIT :batchSize) RETURNING *)" + KEEP_FOR_THE_SUMMARY
+            + " SELECT COUNT(*) FROM gone", nativeQuery = true)
     int deleteRequestedBefore(@Param("cutoff") Instant cutoff, @Param("batchSize") int batchSize);
 }

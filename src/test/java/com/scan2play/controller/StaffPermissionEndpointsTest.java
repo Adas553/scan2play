@@ -82,7 +82,7 @@ class StaffPermissionEndpointsTest {
                         new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off(), songCommands),
                         new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class))),
                         dashboard,
-                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), com.scan2play.service.Plans.off()),
+                        new DjSummaryController(oneEvening(), helper, codesAsTexts(), com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl/"),
                         new StaffController(staff, mock(PartySettingsCommandService.class), helper,
                                 mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off()),
                         new FeedbackController(mock(com.scan2play.repository.FeedbackRepository.class), helper),
@@ -128,7 +128,11 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.HOST_LISTS, post("/dj/dashboard/host-lists").param("partyCode", PUB).param("blocked", "x")),
                 Arguments.of(StaffPermission.HOST_LISTS, post("/dj/dashboard/host-link").param("partyCode", PUB).param("link", "off")),
                 Arguments.of(StaffPermission.SUMMARY, get("/dj/summary").param("party", PUB)),
-                Arguments.of(StaffPermission.SUMMARY, get("/dj/summary/csv").param("party", PUB)));
+                Arguments.of(StaffPermission.SUMMARY, get("/dj/summary/csv").param("party", PUB)),
+                // the evening's title and its hosts' link (V61)
+                Arguments.of(StaffPermission.SUMMARY, post("/dj/summary/title").param("party", PUB).param("evening", "2026-10-10").param("title", "x")),
+                Arguments.of(StaffPermission.SUMMARY, post("/dj/summary/share").param("party", PUB).param("evening", "2026-10-10")),
+                Arguments.of(StaffPermission.SUMMARY, post("/dj/summary/share/off").param("party", PUB).param("evening", "2026-10-10")));
     }
 
     @ParameterizedTest(name = "{1}: {0}")

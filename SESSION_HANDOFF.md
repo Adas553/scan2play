@@ -157,6 +157,33 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    measured, the feel is not), Nosifer's "Gra: …" with a long DJ name, the TV at the venue; a photo of the TV in "Straszny" for Instagram.
    Next, only if DJs ask: the DJ's own colours (Pro, on the same tokens: a contrast fix and the statuses' hues kept away), more themes
    (each a block of tokens and an SVG; `GuestThemesCssTest` checks it), a summer one once a hue far from the statuses and the cyan is found.
+9. **"Podsumowanie wieczoru" — v1 and v2 of the analysis** (the artifact https://claude.ai/artifact/C9kWpRuZ8h5pbnbPDS6Fvx; the owner,
+   2026-11-04: "Zrób v1 w całości, potem zaczniemy v2", the open questions left to me; then "zrób razem z v2" for the bar's width on a
+   computer) — **both on `claude/vibrant-maxwell-j5kxed`** (v1 pushed as `40f7f89`; v2 after it), **waiting for the owner's review**,
+   then a release with **V61, V62 and V63** (check Flyway's lines once). **v2:** an evening lasts 13 months — instead of a snapshot of the counts
+   (planned), the statement that deletes requests ("Wyczyść historię", the 30 days' purge) copies what the summary needs of each into
+   `evening_song` (`KEEP_FOR_THE_SUMMARY`; no guest's words, no name of a request the AI rejected): a clear in the middle of a party
+   loses nothing and no 06:30 job is needed; the page reads both tables. The evenings' list up to 52, by month; the DJ's title of the
+   evening and the hosts' read-only link `/s/{token}` (30 days, one an evening, "Nowy link", "Wyłącz link", `noindex`, no referrer) in
+   the panel "Dla gospodarzy" of the hosts' version (`evening_summary`); the bar one compact row on a computer (the owner's screenshot:
+   the list half the screen wide); the privacy policy's section 5 and "Wyczyść historię"'s question say the summary keeps the songs.
+   Tests: `EveningSummaryIT` (seen red without the copy), `AccountDeletionIT`, `PartyCodeChangeIT`, browser scenarios
+   `summary-hosts-panel-phone`, `summary-shared-page`. Kept for Free too (the copy does not ask the plan), read with Pro. **v1:** (no migration). The numbers: a song asked for again is one line (`EveningSummaryService.Song`, by
+   `LibraryKey`) — it was twice in the most wanted and in "Chcieli, a nie usłyszeli" though it played; four counts (played, the guests'
+   votes, the songs wanted, rejected by the AI), the rest in a line; the evenings' list with the votes (`findEvenings`,
+   `SongRequestRepositoryIT`); the half-hours counted in time (the night the clocks go back). The look: the bar in three rows on a phone
+   (the counts at ~300 px, were ~560), bars of an SVG in the accent, artists of two songs or more only, what played folded on a phone and
+   in two columns on paper. "Dla mnie / Dla gospodarzy" (`view=hosts`): the hosts' version without the DJ's own — one A4 page for ~40
+   played. "Kopiuj listę" of the library's gaps; the CSV with four columns at the end. My picks: the switch on the same page; the hosts'
+   version without "Chcieli, a nie usłyszeli"; no title from the poster (its heading is a call like "Piosenka dla Pary", and today's, not
+   that evening's) — the title is the DJ's, typed (v2). Details: `PROJECT_CONTEXT.md` 5.1. **v3** (the owner: "ok, rób v3"; after v2
+   on the same branch, **V62**): why the AI rejected — saved with the request from what the code knows (on the recently played list
+   the AI was given: "już grała"; else "nie pasowała"; the prompt unchanged), counted under the rejections, "Odrzucone przez AI" listed,
+   a CSV column; "Ostatnie wieczory" (up to 8 around the shown one, from the evenings' query); "Do internetu" in the hosts' panel — a
+   story or a post drawn in the page (`summary-social.js`, as the poster's), shared or saved. **Later:** the morning e-mail with the
+   summary's link waits for item 1c's sender. **Then** (the owner: "prośby odrzucone jeszcze przed AI — możemy zrobić"; **V63**): the
+   requests refused before the AI (the hosts' "nie grać" list, a song the DJ skipped lately, a mood or a message) counted per evening and
+   reason in `evening_refusal` — no song, no guest's words —, one line "Zatrzymane, zanim zapytano AI" in the DJ's version.
 
 ## Later (not now)
 

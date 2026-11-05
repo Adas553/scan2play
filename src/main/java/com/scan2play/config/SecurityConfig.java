@@ -171,6 +171,8 @@ public class SecurityConfig {
                         .requestMatchers("/csp-report").permitAll()
                         // The hosts' lists (V29): a page opened by its secret link, without an account (HostController)
                         .requestMatchers("/h/*").permitAll()
+                        // The hosts' read-only link of an evening summary (V61): a page opened by its secret link (SharedSummaryController)
+                        .requestMatchers(HttpMethod.GET, "/s/*").permitAll()
                         // the venue's kiosk (V56): a tablet without a login, its secret link and what its page sends; "/k" the
                         // same page by the kiosk's cookie
                         .requestMatchers("/k", "/k/*", "/k/*/*").permitAll()

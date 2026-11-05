@@ -73,6 +73,21 @@ public final class ViewAttributes {
     public static final String EVENINGS = "evenings";
     public static final String EVENING = "evening";
     public static final String SUMMARY = "summary";
+    /** The evening summary's version for the hosts (the couple, the client): without what is the DJ's own. */
+    public static final String HOSTS_VIEW = "hostsView";
+    /** The summary's evenings by month ({@code EveningSummaryService.Month}): the list's groups. */
+    public static final String EVENING_MONTHS = "eveningMonths";
+    /** The evenings "Ostatnie wieczory" compares, the shown one among them. */
+    public static final String COMPARED_EVENINGS = "comparedEvenings";
+    /** The evening's requests refused before the AI (V63), by reason: the DJ's version. */
+    public static final String REFUSALS = "refusals";
+    /** The DJ's title of the evening (V61); null: "Podsumowanie wieczoru". */
+    public static final String EVENING_TITLE = "eveningTitle";
+    /** The evening's hosts' link (V61, {@code /s/{token}}) while it works, and the day it stops. */
+    public static final String SHARE_LINK = "shareLink";
+    public static final String SHARE_UNTIL = "shareUntil";
+    /** The summary opened by its hosts' link: no bar, no DJ's controls. */
+    public static final String SHARED = "shared";
     public static final String REQUEST_LIMIT = "requestLimit";
     public static final String COOLDOWN_MINUTES = "cooldownMinutes";
     public static final String DUPLICATE_CHECK_WINDOW = "duplicateCheckWindow";
@@ -127,6 +142,8 @@ public final class ViewAttributes {
     public static final String LIBRARY_ON = "libraryOn";
     /** The evening summary's songs not in the DJ's library (V42); null without a library or without the plan. */
     public static final String LIBRARY_GAPS = "libraryGaps";
+    /** The library's gaps one a line: what the summary's "Kopiuj listę" copies. */
+    public static final String LIBRARY_COPY = "libraryCopy";
 
     // --- Result Page Attributes ---
     public static final String RESPONSE = "response";
