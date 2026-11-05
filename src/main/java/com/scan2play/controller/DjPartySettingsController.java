@@ -235,6 +235,28 @@ public class DjPartySettingsController {
     }
 
     /**
+     * "Poranne podsumowanie" (V64): the organiser's switch of the morning e-mail of a busy evening — their address, so theirs alone.
+     * Sent as soon as it is switched (cards-in-place.js, {@code X-Requested-With: fetch}): the answer is the card alone, saying it is
+     * saved; without the script the page "Ustawienia imprezy" again at the card. Kept whatever the plan: the e-mail itself is Pro's.
+     */
+    @PostMapping("/dashboard/morning-summary")
+    public String updateMorningSummary(@RequestParam String partyCode, @RequestParam(defaultValue = "false") boolean on,
+                                       @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+                                       OAuth2AuthenticationToken authentication, HttpSession session, Model model) {
+        PartySettingsEntity settings = sessionHelper.requireOwner(partyCode, authentication, session);
+        partySettingsCommandService.updateSettings(partyCode, s -> s.setMorningSummary(on));
+        if (!"fetch".equals(requestedWith)) {
+            return REDIRECT_SETTINGS + "?party=" + partyCode + "#morningSummaryCard";
+        }
+        model.addAttribute(IS_OWNER, true);
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(PLAN, planService.view(settings, true));
+        model.addAttribute(MORNING_SUMMARY, on);
+        model.addAttribute(MORNING_SUMMARY_SAVED, true);
+        return "settings :: morningSummaryCard";
+    }
+
+    /**
      * The card "Impreza"'s words, under one "Zapisz" (the design review, 2026-10-10: each field had its own): the DJ's own words
      * about the vibe (V16) — one line, at most {@value PartySettingsEntity#VIBE_NOTE_MAX} characters; the AI is given it with every
      * request, the guests see it on the party page — and who plays (V17), e.g. "DJ Koko" — at most

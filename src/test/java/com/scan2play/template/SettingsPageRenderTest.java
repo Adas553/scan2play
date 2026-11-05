@@ -138,7 +138,7 @@ class SettingsPageRenderTest {
         when(push.publicKey()).thenReturn(PUBLIC_KEY);
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), limiter, push, staff,
-                mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
+                mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -407,7 +407,7 @@ class SettingsPageRenderTest {
 
         assertThat(html).contains("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"pushToggle\"", "s2p-fold-state")
                 .doesNotContain("id=\"linksCard\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
-                        "href=\"/dj/staff", "id=\"staffRow\"", "id=\"joinStaffForm\"", "id=\"libraryCard\"");
+                        "href=\"/dj/staff", "id=\"staffRow\"", "id=\"joinStaffForm\"", "id=\"libraryCard\"", "id=\"morningSummaryCard\"");
         write("settings-staff.html", html);
     }
 
@@ -515,6 +515,60 @@ class SettingsPageRenderTest {
         assertThat(html).contains("id=\"guestThemeCard\" data-saves-in-place open=\"open\"", "id=\"guestThemeState\">Weselny<",
                 "id=\"guestThemeSaved\">✓ Zapisane<").containsPattern("id=\"guestTheme-wedding\" value=\"WEDDING\"[^>]*checked=\"checked\"");
         write("settings-guest-theme-answer.html", html);
+    }
+
+    /**
+     * "Poranne podsumowanie" (V64): the organiser's card, folded to its state, a switch that sends at once (data-auto-submit, the card
+     * answered in place) — on for a new account.
+     */
+    @Test
+    void theMorningSummary_hasASwitch_forTheOrganiser() throws IOException {
+        String html = render(new PartyStaffService.Access(party(), true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+
+        String card = html.substring(html.indexOf("id=\"morningSummaryCard\""), html.indexOf("</details>", html.indexOf("id=\"morningSummaryCard\"")));
+        assertThat(card).contains("data-saves-in-place", ">Poranne podsumowanie<", "id=\"morningSummaryState\">Włączone<",
+                "action=\"/dj/dashboard/morning-summary\"", "data-in-place", "name=\"partyCode\" value=\"" + PARTY + "\"",
+                "Rano po wieczorze z co najmniej 5 prośbami gości").containsPattern(
+                "id=\"morningSummaryToggle\" name=\"on\" value=\"true\"\\s+data-auto-submit checked=\"checked\">");
+    }
+
+    /**
+     * The switch flipped (V64): the server answers with the card alone, unfolded, the new state and "✓ Zapisane" — as the theme's card.
+     * {@code settings-morning-answer.html} for the stand-in.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void theMorningSummarySwitched_isAnsweredWithTheCardAlone() throws IOException {
+        PartySettingsEntity party = party();
+        PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
+        when(commands.updateSettings(any(), any())).thenAnswer(call -> {
+            ((java.util.function.Consumer<PartySettingsEntity>) call.getArgument(1)).accept(party);
+            return party;
+        });
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.requireOwner(any(), any(), any())).thenReturn(party);
+        com.scan2play.controller.DjPartySettingsController controller = new com.scan2play.controller.DjPartySettingsController(commands,
+                mock(com.scan2play.service.AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper,
+                com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.of(commands, com.scan2play.service.PartySchedules.FRIDAY_NOON));
+        ConcurrentModel model = new ConcurrentModel();
+        String view = controller.updateMorningSummary(PARTY, false, "fetch", user("owner"), new MockHttpSession(), model);
+        assertThat(view).isEqualTo("settings :: morningSummaryCard");
+        assertThat(party.isMorningSummary()).isFalse();
+        assertThat(controller.updateMorningSummary(PARTY, true, null, user("owner"), new MockHttpSession(), new ConcurrentModel()))
+                .as("without the script: the page again, at the card").isEqualTo("redirect:/dj/settings?party=" + PARTY + "#morningSummaryCard");
+        party.setMorningSummary(false);
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String html = engine.process("settings", Set.of("morningSummaryCard"), context);
+        assertThat(html).doesNotContain("??");
+        DashboardPageRenderTest.assertNothingInline(html);
+        assertThat(html.trim()).startsWith("<details").endsWith("</details>").doesNotContain("<html", "guestThemeCard");
+        assertThat(html).contains("id=\"morningSummaryCard\" data-saves-in-place open=\"open\"", "id=\"morningSummaryState\">Wyłączone<",
+                "id=\"morningSummarySaved\">✓ Zapisane<").doesNotContain("checked");
+        write("settings-morning-answer.html", html);
     }
 
     /** A closed party that opens today at 20:00 and closes tomorrow at 3:00 (V55), seen on Friday at noon. */
@@ -729,6 +783,9 @@ class SettingsPageRenderTest {
                 "id=\"kioskLinkOffBtn\"", "name=\"link\" value=\"off\"").doesNotContain("id=\"kioskLinkNewBtn\"", "id=\"kioskLinkInput\"");
         assertThat(kiosk).as("the button says what it takes away, and why it is there").contains(">Usuń stary link kiosku<",
                 "id=\"kioskOldHelp\"", "Link kiosku utworzony w planie Pro bez niego nic nie otwiera.");
+        String morning = html.substring(html.indexOf("id=\"morningSummaryCard\""), html.indexOf("</details>", html.indexOf("id=\"morningSummaryCard\"")));
+        assertThat(morning).as("the morning summary (V64): the offer, no switch").contains("class=\"s2p-pro\">PRO<",
+                "Podsumowanie wieczoru mailem następnego ranka — w planie Pro.").doesNotContain("s2p-fold-state", "morningSummaryToggle");
         assertThat(html).contains("id=\"deviceCard\"", "id=\"pushToggle\"");
         write("settings-free.html", html);
     }

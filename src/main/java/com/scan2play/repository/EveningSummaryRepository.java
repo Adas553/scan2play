@@ -89,4 +89,35 @@ public interface EveningSummaryRepository extends JpaRepository<EveningSummaryEn
     @Modifying
     @Query(value = "DELETE FROM evening_refusal WHERE evening < :before", nativeQuery = true)
     int deleteRefusalsBefore(@Param("before") LocalDate before);
+
+    /**
+     * The morning e-mail of an evening claimed (V64): marked as sent at {@code now} unless it already went — one upsert, so two runs
+     * of the job at once send it once (the one that gets 0 sends nothing). The evening's row is made when the DJ never named it.
+     */
+    @Transactional
+    @Modifying
+    @Query(value = "INSERT INTO evening_summary (party_code, evening, morning_sent_at, updated_at) VALUES (:partyCode, :evening, :now, :now)"
+            + " ON CONFLICT (party_code, evening) DO UPDATE SET morning_sent_at = EXCLUDED.morning_sent_at"
+            + " WHERE evening_summary.morning_sent_at IS NULL", nativeQuery = true)
+    int claimMorning(@Param("partyCode") String partyCode, @Param("evening") LocalDate evening, @Param("now") Instant now);
+
+    /** A claimed morning e-mail given back (its send failed): the job's next run that morning tries again. */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE evening_summary SET morning_sent_at = NULL WHERE party_code = :partyCode AND evening = :evening",
+            nativeQuery = true)
+    int releaseMorning(@Param("partyCode") String partyCode, @Param("evening") LocalDate evening);
+
+    /**
+     * The parties with at least {@code minimum} guests' requests between {@code from} and {@code to} — the ones still there and the
+     * ones kept of the requests gone (a request is in one of them), the DJ's own additions not counted —, at most {@code limit}.
+     * {@code idx_song_requests_requested_at} and {@code idx_evening_song_time} find the day's rows.
+     */
+    @Query(value = "SELECT party_code FROM ("
+            + " SELECT party_code FROM song_requests WHERE requested_at >= :from AND requested_at < :to AND NOT added_by_dj"
+            + " UNION ALL"
+            + " SELECT party_code FROM evening_song WHERE requested_at >= :from AND requested_at < :to AND NOT added_by_dj"
+            + ") guests GROUP BY party_code HAVING count(*) >= :minimum ORDER BY party_code LIMIT :limit", nativeQuery = true)
+    List<String> busyParties(@Param("from") Instant from, @Param("to") Instant to, @Param("minimum") int minimum,
+                             @Param("limit") int limit);
 }

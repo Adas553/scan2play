@@ -26,7 +26,7 @@ import { csrfHeaders, hideRefused, partyCode, showPartyActive, showRefused } fro
 /** The forms sent as a page load, not by fetch(). */
 const RELOADS = new Set(['/dj/logout', '/dj/delete-account', '/dj/dashboard/host-link', '/dj/panel', '/dj/join', '/dj/staff/leave',
     '/dj/library/delete', '/dj/logo/delete', '/dj/dashboard/party-code', '/dj/dashboard/schedule', '/dj/dashboard/kiosk-link',
-    '/dj/dashboard/guest-theme']);
+    '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary']);
 /** The forms after which the queue is fetched at once (a song played, skipped, put back; the hosts' lists; a tip; ...). */
 const CHANGE_THE_QUEUE = new Set(['/dj/dashboard/play', '/dj/dashboard/dismiss', '/dj/dashboard/clear-queue', '/dj/dashboard/restore',
     '/dj/dashboard/host-lists', '/dj/dashboard/guest-limit-reset', '/dj/dashboard/tip-count', '/dj/dashboard/add-song',

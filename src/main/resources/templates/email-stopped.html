@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--/* "Nie wysyłaj mi tego" of an e-mail (V64, EmailStopController): the morning summaries are off, said at once — one click, no
+     login. Turned on again in "Ustawienia imprezy" (the link leads there through the login). */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title th:text="#{email.stopped.page_title}">E-mails switched off - Scan2Play</title>
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="page-status">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card p-4 p-sm-5">
+                <h1 class="mb-3 fw-bold text-light-custom h2" id="emailStoppedTitle" th:text="#{email.stopped.title}">Done — no more morning summaries</h1>
+                <p class="lead text-secondary-bright" th:text="#{email.stopped.text}">We will not e-mail you the evening's summary any more.</p>
+                <p class="text-secondary-bright mt-3 mb-0">
+                    <span th:text="#{email.stopped.again}">Changed your mind? Switch it on again in</span>
+                    <a href="/dj/settings#morningSummaryCard" class="text-secondary-bright" th:text="#{email.stopped.settings}">Party settings</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

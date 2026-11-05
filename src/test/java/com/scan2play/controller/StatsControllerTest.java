@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.service.Mailer;
 import com.scan2play.service.SiteCounter;
 import com.scan2play.service.SiteCounter.Event;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,25 @@ class StatsControllerTest {
     private final SiteCounter counter = mock(SiteCounter.class);
     private final PartySettingsRepository parties = mock(PartySettingsRepository.class);
 
+    /** The e-mails' state of the page (V64): a key set, one e-mail sent, none failed. */
+    private static Mailer mailer() {
+        Mailer mailer = mock(Mailer.class);
+        when(mailer.isOn()).thenReturn(true);
+        when(mailer.status()).thenReturn(new Mailer.Status(Instant.parse("2026-11-05T09:00:00Z"), null, null));
+        return mailer;
+    }
+
+    @Test
+    void theEmails_sayTheLastSend_andALaterFailureLoudly() {
+        assertThat(StatsController.renderEmails(true, new Mailer.Status(Instant.parse("2026-11-05T09:00:00Z"), null, null)))
+                .contains("key:          set", "last sent:    05.11.2026 10:00:00").doesNotContain("FAILED", "failed");
+        assertThat(StatsController.renderEmails(true, new Mailer.Status(Instant.parse("2026-11-05T09:00:00Z"),
+                Instant.parse("2026-11-06T09:00:00Z"), "the key was refused (401/403): a new BREVO_API_KEY is needed")))
+                .contains("LAST FAILED:  06.11.2026 10:00:00 — the key was refused");
+        assertThat(StatsController.renderEmails(false, new Mailer.Status(null, null, null)))
+                .contains("NOT SET (BREVO_API_KEY)", "last sent:    never");
+    }
+
     private static OAuth2AuthenticationToken login(String sub) {
         DefaultOAuth2User user = new DefaultOAuth2User(List.of(), Map.of("sub", sub), "sub");
         return new OAuth2AuthenticationToken(user, List.of(), "google");
@@ -61,7 +81,7 @@ class StatsControllerTest {
         when(counter.lastDays(StatsController.DAYS)).thenReturn(List.of(day("2026-10-24", 15, 2, 2, 1, 1, 3),
                 day("2026-10-23", 4, 0, 0, 0, 0, 0)));
 
-        String text = new StatsController(counter, parties, OWNER).stats(login(OWNER));
+        String text = new StatsController(counter, parties, mailer(), OWNER).stats(login(OWNER));
 
         assertThat(text).contains("landing PL", "landing EN", "start", "login", "new DJ", "guest requests", "demo");
         assertThat(text.lines().filter(line -> line.startsWith("2026-10-24")).findFirst().orElseThrow()).matches(
@@ -71,11 +91,11 @@ class StatsControllerTest {
 
     @Test
     void anotherAccount_orNoOwnerSet_isA404() {
-        assertThatThrownBy(() -> new StatsController(counter, parties, OWNER).stats(login("someone-else")))
+        assertThatThrownBy(() -> new StatsController(counter, parties, mailer(), OWNER).stats(login("someone-else")))
                 .isInstanceOfSatisfying(ResponseStatusException.class, e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
-        assertThatThrownBy(() -> new StatsController(counter, parties, "").stats(login(OWNER)))
+        assertThatThrownBy(() -> new StatsController(counter, parties, mailer(), "").stats(login(OWNER)))
                 .isInstanceOf(ResponseStatusException.class);
-        assertThatThrownBy(() -> new StatsController(counter, parties, " ").stats(login(" ")))
+        assertThatThrownBy(() -> new StatsController(counter, parties, mailer(), " ").stats(login(" ")))
                 .as("a blank id is no owner").isInstanceOf(ResponseStatusException.class);
         verifyNoInteractions(counter, parties);
     }
@@ -86,7 +106,7 @@ class StatsControllerTest {
         when(parties.newOrganisers(any(), any())).thenReturn(List.of(PartySettingsEntity.builder().partyCode("WED01")
                 .ownerEmail("ola@gmail.com").ownerName("Ola Kowalska").createdAt(Instant.parse("2026-10-27T18:04:00Z")).build()));
 
-        String text = new StatsController(counter, parties, OWNER).stats(login(OWNER));
+        String text = new StatsController(counter, parties, mailer(), OWNER).stats(login(OWNER));
 
         assertThat(text).contains("New organisers");
         assertThat(text.lines().filter(line -> line.contains("ola@gmail.com")).findFirst().orElseThrow())

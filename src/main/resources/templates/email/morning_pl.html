@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--/* The morning e-mail of the evening summary (V64, MorningSummaryEmailService), Polish: the title and the day, three numbers, the
+     top 3, a button to "Podsumowanie wieczoru". Inline styles only (mail programs), one column, no images. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head><meta charset="UTF-8"><title>Podsumowanie wieczoru</title></head>
+<body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;">
+<div style="max-width:560px;">
+<h1 style="font-size:22px;margin:0 0 4px;" th:text="${title != null} ? ${title} : 'Podsumowanie wieczoru'">Wesele Ani i Tomka</h1>
+<p style="margin:0 0 20px;color:#555555;" th:text="${day}">sobota, 1 listopada 2026</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px;">
+    <tr>
+        <td style="padding:0 24px 0 0;"><div style="font-size:26px;font-weight:bold;" th:text="${requests}">48</div><div style="color:#555555;font-size:14px;">prośby</div></td>
+        <td style="padding:0 24px 0 0;"><div style="font-size:26px;font-weight:bold;" th:text="${played}">31</div><div style="color:#555555;font-size:14px;">zagrane</div></td>
+        <td><div style="font-size:26px;font-weight:bold;" th:text="${votes}">112</div><div style="color:#555555;font-size:14px;">głosy gości</div></td>
+    </tr>
+</table>
+<th:block th:if="${!#lists.isEmpty(top)}">
+<h2 style="font-size:17px;margin:0 0 8px;">Najczęściej chciane</h2>
+<ol style="margin:0 0 24px;padding-left:22px;">
+    <li th:each="song : ${top}"><span th:text="${song.name()}">Artysta - Tytuł</span> <span style="color:#555555;" th:text="'· ' + ${song.votes()} + ' 👍'">· 9 👍</span></li>
+</ol>
+</th:block>
+<p style="margin:0 0 28px;"><a th:href="${summaryUrl}" href="#" style="display:inline-block;background:#0a7f99;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;">Zobacz całe podsumowanie</a></p>
+<p style="color:#666666;font-size:13px;">Wysyłamy je rano po wieczorze z co najmniej 5 prośbami gości. Wyłączysz je w „Ustawieniach imprezy” (Poranne podsumowanie)<th:block th:if="${stopUrl != null}"> albo jednym kliknięciem: <a th:href="${stopUrl}" href="#" style="color:#666666;">Nie wysyłaj mi tego</a></th:block>.</p>
+</div>
+</body>
+</html>

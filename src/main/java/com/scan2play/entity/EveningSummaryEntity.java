@@ -57,6 +57,10 @@ public class EveningSummaryEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    /** When the morning e-mail of this evening went (V64); written only by {@code EveningSummaryRepository}'s claim and release. */
+    @Column(insertable = false, updatable = false)
+    private Instant morningSentAt;
+
     /** Whether the hosts' link opens at {@code now}. */
     public boolean shareWorks(Instant now) {
         return shareToken != null && shareExpiresAt != null && now.isBefore(shareExpiresAt);

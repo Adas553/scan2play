@@ -150,7 +150,8 @@ public class SecurityConfig {
                         .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN))
                         .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY)))
                 // A browser sends its CSP report without a CSRF token
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report"))
+                // A mail program's one-click "Unsubscribe" (RFC 8058, the automatic e-mails' "Nie wysyłaj mi tego", V64) neither
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report", "/email/stop/*"))
                 // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
                 .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver))
                         // no login: a DJ's page → Google's login and back; a fetch of the panel → "/"; any other address → 404
@@ -177,6 +178,8 @@ public class SecurityConfig {
                         // same page by the kiosk's cookie
                         .requestMatchers("/k", "/k/*", "/k/*/*").permitAll()
                         // The staff's invitation (V30): opened before the login, it names the party (StaffController)
+                        // "Nie wysyłaj mi tego" of an e-mail (V64): its secret link, without a login (EmailStopController)
+                        .requestMatchers("/email/stop/*").permitAll()
                         .requestMatchers("/join", "/join/*").permitAll()   // GET /join: the link pasted on the landing page
                         // Legal pages (Privacy Policy, Terms of Service) and the guide "Jak działa Scan2Play" (public: a DJ reads it before
                         // the first login, a person of the staff before joining — the owner, 2026-10-12)

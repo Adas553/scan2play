@@ -1,4 +1,4 @@
-# Session Handoff — 2026-11-04
+# Session Handoff — 2026-11-05
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`,
@@ -58,10 +58,32 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    (b) **The welcome card** above the queue (`welcome_dismissed_at`; the accounts of before closed by the migration): "Pierwszy raz? Napisz
    do nas", "Napisz do nas" → "Pomoc i kontakt", "Jak to działa →"; closed on the server (`POST /dj/dashboard/welcome-dismiss`,
    `welcome.js`); browser scenarios `welcome-card-*`, seen red first, the one-line heading also with the runner's fonts.
-   (c) **an automatic welcome e-mail — later**, when new accounts come several a day or the plans are enforced. Its choices then: the
-   sender (Resend, Postmark, Brevo… or Google Workspace SMTP; its key a Railway secret; SPF / DKIM / DMARC at Cloudflare), the
-   reply-to, once only (`welcome_sent_at`, sent after the commit off the login's thread, retried by the nightly job, never blocking the
-   login), the language, no marketing; the sending behind an interface (a fake in the tests), an IT for "once only" under two logins.
+   (c) **automatic e-mails (V64) — built 2026-11-05 on `claude/nifty-albattani-yzjh5r`, the PR to `dev` waits for the owner's
+   review.** Details: `PROJECT_CONTEXT.md` 5.1 ("The automatic e-mails"), 7.4 (Brevo), 10 (V64). What was built, by the owner's picks:
+   - **Brevo** API v3 behind `EmailSender` (`BrevoEmailSender`; a fake in the tests). From `Scan2Play <kontakt@scan2play.com.pl>`,
+     Reply-To `scan2playcontact@gmail.com`. The key: Railway **`BREVO_API_KEY`** (already set; Brevo key "scan2play-production",
+     Restricted, Transactional email = All; expires 4.11.2027 **or after 90 days unused** — rotate before). Brevo's "Authorised IPs"
+     must stay off. A 401 / 403 is the ERROR line "E-MAIL KEY REFUSED …"; `/dj/stats` shows whether the key is set, the last send Brevo
+     took and a later failure in capitals (`email_status`). A send never throws: the login and the pages never wait for it.
+   - **The welcome**: once an account (`welcome_sent_at`, a claim — two logins at once send one), after the commit on the e-mails' own
+     thread, the panel's language (`email_language`, kept at each panel's opening), the text of `docs/welcome-email.md` (templates
+     `email/welcome_pl|en.html`), no marketing; a failed send is given back and the nightly job (4:35) retries the accounts of the last
+     7 days. **The accounts of before V64 count as welcomed** (the migration) — nobody old is mailed on the deploy.
+   - **The morning summary**: Pro (`PlanFeature.SUMMARY`), ≥ 5 guests' requests that evening (the DJ's additions not counted), at 10:00
+     Polish time the next day (12:00 retries the failed), once an evening (`evening_summary.morning_sent_at`); the title and day, 3
+     numbers (requests, played, votes), the top 3, a button to `/dj/summary`. The switch **"Poranne podsumowanie"** (the organiser's
+     card in "Ustawienia imprezy", on by default) and **"Nie wysyłaj mi tego"** in every e-mail (`/email/stop/{token}`, one click, no
+     login; also the mail program's one-click "Unsubscribe", RFC 8058).
+   - Privacy policy PL / EN: Brevo (Sendinblue SAS, EU) as a processor, the welcome and the morning summary in sections 2, 3, 6.
+   - Tests: `AutomaticEmailsTest`, `BrevoEmailSenderTest`, `EmailStopControllerTest`, `AutomaticEmailsIT` (two logins at once, the jobs
+     run twice and at once — red without the claims' `IS NULL`), the browser scenario `morning-summary-switch` (red before `forms.js`
+     left the form to `cards-in-place.js`).
+   - **After the release:** Flyway's line "now at version v64" once; the start's line "E-mails on (Brevo)"; the first welcome on
+     `/dj/stats` ("last sent") and in Brevo's log (Transactional → Logs); open one in Gmail — "Show original": DKIM and DMARC `PASS`
+     for `scan2play.com.pl`. After a few weeks of clean sending, `_dmarc` `p=none` → `quarantine`. Check Brevo's own data processing
+     agreement is accepted in its account (Settings → Security / GDPR), and how long Brevo keeps its log of sent e-mails.
+   - Not done (proposed): a test e-mail button for the site's owner on `/dj/stats`; the welcome of an account whose address Google did
+     not verify (it never has one, so it gets no e-mail).
 2. **"Zmień kod imprezy"** (V49; the owner, 2026-10-28: "gość, który ma zawsze jego kod QR i spamuje imprezę DJ-a") — **built on
    `claude/affectionate-gauss-iwuhvz`, the PR to `dev` waits for the owner's review** (then a release; V49 on production: check Flyway's
    line once). The owner's picks: a new code (not a ban by address — a venue's Wi-Fi and a mobile network share one), the organiser

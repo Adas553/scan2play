@@ -519,6 +519,37 @@
             </div>
         </details>
 
+        <!--/* "Poranne podsumowanie" (V64): the morning e-mail of a busy evening (MorningSummaryEmailService) — the organiser's alone (the
+             e-mail goes to their address), Pro's alone (without Pro the card offers it, as every Pro card; the switch is kept). Sent as soon as it is
+             switched (forms.js data-auto-submit) and answered with this card (cards-in-place.js), "✓ Zapisane" in it; without the
+             script the "Zapisz" of <noscript>. The e-mails' own "Nie wysyłaj mi tego" switches it off too. */-->
+        <details th:fragment="morningSummaryCard" th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold"
+                 id="morningSummaryCard" data-saves-in-place th:attr="open=${morningSummarySaved != null} ? 'open' : null">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.morning.title}">Morning summary</span><th:block th:if="${plan.pro('SUMMARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+                <span class="s2p-fold-state" id="morningSummaryState" th:unless="${plan.pro('SUMMARY')}"
+                      th:text="${morningSummary} ? #{settings.morning.on} : #{settings.morning.off}">On</span>
+            </summary>
+            <div class="s2p-fold-body">
+            <th:block th:if="${plan.pro('SUMMARY')}"><div th:replace="~{fragments/components :: proOffer(#{settings.morning.pro})}"></div></th:block>
+            <th:block th:unless="${plan.pro('SUMMARY')}">
+            <p class="s2p-card-help mb-3" th:text="#{settings.morning.help}">The morning after an evening with at least 5 guests' requests: its numbers and the top 3, by e-mail.</p>
+            <form th:action="@{/dj/dashboard/morning-summary}" method="POST" class="m-0" id="morningSummaryForm" data-in-place>
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <div class="form-check form-switch m-0 s2p-switch-row">
+                    <input class="form-check-input" type="checkbox" role="switch" id="morningSummaryToggle" name="on" value="true"
+                           th:checked="${morningSummary}" data-auto-submit>
+                    <label class="form-check-label text-light" for="morningSummaryToggle" th:text="#{settings.morning.label}">E-mail me the evening's summary</label>
+                </div>
+                <div class="mt-3" th:if="${morningSummarySaved != null}">
+                    <span class="small text-light" role="status" id="morningSummarySaved" th:text="#{settings.morning.saved}">✓ Saved</span>
+                </div>
+                <noscript><button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{settings.morning.save}">Save</button></noscript>
+            </form>
+            </th:block>
+            </div>
+        </details>
+
         <!--/* "Obsługa" is a page of its own (the organiser's): a row like a folded card, with its state, leading there */-->
         <a th:if="${isOwner}" th:href="@{/dj/staff(party=${partyCode})}" href="/dj/staff" id="staffRow"
            class="card bg-dark border-secondary s2p-fold-link">

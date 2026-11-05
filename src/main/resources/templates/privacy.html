@@ -35,7 +35,8 @@
             <li>If someone joins a party’s staff (a bartender, a second DJ) by the owner’s invitation link or invitation: their Google account’s identifier, the name on that account and what the owner allows them to do — the party’s owner sees the name on the list of the staff</li>
             <li>If the owner invites someone to the staff by the e-mail address of their Google account: that address and what the person will be able to do — the owner sees the address on the list of the staff until the person answers. No e-mail is sent to it: the person sees the invitation when they log in with that account, because the address Google confirms at the login is compared with it</li>
             <li>The party owner’s name from their Google account: their party’s staff see it, and so does whoever opens their invitation link (when the party has no “Who plays”)</li>
-            <li>The party owner’s e-mail address from their Google account (only one Google has verified) and the day the account was made: only so that we can write to them about their account and help — never for advertising or a newsletter; nobody but us sees it and we give it to no one</li>
+            <li>The party owner’s e-mail address from their Google account (only one Google has verified) and the day the account was made: only so that we can write to them about their account and help — never for advertising or a newsletter; nobody but us sees it, and only Brevo gets it, to send our e-mails (section 6)</li>
+            <li>The panel’s language the party owner last opened it in, and their setting “Morning summary” — so that the e-mails are in their language and only the ones they want</li>
         </ul>
         <p><strong>For Guests (anonymous users):</strong></p>
         <ul>
@@ -52,7 +53,8 @@
             <li>To process song requests and provide AI-powered music evaluation</li>
             <li>To count requests for the same song and the guests’ 👍 as votes and show guests the most wanted songs (the number of votes holds no personal data)</li>
             <li>To enforce rate limits and prevent abuse</li>
-            <li>To write to a party’s owner about their account and help (e.g. a short message after their first login, written by us from scan2playcontact@gmail.com) — never for advertising</li>
+            <li>To write to a party’s owner about their account and help: one welcome message after their first login (sent automatically from kontakt@scan2play.com.pl; a reply reaches us at scan2playcontact@gmail.com) and our answers — never for advertising or a newsletter</li>
+            <li>With the Pro plan: the evening’s summary by e-mail the next morning (the evening’s numbers and the three most wanted songs) — only after an evening with at least 5 guests’ requests, at most once an evening, at 10:00 Polish time. Switch it off in “Party settings” or with one click on “Don’t send me this” in every such e-mail</li>
         </ul>
 
         <h3>4. Links to Other Sites</h3>
@@ -93,7 +95,8 @@
         <ul>
             <li><strong>Railway</strong> (Railway Corporation, USA) — hosting of the application and the database: all the data described above is stored on servers in the us-east4 region (Virginia, USA), outside the European Economic Area. Railway processes it under a data processing agreement, and its transfer to the USA relies on the European Commission’s standard contractual clauses.</li>
             <li><strong>Cloudflare</strong> (Cloudflare, Inc., USA) — every connection to the site passes through Cloudflare (encryption, protection against attacks, speed); it sees the IP address and the address of the page.</li>
-            <li><strong>Google</strong> — the DJ’s login (OAuth), Google Gemini (AI song evaluation — it receives the guest’s request text, nothing about the guest) and Gmail, from which we write to a party’s owner.</li>
+            <li><strong>Google</strong> — the DJ’s login (OAuth), Google Gemini (AI song evaluation — it receives the guest’s request text, nothing about the guest) and Gmail, from which we answer a party’s owner and where their replies arrive.</li>
+            <li><strong>Brevo</strong> (Sendinblue SAS, France, EU) — sends our e-mails to a party’s owner (the welcome, the morning summary): it receives their e-mail address and the e-mail’s content (with their first name and the evening’s numbers). Brevo processes them as a processor, under a data processing agreement, on servers in the European Union.</li>
             <li><strong>Apple iTunes Search API</strong> — while a guest types, their browser asks it for song suggestions (it receives the typed text, nothing else).</li>
             <li><strong>The push service of the DJ’s browser</strong> (Google, Apple, Mozilla or Microsoft) — when a DJ has switched on notifications on a device, a new request reaches it as an end-to-end encrypted message (the song’s name); the service delivers it but cannot read it.</li>
         </ul>

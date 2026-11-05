@@ -1,6 +1,6 @@
 /**
  * The cards of "Ustawienia imprezy" answered in place ([data-saves-in-place]: "Godziny imprezy", V55; "Kiosk dla gości", V56; "Motyw dla
- * gości", V59 — sent by its radios, the focus kept on the one picked; the hosts'
+ * gości", V59 — sent by its radios, the focus kept on the one picked; "Poranne podsumowanie", V64 — sent by its switch; the hosts'
  * link of "Lista gospodarzy", V29): a form of such a card marked [data-in-place] is sent in the background (X-Requested-With: fetch).
  * The server answers with the card alone (the same id), or with the page "Ustawienia imprezy" its redirect leads to — the card is
  * taken from it either way. The card's folded line takes the answer's state, and its body — or only the part the form names

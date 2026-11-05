@@ -35,7 +35,8 @@
             <li>Gdy ktoś dołączy do obsługi imprezy (barman, drugi DJ) przez link zaproszenia albo zaproszenie właściciela: identyfikator jego konta Google, imię z tego konta i to, co właściciel pozwolił mu robić — imię widzi właściciel imprezy na liście obsługi</li>
             <li>Gdy właściciel zaprosi kogoś do obsługi po adresie e-mail jego konta Google: ten adres i to, co ta osoba będzie mogła robić — adres widzi właściciel na liście obsługi, dopóki osoba nie odpowie. Na ten adres nic nie wysyłamy: osoba zobaczy zaproszenie, gdy zaloguje się tym kontem, bo porównujemy go z adresem, który Google potwierdza przy logowaniu</li>
             <li>Imię właściciela imprezy z jego konta Google: widzi je obsługa jego imprezy i osoba, która otworzy jego link zaproszenia (gdy impreza nie ma podanego „Kto gra”)</li>
-            <li>Adres e-mail właściciela imprezy z jego konta Google (tylko potwierdzony przez Google) i dzień założenia konta: tylko po to, żebyśmy mogli napisać do niego w sprawie jego konta i pomocy — nigdy w celach reklamowych ani do newslettera; nie widzi go nikt poza nami i nikomu go nie przekazujemy</li>
+            <li>Adres e-mail właściciela imprezy z jego konta Google (tylko potwierdzony przez Google) i dzień założenia konta: tylko po to, żebyśmy mogli napisać do niego w sprawie jego konta i pomocy — nigdy w celach reklamowych ani do newslettera; nie widzi go nikt poza nami, a do wysyłki maili przekazujemy go tylko firmie Brevo (pkt 6)</li>
+            <li>Język panelu, w którym właściciel imprezy ostatnio go otworzył, i jego ustawienie „Poranne podsumowanie” — żeby maile były w jego języku i tylko te, których chce</li>
         </ul>
         <p><strong>Dla gości (anonimowi użytkownicy):</strong></p>
         <ul>
@@ -52,7 +53,8 @@
             <li>Do przetwarzania zamówień piosenek i oceny muzyki przez AI</li>
             <li>Do liczenia próśb o tę samą piosenkę i 👍 gości jako głosów i pokazywania gościom piosenek z największą liczbą głosów (liczba głosów nie zawiera danych osobowych)</li>
             <li>Do egzekwowania limitów i zapobiegania nadużyciom</li>
-            <li>Do kontaktu z właścicielem imprezy w sprawie jego konta i pomocy (np. krótka wiadomość po pierwszym logowaniu, pisana przez nas z adresu scan2playcontact@gmail.com) — nigdy w celach reklamowych</li>
+            <li>Do kontaktu z właścicielem imprezy w sprawie jego konta i pomocy: jedna wiadomość powitalna po pierwszym logowaniu (wysyłana automatycznie z adresu kontakt@scan2play.com.pl; odpowiedź trafia do nas na scan2playcontact@gmail.com) i nasze odpowiedzi — nigdy w celach reklamowych ani do newslettera</li>
+            <li>W planie Pro: poranne podsumowanie wieczoru mailem (liczby wieczoru i trzy najczęściej chciane piosenki) — tylko po wieczorze z co najmniej 5 prośbami gości, najwyżej raz na wieczór, następnego dnia o 10:00. Wyłączysz je w „Ustawieniach imprezy” albo jednym kliknięciem w linku „Nie wysyłaj mi tego” w każdym mailu</li>
         </ul>
 
         <h3>4. Linki do innych serwisów</h3>
@@ -93,7 +95,8 @@
         <ul>
             <li><strong>Railway</strong> (Railway Corporation, USA) — hosting aplikacji i bazy danych: wszystkie dane opisane wyżej są przechowywane na serwerach w regionie us-east4 (Wirginia, USA), czyli poza Europejskim Obszarem Gospodarczym. Railway przetwarza je na podstawie umowy powierzenia przetwarzania danych, a ich przekazanie do USA opiera się na standardowych klauzulach umownych Komisji Europejskiej.</li>
             <li><strong>Cloudflare</strong> (Cloudflare, Inc., USA) — przez Cloudflare przechodzi każde połączenie ze stroną (szyfrowanie, ochrona przed atakami, przyspieszenie); widzi adres IP i adres odwiedzanej strony.</li>
-            <li><strong>Google</strong> — logowanie DJ-a (OAuth), Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa, bez danych o gościu) i poczta Gmail, z której piszemy do właściciela imprezy.</li>
+            <li><strong>Google</strong> — logowanie DJ-a (OAuth), Google Gemini (ocena piosenek przez AI — trafia tam tekst prośby gościa, bez danych o gościu) i poczta Gmail, z której odpowiadamy właścicielowi imprezy i na którą przychodzą jego odpowiedzi.</li>
+            <li><strong>Brevo</strong> (Sendinblue SAS, Francja, UE) — wysyłka maili do właściciela imprezy (powitanie, poranne podsumowanie): trafia tam jego adres e-mail i treść maila (z imieniem i liczbami wieczoru). Brevo przetwarza je jako podmiot przetwarzający, na podstawie umowy powierzenia przetwarzania danych, na serwerach w Unii Europejskiej.</li>
             <li><strong>Apple iTunes Search API</strong> — gdy gość pisze, jego przeglądarka pyta o podpowiedzi piosenek (trafia tam tylko wpisany tekst).</li>
             <li><strong>Usługa powiadomień przeglądarki DJ-a</strong> (Google, Apple, Mozilla albo Microsoft) — gdy DJ włączy powiadomienia na urządzeniu, nowa prośba trafia na nie jako wiadomość zaszyfrowana od końca do końca (nazwa piosenki); usługa ją dostarcza, ale nie może jej odczytać.</li>
         </ul>
