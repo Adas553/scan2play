@@ -89,15 +89,17 @@ public class WelcomeEmailService {
         }
     }
 
+    /**
+     * The welcome, without "Nie wysyłaj mi tego" and without {@code List-Unsubscribe}: it goes once, so there is nothing to stop —
+     * the link switches the morning summary off, which a welcome to an account that may have no Pro never names.
+     */
     Email email(PartySettingsEntity settings) {
         Locale locale = Mailer.localeOf(settings.getEmailLanguage());
         Map<String, Object> variables = new HashMap<>();
         variables.put("firstName", firstName(settings.getOwnerName()));
-        String stopUrl = mailer.stopUrl(settings.getEmailToken(), locale);
-        variables.put("stopUrl", stopUrl);
         String html = mailer.render("welcome", locale, variables);
         String subject = "en".equals(Mailer.languageOf(locale)) ? "Scan2Play — thanks for signing up" : "Scan2Play — dzięki za założenie konta";
-        return new Email(settings.getOwnerEmail(), subject, html, Mailer.plainText(html), stopUrl);
+        return new Email(settings.getOwnerEmail(), subject, html, Mailer.plainText(html), null);
     }
 
     /** "Ola" of "Ola Kowalska" (the name from Google); null without one. */

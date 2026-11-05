@@ -522,7 +522,7 @@
         <!--/* "Poranne podsumowanie" (V64): the morning e-mail of a busy evening (MorningSummaryEmailService) — the organiser's alone (the
              e-mail goes to their address), Pro's alone (without Pro the card offers it, as every Pro card; the switch is kept). Sent as soon as it is
              switched (forms.js data-auto-submit) and answered with this card (cards-in-place.js), "✓ Zapisane" in it; without the
-             script the "Zapisz" of <noscript>. The e-mails' own "Nie wysyłaj mi tego" switches it off too. */-->
+             script the "Zapisz" of <noscript>. The morning e-mail's own "Nie wysyłaj mi tego" switches it off too. */-->
         <details th:fragment="morningSummaryCard" th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold"
                  id="morningSummaryCard" data-saves-in-place th:attr="open=${morningSummarySaved != null} ? 'open' : null">
             <summary class="s2p-fold-summary">

@@ -113,18 +113,20 @@ class AutomaticEmailsTest {
         assertThat(polish.to()).isEqualTo("ola@example.com");
         assertThat(polish.subject()).isEqualTo("Scan2Play — dzięki za założenie konta");
         assertThat(polish.html()).contains("Cześć Ola,", "dzięki za założenie konta w Scan2Play!", "Twoja odpowiedź trafi prosto do nas.",
-                "href=\"https://www.scan2play.com.pl/jak-to-dziala\"", "nie wysyłamy reklam ani newslettera",
-                "href=\"https://www.scan2play.com.pl/email/stop/0123456789abcdef0123456789abcdef?lang=pl\"", "Nie wysyłaj mi tego");
+                "href=\"https://www.scan2play.com.pl/jak-to-dziala\"", "nie wysyłamy reklam ani newslettera");
         assertThat(polish.html()).as("sent automatically: it does not say a person wrote it").doesNotContain("osobiście");
-        assertThat(polish.stopUrl()).isEqualTo("https://www.scan2play.com.pl/email/stop/0123456789abcdef0123456789abcdef?lang=pl");
+        // sent once: nothing to stop — its "Nie wysyłaj mi tego" switched the morning summary off, a thing the welcome never names
+        assertThat(polish.html()).doesNotContain("Nie wysyłaj mi tego", "/email/stop/");
+        assertThat(polish.stopUrl()).as("no List-Unsubscribe either").isNull();
         assertThat(polish.text()).contains("Cześć Ola,", "(https://www.scan2play.com.pl/jak-to-dziala)").doesNotContain("<");
 
         PartySettingsEntity noName = organiser("en");
         noName.setOwnerName(null);
         Email english = service.email(noName);
         assertThat(english.subject()).isEqualTo("Scan2Play — thanks for signing up");
-        assertThat(english.html()).doesNotContain("personally").contains("Hi!", "Your reply comes straight to us.", "href=\"https://www.scan2play.com.pl/how-it-works\"", "no ads, no newsletter",
-                "?lang=en\"", "Don't send me this");
+        assertThat(english.html()).doesNotContain("personally").contains("Hi!", "Your reply comes straight to us.", "href=\"https://www.scan2play.com.pl/how-it-works\"", "no ads, no newsletter")
+                .doesNotContain("Don't send me this", "/email/stop/");
+        assertThat(english.stopUrl()).isNull();
     }
 
     @Test

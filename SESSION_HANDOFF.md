@@ -4,33 +4,30 @@ The current state only: the branch, what waits for the owner, what comes next. *
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`,
 `session-handoff-2026-10-16.md`, `session-handoff-2026-10-18.md`, `session-handoff-2026-10-21.md`, `session-handoff-2026-10-24.md`
 (2026-10-22 … 24: the review of 2026-10-21 and its releases, the DJ's library, the ideas list — items 1–7 — word for word),
-`session-handoff-2026-10-26.md` (2026-10-26 … 28: the DJ's logo, the QR poster's editor and look, the panel's review — word for word).
+`session-handoff-2026-10-26.md` (2026-10-26 … 28: the DJ's logo, the QR poster's editor and look, the panel's review — word for word),
+`session-handoff-2026-10-30.md` (the "Start here" of 2026-10-28 … 30: the state, the releases and the use of those days — word for word).
 Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. Reviews: `docs/history/review-*.md` (the latest
-`review-2026-10-25.md`).
+`review-2026-11-05.md`: the releases #219 … #236).
 
 ## Start here
 
-- **2026-10-30 — the state.** `main` = `dev` + the release merge #209 (`c8b1fe7`), deployed 2026-10-30 15:26 UTC, SUCCESS. Checked
-  (Railway, read only): started in 5.4 s, Flyway validated 56 migrations and applied none. V55 came with #207 (`bfab063`, deployed
-  13:28 UTC): "Successfully applied 1 migration … now at version v55" (0.028 s). **The party hours work on production:** the owner's
-  party planned at 13:51 UTC (open 20:00, close 23:00 Polish time), the job logged "Party [...] opened by its plan" at 19:00:00.019 UTC
-  — the minute's first second. Still to see once: the planned close ("closed by its plan" at 22:00 UTC that evening) and the card's
-  save in place (#209) on a phone. The public pages were not curled from the cloud session (its network refuses
-  `www.scan2play.com.pl`): curl them without cookies to the page's end.
-- **Released 2026-10-30:** #207 "Godziny imprezy" (V55; item 5 below) and #209 its card saving in place, as every card (no jump of the
-  screen, "✓" / "✗" on its small "Zapisz"). Released before it the same day and the day before (other sessions): #199 the poster
-  heading's colour, #202 the QR print's editor after its review, #205 the table tent centred on a phone and the tips said to go 100 %
-  to the DJ.
-- **The use on 2026-10-30** (Railway's logs, read only): the owner's account alone on the panel; no guest's request all day; the
-  demo opened by the owner and by one visitor on an Android phone (10:58 Polish time, three loads, nothing sent); Googlebot crawling
-  `/`, `/demo` and the assets in the evening; a scanner asking for WordPress paths (404).
-- **Released 2026-10-28** (#186 / #187, the review of the DJ's panel against TipTunes and Rekwest, 10 commits): one heading and tabs
-  "Panel DJ-a | Historia | Ustawienia" on every DJ page (a tab opens its page at the top), the devices' own fonts named
-  (`-apple-system` … Arial — never `system-ui` first: DejaVu on GitHub's runner broke three one-line layouts), one accent (cyan; green a
-  status), "Impreza i kod QR", the rows of "Więcej" off the panel (the network's limit near is a warning above the queue), from
-  1400 px the settings beside the queue, quiet "Kopiuj" / "Podejrzyj", the print's editor in the panel's colours, "Panel jako
-  aplikacja" under an empty queue on a phone, the history's "⋯" menu and its folded line in columns, "Ukryj ✗" / "+ Dodaj" on one line.
-  Released before it the same day: the DJ's QR poster and its look (V46, V47; #185).
+- **2026-11-05 — the state.** `main` = `09667ea` (the release merge #236), deployed 2026-11-05 13:13 UTC, SUCCESS. Checked (Railway,
+  read only): PostgreSQL 18.6, Flyway "Successfully validated 65 migrations", "E-mails on (Brevo), from contact@scan2play.com.pl",
+  started in 9.2 s. Every item of "Next" below that said "waiting for a review / a release" is on production: V48 and V49 with #192
+  (2026-10-28), V50–V53 with #197 (2026-10-29), V55 with #207 (2026-10-30), V56 with #214 (2026-10-31), V57 and V58 with #221
+  (applied 2026-11-04 13:23 UTC, "now at version v58"), V59 and V60 with #224 (17:16 UTC, v60), V61–V63 with #228 (2026-11-05
+  08:49 UTC, v63), V64 with #230 (09:57 UTC, v64).
+- **Released 2026-11-04 … 05** (#219 … #236): the sessions' attributes written with `ON CONFLICT DO UPDATE` and the pages' faint cyan
+  glow (#219); the library's details and the guests' suggestions "✓ DJ ma" (#221, item 7); "Motyw dla gości" and the library's
+  spellings (#224, #226 the ghost of "Straszny"; item 8); "Podsumowanie wieczoru" v1–v3 and the refusals before the AI (#228, item 9);
+  the automatic e-mails through Brevo (#230, item 1c), Google's login asking which account (#232), the sender `contact@` (#234), the
+  welcome's words (#236).
+- **The review of 2026-11-05** (`docs/history/review-2026-11-05.md`): nothing critical; three important points and a white card,
+  **fixed on `claude/sharp-planck-nbkp7f`, not committed yet** (the owner reviews the diff): "Nie wysyłaj mi tego" only asks on its
+  `GET` and switches off on its `POST` (mail filters open links: they switched the morning summary off unseen) — `EmailStopWebTest`;
+  the welcome without that link and without `List-Unsubscribe`; the pages of the link with the dark card (`.page-email`; Bootstrap's
+  white card made their words unreadable on production since #230 — scenarios `email-stop-*`); this file. The review's 13 small points
+  are open (its list "Drobne").
 - **The repository is public** (`LICENSE`: viewing only) — GitHub Actions have no minute limit. Nothing secret in the repo, the docs
   or a commit — ever.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
@@ -47,8 +44,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 ## Next (the owner's ideas, 2026-10-28)
 
 1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać") — (a) and
-   (b) **in `dev` (#189, #190), waiting for a release** (V48 on production: check Flyway's line once, and `/dj/stats` shows "New
-   organisers"). The owner's picks (2026-10-28): the card for new accounts only, above
+   (b) **released 2026-10-28 (#192, V48).** The owner's picks (2026-10-28): the card for new accounts only, above
    the queue until closed, closed by "✕" or "Napisz do nas", the list of new organisers on `/dj/stats`.
    (a) **The organiser's e-mail** (V48): `party_settings.owner_email` — Google's verified address, kept with the name when the organiser
    opens their panel (`DjDashboardController.keepOwner`; never the staff's), gone with the account (`AccountDeletionIT`); `created_at`
@@ -58,8 +54,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    (b) **The welcome card** above the queue (`welcome_dismissed_at`; the accounts of before closed by the migration): "Pierwszy raz? Napisz
    do nas", "Napisz do nas" → "Pomoc i kontakt", "Jak to działa →"; closed on the server (`POST /dj/dashboard/welcome-dismiss`,
    `welcome.js`); browser scenarios `welcome-card-*`, seen red first, the one-line heading also with the runner's fonts.
-   (c) **automatic e-mails (V64) — built 2026-11-05 on `claude/nifty-albattani-yzjh5r`, the PR to `dev` waits for the owner's
-   review.** Details: `PROJECT_CONTEXT.md` 5.1 ("The automatic e-mails"), 7.4 (Brevo), 10 (V64). What was built, by the owner's picks:
+   (c) **automatic e-mails (V64) — released 2026-11-05 (#230; the sender `contact@` #234, the welcome's words #236).** Details: `PROJECT_CONTEXT.md` 5.1 ("The automatic e-mails"), 7.4 (Brevo), 10 (V64). What was built, by the owner's picks:
    - **Brevo** API v3 behind `EmailSender` (`BrevoEmailSender`; a fake in the tests). From `Scan2Play <contact@scan2play.com.pl>`,
      Reply-To `scan2playcontact@gmail.com`. The key: Railway **`BREVO_API_KEY`** (already set; Brevo key "scan2play-production",
      Restricted, Transactional email = All; expires 4.11.2027 **or after 90 days unused** — rotate before). Brevo's "Authorised IPs"
@@ -72,8 +67,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    - **The morning summary**: Pro (`PlanFeature.SUMMARY`), ≥ 5 guests' requests that evening (the DJ's additions not counted), at 10:00
      Polish time the next day (12:00 retries the failed), once an evening (`evening_summary.morning_sent_at`); the title and day, 3
      numbers (requests, played, votes), the top 3, a button to `/dj/summary`. The switch **"Poranne podsumowanie"** (the organiser's
-     card in "Ustawienia imprezy", on by default) and **"Nie wysyłaj mi tego"** in every e-mail (`/email/stop/{token}`, one click, no
-     login; also the mail program's one-click "Unsubscribe", RFC 8058).
+     card in "Ustawienia imprezy", on by default) and **"Nie wysyłaj mi tego"** in the morning e-mail (`/email/stop/{token}`, no login: the
+     link asks, its "Tak, wyłącz" switches off — mail filters open links —; also the mail program's one-click "Unsubscribe", RFC 8058,
+     a `POST`). The welcome has neither (the review of 2026-11-05).
    - Privacy policy PL / EN: Brevo (Sendinblue SAS, EU) as a processor, the welcome and the morning summary in sections 2, 3, 6.
    - Tests: `AutomaticEmailsTest`, `BrevoEmailSenderTest`, `EmailStopControllerTest`, `AutomaticEmailsIT` (two logins at once, the jobs
      run twice and at once — red without the claims' `IS NULL`), the browser scenario `morning-summary-switch` (red before `forms.js`
@@ -85,31 +81,29 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
      forwarded to the Gmail address by Cloudflare Email Routing (the verification code came that way). Those four test accounts count
      as welcomed. Proposed, not built: Brevo's webhook of errors / bounces, so such a drop shows on `/dj/stats` and the welcome is
      tried again.
-   - **After the release:** Flyway's line "now at version v64" once; the start's line "E-mails on (Brevo)"; the first welcome on
-     `/dj/stats` ("last sent") and in Brevo's log (Transactional → Logs); open one in Gmail — "Show original": DKIM and DMARC `PASS`
+   - **After the release:** (seen 2026-11-05: Flyway's "now at version v64", the start's "E-mails on (Brevo), from contact@…") the
+     first welcome on `/dj/stats` ("last sent") and in Brevo's log (Transactional → Logs); open one in Gmail — "Show original": DKIM and DMARC `PASS`
      for `scan2play.com.pl`. After a few weeks of clean sending, `_dmarc` `p=none` → `quarantine`. Check Brevo's own data processing
      agreement is accepted in its account (Settings → Security / GDPR), and how long Brevo keeps its log of sent e-mails.
    - Not done (proposed): a test e-mail button for the site's owner on `/dj/stats`; the welcome of an account whose address Google did
      not verify (it never has one, so it gets no e-mail).
-2. **"Zmień kod imprezy"** (V49; the owner, 2026-10-28: "gość, który ma zawsze jego kod QR i spamuje imprezę DJ-a") — **built on
-   `claude/affectionate-gauss-iwuhvz`, the PR to `dev` waits for the owner's review** (then a release; V49 on production: check Flyway's
-   line once). The owner's picks: a new code (not a ban by address — a venue's Wi-Fi and a mobile network share one), the organiser
+2. **"Zmień kod imprezy"** (V49; the owner, 2026-10-28: "gość, który ma zawsze jego kod QR i spamuje imprezę DJ-a") — **released
+   2026-10-28 (#192, V49).** The owner's picks: a new code (not a ban by address — a venue's Wi-Fi and a mobile network share one), the organiser
    only, last card of "Ustawienia imprezy", asks "Zmienić kod imprezy? Stare plakaty i karty przestaną działać.". Everything of the party
    moves (FKs ON UPDATE CASCADE, requests and feedback by UPDATE), the old code is retired for good (`party_code_retired`), the TV
    screen opened again from the panel. Not done (proposed): closing a party by itself after hours without requests.
 3. **The QR print's editor, enriched** (the owner, 2026-10-29: "chcę wzbogacić edytor plakatów i kart") — the ideas, the competitors and
    the mock-ups: the artifact "Edytor wydruku: co dalej" (claude.ai, private). The owner's picks: first **the table tent** (one A4
    sheet, two A5 faces alike, the upper one upside down) and **the number of tables** saved with the party (V50, "Liczba stołów", on the
-   cards and the tents, never on the poster), "Numer pierwszego stołu" (never saved) — **in `dev` (#194), waiting for a release** (V50
-   on production: check Flyway's line once; print a tent on a home printer and fold it). Then (the owner, 2026-10-29: "zrób następne
+   cards and the tents, never on the poster), "Numer pierwszego stołu" (never saved) — **released 2026-10-29 (#197,
+   V50)** (still to do: print a tent on a home printer and fold it). Then (the owner, 2026-10-29: "zrób następne
    rzeczy z listy") **"Nagłówek na okazję" and "Do internetu" (a story / post PNG)** — built on
    `claude/bold-bell-w3epu5` again, no migration. The theme "Oszczędny" was not built: "Klasyczny" is already the white sheet with no
    fills (an ink note under the club theme was built and taken off again: the owner — everyone knows a dark sheet takes ink). New looks (themes, fonts, ornaments) for every plan; photos on the poster
-   later, as Pro. **#195 in `dev`.** Then (the owner, 2026-10-29: "zrób na razie 1") **the print's own fonts** ("S2P Sans" = Source
+   later, as Pro. **Released with #197.** Then (the owner, 2026-10-29: "zrób na razie 1") **the print's own fonts** ("S2P Sans" = Source
    Sans 3, "S2P Serif" = Playfair Display, `static/fonts`, OFL, `/fonts/**` public and kept a year) **and the DJ's heading and line
    fitted**, and (the owner: "dodaj wybór kroju") **"Krój nagłówka"** (V51: the theme's, sans, serif, script — Dancing Script) —
-   built on `claude/bold-bell-w3epu5` (the longest words were cut on a card and a tent before; V51 on production: check Flyway's
-   line once), and **four more themes** (V52: Rustykalny, Gala, Neon, Konfetti; the owner picked four of seven mock-ups — Morski, Retro,
+   built on `claude/bold-bell-w3epu5` (the longest words were cut on a card and a tent before), released with #197 with V52 and V53, and **four more themes** (V52: Rustykalny, Gala, Neon, Konfetti; the owner picked four of seven mock-ups — Morski, Retro,
    Zimowy when DJs ask; at 10+ themes a picker of thumbnails in place of the list), and **"Kolor tła"** (V53: the theme's, six tints
    or the DJ's own — a light colour a light tint, a dark one a dark paper with light words: the owner asked for dark ones too). Next
    candidates: A5 / A6 for the acrylic stands; the TV screen in the print's look; small ones (A3, the scan distance, a ruler). Open: stickers and business cards against "Zmień kod imprezy" (V49 kills old
@@ -127,8 +121,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    a job that, after N hours without a request, closes the party through `PartyScheduleService.setActive` (or writes `next_close_at`);
    not built. To try on a phone: the native day and time fields in an iPhone's Safari and on Android.
 6. **"Kiosk dla gości" — a tablet at the bar for guests without a phone** (V56, Pro; the owner, 2026-10-30, after Rekwest's kiosk) —
-   **built on `claude/serene-fermat-6gp9b8`, waiting for the owner's review** (then a release; V56 on production: check Flyway's line
-   once — it also adds KIOSK to the co-organisers' permissions). The owner's picks: Pro; with votes; whoever has the new permission KIOSK
+   **released 2026-10-31 (#214, V56 — it also adds KIOSK to the co-organisers' permissions).** The owner's picks: Pro; with votes; whoever has the new permission KIOSK
    makes the link; the most wanted beside the form, as the TV screen. A guest's turn is a session ("Następny gość", or by itself after a
    minute without a touch); the kiosk's own limits (3 requests a minute, 20 👍 per 10 min) in place of the address's; a request marked
    "🖥 kiosk" in the queue. After the review of 2026-10-30 (three fixes, each with a test seen red first): "Następny gość" keeps a
@@ -151,9 +144,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    with the screen pinned, the native keyboard over the form, the suggestions.
 
 7. **The library's details (V57) — variant B of the analysis "Tryb „tylko z biblioteki”"** (the artifact
-   https://claude.ai/artifact/7nEtKmgJkVMUie3K5dBT2u; the owner, 2026-11-04: "zróbmy na razie B") — **built on
-   `claude/wonderful-edison-wud546`, waiting for the owner's review** (then a release; V57 on production: check Flyway's line once,
-   upload a rekordbox collection again and see "128 BPM · 5A" beside "✓" in the queue). Each song is kept as the file writes it beside
+   https://claude.ai/artifact/7nEtKmgJkVMUie3K5dBT2u; the owner, 2026-11-04: "zróbmy na razie B") — **released
+   2026-11-04 (#221, V57 and V58; V60 with #224)** (still to do: upload a rekordbox collection again and see "128 BPM · 5A" beside "✓"
+   in the queue). Each song is kept as the file writes it beside
    its key (artist, title, from rekordbox the tempo, key, genre, year; never a path, notes, rating or play count); the queue shows the
    tempo and the key beside "✓" / "?"; the libraries of before stay (their marks as they were; a rekordbox one is asked for again on
    its card). Two causes of a false "✗" fixed with it: a rekordbox track never tagged (no artist, "Wilki - Baśka" for its name) is read
@@ -176,8 +169,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    matching on real titles; rekordbox's own format only from rekordbox (free) with a few files.
 
 8. **"Motyw dla gości" (V59) — variant A′ of the analysis** (the artifact https://claude.ai/artifact/T8uNK1tcQm4nynE53DK1uU; the
-   owner, 2026-11-04: "zróbmy A′, Free") — **built on `claude/stoic-galileo-uaywih`, waiting for the owner's review** (then a release;
-   V59 on production: check Flyway's line once). The owner's picks: Free; whoever has VIBE sets it (the staff too); the New Year's theme
+   owner, 2026-11-04: "zróbmy A′, Free") — **released 2026-11-04 (#224, V59; #226
+   the ghost).** The owner's picks: Free; whoever has VIBE sets it (the staff too); the New Year's theme
    made a universal one, a birthday too ("Konfetti"); "Świąteczny" for the winter one; "Straszny" for Halloween, scarier (the analysis's
    orange kept, a near-black page, a violet mist above and a dark red one below, a dark drip with a small ghost, a bat and a spider, the DJ's name in
    Nosifer's dripping capitals); the TV in the same change; the print's choice apart, its editor saying the guests' theme ("Strona
@@ -188,8 +181,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    (each a block of tokens and an SVG; `GuestThemesCssTest` checks it), a summer one once a hue far from the statuses and the cyan is found.
 9. **"Podsumowanie wieczoru" — v1 and v2 of the analysis** (the artifact https://claude.ai/artifact/C9kWpRuZ8h5pbnbPDS6Fvx; the owner,
    2026-11-04: "Zrób v1 w całości, potem zaczniemy v2", the open questions left to me; then "zrób razem z v2" for the bar's width on a
-   computer) — **both on `claude/vibrant-maxwell-j5kxed`** (v1 pushed as `40f7f89`; v2 after it), **waiting for the owner's review**,
-   then a release with **V61, V62 and V63** (check Flyway's lines once). **v2:** an evening lasts 13 months — instead of a snapshot of the counts
+   computer) — **released 2026-11-05 (#228, V61, V62 and V63; v3 and the
+   refusals before the AI with it).** **v2:** an evening lasts 13 months — instead of a snapshot of the counts
    (planned), the statement that deletes requests ("Wyczyść historię", the 30 days' purge) copies what the summary needs of each into
    `evening_song` (`KEEP_FOR_THE_SUMMARY`; no guest's words, no name of a request the AI rejected): a clear in the middle of a party
    loses nothing and no 06:30 job is needed; the page reads both tables. The evenings' list up to 52, by month; the DJ's title of the

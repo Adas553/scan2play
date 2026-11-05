@@ -8,6 +8,7 @@
  *   .page-landing   — landing.html
  *   .page-error     — error.html
  *   .page-ended     — party_ended.html
+ *   .page-email     — email-stop.html, email-stopped.html ("Nie wysyłaj mi tego", V64)
  *
  * Sections:
  *   1. Design Tokens (CSS Custom Properties)
@@ -707,6 +708,7 @@ th[data-sort].sort-desc::after {
  *    Body class: .page-status  (shared centering for error + party_ended)
  *                .page-error   (error.html specifics)
  *                .page-ended   (party_ended.html specifics)
+ *                .page-email   (email-stop.html, email-stopped.html: the same dark card)
  * ========================================================================== */
 .page-status {
     display: flex;
@@ -737,8 +739,9 @@ th[data-sort].sort-desc::after {
 .page-error .desc    { color: var(--s2p-text-dim); }
 .error-code          { color: var(--s2p-text-muted); font-size: 0.85rem; }
 
-/* --- Party ended page --- */
-.page-ended .card {
+/* --- Party ended page; "Nie wysyłaj mi tego" (V64): without a card of its own, Bootstrap's white card hid its light words --- */
+.page-ended .card,
+.page-email .card {
     background-color: var(--s2p-bg-elevated);
     border: 1px solid var(--s2p-border);
     box-shadow: 0 0 30px var(--s2p-black-70);

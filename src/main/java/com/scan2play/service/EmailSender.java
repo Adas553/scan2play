@@ -7,8 +7,9 @@ package com.scan2play.service;
 public interface EmailSender {
 
     /**
-     * One e-mail to one person. {@code stopUrl}: the one-click "Nie wysyłaj mi tego" address, also given to the mail program as
-     * {@code List-Unsubscribe} (with {@code List-Unsubscribe-Post}, RFC 8058), or null.
+     * One e-mail to one person. {@code stopUrl}: the "Nie wysyłaj mi tego" address (its link asks, a POST to it switches off),
+     * also given to the mail program as {@code List-Unsubscribe} (with {@code List-Unsubscribe-Post}, RFC 8058); null for an e-mail
+     * that goes once (the welcome).
      */
     record Email(String to, String subject, String html, String text, String stopUrl) {
 

@@ -132,11 +132,20 @@ class HtmlLangDeclarationTest {
     @Test
     @DisplayName("the pages that need no model say the language of their texts: Polish, English, and English for a locale without a bundle")
     void shouldRenderTheDeclaredLanguage() {
-        for (String page : List.of("party_ended", "error", "email-stopped")) {
+        for (String page : List.of("party_ended", "error", "email-stop", "email-stopped")) {
             assertThat(render(page, PL)).as("%s in Polish", page).contains("<html lang=\"pl\">");
             assertThat(render(page, Locale.ENGLISH)).as("%s in English", page).contains("<html lang=\"en\">");
             assertThat(render(page, Locale.GERMAN)).as("%s for a German browser", page).contains("<html lang=\"en\">");
         }
+    }
+
+    @Test
+    @DisplayName("\"Nie wysyłaj mi tego\" (V64): the link asks first — its answer a POST to the page's own address, no CSRF token")
+    void shouldAskBeforeTheEmailsAreOff() {
+        assertThat(engine.process("email-stop", webContext(PL))).contains("Wyłączyć poranne podsumowanie?", ">Tak, wyłącz<",
+                "<form method=\"post\"", "href=\"/dj/settings#morningSummaryCard\"").doesNotContain("??", "action=", "_csrf");
+        assertThat(engine.process("email-stop", webContext(Locale.ENGLISH))).contains("Switch the morning summary off?",
+                ">Yes, switch it off<").doesNotContain("??");
     }
 
     @Test
