@@ -75,6 +75,12 @@
                     <button type="button" class="dropdown-item" id="helpMenuBtn" data-bs-toggle="modal" data-bs-target="#feedbackModal"
                             th:attr="data-party-code=${partyCode}" th:text="#{help.button.label}">Help and contact</button>
                 </li>
+                <!--/* the organiser's plan and the pricing page (2026-11-05): only while the plans are enforced (PlanService.View.offered —
+                     the staff cannot buy it, so they never see it) */-->
+                <li th:if="${plan != null and plan.offered()}">
+                    <a class="dropdown-item" id="pricingMenuLink" href="/pro"
+                       th:text="#{plan.menu.label(${plan.plan().name() == 'PRO' ? 'Pro' : 'Free'})}">Your plan: Free · Pricing</a>
+                </li>
                 <!--/* the language (LanguageSwitchAdvice, the owner 2026-10-18): the footer is far under a long queue; after the help,
                      which stays first */-->
                 <th:block th:if="${langSwitch != null}" th:with="english=${#messages.msg('html.lang') == 'en'}">
@@ -423,6 +429,9 @@
         <p class="mb-2">
             <a href="/privacy" class="text-secondary me-3" th:text="#{footer.privacy}">Privacy Policy</a>
             <a href="/terms" class="text-secondary me-3" th:text="#{footer.terms}">Terms of Service</a>
+            <!--/* the pricing page, only while the plans are enforced (plansEnforced: HomeController, ForWhomController,
+                 LegalController) — before that it is a 404 */-->
+            <a th:if="${plansEnforced}" href="/pro" class="text-secondary me-3" id="footerPricing" th:text="#{footer.pricing}">Pricing</a>
         </p>
         <nav th:replace="~{fragments/components :: langSwitch('langSwitch', 'mb-2')}"></nav>
         <p class="mb-0">&copy; 2026 Scan2Play</p>

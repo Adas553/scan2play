@@ -5,42 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
-    <title>Scan2Play Pro</title>
-    <th:block th:replace="~{fragments/components :: seo('/pro', 'Scan2Play Pro', 'What the Pro plan of Scan2Play adds, and what stays free.')}"></th:block>
+    <title>Scan2Play pricing</title>
+    <th:block th:replace="~{fragments/components :: seo('/pro', 'Scan2Play pricing', 'Free for 0 zł and Pro in early access: what is free and what Pro adds.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<!--/* "Scan2Play Pro" (V35): the English twin of pro_pl.html — keep the two alike. */-->
+<!--/* The pricing page in English: pro_pl.html's twin — keep them alike. */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-960">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div class="fs-4 fw-bold text-white"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></div>
-        <a th:if="${loggedIn}" href="/dj/dashboard" id="proBack" class="btn btn-sm btn-outline-light text-nowrap">← Panel</a>
+        <a th:if="${loggedIn}" href="/dj/dashboard" id="proBack" class="btn btn-sm btn-outline-light text-nowrap">← Dashboard</a>
         <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light text-nowrap">← Home</a>
     </div>
 
     <header class="s2p-product-hero" data-pro-hero>
-        <span class="s2p-pro">PRO</span>
-        <h1>Scan2Play Pro</h1>
-        <p class="s2p-product-lede">Everything a party needs is free. Pro is for DJs who play often: lists from the hosts, your profiles
-            and tips, the evening summary.</p>
-        <div class="s2p-product-cta">
-            <a class="btn btn-action btn-lg px-4" href="mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro">Tell us you want Pro</a>
-            <button type="button" class="btn btn-outline-light btn-lg" data-copy-text="contact@scan2play.com.pl"
-                    data-copied="Copied" data-copy-select="proAddress">Copy address</button>
-        </div>
-        <p class="s2p-product-note">There is no payment in the app yet — we switch Pro on after your message to
-            <span class="text-light user-select-all" id="proAddress" data-pro-address>contact@scan2play.com.pl</span>.</p>
+        <h1>Pricing</h1>
+        <p class="s2p-product-lede mb-0">Everything a party needs is free. Pro is for DJs who play every week: the hosts' list, your logo and
+            tips, the kiosk, the evening summary.</p>
     </header>
 
     <div class="s2p-plans">
         <section class="s2p-plan" data-plan="free">
             <h2>Free</h2>
-            <p class="s2p-plan-sub">Free, always</p>
+            <p class="s2p-plan-price" data-plan-price>0 zł <small>always</small></p>
+            <p class="s2p-plan-sub">No card and no trial period.</p>
             <ul>
                 <li><div>The QR code, a poster, table cards and tents — themes, fonts, a picture for social media</div></li>
-                <li><div>Requests checked by the AI: is it a song, does it fit the vibe, has it played tonight; dedications too</div></li>
+                <li><div>Requests checked by the AI: is it a song, does it fit the vibe, has it played tonight; dedications too — up to 150 AI checks an evening, then requests come unchecked</div></li>
                 <li><div>The queue: Played, Skip, Undo, Copy, Add a song, keys</div></li>
                 <li><div>The guests' votes and 👍, the vibe, its note, "Who's playing", the guests' page theme, the TV screen</div></li>
                 <li><div>Party hours (it opens and closes by itself), "Change the party code"</div></li>
@@ -48,26 +41,64 @@
                 <li><div>Staff: 1 person</div></li>
                 <li><div>Guest limits: 2 requests per guest, then a 3 minute break, no repeats of the last 15</div></li>
             </ul>
+            <div class="s2p-plan-cta" th:unless="${loggedIn}">
+                <a href="/start" class="btn btn-outline-light w-100" id="freeStart">Start for free</a>
+            </div>
         </section>
         <section class="s2p-plan s2p-plan-pro" data-plan="pro">
-            <h2>Pro</h2>
-            <p class="s2p-plan-sub">Everything in Free, plus:</p>
+            <h2>Pro <span class="s2p-pro">EARLY ACCESS</span></h2>
+            <p class="s2p-plan-price s2p-plan-price-ask" data-plan-price>Write to us</p>
+            <p class="s2p-plan-sub">There is no payment yet — we switch Pro on after your message.</p>
             <ul>
                 <li data-feature="HOST_LISTS"><div><b>The hosts’ list</b><span>🚫 what not to play, ⭐ what to play for sure — the hosts fill it in themselves by a link</span></div></li>
                 <li data-feature="PROFILES TIPS"><div><b>Your profiles and tips</b><span>Instagram, Facebook, TikTok and "Tip the DJ" for the guests and on the print — 100% yours, no commission —, the 💸 count in the queue</span></div></li>
                 <li data-feature="SUMMARY"><div><b>The evening summary</b><span>yours and the hosts': to print, as a PDF and a CSV, a link for the hosts for 30 days, a picture for a story or a post; in the morning an e-mail with the summary</span></div></li>
                 <li data-feature="COMMENT_STYLES"><div><b>AI comments with character</b><span>funny, sarcastic or short</span></div></li>
-                <li data-feature="GUEST_LIMITS"><div><b>Your own guest limits</b><span>how many requests per guest, how long a break, how many songs without repeats</span></div></li>
+                <li data-feature="GUEST_LIMITS"><div><b>Your own guest limits, more AI checks</b><span>how many requests per guest, how long a break, how many songs without repeats; up to 300 AI checks an evening</span></div></li>
                 <li data-feature="LIBRARY"><div><b>Your library</b><span>✓, ? or ✗ at each request, the tempo and the key in the queue, "✓ DJ has it" in the guests' suggestions — from your rekordbox collection or an M3U playlist</span></div></li>
                 <li data-feature="LOGO"><div><b>Your logo</b><span>on the guests' page, the TV screen, the poster and the cards, and in the evening summary</span></div></li>
                 <li data-feature="KIOSK"><div><b>The guests’ kiosk</b><span>a tablet at the bar: guests without a phone ask for a song and vote too</span></div></li>
                 <li><div><b>Staff of up to 10</b><span>a second DJ, a bartender, the organiser — each with the permissions you give them</span></div></li>
             </ul>
+            <div class="s2p-plan-cta">
+                <a class="btn btn-action w-100" href="mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro">Tell us you want Pro</a>
+                <div class="s2p-plan-address">
+                    <span class="text-light user-select-all" id="proAddress" data-pro-address>contact@scan2play.com.pl</span>
+                    <button type="button" class="btn btn-sm btn-outline-light" data-copy-text="contact@scan2play.com.pl"
+                            data-copied="Copied" data-copy-select="proAddress">Copy address</button>
+                </div>
+            </div>
         </section>
+    </div>
+
+    <p class="s2p-faq-title">Compare</p>
+    <div class="s2p-compare-wrap">
+        <table class="s2p-compare" data-pro-compare>
+            <thead><tr><th scope="col"><span class="visually-hidden">Feature</span></th><th scope="col">Free</th><th scope="col">Pro</th></tr></thead>
+            <tbody>
+                <tr class="s2p-compare-group"><th scope="rowgroup" colspan="3">The guests' requests</th></tr>
+                <tr><th scope="row">An AI check of each request</th><td>up to 150 an evening</td><td>up to 300 an evening</td></tr>
+                <tr><th scope="row">Past the limit requests still reach you, unchecked</th><td>✓</td><td>✓</td></tr>
+                <tr><th scope="row">Guest limits</th><td>2 · 3 min · 15</td><td>your own</td></tr>
+                <tr><th scope="row">The AI's comment style</th><td>Classic</td><td>+ funny, sarcastic, short</td></tr>
+                <tr><th scope="row">The hosts' list</th><td class="s2p-compare-no">—</td><td>✓</td></tr>
+                <tr><th scope="row">A kiosk for guests without a phone</th><td class="s2p-compare-no">—</td><td>✓</td></tr>
+                <tr class="s2p-compare-group"><th scope="rowgroup" colspan="3">Your brand</th></tr>
+                <tr><th scope="row">Your logo for the guests, on the TV and the print</th><td class="s2p-compare-no">—</td><td>✓</td></tr>
+                <tr><th scope="row">Profiles and tips</th><td class="s2p-compare-no">—</td><td>✓</td></tr>
+                <tr><th scope="row">The library and "✓ DJ has it" for the guests</th><td class="s2p-compare-no">—</td><td>✓</td></tr>
+                <tr class="s2p-compare-group"><th scope="rowgroup" colspan="3">After the party</th></tr>
+                <tr><th scope="row">History</th><td>30 days</td><td>30 days</td></tr>
+                <tr><th scope="row">The evening summary, the hosts' link, CSV</th><td class="s2p-compare-no">—</td><td>✓</td></tr>
+                <tr><th scope="row">The morning e-mail with the summary</th><td class="s2p-compare-no">—</td><td>✓</td></tr>
+                <tr><th scope="row">Staff</th><td>1 person</td><td>up to 10</td></tr>
+            </tbody>
+        </table>
     </div>
 
     <p class="s2p-faq-title">Good to know</p>
     <div class="s2p-faq" data-pro-faq>
+        <div><h3>How much will Pro cost?</h3><p>We do not know yet. Today we switch Pro on after a message. Before anything is paid, we will write to you.</p></div>
         <div><h3>What if Pro ends?</h3><p>Nothing is lost. The lists, the profiles, the logo, the library and the settings wait and come back with Pro; the staff keep their access. The kiosk's link does not work meanwhile.</p></div>
         <div><h3>Do the staff need Pro?</h3><p>No. The staff work on the plan of the party's organiser.</p></div>
         <div><h3>And the guests?</h3><p>The guests pay nothing and install nothing: they scan the code and ask for a song.</p></div>

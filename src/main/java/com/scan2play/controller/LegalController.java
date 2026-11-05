@@ -45,8 +45,14 @@ public class LegalController {
         return resolveTemplate("guide");
     }
 
+    /** The footer's "Cennik" (components :: footer) on these pages: only while the plans are enforced, as the page itself. */
+    @org.springframework.web.bind.annotation.ModelAttribute("plansEnforced")
+    public boolean plansEnforced() {
+        return planService.isEnforced();
+    }
+
     /**
-     * "Scan2Play Pro" (V35): what the Pro plan adds and what stays everyone's — where "Zobacz, co daje Pro" leads. Only while the
+     * The pricing page (V35; "Cennik" since 2026-11-05): Free and Pro, what Pro adds — where "Zobacz, co daje Pro" leads. Only while the
      * plans are enforced: before that nothing says "Pro", and the page is a 404.
      */
     @GetMapping("/pro")
@@ -57,6 +63,18 @@ public class LegalController {
         model.addAttribute("loggedIn", authentication != null && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken));
         return resolveTemplate("pro");
+    }
+
+    /**
+     * The pricing page's other addresses: one page, one canonical address ({@code /pro}, already linked from the panel), so a search
+     * engine sees no copy. A 404 while the plans are not enforced, as the page itself.
+     */
+    @GetMapping({"/cennik", "/pricing"})
+    public String pricing(jakarta.servlet.http.HttpServletRequest request) {
+        if (!planService.isEnforced()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return "/pricing".equals(request.getRequestURI()) ? "redirect:/pro?lang=en" : "redirect:/pro?lang=pl";
     }
 
     /**

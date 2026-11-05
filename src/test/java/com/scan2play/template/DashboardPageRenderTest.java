@@ -813,6 +813,7 @@ class DashboardPageRenderTest {
         assertThat(html).as("the queue: no 💸 and no ⭐ without Pro — the song's own number and the buttons stay")
                 .contains("Golec uOrkiestra - Hej sokoły", "s2p-btn-played", "s2p-btn-skip")
                 .doesNotContain("s2p-btn-tip", "action=\"/dj/dashboard/tip-count\"", "s2p-host-wanted");
+        assertThat(html).as("the account menu: the plan and the pricing page").contains("id=\"pricingMenuLink\"", "Twój plan: Free · Cennik");
         write("dashboard-free.html", html);
     }
 
@@ -824,7 +825,7 @@ class DashboardPageRenderTest {
                 new PartyStaffService.Access(party(), false, StaffRole.CO_ORGANISER.permissions()), null,
                 com.scan2play.service.Plans.enforced());
         assertThat(html).contains("id=\"partyCard\"", ">Klasyczne<")
-                .doesNotContain("s2p-pro", "· Pro", "<optgroup", ">Zabawne<");
+                .doesNotContain("s2p-pro", "· Pro", "<optgroup", ">Zabawne<", "pricingMenuLink");
     }
 
     /** An organiser with Pro, the plans enforced: the panel as today. */
@@ -834,8 +835,8 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party, List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL,
                 new GuestRequestLimiter(30, 10, 300, ""), ownerToken(), mock(PartyStaffService.class), new MockHttpSession(),
                 new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced("owner"));
-        assertThat(html).contains(">Zabawne<", "s2p-btn-tip", "s2p-host-wanted")
-                .doesNotContain("s2p-pro", "· Pro", "<optgroup");
+        assertThat(html).contains(">Zabawne<", "s2p-btn-tip", "s2p-host-wanted", "Twój plan: Pro · Cennik")
+                .doesNotContain("s2p-pro", "· Pro<", "<optgroup");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

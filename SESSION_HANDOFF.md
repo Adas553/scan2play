@@ -65,7 +65,11 @@ The owner's picks:
 
 **State:** (1) done on `claude/compassionate-cori-g35pvj` (template tests green: `ProPageRenderTest` with the new
 `everyPlanFeature_isOnThePage`, `GuidePageRenderTest`, `DashboardPageRenderTest`, `SmokeTest`; the browser tests — `design.js` has the new
-address — not run yet: run `python src/test/browser/run.py` before the release). Next: (2).
+address). (2) done on the same branch: `/pro` is the pricing page (variant A; `/cennik`, `/pricing` redirect to it), the footer's
+"Cennik", the landing page's "Zobacz cennik →", the account menu's "Twój plan: Free · Cennik" — all only while enforced. Unit tests
+1131 + the new ones green, the browser tests 381 / 381 (in a cloud session: `--no-render --work <a copy where mvn test rendered the
+pages>`, `--chrome /opt/pw-browsers/…/chrome --no-sandbox`, `TMPDIR=/tmp/s2p` — the copy's mvnw cannot download Maven there; `mvn`
+is installed). **The page names the Free limit (150 / 300 AI checks an evening): build (3) before the plans are enforced.** Next: (3).
 
 **The order of work:** (1) `/pro` true to the code — the kiosk, "✓ DJ ma", tempo and key, the morning e-mail, the hosts' link, a fuller
 Free list, `contact@` — and a test that every `PlanFeature` is on the page (`data-feature`); (2) the pricing page (variant A) and its

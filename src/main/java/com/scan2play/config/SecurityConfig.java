@@ -199,7 +199,7 @@ public class SecurityConfig {
                         .requestMatchers("/join", "/join/*").permitAll()   // GET /join: the link pasted on the landing page
                         // Legal pages (Privacy Policy, Terms of Service) and the guide "Jak działa Scan2Play" (public: a DJ reads it before
                         // the first login, a person of the staff before joining — the owner, 2026-10-12)
-                        .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro").permitAll()
+                        .requestMatchers("/privacy", "/terms", "/jak-to-dziala", "/how-it-works", "/pro", "/cennik", "/pricing").permitAll()
                         // the pages "Dla kogo" (ForWhomController, 2026-10-21)
                         .requestMatchers("/dj-weselny", "/kluby", "/puby").permitAll()
                         // what a search engine reads first (SeoController); before, both led to the login page, "/"

@@ -1105,7 +1105,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation, at most 100 an hour |
 | `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, the pages "Dla kogo" (`ForWhomController.PAGES`), `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
 | `ForWhomController` | the pages "Dla kogo" `/dj-weselny`, `/kluby`, `/puby` (one template, `for-whom.html`; the texts `forWhom.KEY.*`) — 2026-10-21 |
-| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), "Scan2Play Pro" `/pro` (V35: what Pro adds, a file per language; a 404 while the plans are not enforced) |
+| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), the pricing page `/pro` (V35: Free and Pro, a file per language; `/cennik`, `/pricing` redirect to it; a 404 while the plans are not enforced) |
 | `ViewAttributes` | names of the model attributes |
 
 ### 6.2 Services
@@ -1283,10 +1283,17 @@ What every page shares, so a new screen looks like the others:
   as an empty place; on a wide screen the sentence and its outline button on one line); a fact is said once (the staff's places: the
   offer, not the help line again); the other choices of a list are there but not to pick, under the list's own heading (`<optgroup label="W planie Pro">`, quieter —
   the comment styles "Zabawne", "Sarkastyczne", "Krótkie"; never "· Pro" after each, it read as one more choice); "Podsumowanie wieczoru PRO" leads
-  to `/pro`. **The page `/pro`** is a page of the product, not a list: a head with "PRO", the title and the one action ("Napisz, że chcesz
-  Pro", `mailto:`; "Kopiuj adres" beside it and the address as text — there is no payment yet), the plans Free and Pro side by side on a
-  wide screen (Pro tinted), each Pro feature named with what it gives under it, "Dobrze wiedzieć" (what happens when Pro ends, the
-  staff, the guests); no price (`.s2p-product-*`, `.s2p-plan*`, `.s2p-faq`). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
+  to `/pro`. **The page `/pro` is the pricing page** ("Cennik" / "Pricing", the owner's variant A of 2026-11-05; `/cennik` and
+  `/pricing` redirect to it in their language — one canonical address): the plans Free and Pro side by side on a wide screen — Free
+  "0 zł zawsze" with "Zacznij za darmo" (`/start`, a visitor only), Pro tinted with the tag "WCZESNY DOSTĘP" and "Napisz do nas" in
+  place of a price, its one action at the card's foot ("Napisz, że chcesz Pro", `mailto:contact@…`, the address as text with "Kopiuj
+  adres" — there is no payment, no price, no date) —, each Pro feature named with what it gives under it, "Porównanie" (a table, Free /
+  Pro, in its own scroll box), "Dobrze wiedzieć" (what Pro will cost — not known yet, we write before anything is paid; what happens when
+  Pro ends; the staff; the guests) (`.s2p-product-*`, `.s2p-plan*`, `.s2p-compare*`, `.s2p-faq`). Linked, only while the plans are
+  enforced: the footer's "Cennik" (`plansEnforced` — `HomeController`, `ForWhomController`, `LegalController`), the landing page's "Ile to
+  kosztuje?" ("Zobacz cennik →"), the account menu's "Twój plan: Free · Cennik" (the organiser only, `PlanService.View.offered`). It names
+  the Free plan's 150 AI checks an evening and Pro's 300 — **the Free limit is not built yet** (SESSION_HANDOFF, "Pricing"): build it
+  before the plans are enforced. **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
   permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
   see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
   `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`, `pro-page-phone`, `pro-page-wide`.
@@ -1373,7 +1380,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/dj-weselny`, `/kluby`, `/puby`, `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/cennik`, `/pricing`, `/dj-weselny`, `/kluby`, `/puby`, `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
 under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/fonts/**` (the print's fonts), `/webjars/**`, `/favicon.ico`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`, `GET /demo` and `GET /demo/**` (the demo, `DemoController`), `/email/stop/*` (V64, "Nie wysyłaj mi tego" by its secret: the GET asks, the POST — CSRF-free for the mail program's one-click — switches off). Everything else needs the DJ's login. Without it (`SecurityConfig.loginEntryPoint`, the review of 2026-10-21, C2, C3): a DJ's page opened in the browser (`Sec-Fetch-Mode: navigate`) goes straight to Google's login and, after it, back to that page with its `?party=` (`djPagesRemembered`, `loginSuccess`; only such a page is remembered, never a poll or a fragment) — a DJ whose session expired with the phone in the pocket comes back to the panel, not to the landing page; a fetch of the panel goes to `/` as before (`polling.js` then loads its page again); any other address is a 404 (the error page), not the landing page; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
