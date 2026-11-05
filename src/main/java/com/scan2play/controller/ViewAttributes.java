@@ -104,7 +104,7 @@ public final class ViewAttributes {
     public static final String AI_DOWN = "aiDown";
     /** The Free plan's AI checks an evening ({@code FreeAiLimit.Use}): its limit (0: none applies) and what this evening used. */
     public static final String FREE_AI = "freeAi";
-    /** Yesterday's use of the Free plan's AI checks, for the organiser's note — only when the limit was reached; else null. */
+    /** Yesterday's use of the Free plan's AI checks, for the organiser's note — only when some came unchecked, before tonight's first request; else null. */
     public static final String FREE_AI_YESTERDAY = "freeAiYesterday";
     /** The day the gift of Pro ends ("7.12."), to the organiser it gives Pro to; else null (PlanService.giftEndsFor). */
     public static final String PLAN_GIFT_UNTIL = "planGiftUntil";

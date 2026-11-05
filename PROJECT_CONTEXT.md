@@ -1058,7 +1058,7 @@ follow every poll's headers).
 **The Free plan's AI checks** (`FreeAiLimit`, the owner 2026-11-05: 150, soft): `guest.limit.free-ai-per-party` (env
 `GUEST_LIMIT_FREE_AI_PER_PARTY`, 150; 0 = off) requests a party an evening (`EveningSummaryService.eveningOf`, 6:00 to 6:00 Polish time)
 go to Gemini — only while the plans are enforced and for an organiser without Pro (Pro's bound: the 300 a day above). Counted in
-`SongEvaluationService` just before the call — moods and a song asked again too (they cost a call); not 👍, not the refusals before the AI
+`SongEvaluationService` just before the call — moods and a song asked again too (they cost a call), a call that failed given back (`giveBack`: the AI judged nothing); not 👍, not the refusals before the AI
 (the limits, the hosts' list by the guest's words), not the demo; the kiosk as every guest. Past it: no call, the request reaches the DJ
 unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —; the
 guest reads "Twoja prośba trafiła do DJ-a, który sam ją oceni." (`ai.limit.to_dj`), nothing of a limit. The panel: from 80 % the line
@@ -1068,7 +1068,7 @@ number — sent only where the limit applies, so while the plans are off the hea
 a deploy still reads; scenario `free-ai-limit-follows-the-poll`); the tooltip of "bez oceny AI" names the Free plan only there too
 (`dashboard.request.unchecked.title.free`, `freeAi` of the page and of every poll); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
 the party: the next day the organiser alone sees above the queue "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150 …" with
-"Zobacz, co daje Pro" (`freeAiYesterday`, only when the limit was reached). In memory (two evenings kept): a restart starts the count
+"Zobacz, co daje Pro" (`freeAiYesterday`, only when some came unchecked, and only until this evening's first request — never during the next party). In memory (two evenings kept): a restart starts the count
 again, in the DJ's favour. The pricing page names it — change both together.
 
 ### 5.3 (Spotify — removed 2026-10-04, migration V18)

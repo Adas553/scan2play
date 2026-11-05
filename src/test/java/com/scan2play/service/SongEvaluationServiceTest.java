@@ -663,6 +663,61 @@ class SongEvaluationServiceTest {
         assertThat(freeAi.today(party).asked()).isEqualTo(2);
     }
 
+    /** A call that failed (the AI down) is no check of the Free plan's: given back, so the evening keeps its 150 answers. */
+    @Test
+    void aFailedAiCall_doesNotUseTheFreePlansChecks() {
+        PartySettingsEntity party = aParty(0);
+        party.setOwnerId("owner");
+        savesWithId();
+        plans = Plans.enforced();
+        freeAi = new FreeAiLimit(1, plans, java.time.Clock.systemUTC());
+
+        DjResponse failed = answering(null).evaluateAndSaveSong(PARTY_CODE, "sanah", "ANY");
+        assertThat(failed.isUnchecked()).isTrue();
+        assertThat(freeAi.today(party).asked()).as("given back").isZero();
+
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baśka", "ANY");
+        assertThat(prompts).as("the evening's one check still asked").hasSize(2);
+    }
+
+    /** Past the limit while the AI is down: the outage goes on (no "answered" clears it). */
+    @Test
+    void pastTheFreePlansAiChecks_anOutageGoesOn() {
+        PartySettingsEntity party = aParty(0);
+        party.setOwnerId("owner");
+        savesWithId();
+        plans = Plans.enforced();
+        freeAi = new FreeAiLimit(1, plans, java.time.Clock.systemUTC());
+        freeAi.tryAcquire(party);
+        for (int i = 0; i < 3; i++) {
+            aiHealth.recordUnchecked();
+        }
+        assertThat(aiHealth.isAiDown()).isTrue();
+
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baśka", "ANY");
+
+        assertThat(prompts).isEmpty();
+        assertThat(aiHealth.isAiDown()).as("not cleared by a request the AI never saw").isTrue();
+    }
+
+    /** The demo party asks no AI, so it uses none of the Free plan's checks, even with the plans enforced and its limit spent. */
+    @Test
+    void theDemoParty_usesNoneOfTheFreePlansChecks() {
+        PartySettingsEntity demo = PartySettingsEntity.builder().partyCode(DemoParty.CODE).ownerId("demo-owner").build();
+        when(partySettingsQueryService.getSettings(DemoParty.CODE)).thenReturn(demo);
+        savesWithId();
+        when(messageSource.getMessage(org.mockito.ArgumentMatchers.startsWith("demo.ai.comment."), any(), any(Locale.class)))
+                .thenReturn("Świetny wybór (demo)");
+        plans = Plans.enforced();
+        freeAi = new FreeAiLimit(1, plans, java.time.Clock.systemUTC());
+
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(DemoParty.CODE, "wilki baśka", "ANY");
+        DjResponse second = answering(WILKI_ACCEPTED).evaluateAndSaveSong(DemoParty.CODE, "kult", "ANY");
+
+        assertThat(second.comment()).as("the demo's ready answer, not \"unchecked\"").isEqualTo("Świetny wybór (demo)");
+        assertThat(freeAi.today(demo).asked()).isZero();
+    }
+
     /** With Pro (and while the plans are not enforced) there is no such limit: every request is asked. */
     @Test
     void withPro_theFreeLimitDoesNotApply() {

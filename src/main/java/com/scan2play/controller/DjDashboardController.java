@@ -306,9 +306,12 @@ public class DjDashboardController {
         model.addAttribute(AI_DOWN, aiDown(partyCode));
         // the Free plan's AI checks of the evening (FreeAiLimit): the line near it, the bar at it; yesterday's, to the organiser only
         // and only when it was reached — the offer of Pro the next day, never during the party
-        model.addAttribute(FREE_AI, freeAiLimit.today(settings));
-        FreeAiLimit.Use yesterday = owner ? freeAiLimit.yesterday(settings) : null;
-        model.addAttribute(FREE_AI_YESTERDAY, yesterday != null && yesterday.reached() ? yesterday : null);
+        // — only when some came unchecked, and only until this evening's first request: a party the next evening (a wedding's
+        // second day) is a party, and the note would be an offer of Pro during it
+        FreeAiLimit.Use tonight = freeAiLimit.today(settings);
+        model.addAttribute(FREE_AI, tonight);
+        FreeAiLimit.Use yesterday = owner && tonight.asked() == 0 ? freeAiLimit.yesterday(settings) : null;
+        model.addAttribute(FREE_AI_YESTERDAY, yesterday != null && yesterday.unchecked() > 0 ? yesterday : null);
         // the gift of Pro when the plans were switched on: until when, to the organiser it gives Pro to
         java.time.Instant giftEnds = owner ? planService.giftEndsFor(settings) : null;
         model.addAttribute(PLAN_GIFT_UNTIL, giftEnds == null ? null : Times.day(giftEnds.minusSeconds(1)));

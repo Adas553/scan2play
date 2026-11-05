@@ -225,9 +225,10 @@ public class SongEvaluationService {
         if (demo) {
             log.info("Party [{}]: the demo's ready answer, no AI", partyCode);
         } else if (beyondTheFreeLimit) {
-            // not an outage: the AI's health is not touched
+            // not an outage: the AI's health is not touched — recordAnswered would clear an outage that goes on
         } else if (aiResponse == null) {
             aiHealthMonitor.recordUnchecked();
+            freeAiLimit.giveBack(settings);   // the AI judged nothing: not one of the Free plan's checks
             aiResponse = withoutTheAi(partyCode, songName, locale);
         } else {
             aiHealthMonitor.recordAnswered();
@@ -382,11 +383,6 @@ public class SongEvaluationService {
         return decision.equals(answer.decision()) ? answer : answer.withVerdict(decision, answer.comment());
     }
 
-    /**
-     * The answer when the AI could not be asked: the request goes on to the DJ unchecked (accepted, the guest's own words, a note
-     * instead of the AI's comment) — the DJ looks at every request anyway, and a wedding should not lose requests while the AI is
-     * down.
-     */
     /** Past the Free plan's AI checks of the evening: unchecked, as {@link #withoutTheAi}; the guest is told nothing of a limit. */
     DjResponse beyondTheFreeLimit(String partyCode, String songName, Locale locale) {
         log.info("Party [{}]: '{}' goes to the DJ unchecked — the Free plan's AI checks of the evening are used", partyCode, songName);
@@ -394,6 +390,11 @@ public class SongEvaluationService {
                 DjResponse.KIND_UNCHECKED);
     }
 
+    /**
+     * The answer when the AI could not be asked: the request goes on to the DJ unchecked (accepted, the guest's own words, a note
+     * instead of the AI's comment) — the DJ looks at every request anyway, and a wedding should not lose requests while the AI is
+     * down.
+     */
     DjResponse withoutTheAi(String partyCode, String songName, Locale locale) {
         log.warn("Party [{}]: the AI could not be asked — '{}' goes to the DJ unchecked", partyCode, songName);
         return new DjResponse(DECISION_ACCEPTED, messageSource.getMessage("ai.unavailable.to_dj", null, locale), songName,
