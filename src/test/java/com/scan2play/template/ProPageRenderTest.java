@@ -101,13 +101,15 @@ class ProPageRenderTest {
         assertThat(html).contains("lang=\"pl\"", "<title>Cennik Scan2Play</title>", ">Cennik</h1>", ">0 zł <small>zawsze</small><", ">WCZESNY DOSTĘP<", ">Napisz do nas<",
                 "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"", ">Napisz, że chcesz Pro<",
                 "data-copy-text=\"contact@scan2play.com.pl\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
-                "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", "data-pro-compare", ">Ocena AI każdej prośby<", ">do 150 na wieczór<", ">do 300 na wieczór<",
+                "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", "data-pro-compare", ">Ocena AI prośby<", ">150 na wieczór<", ">każda prośba<", ">300 na dobę<",
                 ">Lista gospodarzy<", ">Twoje profile i napiwki<", "w 100% dla Ciebie, bez prowizji", ">Podsumowanie wieczoru<", ">Komentarze AI z charakterem<",
-                ">Własne limity gości i więcej ocen AI<", ">Obsługa do 10 osób<", ">Twoja biblioteka<", ">Kiosk dla gości<", "rano mail z podsumowaniem",
+                ">Własne limity gości i ocena AI każdej prośby<", ">Obsługa do 10 osób<", ">Twoja biblioteka<", ">Kiosk dla gości<", "rano mail z podsumowaniem",
                 "„✓ DJ ma” w podpowiedziach gości",
                 "data-pro-faq", ">Ile będzie kosztować Pro?<", ">Co, gdy Pro się skończy?<", ">Czy obsługa potrzebuje Pro?<", ">A goście?<",
-                "Płatności jeszcze nie ma", "src=\"/js/dj-nav.js\"")
+                "Płatności jeszcze nie ma", "src=\"/js/dj-nav.js\"", "lista gości i ekran TV ich nie pokazują")
                 .doesNotContain("??");
+        assertThat(html).as("Pro has no AI limit an evening; the 300 is a party's requests a day, for both plans (GuestRequestLimiter)")
+                .doesNotContain("300 na wieczór", "300 ocen");
         assertThat(count(html, "btn-action")).as("one action on the page").isEqualTo(1);
         assertThat(html).as("the head for search engines and shared links").contains(
                 "<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/pro\">",
@@ -127,7 +129,7 @@ class ProPageRenderTest {
     void shouldRenderThePageInEnglish() throws IOException {
         String html = render(Locale.ENGLISH, dj());
 
-        assertThat(html).contains("lang=\"en\"", ">Pricing</h1>", ">EARLY ACCESS<", ">Write to us<", ">How much will Pro cost?<", ">up to 150 an evening<", "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"",
+        assertThat(html).contains("lang=\"en\"", ">Pricing</h1>", ">EARLY ACCESS<", ">Write to us<", ">How much will Pro cost?<", ">150 an evening<", ">every request<", ">300 a day<", "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"",
                 ">Tell us you want Pro<", "data-copied=\"Copied\"", ">Copy address<", "data-plan=\"free\"", "data-plan=\"pro\"",
                 "data-pro-compare", ">The hosts’ list<", ">Staff of up to 10<", ">Your library<", ">The guests’ kiosk<", "data-pro-faq", ">What if Pro ends?<")
                 .doesNotContain("??");

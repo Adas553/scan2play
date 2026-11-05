@@ -869,7 +869,7 @@ class DashboardPageRenderTest {
                 mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
                 null, plans);
         assertThat(html).contains("data-free-ai-yesterday", "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150",
-                "W Pro do 300 ocen na wieczór", "href=\"/pro\"", ">Zobacz, co daje Pro<");
+                "W Pro AI ocenia każdą prośbę.", "href=\"/pro\"", ">Zobacz, co daje Pro<");
         assertThat(html).as("a new evening: no bar").containsPattern("data-guest-limit=\"ai-limit\"[^>]*d-none|d-none[^>]*data-guest-limit=\"ai-limit\"");
 
         String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),

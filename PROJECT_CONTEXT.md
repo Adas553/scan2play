@@ -1314,7 +1314,8 @@ What every page shares, so a new screen looks like the others:
   Pro ends; the staff; the guests) (`.s2p-product-*`, `.s2p-plan*`, `.s2p-compare*`, `.s2p-faq`). Linked, only while the plans are
   enforced: the footer's "Cennik" (`plansEnforced` — `HomeController`, `ForWhomController`, `LegalController`), the landing page's "Ile to
   kosztuje?" ("Zobacz cennik →"), the account menu's "Twój plan: Free · Cennik" (the organiser only, `PlanService.View.offered`). It names
-  the Free plan's 150 AI checks an evening and Pro's 300 (`FreeAiLimit`, Section 5.2). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
+  the Free plan's 150 AI checks an evening (then unchecked, not on the guests' list nor the TV), Pro's check of every request, and a
+  party's 300 requests a day for both (`FreeAiLimit`, `GuestRequestLimiter`, Section 5.2). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
   permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
   see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
   `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`, `pro-page-phone`, `pro-page-wide`.

@@ -360,9 +360,8 @@
         </p>
         <!--/* the organiser's note the day after the Free plan's AI checks ran out (FreeAiLimit.yesterday): what came unchecked, and the
              way to Pro — the next day, never during the party */-->
-        <div th:if="${freeAiYesterday != null}" class="mb-2" data-free-ai-yesterday
-             th:with="proLimit=${serverLimitPerParty > 0 ? serverLimitPerParty : 300}">
-            <div th:replace="~{fragments/components :: proOffer(#{dashboard.free_ai.yesterday(${freeAiYesterday.asked()}, ${freeAiYesterday.checked()}, ${proLimit})})}"></div>
+        <div th:if="${freeAiYesterday != null}" class="mb-2" data-free-ai-yesterday>
+            <div th:replace="~{fragments/components :: proOffer(#{dashboard.free_ai.yesterday(${freeAiYesterday.asked()}, ${freeAiYesterday.checked()})})}"></div>
         </div>
         <div class="table-responsive list-scroll">
         <table class="table table-dark table-hover table-sm align-middle">
