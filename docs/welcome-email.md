@@ -9,7 +9,8 @@ organisers new in the last 7 days and whether the e-mails go.
 What the privacy policy promises, so the message keeps it: the address is used to write about the account and help — no advertising,
 no newsletter. Never twice unasked; a reply is a conversation, not a campaign. It is sent automatically, so it does not pretend to be
 written by a person ("we", no "I write personally", no signature of a person): it ends "Scan2Play". `{imię}` / `{name}` is the first word of the name from Google; none — "Cześć!" / "Hi!".
-Under it, in small print, "Nie wysyłaj mi tego" / "Don't send me this" (the one-click switch of the morning summary, V64).
+No "Nie wysyłaj mi tego" and no `List-Unsubscribe`: the welcome goes once, and that link switches off the morning summary, which
+the welcome never names (it is the morning e-mail's).
 
 ## Polski
 

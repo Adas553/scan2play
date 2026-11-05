@@ -142,7 +142,7 @@
             y += item.height;
         });
 
-        // the foot: the DJ's logo on a white badge, and ours — "Działa na Scan2Play", the address
+        // the foot: the DJ's logo on a white badge, and ours — "Działa na Scan2Play" (in English "Powered by", as the poster's foot), the address
         const footY = size.h - size.foot - footer + 20;
         if (c.logo) {
             const box = 130, ratio = Math.min(box / c.logo.naturalWidth, box / c.logo.naturalHeight);

@@ -159,7 +159,7 @@ class AutomaticEmailsIT extends PostgresIntegrationTest {
         assertThat(welcomeSentAt(code)).isNotNull();
         Email email = sender.sent.stream().filter(e -> e.to().equals(address)).findFirst().orElseThrow();
         assertThat(email.subject()).isEqualTo("Scan2Play — dzięki za założenie konta");
-        assertThat(email.html()).contains("Cześć Ola,", "/email/stop/" + queries.getSettings(code).getEmailToken() + "?lang=pl");
+        assertThat(email.html()).contains("Cześć Ola,").doesNotContain("/email/stop/");
         assertThat(jdbc.queryForObject("SELECT last_sent_at FROM email_status WHERE id = 1", Timestamp.class)).isNotNull();
     }
 

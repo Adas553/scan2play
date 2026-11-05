@@ -10,8 +10,10 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
@@ -27,6 +29,8 @@ import java.time.Duration;
 public class BrevoEmailSender implements EmailSender {
 
     static final String DEFAULT_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+    /** How long Brevo has to answer a sent e-mail; after it the e-mail is {@link Result#UNKNOWN}. */
+    static final Duration ANSWER_TIMEOUT = Duration.ofSeconds(15);
 
     private final HttpClient httpClient;
     private final ObjectMapper json = new ObjectMapper();
@@ -35,6 +39,7 @@ public class BrevoEmailSender implements EmailSender {
     private final String fromAddress;
     private final String fromName;
     private final String replyTo;
+    private final Duration answerTimeout;
 
     @Autowired
     public BrevoEmailSender(@Value("${brevo.api-key:}") String apiKey,
@@ -42,17 +47,19 @@ public class BrevoEmailSender implements EmailSender {
                             @Value("${scan2play.mail.from-name:Scan2Play}") String fromName,
                             @Value("${scan2play.mail.reply-to:scan2playcontact@gmail.com}") String replyTo) {
         this(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build(), DEFAULT_ENDPOINT, apiKey, fromAddress, fromName,
-                replyTo);
+                replyTo, ANSWER_TIMEOUT);
     }
 
-    /** For the tests: their own endpoint. */
-    BrevoEmailSender(HttpClient httpClient, String endpoint, String apiKey, String fromAddress, String fromName, String replyTo) {
+    /** For the tests: their own endpoint and how long it may take. */
+    BrevoEmailSender(HttpClient httpClient, String endpoint, String apiKey, String fromAddress, String fromName, String replyTo,
+                     Duration answerTimeout) {
         this.httpClient = httpClient;
         this.endpoint = endpoint;
         this.apiKey = apiKey == null ? "" : apiKey.strip();
         this.fromAddress = fromAddress;
         this.fromName = fromName;
         this.replyTo = replyTo;
+        this.answerTimeout = answerTimeout;
         if (this.apiKey.isEmpty()) {
             log.warn("E-mails off: BREVO_API_KEY is not set — no welcome or morning summary is sent from this server");
         } else {
@@ -71,7 +78,7 @@ public class BrevoEmailSender implements EmailSender {
         }
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(answerTimeout)
                     .header("api-key", apiKey)
                     .header("accept", "application/json")
                     .header("content-type", "application/json")
@@ -90,6 +97,13 @@ public class BrevoEmailSender implements EmailSender {
             }
             log.warn("E-mail not sent: Brevo answered HTTP {}: {}", status, shortly(response.body()));
             return Result.FAILED;
+        } catch (HttpConnectTimeoutException e) {
+            log.warn("E-mail not sent: Brevo could not be reached ({})", e.toString());
+            return Result.FAILED;
+        } catch (HttpTimeoutException e) {
+            // the request went out: Brevo may have taken it — not sent again
+            log.warn("E-mail maybe sent: Brevo did not answer in {} s", answerTimeout.toSeconds());
+            return Result.UNKNOWN;
         } catch (IOException e) {
             log.warn("E-mail not sent: Brevo did not answer ({})", e.toString());
             return Result.FAILED;

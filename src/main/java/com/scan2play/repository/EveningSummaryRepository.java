@@ -55,6 +55,16 @@ public interface EveningSummaryRepository extends JpaRepository<EveningSummaryEn
                                     @Param("limit") int limit);
 
     /**
+     * Whether the party has a request between {@code from} and {@code to} — one still there or one kept of a deleted one (an evening
+     * there is: it may be named and shared). Stops at the first row; {@code idx_party_decision_time} and
+     * {@code idx_evening_song_party_time} find it.
+     */
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM song_requests WHERE party_code = :partyCode AND requested_at >= :from"
+            + " AND requested_at < :to) OR EXISTS (SELECT 1 FROM evening_song WHERE party_code = :partyCode AND requested_at >= :from"
+            + " AND requested_at < :to)", nativeQuery = true)
+    boolean hasRequestsBetween(@Param("partyCode") String partyCode, @Param("from") Instant from, @Param("to") Instant to);
+
+    /**
      * The purge of the evenings' songs older than {@code cutoff}, at most {@code batchSize} rows a call (each its own transaction,
      * as the requests' purge); {@code idx_evening_song_time} finds them.
      */

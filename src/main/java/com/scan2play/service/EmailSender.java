@@ -7,8 +7,9 @@ package com.scan2play.service;
 public interface EmailSender {
 
     /**
-     * One e-mail to one person. {@code stopUrl}: the one-click "Nie wysyłaj mi tego" address, also given to the mail program as
-     * {@code List-Unsubscribe} (with {@code List-Unsubscribe-Post}, RFC 8058), or null.
+     * One e-mail to one person. {@code stopUrl}: the "Nie wysyłaj mi tego" address (its link asks, a POST to it switches off),
+     * also given to the mail program as {@code List-Unsubscribe} (with {@code List-Unsubscribe-Post}, RFC 8058); null for an e-mail
+     * that goes once (the welcome).
      */
     record Email(String to, String subject, String html, String text, String stopUrl) {
 
@@ -25,6 +26,11 @@ public interface EmailSender {
         KEY_REFUSED,
         /** Any other failure (the network, a 5xx, a refused address): worth trying again later. */
         FAILED,
+        /**
+         * The service took the request and gave no answer in time: the e-mail may have gone. Kept as sent by the callers — the same
+         * e-mail twice is worse than one lost.
+         */
+        UNKNOWN,
         /** No key on this server (a developer's machine): nothing is sent. */
         OFF
     }

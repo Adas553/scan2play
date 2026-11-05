@@ -104,6 +104,8 @@ def default_state():
         'guestThemeAnswer': 'settings-guest-theme-answer',
         # "Poranne podsumowanie" (V64): the rendered card the real server answers the switch with
         'morningAnswer': 'settings-morning-answer',
+        # what "Podpowiedzi gości" sent in the background is answered with (V58): the settings page its redirect leads to
+        'libraryHintsAnswer': 'settings-library-hints-answer',
         # The poll's own answer (V32): e.g. 403 — the organiser took the person's access away (the page loads itself again)
         'updatesStatus': None,
         # The poll's body instead of the queue, answered 200 without an ETag: e.g. a Wi-Fi login page that took the request over
@@ -423,7 +425,8 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
-        if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary'):   # by fetch (V55, V59, V64)
+        if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary',
+                    '/dj/library/hints'):   # by fetch (V55, V59, V64, V58)
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         self._note('POST', path, fields)
@@ -506,6 +509,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/morning-summary':    # "Poranne podsumowanie" (V64): the card alone, as the real server answers a fetch
             with open(os.path.join(stand.rendered, state['morningAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path == '/dj/library/hints':                # "Podpowiedzi gości" (V58): the settings page the real server's redirect leads to
+            with open(os.path.join(stand.rendered, state['libraryHintsAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/guest-theme':        # "Motyw dla gości" (V59): the card alone, as the real server answers a fetch
             with open(os.path.join(stand.rendered, state['guestThemeAnswer'] + '.html'), encoding='utf-8') as f:

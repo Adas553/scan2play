@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,6 +28,8 @@ class BrevoEmailSenderTest {
 
     private HttpServer server;
     private final AtomicInteger status = new AtomicInteger(201);
+    /** How long the stand-in waits before it answers, in milliseconds. */
+    private final AtomicInteger delay = new AtomicInteger(0);
     private final List<String> bodies = new ArrayList<>();
     private final List<String> keys = new ArrayList<>();
 
@@ -35,6 +38,11 @@ class BrevoEmailSenderTest {
         server.createContext("/v3/smtp/email", exchange -> {
             bodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             keys.add(exchange.getRequestHeaders().getFirst("api-key"));
+            try {
+                Thread.sleep(delay.get());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             byte[] answer = (status.get() == 201 ? "{\"messageId\":\"<1@smtp-relay.mailin.fr>\"}"
                     : "{\"code\":\"unauthorized\",\"message\":\"Key not found\"}").getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(status.get(), answer.length);
@@ -43,7 +51,7 @@ class BrevoEmailSenderTest {
         });
         server.start();
         return new BrevoEmailSender(HttpClient.newHttpClient(), "http://127.0.0.1:" + server.getAddress().getPort() + "/v3/smtp/email",
-                key, "contact@scan2play.com.pl", "Scan2Play", "scan2playcontact@gmail.com");
+                key, "contact@scan2play.com.pl", "Scan2Play", "scan2playcontact@gmail.com", Duration.ofMillis(300));
     }
 
     @AfterEach
@@ -93,6 +101,18 @@ class BrevoEmailSenderTest {
         server.stop(0);
         server = null;
         assertThat(sender.send(email())).isEqualTo(Result.FAILED);
+    }
+
+    /**
+     * Brevo took the request and gave no answer in time: the e-mail may have gone — "unknown", which the callers keep as sent (a
+     * welcome twice is worse than none), never a failure to try again.
+     */
+    @Test
+    void anAnswerTooLate_isUnknown_notAFailure() throws Exception {
+        BrevoEmailSender sender = sender("key");
+        delay.set(2000);
+        assertThat(sender.send(email())).isEqualTo(Result.UNKNOWN);
+        assertThat(bodies).as("the request reached Brevo").hasSize(1);
     }
 
     @Test

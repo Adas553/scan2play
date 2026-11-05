@@ -195,7 +195,9 @@ class DjLibraryControllerTest {
         mvc.perform(post("/dj/library/hints").param("partyCode", PUB).param("on", "false").principal(user(ORGANISER))
                         .session(new MockHttpSession()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/dj/settings?party=PUB01#libraryCard"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/dj/settings?party=PUB01#libraryCard"))
+                // the page it leads to says "✓ Zapisane" beside the choice (cards-in-place.js puts that part in place)
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attribute("libraryHintsSaved", true));
         @SuppressWarnings("unchecked")
         ArgumentCaptor<java.util.function.Consumer<PartySettingsEntity>> change = ArgumentCaptor.forClass(java.util.function.Consumer.class);
         verify(settings).updateSettings(eq(PUB), change.capture());

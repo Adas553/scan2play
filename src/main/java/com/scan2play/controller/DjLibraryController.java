@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.FilterInputStream;
@@ -110,16 +111,18 @@ public class DjLibraryController {
 
     /**
      * "Podpowiedzi gości" (V58): whether the guests' suggestions are marked by the library, "✓ DJ ma" first. Saved as soon as picked
-     * (forms.js). Switching it on needs the plan; switching it off never does.
+     * (cards-in-place.js follows the redirect and takes the choice's part of the card from the page, "✓ Zapisane" in it). Switching
+     * it on needs the plan; switching it off never does.
      */
     @PostMapping("/hints")
     public String hints(@RequestParam String partyCode, @RequestParam boolean on, OAuth2AuthenticationToken authentication,
-                        HttpSession session) {
+                        HttpSession session, RedirectAttributes redirect) {
         PartySettingsEntity party = sessionHelper.requireOwner(partyCode, authentication, session);
         if (on) {
             planService.require(party, PlanFeature.LIBRARY);
         }
         partySettingsCommandService.updateSettings(party.getPartyCode(), settings -> settings.setLibraryHints(on));
+        redirect.addFlashAttribute(ViewAttributes.LIBRARY_HINTS_SAVED, true);
         return toTheCard(party);
     }
 

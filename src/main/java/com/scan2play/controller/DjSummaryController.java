@@ -192,10 +192,13 @@ public class DjSummaryController {
         return planService.require(sessionHelper.require(party, StaffPermission.SUMMARY, authentication, session), PlanFeature.SUMMARY);
     }
 
-    /** One of the party's evenings, by its day; 404 for an evening it has not (a title or a link only for an evening there is). */
+    /**
+     * One of the party's evenings, by its day; 404 for an evening it has not (a title or a link only for an evening there is). Asked
+     * of that evening alone: the list of evenings reads the party's 13 months of rows.
+     */
     private LocalDate existing(String evening, PartySettingsEntity settings) {
         LocalDate day = parse(evening);
-        if (day == null || eveningSummaryService.evenings(settings.getPartyCode()).stream().noneMatch(e -> e.day().equals(day))) {
+        if (day == null || !eveningSummaryService.hasRequests(settings.getPartyCode(), day)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return day;

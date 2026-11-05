@@ -213,7 +213,10 @@ public class PartySettingsEntity {
     @Column(nullable = false)
     private boolean morningSummary = true;
 
-    /** The secret of "Nie wysyłaj mi tego" in the e-mails (V64, made by the database for every row). */
+    /**
+     * The secret of "Nie wysyłaj mi tego" in the e-mails (V64, made by the database for every row): a random UUID without its dashes,
+     * 32 hex digits holding 122 random bits (V64's comment says 128 — the version and variant take six).
+     */
     @Column(insertable = false, updatable = false, length = 32)
     @ToString.Exclude
     private String emailToken;

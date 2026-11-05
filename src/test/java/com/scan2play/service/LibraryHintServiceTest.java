@@ -88,4 +88,19 @@ class LibraryHintServiceTest {
         assertThat(hints.have(PARTY, List.of())).isEmpty();
         verify(libraries, never()).info(PARTY);
     }
+
+    /**
+     * A script could learn the DJ's library ten songs at a time: an address may ask {@value LibraryHintService#ASKS_A_MINUTE} times a
+     * minute of one party — a room of phones behind one Wi-Fi types far less —, then the suggestions go unmarked for the rest of it.
+     */
+    @Test
+    void anAddress_mayAskSoManyTimesAMinute_ofOneParty() {
+        LibraryHintService hints = new LibraryHintService(libraries, Plans.off());
+        for (int i = 0; i < LibraryHintService.ASKS_A_MINUTE; i++) {
+            assertThat(hints.mayAsk(PARTY, "203.0.113.7")).as("ask %d", i + 1).isTrue();
+        }
+        assertThat(hints.mayAsk(PARTY, "203.0.113.7")).as("one more").isFalse();
+        assertThat(hints.mayAsk(PARTY, "203.0.113.8")).as("another address").isTrue();
+        assertThat(hints.mayAsk("PUB02", "203.0.113.7")).as("another party").isTrue();
+    }
 }

@@ -141,6 +141,27 @@ class EveningSummaryIT extends PostgresIntegrationTest {
         assertThat(EveningSummaryService.summarize(evening, summaries.requests(party, evening)).played()).isEqualTo(1);
     }
 
+    /**
+     * An evening the DJ may name or share is one with a request — still there or kept of a deleted one —, from 6:00 to 6:00 Polish
+     * time: a question of one evening, not of the party's whole list ({@code DjSummaryController.existing}).
+     */
+    @Test
+    void anEveningIsThere_byItsRequests_orTheSongsKeptOfThem() {
+        String party = party();
+        assertThat(summaries.hasRequests(party, EVENING)).isFalse();
+
+        save(party, "Sanah - Szampan", "played", at(5, 59), at(5, 59), 1);   // the next morning, before 6:00: still this evening
+        assertThat(summaries.hasRequests(party, EVENING)).isTrue();
+        assertThat(summaries.hasRequests(party, EVENING.plusDays(1))).isFalse();
+        assertThat(summaries.hasRequests(party(), EVENING)).as("another party's evening").isFalse();
+
+        LocalDate earlier = EVENING.minusDays(40);
+        jdbc.update("INSERT INTO evening_song (song_request_id, party_code, song_name, requested_at, status, votes, tips, dedications,"
+                + " added_by_dj, via_kiosk) VALUES (?, ?, 'Kult - Arahja', ?, 'PLAYED', 1, 0, 0, false, false)", 990_000_001L, party,
+                java.sql.Timestamp.from(earlier.atTime(21, 0).atZone(Times.DISPLAY_ZONE).toInstant()));
+        assertThat(summaries.hasRequests(party, earlier)).as("only kept songs, the requests gone").isTrue();
+    }
+
     /** The title and the hosts' link: one row an evening, saved twice it stays one; a link's secret is no other evening's. */
     @Test
     void theTitleAndTheLink_areOneRowAnEvening() {
@@ -202,7 +223,10 @@ class EveningSummaryIT extends PostgresIntegrationTest {
                 .hasMessageContaining("song_requests_reject_reason_check");
     }
 
-    /** 13 months after the evening its kept songs, its title and its link go (the nightly purge). */
+    /**
+     * 13 months after the evening its kept songs, its title and its link go (the nightly purge) — the evening as a whole: its songs
+     * after midnight with it (an evening ends at 6:00), not a day after its title.
+     */
     @Test
     void after13Months_theEveningGoes() {
         String party = party();
@@ -212,6 +236,10 @@ class EveningSummaryIT extends PostgresIntegrationTest {
         jdbc.update("INSERT INTO evening_song (song_request_id, party_code, song_name, requested_at, status, votes, tips, dedications,"
                 + " added_by_dj, via_kiosk) VALUES (?, ?, 'old', ?, 'PLAYED', 1, 0, 0, false, false), (?, ?, 'young', ?, 'PLAYED', 1, 0, 0, false, false)",
                 -System.nanoTime(), party, java.sql.Timestamp.from(tooOld), -System.nanoTime() - 1, party, java.sql.Timestamp.from(young));
+        Instant itsNight = before.atTime(2, 0).atZone(Times.DISPLAY_ZONE).toInstant();   // the evening before's, after midnight
+        jdbc.update("INSERT INTO evening_song (song_request_id, party_code, song_name, requested_at, status, votes, tips, dedications,"
+                + " added_by_dj, via_kiosk) VALUES (?, ?, 'old night', ?, 'PLAYED', 1, 0, 0, false, false)", -System.nanoTime() - 2, party,
+                java.sql.Timestamp.from(itsNight));
         summaries.saveTitle(party, before.minusDays(1), "old");
         summaries.saveTitle(party, before.plusDays(1), "young");
 

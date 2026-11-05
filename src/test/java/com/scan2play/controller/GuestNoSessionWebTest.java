@@ -139,9 +139,17 @@ class GuestNoSessionWebTest {
         doReturn(open).when(partySettingsQueryService).getSettings("OPEN1");
         doReturn(true).when(libraryHintService).on(open);
         doReturn(java.util.List.of(true, false)).when(libraryHintService).have("OPEN1", java.util.List.of("Wilki - Baśka", "ABBA - SOS"));
+        doReturn(true).when(libraryHintService).mayAsk(org.mockito.ArgumentMatchers.eq("OPEN1"), org.mockito.ArgumentMatchers.any());
         MvcResult answer = mockMvc.perform(get("/p/OPEN1/library/has").param("song", "Wilki - Baśka", "ABBA - SOS"))
                 .andExpect(status().isOk()).andReturn();
         noSession(answer);
         assertThat(answer.getResponse().getContentAsString()).isEqualTo("[true,false]");
+
+        // the address asked too often this minute: a 429, the library not looked at — the suggestions go unmarked
+        doReturn(false).when(libraryHintService).mayAsk(org.mockito.ArgumentMatchers.eq("OPEN1"), org.mockito.ArgumentMatchers.any());
+        noSession(mockMvc.perform(get("/p/OPEN1/library/has").param("song", "Wilki - Baśka")).andExpect(status().isTooManyRequests())
+                .andReturn());
+        org.mockito.Mockito.verify(libraryHintService, org.mockito.Mockito.times(1)).have(org.mockito.ArgumentMatchers.eq("OPEN1"),
+                org.mockito.ArgumentMatchers.any());
     }
 }

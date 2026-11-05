@@ -122,6 +122,8 @@ public final class ViewAttributes {
      * switch as saved ({@code PartySettingsEntity.libraryHints}).
      */
     public static final String LIBRARY_HINTS = "libraryHints";
+    /** "Podpowiedzi gości" just saved (a flash attribute of the redirect): "✓ Zapisane" beside the choice. */
+    public static final String LIBRARY_HINTS_SAVED = "libraryHintsSaved";
     /** Whether the guests may add a dedication (V38, {@code PartySettingsEntity.dedicationsOn}). */
     public static final String DEDICATIONS_ON = "dedicationsOn";
     /** The newest dedications of the queue's songs (V38), by the song's id ({@code DjService.dedicationsOf}). */

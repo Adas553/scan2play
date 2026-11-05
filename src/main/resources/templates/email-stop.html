@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--/* "Nie wysyłaj mi tego" of the morning summary's e-mail (V64, EmailStopController): the link asks first — a mail filter that opens
+     it to check it switches nothing off. "Tak, wyłącz" posts to this page's own address (no action: the secret and ?lang go with it);
+     no th:action, so no CSRF token — the path is exempt, and a token would make a session for every link opened. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title th:text="#{email.stop.page_title}">Morning summary - Scan2Play</title>
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="page-status page-email">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card p-4 p-sm-5">
+                <h1 class="mb-3 fw-bold text-light-custom h2" id="emailStopTitle" th:text="#{email.stop.title}">Switch the morning summary off?</h1>
+                <p class="lead text-secondary-bright" th:text="#{email.stop.text}">We will stop e-mailing you the evening's summary the next morning.</p>
+                <form method="post" id="emailStopForm" class="mt-2 mb-0">
+                    <button type="submit" class="btn btn-action px-4" th:text="#{email.stop.confirm}">Yes, switch it off</button>
+                </form>
+                <p class="text-secondary-bright mt-4 mb-0">
+                    <span th:text="#{email.stop.keep}">To keep getting it, just close this page. You can also change it in</span>
+                    <a href="/dj/settings#morningSummaryCard" class="text-secondary-bright" th:text="#{email.stopped.settings}">Party settings</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>
