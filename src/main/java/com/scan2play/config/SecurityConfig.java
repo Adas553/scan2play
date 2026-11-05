@@ -11,6 +11,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -130,13 +134,25 @@ public class SecurityConfig {
         };
     }
 
+    /**
+     * Google's login always asks which account ({@code prompt=select_account}): signing out of Scan2Play does not sign out of Google,
+     * and without it the next "Zaloguj" on a shared device (a club's computer) went straight into the last DJ's account.
+     */
+    static OAuth2AuthorizationRequestResolver accountPicker(ClientRegistrationRepository clients) {
+        DefaultOAuth2AuthorizationRequestResolver resolver = new DefaultOAuth2AuthorizationRequestResolver(clients,
+                OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI);
+        resolver.setAuthorizationRequestCustomizer(request -> request.additionalParameters(parameters ->
+                parameters.put("prompt", "select_account")));
+        return resolver;
+    }
+
     /** The deploy's version the scripts and styles are linked under ({@code /<version>/js/...}, application.properties). */
     @Value("${spring.web.resources.chain.strategy.fixed.version:dev}")
     private String assetVersion;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, MessageSource messageSource, LocaleResolver localeResolver,
-                                           ObjectProvider<SiteCounter> siteCounter) throws Exception {
+                                           ObjectProvider<SiteCounter> siteCounter, ClientRegistrationRepository clients) throws Exception {
         RequestCache remembered = djPagesRemembered();
         http
                 .headers(headers -> headers.contentSecurityPolicy(csp -> {
@@ -200,6 +216,8 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         // Use root landing page as custom login entry point
                         .loginPage("/")
+                        // Google asks which account every time, also after "Wyloguj"
+                        .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(accountPicker(clients)))
                         // back to the DJ's page asked for before the login (with its ?party=), else the panel
                         .successHandler(loginSuccess(remembered, () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN))))
                         .failureHandler((request, response, exception) -> {
