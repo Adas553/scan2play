@@ -105,8 +105,8 @@ public class DjDashboardController {
 
     /**
      * On every answer of the queue poll, 304 too: how many requests the server limits have used now,
-     * {@code <busiest network>,<party>,<the Free plan's AI checks this evening>} — the dashboard keeps its badges current by it,
-     * without a reload.
+     * {@code <busiest network>,<party>[,<the Free plan's AI checks this evening>]} — the dashboard keeps its badges current by it,
+     * without a reload. The third only where the Free plan's limit applies ({@code FreeAiLimit.limitOf} &gt; 0).
      */
     static final String GUEST_LIMITS_USE_HEADER = "X-Guest-Limits-Use";
 
@@ -551,8 +551,10 @@ public class DjDashboardController {
         // Not part of the ETag: the warnings follow the limits even while the queue stays the same
         FreeAiLimit.Use freeAi = freeAiLimit.today(settings);
         response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode, freeAi));
+        // the third number only where the Free plan's limit applies: while the plans are off the header stays as it was, and a panel
+        // opened before a deploy (whose polling.js takes exactly two numbers) keeps following the limits
         response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
-                + "," + guestRequestLimiter.partyRequestsUsed(partyCode) + "," + freeAi.asked());
+                + "," + guestRequestLimiter.partyRequestsUsed(partyCode) + (freeAi.limit() > 0 ? "," + freeAi.asked() : ""));
         response.setHeader(PARTY_ACTIVE_HEADER, String.valueOf(settings.isActive()));
         // …and its plan (V55): the panel hides a planned moment's line once it is applied, cancelled or made pointless
         response.setHeader(PARTY_SCHEDULE_HEADER, PartyScheduleService.headerValue(settings));
@@ -591,6 +593,7 @@ public class DjDashboardController {
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
         model.addAttribute(PLAN, plan);       // and by the organiser's plan (V35): no 💸 without Pro
+        model.addAttribute(FREE_AI, freeAi);  // "bez oceny AI" names the Free plan only where its limit applies
         return "dashboard :: songTableBody";
     }
 

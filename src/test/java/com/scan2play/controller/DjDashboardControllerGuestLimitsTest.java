@@ -113,9 +113,10 @@ class DjDashboardControllerGuestLimitsTest {
         when(limiter.busiestClientRequestsUsed(PARTY)).thenReturn(24);
         when(limiter.partyRequestsUsed(PARTY)).thenReturn(5);
 
-        // the third: the Free plan's AI checks of the evening (0 — none apply while the plans are off)
-        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("24,5,0");
-        assertThat(poll(false).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("24,5,0");
+        // no third number while no Free plan's limit applies (the plans off): the header as before, which a panel opened before a
+        // deploy — its polling.js takes exactly two numbers — still reads
+        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("24,5");
+        assertThat(poll(false).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("24,5");
     }
 
     /** The party ended in another window (the DJ's phone): every window learns it from its next poll, a 304 too. */
@@ -164,7 +165,7 @@ class DjDashboardControllerGuestLimitsTest {
                 mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
                 mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), freeAi);
         freeAi.tryAcquire(party);
-        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).endsWith(",1");
+        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("0,0,1");
         assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("none");
 
         freeAi.tryAcquire(party);

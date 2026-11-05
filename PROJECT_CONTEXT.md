@@ -1064,7 +1064,9 @@ unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI 
 guest reads "Twoja prośba trafiła do DJ-a, który sam ją oceni." (`ai.limit.to_dj`), nothing of a limit. The panel: from 80 % the line
 "120 z 150 próśb ocenionych dziś przez AI. Kolejne przyjdą bez oceny." (`data-limit-near="ai"`), at it the bar "⚠ Oceny AI na ten wieczór
 wykorzystane …" (`data-guest-limit="ai-limit"`), both from every poll (`X-Guest-Limits` "ai-limit", `X-Guest-Limits-Use`'s third
-number; scenario `free-ai-limit-follows-the-poll`); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
+number — sent only where the limit applies, so while the plans are off the header keeps its two numbers, which a panel opened before
+a deploy still reads; scenario `free-ai-limit-follows-the-poll`); the tooltip of "bez oceny AI" names the Free plan only there too
+(`dashboard.request.unchecked.title.free`, `freeAi` of the page and of every poll); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
 the party: the next day the organiser alone sees above the queue "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150 …" with
 "Zobacz, co daje Pro" (`freeAiYesterday`, only when the limit was reached). In memory (two evenings kept): a restart starts the count
 again, in the DJ's favour. The pricing page names it — change both together.
