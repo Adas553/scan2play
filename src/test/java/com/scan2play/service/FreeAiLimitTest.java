@@ -60,6 +60,34 @@ class FreeAiLimitTest {
     }
 
     @Test
+    @DisplayName("the change of time: the night of 25.10 (2:30 twice) and of 28.3 (no 2:30) is one evening, the next starts at 6:00 local time")
+    void theChangeOfTime_keepsTheEveningWhole() {
+        FreeAiLimit limit = new FreeAiLimit(10, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+
+        now.set(Instant.parse("2026-10-24T18:00:00Z"));   // Saturday 20:00 CEST
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2026-10-25T00:30:00Z"));   // 2:30 CEST
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2026-10-25T01:30:00Z"));   // 2:30 CET, the hour again
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2026-10-25T04:59:00Z"));   // 5:59 CET: the same evening, 25 hours long
+        assertThat(limit.today(party).asked()).isEqualTo(3);
+        now.set(Instant.parse("2026-10-25T05:00:00Z"));   // 6:00 CET: Sunday's
+        assertThat(limit.today(party).asked()).isZero();
+        assertThat(limit.yesterday(party).asked()).isEqualTo(3);
+
+        now.set(Instant.parse("2027-03-27T20:00:00Z"));   // Saturday 21:00 CET
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2027-03-28T03:59:00Z"));   // 5:59 CEST (2:00 became 3:00): the same evening, 23 hours long
+        limit.tryAcquire(party);
+        assertThat(limit.today(party).asked()).isEqualTo(2);
+        now.set(Instant.parse("2027-03-28T04:00:00Z"));   // 6:00 CEST: Sunday's
+        assertThat(limit.today(party).asked()).isZero();
+        assertThat(limit.yesterday(party).asked()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("no limit with Pro, while the plans are not enforced, or switched off (0)")
     void noLimit_withPro_plansOff_orZero() {
         PartySettingsEntity party = party("dj");

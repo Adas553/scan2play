@@ -872,7 +872,7 @@ class DashboardPageRenderTest {
 
     /** The day after the checks ran out: the organiser alone sees what came unchecked, and the way to Pro; the staff nothing. */
     @Test
-    void theDayAfter_theOrganiserSeesWhatCameUnchecked_andTheWayToPro() {
+    void theDayAfter_theOrganiserSeesWhatCameUnchecked_andTheWayToPro() throws IOException {
         PartySettingsEntity party = party();
         com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
         java.util.concurrent.atomic.AtomicReference<java.time.Instant> now =
@@ -892,6 +892,7 @@ class DashboardPageRenderTest {
                 null, plans);
         assertThat(html).contains("data-free-ai-yesterday", "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150",
                 "W Pro AI ocenia każdą prośbę.", "href=\"/pro\"", ">Zobacz, co daje Pro<");
+        write("dashboard-free-ai-yesterday.html", html);   // the browser tests
         assertThat(html).as("a new evening: no bar").containsPattern("data-guest-limit=\"ai-limit\"[^>]*d-none|d-none[^>]*data-guest-limit=\"ai-limit\"");
 
         String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
@@ -928,7 +929,7 @@ class DashboardPageRenderTest {
 
     /** The gift of Pro (scan2play.plans.gift-until): one quiet line to the organiser — until when, and the pricing page; the staff nothing. */
     @Test
-    void theGiftOfPro_isOneLineToTheOrganiser() {
+    void theGiftOfPro_isOneLineToTheOrganiser() throws IOException {
         PartySettingsEntity party = party();
         com.scan2play.repository.DjPlanRepository rows = mock(com.scan2play.repository.DjPlanRepository.class);
         when(rows.findById(anyString())).thenReturn(java.util.Optional.empty());
@@ -940,6 +941,7 @@ class DashboardPageRenderTest {
                 null, plans);
         assertThat(html).contains("data-plan-gift", "Scan2Play ma teraz plany Free i Pro. Do ", "masz Pro w prezencie, potem plan Free.",
                 ">Zobacz cennik →<");
+        write("dashboard-plan-gift.html", html);   // the browser tests
         String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
                 mock(PartyStaffService.class), new MockHttpSession(),
                 new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);
