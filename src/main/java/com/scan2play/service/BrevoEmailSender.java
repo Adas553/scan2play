@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 /**
- * The e-mails through Brevo's transactional API (v3, {@code POST /v3/smtp/email}): from {@code Scan2Play <kontakt@scan2play.com.pl>}
+ * The e-mails through Brevo's transactional API (v3, {@code POST /v3/smtp/email}): from {@code Scan2Play <contact@scan2play.com.pl>}
  * — the domain is authenticated in Brevo (DKIM, DMARC) — with the replies to the Gmail address the owner reads (Brevo refuses a free
  * address as the sender, and Gmail's DMARC would mark it forged). The key is the Railway variable {@code BREVO_API_KEY}; without it
  * nothing is sent ({@link Result#OFF}). A refused key (401 / 403) is logged as an error that says what to do: Brevo expires a key
@@ -38,7 +38,7 @@ public class BrevoEmailSender implements EmailSender {
 
     @Autowired
     public BrevoEmailSender(@Value("${brevo.api-key:}") String apiKey,
-                            @Value("${scan2play.mail.from:kontakt@scan2play.com.pl}") String fromAddress,
+                            @Value("${scan2play.mail.from:contact@scan2play.com.pl}") String fromAddress,
                             @Value("${scan2play.mail.from-name:Scan2Play}") String fromName,
                             @Value("${scan2play.mail.reply-to:scan2playcontact@gmail.com}") String replyTo) {
         this(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build(), DEFAULT_ENDPOINT, apiKey, fromAddress, fromName,

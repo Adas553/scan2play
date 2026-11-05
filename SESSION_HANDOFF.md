@@ -60,7 +60,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    `welcome.js`); browser scenarios `welcome-card-*`, seen red first, the one-line heading also with the runner's fonts.
    (c) **automatic e-mails (V64) — built 2026-11-05 on `claude/nifty-albattani-yzjh5r`, the PR to `dev` waits for the owner's
    review.** Details: `PROJECT_CONTEXT.md` 5.1 ("The automatic e-mails"), 7.4 (Brevo), 10 (V64). What was built, by the owner's picks:
-   - **Brevo** API v3 behind `EmailSender` (`BrevoEmailSender`; a fake in the tests). From `Scan2Play <kontakt@scan2play.com.pl>`,
+   - **Brevo** API v3 behind `EmailSender` (`BrevoEmailSender`; a fake in the tests). From `Scan2Play <contact@scan2play.com.pl>`,
      Reply-To `scan2playcontact@gmail.com`. The key: Railway **`BREVO_API_KEY`** (already set; Brevo key "scan2play-production",
      Restricted, Transactional email = All; expires 4.11.2027 **or after 90 days unused** — rotate before). Brevo's "Authorised IPs"
      must stay off. A 401 / 403 is the ERROR line "E-MAIL KEY REFUSED …"; `/dj/stats` shows whether the key is set, the last send Brevo
@@ -78,6 +78,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    - Tests: `AutomaticEmailsTest`, `BrevoEmailSenderTest`, `EmailStopControllerTest`, `AutomaticEmailsIT` (two logins at once, the jobs
      run twice and at once — red without the claims' `IS NULL`), the browser scenario `morning-summary-switch` (red before `forms.js`
      left the form to `cards-in-place.js`).
+   - **Released 2026-11-05 (#230); set up the same day:** Brevo's "Authorized IPs" blocking for API keys **deactivated** (it refused
+     Railway's address, 401 "unrecognised IP address" — logged as "E-MAIL KEY REFUSED", the key itself was fine); the sender changed to
+     **`contact@scan2play.com.pl`** (`SCAN2PLAY_MAIL_FROM`, default) — it must be a **verified sender** in Brevo: the first four
+     welcomes were taken (201) and then dropped by Brevo ("sender kontakt@… is not valid", only in Brevo's log). `contact@` is
+     forwarded to the Gmail address by Cloudflare Email Routing (the verification code came that way). Those four test accounts count
+     as welcomed. Proposed, not built: Brevo's webhook of errors / bounces, so such a drop shows on `/dj/stats` and the welcome is
+     tried again.
    - **After the release:** Flyway's line "now at version v64" once; the start's line "E-mails on (Brevo)"; the first welcome on
      `/dj/stats` ("last sent") and in Brevo's log (Transactional → Logs); open one in Gmail — "Show original": DKIM and DMARC `PASS`
      for `scan2play.com.pl`. After a few weeks of clean sending, `_dmarc` `p=none` → `quarantine`. Check Brevo's own data processing
