@@ -9,9 +9,9 @@ import com.scan2play.service.DemoParty;
 import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
-import com.scan2play.service.LogoImage;
 import com.scan2play.service.FreeAiLimit;
 import com.scan2play.service.GuestRequestLimiter;
+import com.scan2play.service.LogoImage;
 import com.scan2play.service.Mailer;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.WelcomeEmailService;
@@ -105,7 +105,7 @@ public class DjDashboardController {
 
     /**
      * On every answer of the queue poll, 304 too: how many requests the server limits have used now,
-     * {@code <busiest network>,<party>[,<the Free plan's AI checks this evening>]} — the dashboard keeps its badges current by it,
+     * {@code <busiest network>,<party>[,<the Free plan's AI checks this evening>]} — the dashboard keeps its warnings near a limit current by it,
      * without a reload. The third only where the Free plan's limit applies ({@code FreeAiLimit.limitOf} &gt; 0).
      */
     static final String GUEST_LIMITS_USE_HEADER = "X-Guest-Limits-Use";

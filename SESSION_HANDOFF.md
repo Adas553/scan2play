@@ -49,16 +49,17 @@ The analysis (competitors, Pro / Free checked with the code, the mock-ups, the A
 the logs Railway keeps (since 2026-10-27) hold no guest's request — nobody but the owner has tested it, so there is no real party size.
 The owner's picks:
 1. **Free: 150 AI evaluations a party an evening, soft** — past it a request still reaches the DJ, unchecked (the path of "AI down",
-   `withoutTheAi`); the hard 300 a day stays for everyone; Pro 300. Counted: what goes to Gemini (moods and repeats too); not: 👍,
+   `withoutTheAi`); the hard 300 a day stays for everyone; Pro: every request checked. Counted: what goes to Gemini (moods and repeats too; a failed
+   call given back); not: 👍,
    refusals before the AI, the demo; the kiosk counts. The guest sees nothing of a limit; the DJ a quiet line at 80 %, a bar past it,
    "bez oceny AI" on those requests — no Pro offer during the party; the next day the organiser's panel ("Wczoraj 212 próśb, AI oceniło
-   150. W Pro do 300", "Zobacz, co daje Pro"). Property `guest.limit.free-ai-per-party` (150, 0 = off), only while enforced.
+   150. W Pro AI ocenia każdą prośbę.", "Zobacz, co daje Pro"; only until the next evening's first request). Property `guest.limit.free-ai-per-party` (150, 0 = off), only while enforced.
 2. **The pricing page: variant A** — Free "0 zł zawsze", Pro "WCZESNY DOSTĘP" with "Napisz do nas" (no price, no payment, no date), a
    comparison table, FAQ ("Ile będzie kosztować Pro?" — not known yet; we write before anything is paid).
 3. **A 404 while `PLANS_ENFORCE=false`** (as `/pro` now); links: the footer ("Cennik"), the landing page's FAQ "Ile to kosztuje?", the
-   account menu ("Twój plan: Free · Zobacz cennik", the organiser only); never in the queue.
-4. **`contact@scan2play.com.pl` everywhere public** (`/pro`, the footer's `contact.email`, terms, guide); Gmail only as Reply-To and in the
-   privacy policy.
+   account menu ("Twój plan: Free · Cennik", the organiser only); never in the queue.
+4. **`contact@scan2play.com.pl` everywhere public** (`/pro`, the footer's `contact.email`, terms, guide, the privacy policy's contact);
+   Gmail only as Reply-To (and named so in the privacy policy).
 5. **30 days everywhere**: a gift of Pro for the accounts that exist on the switch (`PLANS_GIFT_UNTIL` = the switch + 30 — see the
    state below) and `PLANS_TRIAL_DAYS=30` for new ones.
 6. The address: `/pro`, with `/cennik` (PL) and `/pricing` (EN) as the same page, one canonical; in the sitemap only once enforced.
@@ -80,11 +81,16 @@ new section 5 "Plany Free i Pro" (PL, EN; true now and after); the privacy polic
 (5) **not switched — the owner, 2026-11-05: everyone keeps Pro (`PLANS_ENFORCE=false`) until there are customers and a registered
 business**; the day's steps: `docs/plans-switch-on.md`. Unit tests 1143, browser tests 382 / 382.
 
-**The order of work:** (1) `/pro` true to the code — the kiosk, "✓ DJ ma", tempo and key, the morning e-mail, the hosts' link, a fuller
-Free list, `contact@` — and a test that every `PlanFeature` is on the page (`data-feature`); (2) the pricing page (variant A) and its
-links; (3) the Free AI limit; (4) the terms and the privacy policy (the plans, the trial, the gift), V65 with its `*MigrationIT`, a card
-announcing it; (5) the switch on production on a Tuesday / Wednesday morning (`SCAN2PLAY_PLANS_PRO_OWNERS` = the owner first; rollback =
-`PLANS_ENFORCE=false`).
+**The review of PR #239** (2026-11-05, `docs/history/review-2026-11-05-pr239.md`; the owner agreed to every proposal): fixed on
+`claude/pensive-carson-guv7kw`, which is the PR's branch plus seven commits — to be merged into the PR or opened as its own PR to `dev`.
+W1 no "Free" in the "bez oceny AI" tooltip while the plans are off; W2 `X-Guest-Limits-Use`'s third number only where the Free limit
+applies (an open panel's old `polling.js` takes two); W3 the pricing page true to the code (Pro: every request checked; 300 a day for
+both); W4 the terms' section 5 true before and after the switch; W5 (a) the Free card says requests past the limit are not on the
+guests' list nor the TV; W6 an unchecked request for a song played lately refused by the code (`playedLately`); W7 a failed AI call
+given back; W8 the next day's note only until the evening's first request, and only when some came unchecked; D1–D12 (a 301 for
+`/cennik`, the table on a phone, the staff not told of the plan, the count by the party's row so "Zmień kod" keeps it, the trial during
+the gift starts at its end, `PLANS_GIFT_UNTIL` badly written names itself). Unit tests and the browser tests green (the numbers: the
+last commit's message). Then: the switch, on a Tuesday / Wednesday morning (`docs/plans-switch-on.md`; rollback `PLANS_ENFORCE=false`).
 
 ## Next (the owner's ideas, 2026-10-28)
 

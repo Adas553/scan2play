@@ -398,7 +398,8 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   (that moment is Free already), not up to 10 min later.
 - **The gift** (the owner, 2026-11-05: 30 days): `scan2play.plans.gift-until` (env `PLANS_GIFT_UNTIL`, a day; empty: none) — until the
   end of that day, Polish time, every organiser without Pro of their own has Pro (`PlanService.planOf`; no row written, so nothing
-  waits in the database for a switch not yet made, and it ends by itself); the organiser it gives Pro to reads one line above the
+  waits in the database for a switch not yet made, and it ends by itself; a trial begun during it runs from its end, and a day
+  not written as 2026-12-09 stops the start naming the variable); the organiser it gives Pro to reads one line above the
   queue, "Scan2Play ma teraz plany Free i Pro. Do 9.12 masz Pro w prezencie, potem plan Free. Zobacz cennik →" (`giftEndsFor`,
   `data-plan-gift`). The day of the switch, the variables and the checks: `docs/plans-switch-on.md`. The terms (section 5 "Plany
   Free i Pro", 2026-11-05): free of charge, what may become Pro, the Free limit, the notice and the 30 days, nothing deleted, nothing
@@ -1071,7 +1072,8 @@ number — sent only where the limit applies, so while the plans are off the hea
 a deploy still reads; scenario `free-ai-limit-follows-the-poll`); the tooltip of "bez oceny AI" names the Free plan only there too
 (`dashboard.request.unchecked.title.free`, `freeAi` of the page and of every poll); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
 the party: the next day the organiser alone sees above the queue "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150 …" with
-"Zobacz, co daje Pro" (`freeAiYesterday`, only when some came unchecked, and only until this evening's first request — never during the next party). In memory (two evenings kept): a restart starts the count
+"Zobacz, co daje Pro" (`freeAiYesterday`, only when some came unchecked, and only until this evening's first request — never during the next party). The staff read the bar without the plan's name (`dashboard.warning.ai_limit.staff`). In memory (two
+evenings kept, by the party's row: "Zmień kod imprezy" keeps the count): a restart starts the count
 again, in the DJ's favour. The pricing page names it — change both together.
 
 ### 5.3 (Spotify — removed 2026-10-04, migration V18)

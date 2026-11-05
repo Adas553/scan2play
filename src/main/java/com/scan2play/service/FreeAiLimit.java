@@ -98,7 +98,7 @@ public class FreeAiLimit {
         if (partyLimit <= 0) {
             return true;
         }
-        int asked = counts.get(key(party.getPartyCode(), today()), k -> new AtomicInteger()).incrementAndGet();
+        int asked = counts.get(key(party, today()), k -> new AtomicInteger()).incrementAndGet();
         if (asked == partyLimit + 1) {
             log.info("Party [{}]: the Free plan's {} AI checks of the evening used — the next requests go to the DJ unchecked",
                     party.getPartyCode(), partyLimit);
@@ -114,7 +114,7 @@ public class FreeAiLimit {
         if (limitOf(party) <= 0) {
             return;
         }
-        AtomicInteger asked = counts.getIfPresent(key(party.getPartyCode(), today()));
+        AtomicInteger asked = counts.getIfPresent(key(party, today()));
         if (asked != null) {
             asked.updateAndGet(n -> Math.max(0, n - 1));
         }
@@ -135,7 +135,7 @@ public class FreeAiLimit {
         if (partyLimit <= 0) {
             return Use.NONE;
         }
-        AtomicInteger asked = counts.getIfPresent(key(party.getPartyCode(), evening));
+        AtomicInteger asked = counts.getIfPresent(key(party, evening));
         return new Use(asked == null ? 0 : asked.get(), partyLimit);
     }
 
@@ -143,7 +143,11 @@ public class FreeAiLimit {
         return EveningSummaryService.eveningOf(clock.instant());
     }
 
-    private static String key(String partyCode, LocalDate evening) {
-        return partyCode + "|" + evening;
+    /**
+     * The party by its row's id, which "Zmień kod imprezy" keeps — by its code, the change would start the evening's count again and
+     * lose yesterday's; the code for a party without one (tests).
+     */
+    private static String key(PartySettingsEntity party, LocalDate evening) {
+        return (party.getId() != null ? "#" + party.getId() : party.getPartyCode()) + "|" + evening;
     }
 }

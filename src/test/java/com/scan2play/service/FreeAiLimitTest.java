@@ -136,6 +136,18 @@ class FreeAiLimitTest {
     }
 
     @Test
+    @DisplayName("\"Zmień kod imprezy\" keeps the evening's count: the party is its row, not its code")
+    void aNewCode_keepsTheCount() {
+        FreeAiLimit limit = new FreeAiLimit(1, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+        party.setId(7L);
+        assertThat(limit.tryAcquire(party)).isTrue();
+        party.setPartyCode("XYZ12");
+        assertThat(limit.tryAcquire(party)).isFalse();
+        assertThat(limit.today(party).asked()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("each party counts its own evening")
     void eachParty_countsItsOwn() {
         FreeAiLimit limit = new FreeAiLimit(1, Plans.enforced(), clock);

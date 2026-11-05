@@ -848,6 +848,28 @@ class DashboardPageRenderTest {
         write("dashboard-free-ai.html", html);
     }
 
+    /** The staff past the Free plan's checks: the bar and the tooltip say what happens, not which plan the organiser has. */
+    @Test
+    void pastTheFreePlansAiChecks_theStaffAreNotToldOfThePlan() {
+        PartySettingsEntity party = party();
+        com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
+        freeAiLimit = new com.scan2play.service.FreeAiLimit(150, plans);
+        for (int i = 0; i < 151; i++) {
+            freeAiLimit.tryAcquire(party);
+        }
+        SongRequestEntity unchecked = song(1, "cokolwiek gość wpisał");
+        unchecked.setChecked(false);
+        String staffs = renderDashboard(party, List.of(unchecked), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
+                mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);
+        assertThat(staffs).contains("⚠ Oceny AI na ten wieczór wykorzystane. Prośby gości nadal przychodzą", "title=\"AI nie działało, gdy przyszła:")
+                .doesNotContain("planie Free", "planu Free");
+        String owners = renderDashboard(party, List.of(unchecked), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans);
+        assertThat(owners).contains("(150 w planie Free)", "oceny planu Free na ten wieczór");
+    }
+
     /** The day after the checks ran out: the organiser alone sees what came unchecked, and the way to Pro; the staff nothing. */
     @Test
     void theDayAfter_theOrganiserSeesWhatCameUnchecked_andTheWayToPro() {

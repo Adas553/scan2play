@@ -329,9 +329,9 @@
             <div class="alert alert-danger small py-2 mb-2" role="status" data-guest-limit="ai-down"
                  th:classappend="${aiDown} ? '' : 'd-none'" th:text="#{dashboard.warning.ai_down}">The AI is not judging requests right now</div>
             <!--/* the Free plan's AI checks of the evening are used (FreeAiLimit): the requests still come, "bez oceny AI" — no offer of
-                 Pro here, during the party (that is the organiser's note the next day, below) */-->
+                 Pro here, during the party (that is the organiser's note the next day, below); the staff are not told of the plan */-->
             <div class="alert alert-warning small py-2 mb-2" role="status" data-guest-limit="ai-limit" th:if="${freeAi != null and freeAi.limit() > 0}"
-                 th:classappend="${freeAi.reached()} ? '' : 'd-none'" th:text="#{dashboard.warning.ai_limit(${freeAi.limit()})}">The AI checks of this evening are used</div>
+                 th:classappend="${freeAi.reached()} ? '' : 'd-none'" th:text="${access != null and !access.owner()} ? #{dashboard.warning.ai_limit.staff} : #{dashboard.warning.ai_limit(${freeAi.limit()})}">The AI checks of this evening are used</div>
             <!--/* near a server limit (from 80 %, under it): how much is used — the DJ sees it coming (polling.js keeps it current);
                  the party's day (at it, "wyczerpany" above takes over), then one network's ten minutes (a venue's Wi-Fi: its guests
                  count together; at it too — it has no warning of its own, and it passes by itself) */-->
@@ -432,7 +432,7 @@
                                  were used: the guest's own words, not on the guests' list nor the TV screen. The Free plan is named only
                                  where its limit applies — never while the plans are off */-->
                             <span th:unless="${req.checked or demo == true}" class="badge text-bg-secondary align-self-start s2p-request-unchecked"
-                                  th:title="${freeAi != null and freeAi.limit() > 0} ? #{dashboard.request.unchecked.title.free} : #{dashboard.request.unchecked.title}"
+                                  th:title="${freeAi != null and freeAi.limit() > 0 and (access == null or access.owner())} ? #{dashboard.request.unchecked.title.free} : #{dashboard.request.unchecked.title}"
                                   th:text="#{dashboard.request.unchecked}">not checked by the AI</span>
                             <span th:unless="${#strings.isEmpty(req.guestText)}" class="small text-secondary fst-italic text-break guest-text"
                                   th:text="#{dashboard.guest_text(${req.guestText})}">Guest: “…”</span>

@@ -195,6 +195,27 @@ class PlanServiceTest {
         verify(rows).markTrialUsed(PlanService.trialKey("new"));
     }
 
+    /** A new account during the gift of Pro: its trial starts when the gift ends, so none of its days are spent on Pro it has anyway. */
+    @Test
+    void duringTheGift_theTrialStartsWhenTheGiftEnds() {
+        when(rows.existsById("new")).thenReturn(false);
+        String inTenDays = java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).plusDays(10).toString();
+        Instant giftEnds = PlanService.giftEnd(inTenDays);
+
+        new PlanService(rows, new ConcurrentMapCacheManager(PlanService.CACHE), true, "", 30, inTenDays).startTrial("new");
+
+        verify(rows).save(org.mockito.ArgumentMatchers.argThat(row -> row.getValidUntil().equals(giftEnds.plus(Duration.ofDays(30)))));
+    }
+
+    /** The gift's day as the variable gives it: a day not written as 2026-12-09 stops the start with the variable's name. */
+    @Test
+    void theGiftsDay_badlyWritten_namesTheVariable() {
+        assertThat(PlanService.giftEnd(" ")).isNull();
+        assertThat(PlanService.giftEnd("2026-12-09")).isEqualTo(Instant.parse("2026-12-09T23:00:00Z"));   // the end of the day in Warsaw
+        assertThatThrownBy(() -> PlanService.giftEnd("9.12.2026")).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PLANS_GIFT_UNTIL").hasMessageContaining("9.12.2026");
+    }
+
     /**
      * A Google account that had a trial and deleted its account (its {@code dj_plan} row went with it) gets no second one: only the
      * key of the account (a SHA-256, {@code trial_used}) is left (the owner, 2026-10-15; {@code DjPlanIT}).

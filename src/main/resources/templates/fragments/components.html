@@ -75,7 +75,7 @@
                     <button type="button" class="dropdown-item" id="helpMenuBtn" data-bs-toggle="modal" data-bs-target="#feedbackModal"
                             th:attr="data-party-code=${partyCode}" th:text="#{help.button.label}">Help and contact</button>
                 </li>
-                <!--/* the organiser's plan and the pricing page (2026-11-05): only while the plans are enforced (PlanService.View.offered —
+                <!--/* the organiser's plan and the pricing page: only while the plans are enforced (PlanService.View.offered —
                      the staff cannot buy it, so they never see it) */-->
                 <li th:if="${plan != null and plan.offered()}">
                     <a class="dropdown-item" id="pricingMenuLink" href="/pro"
