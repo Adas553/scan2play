@@ -6,8 +6,8 @@
 <body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;">
 <div style="max-width:560px;">
 <p th:text="${firstName != null} ? 'Cześć ' + ${firstName} + ',' : 'Cześć!'">Cześć Ola,</p>
-<p>dzięki za założenie konta w Scan2Play! Piszę osobiście, bo każdy DJ, który z nami zaczyna, jest dla nas ważny.</p>
-<p>Jeśli coś jest niejasne, czegoś Ci brakuje albo chcesz pomocy przy pierwszej imprezie — po prostu odpisz na tego maila. Odpisuję osobiście.</p>
+<p>dzięki za założenie konta w Scan2Play! Cieszymy się, że jesteś z nami.</p>
+<p>Jeśli coś jest niejasne, czegoś Ci brakuje albo chcesz pomocy przy pierwszej imprezie — po prostu odpisz na tego maila. Twoja odpowiedź trafi prosto do nas.</p>
 <p>Na początek przyda się instrukcja: <a th:href="${siteUrl} + '/jak-to-dziala'" href="https://www.scan2play.com.pl/jak-to-dziala" style="color:#0a7f99;">www.scan2play.com.pl/jak-to-dziala</a></p>
 <p>Udanej imprezy!<br>Scan2Play</p>
 <p style="color:#666666;font-size:13px;">PS Twój adres mamy tylko po to, żeby napisać w sprawie konta — nie wysyłamy reklam ani newslettera.<th:block th:if="${stopUrl != null}">
