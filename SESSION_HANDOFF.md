@@ -59,8 +59,8 @@ The owner's picks:
    account menu ("Twój plan: Free · Zobacz cennik", the organiser only); never in the queue.
 4. **`contact@scan2play.com.pl` everywhere public** (`/pro`, the footer's `contact.email`, terms, guide); Gmail only as Reply-To and in the
    privacy policy.
-5. **30 days everywhere**: a gift of Pro for the accounts that exist on the switch (V65, `dj_plan` PRO / GIFT / +30 days, and into
-   `trial_used`) and `PLANS_TRIAL_DAYS=30` for new ones.
+5. **30 days everywhere**: a gift of Pro for the accounts that exist on the switch (`PLANS_GIFT_UNTIL` = the switch + 30 — see the
+   state below) and `PLANS_TRIAL_DAYS=30` for new ones.
 6. The address: `/pro`, with `/cennik` (PL) and `/pricing` (EN) as the same page, one canonical; in the sitemap only once enforced.
 
 **State:** (1) done on `claude/compassionate-cori-g35pvj` (template tests green: `ProPageRenderTest` with the new
@@ -73,7 +73,12 @@ is installed). (3) done on the same branch: `FreeAiLimit` (PROJECT_CONTEXT 5.2, 
 150 goes to the DJ unchecked, the panel's line at 80 % and bar at the limit (polled), the settings' badge, the organiser's note the next
 day with "Zobacz, co daje Pro"; unit tests 1141 green (`FreeAiLimitTest`, `SongEvaluationServiceTest`, `DjDashboardControllerGuestLimitsTest`,
 `DashboardPageRenderTest`), the browser tests 382 / 382 (`free-ai-limit-follows-the-poll` seen red on the old `polling.js`). Off for
-everyone while `PLANS_ENFORCE=false`. The next day's note: a render test (`theDayAfter_…`), no browser scenario. Next: (4).
+everyone while `PLANS_ENFORCE=false`. The next day's note: a render test (`theDayAfter_…`), no browser scenario. (4) done on the same branch, changed from
+the plan: **the gift is a variable, not a migration** — `PLANS_GIFT_UNTIL` (a day): a V65 would have written the 30 days at the next
+deploy, long before a switch; the panel's line "Do … masz Pro w prezencie" (`PlanServiceTest`, `DashboardPageRenderTest`); the terms'
+new section 5 "Plany Free i Pro" (PL, EN; true now and after); the privacy policy needed nothing (the plan and the trial were in it).
+(5) **not switched — the owner, 2026-11-05: everyone keeps Pro (`PLANS_ENFORCE=false`) until there are customers and a registered
+business**; the day's steps: `docs/plans-switch-on.md`. Unit tests 1143, browser tests 382 / 382.
 
 **The order of work:** (1) `/pro` true to the code — the kiosk, "✓ DJ ma", tempo and key, the morning e-mail, the hosts' link, a fuller
 Free list, `contact@` — and a test that every `PlanFeature` is on the page (`data-feature`); (2) the pricing page (variant A) and its

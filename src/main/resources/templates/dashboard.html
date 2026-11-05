@@ -352,6 +352,12 @@
                  th:hidden="${freeAi.asked() * 5 < freeAi.limit() * 4 or freeAi.reached()}"
                  th:text="#{dashboard.warning.ai_near(${freeAi.asked()}, ${freeAi.limit()})}">120 of 150 requests checked by the AI tonight</div>
         </div>
+        <!--/* the gift of Pro when the plans were switched on (PlanService.giftEndsFor): one quiet line to the organiser it is for —
+             until when, and the pricing page */-->
+        <p th:if="${planGiftUntil != null}" class="small text-secondary mb-2" data-plan-gift>
+            <span th:text="#{plan.gift.note(${planGiftUntil})}">Scan2Play has Free and Pro plans now: you have Pro as a gift until 7.12.</span>
+            <a href="/pro" class="ms-1" th:text="#{plan.gift.link}">See the pricing →</a>
+        </p>
         <!--/* the organiser's note the day after the Free plan's AI checks ran out (FreeAiLimit.yesterday): what came unchecked, and the
              way to Pro — the next day, never during the party */-->
         <div th:if="${freeAiYesterday != null}" class="mb-2" data-free-ai-yesterday

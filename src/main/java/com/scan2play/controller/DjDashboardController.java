@@ -309,6 +309,9 @@ public class DjDashboardController {
         model.addAttribute(FREE_AI, freeAiLimit.today(settings));
         FreeAiLimit.Use yesterday = owner ? freeAiLimit.yesterday(settings) : null;
         model.addAttribute(FREE_AI_YESTERDAY, yesterday != null && yesterday.reached() ? yesterday : null);
+        // the gift of Pro when the plans were switched on: until when, to the organiser it gives Pro to
+        java.time.Instant giftEnds = owner ? planService.giftEndsFor(settings) : null;
+        model.addAttribute(PLAN_GIFT_UNTIL, giftEnds == null ? null : Times.day(giftEnds.minusSeconds(1)));
 
         // --- Notifications on the DJ's devices (offered only when the server has the keys) ---
         model.addAttribute(PUSH_PUBLIC_KEY, pushNotificationService.publicKey());

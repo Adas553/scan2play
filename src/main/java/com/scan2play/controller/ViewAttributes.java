@@ -106,6 +106,8 @@ public final class ViewAttributes {
     public static final String FREE_AI = "freeAi";
     /** Yesterday's use of the Free plan's AI checks, for the organiser's note — only when the limit was reached; else null. */
     public static final String FREE_AI_YESTERDAY = "freeAiYesterday";
+    /** The day the gift of Pro ends ("7.12."), to the organiser it gives Pro to; else null (PlanService.giftEndsFor). */
+    public static final String PLAN_GIFT_UNTIL = "planGiftUntil";
     /** The VAPID public key (base64url) for the switch of notifications on this device; null = notifications are off on the server. */
     public static final String PUSH_PUBLIC_KEY = "pushPublicKey";
 

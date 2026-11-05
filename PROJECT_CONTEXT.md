@@ -395,8 +395,14 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 - **A trial**: `scan2play.plans.trial-days` (env `PLANS_TRIAL_DAYS`, 0) days of Pro written for a new DJ when their party is made —
   only while enforced, once per Google account — also after "Usuń konto" (`trial_used`, V36; `PlanService.startTrial`). The
   cached plan goes after the trial's commit, and the cache keeps the row's end (`PlanService.Read`): a plan ends at its `validUntil`
-  (that moment is Free already), not up to 10 min later. When the plans are switched on, the DJs of that day get Pro for a while
-  by one data migration (to decide then).
+  (that moment is Free already), not up to 10 min later.
+- **The gift** (the owner, 2026-11-05: 30 days): `scan2play.plans.gift-until` (env `PLANS_GIFT_UNTIL`, a day; empty: none) — until the
+  end of that day, Polish time, every organiser without Pro of their own has Pro (`PlanService.planOf`; no row written, so nothing
+  waits in the database for a switch not yet made, and it ends by itself); the organiser it gives Pro to reads one line above the
+  queue, "Scan2Play ma teraz plany Free i Pro. Do 9.12 masz Pro w prezencie, potem plan Free. Zobacz cennik →" (`giftEndsFor`,
+  `data-plan-gift`). The day of the switch, the variables and the checks: `docs/plans-switch-on.md`. The terms (section 5 "Plany
+  Free i Pro", 2026-11-05): free of charge, what may become Pro, the Free limit, the notice and the 30 days, nothing deleted, nothing
+  paid without separate terms and consent — true while the plans are off and after.
 - The server refuses a Pro feature's endpoint (`PlanService.require` → `PlanRequiredException`, a 403) — `PlanFeatureEndpointsTest`
   walks them all; the pages show it as 6.7 says ("PRO"). No payment, no prices: "Zobacz, co daje Pro" leads to `/pro`, which says to
   write to contact@scan2play.com.pl (a 404 while not enforced). Each `PlanFeature` has its line there (`data-feature`, both languages —
@@ -1477,7 +1483,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 | `guest.limit.*` | 30 per 10 min per address + party, 300 per 24 h per party, the Free plan's 150 AI checks an evening (`free-ai-per-party`) (env `GUEST_LIMIT_*`) |
 | `guest.client-ip-header` | empty (env `GUEST_CLIENT_IP_HEADER`) |
 | `security.csp.enforce` | `false` = report only (env `CSP_ENFORCE`) |
-| `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` | `false` / empty / 0 (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`; V35) |
+| `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` / `.gift-until` | `false` / empty / 0 / empty (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`, `PLANS_GIFT_UNTIL`; V35) |
 | `spring.session.jdbc.initialize-schema` | `never` (the tables are Flyway's, `V11`); a session lives 30 min without a request |
 
 **The profile `local`** (`application-local.properties`): the developer's defaults `PGUSER=postgres`, `PGPASSWORD=1111`. IntelliJ's run

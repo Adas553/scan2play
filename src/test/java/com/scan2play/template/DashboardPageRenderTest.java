@@ -878,6 +878,27 @@ class DashboardPageRenderTest {
         assertThat(staffs).as("the staff: not theirs to buy").doesNotContain("data-free-ai-yesterday");
     }
 
+    /** The gift of Pro (scan2play.plans.gift-until): one quiet line to the organiser — until when, and the pricing page; the staff nothing. */
+    @Test
+    void theGiftOfPro_isOneLineToTheOrganiser() {
+        PartySettingsEntity party = party();
+        com.scan2play.repository.DjPlanRepository rows = mock(com.scan2play.repository.DjPlanRepository.class);
+        when(rows.findById(anyString())).thenReturn(java.util.Optional.empty());
+        com.scan2play.service.PlanService plans = new com.scan2play.service.PlanService(rows,
+                new org.springframework.cache.concurrent.ConcurrentMapCacheManager(com.scan2play.service.PlanService.CACHE), true, "", 0,
+                java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).plusDays(3).toString());
+        String html = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans);
+        assertThat(html).contains("data-plan-gift", "Scan2Play ma teraz plany Free i Pro. Do ", "masz Pro w prezencie, potem plan Free.",
+                ">Zobacz cennik →<");
+        String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
+                mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);
+        assertThat(staffs).doesNotContain("data-plan-gift");
+        assertThat(renderDashboard(party, List.of(), PL)).as("the plans off: nothing").doesNotContain("data-plan-gift");
+    }
+
     /** Below 80 % of the checks: no line, no bar — and no badge of AI checks while the plans are off. */
     @Test
     void belowTheFreePlansAiChecks_nothingShows_andNothingWhilePlansAreOff() {
