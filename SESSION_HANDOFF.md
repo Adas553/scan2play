@@ -58,10 +58,25 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
    (b) **The welcome card** above the queue (`welcome_dismissed_at`; the accounts of before closed by the migration): "Pierwszy raz? Napisz
    do nas", "Napisz do nas" → "Pomoc i kontakt", "Jak to działa →"; closed on the server (`POST /dj/dashboard/welcome-dismiss`,
    `welcome.js`); browser scenarios `welcome-card-*`, seen red first, the one-line heading also with the runner's fonts.
-   (c) **an automatic welcome e-mail — later**, when new accounts come several a day or the plans are enforced. Its choices then: the
-   sender (Resend, Postmark, Brevo… or Google Workspace SMTP; its key a Railway secret; SPF / DKIM / DMARC at Cloudflare), the
-   reply-to, once only (`welcome_sent_at`, sent after the commit off the login's thread, retried by the nightly job, never blocking the
-   login), the language, no marketing; the sending behind an interface (a fake in the tests), an IT for "once only" under two logins.
+   (c) **automatic e-mails — decided 2026-11-05, to build next (a new session).** The owner's picks:
+   - **Sender: Brevo** (EU), its API v3. The key: Railway variable **`BREVO_API_KEY`** (Brevo key "scan2play-production",
+     Restricted, Transactional email = All, the rest None; it expires 4.11.2027 **or after 90 days unused** — log a refused key loudly
+     and show the last successful send on `/dj/stats`; rotate before 4.11.2027). Brevo's "Authorised IPs" must be off (Railway has no
+     fixed IP). Never the key in the repo, docs or chat.
+   - **Domain** `scan2play.com.pl` authenticated in Brevo by hand at Cloudflare (2026-11-05): TXT `brevo-code` at the root, CNAME
+     `brevo1._domainkey` / `brevo2._domainkey` (DKIM), TXT `_dmarc` (`p=none`, reports to Brevo; tighten to `quarantine` after a few
+     weeks of clean sending), CNAME `em`, `r.em`, `img.em` (the branded subdomain) — every CNAME **DNS only**. No SPF needed (DKIM
+     aligns); no MX (Cloudflare Email Routing for `kontakt@` → Gmail is optional, it adds MX + SPF).
+   - **From** `Scan2Play <kontakt@scan2play.com.pl>`, **Reply-To** `scan2playcontact@gmail.com` (the owner wanted the Gmail address as
+     the sender; Brevo refuses a free address and Gmail's DMARC would mark it forged — the reply-to gives the same).
+   - **The welcome e-mail: automatic**, once (`welcome_sent_at`; sent after the commit off the login's thread, retried by the nightly
+     job, never blocking the login), the panel's language, the text of `docs/welcome-email.md`, no marketing.
+   - **The morning e-mail of the evening summary** (the owner: no spam — not every day): **Pro only**; only after an evening with **at
+     least 5 guests' requests**; **once an evening, at 10:00 Polish time the next day**; the title and day, 3 numbers, the top 3, a
+     button to the summary; a switch "Poranne podsumowanie" in the settings and a one-click "Nie wysyłaj mi tego" in each e-mail. A DJ
+     of weekends gets 1–2 a week, none in a break.
+   - Built behind an interface (a fake in the tests); ITs for "once only" (two logins at once, the job run twice); the privacy policy
+     PL / EN names Brevo as a processor.
 2. **"Zmień kod imprezy"** (V49; the owner, 2026-10-28: "gość, który ma zawsze jego kod QR i spamuje imprezę DJ-a") — **built on
    `claude/affectionate-gauss-iwuhvz`, the PR to `dev` waits for the owner's review** (then a release; V49 on production: check Flyway's
    line once). The owner's picks: a new code (not a ban by address — a venue's Wi-Fi and a mobile network share one), the organiser
