@@ -1,7 +1,8 @@
 // The QR print's editor helps the DJ start (qr-print.js): "Wzór na okazję" — a wedding, an 18th, a birthday, a club, a pub, a company
 // party — fills the heading with a text for the occasion in the print's language, as if typed (the preview, "Niezapisane zmiany"), and
-// sets the look that suits it: the theme, the heading's font, the colour, the theme's paper; the list goes back to its prompt and the DJ
-// changes any of it further.
+// sets the look that suits it: the theme, the heading's font, the colour, the theme's paper. The list keeps showing the occasion (on a
+// phone the preview is out of sight: a list back at its prompt read as if nothing happened) until the DJ changes by hand one of the
+// things it set — then it is back at its prompt, and the same occasion can be picked again.
 (function () {
     function pick(select, value) {
         select.value = value;
@@ -11,7 +12,7 @@
     S2P.scenario({
         name: 'poster-presets',
         page: 'qr-print-poster',
-        title: '"Wzór na okazję": an occasion fills the heading in the print\'s language, the preview shows it, the editor says unsaved; the list goes back to its prompt; every text within the heading\'s 40',
+        title: '"Wzór na okazję": an occasion fills the heading in the print\'s language, the preview shows it, the editor says unsaved; the list shows the occasion until a hand changes what it set; every text within the heading\'s 40',
         run: async function (t) {
             const select = document.getElementById('posterPreset');
             const options = Array.from(select.options).slice(1);
@@ -27,7 +28,21 @@
                 [options[0].dataset.heading, options[0].dataset.heading, false]);
             const form = document.getElementById('posterForm');
             t.step('not saved yet, it says', document.getElementById('posterAnswer').textContent, form.dataset.unsaved);
-            t.step('the list back to its prompt', select.value, '');
+            t.step('the list shows the occasion picked', [select.value, select.options[select.selectedIndex].textContent.trim()],
+                ['WEDDING', options[0].textContent.trim()]);
+            const line = document.getElementById('posterLine');
+            line.value = 'Zapraszamy';
+            line.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('a second line typed (not set by the occasion): still shown', select.value, 'WEDDING');
+            heading.value = heading.value + '!';
+            heading.dispatchEvent(new Event('input', { bubbles: true }));
+            t.step('the heading changed by hand: the list back to its prompt', select.value, '');
+            pick(select, 'WEDDING');
+            t.step('…and the same occasion can be picked again: its text back', [select.value, heading.value], ['WEDDING', options[0].dataset.heading]);
+            const font = document.getElementById('posterFont');
+            font.value = 'SANS';
+            font.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('the font changed by hand: the list back to its prompt', select.value, '');
             t.check('an English panel prints English: the wedding\'s text has no Polish letters (' + heading.value + ')',
                 !/[ąćęłńóśźż]/i.test(heading.value));
         }
