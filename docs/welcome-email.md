@@ -2,7 +2,7 @@
 
 **Sent automatically since V64** (`WelcomeEmailService`, the pages `src/main/resources/templates/email/welcome_pl.html` and
 `welcome_en.html` — change the text there and here together): once an account, after the organiser first opens their panel with a
-Google-verified address, in the panel's language, from `Scan2Play <kontakt@scan2play.com.pl>` through Brevo, replies to
+Google-verified address, in the panel's language, from `Scan2Play <contact@scan2play.com.pl>` through Brevo, replies to
 `scan2playcontact@gmail.com`. The accounts of before V64 got it by hand or not at all — they are never sent it. `/dj/stats` lists the
 organisers new in the last 7 days and whether the e-mails go.
 

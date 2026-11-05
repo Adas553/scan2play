@@ -43,7 +43,7 @@ class BrevoEmailSenderTest {
         });
         server.start();
         return new BrevoEmailSender(HttpClient.newHttpClient(), "http://127.0.0.1:" + server.getAddress().getPort() + "/v3/smtp/email",
-                key, "kontakt@scan2play.com.pl", "Scan2Play", "scan2playcontact@gmail.com");
+                key, "contact@scan2play.com.pl", "Scan2Play", "scan2playcontact@gmail.com");
     }
 
     @AfterEach
@@ -63,7 +63,7 @@ class BrevoEmailSenderTest {
 
         assertThat(keys).containsExactly("secret-key");
         JsonNode body = new ObjectMapper().readTree(bodies.getFirst());
-        assertThat(body.at("/sender/email").asText()).isEqualTo("kontakt@scan2play.com.pl");
+        assertThat(body.at("/sender/email").asText()).isEqualTo("contact@scan2play.com.pl");
         assertThat(body.at("/sender/name").asText()).isEqualTo("Scan2Play");
         assertThat(body.at("/replyTo/email").asText()).isEqualTo("scan2playcontact@gmail.com");
         assertThat(body.at("/to/0/email").asText()).isEqualTo("dj@example.com");
