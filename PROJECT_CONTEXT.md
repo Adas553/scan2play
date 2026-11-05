@@ -560,7 +560,9 @@ zmiany" by themselves): "Wzór na okazję" — the first field — six occasions
 text in the print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) —
 fills the heading as if typed and sets its look: the theme, the heading's font, the colour (none: the theme's) and the theme's paper
 (the wedding Elegancki with the script, the 18th Neon, the birthday Konfetti, the club Klubowy, the pub Rustykalny, the company
-Klasyczny in navy and the sans), and goes back to its prompt (`poster-presets`, `…-both`, `…-look`). **Fewer fields to start**:
+Klasyczny in navy and the sans); the list shows the occasion picked (on a phone the preview is out of sight) until the DJ changes
+by hand one of the things it set — the heading, the theme, the font, the colour, the paper —, then it is back at its prompt, so the
+same occasion can be picked again (`poster-presets`, `…-both`, `…-look`). **Fewer fields to start**:
 "Treść" is the occasion, the heading, "Druga linia" and the language; the paper, the heading's font and its colour are folded under
 "Więcej wyglądu" (`#posterMoreLook`, open when the party has one of them set; the weak heading's note outside it); the tables and the
 first table's number are with what is on the print, on the cards and the tents only (on the poster hidden, still sent —

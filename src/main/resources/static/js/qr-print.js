@@ -400,12 +400,17 @@
 
     form.elements.heading.addEventListener('input', showHeading);
     // "Wzór na okazję": the occasion's text in the heading, as if typed (the preview, "Niezapisane zmiany"), and its look — the theme,
-    // the heading's font, the colour (empty: the theme's) and the theme's paper; the list back to its prompt
+    // the heading's font, the colour (empty: the theme's) and the theme's paper. The occasion stays shown in the list — on a phone the
+    // preview is out of sight, and a list back at its prompt read as if nothing happened — until the DJ changes by hand one of the
+    // things it set: then the list is back at its prompt, so it never names a look the print no longer has, and the same occasion
+    // can be picked again (picking the option already shown fires no "change").
     const preset = document.getElementById('posterPreset');
     if (preset) {
+        let applying = false;
         preset.addEventListener('change', function () {
             const option = preset.options[preset.selectedIndex];
             if (!option || !option.dataset.heading) return;
+            applying = true;
             form.elements.theme.value = option.dataset.theme;
             form.elements.font.value = option.dataset.font;
             [['accent', option.dataset.colour || ''], ['paper', '']].forEach(function (pick) {
@@ -415,8 +420,16 @@
             changeLook();
             form.elements.heading.value = option.dataset.heading;
             form.elements.heading.dispatchEvent(new Event('input', { bubbles: true }));
-            preset.value = '';
+            applying = false;
         });
+        const SET_BY_IT = ['heading', 'theme', 'font', 'accent', 'paper'];
+        const leftByHand = function (e) {
+            if (applying || !preset.value) return;
+            const target = e.target;
+            if (SET_BY_IT.indexOf(target.name) >= 0 || target === picker || target === paperPicker) preset.value = '';
+        };
+        form.addEventListener('input', leftByHand);
+        form.addEventListener('change', leftByHand);
     }
     form.elements.line.addEventListener('input', showLine);
     form.elements.tables.addEventListener('input', showTables);
