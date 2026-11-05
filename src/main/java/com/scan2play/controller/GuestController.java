@@ -89,11 +89,13 @@ public class GuestController {
      * Which of the guest's suggestions the DJ has (V58, {@link LibraryHintService}): {@code song} once for each, "Artist - Title";
      * the answer a list of as many true / false, in their order (song-autocomplete.js puts those first, "✓ DJ ma"). 404 when the party
      * has none to tell — ended, no library, no plan, switched off — or is no party; at most {@value LibraryHintService#MOST_SONGS}
-     * songs are looked at. No session is made: it is asked as the guest types.
+     * songs are looked at; a 429 past {@value LibraryHintService#ASKS_A_MINUTE} asks a minute of the address (the suggestions are then
+     * shown unmarked). No session is made: it is asked as the guest types.
      */
     @GetMapping("/{partyCode}/library/has")
     @ResponseBody
-    public List<Boolean> libraryHas(@PathVariable String partyCode, @RequestParam(name = "song", required = false) List<String> songs) {
+    public List<Boolean> libraryHas(@PathVariable String partyCode, @RequestParam(name = "song", required = false) List<String> songs,
+                                    HttpServletRequest request) {
         PartySettingsEntity settings;
         try {
             settings = partySettingsQueryService.getSettings(partyCode);
@@ -102,6 +104,9 @@ public class GuestController {
         }
         if (!libraryHintService.on(settings)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (!libraryHintService.mayAsk(partyCode, guestRequestLimiter.clientIp(request))) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS);
         }
         return libraryHintService.have(partyCode, songs == null ? List.of() : songs);
     }

@@ -88,8 +88,9 @@ public class Mailer {
     }
 
     /**
-     * Sends it now, on the caller's thread, and keeps how it went; true when the service took it. Never throws: a send is never a
-     * reason for a page, a login or a job to fail.
+     * Sends it now, on the caller's thread, and keeps how it went; true when the service took it — or may have (no answer in time:
+     * the caller keeps its claim, the same e-mail twice is worse than one lost). Never throws: a send is never a reason for a page, a
+     * login or a job to fail.
      */
     public boolean send(Email email) {
         Result result;
@@ -100,7 +101,7 @@ public class Mailer {
             result = Result.FAILED;
         }
         record(result);
-        return result == Result.SENT;
+        return result == Result.SENT || result == Result.UNKNOWN;
     }
 
     /** Runs {@code task} on the e-mails' thread; a full queue drops it (logged) — the caller's nightly job tries again. */
@@ -127,6 +128,8 @@ public class Mailer {
                         "the key was refused (401/403): a new BREVO_API_KEY is needed");
                 case FAILED -> jdbc.update("UPDATE email_status SET last_failed_at = ?, last_failure = ? WHERE id = 1", now,
                         "the send failed (the network or Brevo); tried again later");
+                case UNKNOWN -> jdbc.update("UPDATE email_status SET last_failed_at = ?, last_failure = ? WHERE id = 1", now,
+                        "Brevo did not answer in time: maybe sent, not tried again (see Brevo's log)");
                 case OFF -> {
                     // no key on this server: nothing to keep
                 }

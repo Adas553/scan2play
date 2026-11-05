@@ -9,13 +9,13 @@
 <p style="margin:0 0 20px;color:#555555;" th:text="${day}">sobota, 1 listopada 2026</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px;">
     <tr>
-        <td style="padding:0 24px 0 0;"><div style="font-size:26px;font-weight:bold;" th:text="${requests}">48</div><div style="color:#555555;font-size:14px;">prośby</div></td>
-        <td style="padding:0 24px 0 0;"><div style="font-size:26px;font-weight:bold;" th:text="${played}">31</div><div style="color:#555555;font-size:14px;">zagrane</div></td>
-        <td><div style="font-size:26px;font-weight:bold;" th:text="${votes}">112</div><div style="color:#555555;font-size:14px;">głosy gości</div></td>
+        <td style="padding:0 24px 0 0;"><div style="font-size:26px;font-weight:bold;" th:text="${requests}">48</div><div style="color:#555555;font-size:14px;" th:text="${labels[0]}">prośby</div></td>
+        <td style="padding:0 24px 0 0;"><div style="font-size:26px;font-weight:bold;" th:text="${played}">31</div><div style="color:#555555;font-size:14px;" th:text="${labels[1]}">zagrane</div></td>
+        <td><div style="font-size:26px;font-weight:bold;" th:text="${votes}">112</div><div style="color:#555555;font-size:14px;" th:text="${labels[2]}">głosy gości</div></td>
     </tr>
 </table>
 <th:block th:if="${!#lists.isEmpty(top)}">
-<h2 style="font-size:17px;margin:0 0 8px;">Najczęściej chciane</h2>
+<h2 style="font-size:17px;margin:0 0 8px;">Najczęściej proszone</h2>
 <ol style="margin:0 0 24px;padding-left:22px;">
     <li th:each="song : ${top}"><span th:text="${song.name()}">Artysta - Tytuł</span> <span style="color:#555555;" th:text="'· ' + ${song.votes()} + ' 👍'">· 9 👍</span></li>
 </ol>

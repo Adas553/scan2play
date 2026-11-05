@@ -442,7 +442,9 @@ class SummaryPageTest {
                 "Busiest: 22:30–23:00 (2)", "Wanted, not heard", "New requests every half-hour", "Played, in order (6)", "For me",
                 "For the hosts", "Songs wanted").doesNotContain("??");
         assertThat(render(Locale.ENGLISH, "2026-10-03", "hosts", TWO_EVENINGS, wedding(), "hosts-en"))
-                .contains("When the guests asked", "Played on request, in order (6)", "The first request, 19:05").doesNotContain("??");
+                .contains("When the guests asked", "Played on request, in order (6)", "The first request, 19:05",
+                        // the picture's foot, as the poster's: "Powered by Scan2Play"
+                        "data-made=\"Powered by\"").doesNotContain("??");
     }
 
     @Test
@@ -513,6 +515,29 @@ class SummaryPageTest {
     @Test
     void withoutALibrary_noSuchSection() throws IOException {
         assertThat(render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "wedding-pl")).doesNotContain("id=\"libraryGaps\"");
+    }
+
+    /**
+     * A title or a hosts' link only for an evening with requests — asked of that evening alone, never of the party's whole list of
+     * evenings (13 months of a club's rows read again at every "Zapisz"); one without is a 404.
+     */
+    @Test
+    void aTitleOrALink_onlyForAnEveningWithRequests_askedOfThatEvening() {
+        EveningSummaryService service = mock(EveningSummaryService.class);
+        DjSummaryController controller = new DjSummaryController(service, sessionHelperOf(), messages,
+                com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
+        java.time.LocalDate day = java.time.LocalDate.of(2026, 10, 3);
+        when(service.hasRequests(PARTY, day)).thenReturn(true);
+
+        assertThat(controller.saveTitle("2026-10-03", null, "Wesele", null, new MockHttpSession()))
+                .isEqualTo("redirect:/dj/summary?evening=2026-10-03&view=hosts");
+        org.mockito.Mockito.verify(service).saveTitle(PARTY, day, "Wesele");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.share("2026-10-04", null, null, new MockHttpSession()))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class).hasMessageContaining("404");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.stopSharing("not a day", null, null, new MockHttpSession()))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class).hasMessageContaining("404");
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never()).evenings(any());
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never()).share(any(), any());
     }
 
     private static SongRequestRepository repositoryOf(List<SongRequestEntity> requests) {
