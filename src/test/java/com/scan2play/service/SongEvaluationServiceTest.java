@@ -663,6 +663,50 @@ class SongEvaluationServiceTest {
         assertThat(freeAi.today(party).asked()).isEqualTo(2);
     }
 
+    /**
+     * Unchecked (past the Free plan's checks, or the AI down), a song of the recently played list is still refused — by the code,
+     * when the guest's words are its whole name or its title — with the reason "played already" for the evening summary; anything
+     * else goes to the DJ unchecked as before.
+     */
+    @Test
+    void unchecked_aSongPlayedLately_isRefused_byItsNameOrTitle() {
+        PartySettingsEntity party = aParty(5);
+        party.setOwnerId("owner");
+        ArgumentCaptor<SongRequestEntity> saved = savesWithId();
+        when(songRequestRepository.findRecentlyPlayed(eq(PARTY_CODE), any()))
+                .thenReturn(List.of(SongRequestEntity.builder().songName("Zenek Martyniuk - Przez twe oczy zielone").build()));
+        when(messageSource.getMessage(any(String.class), any(), any(Locale.class)))
+                .thenAnswer(call -> "guest.played_lately".equals(call.getArgument(0)) ? "Played a moment ago" : "To the DJ");
+        plans = Plans.enforced();
+        freeAi = new FreeAiLimit(1, plans, java.time.Clock.systemUTC());
+        freeAi.tryAcquire(party);   // the evening's checks used
+
+        for (String words : List.of("Zenek Martyniuk – Przez Twe Oczy Zielone", "przez twe oczy zielone")) {
+            DjResponse refused = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, words, "ANY");
+            assertThat(refused.decision()).as(words).isEqualTo("rejected");
+            assertThat(refused.comment()).isEqualTo("Played a moment ago");
+            assertThat(refused.isUnchecked()).as("the guest reads the refusal, not \"PRZEKAZANE\"").isFalse();
+            assertThat(saved.getValue().getRejectReason()).isEqualTo(com.scan2play.model.RejectReason.DUPLICATE);
+        }
+
+        DjResponse other = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "zielone oczy", "ANY");
+        assertThat(other.isUnchecked()).as("not a played song's name: to the DJ").isTrue();
+        assertThat(other.decision()).isEqualTo(DECISION_ACCEPTED);
+        assertThat(prompts).as("no AI asked").isEmpty();
+    }
+
+    @Test
+    void theAiDown_aSongPlayedLately_isRefusedToo() {
+        aParty(5);
+        savesWithId();
+        when(songRequestRepository.findRecentlyPlayed(eq(PARTY_CODE), any()))
+                .thenReturn(List.of(SongRequestEntity.builder().songName("Wilki - Baśka").build()));
+        when(messageSource.getMessage(any(String.class), any(), any(Locale.class))).thenReturn("note");
+
+        assertThat(answering(null).evaluateAndSaveSong(PARTY_CODE, "baska", "ANY").decision()).isEqualTo("rejected");
+        assertThat(answering(null).evaluateAndSaveSong(PARTY_CODE, "sanah", "ANY").decision()).isEqualTo(DECISION_ACCEPTED);
+    }
+
     /** A call that failed (the AI down) is no check of the Free plan's: given back, so the evening keeps its 150 answers. */
     @Test
     void aFailedAiCall_doesNotUseTheFreePlansChecks() {

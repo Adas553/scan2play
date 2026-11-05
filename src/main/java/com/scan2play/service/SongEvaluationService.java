@@ -233,6 +233,13 @@ public class SongEvaluationService {
         } else {
             aiHealthMonitor.recordAnswered();
         }
+        // unchecked (the AI down, or past the Free plan's checks): the DJ's rule of no repeats still holds where the code can tell it —
+        // the guest named a song played lately — refused as the AI would refuse it, the guest asked for another one
+        if (aiResponse.isUnchecked() && playedLately(songName, recentlyPlayed)) {
+            log.info("Party [{}]: '{}' unchecked, but it played lately — refused", partyCode, songName);
+            aiResponse = new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.played_lately", null, locale), songName,
+                    DjResponse.KIND_TITLE);
+        }
         if (aiResponse.isMood()) {
             log.info("Party [{}]: '{}' reads as a mood, not a song — not saved", partyCode, songName);
             eveningRefusals.count(partyCode, RefusalReason.NOT_A_SONG);
@@ -459,12 +466,21 @@ public class SongEvaluationService {
      * Why the AI rejected the request (V62, for the evening summary): the song is one of the recently played ones the AI was given (the
      * duplicate window) — else it was judged against the vibe. Null for a request let through.
      */
+    /**
+     * Whether the guest's words name a song of the recently played list without the AI: the whole name ("Zenek - Przez twe oczy
+     * zielone", as the guests' suggestions give it) or its title alone ("przez twe oczy zielone"), in any spelling
+     * ({@link SongNames#same}). A line of the lyrics or an artist alone is not caught — only the AI tells those.
+     */
+    static boolean playedLately(String guestWords, List<String> recentlyPlayed) {
+        return recentlyPlayed.stream().anyMatch(played -> SongNames.same(played, guestWords)
+                || (played.lastIndexOf(" - ") > 0 && SongNames.same(played.substring(played.lastIndexOf(" - ") + 3), guestWords)));
+    }
+
     static RejectReason rejectReason(DjResponse aiResponse, List<String> recentlyPlayed) {
         if (!DECISION_REJECTED.equalsIgnoreCase(aiResponse.decision())) {
             return null;
         }
-        return recentlyPlayed.stream().anyMatch(played -> SongNames.same(played, aiResponse.songName()))
-                ? RejectReason.DUPLICATE : RejectReason.OFF_VIBE;
+        return playedLately(aiResponse.songName(), recentlyPlayed) ? RejectReason.DUPLICATE : RejectReason.OFF_VIBE;
     }
 
     private SongRequestCommandService.Saved saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style,

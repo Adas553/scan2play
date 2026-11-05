@@ -1060,7 +1060,10 @@ follow every poll's headers).
 go to Gemini — only while the plans are enforced and for an organiser without Pro (Pro's bound: the 300 a day above). Counted in
 `SongEvaluationService` just before the call — moods and a song asked again too (they cost a call), a call that failed given back (`giveBack`: the AI judged nothing); not 👍, not the refusals before the AI
 (the limits, the hosts' list by the guest's words), not the demo; the kiosk as every guest. Past it: no call, the request reaches the DJ
-unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —; the
+unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —, except a song of the recently played
+list named by its whole name or its title (`SongEvaluationService.playedLately`, on both unchecked paths): refused by the code,
+"Ta piosenka leciała przed chwilą — wybierz inną." (`guest.played_lately`, reason DUPLICATE). A mood or an insult past the limit
+reaches the DJ as a request "bez oceny AI" (the DJ alone sees it, as while the AI is down); the
 guest reads "Twoja prośba trafiła do DJ-a, który sam ją oceni." (`ai.limit.to_dj`), nothing of a limit. The panel: from 80 % the line
 "120 z 150 próśb ocenionych dziś przez AI. Kolejne przyjdą bez oceny." (`data-limit-near="ai"`), at it the bar "⚠ Oceny AI na ten wieczór
 wykorzystane …" (`data-guest-limit="ai-limit"`), both from every poll (`X-Guest-Limits` "ai-limit", `X-Guest-Limits-Use`'s third
