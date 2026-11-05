@@ -26,8 +26,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   **fixed on `claude/sharp-planck-nbkp7f`, not committed yet** (the owner reviews the diff): "Nie wysyłaj mi tego" only asks on its
   `GET` and switches off on its `POST` (mail filters open links: they switched the morning summary off unseen) — `EmailStopWebTest`;
   the welcome without that link and without `List-Unsubscribe`; the pages of the link with the dark card (`.page-email`; Bootstrap's
-  white card made their words unreadable on production since #230 — scenarios `email-stop-*`); this file. The review's 13 small points
-  are open (its list "Drobne").
+  white card made their words unreadable on production since #230 — scenarios `email-stop-*`); this file (commit `94ff45e`). Then its small points: all
+  fixed on the same branch but 7 (secrets in the paths' logs, accepted as `/h/`, `/k/`) and 13 (`prompt=select_account`, chosen); for
+  the owner: check Brevo's list of subprocessors against the privacy policy's "na serwerach w UE" (the review's table at its end).
 - **The repository is public** (`LICENSE`: viewing only) — GitHub Actions have no minute limit. Nothing secret in the repo, the docs
   or a commit — ever.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.

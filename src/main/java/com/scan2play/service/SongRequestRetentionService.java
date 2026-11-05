@@ -91,13 +91,14 @@ public class SongRequestRetentionService {
     }
 
     /**
-     * Deletes the evenings' kept songs (V61) asked for before {@code before} (its start, Polish time), batch by batch as the requests,
+     * Deletes the evenings' kept songs (V61) asked for before the evening of {@code before} starts (6:00 Polish time), batch by batch as the requests,
      * and the evenings' titles and links of before it.
      *
      * @return how many songs were deleted
      */
     int purgeSummariesBefore(LocalDate before) {
-        Instant cutoff = before.atStartOfDay(Times.DISPLAY_ZONE).toInstant();
+        // the evening of `before` starts at 6:00: what is earlier that night belongs to the evening before, purged with its title
+        Instant cutoff = EveningSummaryService.startOf(before);
         int deleted = 0;
         for (int batch = 0; batch < MAX_BATCHES; batch++) {
             int n = eveningSummaryRepository.deleteSongsRequestedBefore(cutoff, BATCH_SIZE);

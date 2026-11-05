@@ -106,7 +106,7 @@ automatic welcome (V64, through Brevo) and our replies; the privacy policy says 
 panel's welcome card, null = shown; the parties of before closed by the migration), `welcomeSentAt` (V64, `insertable` /
 `updatable = false`: when the welcome e-mail went — written only by the claim and its release; the parties of before count as welcomed),
 `emailLanguage` (V64: "pl" / "en", the panel's language kept with the address — the e-mails' language), `morningSummary` (V64: the switch
-"Poranne podsumowanie", on by default), `emailToken` (V64, made by the database for every row: the secret of "Nie wysyłaj mi tego"),
+"Poranne podsumowanie", on by default), `emailToken` (V64, made by the database for every row: the secret of "Nie wysyłaj mi tego", `gen_random_uuid()` — 122 random bits),
 `nextOpenAt` / `nextCloseAt` (V55, timestamptz, null = none: when the party opens / closes by itself — "Godziny imprezy", 5.1; never one
 that would change nothing; a weekly plan, later, would write its next moment into them after each one),
 `kioskToken` (V56, ≤ 32, UNIQUE, null = no kiosk: the secret of the venue's kiosk link `/k/{token}` — 128 random bits, as the hosts'
@@ -333,7 +333,7 @@ the whole words their `aria-label`, so the two and the search share one line, 20
 the "✗" rows hidden; the tempo and the key beside the mark, on its line also in a phone's folded card,
 `library-tempo-beside-mark*`), and "Podsumowanie wieczoru" — "Nie masz w bibliotece" (the songs the AI let through with "✗" or "?", each once,
 the most wanted first) and the CSV's column "W bibliotece" — by the library as it is now. And, unless the organiser switches it off
-(`party_settings.library_hints`, V58, on by default; "Podpowiedzi gości" in the card, a select saved as picked — `POST /dj/library/hints`),
+(`party_settings.library_hints`, V58, on by default; "Podpowiedzi gości" in the card, a select saved as picked, its part of the card answered in place with "✓ Zapisane" — `POST /dj/library/hints`, browser scenario `library-hints-switch`),
 the guests' song suggestions on the party page and the kiosk: the ones the DJ has first, "✓ DJ ma" (Section 5.2, `LibraryHintService`).
 **The DJ's logo → `party_logo`** (V45, plan Pro; plain SQL in `PartyLogoService`, no entity) — one row per party (`party_code` PK,
 FK ON DELETE CASCADE — gone with the party and the account, `PartyLogoIT`): `png` (bytea: our own PNG, never the file uploaded), `width`,
@@ -616,7 +616,8 @@ podsumowanie" on (`morning_summary`, its card in "Ustawienia imprezy" before "Ob
 `morning-summary-switch`), an address, and an evening of **at least 5 guests' requests** (the DJ's own additions not counted, the kept
 ones of `evening_song` counted): at **10:00 Polish time** the next day (`MorningSummaryEmailService`, the run at 12:00 sends what failed
 at 10), once an evening (`evening_summary.morning_sent_at`, one upsert claim). The evening's title (or "Podsumowanie wieczoru") and day,
-three numbers (requests, played, the guests' votes), the top 3, a button to `/dj/summary?evening=…&party=…`. The morning e-mail has
+three numbers (the guests' requests — the DJ's additions not counted, as for the threshold —, played, the guests' votes, each label
+in its Polish form: "5 próśb gości", "1 zagrana"), the top 3, a button to `/dj/summary?evening=…&party=…`. The morning e-mail has
 **"Nie wysyłaj mi tego"**, without a login: `GET /email/stop/{email_token}` only asks ("Wyłączyć poranne podsumowanie?",
 `email-stop.html`) — mail filters open an e-mail's links to check them, and a link that switched off would switch it off unseen —;
 its "Tak, wyłącz" posts to the same address (a form without `action` and without a CSRF token: the path is exempt, and a token would
@@ -843,7 +844,8 @@ times, the status, votes, tips, the count of dedications, added by the DJ, from 
 dedication's text or who asked. So clearing the history, even in the middle of a party, loses nothing of the summary, and no job is
 needed. `EveningSummaryService.requests` reads an evening from both tables (`findSongsBetween`, ≤ 2000; a request is in one of them) and
 turns a kept song back into the request the summary counts (`fromKept`). The nightly purge (`SongRequestRetentionService`, 04:45) deletes
-the kept songs and the evenings' rows 13 months after the evening (`SUMMARY_MONTHS`); the party's row takes both along (the account's
+the kept songs and the evenings' rows 13 months after the evening (`SUMMARY_MONTHS`; the evening as a whole — its songs after midnight
+with it, the cut at its 6:00); the party's row takes both along (the account's
 deletion, `AccountDeletionIT`) and a new party code moves them (`ON UPDATE CASCADE`, `PartyCodeChangeIT`). The privacy policy (PL / EN,
 section 5) says so. **A song is counted once:** one asked for again — after it played (out of the AI's duplicate
 window), after "Wyczyść kolejkę", two hours after a skip — is a row of its own, and the lists put its rows together by `LibraryKey`
@@ -978,7 +980,7 @@ The texts call the party's owner "organizator" and the people "obsługa".
 of its lyrics — the AI still tries, the field takes any text; song suggestions from
 iTunes, asked by the browser; with the DJ's library (V58, Pro, "Podpowiedzi gości" on — the default) the songs of them the DJ has
 come first, "✓ DJ ma": `GET /p/{partyCode}/library/has?song=…` for the suggestions shown, at most 10, "✓" only — never "?", never the
-library listed —, waited for at most 600 ms, else the list as iTunes gave it; nothing is refused by it, `LibraryHintService`) →
+library listed —, at most 120 asks a minute of an address and a party (`LibraryHintService.ASKS_A_MINUTE`, a 429 past it), waited for at most 600 ms, else the list as iTunes gave it; nothing is refused by it, `LibraryHintService`) →
 `POST /p/{partyCode}/request` (`songName`; an async `Callable`) → the result page (decision, the AI's
 comment, the votes). A request the AI reads as a mood is not saved: the guest is back at the form with the text and
 `guest.error.song_only` (the DJ sets the mood) — with the dedication too. Under the field "💌 Dodaj dedykację" (a `details`, no
@@ -1356,7 +1358,8 @@ Brevo's log (Transactional → Logs). The key: **`BREVO_API_KEY`** (Restricted, 
 = All; Brevo's "Authorised IPs" off — Railway has no fixed IP). It expires on 4.11.2027 **or after 90 days unused**: a 401 / 403 is an
 ERROR line "E-MAIL KEY REFUSED …" and `KEY_REFUSED`; `/dj/stats` shows whether the key is set, the last e-mail Brevo took and a later
 failure in capitals (`email_status`, one row, `Mailer`). Without the key nothing is sent (a WARN at start). A send never throws to its
-caller; anything but 2xx is a failure the jobs try again.
+caller; anything but 2xx is a failure the jobs try again — except no answer within 15 s of a request sent (`UNKNOWN`): it may have
+gone, so the claim is kept (a welcome twice is worse than one lost) and `/dj/stats` says "maybe sent".
 
 ### 7.2a (Spotify — removed 2026-10-04)
 
@@ -1598,7 +1601,7 @@ GuestQueueService          → DjService
 | GET | `/` | `HomeController.home` |
 | GET | `/start`, `/start/{kind}` | → Google's login (`{kind}`: the old tile links, ignored) |
 | GET | `/p/{partyCode}` | the guest's page (`party_ended` when closed); an unknown code is a 404 — the error page's "Ten kod imprezy nie istnieje lub link jest niepoprawny" (until 2026-10-21 the landing page for DJs; a request sent to one, too). No session is made for an unknown code or a party that has ended (review 2026-10-14 W3: every `GET /p/{anything}` was a row in `spring_session`); an open party's page makes one — its form's CSRF token |
-| GET | `/p/{partyCode}/library/has` | `song` (repeated, "Artist - Title", the first 10 looked at): which of them the DJ has — JSON `[true, false, …]` in their order (V58, `LibraryHintService`); 404 for an unknown party or one with nothing to tell (ended, no library, no Pro, switched off); no session made |
+| GET | `/p/{partyCode}/library/has` | `song` (repeated, "Artist - Title", the first 10 looked at): which of them the DJ has — JSON `[true, false, …]` in their order (V58, `LibraryHintService`); 404 for an unknown party or one with nothing to tell (ended, no library, no Pro, switched off); 429 past 120 asks a minute of the address (the suggestions shown unmarked); no session made |
 | GET | `/p/{partyCode}/queue` | the guest's list alone: the first five (empty when closed, 404 for an unknown party) |
 | GET | `/p/{partyCode}/queue/more` | the rest of the guest's list, fetched when "Pokaż pozostałe prośby" is unfolded |
 | GET | `/p/{partyCode}/tv` | the screen for a TV (2026-10-18): in the language of the DJ's panel (the panel's link carries `?lang=`; Polish: Polish and English at once, any other: English alone — 2026-10-23); the QR code, the ten most wanted songs and their votes — no guests' words, no dedications, no request the AI did not judge (V39); "DJ nie przyjmuje teraz próśb" when closed; 404 for an unknown party; no session |
@@ -1670,9 +1673,9 @@ GuestQueueService          → DjService
 | POST | `/dj/logo` | `partyCode`; the body is the picture (`application/octet-stream`): the DJ's logo (V45, Pro, the organiser) — text: 200 saved, 413 over 2 MB, 422 not a PNG / JPEG, over 4096 px a side or 16 megapixels, unreadable; 503 two others being decoded |
 | POST | `/dj/logo/delete` | `partyCode`: the logo deleted (the organiser, any plan); back to `/dj/settings#logoCard` |
 | POST | `/dj/library/delete` | `partyCode`: the library deleted (the organiser, any plan); back to `/dj/settings#libraryCard` |
-| POST | `/dj/library/hints` | `partyCode`, `on`: "Podpowiedzi gości" (V58, the organiser; `on=true` needs Pro); back to `/dj/settings#libraryCard` |
+| POST | `/dj/library/hints` | `partyCode`, `on`: "Podpowiedzi gości" (V58, the organiser; `on=true` needs Pro); back to `/dj/settings#libraryCard` with "✓ Zapisane" (a flash attribute) |
 | GET | `/dj/summary`, `/dj/summary/csv` | `evening` ("2026-10-03"; none or not a date = the latest with requests), on the page `view` ("hosts": the hosts' version): the evening summary, its CSV (404 with no evening) |
-| POST | `/dj/summary/title`, `/dj/summary/share`, `/dj/summary/share/off` | `evening` (one the party has, else 404), `title`: the evening's title, a new hosts' link (30 days), the link switched off (V61); back to the hosts' version |
+| POST | `/dj/summary/title`, `/dj/summary/share`, `/dj/summary/share/off` | `evening` (one with a request, kept or not — `EveningSummaryService.hasRequests`, one EXISTS —, else 404), `title`: the evening's title, a new hosts' link (30 days), the link switched off (V61); back to the hosts' version |
 | POST | `/dj/push/subscribe`, `/dj/push/unsubscribe` | JSON: the browser's push subscription (204; 400 when not a push service's address or malformed keys); unsubscribe removes only the DJ's own |
 | POST | `/dj/start-party`, `/dj/end-party`, `/dj/delete-account`, `/dj/logout`, `/dj/feedback` | (start / end: `partyCode`, the permission OPEN_CLOSE; a planned moment they make pointless goes, V55) |
 | POST | `/dj/dashboard/guest-theme` | "Motyw dla gości" (V59, VIBE, any plan): `partyCode`, `theme` (CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING, anything else CLASSIC); with `X-Requested-With: fetch` the card alone (`settings :: guestThemeCard`, `guestThemeSaved`), else back to `/dj/settings#guestThemeCard` |

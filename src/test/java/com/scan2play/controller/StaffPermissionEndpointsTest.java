@@ -118,6 +118,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/vibe").param("partyCode", PUB).param("newVibe", "ANY")),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/comment-style").param("partyCode", PUB).param("commentStyle", "FUNNY")),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/dedications").param("partyCode", PUB).param("on", "false")),
+                Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/guest-theme").param("partyCode", PUB).param("theme", "SCARY")),
                 Arguments.of(StaffPermission.VIBE, post("/dj/dashboard/party-words").param("partyCode", PUB).param("vibeNote", "x")
                         .param("djName", "x")),
                 // the QR print as the DJ sets it (V46): the party's words, as the vibe note
@@ -189,6 +190,8 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(post("/dj/dashboard/clear-history").param("partyCode", PUB)),
                 Arguments.of(post("/dj/dashboard/welcome-dismiss").param("partyCode", PUB)),
                 Arguments.of(post("/dj/dashboard/party-code").param("partyCode", PUB)),
+                // "Poranne podsumowanie" (V64): the organiser's own e-mail
+                Arguments.of(post("/dj/dashboard/morning-summary").param("partyCode", PUB).param("on", "false")),
                 // the staff and its invitations (V32, V33, V34)
                 Arguments.of(get("/dj/staff").param("party", PUB)),
                 Arguments.of(post("/dj/staff/permissions").param("partyCode", PUB).param("id", "7").param("role", "VIEWER")),
@@ -240,6 +243,7 @@ class StaffPermissionEndpointsTest {
     private static EveningSummaryService oneEvening() {
         EveningSummaryService summaries = mock(EveningSummaryService.class);
         when(summaries.evenings(PUB)).thenReturn(List.of(new EveningSummaryService.Evening(java.time.LocalDate.of(2026, 10, 10), 3)));
+        when(summaries.hasRequests(PUB, java.time.LocalDate.of(2026, 10, 10))).thenReturn(true);   // a title or a link: an evening there is
         return summaries;
     }
 

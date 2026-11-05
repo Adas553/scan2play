@@ -442,7 +442,7 @@
         <!--/* The DJ's library (V41, Pro): a rekordbox collection or an M3U playlist, sent as it is by library.js (the request's body, not a
              form's upload: DjLibraryController); the queue then marks each request "✓", "?" or "✗". The organiser's alone. Without Pro
              the card says so in place of the form, and a library uploaded before waits — it can still be deleted. */-->
-        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="libraryCard">
+        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="libraryCard" data-saves-in-place>
             <summary class="s2p-fold-summary">
                 <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
                 <span class="s2p-fold-state" th:unless="${plan.pro('LIBRARY')}"
@@ -482,9 +482,12 @@
             <!--/* a rekordbox library uploaded before V57 has its keys alone: uploaded again, the queue shows the tempo and the key too */-->
             <p th:if="${libraryOld == true}" class="small text-secondary mb-3 s2p-library-old" th:text="#{settings.library.old}">Upload your
                 collection again: the queue will show your tracks' tempo and key.</p>
-            <!--/* "Podpowiedzi gości" (V58): the guests' suggestions the DJ has first, "✓ DJ ma" — saved as soon as picked (forms.js);
-                 with a library only. Nothing is refused by it: said under it, so the DJ need not fear losing requests. */-->
-            <form th:if="${libraryTracks != null}" th:action="@{/dj/library/hints}" method="POST" class="mb-3" id="libraryHintsForm">
+            <!--/* "Podpowiedzi gości" (V58): the guests' suggestions the DJ has first, "✓ DJ ma" — saved as soon as picked, its part of
+                 the card answered in place (cards-in-place.js: the upload beside it untouched), "✓ Zapisane" after it; without the
+                 script its "Zapisz". With a library only. Nothing is refused by it: said under it, so the DJ need not fear losing
+                 requests. */-->
+            <div th:if="${libraryTracks != null}" id="libraryHintsBox" class="mb-3">
+            <form th:action="@{/dj/library/hints}" method="POST" class="m-0" id="libraryHintsForm" data-in-place="libraryHintsBox">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <label for="libraryHintsSelect" class="form-label small text-light mb-1" th:text="#{settings.library.hints.label}">Guests' suggestions</label>
                 <select id="libraryHintsSelect" name="on" data-auto-submit aria-describedby="libraryHintsHelp"
@@ -493,7 +496,12 @@
                     <option value="false" th:selected="${libraryHints == false}" th:text="#{settings.library.hints.off}">Not marked</option>
                 </select>
                 <div id="libraryHintsHelp" class="form-text text-secondary" th:text="#{settings.library.hints.help}">Guests can still ask for any song.</div>
+                <div class="mt-2" th:if="${libraryHintsSaved != null}">
+                    <span class="small text-light" role="status" id="libraryHintsSaved" th:text="#{settings.library.hints.saved}">✓ Saved</span>
+                </div>
+                <noscript><button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{settings.library.hints.save}">Save</button></noscript>
             </form>
+            </div>
             <!--/* data-max-bytes / data-too-large: a larger file is refused here, before the browser reads or sends it */-->
             <form th:action="@{/dj/library}" method="POST" class="m-0" id="libraryForm"
                   th:attr="data-sending=#{settings.library.sending},data-refused=#{settings.library.error.other},

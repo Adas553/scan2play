@@ -86,6 +86,25 @@ class AutomaticEmailsTest {
         assertThat(Mailer.localeOf("en")).isEqualTo(Locale.ENGLISH);
     }
 
+    /** No answer in time: maybe sent — the welcome and the morning summary keep their claims (never twice), and /dj/stats says it. */
+    @Test
+    void anUnknownSend_keepsTheClaims() {
+        PartySettingsQueryService queries = mock(PartySettingsQueryService.class);
+        PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
+        when(queries.getSettings("ABC12")).thenReturn(organiser("pl"));
+        when(commands.claimWelcome(eq("ABC12"), any())).thenReturn(true);
+        answer = Result.UNKNOWN;
+
+        assertThat(new WelcomeEmailService(queries, commands, mock(PartySettingsRepository.class), mailer).send("ABC12")).isTrue();
+        verify(commands, never()).releaseWelcome(anyString());
+        Morning morning = morning(organiser("pl"), Plan.PRO);
+        assertThat(morning.service().send(MORNING)).isEqualTo(1);
+        verify(morning.evenings(), never()).releaseMorning(anyString(), any());
+        verify(jdbc, org.mockito.Mockito.atLeastOnce()).update(eq("UPDATE email_status SET last_failed_at = ?, last_failure = ? WHERE id = 1"),
+                any(Object[].class));
+        verify(jdbc, never()).update(eq("UPDATE email_status SET last_sent_at = ? WHERE id = 1"), any(Object[].class));
+    }
+
     @Test
     void aSendThatThrows_isAFailure_neverTheCallers() {
         Mailer throwing = new Mailer(email -> {
@@ -182,8 +201,15 @@ class AutomaticEmailsTest {
                 .build();
     }
 
+    /** A song the DJ added in the panel (V44): its one vote is the DJ's — neither a guest's request nor a guest's vote. */
+    private static SongRequestEntity addedByTheDj(long id, String song) {
+        SongRequestEntity added = request(id, song, 1, false);
+        added.setAddedByDj(true);
+        return added;
+    }
+
     private record Morning(MorningSummaryEmailService service, EveningSummaryRepository evenings, PlanService plans,
-                           PartySettingsQueryService queries) {
+                           PartySettingsQueryService queries, EveningSummaryService summaries) {
     }
 
     private Morning morning(PartySettingsEntity settings, Plan plan) {
@@ -198,9 +224,9 @@ class AutomaticEmailsTest {
         when(summaries.summarize("ABC12", EVENING)).thenReturn(EveningSummaryService.summarize(EVENING, List.of(
                 request(1, "Dawid Podsiadło - Małomiasteczkowy", 9, true), request(2, "Daft Punk - One More Time", 4, true),
                 request(3, "Queen - Don't Stop Me Now", 7, false), request(4, "Abba - Dancing Queen", 2, true),
-                request(5, "Sanah - Szampan", 1, false))));
+                request(5, "Sanah - Szampan", 1, false), addedByTheDj(6, "Golec uOrkiestra - Ściernisko"))));
         when(summaries.evening("ABC12", EVENING)).thenReturn(Optional.of(EveningSummaryEntity.builder().title("Wesele Ani i Tomka").build()));
-        return new Morning(new MorningSummaryEmailService(evenings, summaries, queries, plans, mailer), evenings, plans, queries);
+        return new Morning(new MorningSummaryEmailService(evenings, summaries, queries, plans, mailer), evenings, plans, queries, summaries);
     }
 
     private static int anyInt() {
@@ -218,8 +244,9 @@ class AutomaticEmailsTest {
         Email email = sent.getFirst();
         assertThat(email.subject()).isEqualTo("Wesele Ani i Tomka — podsumowanie wieczoru, 31.10");
         String html = email.html();
-        assertThat(html).contains(">Wesele Ani i Tomka<", ">sobota, 31 października 2026<", ">5<", ">3<", ">prośby<", ">zagrane<",
-                ">głosy gości<", "href=\"https://www.scan2play.com.pl/dj/summary?evening=2026-10-31&amp;party=ABC12\"", "Nie wysyłaj mi tego");
+        // the guests' requests (the DJ's addition not counted, as the threshold of 5 counts them), each count in its Polish form
+        assertThat(html).contains(">Wesele Ani i Tomka<", ">sobota, 31 października 2026<", ">5<", ">próśb gości<", ">3<", ">zagrane<",
+                ">23<", ">głosy gości<", ">Najczęściej proszone<", "href=\"https://www.scan2play.com.pl/dj/summary?evening=2026-10-31&amp;party=ABC12\"", "Nie wysyłaj mi tego");
         assertThat(html.indexOf("Małomiasteczkowy")).isLessThan(html.indexOf("Don&#39;t Stop Me Now"));
         assertThat(html.indexOf("Don&#39;t Stop Me Now")).isLessThan(html.indexOf("One More Time"));
         assertThat(html).doesNotContain("Dancing Queen", "Szampan");
@@ -257,6 +284,31 @@ class AutomaticEmailsTest {
         answer = Result.FAILED;
         assertThat(failing.service().send(MORNING)).isZero();
         verify(failing.evenings()).releaseMorning("ABC12", EVENING);
-        assertThat(sent.getFirst().html()).contains(">Saturday, 31 October 2026<", ">requests<", "Don't send me this");
+        assertThat(sent.getFirst().html()).contains(">Saturday, 31 October 2026<", ">guests&#39; requests<", ">guests&#39; votes<",
+                "Don't send me this");
+    }
+
+    /** An evening the DJ did not name: the subject says what the e-mail is and which evening — never "Twój wieczór — … wieczoru". */
+    @Test
+    void anEveningWithoutATitle_isNamedByTheSummaryAndTheDay() {
+        Morning polish = morning(organiser("pl"), Plan.PRO);
+        when(polish.summaries().evening("ABC12", EVENING)).thenReturn(Optional.empty());
+        polish.service().send(MORNING);
+        assertThat(sent.getLast().subject()).isEqualTo("Podsumowanie wieczoru — sobota 31.10");
+        assertThat(sent.getLast().html()).contains(">Podsumowanie wieczoru<");
+
+        Morning english = morning(organiser("en"), Plan.PRO);
+        when(english.summaries().evening("ABC12", EVENING)).thenReturn(Optional.empty());
+        english.service().send(MORNING);
+        assertThat(sent.getLast().subject()).isEqualTo("The evening's summary — Saturday 31.10");
+    }
+
+    /** One of each: "1 prośba gościa", "1 zagrana", "1 głos gościa"; in English the singular. */
+    @Test
+    void theCountsLabels_followTheNumber() {
+        assertThat(MorningSummaryEmailService.labels(1, 1, 1, false)).containsExactly("prośba gościa", "zagrana", "głos gościa");
+        assertThat(MorningSummaryEmailService.labels(22, 12, 5, false)).containsExactly("prośby gości", "zagranych", "głosów gości");
+        assertThat(MorningSummaryEmailService.labels(1, 1, 1, true)).containsExactly("guest's request", "played", "guest's vote");
+        assertThat(MorningSummaryEmailService.labels(2, 0, 7, true)).containsExactly("guests' requests", "played", "guests' votes");
     }
 }

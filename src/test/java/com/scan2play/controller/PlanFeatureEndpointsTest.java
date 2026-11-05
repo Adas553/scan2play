@@ -193,6 +193,7 @@ class PlanFeatureEndpointsTest {
     private static EveningSummaryService oneEvening() {
         EveningSummaryService summaries = mock(EveningSummaryService.class);
         when(summaries.evenings(PUB)).thenReturn(List.of(new EveningSummaryService.Evening(java.time.LocalDate.of(2026, 10, 10), 3)));
+        when(summaries.hasRequests(PUB, java.time.LocalDate.of(2026, 10, 10))).thenReturn(true);   // a title or a link: an evening there is
         return summaries;
     }
 

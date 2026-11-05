@@ -258,7 +258,7 @@ class SettingsPageRenderTest {
         assertThat(html.split("<script src=\"/js/dj-nav.js\">", -1)).as("dj-nav.js once: a second copy would ask every question twice").hasSize(2);
         assertThat(html).as("every card folded to its heading and its state (the panel's rows'), the card the address names unfolded by folds.js")
                 .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\" data-saves-in-place>",
-                        "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\">",
+                        "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"deviceCard\">",
                         "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · napiwki<",
                         "class=\"s2p-fold-state\">Nie wgrano<", "<script src=\"/js/folds.js\">")
@@ -331,6 +331,29 @@ class SettingsPageRenderTest {
                 "<option value=\"false\">Bez zaznaczania</option>", "Prośby o inne przyjmujemy jak dotąd.");
         assertThat(html.indexOf("id=\"libraryHintsSelect\" name=\"on\" data-auto-submit")).isPositive();
         write("settings-library.html", html);
+    }
+
+    /**
+     * "Podpowiedzi gości" switched off (V58): the card is answered in place (cards-in-place.js) — the page its redirect leads to, the
+     * choice's part "✓ Zapisane" beside the new choice. {@code settings-library-hints-answer.html} for the stand-in.
+     */
+    @Test
+    void theGuestsSuggestionsSwitched_sayTheyAreSaved_inTheirPart() throws IOException {
+        DjService djService = mock(DjService.class);
+        when(djService.libraryOf(PARTY)).thenReturn(java.util.Optional.of(new com.scan2play.service.DjLibraryService.Info(1234,
+                com.scan2play.service.DjLibraryParser.Format.REKORDBOX, Instant.now(), null, true)));
+        PartySettingsEntity off = party();
+        off.setLibraryHints(false);
+
+        String html = render(new PartyStaffService.Access(off, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL,
+                com.scan2play.service.Plans.off(), djService, Map.of("libraryHintsSaved", true));
+
+        assertThat(html).contains("id=\"libraryCard\" data-saves-in-place", "id=\"libraryHintsBox\"",
+                "id=\"libraryHintsForm\" data-in-place=\"libraryHintsBox\"", "<option value=\"false\" selected=\"selected\">Bez zaznaczania</option>",
+                "id=\"libraryHintsSaved\">✓ Zapisane<");
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL, com.scan2play.service.Plans.off(), djService))
+                .as("only after a save").doesNotContain("libraryHintsSaved");
+        write("settings-library-hints-answer.html", html);
     }
 
     /**

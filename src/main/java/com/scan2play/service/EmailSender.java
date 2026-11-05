@@ -26,6 +26,11 @@ public interface EmailSender {
         KEY_REFUSED,
         /** Any other failure (the network, a 5xx, a refused address): worth trying again later. */
         FAILED,
+        /**
+         * The service took the request and gave no answer in time: the e-mail may have gone. Kept as sent by the callers — the same
+         * e-mail twice is worse than one lost.
+         */
+        UNKNOWN,
         /** No key on this server (a developer's machine): nothing is sent. */
         OFF
     }

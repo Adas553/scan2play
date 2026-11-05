@@ -5,6 +5,7 @@ import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.repository.EveningSummaryRepository;
 import com.scan2play.service.EmailSender.Email;
+import com.scan2play.util.Texts;
 import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -108,19 +109,37 @@ public class MorningSummaryEmailService {
         List<EveningSummaryService.Song> top = summary.top().stream().limit(TOP).toList();
         String stopUrl = mailer.stopUrl(settings.getEmailToken(), locale);
 
+        // the guests' requests, as the threshold of MIN_REQUESTS counts them: the DJ's own additions are no guest's
+        int requests = summary.requests() - summary.addedByDj();
         Map<String, Object> variables = new HashMap<>();
         variables.put("title", title);
         variables.put("day", day);
-        variables.put("requests", summary.requests());
+        variables.put("requests", requests);
         variables.put("played", summary.played());
         variables.put("votes", summary.votes());
+        variables.put("labels", labels(requests, summary.played(), summary.votes(), english));
         variables.put("top", top);
         variables.put("summaryUrl", mailer.siteUrl() + "/dj/summary?evening=" + evening + "&party=" + partyCode);
         variables.put("stopUrl", stopUrl);
         String html = mailer.render("morning", locale, variables);
-        String name = title != null ? title : english ? "Your evening" : "Twój wieczór";
-        String subject = name + " — " + (english ? "the evening's summary, " : "podsumowanie wieczoru, ")
-                + evening.format(DateTimeFormatter.ofPattern("d.MM"));
+        String date = evening.format(DateTimeFormatter.ofPattern("d.MM"));
+        String subject = title != null
+                ? title + " — " + (english ? "the evening's summary, " : "podsumowanie wieczoru, ") + date
+                : (english ? "The evening's summary — " : "Podsumowanie wieczoru — ")
+                        + evening.format(DateTimeFormatter.ofPattern("EEEE d.MM", locale));
         return new Email(settings.getOwnerEmail(), subject, html, Mailer.plainText(html), stopUrl);
+    }
+
+    /**
+     * The words under the three numbers, each by its number — "5 próśb gości", "1 zagrana", "23 głosy gości" (a label under a number
+     * reads with it); in English the singular of 1.
+     */
+    static List<String> labels(long requests, long played, long votes, boolean english) {
+        if (english) {
+            return List.of(requests == 1 ? "guest's request" : "guests' requests", "played", votes == 1 ? "guest's vote" : "guests' votes");
+        }
+        return List.of(Texts.polishPlural(requests, "prośba gościa", "prośby gości", "próśb gości"),
+                Texts.polishPlural(played, "zagrana", "zagrane", "zagranych"),
+                Texts.polishPlural(votes, "głos gościa", "głosy gości", "głosów gości"));
     }
 }

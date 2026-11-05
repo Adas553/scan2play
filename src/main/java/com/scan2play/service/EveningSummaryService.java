@@ -296,6 +296,12 @@ public class EveningSummaryService {
         };
     }
 
+    /** Whether the party had a request that evening (still there or kept): an evening there is, to name or to share. */
+    @Transactional(readOnly = true)
+    public boolean hasRequests(String partyCode, LocalDate evening) {
+        return eveningSummaryRepository.hasRequestsBetween(partyCode, startOf(evening), startOf(evening.plusDays(1)));
+    }
+
     /** The evening's requests refused before the AI judged a song (V63), by reason; empty when there were none. */
     @Transactional(readOnly = true)
     public Map<RefusalReason, Integer> refusals(String partyCode, LocalDate evening) {
