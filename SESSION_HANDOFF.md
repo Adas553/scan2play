@@ -28,7 +28,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   the welcome without that link and without `List-Unsubscribe`; the pages of the link with the dark card (`.page-email`; Bootstrap's
   white card made their words unreadable on production since #230 — scenarios `email-stop-*`); this file (commit `94ff45e`). Then its small points: all
   fixed on the same branch but 7 (secrets in the paths' logs, accepted as `/h/`, `/k/`) and 13 (`prompt=select_account`, chosen); for
-  the owner: check Brevo's list of subprocessors against the privacy policy's "na serwerach w UE" (the review's table at its end).
+  Brevo's sub-processors are now in the privacy policy (point 10, from Brevo's terms, annex 2).
 - **The repository is public** (`LICENSE`: viewing only) — GitHub Actions have no minute limit. Nothing secret in the repo, the docs
   or a commit — ever.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
@@ -71,7 +71,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
      card in "Ustawienia imprezy", on by default) and **"Nie wysyłaj mi tego"** in the morning e-mail (`/email/stop/{token}`, no login: the
      link asks, its "Tak, wyłącz" switches off — mail filters open links —; also the mail program's one-click "Unsubscribe", RFC 8058,
      a `POST`). The welcome has neither (the review of 2026-11-05).
-   - Privacy policy PL / EN: Brevo (Sendinblue SAS, EU) as a processor, the welcome and the morning summary in sections 2, 3, 6.
+   - Privacy policy PL / EN: Brevo (Brevo SAS, France) as a processor, the welcome and the morning summary in sections 2, 3, 6;
+     its data stored in the EU (OVH France, GCP Belgium), its sub-processors outside the EEA said — Cloudflare (USA) and the Brevo group
+     in the USA and India (maintenance), on SCCs / the DPF — from Brevo's terms, annex 2 (https://www.brevo.com/legal/termsofuse/,
+     read by the owner 2026-11-05; the optional ones — SMS, AI, Integry, Convrrt — are not used: only transactional e-mail by the API).
    - Tests: `AutomaticEmailsTest`, `BrevoEmailSenderTest`, `EmailStopControllerTest`, `AutomaticEmailsIT` (two logins at once, the jobs
      run twice and at once — red without the claims' `IS NULL`), the browser scenario `morning-summary-switch` (red before `forms.js`
      left the form to `cards-in-place.js`).
