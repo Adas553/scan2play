@@ -87,8 +87,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
      tried again.
    - **After the release:** (seen 2026-11-05: Flyway's "now at version v64", the start's "E-mails on (Brevo), from contact@…") the
      first welcome on `/dj/stats` ("last sent") and in Brevo's log (Transactional → Logs); open one in Gmail — "Show original": DKIM and DMARC `PASS`
-     for `scan2play.com.pl`. After a few weeks of clean sending, `_dmarc` `p=none` → `quarantine`. Still to check: how long Brevo
-     keeps its log of sent e-mails. Brevo's data processing agreement needs no step: it is part of Brevo's Terms of Service, accepted
+     for `scan2play.com.pl`. After a few weeks of clean sending, `_dmarc` `p=none` → `quarantine`. Brevo's log of sent e-mails: 1 month,
+     no previews of their content (set by the owner 2026-11-05 in Brevo's "Email retention rules", all senders — the default was
+     forever; the privacy policy, sections 5 and 6, says so). Brevo's data processing agreement needs no step: it is part of Brevo's Terms of Service, accepted
      with the account (Brevo's help article "Where can I find the Data Processing Agreement (DPA)?", asked 2026-11-05 — there is no
      acceptance page in the app).
    - Not done (proposed): a test e-mail button for the site's owner on `/dj/stats`; the welcome of an account whose address Google did
