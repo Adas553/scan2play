@@ -1343,9 +1343,13 @@ logged. No keys → off (`PushNotificationService.isEnabled`), keys that do not 
 ### 7.4 Brevo (the automatic e-mails, V64)
 
 Brevo's transactional API v3 (`POST https://api.brevo.com/v3/smtp/email`) over the JDK's `HttpClient` (connect 5 s, send 15 s),
-behind `EmailSender` (`BrevoEmailSender`; a fake in the tests). From `Scan2Play <kontakt@scan2play.com.pl>` — the domain authenticated
+behind `EmailSender` (`BrevoEmailSender`; a fake in the tests). From `Scan2Play <contact@scan2play.com.pl>` — the domain authenticated
 in Brevo at Cloudflare (DKIM `brevo1/2._domainkey`, `_dmarc` `p=none`, `brevo-code`; every CNAME DNS only) — with **Reply-To**
-`scan2playcontact@gmail.com` (Brevo refuses a free address as the sender). The key: **`BREVO_API_KEY`** (Restricted, Transactional email
+`scan2playcontact@gmail.com` (Brevo refuses a free address as the sender). The sender must also be a **verified sender** in Brevo (Senders: its code came to
+`contact@` — Cloudflare Email Routing forwards `contact@scan2play.com.pl` to the Gmail address, MX + SPF added by Cloudflare), and
+Brevo's **"Authorized IPs" blocking for API keys must stay deactivated** (Railway has no fixed IP: with it on, every send is a 401
+"unrecognised IP address"). Brevo answers 201 when it takes an e-mail; a later refusal (an unverified sender, a bounce) is only in
+Brevo's log (Transactional → Logs). The key: **`BREVO_API_KEY`** (Restricted, Transactional email
 = All; Brevo's "Authorised IPs" off — Railway has no fixed IP). It expires on 4.11.2027 **or after 90 days unused**: a 401 / 403 is an
 ERROR line "E-MAIL KEY REFUSED …" and `KEY_REFUSED`; `/dj/stats` shows whether the key is set, the last e-mail Brevo took and a later
 failure in capitals (`email_status`, one row, `Mailer`). Without the key nothing is sent (a WARN at start). A send never throws to its
@@ -1421,7 +1425,8 @@ below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH
 **The plans** (V35, Section 4.1 "Plans"): `PLANS_ENFORCE` (default `false`: everything for everyone — not set on Railway),
 `SCAN2PLAY_PLANS_PRO_OWNERS` (Google subjects, comma-separated: Pro for ever — the owner's own `party_settings.owner_id`, testers),
 `PLANS_TRIAL_DAYS` (default 0). **`BREVO_API_KEY`** (V64, Section 7.4): the automatic e-mails' key — a secret, never in the repo; unset,
-no e-mail is sent. **`ADMIN_GOOGLE_ID`** (`scan2play.admin-id`): the owner's Google subject — the account that sees `/dj/stats` (V40) and whose devices get the AI alarm (Section 7.1); not a secret; unset, the page is a 404. Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
+no e-mail is sent. `SCAN2PLAY_MAIL_FROM` (optional, default `contact@scan2play.com.pl`): the sender — it must be a verified sender in
+Brevo (Senders), or Brevo takes the e-mail and then drops it ("sender … is not valid", seen only in Brevo's log). **`ADMIN_GOOGLE_ID`** (`scan2play.admin-id`): the owner's Google subject — the account that sees `/dj/stats` (V40) and whose devices get the AI alarm (Section 7.1); not a secret; unset, the page is a 404. Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
 **`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (staged 2026-10-13, live once the owner
 deploys it): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
 on average, 2 GB at the top) — the live data is ~55 MB. Measured on a copy (20 parties × 50 guests polling every 3 s, 1 500
