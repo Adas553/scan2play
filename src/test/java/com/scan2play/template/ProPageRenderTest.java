@@ -110,6 +110,10 @@ class ProPageRenderTest {
                 .doesNotContain("??");
         assertThat(html).as("Pro has no AI limit an evening; the 300 is a party's requests a day, for both plans (GuestRequestLimiter)")
                 .doesNotContain("300 na wieczór", "300 ocen");
+        assertThat(html).as("a screen reader hears \"tak\" and \"nie\", not \"check mark\" and \"dash\"")
+                .contains("<span aria-hidden=\"true\">✓</span><span class=\"visually-hidden\">tak</span>",
+                        "<span aria-hidden=\"true\">—</span><span class=\"visually-hidden\">nie</span>")
+                .doesNotContain("<td>✓</td>", ">—</td>");
         assertThat(count(html, "btn-action")).as("one action on the page").isEqualTo(1);
         assertThat(html).as("the head for search engines and shared links").contains(
                 "<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/pro\">",
@@ -178,8 +182,8 @@ class ProPageRenderTest {
     @DisplayName("/cennik and /pricing lead to /pro in their language (one page, one canonical address); a 404 while the plans are off")
     void theOtherAddresses_leadToThePage() {
         LegalController on = new LegalController(com.scan2play.service.Plans.enforced());
-        assertThat(on.pricing(new MockHttpServletRequest("GET", "/cennik"))).isEqualTo("redirect:/pro?lang=pl");
-        assertThat(on.pricing(new MockHttpServletRequest("GET", "/pricing"))).isEqualTo("redirect:/pro?lang=en");
+        assertThat(on.pricing(new MockHttpServletRequest("GET", "/cennik")).getUrl()).isEqualTo("/pro?lang=pl");
+        assertThat(on.pricing(new MockHttpServletRequest("GET", "/pricing")).getUrl()).isEqualTo("/pro?lang=en");
         LegalController off = new LegalController(com.scan2play.service.Plans.off());
         assertThat(off.plansEnforced()).as("no footer link").isFalse();
         assertThatThrownBy(() -> off.pricing(new MockHttpServletRequest("GET", "/cennik")))

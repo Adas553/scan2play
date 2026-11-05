@@ -146,9 +146,12 @@
         t.step('the questions one asks before buying, answered', Array.from(document.querySelectorAll('[data-pro-faq] h3')).map(text),
             ['Ile będzie kosztować Pro?', 'Co, gdy Pro się skończy?', 'Czy obsługa potrzebuje Pro?', 'A goście?']);
         const table = document.querySelector('[data-pro-compare]');
-        t.step('the comparison: Free and Pro side by side, the AI\'s evenings in numbers', [shows(table),
-            Array.from(table.querySelectorAll('thead th')).slice(1).map(text), text(table.querySelector('tbody tr:nth-child(2) td'))],
-            [true, ['Free', 'Pro'], 'do 150 na wieczór']);
+        t.step('the comparison: Free and Pro side by side, the AI\'s checks — Free\'s evening in numbers, Pro every request', [shows(table),
+            Array.from(table.querySelectorAll('thead th')).slice(1).map(text),
+            Array.from(table.querySelectorAll('tbody tr:nth-child(2) td')).map(text)],
+            [true, ['Free', 'Pro'], ['150 na wieczór', 'każda prośba']]);
+        // a 390 px phone: both plans' columns in view, the table not scrolled in its box (it was 9 px too wide)
+        t.step('the comparison fits its box', table.scrollWidth <= table.parentElement.clientWidth, true);
         t.step('nothing to tap is lower than 44 px', wide ? [] : tooSmall(document.body), []);
         t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     };
