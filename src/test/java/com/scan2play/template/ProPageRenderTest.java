@@ -97,11 +97,12 @@ class ProPageRenderTest {
         String html = render(PL, dj());
 
         assertThat(html).contains("lang=\"pl\"", "<title>Scan2Play Pro</title>", ">Scan2Play Pro</h1>",
-                "href=\"mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro\"", ">Napisz, że chcesz Pro<",
-                "data-copy-text=\"scan2playcontact@gmail.com\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
+                "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"", ">Napisz, że chcesz Pro<",
+                "data-copy-text=\"contact@scan2play.com.pl\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
                 "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", ">Pro<", "Wszystko z Free, a do tego:",
                 ">Lista gospodarzy<", ">Twoje profile i napiwki<", "w 100% dla Ciebie, bez prowizji", ">Podsumowanie wieczoru<", ">Komentarze AI z charakterem<",
-                ">Własne limity gości<", ">Obsługa do 10 osób<", ">Twoja biblioteka<",
+                ">Własne limity gości<", ">Obsługa do 10 osób<", ">Twoja biblioteka<", ">Kiosk dla gości<", "rano mail z podsumowaniem",
+                "„✓ DJ ma” w podpowiedziach gości",
                 "data-pro-faq", ">Co, gdy Pro się skończy?<", ">Czy obsługa potrzebuje Pro?<", ">A goście?<",
                 "Płatności w aplikacji jeszcze nie ma", "src=\"/js/dj-nav.js\"")
                 .doesNotContain("??");
@@ -121,14 +122,30 @@ class ProPageRenderTest {
     void shouldRenderThePageInEnglish() throws IOException {
         String html = render(Locale.ENGLISH, dj());
 
-        assertThat(html).contains("lang=\"en\"", ">Scan2Play Pro</h1>", "href=\"mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro\"",
+        assertThat(html).contains("lang=\"en\"", ">Scan2Play Pro</h1>", "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"",
                 ">Tell us you want Pro<", "data-copied=\"Copied\"", ">Copy address<", "data-plan=\"free\"", "data-plan=\"pro\"",
-                "Everything in Free, plus:", ">The hosts’ list<", ">Staff of up to 10<", ">Your library<", "data-pro-faq", ">What if Pro ends?<")
+                "Everything in Free, plus:", ">The hosts’ list<", ">Staff of up to 10<", ">Your library<", ">The guests’ kiosk<", "data-pro-faq", ">What if Pro ends?<")
                 .doesNotContain("??");
         assertThat(count(html, "btn-action")).isEqualTo(1);
         assertThat(render(Locale.GERMAN, dj())).contains("lang=\"en\"");
         DashboardPageRenderTest.assertNothingInline(html);
         write("pro-en.html", html);
+    }
+
+    @Test
+    @DisplayName("every feature of the Pro plan is named on the page, in both languages: a new PlanFeature without its line is red here")
+    void everyPlanFeature_isOnThePage() {
+        for (Locale locale : new Locale[]{PL, Locale.ENGLISH}) {
+            String html = render(locale, dj());
+            java.util.Set<String> named = new java.util.HashSet<>();
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("data-feature=\"([A-Z_ ]+)\"").matcher(html);
+            while (m.find()) {
+                named.addAll(java.util.List.of(m.group(1).split(" ")));
+            }
+            for (com.scan2play.model.PlanFeature feature : com.scan2play.model.PlanFeature.values()) {
+                assertThat(named).as("%s on /pro (%s)", feature, locale).contains(feature.name());
+            }
+        }
     }
 
     @Test

@@ -399,7 +399,8 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   by one data migration (to decide then).
 - The server refuses a Pro feature's endpoint (`PlanService.require` → `PlanRequiredException`, a 403) — `PlanFeatureEndpointsTest`
   walks them all; the pages show it as 6.7 says ("PRO"). No payment, no prices: "Zobacz, co daje Pro" leads to `/pro`, which says to
-  write to scan2playcontact@gmail.com (a 404 while not enforced). Later, before the first payment: a payment provider (Stripe Billing /
+  write to contact@scan2play.com.pl (a 404 while not enforced). Each `PlanFeature` has its line there (`data-feature`, both languages —
+  `ProPageRenderTest.everyPlanFeature_isOnThePage`). Later, before the first payment: a payment provider (Stripe Billing /
   Przelewy24 / Tpay) writing `dj_plan` (PAID, `validUntil`), the terms (a paid service, renewal, the consumer's withdrawal), the
   privacy policy (the payment provider, the billing data), invoices and VAT (KSeF, OSS) — the review's list.
 
@@ -568,7 +569,7 @@ share sheet, anything else saves `scan2play-<code>-story.png`; nothing is sent (
 with the longest words, the DJ's logo, three profiles and the tip inside the picture, the code ≥ 420 / 340 px). The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
-the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
+the address contact@scan2play.com.pl — `contact.email`, as every public page; forwarded to the owner's Gmail by Cloudflare — and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
 form of the old "Zgłoś uwagę", `POST /dj/feedback`), "Wyloguj",
 "Usuń konto" (red, the last one) — in place of four icons without words (the design review, 2026-10-09; `.s2p-account-bar` keeps the open
 menu over the sticky tab bar). What a DJ sets before a party is on the page **"Ustawienia imprezy"** (below). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again). **The forms tell the truth** (the review of 2026-10-14, W1 / W11): a form the server refuses (the session ran out — a 403 for the CSRF token —, the plan, the access) or that never reaches it says ✗ on its button and why — its own note (`[data-form-error]`, the DJ's profiles and tip link) or the page's notice `components :: formRefused` ("Nie zapisano. Sesja mogła wygasnąć albo zerwało się połączenie: skopiuj wpisany tekst i odśwież stronę.", "Odśwież stronę", ×; on the panel and the settings) — never ✓; the page does not reload by itself, so what was typed can be copied; "Zakończ imprezę" refused leaves the panel open; a refused "Cofnij" shows the notice too. The button that sent a form waits for the answer (`disabled`), so a double tap sends once (two taps on 💸 counted two tips); a form sent without a button (the vibe's select) is not held back. **A poll that keeps failing** (three in a row: no network, a 5xx) shows "Brak połączenia z serwerem: lista może być nieaktualna." above the queue (`[data-poll-offline]`, `polling.js`, W12); the next answer hides it. An answer without the queue (`#song-list`; a

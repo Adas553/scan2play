@@ -42,6 +42,37 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (code -6); the container's PostgreSQL (16) may stop between runs — `pg_ctlcluster 16 main start`; an `*IT` run failing everywhere at
   once is that, not the code.
 
+## Pricing and the Free plan's limit (the owner's picks, 2026-11-05)
+
+The analysis (competitors, Pro / Free checked with the code, the mock-ups, the AI's cost): the artifact "Cennik i limity Free"
+(https://claude.ai/artifact/HmAVim6owQkhpoe6hTg1vZ, private). The AI costs ~$0.002–0.003 a request from 2027 (half until 2026-12-31);
+the logs Railway keeps (since 2026-10-27) hold no guest's request — nobody but the owner has tested it, so there is no real party size.
+The owner's picks:
+1. **Free: 150 AI evaluations a party an evening, soft** — past it a request still reaches the DJ, unchecked (the path of "AI down",
+   `withoutTheAi`); the hard 300 a day stays for everyone; Pro 300. Counted: what goes to Gemini (moods and repeats too); not: 👍,
+   refusals before the AI, the demo; the kiosk counts. The guest sees nothing of a limit; the DJ a quiet line at 80 %, a bar past it,
+   "bez oceny AI" on those requests — no Pro offer during the party; the next day the organiser's panel ("Wczoraj 212 próśb, AI oceniło
+   150. W Pro do 300", "Zobacz, co daje Pro"). Property `guest.limit.free-ai-per-party` (150, 0 = off), only while enforced.
+2. **The pricing page: variant A** — Free "0 zł zawsze", Pro "WCZESNY DOSTĘP" with "Napisz do nas" (no price, no payment, no date), a
+   comparison table, FAQ ("Ile będzie kosztować Pro?" — not known yet; we write before anything is paid).
+3. **A 404 while `PLANS_ENFORCE=false`** (as `/pro` now); links: the footer ("Cennik"), the landing page's FAQ "Ile to kosztuje?", the
+   account menu ("Twój plan: Free · Zobacz cennik", the organiser only); never in the queue.
+4. **`contact@scan2play.com.pl` everywhere public** (`/pro`, the footer's `contact.email`, terms, guide); Gmail only as Reply-To and in the
+   privacy policy.
+5. **30 days everywhere**: a gift of Pro for the accounts that exist on the switch (V65, `dj_plan` PRO / GIFT / +30 days, and into
+   `trial_used`) and `PLANS_TRIAL_DAYS=30` for new ones.
+6. The address: `/pro`, with `/cennik` (PL) and `/pricing` (EN) as the same page, one canonical; in the sitemap only once enforced.
+
+**State:** (1) done on `claude/compassionate-cori-g35pvj` (template tests green: `ProPageRenderTest` with the new
+`everyPlanFeature_isOnThePage`, `GuidePageRenderTest`, `DashboardPageRenderTest`, `SmokeTest`; the browser tests — `design.js` has the new
+address — not run yet: run `python src/test/browser/run.py` before the release). Next: (2).
+
+**The order of work:** (1) `/pro` true to the code — the kiosk, "✓ DJ ma", tempo and key, the morning e-mail, the hosts' link, a fuller
+Free list, `contact@` — and a test that every `PlanFeature` is on the page (`data-feature`); (2) the pricing page (variant A) and its
+links; (3) the Free AI limit; (4) the terms and the privacy policy (the plans, the trial, the gift), V65 with its `*MigrationIT`, a card
+announcing it; (5) the switch on production on a Tuesday / Wednesday morning (`SCAN2PLAY_PLANS_PRO_OWNERS` = the owner first; rollback =
+`PLANS_ENFORCE=false`).
+
 ## Next (the owner's ideas, 2026-10-28)
 
 1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać") — (a) and
