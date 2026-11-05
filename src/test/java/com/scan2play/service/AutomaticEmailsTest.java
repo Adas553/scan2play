@@ -112,9 +112,10 @@ class AutomaticEmailsTest {
         Email polish = service.email(organiser("pl"));
         assertThat(polish.to()).isEqualTo("ola@example.com");
         assertThat(polish.subject()).isEqualTo("Scan2Play — dzięki za założenie konta");
-        assertThat(polish.html()).contains("Cześć Ola,", "dzięki za założenie konta w Scan2Play!",
+        assertThat(polish.html()).contains("Cześć Ola,", "dzięki za założenie konta w Scan2Play!", "Twoja odpowiedź trafi prosto do nas.",
                 "href=\"https://www.scan2play.com.pl/jak-to-dziala\"", "nie wysyłamy reklam ani newslettera",
                 "href=\"https://www.scan2play.com.pl/email/stop/0123456789abcdef0123456789abcdef?lang=pl\"", "Nie wysyłaj mi tego");
+        assertThat(polish.html()).as("sent automatically: it does not say a person wrote it").doesNotContain("osobiście");
         assertThat(polish.stopUrl()).isEqualTo("https://www.scan2play.com.pl/email/stop/0123456789abcdef0123456789abcdef?lang=pl");
         assertThat(polish.text()).contains("Cześć Ola,", "(https://www.scan2play.com.pl/jak-to-dziala)").doesNotContain("<");
 
@@ -122,7 +123,7 @@ class AutomaticEmailsTest {
         noName.setOwnerName(null);
         Email english = service.email(noName);
         assertThat(english.subject()).isEqualTo("Scan2Play — thanks for signing up");
-        assertThat(english.html()).contains("Hi!", "href=\"https://www.scan2play.com.pl/how-it-works\"", "no ads, no newsletter",
+        assertThat(english.html()).doesNotContain("personally").contains("Hi!", "Your reply comes straight to us.", "href=\"https://www.scan2play.com.pl/how-it-works\"", "no ads, no newsletter",
                 "?lang=en\"", "Don't send me this");
     }
 

@@ -7,8 +7,8 @@ Google-verified address, in the panel's language, from `Scan2Play <contact@scan2
 organisers new in the last 7 days and whether the e-mails go.
 
 What the privacy policy promises, so the message keeps it: the address is used to write about the account and help — no advertising,
-no newsletter. Never twice unasked; a reply is a conversation, not a campaign. The automatic one has no signature line of a person
-(`{podpis}` below): it ends "Scan2Play". `{imię}` / `{name}` is the first word of the name from Google; none — "Cześć!" / "Hi!".
+no newsletter. Never twice unasked; a reply is a conversation, not a campaign. It is sent automatically, so it does not pretend to be
+written by a person ("we", no "I write personally", no signature of a person): it ends "Scan2Play". `{imię}` / `{name}` is the first word of the name from Google; none — "Cześć!" / "Hi!".
 Under it, in small print, "Nie wysyłaj mi tego" / "Don't send me this" (the one-click switch of the morning summary, V64).
 
 ## Polski
@@ -17,15 +17,14 @@ Under it, in small print, "Nie wysyłaj mi tego" / "Don't send me this" (the one
 
 > Cześć {imię},
 >
-> dzięki za założenie konta w Scan2Play! Piszę osobiście, bo każdy DJ, który z nami zaczyna, jest dla nas ważny.
+> dzięki za założenie konta w Scan2Play! Cieszymy się, że jesteś z nami.
 >
-> Jeśli coś jest niejasne, czegoś Ci brakuje albo chcesz pomocy przy pierwszej imprezie — po prostu odpisz na tego maila. Odpisuję
-> osobiście.
+> Jeśli coś jest niejasne, czegoś Ci brakuje albo chcesz pomocy przy pierwszej imprezie — po prostu odpisz na tego maila. Twoja
+> odpowiedź trafi prosto do nas.
 >
 > Na początek przyda się instrukcja: https://www.scan2play.com.pl/jak-to-dziala
 >
 > Udanej imprezy!
-> {podpis}
 > Scan2Play
 >
 > PS Twój adres mamy tylko po to, żeby napisać w sprawie konta — nie wysyłamy reklam ani newslettera.
@@ -36,15 +35,14 @@ Under it, in small print, "Nie wysyłaj mi tego" / "Don't send me this" (the one
 
 > Hi {name},
 >
-> thanks for creating a Scan2Play account! I'm writing personally, because every DJ who starts with us matters to us.
+> thanks for creating a Scan2Play account! We're glad to have you with us.
 >
-> If anything is unclear, something is missing, or you'd like a hand with your first party — just reply to this e-mail. I answer
-> personally.
+> If anything is unclear, something is missing, or you'd like a hand with your first party — just reply to this e-mail. Your reply
+> comes straight to us.
 >
 > A good place to start: https://www.scan2play.com.pl/how-it-works
 >
 > Have a great party!
-> {signature}
 > Scan2Play
 >
 > P.S. We keep your address only to write to you about your account — no ads, no newsletter.
