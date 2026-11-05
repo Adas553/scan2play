@@ -17,10 +17,13 @@
         run: async function (t) {
             t.step('every card folded', folds().map(function (fold) { return [fold.id, fold.open]; }),
                 [['partyHoursCard', false], ['guestThemeCard', false], ['hostListsCard', false], ['kioskCard', false], ['linksCard', false],
-                    ['logoCard', false], ['limitsCard', false], ['libraryCard', false], ['deviceCard', false], ['partyCodeCard', false]]);
+                    ['logoCard', false], ['limitsCard', false], ['libraryCard', false], ['morningSummaryCard', false], ['deviceCard', false],
+                    ['partyCodeCard', false]]);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('guestThemeCard'), stateOf('hostListsCard'),
-                stateOf('linksCard'), stateOf('logoCard'), stateOf('limitsCard'), stateOf('libraryCard'), stateOf('partyCodeCard')],
-                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'HARN1']);
+                stateOf('linksCard'), stateOf('logoCard'), stateOf('limitsCard'), stateOf('libraryCard'), stateOf('morningSummaryCard'),
+                stateOf('partyCodeCard')],
+                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
+                    'HARN1']);
             t.step('"Obsługa" a line like them, leading to its page', [text(document.querySelector('#staffRow .s2p-fold-name')),
                 document.getElementById('staffRow').getAttribute('href')], ['Obsługa', '/dj/staff?party=HARN1']);
             const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat([document.getElementById('staffRow')]);

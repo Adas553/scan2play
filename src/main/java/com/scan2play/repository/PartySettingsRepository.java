@@ -5,9 +5,11 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -92,4 +94,32 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM PartySettingsEntity p WHERE p.staffToken = :staffToken")
     Optional<PartySettingsEntity> lockByStaffToken(@Param("staffToken") String staffToken);
+
+    /** The party of a "Nie wysyłaj mi tego" link (V64): the unique index of the secret. */
+    Optional<PartySettingsEntity> findByEmailToken(String emailToken);
+
+    /**
+     * The welcome e-mail claimed (V64): marked as sent at {@code now} when it was not yet and there is an address to send to — one
+     * statement, so of two logins at once (or a login and the nightly job) one gets 1 and sends, the other 0. The caller empties the
+     * cache ({@code PartySettingsCommandService.claimWelcome}).
+     */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE party_settings SET welcome_sent_at = :now WHERE party_code = :partyCode AND welcome_sent_at IS NULL"
+            + " AND owner_email IS NOT NULL", nativeQuery = true)
+    int claimWelcome(@Param("partyCode") String partyCode, @Param("now") Instant now);
+
+    /** A claimed welcome given back (its send failed): the nightly job tries again. */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE party_settings SET welcome_sent_at = NULL WHERE party_code = :partyCode", nativeQuery = true)
+    int releaseWelcome(@Param("partyCode") String partyCode);
+
+    /**
+     * The parties made since {@code since} whose welcome has not gone and that have an address, the oldest first, at most
+     * {@code limit} — the nightly retry; {@code idx_party_settings_welcome_due} finds them.
+     */
+    @Query(value = "SELECT party_code FROM party_settings WHERE welcome_sent_at IS NULL AND created_at >= :since"
+            + " AND owner_email IS NOT NULL ORDER BY created_at LIMIT :limit", nativeQuery = true)
+    List<String> welcomesDue(@Param("since") Instant since, @Param("limit") int limit);
 }

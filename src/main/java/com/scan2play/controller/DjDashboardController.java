@@ -11,7 +11,9 @@ import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
 import com.scan2play.service.LogoImage;
 import com.scan2play.service.GuestRequestLimiter;
+import com.scan2play.service.Mailer;
 import com.scan2play.service.PartyScheduleService;
+import com.scan2play.service.WelcomeEmailService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlayHistoryService;
 import com.scan2play.service.PushNotificationService;
@@ -83,6 +85,7 @@ public class DjDashboardController {
     private final PlanService planService;
     private final AiHealthMonitor aiHealthMonitor;
     private final PartyScheduleService partyScheduleService;
+    private final WelcomeEmailService welcomeEmailService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -270,6 +273,7 @@ public class DjDashboardController {
         model.addAttribute(DEDICATIONS_ON, settings.isDedicationsOn());   // the guests' dedications on or off (V38)
         model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // "Motyw dla gości" (V59)
         model.addAttribute(GUEST_THEMES, com.scan2play.model.GuestTheme.values());
+        model.addAttribute(MORNING_SUMMARY, settings.isMorningSummary());   // "Poranne podsumowanie" (V64), the organiser's card
         // --- The hosts' lists (V29) and the link that lets them fill the lists ---
         model.addAttribute(HOST_BLOCKED, settings.getHostBlocked());
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
@@ -358,11 +362,18 @@ public class DjDashboardController {
         String kept = Texts.oneLine(name == null ? null : name.toString(), PartySettingsEntity.OWNER_NAME_MAX);
         String ownerName = kept.isEmpty() ? null : kept;
         String ownerEmail = ownerEmail(authentication);
-        if (!Objects.equals(ownerName, settings.getOwnerName()) || !Objects.equals(ownerEmail, settings.getOwnerEmail())) {
+        String language = Mailer.languageOf(LocaleContextHolder.getLocale());   // the e-mails' language: the panel's (V64)
+        if (!Objects.equals(ownerName, settings.getOwnerName()) || !Objects.equals(ownerEmail, settings.getOwnerEmail())
+                || !language.equals(settings.getEmailLanguage())) {
             partySettingsCommandService.updateSettings(settings.getPartyCode(), s -> {
                 s.setOwnerName(ownerName);
                 s.setOwnerEmail(ownerEmail);
+                s.setEmailLanguage(language);
             });
+        }
+        // the welcome e-mail (V64), once: sent off this request's thread after the address is committed — never waited for
+        if (ownerEmail != null) {
+            welcomeEmailService.sendLater(settings);
         }
     }
 

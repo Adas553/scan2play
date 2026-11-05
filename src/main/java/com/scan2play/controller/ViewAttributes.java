@@ -38,6 +38,9 @@ public final class ViewAttributes {
     public static final String GUEST_THEMES = "guestThemes";
     /** The card "Motyw dla gości" saved in the background: it says so ("✓ Zapisane"). */
     public static final String GUEST_THEME_SAVED = "guestThemeSaved";
+    /** "Poranne podsumowanie" (V64): the organiser's switch of the morning e-mail, and the card saved in the background. */
+    public static final String MORNING_SUMMARY = "morningSummary";
+    public static final String MORNING_SUMMARY_SAVED = "morningSummarySaved";
     /** The card "Twoje logo": the largest file, in bytes and MB, and the longest side kept (V45, {@code LogoImage}). */
     public static final String LOGO_MAX_BYTES = "logoMaxBytes";
     public static final String LOGO_MAX_MB = "logoMaxMb";

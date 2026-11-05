@@ -591,7 +591,7 @@ public class EveningSummaryService {
     }
 
     /** When an evening starts: {@link #EVENING_STARTS} on its day, Polish time. */
-    private static Instant startOf(LocalDate evening) {
+    static Instant startOf(LocalDate evening) {
         return evening.atTime(EVENING_STARTS).atZone(Times.DISPLAY_ZONE).toInstant();
     }
 

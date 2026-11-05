@@ -100,6 +100,26 @@ public class PartySettingsCommandService {
         return changes;
     }
 
+    /**
+     * The welcome e-mail claimed for the party (V64, {@link PartySettingsRepository#claimWelcome}): true for the one caller that may
+     * send it. The cached settings dropped once it is committed, so the panel stops asking.
+     */
+    @Transactional
+    public boolean claimWelcome(String partyCode, Instant now) {
+        boolean claimed = partySettingsRepository.claimWelcome(partyCode, now) == 1;
+        if (claimed) {
+            evictAfterCommit(partyCode);
+        }
+        return claimed;
+    }
+
+    /** A claimed welcome given back: its send failed, the nightly job tries again. */
+    @Transactional
+    public void releaseWelcome(String partyCode) {
+        partySettingsRepository.releaseWelcome(partyCode);
+        evictAfterCommit(partyCode);
+    }
+
     /** A party the plan opened ({@code active}) or closed. */
     public record ScheduleChange(String partyCode, boolean active) {
     }
