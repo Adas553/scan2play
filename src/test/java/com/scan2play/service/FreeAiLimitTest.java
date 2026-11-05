@@ -60,6 +60,34 @@ class FreeAiLimitTest {
     }
 
     @Test
+    @DisplayName("the change of time: the night of 25.10 (2:30 twice) and of 28.3 (no 2:30) is one evening, the next starts at 6:00 local time")
+    void theChangeOfTime_keepsTheEveningWhole() {
+        FreeAiLimit limit = new FreeAiLimit(10, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+
+        now.set(Instant.parse("2026-10-24T18:00:00Z"));   // Saturday 20:00 CEST
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2026-10-25T00:30:00Z"));   // 2:30 CEST
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2026-10-25T01:30:00Z"));   // 2:30 CET, the hour again
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2026-10-25T04:59:00Z"));   // 5:59 CET: the same evening, 25 hours long
+        assertThat(limit.today(party).asked()).isEqualTo(3);
+        now.set(Instant.parse("2026-10-25T05:00:00Z"));   // 6:00 CET: Sunday's
+        assertThat(limit.today(party).asked()).isZero();
+        assertThat(limit.yesterday(party).asked()).isEqualTo(3);
+
+        now.set(Instant.parse("2027-03-27T20:00:00Z"));   // Saturday 21:00 CET
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2027-03-28T03:59:00Z"));   // 5:59 CEST (2:00 became 3:00): the same evening, 23 hours long
+        limit.tryAcquire(party);
+        assertThat(limit.today(party).asked()).isEqualTo(2);
+        now.set(Instant.parse("2027-03-28T04:00:00Z"));   // 6:00 CEST: Sunday's
+        assertThat(limit.today(party).asked()).isZero();
+        assertThat(limit.yesterday(party).asked()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("no limit with Pro, while the plans are not enforced, or switched off (0)")
     void noLimit_withPro_plansOff_orZero() {
         PartySettingsEntity party = party("dj");
@@ -70,6 +98,81 @@ class FreeAiLimitTest {
             assertThat(limit.today(party).limit()).isZero();
             assertThat(limit.today(party).reached()).isFalse();
         }
+    }
+
+    @Test
+    @DisplayName("at exactly the limit: the last one judged, the limit reached, nothing unchecked yet")
+    void atTheLimit_reached_nothingUnchecked() {
+        FreeAiLimit limit = new FreeAiLimit(2, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+        assertThat(limit.tryAcquire(party)).isTrue();
+        assertThat(limit.today(party).reached()).isFalse();
+        assertThat(limit.tryAcquire(party)).isTrue();
+        assertThat(limit.today(party).reached()).isTrue();
+        assertThat(limit.today(party).unchecked()).isZero();
+    }
+
+    @Test
+    @DisplayName("a call that failed is given back: the Free plan's checks are the AI's answers; never below zero")
+    void aFailedCall_isGivenBack() {
+        FreeAiLimit limit = new FreeAiLimit(1, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+        assertThat(limit.tryAcquire(party)).isTrue();
+        limit.giveBack(party);
+        limit.giveBack(party);
+        assertThat(limit.today(party).asked()).isZero();
+        assertThat(limit.tryAcquire(party)).as("the check is there again").isTrue();
+        assertThat(limit.tryAcquire(party)).isFalse();
+    }
+
+    @Test
+    @DisplayName("yesterday's count is kept through the next evening (the organiser's note), and gone the evening after")
+    void yesterday_isKeptThroughTheNextEvening() {
+        FreeAiLimit limit = new FreeAiLimit(1, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+        now.set(Instant.parse("2026-11-07T05:00:00Z"));   // 6:00 in Warsaw: the evening's first request, as early as it can be
+        limit.tryAcquire(party);
+        limit.tryAcquire(party);
+        now.set(Instant.parse("2026-11-09T04:59:00Z"));   // 5:59 two days on: still the next evening
+        assertThat(limit.yesterday(party).asked()).isEqualTo(2);
+        now.set(Instant.parse("2026-11-09T05:00:00Z"));
+        assertThat(limit.yesterday(party).asked()).as("a new evening: the day before yesterday is gone").isZero();
+    }
+
+    @Test
+    @DisplayName("concurrent requests: exactly the limit's number goes to the AI")
+    void concurrentRequests_exactlyTheLimit() throws InterruptedException {
+        FreeAiLimit limit = new FreeAiLimit(150, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+        java.util.concurrent.atomic.AtomicInteger allowed = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        for (int i = 0; i < 400; i++) {
+            pool.submit(() -> {
+                start.await();
+                if (limit.tryAcquire(party)) {
+                    allowed.incrementAndGet();
+                }
+                return null;
+            });
+        }
+        start.countDown();
+        pool.shutdown();
+        assertThat(pool.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        assertThat(allowed.get()).isEqualTo(150);
+        assertThat(limit.today(party).asked()).isEqualTo(400);
+    }
+
+    @Test
+    @DisplayName("\"Zmień kod imprezy\" keeps the evening's count: the party is its row, not its code")
+    void aNewCode_keepsTheCount() {
+        FreeAiLimit limit = new FreeAiLimit(1, Plans.enforced(), clock);
+        PartySettingsEntity party = party("dj");
+        party.setId(7L);
+        assertThat(limit.tryAcquire(party)).isTrue();
+        party.setPartyCode("XYZ12");
+        assertThat(limit.tryAcquire(party)).isFalse();
+        assertThat(limit.today(party).asked()).isEqualTo(2);
     }
 
     @Test

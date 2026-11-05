@@ -28,25 +28,14 @@ function applyGuestLimits(value) {
 }
 
 /**
- * Sets the badges with the use of the server limits from '<busiest network>,<party>[,<the Free plan's AI checks tonight>]':
- * "used/limit", grey, yellow from 80 %, red at the limit — the same rule as the page's template. A missing or malformed header
- * changes nothing.
+ * The use of the server limits from '<busiest network>,<party>[,<the Free plan's AI checks tonight>]' (the third only where that
+ * limit applies), for the warnings near a limit above the queue. A missing or malformed header changes nothing. The badges
+ * "used/limit" are on the page "Ustawienia imprezy", which does not poll: its template sets them.
  */
 function applyGuestLimitsUse(value) {
     if (value === null) return;
     const used = value.split(',').map(function (n) { return parseInt(n, 10); });
     if (used.length < 2 || used.length > 3 || used.some(isNaN)) return;
-    const kinds = [['network', used[0]], ['party', used[1]]];
-    if (used.length > 2) kinds.push(['ai', used[2]]);
-    kinds.forEach(function (pair) {
-        const badge = document.querySelector('[data-limit-use="' + pair[0] + '"]');
-        const limit = badge ? parseInt(badge.dataset.limit, 10) : NaN;
-        if (isNaN(limit)) return;
-        badge.textContent = Math.min(pair[1], pair[0] === 'ai' ? limit : pair[1]) + '/' + limit;   // the AI: the checks, never past it
-        badge.classList.toggle('text-bg-danger', pair[1] >= limit);
-        badge.classList.toggle('text-bg-warning', pair[1] < limit && pair[1] * 5 >= limit * 4);
-        badge.classList.toggle('text-bg-secondary', pair[1] * 5 < limit * 4);
-    });
     applyLimitsNear(used[0], used[1], used.length > 2 ? used[2] : null);
 }
 

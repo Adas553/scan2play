@@ -245,6 +245,33 @@ class DashboardQueueFragmentTest {
         assertThat(html.substring(html.indexOf("data-song-id=\"2\""))).doesNotContain("s2p-request-unchecked");
     }
 
+    /**
+     * Its tooltip names the Free plan only where the Free plan's limit applies to the party (FreeAiLimit, {@code freeAi} of the page
+     * and of every poll): while the plans are off — production now — nothing says "Free", only that the AI was down.
+     */
+    @Test
+    @DisplayName("\"bez oceny AI\": the Free plan in its tooltip only where its limit applies — never while the plans are off")
+    void theUncheckedTooltip_namesTheFreePlan_onlyWhereItsLimitApplies() {
+        SongRequestEntity unchecked = accepted(1, "cokolwiek gość wpisał");
+        unchecked.setChecked(false);
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariable("history", List.of(unchecked));
+
+        String noLimit = engine.process("dashboard", Set.of("songTableBody"), context);
+        context.setVariable("freeAi", new com.scan2play.service.FreeAiLimit.Use(0, 0));
+        String limitOff = engine.process("dashboard", Set.of("songTableBody"), context);
+        context.setVariable("freeAi", new com.scan2play.service.FreeAiLimit.Use(151, 150));
+        String free = engine.process("dashboard", Set.of("songTableBody"), context);
+
+        for (String html : List.of(noLimit, limitOff)) {
+            assertThat(html).contains("title=\"AI nie działało, gdy przyszła:").doesNotContain("Free", "??");
+        }
+        assertThat(free).contains("title=\"AI jej nie oceniło (nie działało albo oceny planu Free na ten wieczór się skończyły):")
+                .doesNotContain("??");
+    }
+
     @Test
     @DisplayName("V38: the guests' dedications under the song, newest last, escaped; \"niesprawdzona\" without the AI, \"+N\" for the rest")
     void shouldShowTheGuestsDedications() {

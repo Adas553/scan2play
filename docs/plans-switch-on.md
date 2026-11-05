@@ -30,7 +30,7 @@ Railway redeploys with each change; set the first three, then `PLANS_ENFORCE`, s
 
 1. The start's log: `Plans enforced (1 Pro for ever, trial 30 days, Pro for everyone until 2026-12-09)` — not "Plans not enforced".
 2. Without cookies: `curl -s https://www.scan2play.com.pl/pro` to the page's end (200, "Cennik", "0 zł", "WCZESNY DOSTĘP");
-   `/cennik` → 302 `/pro?lang=pl`; the footer of `/` has "Cennik".
+   `/cennik` → 301 `/pro?lang=pl`; the footer of `/` has "Cennik".
 3. The owner's panel: no "PRO" tags, no gift line (Pro of their own). A test account's panel: "Do … masz Pro w prezencie" above the
    queue, the account menu "Twój plan: Pro · Cennik", everything works.
 

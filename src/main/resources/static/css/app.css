@@ -1332,7 +1332,14 @@ th[data-sort].sort-desc::after {
 .s2p-compare td.s2p-compare-no { color: var(--s2p-text-muted); }
 .s2p-compare tbody .s2p-compare-group th { background: var(--s2p-bg-card); color: var(--s2p-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
 .s2p-compare tr:last-child th, .s2p-compare tr:last-child td { border-bottom: 0; }
-@media (max-width: 575.98px) { .s2p-compare td { white-space: normal; } }
+/* a phone: a smaller size, less padding and a long row name hyphenated (never broken inside a word), so both plans' columns fit
+   from 360 px; at 320 px the table scrolls in its own box */
+@media (max-width: 575.98px) {
+    .s2p-compare { font-size: 0.875rem; }
+    .s2p-compare td { white-space: normal; }
+    .s2p-compare th, .s2p-compare td { padding: 0.5rem 0.5rem; }
+    .s2p-compare tbody th { hyphens: auto; }
+}
 .s2p-faq h3 { font-size: 1rem; font-weight: 700; color: var(--s2p-light); margin: 0 0 0.35rem; }
 .s2p-faq p { color: var(--s2p-text-muted); margin: 0; font-size: 0.925rem; }
 

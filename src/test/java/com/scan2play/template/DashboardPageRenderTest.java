@@ -848,9 +848,31 @@ class DashboardPageRenderTest {
         write("dashboard-free-ai.html", html);
     }
 
+    /** The staff past the Free plan's checks: the bar and the tooltip say what happens, not which plan the organiser has. */
+    @Test
+    void pastTheFreePlansAiChecks_theStaffAreNotToldOfThePlan() {
+        PartySettingsEntity party = party();
+        com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
+        freeAiLimit = new com.scan2play.service.FreeAiLimit(150, plans);
+        for (int i = 0; i < 151; i++) {
+            freeAiLimit.tryAcquire(party);
+        }
+        SongRequestEntity unchecked = song(1, "cokolwiek gość wpisał");
+        unchecked.setChecked(false);
+        String staffs = renderDashboard(party, List.of(unchecked), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
+                mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);
+        assertThat(staffs).contains("⚠ Oceny AI na ten wieczór wykorzystane. Prośby gości nadal przychodzą", "title=\"AI nie działało, gdy przyszła:")
+                .doesNotContain("planie Free", "planu Free");
+        String owners = renderDashboard(party, List.of(unchecked), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans);
+        assertThat(owners).contains("(150 w planie Free)", "oceny planu Free na ten wieczór");
+    }
+
     /** The day after the checks ran out: the organiser alone sees what came unchecked, and the way to Pro; the staff nothing. */
     @Test
-    void theDayAfter_theOrganiserSeesWhatCameUnchecked_andTheWayToPro() {
+    void theDayAfter_theOrganiserSeesWhatCameUnchecked_andTheWayToPro() throws IOException {
         PartySettingsEntity party = party();
         com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
         java.util.concurrent.atomic.AtomicReference<java.time.Instant> now =
@@ -869,18 +891,45 @@ class DashboardPageRenderTest {
                 mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
                 null, plans);
         assertThat(html).contains("data-free-ai-yesterday", "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150",
-                "W Pro do 300 ocen na wieczór", "href=\"/pro\"", ">Zobacz, co daje Pro<");
+                "W Pro AI ocenia każdą prośbę.", "href=\"/pro\"", ">Zobacz, co daje Pro<");
+        write("dashboard-free-ai-yesterday.html", html);   // the browser tests
         assertThat(html).as("a new evening: no bar").containsPattern("data-guest-limit=\"ai-limit\"[^>]*d-none|d-none[^>]*data-guest-limit=\"ai-limit\"");
 
         String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
                 mock(PartyStaffService.class), new MockHttpSession(),
                 new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);
         assertThat(staffs).as("the staff: not theirs to buy").doesNotContain("data-free-ai-yesterday");
+
+        freeAiLimit.tryAcquire(party);   // this evening's first request: a party again
+        assertThat(renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans)).as("no offer of Pro during the next party").doesNotContain("data-free-ai-yesterday");
+    }
+
+    /** An evening that used exactly the Free plan's checks sent nothing unchecked: no note the next day. */
+    @Test
+    void theDayAfter_exactlyTheLimit_noNote() {
+        PartySettingsEntity party = party();
+        com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
+        java.util.concurrent.atomic.AtomicReference<java.time.Instant> now =
+                new java.util.concurrent.atomic.AtomicReference<>(java.time.Instant.parse("2026-11-07T20:00:00Z"));
+        freeAiLimit = new com.scan2play.service.FreeAiLimit(150, plans, new java.time.Clock() {
+            @Override public java.time.ZoneId getZone() { return java.time.ZoneOffset.UTC; }
+            @Override public java.time.Clock withZone(java.time.ZoneId zone) { return this; }
+            @Override public java.time.Instant instant() { return now.get(); }
+        });
+        for (int i = 0; i < 150; i++) {
+            freeAiLimit.tryAcquire(party);
+        }
+        now.set(java.time.Instant.parse("2026-11-08T11:00:00Z"));
+        assertThat(renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans)).doesNotContain("data-free-ai-yesterday");
     }
 
     /** The gift of Pro (scan2play.plans.gift-until): one quiet line to the organiser — until when, and the pricing page; the staff nothing. */
     @Test
-    void theGiftOfPro_isOneLineToTheOrganiser() {
+    void theGiftOfPro_isOneLineToTheOrganiser() throws IOException {
         PartySettingsEntity party = party();
         com.scan2play.repository.DjPlanRepository rows = mock(com.scan2play.repository.DjPlanRepository.class);
         when(rows.findById(anyString())).thenReturn(java.util.Optional.empty());
@@ -892,6 +941,7 @@ class DashboardPageRenderTest {
                 null, plans);
         assertThat(html).contains("data-plan-gift", "Scan2Play ma teraz plany Free i Pro. Do ", "masz Pro w prezencie, potem plan Free.",
                 ">Zobacz cennik →<");
+        write("dashboard-plan-gift.html", html);   // the browser tests
         String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
                 mock(PartyStaffService.class), new MockHttpSession(),
                 new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);

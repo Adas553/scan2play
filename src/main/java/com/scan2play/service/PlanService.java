@@ -8,7 +8,9 @@ import com.scan2play.model.PlanFeature;
 import com.scan2play.model.PlanSource;
 import com.scan2play.repository.DjPlanRepository;
 import com.scan2play.util.AfterCommit;
+import com.scan2play.util.Times;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -19,6 +21,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.Objects;
@@ -63,14 +67,13 @@ public class PlanService {
         this(planRepository, cacheManager, enforced, proOwners, trialDays, "");
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public PlanService(DjPlanRepository planRepository, CacheManager cacheManager,
                        @Value("${scan2play.plans.enforce:false}") boolean enforced,
                        @Value("${scan2play.plans.pro-owners:}") String proOwners,
                        @Value("${scan2play.plans.trial-days:0}") int trialDays,
                        @Value("${scan2play.plans.gift-until:}") String giftUntil) {
-        this.giftEnds = giftUntil == null || giftUntil.isBlank() ? null
-                : java.time.LocalDate.parse(giftUntil.strip()).plusDays(1).atStartOfDay(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
+        this.giftEnds = giftEnd(giftUntil);
         this.planRepository = planRepository;
         this.cacheManager = cacheManager;
         this.enforced = enforced;
@@ -79,6 +82,19 @@ public class PlanService {
         log.info("Plans {}", enforced ? "enforced (" + this.proOwners.size() + " Pro for ever, trial " + this.trialDays + " days"
                 + (giftEnds == null ? "" : ", Pro for everyone until " + giftUntil.strip()) + ")"
                 : "not enforced: every party has every feature");
+    }
+
+    /** The end of the gift's day, Polish time; null for none. A day not written as 2026-12-09 stops the start, saying which variable. */
+    static Instant giftEnd(String giftUntil) {
+        if (giftUntil == null || giftUntil.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(giftUntil.strip()).plusDays(1).atStartOfDay(Times.DISPLAY_ZONE).toInstant();
+        } catch (DateTimeParseException e) {
+            throw new IllegalStateException("PLANS_GIFT_UNTIL (scan2play.plans.gift-until) must be a day written as 2026-12-09, not '"
+                    + giftUntil + "'", e);
+        }
     }
 
     /**
@@ -247,8 +263,10 @@ public class PlanService {
             return;
         }
         Instant now = Instant.now();
+        // during the gift of Pro the trial starts when the gift ends: its days are not spent while the account has Pro anyway
+        Instant from = onGift() ? giftEnds : now;
         planRepository.save(DjPlanEntity.builder().ownerId(ownerId).plan(Plan.PRO).source(PlanSource.TRIAL)
-                .validUntil(now.plus(Duration.ofDays(trialDays))).updatedAt(now).build());
+                .validUntil(from.plus(Duration.ofDays(trialDays))).updatedAt(now).build());
         planRepository.markTrialUsed(key);
         AfterCommit.run(() -> cache().evict(ownerId));
         log.info("DJ {}: a trial of Pro for {} days", ownerId, trialDays);

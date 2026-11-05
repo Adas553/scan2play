@@ -398,7 +398,8 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   (that moment is Free already), not up to 10 min later.
 - **The gift** (the owner, 2026-11-05: 30 days): `scan2play.plans.gift-until` (env `PLANS_GIFT_UNTIL`, a day; empty: none) — until the
   end of that day, Polish time, every organiser without Pro of their own has Pro (`PlanService.planOf`; no row written, so nothing
-  waits in the database for a switch not yet made, and it ends by itself); the organiser it gives Pro to reads one line above the
+  waits in the database for a switch not yet made, and it ends by itself; a trial begun during it runs from its end, and a day
+  not written as 2026-12-09 stops the start naming the variable); the organiser it gives Pro to reads one line above the
   queue, "Scan2Play ma teraz plany Free i Pro. Do 9.12 masz Pro w prezencie, potem plan Free. Zobacz cennik →" (`giftEndsFor`,
   `data-plan-gift`). The day of the switch, the variables and the checks: `docs/plans-switch-on.md`. The terms (section 5 "Plany
   Free i Pro", 2026-11-05): free of charge, what may become Pro, the Free limit, the notice and the 30 days, nothing deleted, nothing
@@ -1058,15 +1059,21 @@ follow every poll's headers).
 **The Free plan's AI checks** (`FreeAiLimit`, the owner 2026-11-05: 150, soft): `guest.limit.free-ai-per-party` (env
 `GUEST_LIMIT_FREE_AI_PER_PARTY`, 150; 0 = off) requests a party an evening (`EveningSummaryService.eveningOf`, 6:00 to 6:00 Polish time)
 go to Gemini — only while the plans are enforced and for an organiser without Pro (Pro's bound: the 300 a day above). Counted in
-`SongEvaluationService` just before the call — moods and a song asked again too (they cost a call); not 👍, not the refusals before the AI
+`SongEvaluationService` just before the call — moods and a song asked again too (they cost a call), a call that failed given back (`giveBack`: the AI judged nothing); not 👍, not the refusals before the AI
 (the limits, the hosts' list by the guest's words), not the demo; the kiosk as every guest. Past it: no call, the request reaches the DJ
-unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —; the
+unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —, except a song of the recently played
+list named by its whole name or its title (`SongEvaluationService.playedLately`, on both unchecked paths): refused by the code,
+"Ta piosenka leciała przed chwilą — wybierz inną." (`guest.played_lately`, reason DUPLICATE). A mood or an insult past the limit
+reaches the DJ as a request "bez oceny AI" (the DJ alone sees it, as while the AI is down); the
 guest reads "Twoja prośba trafiła do DJ-a, który sam ją oceni." (`ai.limit.to_dj`), nothing of a limit. The panel: from 80 % the line
 "120 z 150 próśb ocenionych dziś przez AI. Kolejne przyjdą bez oceny." (`data-limit-near="ai"`), at it the bar "⚠ Oceny AI na ten wieczór
 wykorzystane …" (`data-guest-limit="ai-limit"`), both from every poll (`X-Guest-Limits` "ai-limit", `X-Guest-Limits-Use`'s third
-number; scenario `free-ai-limit-follows-the-poll`); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
+number — sent only where the limit applies, so while the plans are off the header keeps its two numbers, which a panel opened before
+a deploy still reads; scenario `free-ai-limit-follows-the-poll`); the tooltip of "bez oceny AI" names the Free plan only there too
+(`dashboard.request.unchecked.title.free`, `freeAi` of the page and of every poll); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
 the party: the next day the organiser alone sees above the queue "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150 …" with
-"Zobacz, co daje Pro" (`freeAiYesterday`, only when the limit was reached). In memory (two evenings kept): a restart starts the count
+"Zobacz, co daje Pro" (`freeAiYesterday`, only when some came unchecked, and only until this evening's first request — never during the next party). The staff read the bar without the plan's name (`dashboard.warning.ai_limit.staff`). In memory (two
+evenings kept, by the party's row: "Zmień kod imprezy" keeps the count): a restart starts the count
 again, in the DJ's favour. The pricing page names it — change both together.
 
 ### 5.3 (Spotify — removed 2026-10-04, migration V18)
@@ -1312,7 +1319,8 @@ What every page shares, so a new screen looks like the others:
   Pro ends; the staff; the guests) (`.s2p-product-*`, `.s2p-plan*`, `.s2p-compare*`, `.s2p-faq`). Linked, only while the plans are
   enforced: the footer's "Cennik" (`plansEnforced` — `HomeController`, `ForWhomController`, `LegalController`), the landing page's "Ile to
   kosztuje?" ("Zobacz cennik →"), the account menu's "Twój plan: Free · Cennik" (the organiser only, `PlanService.View.offered`). It names
-  the Free plan's 150 AI checks an evening and Pro's 300 (`FreeAiLimit`, Section 5.2). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
+  the Free plan's 150 AI checks an evening (then unchecked, not on the guests' list nor the TV), Pro's check of every request, and a
+  party's 300 requests a day for both (`FreeAiLimit`, `GuestRequestLimiter`, Section 5.2). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
   permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
   see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
   `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`, `pro-page-phone`, `pro-page-wide`.

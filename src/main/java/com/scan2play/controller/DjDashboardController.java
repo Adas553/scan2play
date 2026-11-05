@@ -9,9 +9,9 @@ import com.scan2play.service.DemoParty;
 import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
-import com.scan2play.service.LogoImage;
 import com.scan2play.service.FreeAiLimit;
 import com.scan2play.service.GuestRequestLimiter;
+import com.scan2play.service.LogoImage;
 import com.scan2play.service.Mailer;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.WelcomeEmailService;
@@ -105,8 +105,8 @@ public class DjDashboardController {
 
     /**
      * On every answer of the queue poll, 304 too: how many requests the server limits have used now,
-     * {@code <busiest network>,<party>,<the Free plan's AI checks this evening>} — the dashboard keeps its badges current by it,
-     * without a reload.
+     * {@code <busiest network>,<party>[,<the Free plan's AI checks this evening>]} — the dashboard keeps its warnings near a limit current by it,
+     * without a reload. The third only where the Free plan's limit applies ({@code FreeAiLimit.limitOf} &gt; 0).
      */
     static final String GUEST_LIMITS_USE_HEADER = "X-Guest-Limits-Use";
 
@@ -306,9 +306,12 @@ public class DjDashboardController {
         model.addAttribute(AI_DOWN, aiDown(partyCode));
         // the Free plan's AI checks of the evening (FreeAiLimit): the line near it, the bar at it; yesterday's, to the organiser only
         // and only when it was reached — the offer of Pro the next day, never during the party
-        model.addAttribute(FREE_AI, freeAiLimit.today(settings));
-        FreeAiLimit.Use yesterday = owner ? freeAiLimit.yesterday(settings) : null;
-        model.addAttribute(FREE_AI_YESTERDAY, yesterday != null && yesterday.reached() ? yesterday : null);
+        // — only when some came unchecked, and only until this evening's first request: a party the next evening (a wedding's
+        // second day) is a party, and the note would be an offer of Pro during it
+        FreeAiLimit.Use tonight = freeAiLimit.today(settings);
+        model.addAttribute(FREE_AI, tonight);
+        FreeAiLimit.Use yesterday = owner && tonight.asked() == 0 ? freeAiLimit.yesterday(settings) : null;
+        model.addAttribute(FREE_AI_YESTERDAY, yesterday != null && yesterday.unchecked() > 0 ? yesterday : null);
         // the gift of Pro when the plans were switched on: until when, to the organiser it gives Pro to
         java.time.Instant giftEnds = owner ? planService.giftEndsFor(settings) : null;
         model.addAttribute(PLAN_GIFT_UNTIL, giftEnds == null ? null : Times.day(giftEnds.minusSeconds(1)));
@@ -551,8 +554,10 @@ public class DjDashboardController {
         // Not part of the ETag: the warnings follow the limits even while the queue stays the same
         FreeAiLimit.Use freeAi = freeAiLimit.today(settings);
         response.setHeader(GUEST_LIMITS_HEADER, guestLimitFlags(partyCode, freeAi));
+        // the third number only where the Free plan's limit applies: while the plans are off the header stays as it was, and a panel
+        // opened before a deploy (whose polling.js takes exactly two numbers) keeps following the limits
         response.setHeader(GUEST_LIMITS_USE_HEADER, guestRequestLimiter.busiestClientRequestsUsed(partyCode)
-                + "," + guestRequestLimiter.partyRequestsUsed(partyCode) + "," + freeAi.asked());
+                + "," + guestRequestLimiter.partyRequestsUsed(partyCode) + (freeAi.limit() > 0 ? "," + freeAi.asked() : ""));
         response.setHeader(PARTY_ACTIVE_HEADER, String.valueOf(settings.isActive()));
         // …and its plan (V55): the panel hides a planned moment's line once it is applied, cancelled or made pointless
         response.setHeader(PARTY_SCHEDULE_HEADER, PartyScheduleService.headerValue(settings));
@@ -591,6 +596,7 @@ public class DjDashboardController {
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
         model.addAttribute(PLAN, plan);       // and by the organiser's plan (V35): no 💸 without Pro
+        model.addAttribute(FREE_AI, freeAi);  // "bez oceny AI" names the Free plan only where its limit applies
         return "dashboard :: songTableBody";
     }
 
