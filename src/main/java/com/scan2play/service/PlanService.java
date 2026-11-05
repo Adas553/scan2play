@@ -52,17 +52,32 @@ public class PlanService {
     private final boolean enforced;
     private final Set<String> proOwners;
     private final int trialDays;
+    /**
+     * The gift of Pro when the plans are switched on ({@code scan2play.plans.gift-until}, a day; empty: none): until the end of that
+     * day, Polish time, every organiser without a Pro row has Pro — the accounts of before the switch get their 30 days without a row
+     * written, so nothing waits in the database for a switch that has not come, and the gift ends by itself. Null: none.
+     */
+    private final Instant giftEnds;
 
+    public PlanService(DjPlanRepository planRepository, CacheManager cacheManager, boolean enforced, String proOwners, int trialDays) {
+        this(planRepository, cacheManager, enforced, proOwners, trialDays, "");
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
     public PlanService(DjPlanRepository planRepository, CacheManager cacheManager,
                        @Value("${scan2play.plans.enforce:false}") boolean enforced,
                        @Value("${scan2play.plans.pro-owners:}") String proOwners,
-                       @Value("${scan2play.plans.trial-days:0}") int trialDays) {
+                       @Value("${scan2play.plans.trial-days:0}") int trialDays,
+                       @Value("${scan2play.plans.gift-until:}") String giftUntil) {
+        this.giftEnds = giftUntil == null || giftUntil.isBlank() ? null
+                : java.time.LocalDate.parse(giftUntil.strip()).plusDays(1).atStartOfDay(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
         this.planRepository = planRepository;
         this.cacheManager = cacheManager;
         this.enforced = enforced;
         this.proOwners = Arrays.stream(proOwners.split(",")).map(String::strip).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
         this.trialDays = Math.max(0, trialDays);
-        log.info("Plans {}", enforced ? "enforced (" + this.proOwners.size() + " Pro for ever, trial " + this.trialDays + " days)"
+        log.info("Plans {}", enforced ? "enforced (" + this.proOwners.size() + " Pro for ever, trial " + this.trialDays + " days"
+                + (giftEnds == null ? "" : ", Pro for everyone until " + giftUntil.strip()) + ")"
                 : "not enforced: every party has every feature");
     }
 
@@ -111,11 +126,29 @@ public class PlanService {
         return enforced;
     }
 
-    /** The organiser's plan: {@link Plan#PRO} while the plans are not enforced (and then no row is read). */
+    /** The organiser's plan: {@link Plan#PRO} while the plans are not enforced (and then no row is read), and during the gift. */
     public Plan planOf(String ownerId) {
         if (!enforced) {
             return Plan.PRO;
         }
+        Plan own = ownPlan(ownerId);
+        return own == Plan.FREE && onGift() ? Plan.PRO : own;
+    }
+
+    /**
+     * The end of the gift of Pro for this party's organiser, while it is what gives them Pro (their own plan is Free): the panel's
+     * note "Do 7.12 masz Pro w prezencie". Null otherwise — not enforced, no gift, or Pro of their own.
+     */
+    public Instant giftEndsFor(PartySettingsEntity party) {
+        return enforced && onGift() && ownPlan(party.getOwnerId()) == Plan.FREE ? giftEnds : null;
+    }
+
+    private boolean onGift() {
+        return giftEnds != null && Instant.now().isBefore(giftEnds);
+    }
+
+    /** The organiser's plan by the list of Pro owners and their row, without the gift. */
+    private Plan ownPlan(String ownerId) {
         if (ownerId == null) {
             return Plan.FREE;
         }

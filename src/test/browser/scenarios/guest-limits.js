@@ -115,6 +115,37 @@
         }
     });
 
+    // The Free plan's AI checks of the evening (FreeAiLimit; dashboard-free-ai.html: the plans enforced, 151 of 150 asked): the bar at
+    // the limit (X-Guest-Limits "ai-limit") and the line from 80 % (the third number of X-Guest-Limits-Use) follow the poll
+    S2P.scenario({
+        name: 'free-ai-limit-follows-the-poll',
+        title: 'the Free plan\'s AI checks: the bar "wykorzystane" at the limit and the line from 80 % follow the poll, without a reload',
+        page: 'dashboard-free-ai',
+        setup: { guestLimits: 'ai-limit', guestLimitsUse: '0,0,151' },
+        run: async function (t) {
+            const bar = document.querySelector('#guestLimitWarnings [data-guest-limit="ai-limit"]');
+            const line = document.querySelector('#guestLimitWarnings [data-limit-near="ai"]');
+            const state = function () { return [shows(bar), shows(line) ? line.textContent.trim() : null]; };
+            await afterPolls(t);
+            t.step('the checks used: the bar, no line', state(), [true, null]);
+            t.step('the bar says the requests still come, unchecked', bar.textContent.indexOf('bez oceny AI') >= 0, true);
+
+            await t.stand.config({ guestLimits: 'none', guestLimitsUse: '0,0,125' });
+            await afterPolls(t);
+            t.step('a new evening at 125 of 150 (80 %): the line says how many, the bar goes', state(),
+                [false, '125 z 150 próśb ocenionych dziś przez AI. Kolejne przyjdą bez oceny.']);
+
+            await t.stand.config({ guestLimitsUse: '0,0' });
+            await afterPolls(t);
+            t.step('an answer without the third number changes nothing', state(),
+                [false, '125 z 150 próśb ocenionych dziś przez AI. Kolejne przyjdą bez oceny.']);
+
+            await t.stand.config({ guestLimitsUse: '0,0,10' });
+            await afterPolls(t);
+            t.step('far from it: nothing', state(), [false, null]);
+        }
+    });
+
     // The review of 2026-10-14, W4: one guest with a script spent the party's 300 for the day, and every other guest was refused until
     // the next day — the organiser had no way out. "Odblokuj prośby gości" in the warning starts the party's day again.
     S2P.scenario({

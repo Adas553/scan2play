@@ -88,7 +88,7 @@ class GuidePageRenderTest {
         String html = render(PL, ANONYMOUS);
 
         assertThat(html).contains("lang=\"pl\"", "<title>Jak działa Scan2Play</title>", ">Jak działa Scan2Play</h1>",
-                "Odrzucone przez AI", "w historii, razem z komentarzem AI", "osoby, dla których grasz", "scan2playcontact@gmail.com", "mogą Ci pomagać inne osoby",
+                "Odrzucone przez AI", "w historii, razem z komentarzem AI", "osoby, dla których grasz", "contact@scan2play.com.pl", "mogą Ci pomagać inne osoby",
                 ">Podgląd<", ">Obsługa kolejki<", ">Współorganizator<", ">Własne<",
                 ">▶ Zagrane<", ">⏭ Pomiń<", ">⚠ Sprawdź<", ">⭐ Życzenie gospodarzy<", ">↩ Przywróć<", "TAK! albo NIE", "„PRZEKAZANE”")
                 .doesNotContain("para młoda", "Barman", "??");
@@ -130,7 +130,7 @@ class GuidePageRenderTest {
         String html = render(Locale.ENGLISH, ANONYMOUS);
 
         assertThat(html).contains("lang=\"en\"", ">How Scan2Play works</h1>", "the AI turned down are in the history",
-                "the people you play for", "scan2playcontact@gmail.com", ">▶ Played<", ">↩ Restore<", ">← Home<",
+                "the people you play for", "contact@scan2play.com.pl", ">▶ Played<", ">↩ Restore<", ">← Home<",
                 "id=\"start\"", "id=\"guests\"").doesNotContain("??");
         String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
         assertThat(kiosk).as("the kiosk, as in Polish").contains("not logged in", "Guided Access", "screen pinning",

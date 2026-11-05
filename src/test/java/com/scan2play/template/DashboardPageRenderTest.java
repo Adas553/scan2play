@@ -137,7 +137,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class));
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), freeAiLimit);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -404,7 +404,7 @@ class DashboardPageRenderTest {
         // the owner, 2026-10-12: the guide and one window of help — the address, the guide, the old "Zgłoś uwagę" form
         assertThat(html).as("\"Instrukcja\" and \"Pomoc i kontakt\" in the menu, the help window with the address and the form")
                 .contains(">Instrukcja<", "id=\"helpMenuBtn\"", ">Pomoc i kontakt<",
-                        ">scan2playcontact@gmail.com<", "data-copy-text=\"scan2playcontact@gmail.com\"", ">Kopiuj<",
+                        ">contact@scan2play.com.pl<", "data-copy-text=\"contact@scan2play.com.pl\"", ">Kopiuj<",
                         ">Zgłoś problem albo pomysł<", "id=\"feedbackMessage\"")
                 .doesNotContain(">Zgłoś uwagę<");
         for (String link : List.of("guideMenuLink", "helpGuideLink", "queueEmptyGuide")) {
@@ -691,7 +691,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
@@ -760,7 +760,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class),
-                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class));
+                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
 
         ConcurrentModel model = new ConcurrentModel();
         assertThat(controller.historyView(50, null, PARTY, model, ownerToken(), new MockHttpSession())).isEqualTo("history");
@@ -813,7 +813,108 @@ class DashboardPageRenderTest {
         assertThat(html).as("the queue: no 💸 and no ⭐ without Pro — the song's own number and the buttons stay")
                 .contains("Golec uOrkiestra - Hej sokoły", "s2p-btn-played", "s2p-btn-skip")
                 .doesNotContain("s2p-btn-tip", "action=\"/dj/dashboard/tip-count\"", "s2p-host-wanted");
+        assertThat(html).as("the account menu: the plan and the pricing page").contains("id=\"pricingMenuLink\"", "Twój plan: Free · Cennik");
         write("dashboard-free.html", html);
+    }
+
+    /** The Free plan's AI checks of the evening the page is rendered with (none by default). */
+    private static com.scan2play.service.FreeAiLimit freeAiLimit = com.scan2play.service.FreeAiLimit.off();
+
+    @org.junit.jupiter.api.AfterEach
+    void noFreeAiLimit() {
+        freeAiLimit = com.scan2play.service.FreeAiLimit.off();
+    }
+
+    /**
+     * The Free plan's AI checks of the evening used (FreeAiLimit): the bar says the requests still come "bez oceny AI" — no offer of
+     * Pro during the party; the settings' badge says 150/150. {@code dashboard-free-ai.html} for the browser tests.
+     */
+    @Test
+    void pastTheFreePlansAiChecks_theBarSaysTheRequestsComeUnchecked() throws IOException {
+        PartySettingsEntity party = party();
+        com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
+        freeAiLimit = new com.scan2play.service.FreeAiLimit(150, plans);
+        for (int i = 0; i < 151; i++) {
+            freeAiLimit.tryAcquire(party);
+        }
+        String html = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans);
+
+        assertWhatTheScriptsNeed(html);
+        assertThat(html).containsPattern("class=\"alert alert-warning small py-2 mb-2\" role=\"status\" data-guest-limit=\"ai-limit\">")
+                .contains("Oceny AI na ten wieczór wykorzystane (150 w planie Free)", "data-limit-near=\"ai\"", "data-limit=\"150\"")
+                .as("no offer of Pro during the party").doesNotContain("data-free-ai-yesterday");
+        write("dashboard-free-ai.html", html);
+    }
+
+    /** The day after the checks ran out: the organiser alone sees what came unchecked, and the way to Pro; the staff nothing. */
+    @Test
+    void theDayAfter_theOrganiserSeesWhatCameUnchecked_andTheWayToPro() {
+        PartySettingsEntity party = party();
+        com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
+        java.util.concurrent.atomic.AtomicReference<java.time.Instant> now =
+                new java.util.concurrent.atomic.AtomicReference<>(java.time.Instant.parse("2026-11-07T20:00:00Z"));
+        freeAiLimit = new com.scan2play.service.FreeAiLimit(150, plans, new java.time.Clock() {
+            @Override public java.time.ZoneId getZone() { return java.time.ZoneOffset.UTC; }
+            @Override public java.time.Clock withZone(java.time.ZoneId zone) { return this; }
+            @Override public java.time.Instant instant() { return now.get(); }
+        });
+        for (int i = 0; i < 212; i++) {
+            freeAiLimit.tryAcquire(party);
+        }
+        now.set(java.time.Instant.parse("2026-11-08T11:00:00Z"));   // the next day, 12:00 in Warsaw
+
+        String html = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans);
+        assertThat(html).contains("data-free-ai-yesterday", "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150",
+                "W Pro do 300 ocen na wieczór", "href=\"/pro\"", ">Zobacz, co daje Pro<");
+        assertThat(html).as("a new evening: no bar").containsPattern("data-guest-limit=\"ai-limit\"[^>]*d-none|d-none[^>]*data-guest-limit=\"ai-limit\"");
+
+        String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
+                mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);
+        assertThat(staffs).as("the staff: not theirs to buy").doesNotContain("data-free-ai-yesterday");
+    }
+
+    /** The gift of Pro (scan2play.plans.gift-until): one quiet line to the organiser — until when, and the pricing page; the staff nothing. */
+    @Test
+    void theGiftOfPro_isOneLineToTheOrganiser() {
+        PartySettingsEntity party = party();
+        com.scan2play.repository.DjPlanRepository rows = mock(com.scan2play.repository.DjPlanRepository.class);
+        when(rows.findById(anyString())).thenReturn(java.util.Optional.empty());
+        com.scan2play.service.PlanService plans = new com.scan2play.service.PlanService(rows,
+                new org.springframework.cache.concurrent.ConcurrentMapCacheManager(com.scan2play.service.PlanService.CACHE), true, "", 0,
+                java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).plusDays(3).toString());
+        String html = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans);
+        assertThat(html).contains("data-plan-gift", "Scan2Play ma teraz plany Free i Pro. Do ", "masz Pro w prezencie, potem plan Free.",
+                ">Zobacz cennik →<");
+        String staffs = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), kasia(),
+                mock(PartyStaffService.class), new MockHttpSession(),
+                new PartyStaffService.Access(party, false, StaffRole.CO_ORGANISER.permissions()), null, plans);
+        assertThat(staffs).doesNotContain("data-plan-gift");
+        assertThat(renderDashboard(party, List.of(), PL)).as("the plans off: nothing").doesNotContain("data-plan-gift");
+    }
+
+    /** Below 80 % of the checks: no line, no bar — and no badge of AI checks while the plans are off. */
+    @Test
+    void belowTheFreePlansAiChecks_nothingShows_andNothingWhilePlansAreOff() {
+        PartySettingsEntity party = party();
+        com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
+        freeAiLimit = new com.scan2play.service.FreeAiLimit(150, plans);
+        freeAiLimit.tryAcquire(party);
+        String html = renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, plans);
+        assertThat(html).containsPattern("data-guest-limit=\"ai-limit\"[^>]*d-none|d-none[^>]*data-guest-limit=\"ai-limit\"")
+                .containsPattern("data-limit-near=\"ai\"[^>]*hidden");
+        freeAiLimit = com.scan2play.service.FreeAiLimit.off();
+        assertThat(renderDashboard(party, List.of(), PL, new GuestRequestLimiter(30, 10, 300, ""), ownerToken(),
+                mock(PartyStaffService.class), new MockHttpSession(), new PartyStaffService.Access(party, true, StaffPermission.all()),
+                null, com.scan2play.service.Plans.off())).doesNotContain("ai-limit", "data-limit-near=\"ai\"");
     }
 
     /** The staff of a party without Pro (V35): nothing of Pro, no row of a Pro feature — the staff cannot buy it (6.7: hidden). */
@@ -824,7 +925,7 @@ class DashboardPageRenderTest {
                 new PartyStaffService.Access(party(), false, StaffRole.CO_ORGANISER.permissions()), null,
                 com.scan2play.service.Plans.enforced());
         assertThat(html).contains("id=\"partyCard\"", ">Klasyczne<")
-                .doesNotContain("s2p-pro", "· Pro", "<optgroup", ">Zabawne<");
+                .doesNotContain("s2p-pro", "· Pro", "<optgroup", ">Zabawne<", "pricingMenuLink");
     }
 
     /** An organiser with Pro, the plans enforced: the panel as today. */
@@ -834,8 +935,8 @@ class DashboardPageRenderTest {
         String html = renderDashboard(party, List.of(numbered(11, 12, "Golec uOrkiestra - Hej sokoły", "hej sokoły", 1, 2)), PL,
                 new GuestRequestLimiter(30, 10, 300, ""), ownerToken(), mock(PartyStaffService.class), new MockHttpSession(),
                 new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced("owner"));
-        assertThat(html).contains(">Zabawne<", "s2p-btn-tip", "s2p-host-wanted")
-                .doesNotContain("s2p-pro", "· Pro", "<optgroup");
+        assertThat(html).contains(">Zabawne<", "s2p-btn-tip", "s2p-host-wanted", "Twój plan: Pro · Cennik")
+                .doesNotContain("s2p-pro", "· Pro<", "<optgroup");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

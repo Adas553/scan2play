@@ -120,12 +120,12 @@
             await t.waitFor(function () { return modal.classList.contains('show') && shows(document.getElementById('helpEmail')); }, 'the window', 3000);
             t.step('the address, the guide and the form', [document.getElementById('helpEmail').textContent.trim(),
                 document.getElementById('helpGuideLink').getAttribute('href'), shows(document.getElementById('feedbackMessage'))],
-                ['scan2playcontact@gmail.com', '/jak-to-dziala', true]);
+                ['contact@scan2play.com.pl', '/jak-to-dziala', true]);
             const copy = document.getElementById('helpEmailCopy');
             copy.click();
             await t.sleep(300);
             t.check('"Kopiuj" copies it, or selects it to copy ("' + copy.textContent.trim() + '")', copy.textContent.trim() === 'Skopiowano'
-                || String(window.getSelection()) === 'scan2playcontact@gmail.com');
+                || String(window.getSelection()) === 'contact@scan2play.com.pl');
             t.step('nothing to tap is lower than 44 px', tooSmall(modal.querySelector('.modal-content')), []);
         }
     });

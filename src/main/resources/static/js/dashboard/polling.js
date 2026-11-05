@@ -28,32 +28,38 @@ function applyGuestLimits(value) {
 }
 
 /**
- * Sets the badges with the use of the server limits from '<busiest network>,<party>': "used/limit", grey, yellow from 80 %,
- * red at the limit — the same rule as the page's template. A missing or malformed header changes nothing.
+ * Sets the badges with the use of the server limits from '<busiest network>,<party>[,<the Free plan's AI checks tonight>]':
+ * "used/limit", grey, yellow from 80 %, red at the limit — the same rule as the page's template. A missing or malformed header
+ * changes nothing.
  */
 function applyGuestLimitsUse(value) {
     if (value === null) return;
     const used = value.split(',').map(function (n) { return parseInt(n, 10); });
-    if (used.length !== 2 || used.some(isNaN)) return;
-    [['network', used[0]], ['party', used[1]]].forEach(function (pair) {
+    if (used.length < 2 || used.length > 3 || used.some(isNaN)) return;
+    const kinds = [['network', used[0]], ['party', used[1]]];
+    if (used.length > 2) kinds.push(['ai', used[2]]);
+    kinds.forEach(function (pair) {
         const badge = document.querySelector('[data-limit-use="' + pair[0] + '"]');
         const limit = badge ? parseInt(badge.dataset.limit, 10) : NaN;
         if (isNaN(limit)) return;
-        badge.textContent = pair[1] + '/' + limit;
+        badge.textContent = Math.min(pair[1], pair[0] === 'ai' ? limit : pair[1]) + '/' + limit;   // the AI: the checks, never past it
         badge.classList.toggle('text-bg-danger', pair[1] >= limit);
         badge.classList.toggle('text-bg-warning', pair[1] < limit && pair[1] * 5 >= limit * 4);
         badge.classList.toggle('text-bg-secondary', pair[1] * 5 < limit * 4);
     });
-    applyLimitsNear(used[0], used[1]);
+    applyLimitsNear(used[0], used[1], used.length > 2 ? used[2] : null);
 }
 
 /**
  * Near a server limit (from 80 %, the template's rule): each warning [data-limit-near] above the queue shows how much of its limit is
- * used — the party's day (data-below: only under the limit, where "wyczerpany" takes over) and one network's ten minutes.
+ * used — the party's day (data-below: only under the limit, where "wyczerpany" takes over), one network's ten minutes and the Free
+ * plan's AI checks of the evening (ai: null from an answer without it — left as it is).
  */
-function applyLimitsNear(network, party) {
+function applyLimitsNear(network, party, ai) {
     document.querySelectorAll('[data-limit-near]').forEach(function (element) {
-        const used = element.dataset.limitNear === 'party' ? party : network;
+        const kind = element.dataset.limitNear;
+        const used = kind === 'party' ? party : kind === 'ai' ? ai : network;
+        if (used === null) return;
         const limit = parseInt(element.dataset.limit, 10);
         if (isNaN(limit) || limit <= 0) return;
         element.textContent = element.dataset.template.replace('{used}', used).replace('{limit}', limit);
