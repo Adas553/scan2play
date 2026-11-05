@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.repository.PartySettingsRepository;
+import com.scan2play.service.Mailer;
 import com.scan2play.service.SiteCounter;
 import com.scan2play.service.SiteCounter.Event;
 import com.scan2play.util.Times;
@@ -20,7 +21,7 @@ import java.util.List;
 
 /**
  * The site's counter (V40, {@link SiteCounter}) for the owner of the site: the last {@value #DAYS} days, one line a day, as text; under
- * it the organisers new in the last {@value #NEW_DAYS} days with their address (V48), to write to them by hand. Only
+ * it the organisers new in the last {@value #NEW_DAYS} days with their address (V48), and how the automatic e-mails go (V64). Only
  * the account named by {@code scan2play.admin-id} (env {@code ADMIN_GOOGLE_ID}) sees it; anyone else — and everyone, while it is
  * unset — gets a 404, as for a page that is not there.
  */
@@ -35,12 +36,14 @@ public class StatsController {
 
     private final SiteCounter siteCounter;
     private final PartySettingsRepository partySettingsRepository;
+    private final Mailer mailer;
     private final String adminId;
 
-    public StatsController(SiteCounter siteCounter, PartySettingsRepository partySettingsRepository,
+    public StatsController(SiteCounter siteCounter, PartySettingsRepository partySettingsRepository, Mailer mailer,
                            @Value("${scan2play.admin-id:}") String adminId) {
         this.siteCounter = siteCounter;
         this.partySettingsRepository = partySettingsRepository;
+        this.mailer = mailer;
         this.adminId = adminId == null ? "" : adminId.strip();
     }
 
@@ -50,7 +53,25 @@ public class StatsController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         Instant since = Instant.now().minus(Duration.ofDays(NEW_DAYS));
-        return render(siteCounter.lastDays(DAYS)) + "\n" + renderNew(partySettingsRepository.newOrganisers(since, Limit.of(NEW_MAX)));
+        return render(siteCounter.lastDays(DAYS)) + "\n" + renderNew(partySettingsRepository.newOrganisers(since, Limit.of(NEW_MAX)))
+                + "\n" + renderEmails(mailer.isOn(), mailer.status());
+    }
+
+    /**
+     * The automatic e-mails (V64): whether the server has Brevo's key, the last e-mail Brevo took and the last one it did not, with why
+     * — a key unused for 90 days expires, and a refused one stops every welcome until it is changed.
+     */
+    static String renderEmails(boolean on, Mailer.Status status) {
+        StringBuilder text = new StringBuilder("E-mails (Brevo; the welcome and the morning summary)\n\n");
+        text.append("key:          ").append(on ? "set" : "NOT SET (BREVO_API_KEY): nothing is sent").append('\n');
+        text.append("last sent:    ").append(status.lastSent() == null ? "never" : Times.display(status.lastSent())).append('\n');
+        if (status.lastFailed() != null && (status.lastSent() == null || status.lastFailed().isAfter(status.lastSent()))) {
+            text.append("LAST FAILED:  ").append(Times.display(status.lastFailed())).append(" — ").append(status.lastFailure())
+                    .append('\n');
+        } else if (status.lastFailed() != null) {
+            text.append("last failed:  ").append(Times.display(status.lastFailed())).append(" (sent since)\n");
+        }
+        return text.toString();
     }
 
     /** The new organisers, one line each: when the account came (Polish time), the party's code, the address, the name. */

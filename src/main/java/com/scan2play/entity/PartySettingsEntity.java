@@ -198,6 +198,27 @@ public class PartySettingsEntity {
     private Instant welcomeDismissedAt;
 
     /**
+     * When the welcome e-mail went (V64), null = not yet; the accounts of before count as welcomed. Written only by
+     * {@code PartySettingsRepository}'s claim and its release — a save of the settings never puts an old value back.
+     */
+    @Column(insertable = false, updatable = false)
+    private Instant welcomeSentAt;
+
+    /** The panel's language the organiser last opened it in (V64, "pl" / "en"): the e-mails' language; null = Polish. */
+    @Column(length = 2)
+    private String emailLanguage;
+
+    /** "Poranne podsumowanie" (V64): the morning e-mail of a busy evening — Pro's alone, on until the organiser switches it off. */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean morningSummary = true;
+
+    /** The secret of "Nie wysyłaj mi tego" in the e-mails (V64, made by the database for every row). */
+    @Column(insertable = false, updatable = false, length = 32)
+    @ToString.Exclude
+    private String emailToken;
+
+    /**
      * When the party opens by itself (V55), null = not planned; {@link #nextCloseAt} when it closes. Written only through
      * {@code PartySettingsCommandService} — the DJ's "Godziny imprezy", a manual open or close ({@code PartySchedule#settle}) and the
      * job that applies a moment that has come; never one that would change nothing.

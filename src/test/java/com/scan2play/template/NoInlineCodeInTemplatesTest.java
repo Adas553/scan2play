@@ -17,7 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Every template — the pages and the fragments, also those no browser test opens (the landing page, the legal pages, the error
  * pages) — works under the Content-Security-Policy of {@code SecurityConfig} (review 5.1): no inline script, no {@code on…=}
  * handler, no inline style ({@code style="…"}, {@code th:style}, a {@code <style>} element). The browser tests catch the same on
- * the pages they open; this catches it on every page, without a browser.
+ * the pages they open; this catches it on every page, without a browser. Not the e-mails' pages ({@code templates/email/}, V64): a
+ * mail program reads no stylesheet and no page of the site is one of them — their styles must be inline, and they have no script.
  */
 class NoInlineCodeInTemplatesTest {
 
@@ -34,6 +35,11 @@ class NoInlineCodeInTemplatesTest {
 
         List<String> found = new ArrayList<>();
         for (Resource template : templates) {
+            String address = template.getURL().toString();
+            if (address.contains("/templates/email/")) {
+                assertThat(template.getContentAsString(StandardCharsets.UTF_8)).as("an e-mail has no script").doesNotContain("<script");
+                continue;
+            }
             String html = COMMENT.matcher(template.getContentAsString(StandardCharsets.UTF_8)).replaceAll("");
             for (Pattern pattern : List.of(INLINE_SCRIPT, HANDLER, STYLE)) {
                 Matcher m = pattern.matcher(html);

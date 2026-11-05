@@ -12,7 +12,10 @@ import com.scan2play.service.Plans;
 import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.service.StaffInvitationService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpSession;
@@ -24,6 +27,7 @@ import org.springframework.ui.ExtendedModelMap;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -44,15 +48,27 @@ import static org.mockito.Mockito.when;
 class DjDashboardControllerOwnerContactTest {
 
     private final DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+    private final com.scan2play.service.WelcomeEmailService welcome = mock(com.scan2play.service.WelcomeEmailService.class);
     private final PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
     private final DjDashboardController controller = new DjDashboardController(mock(DjService.class), commands,
             mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), mock(GuestRequestLimiter.class),
             mock(PushNotificationService.class), mock(PartyStaffService.class), mock(StaffInvitationService.class), Plans.off(),
-            new AiHealthMonitor(), com.scan2play.service.PartySchedules.texts());
+            new AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), welcome);
 
     DjDashboardControllerOwnerContactTest() {
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080");
         controller.init();
+    }
+
+    /** The panel in Polish (the request's language, as WebConfig resolves it): the e-mails' language kept with the address (V64). */
+    @BeforeEach
+    void polishPanel() {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag("pl"));
+    }
+
+    @AfterEach
+    void noLanguage() {
+        LocaleContextHolder.resetLocaleContext();
     }
 
     private static OAuth2AuthenticationToken ola(String email, Object verified) {
@@ -110,9 +126,36 @@ class DjDashboardControllerOwnerContactTest {
 
     @Test
     void nothingChanged_writesNothing() {
-        openPanel(party().ownerEmail("ola@gmail.com").ownerName("Ola Kowalska").build(), true, ola("ola@gmail.com", true));
+        openPanel(party().ownerEmail("ola@gmail.com").ownerName("Ola Kowalska").emailLanguage("pl").build(), true, ola("ola@gmail.com", true));
 
         verify(commands, never()).updateSettings(any(), any());
+    }
+
+    /** The automatic e-mails go in the panel's language (V64): opened in English, the next e-mail is English. */
+    @Test
+    void thePanelsLanguage_isKeptForTheEmails() {
+        PartySettingsEntity before = party().ownerEmail("ola@gmail.com").ownerName("Ola Kowalska").emailLanguage("pl").build();
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
+
+        openPanel(before, true, ola("ola@gmail.com", true));
+
+        assertThat(written(before).getEmailLanguage()).isEqualTo("en");
+    }
+
+    /** The welcome e-mail (V64) is asked for by the organiser's panel with an address — never by the staff's, never without one. */
+    @Test
+    void theOrganisersPanel_asksForTheWelcome_theStaffsDoesNot() {
+        PartySettingsEntity party = party().ownerEmail("ola@gmail.com").ownerName("Ola Kowalska").emailLanguage("pl").build();
+        openPanel(party, true, ola("ola@gmail.com", true));
+        verify(welcome).sendLater(party);
+
+        PartySettingsEntity unverified = party().build();
+        openPanel(unverified, true, ola("ola@gmail.com", false));
+        verify(welcome, never()).sendLater(unverified);
+
+        PartySettingsEntity theirs = party().build();
+        openPanel(theirs, false, ola("helper@gmail.com", true));
+        verify(welcome, never()).sendLater(theirs);
     }
 
     /** The organiser changed the address of their Google account: the next panel keeps the new one. */

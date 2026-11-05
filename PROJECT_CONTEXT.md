@@ -100,10 +100,13 @@ stored as `party_staff.permissions`; a link of a version before V33 gives "Obsł
 `ownerName` (V32, ≤ 100: the organiser's name from their Google account, written when they open the panel and it changed — the
 staff and the invitation name a party by "Kto gra", else by it, else by the code: `PartyStaffService.nameOf`),
 `ownerEmail` (V48, ≤ 320: the organiser's address from their Google account — only one Google verified, else null —, kept beside
-`ownerName` by the same write when they open their panel, never the staff's: only to write to them about the account and help, by hand
-from `scan2playcontact@gmail.com` — the privacy policy says so; gone with the row), `createdAt` (V48, the database's `now()`,
+`ownerName` by the same write when they open their panel, never the staff's: only to write to them about the account and help — the
+automatic welcome (V64, through Brevo) and our replies; the privacy policy says so; gone with the row), `createdAt` (V48, the database's `now()`,
 `insertable = false`: when the party was made; null for the parties of before), `welcomeDismissedAt` (V48: when the organiser closed the
-panel's welcome card, null = shown; the parties of before closed by the migration),
+panel's welcome card, null = shown; the parties of before closed by the migration), `welcomeSentAt` (V64, `insertable` /
+`updatable = false`: when the welcome e-mail went — written only by the claim and its release; the parties of before count as welcomed),
+`emailLanguage` (V64: "pl" / "en", the panel's language kept with the address — the e-mails' language), `morningSummary` (V64: the switch
+"Poranne podsumowanie", on by default), `emailToken` (V64, made by the database for every row: the secret of "Nie wysyłaj mi tego"),
 `nextOpenAt` / `nextCloseAt` (V55, timestamptz, null = none: when the party opens / closes by itself — "Godziny imprezy", 5.1; never one
 that would change nothing; a weekly plan, later, would write its next moment into them after each one),
 `kioskToken` (V56, ≤ 32, UNIQUE, null = no kiosk: the secret of the venue's kiosk link `/k/{token}` — 128 random bits, as the hosts'
@@ -256,7 +259,8 @@ one. Only the DJ sees them (the queue), never the other guests; plan Free (the o
 
 **`EveningSummaryEntity` → `evening_summary`** (V61) — one evening of a party the DJ named or shared: `partyCode` (FK, `ON DELETE /
 UPDATE CASCADE`), `evening` (a date; UNIQUE with the party), `title` (≤ 60, the DJ's), `shareToken` (≤ 32, UNIQUE, the hosts' link
-`/s/{token}`) and `shareExpiresAt`, `updatedAt`; written by upserts (`EveningSummaryRepository.saveTitle`, `saveShare`). **`evening_song`**
+`/s/{token}`) and `shareExpiresAt`, `updatedAt`, `morningSentAt` (V64: when the morning e-mail of the evening went — a row is made for
+it when the DJ never named the evening); written by upserts (`EveningSummaryRepository.saveTitle`, `saveShare`, `claimMorning`). **`evening_song`**
 (V61, no entity — native SQL only): what "Podsumowanie wieczoru" keeps of a deleted request — `song_request_id` (PK), `party_code` (FK,
 cascades as above), `song_name` (null for one the AI rejected), `requested_at`, `played_at`, `status` (PLAYED / WAITING / SKIPPED / CLEARED
 / REJECTED_BY_AI), `votes`, `tips`, `dedications`, `added_by_dj`, `via_kiosk`; indexes `(party_code, requested_at)` and `(requested_at)`
@@ -599,7 +603,23 @@ once, "Napisz do nas" once "Pomoc i kontakt" closes; either way `POST /dj/dashbo
 the DJ logs in on a phone and a laptop (`js/dashboard/welcome.js`). While it shows, the empty queue's "Pierwszy raz? Zobacz, jak to
 działa" and "Panel jako aplikacja" wait (`app.css`, `:has`). On a phone up to 400 px the heading stays one line (checked with the CI
 runner's fonts too), "Napisz do nas" the card's width and the guide under it. Browser scenarios `welcome-card-*`. The organisers new in
-the last 7 days with their address are on `/dj/stats` for the site's owner; the message they get, by hand: `docs/welcome-email.md`.
+the last 7 days with their address are on `/dj/stats` for the site's owner.
+
+**The automatic e-mails** (V64, Section 7.4 Brevo): **the welcome** — once an account (`welcome_sent_at`), the text of
+`docs/welcome-email.md` in the panel's language (`email_language`, kept with the address when the organiser opens the panel), no
+marketing. The organiser's panel asks for it (`DjDashboardController.keepOwner` → `WelcomeEmailService.sendLater`): after the address
+is committed, on the e-mails' own thread (`Mailer.later`, one thread, a queue of 100) — the page never waits for Brevo and a failed send
+never fails it. "Once" is a claim (`UPDATE … WHERE welcome_sent_at IS NULL`): of two logins at once, or a login and the job, one sends; a
+failed send gives the claim back, and the nightly job (4:35) sends the welcomes of the accounts of the last 7 days that failed. The
+accounts of before V64 count as welcomed. **The morning summary** — Pro (`PlanFeature.SUMMARY`), the organiser's switch "Poranne
+podsumowanie" on (`morning_summary`, its card in "Ustawienia imprezy" before "Obsługa", the organiser's alone, answered in place — browser scenario
+`morning-summary-switch`), an address, and an evening of **at least 5 guests' requests** (the DJ's own additions not counted, the kept
+ones of `evening_song` counted): at **10:00 Polish time** the next day (`MorningSummaryEmailService`, the run at 12:00 sends what failed
+at 10), once an evening (`evening_summary.morning_sent_at`, one upsert claim). The evening's title (or "Podsumowanie wieczoru") and day,
+three numbers (requests, played, the guests' votes), the top 3, a button to `/dj/summary?evening=…&party=…`. Every e-mail has **"Nie
+wysyłaj mi tego"**: `GET /email/stop/{email_token}` switches the morning summary off in one click without a login (a mail filter that
+opens links switches it off too — the page says where to switch it on again), and the mail program's own "Unsubscribe"
+(`List-Unsubscribe` + `List-Unsubscribe-Post`, RFC 8058) posts to the same address. "Once": `AutomaticEmailsIT`.
 
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
@@ -1064,7 +1084,8 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `DjSummaryController` | the evening summary page and its CSV (`/dj/summary`, `/dj/summary/csv`), the evening's title and hosts' link (`/dj/summary/title`, `/dj/summary/share`, `/dj/summary/share/off`) |
 | `PartyLogoController` | the DJ's logo (V45, Pro, the organiser alone): `POST /dj/logo` — the picture as the request's body (`js/dashboard/logo.js`), ≤ 2 MB, made our own PNG by `LogoImage`, answered with one sentence (200 saved, 413 too large, 422 not a PNG / JPEG, too many pixels, unreadable, 503 busy); `POST /dj/logo/delete` (no plan needed); `GET /p/{code}/logo.png` (public, ETag, an hour's cache) |
 | `DjLibraryController` | the DJ's library (V41, Pro, the organiser alone): `POST /dj/library` — the file as the request's body (`application/octet-stream`, `js/dashboard/library.js`; not a form's upload: Spring Security reads a form's body for the CSRF token before anything checks the login, so a large upload would be anyone's to send), read up to 64 MB, one file at a time on the server, answered with one sentence (200 saved, 413 too large, 422 not a library / no song / too many / a collection too large for one playlist, 503 another file being read); `POST /dj/library/delete` (no plan needed); `POST /dj/library/hints` (V58, "Podpowiedzi gości" — `on`; switched on only with Pro) |
-| `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days, and under it the organisers new in the last 7 days with their address (V48, `PartySettingsRepository.newOrganisers`, at most 50) — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
+| `StatsController` | `/dj/stats`: the site's counter (V40) as text, the last 30 days, and under it the organisers new in the last 7 days with their address (V48, `PartySettingsRepository.newOrganisers`, at most 50) and the e-mails' state (V64, `Mailer.status`) — only for the account `ADMIN_GOOGLE_ID` names; anyone else, and everyone while it is unset, a 404 |
+| `EmailStopController` | "Nie wysyłaj mi tego" of the e-mails (V64): `GET` / `POST /email/stop/{token}` — the morning summary off by the secret alone, no login (public, CSRF-free for the mail program's one-click POST, `noindex`); an unknown secret a 404 |
 | `DemoController` | the demo (2026-10-24, live since #137; Section 5.5): `/demo` — the panel of the demo party of the visitor's language (`DemoParty.codeFor`: Polish `DEMO`, any other English `DEME`), the real `dashboard.html` with `demo`, to anyone without a login, only to look at (`js/dashboard/demo.js` stops every form and link to `/dj/…` and says "start your own party"); `/demo/updates` and `/demo/history` — its poll and History tab, as the panel's (`partyCode` a demo's, else 404). Each visitor sees the examples and their own requests (their session's), never another visitor's |
 | `DjSessionHelper` | which party a request works on — the one the page names (`partyCode` / `?party=`), the session only the default panel (V32) — and what the person may do there: **`require(partyCode, StaffPermission)`**, **`requireOwner`**, `access`, `panel` (none: "no-panel"; a DJ's party made on the first login only — tabs that make it at once look again, `FirstLoginIT`), the panel's note — IDOR |
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍; `GET /p/{code}/library/has` (V58: which of the guest's suggestions the DJ has, JSON, no session) |
@@ -1111,6 +1132,10 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `LibraryHintService` | the guests' suggestions marked by the DJ's library (V58): `on` — an open party, the switch, a library, Pro —, `have` — "✓" only, at most 10 songs, one lookup (`DjLibraryService.marks`) |
 | `DjLibraryParser` / `DjLibraryService` | the DJ's library (V41 – V43, V57): the file read into `LibraryKey`s, each with its `Track` as the file writes it — artist, title, tempo, key, genre, year (a rekordbox collection whole or one playlist of it, an M3U / M3U8 playlist with its swapped keys; a binary file, another XML, a tree too deep or a collection too large for one playlist refused) / the keys and their tracks saved whole, under the party row's lock, `Info` cached (`djLibrary`), and the marks of a queue's or an evening's songs in one lookup (`marks`; `matches` with the tempo and the key of the track found, `DjLibraryIT`); `DjService.libraryMarksOf` gives the queue's marks and tempos, `EveningSummaryService.libraryGaps` the summary's |
 | `PlanService` | the plans (V35, Section 4.1 "Plans"): the organiser's `Plan` (the switch `scan2play.plans.enforce`, `pro-owners`, the row of `dj_plan`, cached), `require(party, PlanFeature)` (a 403), `asPlanned` (the party as its plan lets it work: for the guests, the AI, the queue's marks, the print — never saved), `view` (what the pages show: `plan.allows(…)`, `plan.pro(…)`), the staff's places, the trial |
+
+| `EmailSender` / `BrevoEmailSender` / `Mailer` | the automatic e-mails (V64, Section 7.4): one e-mail through Brevo, its result (`SENT`, `KEY_REFUSED`, `FAILED`, `OFF`) / the e-mails' language, their pages (`templates/email/*_pl|en.html`) and text part, the send that never throws, `email_status`, the e-mails' own thread |
+| `WelcomeEmailService` | the welcome e-mail, once an account: asked for by the organiser's panel, sent after the commit off the request's thread, the claim given back on a failure, the nightly retry (Section 5.1) |
+| `MorningSummaryEmailService` | the morning e-mail of a busy evening (Pro, ≥ 5 guests' requests, the switch on), at 10:00 (and 12:00 for the failed), once an evening (Section 5.1) |
 
 ### 6.3 Configuration
 
@@ -1315,6 +1340,17 @@ The browsers' push services (Google FCM, Apple, Mozilla, Microsoft WNS) — RFC 
 encrypted for the device; the push service delivers it but cannot read it. 404 / 410 → the device is removed; other errors are
 logged. No keys → off (`PushNotificationService.isEnabled`), keys that do not parse → off with an ERROR line, the app starts anyway.
 
+### 7.4 Brevo (the automatic e-mails, V64)
+
+Brevo's transactional API v3 (`POST https://api.brevo.com/v3/smtp/email`) over the JDK's `HttpClient` (connect 5 s, send 15 s),
+behind `EmailSender` (`BrevoEmailSender`; a fake in the tests). From `Scan2Play <kontakt@scan2play.com.pl>` — the domain authenticated
+in Brevo at Cloudflare (DKIM `brevo1/2._domainkey`, `_dmarc` `p=none`, `brevo-code`; every CNAME DNS only) — with **Reply-To**
+`scan2playcontact@gmail.com` (Brevo refuses a free address as the sender). The key: **`BREVO_API_KEY`** (Restricted, Transactional email
+= All; Brevo's "Authorised IPs" off — Railway has no fixed IP). It expires on 4.11.2027 **or after 90 days unused**: a 401 / 403 is an
+ERROR line "E-MAIL KEY REFUSED …" and `KEY_REFUSED`; `/dj/stats` shows whether the key is set, the last e-mail Brevo took and a later
+failure in capitals (`email_status`, one row, `Mailer`). Without the key nothing is sent (a WARN at start). A send never throws to its
+caller; anything but 2xx is a failure the jobs try again.
+
 ### 7.2a (Spotify — removed 2026-10-04)
 
 ### 7.3 YouTube — no API
@@ -1384,7 +1420,8 @@ below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH
 `localhost` or a public HTTPS address (Google refuses a LAN IP as a redirect URI); the guest side works through the LAN IP.
 **The plans** (V35, Section 4.1 "Plans"): `PLANS_ENFORCE` (default `false`: everything for everyone — not set on Railway),
 `SCAN2PLAY_PLANS_PRO_OWNERS` (Google subjects, comma-separated: Pro for ever — the owner's own `party_settings.owner_id`, testers),
-`PLANS_TRIAL_DAYS` (default 0). **`ADMIN_GOOGLE_ID`** (`scan2play.admin-id`): the owner's Google subject — the account that sees `/dj/stats` (V40) and whose devices get the AI alarm (Section 7.1); not a secret; unset, the page is a 404. Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
+`PLANS_TRIAL_DAYS` (default 0). **`BREVO_API_KEY`** (V64, Section 7.4): the automatic e-mails' key — a secret, never in the repo; unset,
+no e-mail is sent. **`ADMIN_GOOGLE_ID`** (`scan2play.admin-id`): the owner's Google subject — the account that sees `/dj/stats` (V40) and whose devices get the AI alarm (Section 7.1); not a secret; unset, the page is a 404. Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
 **`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (staged 2026-10-13, live once the owner
 deploys it): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
 on average, 2 GB at the top) — the live data is ~55 MB. Measured on a copy (20 parties × 50 guests polling every 3 s, 1 500
@@ -1482,6 +1519,7 @@ schema behind Flyway's back.
 | V58 | `party_settings.library_hints` boolean NOT NULL DEFAULT true: the guests' song suggestions the DJ has first, "✓ DJ ma" — "Podpowiedzi gości" in the library's card (`MigrationIT`, `LibraryHintService`) |
 | V59 | `party_settings.guest_theme` varchar(10) NOT NULL DEFAULT 'CLASSIC' (check CLASSIC / CHRISTMAS / SCARY / CONFETTI / WEDDING): the look of the guests' pages, "Motyw dla gości" (`MigrationIT`, `GuestThemeTest` — the check is the enum) |
 | V63 | table `evening_refusal` (`party_code` FK → `party_settings` ON DELETE / UPDATE CASCADE, `evening` date, `reason` HOSTS_BLOCKED / SKIPPED_BY_DJ / NOT_A_SONG with `evening_refusal_reason_check`, `count`; PK (party_code, evening, reason), index `idx_evening_refusal_evening` for the purge): the requests refused before the AI, counted for the evening summary, 13 months (`EveningSummaryIT`) |
+| V64 | the automatic e-mails: `party_settings.welcome_sent_at` timestamptz (the parties of before: the migration's time — they count as welcomed), `email_language` varchar(2), `morning_summary` boolean NOT NULL DEFAULT true, `email_token` varchar(32) NOT NULL DEFAULT 32 hex of `gen_random_uuid()` (unique index — every row, old and new, gets its own), partial index `idx_party_settings_welcome_due` (created_at) WHERE welcome_sent_at IS NULL; `evening_summary.morning_sent_at` timestamptz; index `idx_song_requests_requested_at` (the morning job's day of every party); table `email_status` (one row, id = 1: `last_sent_at`, `last_failed_at`, `last_failure`) (`MigrationIT`, `AutomaticEmailsIT`) |
 | V62 | `song_requests.reject_reason` and `evening_song.reject_reason` varchar(16), null or DUPLICATE / OFF_VIBE (checks `song_requests_reject_reason_check`, `evening_song_reject_reason_check`): why the AI rejected a request, for the evening summary (`EveningSummaryIT`) |
 | V61 | tables `evening_song` (what the evening summary keeps of a deleted request: `song_request_id` PK, `party_code` FK → `party_settings` ON DELETE / UPDATE CASCADE, `song_name` nullable, `requested_at` NOT NULL, `played_at`, `status` with a check of the five, `votes`, `tips`, `dedications`, `added_by_dj`, `via_kiosk`; indexes `idx_evening_song_party_time`, `idx_evening_song_time`) and `evening_summary` (`id` bigserial PK, `party_code` FK as above, `evening` date, `title` varchar(60), `share_token` varchar(32) with `uk_evening_summary_share_token`, `share_expires_at`, `updated_at`; `uk_evening_summary_party_evening`) — the summary for 13 months, its title and the hosts' link (`EveningSummaryIT`) |
 | V60 | data: `dj_library_track.title_key` with one word's two spellings made one, as `LibraryKey.SPELLINGS` makes the new keys ("ing" → "in", "number" → "no", on the key without spaces); two tracks of a party whose keys became one merged, the smaller key of before kept (`LibraryKeySpellingsMigrationIT`) |
@@ -1617,7 +1655,8 @@ GuestQueueService          → DjService
 | GET | `/dj/history-view`, `/dj/history-view/fragment` | `limit` (50..300), `filter` |
 | GET | `/dj/qr-print` | `layout` = poster (the heading, the code, the address and the party's code — no numbered steps: the heading says what to do) / cards / tent (V50; the cards and the tents a table each, numbered, when the party has tables); as the DJ set it (V46: the heading, the line, the language — by default the panel's: Polish prints Polish and English, any other English —, the parts shown); the editor for whom has VIBE |
 | POST | `/dj/qr-print/settings` | `partyCode` and the form as one record (`DjPartySettingsController.PosterForm`, `applyTo`): `heading`, `line` (one line each, cut to 40 / 60; empty = ours / none), `language` (AUTO / BOTH / PL / EN, anything else AUTO), `theme` (CLASSIC / ELEGANT / CLUB / PASTEL / RUSTIC / GALA / NEON / CONFETTI, anything else CLASSIC, V47, V52), `accent` ("#rrggbb", anything else none), `font` (THEME / SANS / SERIF / SCRIPT, anything else THEME, V51), `size` (SMALL / NORMAL / LARGE, anything else NORMAL, V54), `paper` ("#rrggbb", anything else none, V53), `tables` (V50: 1 … 50, more is 50, anything else none), `showLogo`, `showLinks`, `showTip`, `showAddress` (a box not sent is off): the QR print as the DJ sets it (V46, VIBE, any plan) — 204 |
-| GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days, and the organisers new in the last 7 days with their address (V48); only the account `ADMIN_GOOGLE_ID` names, else 404 |
+| GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days, the organisers new in the last 7 days with their address (V48), and the e-mails' state (V64: the key set, the last send, a later failure); only the account `ADMIN_GOOGLE_ID` names, else 404 |
+| POST | `/dj/dashboard/morning-summary` | "Poranne podsumowanie" (V64): `on` (none = off); the organiser's alone; with `X-Requested-With: fetch` the card alone, else back to the settings |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s) |
 | POST | `/dj/logo` | `partyCode`; the body is the picture (`application/octet-stream`): the DJ's logo (V45, Pro, the organiser) — text: 200 saved, 413 over 2 MB, 422 not a PNG / JPEG, over 4096 px a side or 16 megapixels, unreadable; 503 two others being decoded |

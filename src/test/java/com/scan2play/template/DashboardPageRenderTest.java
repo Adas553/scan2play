@@ -137,7 +137,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -691,7 +691,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
@@ -760,7 +760,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class),
-                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON));
+                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         assertThat(controller.historyView(50, null, PARTY, model, ownerToken(), new MockHttpSession())).isEqualTo("history");

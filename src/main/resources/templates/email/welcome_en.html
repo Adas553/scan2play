@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<!--/* The welcome e-mail (V64, WelcomeEmailService), English: the text of docs/welcome-email.md. Mail programs read little CSS —
+     inline styles only, one column, no images. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head><meta charset="UTF-8"><title>Scan2Play</title></head>
+<body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;">
+<div style="max-width:560px;">
+<p th:text="${firstName != null} ? 'Hi ' + ${firstName} + ',' : 'Hi!'">Hi Ola,</p>
+<p>thanks for creating a Scan2Play account! I'm writing personally, because every DJ who starts with us matters to us.</p>
+<p>If anything is unclear, something is missing, or you'd like a hand with your first party — just reply to this e-mail. I answer personally.</p>
+<p>A good place to start: <a th:href="${siteUrl} + '/how-it-works'" href="https://www.scan2play.com.pl/how-it-works" style="color:#0a7f99;">www.scan2play.com.pl/how-it-works</a></p>
+<p>Have a great party!<br>Scan2Play</p>
+<p style="color:#666666;font-size:13px;">P.S. We keep your address only to write to you about your account — no ads, no newsletter.<th:block th:if="${stopUrl != null}">
+    <br><a th:href="${stopUrl}" href="#" style="color:#666666;">Don't send me this</a></th:block></p>
+</div>
+</body>
+</html>

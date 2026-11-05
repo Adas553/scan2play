@@ -1,13 +1,15 @@
-# A welcome e-mail to a new organiser — sent by hand
+# The welcome e-mail to a new organiser
 
-Who: the organisers new in the last 7 days, with their address, on `/dj/stats` (the site's owner only: `ADMIN_GOOGLE_ID`). From:
-`scan2playcontact@gmail.com`, one person a message (never a list in "To" or "Cc"). The language: the app does not know the DJ's —
-pick it by the name and the address; when unsure, Polish with the English under it.
+**Sent automatically since V64** (`WelcomeEmailService`, the pages `src/main/resources/templates/email/welcome_pl.html` and
+`welcome_en.html` — change the text there and here together): once an account, after the organiser first opens their panel with a
+Google-verified address, in the panel's language, from `Scan2Play <kontakt@scan2play.com.pl>` through Brevo, replies to
+`scan2playcontact@gmail.com`. The accounts of before V64 got it by hand or not at all — they are never sent it. `/dj/stats` lists the
+organisers new in the last 7 days and whether the e-mails go.
 
 What the privacy policy promises, so the message keeps it: the address is used to write about the account and help — no advertising,
-no newsletter. Not before their first login, never twice unasked; a reply is a conversation, not a campaign.
-
-Fill in `{imię}` / `{name}` (the name from `/dj/stats`; none — "Cześć!" / "Hi!") and the signature.
+no newsletter. Never twice unasked; a reply is a conversation, not a campaign. The automatic one has no signature line of a person
+(`{podpis}` below): it ends "Scan2Play". `{imię}` / `{name}` is the first word of the name from Google; none — "Cześć!" / "Hi!".
+Under it, in small print, "Nie wysyłaj mi tego" / "Don't send me this" (the one-click switch of the morning summary, V64).
 
 ## Polski
 
