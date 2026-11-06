@@ -11,6 +11,21 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Start here
 
+- **2026-11-06 — the full review** (`docs/history/review-2026-11-06.md`; `main` = `1d81386`, #244): nothing critical. **PR #245**
+  (`claude/adoring-edison-dr87gy` → `dev`, waiting for the owner's review), three commits: (1) the review's fixes — the logo's upload
+  reads its body only once it has its turn (a burst of uploads could fill the 512 MB heap); the guests' limit per address 30 → 60 a 10
+  minutes (the owner: a room on one Wi-Fi); "Ostatnie wieczory" whole on a phone; the pages "Dla kogo"' ways back 44 px; no "👍 0" on
+  the TV; stack traces cut to 30 lines a cause (Railway drops lines past 500 a second); `PROJECT_CONTEXT.md`'s numbers; (2) **Spring Boot
+  4.1.2** (4.0's free updates end 2026-12-31; 4.2 is at RC2); (3) **`OriginGuardFilter`** — Railway's own address answered past
+  Cloudflare (the owner's `curl --resolve`, a 200 from `railway-hikari`).
+- **After #245 reaches `main`, the owner switches the guard on** (off until then, nothing changes by the merge alone), in this order
+  (`PROJECT_CONTEXT.md` Section 10): the Cloudflare Transform Rule `X-Scan2Play-Origin` = a long random value, then Railway's
+  `ORIGIN_SECRET` = the same; check the start's "Origin guard on", the site 200, the `--resolve` curl 403. The variable first = every page
+  403 (back: delete it).
+- **The database's copy:** the owner took one on 2026-11-06 (`scan2play-2026-11-06.dump`, 250 KB, on their computer); the Postgres TCP
+  proxy is added only for a copy and removed right after it (`docs/database-backup.md`). Next: before #245 reaches `main`, and weekly.
+- Open from the review: the hypotheses H2 (a login started twice shows "Błąd logowania"), H3 (a slow library upload holds its one
+  turn), H4 (the limiter's address windows bounded per party, not overall).
 - **2026-11-05 — the state.** `main` = `09667ea` (the release merge #236), deployed 2026-11-05 13:13 UTC, SUCCESS. Checked (Railway,
   read only): PostgreSQL 18.6, Flyway "Successfully validated 65 migrations", "E-mails on (Brevo), from contact@scan2play.com.pl",
   started in 9.2 s. Every item of "Next" below that said "waiting for a review / a release" is on production: V48 and V49 with #192
@@ -307,5 +322,7 @@ F. **A light theme — only when someone asks** (the owner, 2026-10-28: not now)
   disabled OAuth secret `****IgiS` — delete it.
 - Search Console: request the indexing of `/dj-weselny`, `/kluby`, `/puby`.
 - `SCAN2PLAY_GUEST_URL` in IntelliJ follows the local network's address — change it when the network changes.
-- `server.forward-headers-strategy=FRAMEWORK` trusts `X-Forwarded-*`: safe while Railway's own address cannot be reached past
-  Cloudflare — keep it so.
+- **Railway's own address can be reached past Cloudflare** (the owner's `curl --resolve`, 2026-11-06: a 200 from `railway-hikari`):
+  there `X-Forwarded-*` (`server.forward-headers-strategy=FRAMEWORK`) and `CF-Connecting-IP` are the client's to choose.
+  `OriginGuardFilter` closes it once switched on — after the release: the Cloudflare Transform Rule first, then `ORIGIN_SECRET` on
+  Railway (`PROJECT_CONTEXT.md` Section 10, the order matters).

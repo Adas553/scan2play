@@ -260,6 +260,10 @@ body::before {
     .s2p-panel-bar > summary { min-height: 44px; }
     .s2p-staff-perms .form-check { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
     .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
+    /* the pages "Dla kogo": the breadcrumbs' links and "← Wróć na stronę główną" */
+    .s2p-breadcrumb a,
+    #forWhomBack { display: inline-flex; align-items: center; min-height: 44px; }
+    .s2p-breadcrumb .breadcrumb-item { display: flex; align-items: center; }   /* the "/" beside the taller links, not above */
     /* the "×" of a window ("Pomoc i kontakt") was 32 px: its icon stays 1em, the target grows around it */
     .btn-close { width: 44px; height: 44px; padding: 0; }
 }

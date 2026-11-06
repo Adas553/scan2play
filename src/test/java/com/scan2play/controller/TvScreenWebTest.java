@@ -132,6 +132,8 @@ class TvScreenWebTest {
                 "Zeskanuj i poproś o piosenkę", "Scan to request a song", "Najczęściej wybierane", "Most wanted",
                 "id=\"tvList\"", "data-url=\"/p/ABC12/tv/list?lang=pl\"", "/js/tv.js\"", "/css/tv.css\"");
         assertThat(html.split("class=\"tv-song\"", -1)).as("ten songs").hasSize(11);
+        assertThat(html.split("class=\"tv-votes\"", -1)).as("a count beside the nine with votes, none beside the song with 0")
+                .hasSize(10);
         assertThat(html).contains("Zenek Martyniuk - Przez twe oczy zielone", ">9<", "Wilki - Baśka")
                 .doesNotContain("Lady Pank");
         assertThat(html).as("what the guests see under their form, no more: no words, no dedications, no numbers")

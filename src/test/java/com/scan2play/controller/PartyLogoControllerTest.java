@@ -23,10 +23,24 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import jakarta.servlet.ServletInputStream;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.DelegatingServletInputStream;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -63,6 +77,10 @@ class PartyLogoControllerTest {
     }
 
     private MockMvc mvc(PartySettingsEntity pub, PlanService plans) {
+        return MockMvcBuilders.standaloneSetup(controller(pub, plans)).build();
+    }
+
+    private PartyLogoController controller(PartySettingsEntity pub, PlanService plans) {
         PartyStaffService staff = mock(PartyStaffService.class);
         when(staff.partiesOf(anyString())).thenReturn(List.of(pub));
         when(staff.accessOf(pub, ORGANISER)).thenReturn(Optional.of(new PartyStaffService.Access(pub, true, StaffPermission.all())));
@@ -75,7 +93,7 @@ class PartyLogoControllerTest {
         DjSessionHelper helper = new DjSessionHelper(query, mock(PartySettingsCommandService.class), parties, staff);
         StaticMessageSource messages = new StaticMessageSource();
         messages.setUseCodeAsDefaultMessage(true);
-        return MockMvcBuilders.standaloneSetup(new PartyLogoController(logos, query, helper, plans, messages)).build();
+        return new PartyLogoController(logos, query, helper, plans, messages);
     }
 
     private static PartySettingsEntity pub(String logoVersion) {
@@ -106,6 +124,54 @@ class PartyLogoControllerTest {
         assertThat(upload(mvc, ORGANISER, TestImages.pngHeaderOnly(50_000, 50_000), 422)).isEqualTo("settings.logo.error.TOO_MANY_PIXELS");
         assertThat(upload(mvc, ORGANISER, new byte[LogoImage.MAX_BYTES + 10], 413)).isEqualTo("settings.logo.error.TOO_LARGE");
         verify(logos, never()).replace(anyString(), any());
+    }
+
+    /**
+     * An upload waits for its turn with its body unread: two decode at a time, and the others must not hold 2 MB each in the heap
+     * meanwhile (a burst of uploads filled a half-gigabyte heap when the body was read first).
+     */
+    @Test
+    void anUploadWaitingForItsTurn_hasNotReadItsBody() throws Exception {
+        PartyLogoController controller = controller(pub(null), Plans.off());
+        Semaphore decoding = (Semaphore) ReflectionTestUtils.getField(controller, "decoding");
+        decoding.acquire(2);   // two other uploads are decoding
+
+        byte[] png = TestImages.png(10, 10);
+        AtomicInteger read = new AtomicInteger();
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/dj/logo") {
+            @Override
+            public ServletInputStream getInputStream() {
+                ByteArrayInputStream bytes = new ByteArrayInputStream(png);
+                return new DelegatingServletInputStream(bytes) {
+                    @Override
+                    public int read() throws IOException {   // every other read of the stream comes through this one
+                        int b = super.read();
+                        if (b != -1) {
+                            read.incrementAndGet();
+                        }
+                        return b;
+                    }
+                };
+            }
+        };
+        request.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+
+        CompletableFuture<ResponseEntity<String>> answer = CompletableFuture.supplyAsync(() -> {
+            try {
+                return controller.upload(PUB, request, Locale.ENGLISH, user(ORGANISER), new MockHttpSession());
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        });
+        Thread.sleep(300);
+        assertThat(read.get()).as("bytes read while waiting for the turn").isZero();
+        assertThat(answer).isNotDone();
+
+        decoding.release(2);
+        assertThat(answer.get(5, TimeUnit.SECONDS).getStatusCode().value()).isEqualTo(200);
+        assertThat(read.get()).isEqualTo(png.length);
+        verify(logos).replace(eq(PUB), any());
+        assertThat(decoding.availablePermits()).isEqualTo(2);   // its turn given back
     }
 
     @Test
