@@ -131,6 +131,8 @@ public class SongEvaluationService {
     private final PlanService planService;
     /** The requests refused before the AI judged a song, counted for the evening summary (V63). */
     private final EveningRefusals eveningRefusals;
+    /** The Free plan's AI checks an evening: past it a request goes to the DJ unchecked. */
+    private final FreeAiLimit freeAiLimit;
 
     /** The answer's configs: the model, its thinking, the schema (with the dedication's field or without). */
     @PostConstruct
@@ -214,15 +216,29 @@ public class SongEvaluationService {
 
         // 1. External API Call: AI Evaluation (prompt language matches guest's locale)
         // the demo party (DemoParty) asks no AI: a ready verdict — no Gemini call to pay for, and no free AI for anyone
-        DjResponse aiResponse = DemoParty.isDemo(partyCode) ? demoAnswer(songName, dedicationText, locale)
+        // past the Free plan's AI checks of the evening (FreeAiLimit) no call: the request reaches the DJ unchecked, the party goes on
+        boolean demo = DemoParty.isDemo(partyCode);
+        boolean beyondTheFreeLimit = !demo && !freeAiLimit.tryAcquire(settings);
+        DjResponse aiResponse = demo ? demoAnswer(songName, dedicationText, locale)
+                : beyondTheFreeLimit ? beyondTheFreeLimit(partyCode, songName, locale)
                 : evaluateWithAi(songName, style, recentSongs, settings.getVibeNote(), settings.getCommentStyle(), dedicationText, locale);
-        if (DemoParty.isDemo(partyCode)) {
+        if (demo) {
             log.info("Party [{}]: the demo's ready answer, no AI", partyCode);
+        } else if (beyondTheFreeLimit) {
+            // not an outage: the AI's health is not touched — recordAnswered would clear an outage that goes on
         } else if (aiResponse == null) {
             aiHealthMonitor.recordUnchecked();
+            freeAiLimit.giveBack(settings);   // the AI judged nothing: not one of the Free plan's checks
             aiResponse = withoutTheAi(partyCode, songName, locale);
         } else {
             aiHealthMonitor.recordAnswered();
+        }
+        // unchecked (the AI down, or past the Free plan's checks): the DJ's rule of no repeats still holds where the code can tell it —
+        // the guest named a song played lately — refused as the AI would refuse it, the guest asked for another one
+        if (aiResponse.isUnchecked() && playedLately(songName, recentlyPlayed)) {
+            log.info("Party [{}]: '{}' unchecked, but it played lately — refused", partyCode, songName);
+            aiResponse = new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.played_lately", null, locale), songName,
+                    DjResponse.KIND_TITLE);
         }
         if (aiResponse.isMood()) {
             log.info("Party [{}]: '{}' reads as a mood, not a song — not saved", partyCode, songName);
@@ -374,6 +390,13 @@ public class SongEvaluationService {
         return decision.equals(answer.decision()) ? answer : answer.withVerdict(decision, answer.comment());
     }
 
+    /** Past the Free plan's AI checks of the evening: unchecked, as {@link #withoutTheAi}; the guest is told nothing of a limit. */
+    DjResponse beyondTheFreeLimit(String partyCode, String songName, Locale locale) {
+        log.info("Party [{}]: '{}' goes to the DJ unchecked — the Free plan's AI checks of the evening are used", partyCode, songName);
+        return new DjResponse(DECISION_ACCEPTED, messageSource.getMessage("ai.limit.to_dj", null, locale), songName,
+                DjResponse.KIND_UNCHECKED);
+    }
+
     /**
      * The answer when the AI could not be asked: the request goes on to the DJ unchecked (accepted, the guest's own words, a note
      * instead of the AI's comment) — the DJ looks at every request anyway, and a wedding should not lose requests while the AI is
@@ -443,12 +466,21 @@ public class SongEvaluationService {
      * Why the AI rejected the request (V62, for the evening summary): the song is one of the recently played ones the AI was given (the
      * duplicate window) — else it was judged against the vibe. Null for a request let through.
      */
+    /**
+     * Whether the guest's words name a song of the recently played list without the AI: the whole name ("Zenek - Przez twe oczy
+     * zielone", as the guests' suggestions give it) or its title alone ("przez twe oczy zielone"), in any spelling
+     * ({@link SongNames#same}). A line of the lyrics or an artist alone is not caught — only the AI tells those.
+     */
+    static boolean playedLately(String guestWords, List<String> recentlyPlayed) {
+        return recentlyPlayed.stream().anyMatch(played -> SongNames.same(played, guestWords)
+                || (played.lastIndexOf(" - ") > 0 && SongNames.same(played.substring(played.lastIndexOf(" - ") + 3), guestWords)));
+    }
+
     static RejectReason rejectReason(DjResponse aiResponse, List<String> recentlyPlayed) {
         if (!DECISION_REJECTED.equalsIgnoreCase(aiResponse.decision())) {
             return null;
         }
-        return recentlyPlayed.stream().anyMatch(played -> SongNames.same(played, aiResponse.songName()))
-                ? RejectReason.DUPLICATE : RejectReason.OFF_VIBE;
+        return playedLately(aiResponse.songName(), recentlyPlayed) ? RejectReason.DUPLICATE : RejectReason.OFF_VIBE;
     }
 
     private SongRequestCommandService.Saved saveSongRequest(String partyCode, DjResponse aiResponse, String guestText, String style,

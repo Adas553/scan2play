@@ -46,7 +46,7 @@ class DjDashboardControllerGuestLimitsTest {
         sessionHelper = mock(DjSessionHelper.class);
         limiter = mock(GuestRequestLimiter.class);
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
-                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), aiHealth, com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class));
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), aiHealth, com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getWaiting(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
@@ -113,6 +113,8 @@ class DjDashboardControllerGuestLimitsTest {
         when(limiter.busiestClientRequestsUsed(PARTY)).thenReturn(24);
         when(limiter.partyRequestsUsed(PARTY)).thenReturn(5);
 
+        // no third number while no Free plan's limit applies (the plans off): the header as before, which a panel opened before a
+        // deploy — its polling.js takes exactly two numbers — still reads
         assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("24,5");
         assertThat(poll(false).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("24,5");
     }
@@ -153,10 +155,29 @@ class DjDashboardControllerGuestLimitsTest {
         assertThat(free).as("no hosts' wishes, no tips").isEqualTo("\"q-3-42-f\"").isNotEqualTo(pro);
     }
 
+    /** The Free plan's AI checks of the evening (FreeAiLimit): the poll says how many, and "ai-limit" once they are used. */
+    @Test
+    void theFreePlansAiChecks_areOnEveryAnswer_andTheirLimitIsAFlag() {
+        party.setOwnerId("organiser");
+        com.scan2play.service.PlanService plans = com.scan2play.service.Plans.enforced();
+        com.scan2play.service.FreeAiLimit freeAi = new com.scan2play.service.FreeAiLimit(2, plans);
+        controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
+                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), freeAi);
+        freeAi.tryAcquire(party);
+        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("0,0,1");
+        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("none");
+
+        freeAi.tryAcquire(party);
+        freeAi.tryAcquire(party);
+        assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).endsWith(",3");
+        assertThat(poll(false).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("ai-limit");
+    }
+
     private String etagWith(com.scan2play.service.PlanService plans) {
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
                 mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
-                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class));
+                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
         return poll(false).getHeader("ETag");
     }
 }

@@ -395,11 +395,19 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 - **A trial**: `scan2play.plans.trial-days` (env `PLANS_TRIAL_DAYS`, 0) days of Pro written for a new DJ when their party is made —
   only while enforced, once per Google account — also after "Usuń konto" (`trial_used`, V36; `PlanService.startTrial`). The
   cached plan goes after the trial's commit, and the cache keeps the row's end (`PlanService.Read`): a plan ends at its `validUntil`
-  (that moment is Free already), not up to 10 min later. When the plans are switched on, the DJs of that day get Pro for a while
-  by one data migration (to decide then).
+  (that moment is Free already), not up to 10 min later.
+- **The gift** (the owner, 2026-11-05: 30 days): `scan2play.plans.gift-until` (env `PLANS_GIFT_UNTIL`, a day; empty: none) — until the
+  end of that day, Polish time, every organiser without Pro of their own has Pro (`PlanService.planOf`; no row written, so nothing
+  waits in the database for a switch not yet made, and it ends by itself; a trial begun during it runs from its end, and a day
+  not written as 2026-12-09 stops the start naming the variable); the organiser it gives Pro to reads one line above the
+  queue, "Scan2Play ma teraz plany Free i Pro. Do 9.12 masz Pro w prezencie, potem plan Free. Zobacz cennik →" (`giftEndsFor`,
+  `data-plan-gift`). The day of the switch, the variables and the checks: `docs/plans-switch-on.md`. The terms (section 5 "Plany
+  Free i Pro", 2026-11-05): free of charge, what may become Pro, the Free limit, the notice and the 30 days, nothing deleted, nothing
+  paid without separate terms and consent — true while the plans are off and after.
 - The server refuses a Pro feature's endpoint (`PlanService.require` → `PlanRequiredException`, a 403) — `PlanFeatureEndpointsTest`
   walks them all; the pages show it as 6.7 says ("PRO"). No payment, no prices: "Zobacz, co daje Pro" leads to `/pro`, which says to
-  write to scan2playcontact@gmail.com (a 404 while not enforced). Later, before the first payment: a payment provider (Stripe Billing /
+  write to contact@scan2play.com.pl (a 404 while not enforced). Each `PlanFeature` has its line there (`data-feature`, both languages —
+  `ProPageRenderTest.everyPlanFeature_isOnThePage`). Later, before the first payment: a payment provider (Stripe Billing /
   Przelewy24 / Tpay) writing `dj_plan` (PAID, `validUntil`), the terms (a paid service, renewal, the consumer's withdrawal), the
   privacy policy (the payment provider, the billing data), invoices and VAT (KSeF, OSS) — the review's list.
 
@@ -552,7 +560,9 @@ zmiany" by themselves): "Wzór na okazję" — the first field — six occasions
 text in the print's language (Polish and English at once "Piosenka dla Pary / Song for the couple"), all within 40 (`QrPrintPageTest`) —
 fills the heading as if typed and sets its look: the theme, the heading's font, the colour (none: the theme's) and the theme's paper
 (the wedding Elegancki with the script, the 18th Neon, the birthday Konfetti, the club Klubowy, the pub Rustykalny, the company
-Klasyczny in navy and the sans), and goes back to its prompt (`poster-presets`, `…-both`, `…-look`). **Fewer fields to start**:
+Klasyczny in navy and the sans); the list shows the occasion picked (on a phone the preview is out of sight) until the DJ changes
+by hand one of the things it set — the heading, the theme, the font, the colour, the paper —, then it is back at its prompt, so the
+same occasion can be picked again (`poster-presets`, `…-both`, `…-look`). **Fewer fields to start**:
 "Treść" is the occasion, the heading, "Druga linia" and the language; the paper, the heading's font and its colour are folded under
 "Więcej wyglądu" (`#posterMoreLook`, open when the party has one of them set; the weak heading's note outside it); the tables and the
 first table's number are with what is on the print, on the cards and the tents only (on the poster hidden, still sent —
@@ -568,7 +578,7 @@ share sheet, anything else saves `scan2play-<code>-story.png`; nothing is sent (
 with the longest words, the DJ's logo, three profiles and the tip inside the picture, the code ≥ 420 / 340 px). The longest words still fit: browser scenarios `poster-editor-longest-fits-a4`, `…-cards` — the
 DJ's heading 26 pt, the line 15 pt, the code 100 mm while there is a line); the
 history; "Zakończ / Wznów imprezę" (in words — "Zakończ" on a phone —, beside the account's menu) and the menu "Konto" — about the person and their help: "Instrukcja" (the public guide below), "Pomoc i kontakt" (2026-10-12: one window with
-the address scan2playcontact@gmail.com and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
+the address contact@scan2play.com.pl — `contact.email`, as every public page; forwarded to the owner's Gmail by Cloudflare — and "Kopiuj" — `dj-nav.js`, as every "Kopiuj" of the DJ's pages —, the guide, and the
 form of the old "Zgłoś uwagę", `POST /dj/feedback`), "Wyloguj",
 "Usuń konto" (red, the last one) — in place of four icons without words (the design review, 2026-10-09; `.s2p-account-bar` keeps the open
 menu over the sticky tab bar). What a DJ sets before a party is on the page **"Ustawienia imprezy"** (below). The forms are sent in the background (`forms.js`; not logout and account deletion); a song played or skipped leaves the list at once (`s2p:guest-queue-changed` → the queue is fetched again). **The forms tell the truth** (the review of 2026-10-14, W1 / W11): a form the server refuses (the session ran out — a 403 for the CSRF token —, the plan, the access) or that never reaches it says ✗ on its button and why — its own note (`[data-form-error]`, the DJ's profiles and tip link) or the page's notice `components :: formRefused` ("Nie zapisano. Sesja mogła wygasnąć albo zerwało się połączenie: skopiuj wpisany tekst i odśwież stronę.", "Odśwież stronę", ×; on the panel and the settings) — never ✓; the page does not reload by itself, so what was typed can be copied; "Zakończ imprezę" refused leaves the panel open; a refused "Cofnij" shows the notice too. The button that sent a form waits for the answer (`disabled`), so a double tap sends once (two taps on 💸 counted two tips); a form sent without a button (the vibe's select) is not held back. **A poll that keeps failing** (three in a row: no network, a 5xx) shows "Brak połączenia z serwerem: lista może być nieaktualna." above the queue (`[data-poll-offline]`, `polling.js`, W12); the next answer hides it. An answer without the queue (`#song-list`; a
@@ -1048,6 +1058,26 @@ the row "Limity gości" in yellow from 80 % ("Impreza 250/300", "Sieć 26/30"), 
 80 % of the party's limit and "⚠ Limit 300 próśb na dobę wyczerpany — goście nie mogą teraz wysyłać." while it stops guest songs (both
 follow every poll's headers).
 
+**The Free plan's AI checks** (`FreeAiLimit`, the owner 2026-11-05: 150, soft): `guest.limit.free-ai-per-party` (env
+`GUEST_LIMIT_FREE_AI_PER_PARTY`, 150; 0 = off) requests a party an evening (`EveningSummaryService.eveningOf`, 6:00 to 6:00 Polish time)
+go to Gemini — only while the plans are enforced and for an organiser without Pro (Pro's bound: the 300 a day above). Counted in
+`SongEvaluationService` just before the call — moods and a song asked again too (they cost a call), a call that failed given back (`giveBack`: the AI judged nothing); not 👍, not the refusals before the AI
+(the limits, the hosts' list by the guest's words), not the demo; the kiosk as every guest. Past it: no call, the request reaches the DJ
+unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —, except a song of the recently played
+list named by its whole name or its title (`SongEvaluationService.playedLately`, on both unchecked paths): refused by the code,
+"Ta piosenka leciała przed chwilą — wybierz inną." (`guest.played_lately`, reason DUPLICATE). A mood or an insult past the limit
+reaches the DJ as a request "bez oceny AI" (the DJ alone sees it, as while the AI is down); the
+guest reads "Twoja prośba trafiła do DJ-a, który sam ją oceni." (`ai.limit.to_dj`), nothing of a limit. The panel: from 80 % the line
+"120 z 150 próśb ocenionych dziś przez AI. Kolejne przyjdą bez oceny." (`data-limit-near="ai"`), at it the bar "⚠ Oceny AI na ten wieczór
+wykorzystane …" (`data-guest-limit="ai-limit"`), both from every poll (`X-Guest-Limits` "ai-limit", `X-Guest-Limits-Use`'s third
+number — sent only where the limit applies, so while the plans are off the header keeps its two numbers, which a panel opened before
+a deploy still reads; scenario `free-ai-limit-follows-the-poll`); the tooltip of "bez oceny AI" names the Free plan only there too
+(`dashboard.request.unchecked.title.free`, `freeAi` of the page and of every poll); "Ustawienia imprezy" the badge "oceny AI 120/150 na wieczór". No offer of Pro during
+the party: the next day the organiser alone sees above the queue "Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150 …" with
+"Zobacz, co daje Pro" (`freeAiYesterday`, only when some came unchecked, and only until this evening's first request — never during the next party). The staff read the bar without the plan's name (`dashboard.warning.ai_limit.staff`). In memory (two
+evenings kept, by the party's row: "Zmień kod imprezy" keeps the count): a restart starts the count
+again, in the DJ's favour. The pricing page names it — change both together.
+
 ### 5.3 (Spotify — removed 2026-10-04, migration V18)
 
 ### 5.4 (The YouTube player, Auto-Pilot and the background playlist — removed 2026-10-04, migration V19)
@@ -1104,7 +1134,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation, at most 100 an hour |
 | `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, the pages "Dla kogo" (`ForWhomController.PAGES`), `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
 | `ForWhomController` | the pages "Dla kogo" `/dj-weselny`, `/kluby`, `/puby` (one template, `for-whom.html`; the texts `forWhom.KEY.*`) — 2026-10-21 |
-| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), "Scan2Play Pro" `/pro` (V35: what Pro adds, a file per language; a 404 while the plans are not enforced) |
+| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), the pricing page `/pro` (V35: Free and Pro, a file per language; `/cennik`, `/pricing` redirect to it; a 404 while the plans are not enforced) |
 | `ViewAttributes` | names of the model attributes |
 
 ### 6.2 Services
@@ -1282,10 +1312,17 @@ What every page shares, so a new screen looks like the others:
   as an empty place; on a wide screen the sentence and its outline button on one line); a fact is said once (the staff's places: the
   offer, not the help line again); the other choices of a list are there but not to pick, under the list's own heading (`<optgroup label="W planie Pro">`, quieter —
   the comment styles "Zabawne", "Sarkastyczne", "Krótkie"; never "· Pro" after each, it read as one more choice); "Podsumowanie wieczoru PRO" leads
-  to `/pro`. **The page `/pro`** is a page of the product, not a list: a head with "PRO", the title and the one action ("Napisz, że chcesz
-  Pro", `mailto:`; "Kopiuj adres" beside it and the address as text — there is no payment yet), the plans Free and Pro side by side on a
-  wide screen (Pro tinted), each Pro feature named with what it gives under it, "Dobrze wiedzieć" (what happens when Pro ends, the
-  staff, the guests); no price (`.s2p-product-*`, `.s2p-plan*`, `.s2p-faq`). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
+  to `/pro`. **The page `/pro` is the pricing page** ("Cennik" / "Pricing", the owner's variant A of 2026-11-05; `/cennik` and
+  `/pricing` redirect to it in their language — one canonical address): the plans Free and Pro side by side on a wide screen — Free
+  "0 zł zawsze" with "Zacznij za darmo" (`/start`, a visitor only), Pro tinted with the tag "WCZESNY DOSTĘP" and "Napisz do nas" in
+  place of a price, its one action at the card's foot ("Napisz, że chcesz Pro", `mailto:contact@…`, the address as text with "Kopiuj
+  adres" — there is no payment, no price, no date) —, each Pro feature named with what it gives under it, "Porównanie" (a table, Free /
+  Pro, in its own scroll box), "Dobrze wiedzieć" (what Pro will cost — not known yet, we write before anything is paid; what happens when
+  Pro ends; the staff; the guests) (`.s2p-product-*`, `.s2p-plan*`, `.s2p-compare*`, `.s2p-faq`). Linked, only while the plans are
+  enforced: the footer's "Cennik" (`plansEnforced` — `HomeController`, `ForWhomController`, `LegalController`), the landing page's "Ile to
+  kosztuje?" ("Zobacz cennik →"), the account menu's "Twój plan: Free · Cennik" (the organiser only, `PlanService.View.offered`). It names
+  the Free plan's 150 AI checks an evening (then unchecked, not on the guests' list nor the TV), Pro's check of every request, and a
+  party's 300 requests a day for both (`FreeAiLimit`, `GuestRequestLimiter`, Section 5.2). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
   permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
   see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
   `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`, `pro-page-phone`, `pro-page-wide`.
@@ -1372,7 +1409,7 @@ Scan2Play uses no YouTube API (removed 2026-10-04, V19). "Podejrzyj" is a plain 
 
 ## 8. Security Model
 
-Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/dj-weselny`, `/kluby`, `/puby`, `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
+Public: `/`, `/start/**`, `/p/**`, `/h/*` (V29), `/join`, `/join/*` (V30), `/privacy`, `/terms`, `/jak-to-dziala`, `/how-it-works`, `/pro` (V35), `/cennik`, `/pricing`, `/dj-weselny`, `/kluby`, `/puby`, `/robots.txt`, `/sitemap.xml`, `/oauth2/**`, `/login/**`, `/css/**`, `/js/**` (and `/<version>/css/**`, `/<version>/js/**`:
 under the running deploy's version only — `/*/js/**` let `/dj/js/…` past the login, review 2026-10-14), `/images/**`, `/fonts/**` (the print's fonts), `/webjars/**`, `/favicon.ico`,
 `/error`, `POST /csp-report`, `/manifest.webmanifest`, `/sw.js`, `GET /demo` and `GET /demo/**` (the demo, `DemoController`), `/email/stop/*` (V64, "Nie wysyłaj mi tego" by its secret: the GET asks, the POST — CSRF-free for the mail program's one-click — switches off). Everything else needs the DJ's login. Without it (`SecurityConfig.loginEntryPoint`, the review of 2026-10-21, C2, C3): a DJ's page opened in the browser (`Sec-Fetch-Mode: navigate`) goes straight to Google's login and, after it, back to that page with its `?party=` (`djPagesRemembered`, `loginSuccess`; only such a page is remembered, never a poll or a fragment) — a DJ whose session expired with the phone in the pocket comes back to the panel, not to the landing page; a fetch of the panel goes to `/` as before (`polling.js` then loads its page again); any other address is a 404 (the error page), not the landing page; `/dj/**` validates the party the page
 names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owner, or a person of the staff given that permission (V32) —,
@@ -1453,10 +1490,10 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 | `server.shutdown` | graceful, 30 s |
 | `spring.task.execution.pool.*` | 16 core / 32 max threads, queue 50 (env `ASYNC_POOL_*`) — the guests' requests (`Callable`) |
 | `spring.datasource.hikari.*` | 15 max, 5 idle, 5 s connect timeout |
-| `guest.limit.*` | 30 per 10 min per address + party, 300 per 24 h per party (env `GUEST_LIMIT_*`) |
+| `guest.limit.*` | 30 per 10 min per address + party, 300 per 24 h per party, the Free plan's 150 AI checks an evening (`free-ai-per-party`) (env `GUEST_LIMIT_*`) |
 | `guest.client-ip-header` | empty (env `GUEST_CLIENT_IP_HEADER`) |
 | `security.csp.enforce` | `false` = report only (env `CSP_ENFORCE`) |
-| `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` | `false` / empty / 0 (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`; V35) |
+| `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` / `.gift-until` | `false` / empty / 0 / empty (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`, `PLANS_GIFT_UNTIL`; V35) |
 | `spring.session.jdbc.initialize-schema` | `never` (the tables are Flyway's, `V11`); a session lives 30 min without a request |
 
 **The profile `local`** (`application-local.properties`): the developer's defaults `PGUSER=postgres`, `PGPASSWORD=1111`. IntelliJ's run

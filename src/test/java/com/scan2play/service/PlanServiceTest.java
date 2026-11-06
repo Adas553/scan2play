@@ -46,6 +46,36 @@ class PlanServiceTest {
                 .validUntil(validUntil).updatedAt(Instant.now()).build()));
     }
 
+    /**
+     * The gift of Pro when the plans are switched on ({@code scan2play.plans.gift-until}): until the end of that day, Polish time, an
+     * organiser without Pro of their own has Pro, and the panel says until when; one with a Pro row is not "on the gift"; after it, Free.
+     */
+    @Test
+    void theGift_givesProUntilItsDay_toWhoeverHasNoProOfTheirOwn() {
+        when(rows.findById(org.mockito.ArgumentMatchers.anyString())).thenReturn(Optional.empty());
+        String tomorrow = java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).plusDays(1).toString();
+        PlanService gift = new PlanService(rows, new ConcurrentMapCacheManager(PlanService.CACHE), true, "", 0, tomorrow);
+        PartySettingsEntity party = savedOnPro();
+
+        assertThat(gift.planOf(party)).isEqualTo(Plan.PRO);
+        assertThat(gift.giftEndsFor(party)).as("the end of tomorrow, Polish time")
+                .isEqualTo(java.time.LocalDate.parse(tomorrow).plusDays(1).atStartOfDay(com.scan2play.util.Times.DISPLAY_ZONE).toInstant());
+
+        row("owner", Plan.PRO, null);
+        PlanService ownPro = new PlanService(rows, new ConcurrentMapCacheManager(PlanService.CACHE), true, "", 0, tomorrow);
+        assertThat(ownPro.planOf(party)).isEqualTo(Plan.PRO);
+        assertThat(ownPro.giftEndsFor(party)).as("Pro of their own: no gift to tell of").isNull();
+
+        String yesterday = java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).minusDays(1).toString();
+        when(rows.findById("owner")).thenReturn(Optional.empty());
+        PlanService over = new PlanService(rows, new ConcurrentMapCacheManager(PlanService.CACHE), true, "", 0, yesterday);
+        assertThat(over.planOf(party)).as("after the gift: Free").isEqualTo(Plan.FREE);
+        assertThat(over.giftEndsFor(party)).isNull();
+
+        PlanService notEnforced = new PlanService(rows, new ConcurrentMapCacheManager(PlanService.CACHE), false, "", 0, tomorrow);
+        assertThat(notEnforced.giftEndsFor(party)).as("the plans off: nothing said").isNull();
+    }
+
     @Test
     void notEnforced_everyPartyHasEverything_andNoPlanIsRead() {
         PlanService plans = plans(false, "", 30);
@@ -163,6 +193,27 @@ class PlanServiceTest {
         verify(rows).save(org.mockito.ArgumentMatchers.argThat(row -> row.getOwnerId().equals("new") && row.getPlan() == Plan.PRO
                 && row.getSource() == PlanSource.TRIAL && row.getValidUntil().isAfter(Instant.now().plus(Duration.ofDays(29)))));
         verify(rows).markTrialUsed(PlanService.trialKey("new"));
+    }
+
+    /** A new account during the gift of Pro: its trial starts when the gift ends, so none of its days are spent on Pro it has anyway. */
+    @Test
+    void duringTheGift_theTrialStartsWhenTheGiftEnds() {
+        when(rows.existsById("new")).thenReturn(false);
+        String inTenDays = java.time.LocalDate.now(com.scan2play.util.Times.DISPLAY_ZONE).plusDays(10).toString();
+        Instant giftEnds = PlanService.giftEnd(inTenDays);
+
+        new PlanService(rows, new ConcurrentMapCacheManager(PlanService.CACHE), true, "", 30, inTenDays).startTrial("new");
+
+        verify(rows).save(org.mockito.ArgumentMatchers.argThat(row -> row.getValidUntil().equals(giftEnds.plus(Duration.ofDays(30)))));
+    }
+
+    /** The gift's day as the variable gives it: a day not written as 2026-12-09 stops the start with the variable's name. */
+    @Test
+    void theGiftsDay_badlyWritten_namesTheVariable() {
+        assertThat(PlanService.giftEnd(" ")).isNull();
+        assertThat(PlanService.giftEnd("2026-12-09")).isEqualTo(Instant.parse("2026-12-09T23:00:00Z"));   // the end of the day in Warsaw
+        assertThatThrownBy(() -> PlanService.giftEnd("9.12.2026")).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PLANS_GIFT_UNTIL").hasMessageContaining("9.12.2026");
     }
 
     /**

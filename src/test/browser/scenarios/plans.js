@@ -50,6 +50,66 @@
         }
     });
 
+    /** Waits until two more polls of the queue have been answered (the stand's config). */
+    const afterPolls = async function (t) {
+        const before = await t.stand.count('GET /dj/dashboard/updates');
+        const started = performance.now();
+        while ((await t.stand.count('GET /dj/dashboard/updates')) < before + 2) {
+            if (performance.now() - started > 10000) throw new Error('timeout: two more polls of the queue');
+            await t.sleep(100);
+        }
+        await t.sleep(200);
+    };
+
+    // The organiser's note the day after the Free plan's AI checks ran out (FreeAiLimit; dashboard-free-ai-yesterday.html: 212 asked,
+    // 150 checked, the next day at noon): above the queue, the way to Pro a finger's target — and the polls (a new evening, nothing
+    // asked: no flag, a use of 0) leave it as it is. The queue is empty here: "above the queue" is above its "no requests yet"
+    S2P.scenario({
+        name: 'free-ai-yesterday-note-phone',
+        title: 'the day after the Free plan\'s AI checks ran out, on a phone: the organiser\'s note above the queue, "Zobacz, co daje Pro" a 44 px target; the polls leave it',
+        page: 'dashboard-free-ai-yesterday',
+        viewport: '390,844',
+        setup: { guestLimits: 'none', guestLimitsUse: '0,0,0' },
+        run: async function (t) {
+            const note = document.querySelector('[data-free-ai-yesterday]');
+            const state = function () {
+                const link = note.querySelector('a[href="/pro"]');
+                return [shows(note), text(note).indexOf('Wczoraj goście wysłali 212 próśb do oceny, AI oceniło 150'), shows(link) && text(link),
+                    note.getBoundingClientRect().bottom <= document.getElementById('queueEmpty').getBoundingClientRect().top];
+            };
+            t.step('the note, its words, the way to Pro, above the queue', state(), [true, 0, 'Zobacz, co daje Pro', true]);
+            t.step('nothing to tap in it lower than 44 px', tooSmall(note), []);
+            await afterPolls(t);
+            t.step('after the polls: as it was', state(), [true, 0, 'Zobacz, co daje Pro', true]);
+            t.step('a new evening: no bar "wykorzystane"', shows(document.querySelector('[data-guest-limit="ai-limit"]')), false);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+        }
+    });
+
+    // The gift of Pro when the plans are switched on (PlanService.giftEndsFor; dashboard-plan-gift.html): one quiet line to the
+    // organiser above the queue (empty here: above its "no requests yet") — until when ("08.11"), and the pricing page — that the polls leave
+    S2P.scenario({
+        name: 'plan-gift-line-phone',
+        title: 'the gift of Pro, on a phone: one quiet line above the queue — until when, "Zobacz cennik →" —, nothing wider than the screen; the polls leave it',
+        page: 'dashboard-plan-gift',
+        viewport: '390,844',
+        setup: { guestLimits: 'none', guestLimitsUse: '0,0' },
+        run: async function (t) {
+            const line = document.querySelector('[data-plan-gift]');
+            const state = function () {
+                const link = line.querySelector('a[href="/pro"]');
+                return [shows(line), /^Scan2Play ma teraz plany Free i Pro\. Do \d{2}\.\d{2}(\.\d{4})? masz Pro w prezencie, potem plan Free\. Zobacz cennik →$/.test(text(line)),
+                    shows(link) && text(link), line.getBoundingClientRect().bottom <= document.getElementById('queueEmpty').getBoundingClientRect().top];
+            };
+            t.step('the line, its words, the pricing page, above the queue', state(), [true, true, 'Zobacz cennik →', true]);
+            t.step('quiet: the size of the small print, no box', [parseFloat(getComputedStyle(line).fontSize) < 16,
+                getComputedStyle(line).borderTopStyle], [true, 'none']);
+            await afterPolls(t);
+            t.step('after the polls: as it was', state(), [true, true, 'Zobacz cennik →', true]);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+        }
+    });
+
     S2P.scenario({
         name: 'pro-free-settings-phone',
         title: 'an organiser without Pro, the page "Ustawienia imprezy" on a phone: each Pro card says what waits or holds and leads to /pro, no form of it; 44 px targets',
@@ -105,13 +165,17 @@
     const proPage = async function (t, wide) {
         const actions = Array.from(document.querySelectorAll('.btn-action')).filter(shows);
         t.step('one action on the page: write that you want Pro', actions.map(function (a) { return [text(a), a.getAttribute('href').split('?')[0]]; }),
-            [['Napisz, że chcesz Pro', 'mailto:scan2playcontact@gmail.com']]);
-        t.step('the title, and "PRO" a cyan tag above it', [text(document.querySelector('h1')),
-            markOf(document.querySelector('[data-pro-hero]'))], ['Scan2Play Pro', MARK]);
+            [['Napisz, że chcesz Pro', 'mailto:contact@scan2play.com.pl']]);
         const free = document.querySelector('[data-plan="free"]'), pro = document.querySelector('[data-plan="pro"]');
+        t.step('the title "Cennik", Pro marked "WCZESNY DOSTĘP" as a cyan tag by its name', [text(document.querySelector('h1')),
+            markOf(pro.querySelector('h2'))], ['Cennik', ['WCZESNY DOSTĘP', 'cyan tag', true, true]]);
+        t.step('Free costs 0 zł; Pro has no price, only "Napisz do nas"', [free, pro].map(function (card) {
+            return text(card.querySelector('[data-plan-price]'));
+        }), ['0 zł zawsze', 'Napisz do nas']);
+        t.step('the action at the foot of the Pro card', pro.contains(actions[0]), true);
         t.step('two plans, Free and Pro, each with what it has', [free, pro].map(function (card) {
             return shows(card) && [text(card.querySelector('h2')), card.querySelectorAll('li').length > 4];
-        }), [['Free', true], ['Pro', true]]);
+        }), [['Free', true], ['Pro WCZESNY DOSTĘP', true]]);
         const a = free.getBoundingClientRect(), b = pro.getBoundingClientRect();
         t.step(wide ? 'side by side on a computer' : 'one under the other on a phone',
             wide ? [Math.abs(a.top - b.top) < 2, b.left >= a.right] : [b.top >= a.bottom, Math.abs(a.left - b.left) < 2], [true, true]);
@@ -119,7 +183,7 @@
             return !li.querySelector('b') || !text(li).slice(text(li.querySelector('b')).length).trim();
         }).length, 0);
         t.step('the address also as text, to copy by hand', document.querySelector('[data-pro-address]') !== null
-            && text(document.querySelector('[data-pro-address]')), 'scan2playcontact@gmail.com');
+            && text(document.querySelector('[data-pro-address]')), 'contact@scan2play.com.pl');
         // "Kopiuj adres" (dj-nav.js): the clipboard stood in for (a headless Chrome has none to read back, and may never answer), once
         // taking the address and once refusing it — then the address shown on the page is selected
         const copy = document.querySelector('button[data-copy-text]');
@@ -132,15 +196,22 @@
         const copied = clipboard(Promise.resolve());
         copy.click();
         await t.sleep(100);
-        t.step('"Kopiuj adres" copies the address and says so', [copied, text(copy)], [['scan2playcontact@gmail.com'], 'Skopiowano']);
+        t.step('"Kopiuj adres" copies the address and says so', [copied, text(copy)], [['contact@scan2play.com.pl'], 'Skopiowano']);
         await t.sleep(1600);
         window.getSelection().removeAllRanges();
         clipboard(Promise.reject(new Error('refused')));
         copy.click();
         await t.sleep(100);
-        t.step('the clipboard refused: the address on the page selected, to copy by hand', String(window.getSelection()), 'scan2playcontact@gmail.com');
+        t.step('the clipboard refused: the address on the page selected, to copy by hand', String(window.getSelection()), 'contact@scan2play.com.pl');
         t.step('the questions one asks before buying, answered', Array.from(document.querySelectorAll('[data-pro-faq] h3')).map(text),
-            ['Co, gdy Pro się skończy?', 'Czy obsługa potrzebuje Pro?', 'A goście?']);
+            ['Ile będzie kosztować Pro?', 'Co, gdy Pro się skończy?', 'Czy obsługa potrzebuje Pro?', 'A goście?']);
+        const table = document.querySelector('[data-pro-compare]');
+        t.step('the comparison: Free and Pro side by side, the AI\'s checks — Free\'s evening in numbers, Pro every request', [shows(table),
+            Array.from(table.querySelectorAll('thead th')).slice(1).map(text),
+            Array.from(table.querySelectorAll('tbody tr:nth-child(2) td')).map(text)],
+            [true, ['Free', 'Pro'], ['150 na wieczór', 'każda prośba']]);
+        // a 390 px phone: both plans' columns in view, the table not scrolled in its box (it was 9 px too wide)
+        t.step('the comparison fits its box', table.scrollWidth <= table.parentElement.clientWidth, true);
         t.step('nothing to tap is lower than 44 px', wide ? [] : tooSmall(document.body), []);
         t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     };

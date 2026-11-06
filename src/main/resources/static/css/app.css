@@ -1313,7 +1313,33 @@ th[data-sort].sort-desc::after {
 .s2p-plan li span { color: var(--s2p-text-muted); font-size: 0.9rem; }
 .s2p-faq-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--s2p-text-muted); font-weight: 700; margin: 2.25rem 0 0; }
 .s2p-faq { margin-top: 1.25rem; display: grid; gap: 1.25rem; }
-@media (min-width: 768px) { .s2p-faq { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .s2p-faq { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* the pricing page: a plan's price ("0 zł"; Pro's "Napisz do nas", there is no price), its action at the card's foot, the table */
+.s2p-plan { display: flex; flex-direction: column; }
+.s2p-plan h2 .s2p-pro { margin-left: 0.4rem; }
+.s2p-plan-price { font-size: 2rem; font-weight: 800; color: var(--s2p-white); line-height: 1.1; margin: 0.6rem 0 0; }
+.s2p-plan-price small { font-size: 0.9rem; font-weight: 400; color: var(--s2p-text-muted); }
+.s2p-plan-price-ask { font-size: 1.35rem; color: var(--s2p-action); }
+.s2p-plan-cta { margin-top: auto; padding-top: 1.25rem; display: grid; gap: 0.6rem; }
+.s2p-plan-address { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: center; font-size: 0.9rem; }
+.s2p-compare-wrap { overflow-x: auto; margin-top: 1rem; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
+.s2p-compare { width: 100%; border-collapse: collapse; font-size: 0.925rem; }
+.s2p-compare th, .s2p-compare td { padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--s2p-bg-hover); text-align: left; vertical-align: top; }
+.s2p-compare thead th { background: var(--s2p-bg-thead); color: var(--s2p-light); font-weight: 700; }
+.s2p-compare tbody th { color: var(--s2p-text); font-weight: 400; }
+.s2p-compare td { color: var(--s2p-light); white-space: nowrap; }
+.s2p-compare td:last-child { color: var(--s2p-action); }
+.s2p-compare td.s2p-compare-no { color: var(--s2p-text-muted); }
+.s2p-compare tbody .s2p-compare-group th { background: var(--s2p-bg-card); color: var(--s2p-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+.s2p-compare tr:last-child th, .s2p-compare tr:last-child td { border-bottom: 0; }
+/* a phone: a smaller size, less padding and a long row name hyphenated (never broken inside a word), so both plans' columns fit
+   from 360 px; at 320 px the table scrolls in its own box */
+@media (max-width: 575.98px) {
+    .s2p-compare { font-size: 0.875rem; }
+    .s2p-compare td { white-space: normal; }
+    .s2p-compare th, .s2p-compare td { padding: 0.5rem 0.5rem; }
+    .s2p-compare tbody th { hyphens: auto; }
+}
 .s2p-faq h3 { font-size: 1rem; font-weight: 700; color: var(--s2p-light); margin: 0 0 0.35rem; }
 .s2p-faq p { color: var(--s2p-text-muted); margin: 0; font-size: 0.925rem; }
 

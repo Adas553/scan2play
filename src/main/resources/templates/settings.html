@@ -433,6 +433,14 @@
                               th:text="${partyRequestsUsed + '/' + serverLimitPerParty}">0/300</span>
                         <span th:text="#{dashboard.limits.server.party.window}">per 24 h</span>
                     </span>
+                    <!--/* the Free plan's AI checks of the evening (FreeAiLimit) — past them the requests come unchecked */-->
+                    <span th:if="${freeAi != null and freeAi.limit() > 0}" class="text-nowrap">
+                        <span th:text="#{dashboard.limits.server.ai}">AI checks</span>
+                        <span class="badge" data-limit-use="ai" th:attr="data-limit=${freeAi.limit()}"
+                              th:classappend="${freeAi.reached()} ? 'text-bg-danger' : (${freeAi.asked() * 5 >= freeAi.limit() * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
+                              th:text="${freeAi.checked() + '/' + freeAi.limit()}">0/150</span>
+                        <span th:text="#{dashboard.limits.server.ai.window}">an evening</span>
+                    </span>
                 </summary>
                 <p class="text-secondary mt-2 mb-0" th:text="#{dashboard.limits.server.help}">One network is e.g. the venue's Wi-Fi…</p>
             </details>

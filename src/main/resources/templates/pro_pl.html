@@ -5,16 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
-    <title>Scan2Play Pro</title>
-    <th:block th:replace="~{fragments/components :: seo('/pro', 'Scan2Play Pro', 'Co daje plan Pro w Scan2Play, a co zostaje za darmo.')}"></th:block>
+    <title>Cennik Scan2Play</title>
+    <th:block th:replace="~{fragments/components :: seo('/pro', 'Cennik Scan2Play', 'Plan Free za 0 zł i Pro we wczesnym dostępie: co jest za darmo, a co daje Pro.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<!--/* "Scan2Play Pro" (V35, the owner 2026-10-14): what the Pro plan adds and what stays everyone's — where "Zobacz, co daje Pro"
-     leads. Public (LegalController.pro), one file per language as the guide; a 404 while the plans are not enforced. A page of the
-     product (the review of the look, https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN): one action — write to us, as there is no
-     payment yet —, the plans side by side, each Pro feature with what it gives, the questions one asks before buying. No price.
-     Keep it true to PlanFeature and to PROJECT_CONTEXT 4.1; pro.html is its English twin. */-->
+<!--/* The pricing page (/pro; /cennik and /pricing lead here): Free "0 zł", Pro in early access with no price — the one action is to
+     write to us, as there is no payment. Public (LegalController.pro), one file per language as the guide; a 404 while the plans are
+     not enforced. Each PlanFeature has its line (data-feature: ProPageRenderTest.everyPlanFeature_isOnThePage). The AI's limits named
+     here are guest.limit.free-ai-per-party and guest.limit.per-party-daily. pro.html is its English twin. */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-960">
 
@@ -25,52 +24,85 @@
     </div>
 
     <header class="s2p-product-hero" data-pro-hero>
-        <span class="s2p-pro">PRO</span>
-        <h1>Scan2Play Pro</h1>
-        <p class="s2p-product-lede">Za darmo masz wszystko, czego potrzeba na imprezę. Pro jest dla DJ-ów, którzy grają często: listy od
-            gospodarzy, Twoje profile i napiwki, podsumowanie wieczoru.</p>
-        <div class="s2p-product-cta">
-            <a class="btn btn-action btn-lg px-4" href="mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro">Napisz, że chcesz Pro</a>
-            <button type="button" class="btn btn-outline-light btn-lg" data-copy-text="scan2playcontact@gmail.com"
-                    data-copied="Skopiowano" data-copy-select="proAddress">Kopiuj adres</button>
-        </div>
-        <p class="s2p-product-note">Płatności w aplikacji jeszcze nie ma — Pro włączamy po Twojej wiadomości na
-            <span class="text-light user-select-all" id="proAddress" data-pro-address>scan2playcontact@gmail.com</span>.</p>
+        <h1>Cennik</h1>
+        <p class="s2p-product-lede mb-0">Wszystko, czego potrzeba na imprezę, jest za darmo. Pro jest dla DJ-ów, którzy grają co tydzień:
+            lista od gospodarzy, Twoje logo i napiwki, kiosk, podsumowanie wieczoru.</p>
     </header>
 
     <div class="s2p-plans">
         <section class="s2p-plan" data-plan="free">
             <h2>Free</h2>
-            <p class="s2p-plan-sub">Za darmo, zawsze</p>
+            <p class="s2p-plan-price" data-plan-price>0 zł <small>zawsze</small></p>
+            <p class="s2p-plan-sub">Bez karty i bez okresu próbnego.</p>
             <ul>
-                <li><div>Kod QR, plakat i karty na stoły</div></li>
-                <li><div>Prośby sprawdzane przez AI: czy to piosenka, czy pasuje do klimatu, czy dziś już nie leciała</div></li>
-                <li><div>Kolejka: Zagrane, Pomiń, Cofnij, Kopiuj, klawisze</div></li>
-                <li><div>Głosy i 👍 gości, klimat, jego opis i „Kto gra”</div></li>
+                <li><div>Kod QR, plakat, karty i namioty na stoły — motywy, kroje, grafika „Do internetu”</div></li>
+                <li><div>Prośby sprawdzane przez AI: czy to piosenka, czy pasuje do klimatu, czy dziś już nie leciała; dedykacje też — do 150 ocen AI na wieczór; kolejne prośby przychodzą do Ciebie bez oceny, a lista gości i ekran TV ich nie pokazują</div></li>
+                <li><div>Kolejka: Zagrane, Pomiń, Cofnij, Kopiuj, Dodaj piosenkę, klawisze</div></li>
+                <li><div>Głosy i 👍 gości, klimat, jego opis, „Kto gra”, motyw strony gości, ekran TV</div></li>
+                <li><div>Godziny imprezy (otwiera i zamyka się sama), „Zmień kod imprezy”</div></li>
                 <li><div>Historia z 30 dni, powiadomienia na telefon</div></li>
                 <li><div>Obsługa: 1 osoba</div></li>
                 <li><div>Limity gości: 2 prośby na gościa, potem 3 minuty przerwy, bez powtórek z ostatnich 15</div></li>
             </ul>
+            <div class="s2p-plan-cta" th:unless="${loggedIn}">
+                <a href="/start" class="btn btn-outline-light w-100" id="freeStart">Zacznij za darmo</a>
+            </div>
         </section>
         <section class="s2p-plan s2p-plan-pro" data-plan="pro">
-            <h2>Pro</h2>
-            <p class="s2p-plan-sub">Wszystko z Free, a do tego:</p>
+            <h2>Pro <span class="s2p-pro">WCZESNY DOSTĘP</span></h2>
+            <p class="s2p-plan-price s2p-plan-price-ask" data-plan-price>Napisz do nas</p>
+            <p class="s2p-plan-sub">Płatności jeszcze nie ma — Pro włączamy po Twojej wiadomości.</p>
             <ul>
-                <li><div><b>Lista gospodarzy</b><span>🚫 czego nie grać, ⭐ co koniecznie zagrać — gospodarze wypełnią ją sami przez link</span></div></li>
-                <li><div><b>Twoje profile i napiwki</b><span>Instagram, Facebook, TikTok i „Napiwek dla DJ-a” u gości i na wydruku — w 100% dla Ciebie, bez prowizji —, licznik 💸 w kolejce</span></div></li>
-                <li><div><b>Podsumowanie wieczoru</b><span>do druku, PDF i CSV</span></div></li>
-                <li><div><b>Komentarze AI z charakterem</b><span>zabawne, sarkastyczne albo krótkie</span></div></li>
-                <li><div><b>Własne limity gości</b><span>ile próśb na gościa, jaka przerwa, ile piosenek bez powtórek</span></div></li>
-                <li><div><b>Twoja biblioteka</b><span>✓, ? albo ✗ przy każdej prośbie: czy masz ten utwór — z kolekcji rekordboxa albo playlisty M3U</span></div></li>
-                <li><div><b>Twoje logo</b><span>na stronie gości, ekranie TV, plakacie i kartkach oraz w podsumowaniu wieczoru</span></div></li>
+                <li data-feature="HOST_LISTS"><div><b>Lista gospodarzy</b><span>🚫 czego nie grać, ⭐ co koniecznie zagrać — gospodarze wypełnią ją sami przez link</span></div></li>
+                <li data-feature="PROFILES TIPS"><div><b>Twoje profile i napiwki</b><span>Instagram, Facebook, TikTok i „Napiwek dla DJ-a” u gości i na wydruku — w 100% dla Ciebie, bez prowizji —, licznik 💸 w kolejce</span></div></li>
+                <li data-feature="SUMMARY"><div><b>Podsumowanie wieczoru</b><span>Twoje i dla gospodarzy: do druku, PDF i CSV, link dla gospodarzy na 30 dni, obrazek na story i post; rano mail z podsumowaniem</span></div></li>
+                <li data-feature="COMMENT_STYLES"><div><b>Komentarze AI z charakterem</b><span>zabawne, sarkastyczne albo krótkie</span></div></li>
+                <li data-feature="GUEST_LIMITS"><div><b>Własne limity gości i ocena AI każdej prośby</b><span>ile próśb na gościa, jaka przerwa, ile piosenek bez powtórek; AI ocenia każdą prośbę, bez limitu ocen na wieczór</span></div></li>
+                <li data-feature="LIBRARY"><div><b>Twoja biblioteka</b><span>✓, ? albo ✗ przy każdej prośbie, tempo i tonacja w kolejce, „✓ DJ ma” w podpowiedziach gości — z kolekcji rekordboxa albo playlisty M3U</span></div></li>
+                <li data-feature="LOGO"><div><b>Twoje logo</b><span>na stronie gości, ekranie TV, plakacie i kartkach oraz w podsumowaniu wieczoru</span></div></li>
+                <li data-feature="KIOSK"><div><b>Kiosk dla gości</b><span>tablet przy barze: goście bez telefonu też poproszą o piosenkę i zagłosują</span></div></li>
                 <li><div><b>Obsługa do 10 osób</b><span>drugi DJ, barman, organizator — każdy z uprawnieniami, które mu dasz</span></div></li>
             </ul>
+            <div class="s2p-plan-cta">
+                <a class="btn btn-action w-100" href="mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro">Napisz, że chcesz Pro</a>
+                <div class="s2p-plan-address">
+                    <span class="text-light user-select-all" id="proAddress" data-pro-address>contact@scan2play.com.pl</span>
+                    <button type="button" class="btn btn-sm btn-outline-light" data-copy-text="contact@scan2play.com.pl"
+                            data-copied="Skopiowano" data-copy-select="proAddress">Kopiuj adres</button>
+                </div>
+            </div>
         </section>
+    </div>
+
+    <p class="s2p-faq-title">Porównanie</p>
+    <div class="s2p-compare-wrap">
+        <table class="s2p-compare" data-pro-compare>
+            <thead><tr><th scope="col"><span class="visually-hidden">Funkcja</span></th><th scope="col">Free</th><th scope="col">Pro</th></tr></thead>
+            <tbody>
+                <tr class="s2p-compare-group"><th scope="rowgroup" colspan="3">Prośby gości</th></tr>
+                <tr><th scope="row">Ocena AI prośby</th><td>150 na wieczór</td><td>każda prośba</td></tr>
+                <tr><th scope="row">Prośby imprezy (ochrona przed nadużyciami)</th><td>300 na dobę</td><td>300 na dobę</td></tr>
+                <tr><th scope="row">Limity gościa</th><td>2 · 3 min · 15</td><td>własne</td></tr>
+                <tr><th scope="row">Styl komentarzy AI</th><td>Klasyczne</td><td>+ zabawne, sarkastyczne, krótkie</td></tr>
+                <tr><th scope="row">Lista gospodarzy</th><td class="s2p-compare-no"><span aria-hidden="true">—</span><span class="visually-hidden">nie</span></td><td><span aria-hidden="true">✓</span><span class="visually-hidden">tak</span></td></tr>
+                <tr><th scope="row">Kiosk dla gości bez telefonu</th><td class="s2p-compare-no"><span aria-hidden="true">—</span><span class="visually-hidden">nie</span></td><td><span aria-hidden="true">✓</span><span class="visually-hidden">tak</span></td></tr>
+                <tr class="s2p-compare-group"><th scope="rowgroup" colspan="3">Twoja marka</th></tr>
+                <tr><th scope="row">Logo u gości, na TV i na wydruku</th><td class="s2p-compare-no"><span aria-hidden="true">—</span><span class="visually-hidden">nie</span></td><td><span aria-hidden="true">✓</span><span class="visually-hidden">tak</span></td></tr>
+                <tr><th scope="row">Profile i napiwki</th><td class="s2p-compare-no"><span aria-hidden="true">—</span><span class="visually-hidden">nie</span></td><td><span aria-hidden="true">✓</span><span class="visually-hidden">tak</span></td></tr>
+                <tr><th scope="row">Biblioteka i „✓ DJ ma” u gości</th><td class="s2p-compare-no"><span aria-hidden="true">—</span><span class="visually-hidden">nie</span></td><td><span aria-hidden="true">✓</span><span class="visually-hidden">tak</span></td></tr>
+                <tr class="s2p-compare-group"><th scope="rowgroup" colspan="3">Po imprezie</th></tr>
+                <tr><th scope="row">Historia</th><td>30 dni</td><td>30 dni</td></tr>
+                <tr><th scope="row">Podsumowanie wieczoru, link dla gospodarzy, CSV</th><td class="s2p-compare-no"><span aria-hidden="true">—</span><span class="visually-hidden">nie</span></td><td><span aria-hidden="true">✓</span><span class="visually-hidden">tak</span></td></tr>
+                <tr><th scope="row">Poranny mail z podsumowaniem</th><td class="s2p-compare-no"><span aria-hidden="true">—</span><span class="visually-hidden">nie</span></td><td><span aria-hidden="true">✓</span><span class="visually-hidden">tak</span></td></tr>
+                <tr><th scope="row">Obsługa</th><td>1 osoba</td><td>do 10 osób</td></tr>
+            </tbody>
+        </table>
     </div>
 
     <p class="s2p-faq-title">Dobrze wiedzieć</p>
     <div class="s2p-faq" data-pro-faq>
-        <div><h3>Co, gdy Pro się skończy?</h3><p>Nic nie znika. Listy, profile i ustawienia czekają i wrócą razem z Pro; obsługa zachowuje dostęp.</p></div>
+        <div><h3>Ile będzie kosztować Pro?</h3><p>Jeszcze tego nie wiemy. Dziś Pro włączamy po wiadomości. Zanim cokolwiek będzie płatne, napiszemy do Ciebie.</p></div>
+        <div><h3>Co, gdy Pro się skończy?</h3><p>Nic nie znika. Listy, profile, logo, biblioteka i ustawienia czekają i wrócą razem z Pro; obsługa zachowuje dostęp. Link kiosku do tego czasu nie działa.</p></div>
         <div><h3>Czy obsługa potrzebuje Pro?</h3><p>Nie. Obsługa pracuje na planie organizatora imprezy.</p></div>
         <div><h3>A goście?</h3><p>Goście nic nie płacą i niczego nie instalują: skanują kod i proszą o piosenkę.</p></div>
     </div>

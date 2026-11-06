@@ -69,7 +69,9 @@ class ProPageRenderTest {
     private static String render(Locale locale, Authentication visitor) {
         LocaleContextHolder.setLocale(locale);
         ConcurrentModel model = new ConcurrentModel();
-        String view = new LegalController(com.scan2play.service.Plans.enforced()).pro(visitor, model);
+        LegalController controller = new LegalController(com.scan2play.service.Plans.enforced());
+        model.addAttribute("plansEnforced", controller.plansEnforced());   // the controller's @ModelAttribute, as MVC calls it
+        String view = controller.pro(visitor, model);
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
@@ -96,22 +98,32 @@ class ProPageRenderTest {
     void shouldRenderThePageInPolish() throws IOException {
         String html = render(PL, dj());
 
-        assertThat(html).contains("lang=\"pl\"", "<title>Scan2Play Pro</title>", ">Scan2Play Pro</h1>",
-                "href=\"mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro\"", ">Napisz, że chcesz Pro<",
-                "data-copy-text=\"scan2playcontact@gmail.com\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
-                "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", ">Pro<", "Wszystko z Free, a do tego:",
+        assertThat(html).contains("lang=\"pl\"", "<title>Cennik Scan2Play</title>", ">Cennik</h1>", ">0 zł <small>zawsze</small><", ">WCZESNY DOSTĘP<", ">Napisz do nas<",
+                "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"", ">Napisz, że chcesz Pro<",
+                "data-copy-text=\"contact@scan2play.com.pl\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
+                "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", "data-pro-compare", ">Ocena AI prośby<", ">150 na wieczór<", ">każda prośba<", ">300 na dobę<",
                 ">Lista gospodarzy<", ">Twoje profile i napiwki<", "w 100% dla Ciebie, bez prowizji", ">Podsumowanie wieczoru<", ">Komentarze AI z charakterem<",
-                ">Własne limity gości<", ">Obsługa do 10 osób<", ">Twoja biblioteka<",
-                "data-pro-faq", ">Co, gdy Pro się skończy?<", ">Czy obsługa potrzebuje Pro?<", ">A goście?<",
-                "Płatności w aplikacji jeszcze nie ma", "src=\"/js/dj-nav.js\"")
+                ">Własne limity gości i ocena AI każdej prośby<", ">Obsługa do 10 osób<", ">Twoja biblioteka<", ">Kiosk dla gości<", "rano mail z podsumowaniem",
+                "„✓ DJ ma” w podpowiedziach gości",
+                "data-pro-faq", ">Ile będzie kosztować Pro?<", ">Co, gdy Pro się skończy?<", ">Czy obsługa potrzebuje Pro?<", ">A goście?<",
+                "Płatności jeszcze nie ma", "src=\"/js/dj-nav.js\"", "lista gości i ekran TV ich nie pokazują")
                 .doesNotContain("??");
+        assertThat(html).as("Pro has no AI limit an evening; the 300 is a party's requests a day, for both plans (GuestRequestLimiter)")
+                .doesNotContain("300 na wieczór", "300 ocen");
+        assertThat(html).as("a screen reader hears \"tak\" and \"nie\", not \"check mark\" and \"dash\"")
+                .contains("<span aria-hidden=\"true\">✓</span><span class=\"visually-hidden\">tak</span>",
+                        "<span aria-hidden=\"true\">—</span><span class=\"visually-hidden\">nie</span>")
+                .doesNotContain("<td>✓</td>", ">—</td>");
         assertThat(count(html, "btn-action")).as("one action on the page").isEqualTo(1);
         assertThat(html).as("the head for search engines and shared links").contains(
                 "<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/pro\">",
                 "hreflang=\"en\" href=\"https://www.scan2play.com.pl/pro?lang=en\"", "property=\"og:title\"");
         assertThat(html).as("the address also as text, to copy by hand").contains("data-pro-address");
         assertThat(html.indexOf("data-plan=\"free\"")).as("Free first, then Pro").isLessThan(html.indexOf("data-plan=\"pro\""));
-        assertThat(html).as("no price: there is no payment yet").doesNotContain("zł", "PLN", "/ mies");
+        assertThat(html).as("Free costs 0 zł; Pro has no price: there is no payment yet").doesNotContain("PLN", "/ mies", "/mies", "$", "€");
+        assertThat(count(html.substring(html.indexOf("<body")), " zł")).as("on the page only Free's price").isEqualTo(1);
+        assertThat(html).as("a DJ logged in has an account already").doesNotContain("id=\"freeStart\"");
+        assertThat(html).as("the footer's link to this page").contains("id=\"footerPricing\"", ">Cennik</a>");
         DashboardPageRenderTest.assertNothingInline(html);
         write("pro-pl.html", html);
     }
@@ -121,9 +133,9 @@ class ProPageRenderTest {
     void shouldRenderThePageInEnglish() throws IOException {
         String html = render(Locale.ENGLISH, dj());
 
-        assertThat(html).contains("lang=\"en\"", ">Scan2Play Pro</h1>", "href=\"mailto:scan2playcontact@gmail.com?subject=Scan2Play%20Pro\"",
+        assertThat(html).contains("lang=\"en\"", ">Pricing</h1>", ">EARLY ACCESS<", ">Write to us<", ">How much will Pro cost?<", ">150 an evening<", ">every request<", ">300 a day<", "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"",
                 ">Tell us you want Pro<", "data-copied=\"Copied\"", ">Copy address<", "data-plan=\"free\"", "data-plan=\"pro\"",
-                "Everything in Free, plus:", ">The hosts’ list<", ">Staff of up to 10<", ">Your library<", "data-pro-faq", ">What if Pro ends?<")
+                "data-pro-compare", ">The hosts’ list<", ">Staff of up to 10<", ">Your library<", ">The guests’ kiosk<", "data-pro-faq", ">What if Pro ends?<")
                 .doesNotContain("??");
         assertThat(count(html, "btn-action")).isEqualTo(1);
         assertThat(render(Locale.GERMAN, dj())).contains("lang=\"en\"");
@@ -132,9 +144,26 @@ class ProPageRenderTest {
     }
 
     @Test
+    @DisplayName("every feature of the Pro plan is named on the page, in both languages: a new PlanFeature without its line is red here")
+    void everyPlanFeature_isOnThePage() {
+        for (Locale locale : new Locale[]{PL, Locale.ENGLISH}) {
+            String html = render(locale, dj());
+            java.util.Set<String> named = new java.util.HashSet<>();
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("data-feature=\"([A-Z_ ]+)\"").matcher(html);
+            while (m.find()) {
+                named.addAll(java.util.List.of(m.group(1).split(" ")));
+            }
+            for (com.scan2play.model.PlanFeature feature : com.scan2play.model.PlanFeature.values()) {
+                assertThat(named).as("%s on /pro (%s)", feature, locale).contains(feature.name());
+            }
+        }
+    }
+
+    @Test
     @DisplayName("the way back: the panel for whoever is logged in, the landing page for anyone else")
     void shouldLeadBackWhereTheVisitorCameFrom() {
         assertThat(render(PL, ANONYMOUS)).contains("href=\"/\" id=\"proBack\"", ">← Strona główna<").doesNotContain("href=\"/dj/dashboard\"");
+        assertThat(render(PL, ANONYMOUS)).as("a visitor can start for free").contains("href=\"/start\"", "id=\"freeStart\"", ">Zacznij za darmo<");
         // our logo is the way home too, and says so (the owner, 2026-10-24): a link with its title
         assertThat(render(PL, ANONYMOUS)).contains("<a href=\"/\" class=\"s2p-home-logo\"", "title=\"Scan2Play — strona główna\"",
                 "aria-label=\"Scan2Play — strona główna\"");
@@ -146,6 +175,18 @@ class ProPageRenderTest {
     void withThePlansOff_isNotFound() {
         PlanService off = com.scan2play.service.Plans.off();
         assertThatThrownBy(() -> new LegalController(off).pro(dj(), new ConcurrentModel()))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("404");
+    }
+
+    @Test
+    @DisplayName("/cennik and /pricing lead to /pro in their language (one page, one canonical address); a 404 while the plans are off")
+    void theOtherAddresses_leadToThePage() {
+        LegalController on = new LegalController(com.scan2play.service.Plans.enforced());
+        assertThat(on.pricing(new MockHttpServletRequest("GET", "/cennik")).getUrl()).isEqualTo("/pro?lang=pl");
+        assertThat(on.pricing(new MockHttpServletRequest("GET", "/pricing")).getUrl()).isEqualTo("/pro?lang=en");
+        LegalController off = new LegalController(com.scan2play.service.Plans.off());
+        assertThat(off.plansEnforced()).as("no footer link").isFalse();
+        assertThatThrownBy(() -> off.pricing(new MockHttpServletRequest("GET", "/cennik")))
                 .isInstanceOf(ResponseStatusException.class).hasMessageContaining("404");
     }
 

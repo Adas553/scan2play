@@ -42,6 +42,56 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (code -6); the container's PostgreSQL (16) may stop between runs — `pg_ctlcluster 16 main start`; an `*IT` run failing everywhere at
   once is that, not the code.
 
+## Pricing and the Free plan's limit (the owner's picks, 2026-11-05)
+
+The analysis (competitors, Pro / Free checked with the code, the mock-ups, the AI's cost): the artifact "Cennik i limity Free"
+(https://claude.ai/artifact/HmAVim6owQkhpoe6hTg1vZ, private). The AI costs ~$0.002–0.003 a request from 2027 (half until 2026-12-31);
+the logs Railway keeps (since 2026-10-27) hold no guest's request — nobody but the owner has tested it, so there is no real party size.
+The owner's picks:
+1. **Free: 150 AI evaluations a party an evening, soft** — past it a request still reaches the DJ, unchecked (the path of "AI down",
+   `withoutTheAi`); the hard 300 a day stays for everyone; Pro: every request checked. Counted: what goes to Gemini (moods and repeats too; a failed
+   call given back); not: 👍,
+   refusals before the AI, the demo; the kiosk counts. The guest sees nothing of a limit; the DJ a quiet line at 80 %, a bar past it,
+   "bez oceny AI" on those requests — no Pro offer during the party; the next day the organiser's panel ("Wczoraj 212 próśb, AI oceniło
+   150. W Pro AI ocenia każdą prośbę.", "Zobacz, co daje Pro"; only until the next evening's first request). Property `guest.limit.free-ai-per-party` (150, 0 = off), only while enforced.
+2. **The pricing page: variant A** — Free "0 zł zawsze", Pro "WCZESNY DOSTĘP" with "Napisz do nas" (no price, no payment, no date), a
+   comparison table, FAQ ("Ile będzie kosztować Pro?" — not known yet; we write before anything is paid).
+3. **A 404 while `PLANS_ENFORCE=false`** (as `/pro` now); links: the footer ("Cennik"), the landing page's FAQ "Ile to kosztuje?", the
+   account menu ("Twój plan: Free · Cennik", the organiser only); never in the queue.
+4. **`contact@scan2play.com.pl` everywhere public** (`/pro`, the footer's `contact.email`, terms, guide, the privacy policy's contact);
+   Gmail only as Reply-To (and named so in the privacy policy).
+5. **30 days everywhere**: a gift of Pro for the accounts that exist on the switch (`PLANS_GIFT_UNTIL` = the switch + 30 — see the
+   state below) and `PLANS_TRIAL_DAYS=30` for new ones.
+6. The address: `/pro`, with `/cennik` (PL) and `/pricing` (EN) as the same page, one canonical; in the sitemap only once enforced.
+
+**State:** (1) done on `claude/compassionate-cori-g35pvj` (template tests green: `ProPageRenderTest` with the new
+`everyPlanFeature_isOnThePage`, `GuidePageRenderTest`, `DashboardPageRenderTest`, `SmokeTest`; the browser tests — `design.js` has the new
+address). (2) done on the same branch: `/pro` is the pricing page (variant A; `/cennik`, `/pricing` redirect to it), the footer's
+"Cennik", the landing page's "Zobacz cennik →", the account menu's "Twój plan: Free · Cennik" — all only while enforced. Unit tests
+1131 + the new ones green, the browser tests 381 / 381 (in a cloud session: `--no-render --work <a copy where mvn test rendered the
+pages>`, `--chrome /opt/pw-browsers/…/chrome --no-sandbox`, `TMPDIR=/tmp/s2p` — the copy's mvnw cannot download Maven there; `mvn`
+is installed). (3) done on the same branch: `FreeAiLimit` (PROJECT_CONTEXT 5.2, "The Free plan's AI checks") — the request past
+150 goes to the DJ unchecked, the panel's line at 80 % and bar at the limit (polled), the settings' badge, the organiser's note the next
+day with "Zobacz, co daje Pro"; unit tests 1141 green (`FreeAiLimitTest`, `SongEvaluationServiceTest`, `DjDashboardControllerGuestLimitsTest`,
+`DashboardPageRenderTest`), the browser tests 382 / 382 (`free-ai-limit-follows-the-poll` seen red on the old `polling.js`). Off for
+everyone while `PLANS_ENFORCE=false`. The next day's note: a render test (`theDayAfter_…`), no browser scenario. (4) done on the same branch, changed from
+the plan: **the gift is a variable, not a migration** — `PLANS_GIFT_UNTIL` (a day): a V65 would have written the 30 days at the next
+deploy, long before a switch; the panel's line "Do … masz Pro w prezencie" (`PlanServiceTest`, `DashboardPageRenderTest`); the terms'
+new section 5 "Plany Free i Pro" (PL, EN; true now and after); the privacy policy needed nothing (the plan and the trial were in it).
+(5) **not switched — the owner, 2026-11-05: everyone keeps Pro (`PLANS_ENFORCE=false`) until there are customers and a registered
+business**; the day's steps: `docs/plans-switch-on.md`. Unit tests 1143, browser tests 382 / 382.
+
+**The review of PR #239** (2026-11-05, `docs/history/review-2026-11-05-pr239.md`; the owner agreed to every proposal): fixed on
+`claude/pensive-carson-guv7kw`, which is the PR's branch plus seven commits — to be merged into the PR or opened as its own PR to `dev`.
+W1 no "Free" in the "bez oceny AI" tooltip while the plans are off; W2 `X-Guest-Limits-Use`'s third number only where the Free limit
+applies (an open panel's old `polling.js` takes two); W3 the pricing page true to the code (Pro: every request checked; 300 a day for
+both); W4 the terms' section 5 true before and after the switch; W5 (a) the Free card says requests past the limit are not on the
+guests' list nor the TV; W6 an unchecked request for a song played lately refused by the code (`playedLately`); W7 a failed AI call
+given back; W8 the next day's note only until the evening's first request, and only when some came unchecked; D1–D12 (a 301 for
+`/cennik`, the table on a phone, the staff not told of the plan, the count by the party's row so "Zmień kod" keeps it, the trial during
+the gift starts at its end, `PLANS_GIFT_UNTIL` badly written names itself). Unit tests and the browser tests green (the numbers: the
+last commit's message). Then: the switch, on a Tuesday / Wednesday morning (`docs/plans-switch-on.md`; rollback `PLANS_ENFORCE=false`).
+
 ## Next (the owner's ideas, 2026-10-28)
 
 1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać") — (a) and
