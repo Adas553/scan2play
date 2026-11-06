@@ -652,7 +652,7 @@ of a phone is at 316 px (was 382). **The settings fold** under that button on ev
 note and "Kto gra" under one "Zapisz") and **"Kod QR"** (small, beside the guests' link, "Kopiuj", "Drukuj plakat i karty", "📺 Ekran na TV").
 The rare settings are the tab "Ustawienia" — the rows of **"Więcej"** that led to the same page were taken off the panel (the owner,
 2026-10-28: the settings were in two places); near a server limit the panel says it above the queue (from 80 %: "Impreza: 250 z 300
-próśb na dobę", "Jedna sieć (np. Wi-Fi lokalu): 26 z 30 próśb w 10 minut" — the network's at its limit too, it passes by itself;
+próśb na dobę", "Jedna sieć (np. Wi-Fi lokalu): 52 z 60 próśb w 10 minut" — the network's at its limit too, it passes by itself;
 `polling.js` keeps them current from `X-Guest-Limits-Use`; `guest-limit-near-follows-the-poll`). **From 1400 px wide** the unfolded
 cards stand beside the queue, one under another, held under the tab bar (`.s2p-panel-body`, a grid only then; narrower they stay above
 it, side by side — `settings-beside-queue-wide`, `settings-above-queue-laptop`). Each card only for whom may change it (V32: hidden,
@@ -669,7 +669,7 @@ inside a card too), the others stay folded; a form saved in the background leave
 again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are sent in the background and
 the link's box comes back from the settings page the server redirects to, the lists as typed, the page not moved — `cards-in-place.js`,
 `data-in-place="hostLinkBox"`; without the script page loads back to the card), **"Profile i napiwki"** (the owner's), **"Limity gości"** (`LIMITS`; the three numbers and the server's use in
-one line with their windows, "Limity serwera: sieć 4/30 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
+one line with their windows, "Limity serwera: sieć 4/60 na 10 min · impreza 12/300 na 24 h" — unfolded (a `<details>`), what a
 network is: "Jedna sieć to np. Wi-Fi lokalu — wszyscy goście w nim liczą się razem."), **"To urządzenie"** (everyone's:
 the notifications, "Zainstaluj aplikację", on the person's own party "Zaproszenie do obsługi? Wklej link"), and last **"Kod imprezy"**
 (V49, the owner's; folded to the code): against a guest who keeps the code and spams every party — "Zmień kod imprezy" (an outline in
@@ -1038,13 +1038,13 @@ decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else 
    count there) — `guest.error.rate_limit`. A request that came to nothing gives its place back (`giveBack`: a mood sent back to
    the form, a rejected song — the owner, 2026-10-04 —, the guest's own waiting song asked for again). The guest reads the wait of this limit and of the next one as
    `GuestController.waitText` says it: whole minutes rounded up from a minute on ("3 min"), seconds below it ("45 s");
-2. client IP + party: `guest.limit.per-ip-party` (30) per `guest.limit.per-ip-window-minutes` (10) — loose, a venue's Wi-Fi is one
+2. client IP + party: `guest.limit.per-ip-party` (60) per `guest.limit.per-ip-window-minutes` (10) — loose, a venue's Wi-Fi is one
    address — `guest.error.too_many_requests`;
 3. party: `guest.limit.per-party-daily` (300) per 24 h — `guest.error.party_daily_limit`.
 
 A request that 2 or 3 refused gives the guest's own place back too (`giveBack`; review 2026-10-14 W2: the guest was then held by their
-own cooldown for requests never sent). One guest with a script can spend 3 for the whole party (30 per 10 min from one address reach
-300 in under two hours; without the cookie each request is a new session, so 1 does not hold them): the warning "Limit … wyczerpany"
+own cooldown for requests never sent). One guest with a script can spend 3 for the whole party (60 per 10 min from one address reach
+300 in under an hour; without the cookie each request is a new session, so 1 does not hold them): the warning "Limit … wyczerpany"
 above the queue has **"Odblokuj prośby gości"** for whom may set the limits (the organiser, the staff with `LIMITS`; not a plan's
 feature) — `POST /dj/dashboard/guest-limit-reset`, `GuestRequestLimiter.resetParty`: the party's 24 h start again, the addresses keep
 their windows (W4). A stricter limit per address was not added: a venue's Wi-Fi is one address for all its guests; a scripted flood is
@@ -1102,7 +1102,7 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 - **What else stays:** only numbers in `site_counter` (V40, no personal data).
 - **The daily limit:** the party's limit (300 per 24 h, `GuestRequestLimiter`, in memory) is shared by every visitor of a demo
   party, so the reset starts it again too (`GuestRequestLimiter.resetParty`, `DemoPartyTest`): a script that floods `/p/DEMO`
-  blocks the demo's guest page until the next night at most. The addresses keep their windows (30 per 10 min).
+  blocks the demo's guest page until the next night at most. The addresses keep their windows (60 per 10 min).
 
 ---
 
@@ -1478,8 +1478,8 @@ below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH
 `PLANS_TRIAL_DAYS` (default 0). **`BREVO_API_KEY`** (V64, Section 7.4): the automatic e-mails' key — a secret, never in the repo; unset,
 no e-mail is sent. `SCAN2PLAY_MAIL_FROM` (optional, default `contact@scan2play.com.pl`): the sender — it must be a verified sender in
 Brevo (Senders), or Brevo takes the e-mail and then drops it ("sender … is not valid", seen only in Brevo's log). **`ADMIN_GOOGLE_ID`** (`scan2play.admin-id`): the owner's Google subject — the account that sees `/dj/stats` (V40) and whose devices get the AI alarm (Section 7.1); not a secret; unset, the page is a 404. Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
-**`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (staged 2026-10-13, live once the owner
-deploys it): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
+**`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (set; the deploy log's first line says
+"Picked up JAVA_TOOL_OPTIONS", at the level ERROR because the JVM writes it to stderr — not a failure): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
 on average, 2 GB at the top) — the live data is ~55 MB. Measured on a copy (20 parties × 50 guests polling every 3 s, 1 500
 requests in 2 min): 0 errors, the same speed as the default, ~800 MB at the top instead of 1–1.1 GB. `-Xmx256m` with SerialGC was
 lower (536 MB at one party of 150 guests) but slower under the 20 parties; out of memory the app restarts instead of hanging.
@@ -1498,7 +1498,7 @@ Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`
 | `server.shutdown` | graceful, 30 s |
 | `spring.task.execution.pool.*` | 16 core / 32 max threads, queue 50 (env `ASYNC_POOL_*`) — the guests' requests (`Callable`) |
 | `spring.datasource.hikari.*` | 15 max, 5 idle, 5 s connect timeout |
-| `guest.limit.*` | 30 per 10 min per address + party, 300 per 24 h per party, the Free plan's 150 AI checks an evening (`free-ai-per-party`) (env `GUEST_LIMIT_*`) |
+| `guest.limit.*` | 60 per 10 min per address + party, 300 per 24 h per party, the Free plan's 150 AI checks an evening (`free-ai-per-party`) (env `GUEST_LIMIT_*`) |
 | `guest.client-ip-header` | empty (env `GUEST_CLIENT_IP_HEADER`) |
 | `security.csp.enforce` | `false` = report only (env `CSP_ENFORCE`) |
 | `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` / `.gift-until` | `false` / empty / 0 / empty (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`, `PLANS_GIFT_UNTIL`; V35) |
@@ -1754,11 +1754,11 @@ GuestQueueService          → DjService
   language (`spring.messages.fallback-to-system-locale=false`; before it, Polish on a Polish machine — `SmokeTest`).
 
 ### Testing
-- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 785. Pure Mockito, plus template rendering with
+- **Unit tests** (`mvnw test "-Dtest=!*IT"`, no database): 1161 (2026-11-06). Pure Mockito, plus template rendering with
   the real bundles (`DashboardPageRenderTest`, `GuestPageRenderTest`, fragment tests), `SmokeTest` (`@WebMvcTest` with the real
   security chain) and `DjDashboardControllerQueueCacheTest` (the queue poll with the real `dashboardQueue` cache of `AppConfig`). **Coverage** (JaCoCo, a report, not a gate): `target/site/jacoco/index.html` after `mvnw test`; the Unit tests
   workflow writes the totals per package to its summary and keeps the report as the artifact `coverage-report`.
-- **Database tests** (`mvnw verify -Pit`): 93 tests in 27 `*IT` classes on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
+- **Database tests** (`mvnw verify -Pit`): 152 tests in 40 `*IT` classes (2026-11-06) on a real PostgreSQL — `PostgresIntegrationTest` creates and drops its own
   `s2p_it_*` database and starts the whole application on it: `MigrationIT`, `SongRequestRepositoryIT` (the history's order, the
   queue's fingerprint — also changes that cancel out in counts —, the night's clearing of the queues, the retention), `ApplicationSetupIT`,
   `SessionStoreIT` (what the app keeps in a session survives the database and another repository; the cleanup of expired sessions),
@@ -1777,7 +1777,7 @@ GuestQueueService          → DjService
   repo, Maven there, the stand-in, headless Chrome) write `static/images/landing/*.webp` — look at them before committing.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
-  Chrome, with a Python stand-in server that the scenarios configure; 108 scenarios. The stand-in sends the real CSP **enforced** and
+  Chrome, with a Python stand-in server that the scenarios configure; 388 scenarios (2026-11-06). The stand-in sends the real CSP **enforced** and
   every scenario fails on a violation. They do not cover two real devices, how a page looks, and the guest's behaviour beyond the CSP.
 - **CI** (GitHub Actions, every PR and every push to `main` — not to `dev`: its changes come by PRs that ran them on the same
   tree; the review of 2026-10-21, O3): `unit-tests.yml` (also checks that

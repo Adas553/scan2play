@@ -11,6 +11,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Start here
 
+- **2026-11-06 — the full review** (`docs/history/review-2026-11-06.md`; `main` = `1d81386`, #244): nothing critical. Fixed on
+  `claude/adoring-edison-dr87gy`, **not committed yet** (the owner reviews the diff): the logo's upload reads its body only once it has its
+  turn (a burst of uploads could fill the 512 MB heap); the guests' limit per address 30 → 60 a 10 minutes (the owner: a room on one
+  Wi-Fi); "Ostatnie wieczory" whole on a phone; the pages "Dla kogo"' ways back 44 px; no "👍 0" on the TV; stack traces cut to 30 lines
+  a cause (Railway drops lines past 500 a second); `PROJECT_CONTEXT.md`'s numbers. Next: Spring Boot 4.1.x in its own PR (4.0's free
+  support ends 2026-12-31); the hypotheses H2 (a login started twice shows "Błąd logowania"), H3, H4 of the review.
 - **2026-11-05 — the state.** `main` = `09667ea` (the release merge #236), deployed 2026-11-05 13:13 UTC, SUCCESS. Checked (Railway,
   read only): PostgreSQL 18.6, Flyway "Successfully validated 65 migrations", "E-mails on (Brevo), from contact@scan2play.com.pl",
   started in 9.2 s. Every item of "Next" below that said "waiting for a review / a release" is on production: V48 and V49 with #192

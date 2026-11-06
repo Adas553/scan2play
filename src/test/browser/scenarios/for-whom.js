@@ -38,6 +38,9 @@
                 && box(kind).height > 0);
             t.step('the breadcrumbs say the way back', Array.from(crumbs.querySelectorAll('li')).map(function (li) { return li.textContent.trim(); }),
                 ['Scan2Play', 'Dla kogo', 'DJ weselny']);
+            const ways = Array.from(crumbs.querySelectorAll('a')).concat([document.getElementById('forWhomBack')]);
+            t.step('every way back 44 px to tap (the breadcrumbs\' links, "← Wróć na stronę główną")',
+                ways.filter(function (a) { return box(a).height < 44 - 0.5; }).map(function (a) { return a.textContent.trim() || a.id; }), []);
             const steps = Array.from(document.querySelectorAll('#forWhomSteps .s2p-landing-step'));
             t.step('four steps, one under another', [steps.length, rows(steps)], [4, 4]);
             const questions = Array.from(document.querySelectorAll('#forWhomFaq summary'));

@@ -333,6 +333,19 @@ body {
     background: #f2fbfd;
 }
 
+/* a phone: the counts whole, without scrolling the table — the hours of the requests are on the evening's own page */
+@media (max-width: 575.98px) {
+    .compare th,
+    .compare td {
+        padding: 6px 4px;
+    }
+
+    .compare th:last-child,
+    .compare td:last-child {
+        display: none;
+    }
+}
+
 /* ---- The summary ---- */
 
 main {
