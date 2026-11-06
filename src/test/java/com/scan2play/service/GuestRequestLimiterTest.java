@@ -145,6 +145,25 @@ class GuestRequestLimiterTest {
         assertThat(limiter.partyRequestsUsed("OTHER")).as("another party untouched").isEqualTo(1);
     }
 
+    /**
+     * Once the party's day is spent, a request from a new address is refused without a window kept for that address: a flood from
+     * ever new addresses (IPv6: one for each request) no longer grows the party's map in memory.
+     */
+    @Test
+    void pastThePartysDailyLimit_newAddressesAreNotKept() {
+        GuestRequestLimiter limiter = limiter();
+        for (int i = 0; i < 5; i++) {
+            limiter.tryAcquire("198.51.100." + i, PARTY);
+        }
+        assertThat(limiter.addressWindowsOf(PARTY)).isEqualTo(5);
+
+        for (int i = 0; i < 1000; i++) {
+            assertThat(limiter.tryAcquire("2001:db8::" + Integer.toHexString(i), PARTY)).map(Refusal::scope).contains(Scope.PARTY);
+        }
+
+        assertThat(limiter.addressWindowsOf(PARTY)).as("the flood's addresses not kept").isEqualTo(5);
+    }
+
     @Test
     void aRequestRefusedByItsAddress_doesNotCountAgainstTheParty() {
         GuestRequestLimiter limiter = limiter();

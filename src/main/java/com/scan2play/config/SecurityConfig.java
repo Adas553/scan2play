@@ -17,7 +17,11 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
@@ -135,6 +139,27 @@ public class SecurityConfig {
     }
 
     /**
+     * A login that failed. Spring keeps one login on its way per session: a second "Zaloguj" (another tab, a double tap, "back" to
+     * Google's account picker) replaces the first, whose return from Google then fails ({@code authorization_request_not_found}). A
+     * person who is logged in already goes back to the panel instead of reading "Błąd logowania" about a session that works; anyone
+     * else gets the landing page's "Błąd logowania. Spróbuj ponownie."
+     */
+    static AuthenticationFailureHandler loginFailure() {
+        HttpSessionSecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
+        return (request, response, failure) -> {
+            // the context of this request was cleared before the handler runs; the session still holds the person's login
+            Authentication already = contexts.loadDeferredContext(request).get().getAuthentication();
+            if (already instanceof OAuth2AuthenticationToken && already.isAuthenticated()) {
+                log.info("OAuth2 login failed ({}) for a person logged in already: back to the panel", failure.getMessage());
+                response.sendRedirect("/dj/dashboard");
+                return;
+            }
+            log.error("OAuth2 Login Failed: {}", failure.getMessage());
+            response.sendRedirect("/?error=auth_failed");
+        };
+    }
+
+    /**
      * Google's login always asks which account ({@code prompt=select_account}): signing out of Scan2Play does not sign out of Google,
      * and without it the next "Zaloguj" on a shared device (a club's computer) went straight into the last DJ's account.
      */
@@ -220,10 +245,7 @@ public class SecurityConfig {
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(accountPicker(clients)))
                         // back to the DJ's page asked for before the login (with its ?party=), else the panel
                         .successHandler(loginSuccess(remembered, () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN))))
-                        .failureHandler((request, response, exception) -> {
-                            log.error("OAuth2 Login Failed: {}", exception.getMessage());
-                            response.sendRedirect("/?error=auth_failed");
-                        })
+                        .failureHandler(loginFailure())
                 )
                 .logout(logout -> logout
                         .logoutUrl("/dj/logout")
