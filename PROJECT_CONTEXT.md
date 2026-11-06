@@ -33,7 +33,7 @@ permission to use, copy or build on the code). Nothing secret may be committed �
 | Layer            | Technology |
 |------------------|------------|
 | Language         | Java 21 |
-| Framework        | Spring Boot 4.0.8 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat raised to 11.0.27 by `tomcat.version` in `pom.xml` (security fixes after the parent's 11.0.24 — review 2026-10-14 W15, review 2026-10-21 O4; drop it once the parent manages 11.0.27 or later) |
+| Framework        | Spring Boot 4.1.2 (Spring MVC, Thymeleaf, Spring Security + OAuth2 Client, Spring Data JPA); embedded Tomcat 11.0.27 as the parent manages it. The 4.1 line has free updates until about 2027-07; the next line is 4.2 |
 | Front end        | Thymeleaf pages, Bootstrap 5 (webjar `org.webjars:bootstrap`, served by the app at `/webjars/bootstrap/…`, the version only in `pom.xml` — `webjars-locator-lite`), plain JavaScript — the dashboard's scripts are ES modules, no bundler, no framework |
 | Database         | PostgreSQL 18 (Railway `postgres-ssl:18`), schema by **Flyway** (Section 10) |
 | AI               | Google Gemini (`google-genai` 1.74.0), model `gemini-3.6-flash` (thinking level low) |
