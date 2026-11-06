@@ -1191,7 +1191,8 @@ Spring Security's `no-store`,
 `GeminiConfig` (the Gemini client, 15 s timeout, one try — `GeminiConfigTest` checks both through the real SDK against a Gemini
 stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
 the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an empty header), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
-link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
+link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `OriginGuardFilter` (only requests with
+Cloudflare's secret header, `ORIGIN_SECRET` — Section 8), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
 `scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages; only for
 the controllers it names, `HomeController`, `LegalController`, `ForWhomController` — a new public page's controller goes there, or
 its head has no canonical address:
@@ -1444,6 +1445,14 @@ Railway since 2026-10-15** (`CSP_ENFORCE=true`; the response header is `Content-
 violation` in the log since); the owner watches the log for a week; back: delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced
 (Section 13); the standalone history page is not covered by them.
 
+**Only Cloudflare reaches the app** (`OriginGuardFilter`, the review of 2026-11-06): Railway answers `www.scan2play.com.pl` at its own
+address too (`oqz5xl6q.up.railway.app`, checked with `curl --resolve`: `Server: railway-hikari`, no `cf-ray`), and there a client
+may send any `CF-Connecting-IP` / `X-Forwarded-For` — the guests' limit per address and the address the app sees would be its to
+choose. A Cloudflare Transform Rule adds `X-Scan2Play-Origin: <secret>` to every request; with `ORIGIN_SECRET` set the filter, first of
+every filter (before Spring Session and Spring Security), answers a request without it `403 Forbidden` in plain text. Railway's
+healthcheck (a `GET` with the host `healthcheck.railway.app`, from inside) passes. Empty secret: off (locally, the tests).
+`OriginGuardFilterTest`, `OriginGuardWebTest`. The steps to switch it on: Section 10.
+
 ---
 
 ## 9. Caching Strategy
@@ -1468,7 +1477,12 @@ new party code (V49) — the old code and the new.
 `GOOGLE_CLIENT_ID` / `_SECRET`, `GOOGLE_AI_API_KEY`, the database (`PGHOST`, `PGPORT`, `PGDATABASE`, and **`PGUSER` / `PGPASSWORD`
 required** — no defaults since review 5.5; Railway sets all five), `SCAN2PLAY_GUEST_URL` (the base URL in the QR code; locally the LAN
 address, so a phone on the same Wi-Fi can open it), `SCAN2PLAY_SITE_URL` (optional; the site's address for search engines and shared links,
-default the production domain — not set on Railway), `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` (Railway), **`VAPID_PUBLIC_KEY` /
+default the production domain — not set on Railway), `GUEST_CLIENT_IP_HEADER=CF-Connecting-IP` (Railway), **`ORIGIN_SECRET`** (a secret; Section 8, "Only Cloudflare reaches
+the app" — in this order: (1) Cloudflare → the zone → Rules → Transform Rules → Modify Request Header → "Set static" header
+`X-Scan2Play-Origin` = a long random value, for every request to the host `www.scan2play.com.pl`; (2) Railway → `scan2play` →
+Variables → `ORIGIN_SECRET` = the same value; (3) the start's log says "Origin guard on"; `curl -sI https://www.scan2play.com.pl` is a
+200 and `curl -sI https://www.scan2play.com.pl --resolve www.scan2play.com.pl:443:<the address of oqz5xl6q.up.railway.app>` a 403.
+The variable before the rule refuses every page — back: delete the variable), **`VAPID_PUBLIC_KEY` /
 `VAPID_PRIVATE_KEY`** (the notifications' key pair, made once by `VapidKeyGenerator` in `src/test/java` — secrets; without them the
 notifications are off; a new pair makes every device switch them on again; `VAPID_SUBJECT` optional), and the optional overrides
 below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH_DAILY_BUDGET`. The DJ's login works only on

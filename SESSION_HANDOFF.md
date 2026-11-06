@@ -313,5 +313,7 @@ F. **A light theme — only when someone asks** (the owner, 2026-10-28: not now)
   disabled OAuth secret `****IgiS` — delete it.
 - Search Console: request the indexing of `/dj-weselny`, `/kluby`, `/puby`.
 - `SCAN2PLAY_GUEST_URL` in IntelliJ follows the local network's address — change it when the network changes.
-- `server.forward-headers-strategy=FRAMEWORK` trusts `X-Forwarded-*`: safe while Railway's own address cannot be reached past
-  Cloudflare — keep it so.
+- **Railway's own address can be reached past Cloudflare** (the owner's `curl --resolve`, 2026-11-06: a 200 from `railway-hikari`):
+  there `X-Forwarded-*` (`server.forward-headers-strategy=FRAMEWORK`) and `CF-Connecting-IP` are the client's to choose.
+  `OriginGuardFilter` closes it once switched on — after the release: the Cloudflare Transform Rule first, then `ORIGIN_SECRET` on
+  Railway (`PROJECT_CONTEXT.md` Section 10, the order matters).
