@@ -81,7 +81,7 @@ public class GuestRequestLimiter {
     private final Cache<String, Window> kioskWindows;
 
     @Autowired
-    public GuestRequestLimiter(@Value("${guest.limit.per-ip-party:30}") int perClientLimit,
+    public GuestRequestLimiter(@Value("${guest.limit.per-ip-party:60}") int perClientLimit,
                                @Value("${guest.limit.per-ip-window-minutes:10}") int clientWindowMinutes,
                                @Value("${guest.limit.per-party-daily:300}") int perPartyLimit,
                                @Value("${guest.client-ip-header:}") String clientIpHeader,
@@ -173,9 +173,9 @@ public class GuestRequestLimiter {
     }
 
     /**
-     * The organiser's "Odblokuj prośby gości" (review 2026-10-14 W4): the party's 24-hour window starts again. One guest with a
-     * script could spend the party's whole day (30 per 10 min from one address reach 300 in under two hours) and every other guest
-     * was refused until the next day, with nothing the DJ could do. The addresses keep their windows, so the one that spent it is
+     * The organiser's "Odblokuj prośby gości": the party's 24-hour window starts again. One guest with a script can spend the
+     * party's whole day (60 per 10 min from one address reach 300 in under an hour), and every other guest would be refused until
+     * the next day, with nothing the DJ could do. The addresses keep their windows, so the one that spent it is
      * still held by its own limit. The demo's nightly reset too ({@code DemoParty}).
      */
     public void resetParty(String partyCode) {

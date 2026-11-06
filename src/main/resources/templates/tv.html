@@ -36,7 +36,8 @@
             <ol th:unless="${#lists.isEmpty(tvSongs)}" class="tv-songs">
                 <li class="tv-song" th:each="song : ${tvSongs}">
                     <span class="tv-name" th:text="${song.songName}">Wilki - Baśka</span>
-                    <span class="tv-votes"><span aria-hidden="true">👍</span> <span th:text="${song.votes}">0</span></span>
+                    <!--/* no "👍 0": a song nobody voted for yet (the DJ's own) is just its name in the list */-->
+                    <span th:if="${song.votes > 0}" class="tv-votes"><span aria-hidden="true">👍</span> <span th:text="${song.votes}">0</span></span>
                 </li>
             </ol>
             <p th:if="${#lists.isEmpty(tvSongs)}" id="tvEmpty" class="tv-note">

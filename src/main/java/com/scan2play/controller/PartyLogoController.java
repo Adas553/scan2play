@@ -40,7 +40,8 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * The picture comes as the request's body, as the library's file (see {@code DjLibraryController}: a form's upload would be read
  * before anything checked who sent it), at most {@link LogoImage#MAX_BYTES}, and becomes our own PNG ({@link LogoImage}). Two are
- * decoded at a time on the whole server: a decode holds up to some tens of megabytes of a half-gigabyte heap.
+ * read and decoded at a time on the whole server: a decode holds up to some tens of megabytes of a half-gigabyte heap, and a body
+ * read before its turn would let a burst of uploads fill the heap while they wait.
  */
 @Controller
 public class PartyLogoController {
@@ -75,11 +76,8 @@ public class PartyLogoController {
         if (request.getContentLengthLong() > LogoImage.MAX_BYTES) {
             return answer(HttpStatus.PAYLOAD_TOO_LARGE, "settings.logo.error.TOO_LARGE", locale);
         }
-        byte[] file;
-        try (InputStream in = request.getInputStream()) {
-            file = in.readNBytes(LogoImage.MAX_BYTES + 1);   // one byte more tells a body without a length that is too long
-        }
-        LogoImage.Logo logo;
+        // the turn first, the body after: a body is read only by the two uploads that decode, so a burst of uploads waits with
+        // its bodies unread instead of holding 2 MB each in the heap
         try {
             if (!decoding.tryAcquire(10, TimeUnit.SECONDS)) {
                 return answer(HttpStatus.SERVICE_UNAVAILABLE, "settings.logo.error.BUSY", locale);
@@ -88,7 +86,9 @@ public class PartyLogoController {
             Thread.currentThread().interrupt();
             return answer(HttpStatus.SERVICE_UNAVAILABLE, "settings.logo.error.BUSY", locale);
         }
-        try {
+        LogoImage.Logo logo;
+        try (InputStream in = request.getInputStream()) {
+            byte[] file = in.readNBytes(LogoImage.MAX_BYTES + 1);   // one byte more tells a body without a length that is too long
             logo = LogoImage.reencode(file);
         } catch (RefusedLogoException e) {
             return answer(e.reason() == LogoImage.Reason.TOO_LARGE ? HttpStatus.PAYLOAD_TOO_LARGE : HttpStatus.UNPROCESSABLE_ENTITY,

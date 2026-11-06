@@ -8,8 +8,12 @@ The copy holds the guests' words, the DJs' parties and Google account ids: perso
 
 ## Take a copy (PowerShell)
 
-1. Railway → project → service **Postgres** → **Variables** → `DATABASE_PUBLIC_URL` → the eye icon → copy the value.
-   It holds the database's password: never paste it into the repo, a chat or a screenshot.
+0. Railway → service **Postgres** → **Settings** → **Networking** → **TCP Proxy** → add it (port 5432). It gives the database a
+   public address, which `DATABASE_PUBLIC_URL` names — only for the copy: the app reaches the database inside Railway
+   (`postgres.railway.internal`) and never needs it.
+1. Railway → project → service **Postgres** → **Variables** → `DATABASE_PUBLIC_URL` → the eye icon → copy the value (fresh each time:
+   a new TCP proxy may get another host and port). It holds the database's password: never paste it into the repo, a chat or a
+   screenshot.
 2. In PowerShell (the PostgreSQL 18 tools of the local install; production runs 18 too, and `pg_dump` must not be older than the
    server):
 
@@ -26,6 +30,9 @@ Get-ChildItem $dir | Sort-Object Name -Descending | Select-Object -First 3 Name,
 
 The database sleeps when nobody uses it (Railway's serverless): the first connection wakes it, which can take a few seconds. A
 "timeout" or "connection refused" on the first try — run the `pg_dump` line again.
+
+3. **Remove the TCP proxy at once** (the same place, the bin icon): while it is there the production database is open to the whole
+   internet on a public port, guarded by its password alone, and such ports are scanned all the time. The copy is in the file.
 
 ## Check that a copy restores (once a month, or after changing these steps)
 
@@ -47,7 +54,8 @@ The counts should match what the panel shows; `flyway` is the newest migration (
 
 1. Stop the app: Railway → service **scan2play** → the deployment's menu → **Remove** (or set its replicas to 0), so nothing
    writes meanwhile.
-2. Take a copy of the broken state first (the steps above, another file name) — it may still hold something the old copy lacks.
+2. Take a copy of the broken state first (the steps above, another file name, the TCP proxy kept until step 5) — it may still hold
+   something the old copy lacks.
 3. Restore over it:
 
 ```powershell
@@ -58,3 +66,4 @@ Remove-Variable url
 
 4. Deploy the app again (**Redeploy**). Flyway sees the restored `flyway_schema_history` and applies only migrations newer than
    the copy. Everything written after the copy was taken is lost.
+5. Remove the TCP proxy (step 3 of "Take a copy"): the restore needed it, the app does not.

@@ -38,6 +38,22 @@
     });
 
     S2P.scenario({
+        name: 'summary-compare-phone',
+        title: '"Ostatnie wieczory" on a 320 px phone: the votes, played and rejected columns whole in the card — the hours of the requests left to a wider screen',
+        page: 'summary-wedding-pl',
+        viewport: '320,640',
+        run: async function (t) {
+            const scroll = document.querySelector('#compare .compare-scroll');
+            t.check('the table does not scroll sideways', scroll.scrollWidth <= scroll.clientWidth);
+            const right = scroll.getBoundingClientRect().right;
+            const heads = Array.prototype.filter.call(document.querySelectorAll('#compare thead th'), shows);
+            t.step('the columns shown', heads.map(function (h) { return h.textContent.trim(); }),
+                ['Wieczór', 'Głosy', 'Zagrane', 'Odrzucone']);
+            t.check('every heading shown inside the card', heads.every(function (h) { return h.getBoundingClientRect().right <= right + 0.5; }));
+        }
+    });
+
+    S2P.scenario({
         name: 'summary-wide-one-row',
         title: 'the summary on a computer: the bar in one row, the four counts in one row, what played unfolded',
         page: 'summary-wedding-pl',
