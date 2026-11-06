@@ -231,4 +231,78 @@
         viewport: '1280,900',
         run: async function (t) { await proPage(t, true); }
     });
+    // ---- "Cennik" for a visitor, the plans enforced or not: beside the language at the top of the landing page and the pages "Dla
+    // kogo"; /pro before the switch (pro_pl.html rendered by ProPageRenderTest as pro-free-pl.html — a visitor, the plans off) is one
+    // card, everything free, and no word of Pro
+    const pricingAtTheTop = function (t) {
+        const link = document.getElementById('headerPricing'), nav = document.getElementById('langSwitchTop');
+        t.step('"Cennik" at the top, to the pricing page', link && [text(link), link.getAttribute('href')], ['Cennik', '/pro']);
+        if (!link || !nav) return;
+        const a = link.getBoundingClientRect(), b = nav.getBoundingClientRect();
+        t.step('"Cennik" before the language, on its line', [a.right <= b.left + 0.5, Math.abs(middle(link) - middle(nav)) < 4], [true, true]);
+        t.step('as tall as the language\'s links, 44 px to tap', a.height >= 44 - 0.5, true);
+        t.check('on the first screen, within the screen', a.left >= 0 && b.right <= document.documentElement.clientWidth && a.bottom <= window.innerHeight);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    };
+
+    S2P.scenario({
+        name: 'pricing-at-the-top-landing-narrow-phone',
+        title: 'the landing page on a narrow phone (320 px): "Cennik" beside "Polski · English" at the top, 44 px, nothing sticks out',
+        page: 'landing-pl',
+        viewport: '320,700',
+        run: async function (t) { pricingAtTheTop(t); }
+    });
+
+    S2P.scenario({
+        name: 'pricing-at-the-top-for-whom-narrow-phone',
+        title: 'a page "Dla kogo" on a narrow phone (320 px): "Cennik" beside "Polski · English", on the right under the breadcrumbs',
+        page: 'for-whom-dj-weselny-pl',
+        viewport: '320,700',
+        run: async function (t) {
+            pricingAtTheTop(t);
+            const nav = document.getElementById('langSwitchTop');
+            t.check('on the right of the page\'s column', nav.getBoundingClientRect().right
+                >= document.querySelector('.s2p-landing-hero').getBoundingClientRect().right - 40);
+        }
+    });
+
+    const proPageOff = function (t, wide) {
+        const actions = Array.from(document.querySelectorAll('.btn-action')).filter(shows);
+        t.step('one action: start for free', actions.map(function (a) { return [text(a), a.getAttribute('href')]; }), [['Zacznij za darmo', '/start']]);
+        const cards = Array.from(document.querySelectorAll('.s2p-plan')).filter(shows);
+        t.step('one card, "Za darmo", 0 zł', cards.map(function (c) { return [text(c.querySelector('h2')), text(c.querySelector('[data-plan-price]'))]; }),
+            [['Za darmo', '0 zł']]);
+        // the page's own words (the harness's report on the page names this scenario)
+        const words = document.querySelector('body > .container').innerText + document.querySelector('footer').innerText;
+        // a whole word (JavaScript's \b ends a word at "ś": "Prośby" would match it)
+        t.step('no word of Pro on the page', words.match(/.{0,40}(?<!\p{L})Pro(?!\p{L}).{0,40}/gu) || [], []);
+        t.step('the questions: will it stay so, a card, the guests', Array.from(document.querySelectorAll('[data-pro-faq] h3')).map(text),
+            ['Czy tak zostanie?', 'Czy potrzebuję karty?', 'A goście?']);
+        t.step('the terms\' section 5 linked', document.getElementById('freeTerms').getAttribute('href'), '/terms#plans');
+        const card = cards[0].getBoundingClientRect();
+        t.check('the card within the screen', card.left >= 0 && card.right <= document.documentElement.clientWidth);
+        const items = Array.from(cards[0].querySelectorAll('li'));
+        t.step(wide ? 'the list in two columns, not half a page with nothing beside it' : 'the list in one column',
+            new Set(items.map(function (li) { return Math.round(li.getBoundingClientRect().left); })).size, wide ? 2 : 1);
+        const terms = document.getElementById('freeTerms');
+        t.step('the terms\' link in the accent, as the landing page\'s', getComputedStyle(terms).color, 'rgb(13, 202, 240)');
+        t.step('nothing to tap is lower than 44 px (a finger: a phone)', wide ? [] : tooSmall(document.body), []);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    };
+
+    S2P.scenario({
+        name: 'pro-page-plans-off-narrow-phone',
+        title: 'the page /pro before the plans are enforced, on a 320 px phone: one card "Za darmo", one action, no word of Pro',
+        page: 'pro-free-pl',
+        viewport: '320,700',
+        run: async function (t) { proPageOff(t, false); }
+    });
+
+    S2P.scenario({
+        name: 'pro-page-plans-off-wide',
+        title: 'the page /pro before the plans are enforced, on a computer: one card the page\'s width, its list in two columns',
+        page: 'pro-free-pl',
+        viewport: '1280,900',
+        run: async function (t) { proPageOff(t, true); }
+    });
 })();

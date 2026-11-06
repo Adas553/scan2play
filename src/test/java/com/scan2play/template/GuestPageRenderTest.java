@@ -834,6 +834,7 @@ class GuestPageRenderTest {
             context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "token"));
             // what LanguageSwitchAdvice adds to every page's model
             context.setVariable("langSwitch", new com.scan2play.controller.LanguageSwitchAdvice.LanguageSwitch("/?lang=pl", "/?lang=en"));
+            context.setVariable("pricingLink", true);   // HomeController
             String html = engine.process("landing", context);
             writeForTheBrowserTests("landing-" + lang + ".html", html);
 
@@ -864,11 +865,17 @@ class GuestPageRenderTest {
             assertThat(section(html, "landingFaq").split("<details", -1)).as("seven questions — the tips' one too").hasSize(8);
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
             assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/privacy\"");
-            // no "PRO" on one card (the owner, 2026-10-18); Pro and its page only while the plans are enforced (2026-10-21)
-            assertThat(html).doesNotContain("s2p-pro", ">PRO<", "href=\"/pro\"");
+            // no "PRO" on one card (the owner, 2026-10-18); Pro only while the plans are enforced — the pricing page always, beside the
+            // language at the top, in the answer to "Ile to kosztuje?" and in the footer (before the switch it says everything is free)
+            assertThat(html).doesNotContain("s2p-pro", ">PRO<").doesNotContainPattern("(?U)\\bPro\\b");
+            String pricing = "href=\"/pro" + q + "\"";
+            assertThat(html.indexOf(pricing + " id=\"headerPricing\"")).as("\"Cennik\" at the top, before the language")
+                    .isPositive().isLessThan(html.indexOf("id=\"langSwitchTop\""));
+            assertThat(section(html, "landingFaq")).contains(pricing + " class=\"d-block mt-2\"");
+            assertThat(html).contains("id=\"footerPricing\"");
             context.setVariable("plansEnforced", true);
             assertThat(section(engine.process("landing", context), "landingFaq")).as("the plans enforced")
-                    .contains("href=\"/pro\"", locale == PL ? "Pro dodaje" : "Pro adds");
+                    .contains(pricing, locale == PL ? "Pro dodaje" : "Pro adds");
             if (locale == Locale.ENGLISH) {
                 assertThat(html).contains(">Guests request songs. AI keeps the vibe. You play.<", ">Wedding DJs<");
                 continue;

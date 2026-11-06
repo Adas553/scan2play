@@ -92,6 +92,19 @@ given back; W8 the next day's note only until the evening's first request, and o
 the gift starts at its end, `PLANS_GIFT_UNTIL` badly written names itself). Unit tests and the browser tests green (the numbers: the
 last commit's message). Then: the switch, on a Tuesday / Wednesday morning (`docs/plans-switch-on.md`; rollback `PLANS_ENFORCE=false`).
 
+## The pricing page before the switch, and the trial's abuse (the owner's picks, 2026-11-06)
+
+1. **Variant B**: `/pro` (and `/cennik`, `/pricing`) is public while `PLANS_ENFORCE=false` too — one card "Za darmo", "0 zł", every
+   feature, "Zacznij za darmo", the questions "Czy tak zostanie?" (the terms' section 5, `/terms#plans`), "Czy potrzebuję karty?",
+   "A goście?"; no word of Pro (PROJECT_CONTEXT 6.7). "Cennik" beside the language at the top of `/` and the pages "Dla kogo", in the
+   footer of the site's pages (`pricingLink`), the landing page's "Zobacz cennik →"; `/pro` in the sitemap always. The canonical address
+   stays `/pro` (the panel links it). Tests: `ProPageRenderTest.withThePlansOff_everythingIsFree`, `SmokeTest`, `ForWhomPagesWebTest`,
+   `GuestPageRenderTest`; browser scenarios `pricing-at-the-top-*` (320 px), `pro-page-plans-off-*`.
+2. **The trial**: kept as it is (30 days from the account, or from the gift's end). Its abuse costs little (≤ 150 AI checks an evening,
+   a morning e-mail) and gains nothing while Pro is free on request; the terms' one sentence against it is a step of
+   `docs/plans-switch-on.md` (added on the day of the switch, not before); a card for the trial when payments come.
+3. **The privacy policy**: the trial's hash is kept "while Scan2Play offers a trial", on the legitimate interest (was: with no end).
+
 ## Next (the owner's ideas, 2026-10-28)
 
 1. **A first contact with a new DJ** (the owner, 2026-10-28: "jak ktoś nowy zaloguje się, wysłać maila, że może do nas pisać") — (a) and

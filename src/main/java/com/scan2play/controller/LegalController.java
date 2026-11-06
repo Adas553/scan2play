@@ -11,7 +11,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.view.RedirectView;
 
 /**
@@ -48,21 +47,24 @@ public class LegalController {
         return resolveTemplate("guide");
     }
 
-    /** The footer's "Cennik" (components :: footer) on these pages: only while the plans are enforced, as the page itself. */
+    /** The pricing page shows its plans only while they are enforced; before that one card, "za darmo", and no word of Pro. */
     @ModelAttribute("plansEnforced")
     public boolean plansEnforced() {
         return planService.isEnforced();
     }
 
+    /** The footer's "Cennik" (components :: footer): on the site's public pages, not on a party's. */
+    @ModelAttribute("pricingLink")
+    public boolean pricingLink() {
+        return true;
+    }
+
     /**
-     * The pricing page ("Cennik", V35): Free and Pro, what Pro adds — where "Zobacz, co daje Pro" leads. Only while the plans are
-     * enforced: before that nothing says "Pro", and the page is a 404.
+     * The pricing page ("Cennik", V35), where the header's and the footer's "Cennik" and "Zobacz, co daje Pro" lead. While the plans
+     * are enforced: Free and Pro, what Pro adds. Before that: everything free, as it is — a visitor's first question is the price.
      */
     @GetMapping("/pro")
     public String pro(Authentication authentication, Model model) {
-        if (!planService.isEnforced()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
         model.addAttribute("loggedIn", authentication != null && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken));
         return resolveTemplate("pro");
@@ -70,16 +72,13 @@ public class LegalController {
 
     /**
      * The pricing page's other addresses: one page, one canonical address ({@code /pro}, already linked from the panel), so a search
-     * engine sees no copy — a 301, so it keeps the page's one address. A 404 while the plans are not enforced, as the page itself.
+     * engine sees no copy — a 301, so it keeps the page's one address.
      */
     @GetMapping({"/cennik", "/pricing"})
     public RedirectView pricing(HttpServletRequest request) {
-        if (!planService.isEnforced()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
         RedirectView toThePage = new RedirectView("/pricing".equals(request.getRequestURI()) ? "/pro?lang=en" : "/pro?lang=pl", true);
         toThePage.setStatusCode(HttpStatus.MOVED_PERMANENTLY);
-        toThePage.setExposeModelAttributes(false);   // plansEnforced is no part of the address
+        toThePage.setExposeModelAttributes(false);   // plansEnforced and pricingLink are no part of the address
         return toThePage;
     }
 
