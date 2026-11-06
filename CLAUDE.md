@@ -13,6 +13,8 @@
 ## Working agreements (the project owner's preferences)
 
 - **Leave changes uncommitted** so they can be reviewed as a diff in IntelliJ; commit and push only when asked.
+  When asked, delegate commits, branches and PRs to the subagent `pr-helper` (Sonnet; `.claude/agents/pr-helper.md`), giving it
+  the full context: branch, files, purpose of the change. Commit messages and PR titles/descriptions are written in English.
 - **The app runs from IntelliJ** against `target/classes` with `spring-boot-devtools`, which restarts it whenever
   that directory changes. Do not run `mvnw` inside the repo while it is running: copy the repo without
   `target/`, `.git` and `.idea` to a scratch directory and build/test there
