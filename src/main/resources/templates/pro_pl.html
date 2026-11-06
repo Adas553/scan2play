@@ -6,13 +6,15 @@
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
     <title>Cennik Scan2Play</title>
-    <th:block th:replace="~{fragments/components :: seo('/pro', 'Cennik Scan2Play', 'Plan Free za 0 zł i Pro we wczesnym dostępie: co jest za darmo, a co daje Pro.')}"></th:block>
+    <th:block th:replace="~{fragments/components :: seo('/pro', 'Cennik Scan2Play', ${plansEnforced}
+            ? 'Plan Free za 0 zł i Pro we wczesnym dostępie: co jest za darmo, a co daje Pro.'
+            : 'Scan2Play jest za darmo: kod QR, prośby gości sprawdzane przez AI, kolejka i podsumowanie wieczoru — bez karty i bez instalowania.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <!--/* The pricing page (/pro; /cennik and /pricing lead here): Free "0 zł", Pro in early access with no price — the one action is to
-     write to us, as there is no payment. Public (LegalController.pro), one file per language as the guide; a 404 while the plans are
-     not enforced. Each PlanFeature has its line (data-feature: ProPageRenderTest.everyPlanFeature_isOnThePage). The AI's limits named
+     write to us, as there is no payment. Public (LegalController.pro), one file per language as the guide; while the plans are not
+     enforced, one card "Za darmo" in their place. Each PlanFeature has its line (data-feature: ProPageRenderTest.everyPlanFeature_isOnThePage). The AI's limits named
      here are guest.limit.free-ai-per-party and guest.limit.per-party-daily. pro.html is its English twin. */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-960">
@@ -23,6 +25,46 @@
         <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light text-nowrap">← Strona główna</a>
     </div>
 
+    <!--/* While the plans are not enforced: everything free, as it is — one card, no word of Pro (PROJECT_CONTEXT 6.7); what may
+         change later is the terms' section 5, linked. Each sentence stays true after the switch too. */-->
+    <th:block th:unless="${plansEnforced}">
+    <header class="s2p-product-hero" data-pro-hero>
+        <h1>Cennik</h1>
+        <p class="s2p-product-lede mb-0">Scan2Play jest za darmo: wszystkie funkcje, bez karty i bez instalowania.</p>
+    </header>
+
+    <div class="s2p-plans s2p-plans-one">
+        <section class="s2p-plan" data-plan="all">
+            <h2>Za darmo</h2>
+            <p class="s2p-plan-price" data-plan-price>0 zł</p>
+            <p class="s2p-plan-sub">Dla każdego <span class="text-nowrap">DJ-a</span>, na każdą imprezę. Wystarczy konto Google.</p>
+            <ul>
+                <li><div>Kod QR, plakat, karty i namioty na stoły — motywy, kroje, grafika „Do internetu”, Twoje logo</div></li>
+                <li><div>Prośby sprawdzane przez AI: czy to piosenka, czy pasuje do klimatu, czy dziś już nie leciała; dedykacje też; komentarze AI w czterech stylach</div></li>
+                <li><div>Kolejka: Zagrane, Pomiń, Cofnij, Kopiuj, Dodaj piosenkę, klawisze; Twoja biblioteka z rekordboxa albo M3U</div></li>
+                <li><div>Lista gospodarzy: 🚫 czego nie grać, ⭐ co koniecznie zagrać — gospodarze wypełnią ją sami przez link</div></li>
+                <li><div>Głosy i 👍 gości, klimat, „Kto gra”, motyw strony gości, ekran TV, kiosk dla gości bez telefonu</div></li>
+                <li><div>Twoje profile i napiwki u gości — w 100% dla Ciebie, bez prowizji</div></li>
+                <li><div>Podsumowanie wieczoru: do druku, PDF i CSV, link dla gospodarzy, rano mail</div></li>
+                <li><div>Własne limity gości, historia z 30 dni, powiadomienia na telefon, obsługa do 10 osób</div></li>
+            </ul>
+            <div class="s2p-plan-cta" th:unless="${loggedIn}">
+                <a href="/start" class="btn btn-action w-100" id="freeStart">Zacznij za darmo</a>
+            </div>
+        </section>
+    </div>
+
+    <p class="s2p-faq-title">Dobrze wiedzieć</p>
+    <div class="s2p-faq" data-pro-faq>
+        <div><h3>Czy tak zostanie?</h3><p>To, czego potrzeba na imprezę, zostanie za darmo. Jeśli kiedyś część funkcji stanie się płatna,
+            uprzedzimy o tym w panelu <span class="text-nowrap">DJ-a</span>, a konta, które wtedy będą istnieć, dostaną je na 30 dni bez opłat. Nic nie stanie się płatne
+            bez Twojej wyraźnej zgody — <a href="/terms#plans" id="freeTerms">Regulamin, pkt 5</a>.</p></div>
+        <div><h3>Czy potrzebuję karty?</h3><p>Nie. Nie pobieramy opłat i nie prosimy o dane płatności.</p></div>
+        <div><h3>A goście?</h3><p>Goście nic nie płacą i niczego nie instalują: skanują kod i proszą o piosenkę.</p></div>
+    </div>
+    </th:block>
+
+    <th:block th:if="${plansEnforced}">
     <header class="s2p-product-hero" data-pro-hero>
         <h1>Cennik</h1>
         <p class="s2p-product-lede mb-0">Wszystko, czego potrzeba na imprezę, jest za darmo. Pro jest dla DJ-ów, którzy grają co tydzień:
@@ -106,6 +148,7 @@
         <div><h3>Czy obsługa potrzebuje Pro?</h3><p>Nie. Obsługa pracuje na planie organizatora imprezy.</p></div>
         <div><h3>A goście?</h3><p>Goście nic nie płacą i niczego nie instalują: skanują kod i proszą o piosenkę.</p></div>
     </div>
+    </th:block>
 </div>
 
 <div th:replace="~{fragments/components :: footer}"></div>

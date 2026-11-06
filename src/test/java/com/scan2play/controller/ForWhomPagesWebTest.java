@@ -89,7 +89,9 @@ class ForWhomPagesWebTest {
                     "src=\"/images/landing/dashboard-pl.webp\"");
             assertThat(html).as(path + ": no form — no session, no CSRF token").doesNotContain("<form", "_csrf");
             // no word of Pro while the plans are not enforced (the owner, 2026-10-21)
-            assertThat(html).as(path + ": no Pro").doesNotContainPattern("(?U)\\bPro\\b").doesNotContain("/pro\"", "s2p-pro");
+            assertThat(html).as(path + ": no Pro").doesNotContainPattern("(?U)\\bPro\\b").doesNotContain("s2p-pro");
+            // "Cennik" at the top and in the footer all the same: /pro says that everything is free
+            assertThat(html).contains("href=\"/pro\" id=\"headerPricing\" class=\"s2p-top-link small\">Cennik</a>", "id=\"footerPricing\"");
             writeForTheBrowserTests("for-whom-" + path.substring(1) + "-pl.html", html);
         }
         // the pubs' first step (the owner, 2026-10-24: "Raz" read oddly as a heading)
@@ -106,7 +108,8 @@ class ForWhomPagesWebTest {
                     "href=\"/?lang=en\"", "href=\"/how-it-works?lang=en\"", "src=\"/images/landing/dashboard-en.webp\"");
             assertThat(section(html, "forWhomOthers")).contains("?lang=en\"").doesNotContainPattern("href=\"/[a-z-]+\"");
             assertThat(section(html, "forWhomOthers")).contains("href=\"/?lang=en\" id=\"forWhomBack\"", ">← Back to the home page</a>");
-            assertThat(html).as(path + ": no Pro").doesNotContainPattern("(?U)\\bPro\\b").doesNotContain("/pro\"");
+            assertThat(html).as(path + ": no Pro").doesNotContainPattern("(?U)\\bPro\\b")
+                    .contains("href=\"/pro?lang=en\" id=\"headerPricing\" class=\"s2p-top-link small\">Pricing</a>");
             writeForTheBrowserTests("for-whom-" + path.substring(1) + "-en.html", html);
         }
         assertThat(page("/dj-weselny", "en")).contains("<h1 class=\"s2p-landing-title\">A wedding without a queue at the booth</h1>");

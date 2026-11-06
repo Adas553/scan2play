@@ -367,7 +367,8 @@ end; after it the row reads as FREE, `planAt`), `updatedAt`. **Empty at first: n
 **`trial_used`** (V36, the owner 2026-10-15; no entity — native queries of `DjPlanRepository`) — the Google accounts that had a trial of
 Pro: `owner_hash` (PK, the SHA-256 of the Google subject in hex, `PlanService.trialKey` = PostgreSQL's
 `encode(sha256(convert_to(owner_id, 'UTF8')), 'hex')`), `used_at`. **Not deleted with the account** — that is what it is for: the
-same Google account after "Usuń konto" gets no second trial; nothing else of the account (the privacy policy, section 5).
+same Google account after "Usuń konto" gets no second trial; nothing else of the account (the privacy policy, section 5: kept
+while Scan2Play offers a trial, on its legitimate interest — if the trial is dropped for good, a migration empties the table).
 **`spring_session`, `spring_session_attributes`** (V11, Spring Session's own schema, no entity) — the HTTP sessions; expired ones are
 deleted every minute. An attribute is written with `INSERT … ON CONFLICT DO UPDATE` (`AppConfig.sessionAttributesUpsert`): two requests
 of one session at once that both added the same one (a new session's CSRF token) met the primary key, and one was a 500
@@ -406,7 +407,7 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   paid without separate terms and consent — true while the plans are off and after.
 - The server refuses a Pro feature's endpoint (`PlanService.require` → `PlanRequiredException`, a 403) — `PlanFeatureEndpointsTest`
   walks them all; the pages show it as 6.7 says ("PRO"). No payment, no prices: "Zobacz, co daje Pro" leads to `/pro`, which says to
-  write to contact@scan2play.com.pl (a 404 while not enforced). Each `PlanFeature` has its line there (`data-feature`, both languages —
+  write to contact@scan2play.com.pl (while not enforced it shows one card, everything free — 6.7). Each `PlanFeature` has its line there (`data-feature`, both languages —
   `ProPageRenderTest.everyPlanFeature_isOnThePage`). Later, before the first payment: a payment provider (Stripe Billing /
   Przelewy24 / Tpay) writing `dj_plan` (PAID, `validUntil`), the terms (a paid service, renewal, the consumer's withdrawal), the
   privacy policy (the payment provider, the billing data), invoices and VAT (KSeF, OSS) — the review's list.
@@ -444,8 +445,8 @@ from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLan
 the look; the panel shows the guests' dedications, the phone the folded "💌 Dodaj dedykację") —, then three steps, what one gets
 (six cards: the vibe — with no repeats —, the guest's words, the votes, the dedications, the hosts' list, the phone and the staff; no
 "PRO" on a card; "Ile to kosztuje?" names Pro and links `/pro` only while the plans are enforced — `HomeController`'s
-`plansEnforced`; before, "Nic. Scan2Play jest za darmo…": the owner, 2026-10-21, `/pro` is a 404 then), for whom (wedding DJs, clubs, pubs, karaoke — the first three
-cards lead to their pages "Dla kogo", below; karaoke has none yet), seven questions (`details`, no script; one of them: the tips go 100% to the DJ, Scan2Play takes no commission — the owner, 2026-10-30) and the start again; no prices while the plans are not enforced.
+`plansEnforced`; before, "Nic. Scan2Play jest za darmo…"; "Zobacz cennik →" to `/pro` either way, and "Cennik" beside the language at the top), for whom (wedding DJs, clubs, pubs, karaoke — the first three
+cards lead to their pages "Dla kogo", below; karaoke has none yet), seven questions (`details`, no script; one of them: the tips go 100% to the DJ, Scan2Play takes no commission — the owner, 2026-10-30) and the start again; no word of Pro while the plans are not enforced.
 **The pages "Dla kogo"** (`ForWhomController`, `for-whom.html`, 2026-10-21; Next 7): `/dj-weselny`, `/kluby`, `/puby` — for search
 engines (in the sitemap, Polish at the address, English with `?lang=en`, canonical and `hreflang` like the other public pages) and for
 a link sent to a DJ or a pub's owner. Where one is, at once (the owner: from the landing page's card the page looked the same): breadcrumbs (the
@@ -1132,9 +1133,9 @@ the AI (`SongEvaluationService.demoAnswer`), and a visitor's request is saved un
 | `FeedbackController` | `POST /dj/feedback` (JSON; 10 an hour per account, then 429) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
 | `CspReportController` | `POST /csp-report` — the browsers' CSP reports, logged once an hour per violation, at most 100 an hour |
-| `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, the pages "Dla kogo" (`ForWhomController.PAGES`), `/jak-to-dziala`, `/privacy`, `/terms`, and `/pro` while the plans are enforced — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
+| `SeoController` | `/robots.txt` (the DJ's pages, `/start`, the login not for a crawler; the sitemap's address) and `/sitemap.xml` (the public pages — `/`, the pages "Dla kogo" (`ForWhomController.PAGES`), `/pro`, `/jak-to-dziala`, `/privacy`, `/terms` — Polish at their own address, English with `?lang=en`, each with its `hreflang` alternates); both answered with the landing page before (Spring Security sends an unknown address to the login, `/`) — 2026-10-14 |
 | `ForWhomController` | the pages "Dla kogo" `/dj-weselny`, `/kluby`, `/puby` (one template, `for-whom.html`; the texts `forWhom.KEY.*`) — 2026-10-21 |
-| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), the pricing page `/pro` (V35: Free and Pro, a file per language; `/cennik`, `/pricing` redirect to it; a 404 while the plans are not enforced) |
+| `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), the pricing page `/pro` (V35: Free and Pro, a file per language; `/cennik`, `/pricing` redirect to it; while the plans are not enforced one card "Za darmo" — 6.7) |
 | `ViewAttributes` | names of the model attributes |
 
 ### 6.2 Services
@@ -1318,13 +1319,20 @@ What every page shares, so a new screen looks like the others:
   place of a price, its one action at the card's foot ("Napisz, że chcesz Pro", `mailto:contact@…`, the address as text with "Kopiuj
   adres" — there is no payment, no price, no date) —, each Pro feature named with what it gives under it, "Porównanie" (a table, Free /
   Pro, in its own scroll box), "Dobrze wiedzieć" (what Pro will cost — not known yet, we write before anything is paid; what happens when
-  Pro ends; the staff; the guests) (`.s2p-product-*`, `.s2p-plan*`, `.s2p-compare*`, `.s2p-faq`). Linked, only while the plans are
-  enforced: the footer's "Cennik" (`plansEnforced` — `HomeController`, `ForWhomController`, `LegalController`), the landing page's "Ile to
-  kosztuje?" ("Zobacz cennik →"), the account menu's "Twój plan: Free · Cennik" (the organiser only, `PlanService.View.offered`). It names
+  Pro ends; the staff; the guests) (`.s2p-product-*`, `.s2p-plan*`, `.s2p-compare*`, `.s2p-faq`). **While the plans are not enforced**
+  (the owner, 2026-11-06: a visitor's first question is the price) the same address shows one card instead — "Za darmo", "0 zł",
+  everything a DJ gets today, "Zacznij za darmo" (a visitor only), and "Dobrze wiedzieć": "Czy tak zostanie?" (what a party needs stays
+  free; if anything becomes paid, a notice in the panel and 30 days at no charge for the accounts then — the terms' section 5,
+  `/terms#plans`), "Czy potrzebuję karty?", "A goście?" — no word of Pro (`.s2p-plans-one`; scenarios `pro-page-plans-off-*`); every
+  sentence of it stays true after the switch. Linked whether enforced or not: "Cennik" beside the language at the top of the landing
+  page and the pages "Dla kogo" (`#headerPricing`, `.s2p-top-link` — as quiet and as tall as the language's links; scenarios
+  `pricing-at-the-top-*`, 320 px), the footer's "Cennik" on the site's own pages (`pricingLink` — `HomeController`, `ForWhomController`,
+  `LegalController`; never on a party's), the landing page's "Ile to kosztuje?" ("Zobacz cennik →"); only while enforced the account
+  menu's "Twój plan: Free · Cennik" (the organiser only, `PlanService.View.offered`). It names
   the Free plan's 150 AI checks an evening (then unchecked, not on the guests' list nor the TV), Pro's check of every request, and a
   party's 300 requests a day for both (`FreeAiLimit`, `GuestRequestLimiter`, Section 5.2). **Never in the queue** (no 💸, no ⭐ — nothing changes during a party). Not the rule of the staff's
   permissions (hidden, not greyed): the organiser can change their plan, so they see what there is. The staff of a party without Pro
-  see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows. Browser scenarios
+  see none of it (hidden — not theirs to buy). While the plans are not enforced nothing of this shows but "Cennik". Browser scenarios
   `pro-free-panel`, `pro-free-settings-phone`, `pro-free-settings-wide`, `pro-page-phone`, `pro-page-wide`.
 - **Emoji** only as markers in a list or a status (⭐ ⚠ 💸 👍 ▶ ⏭, "🎧 Gra: …", 🚫 / ⭐ of the hosts' lists) — not in card titles,
   headings or ordinary buttons. **Words**: "Ty" to everyone, "Wy" only on the hosts' page; "organizator" (the party's owner), "obsługa"
@@ -1660,7 +1668,7 @@ GuestQueueService          → DjService
 | GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
 | GET | `/dj-weselny`, `/kluby`, `/puby` | the pages "Dla kogo" (public; `ForWhomController`, 2026-10-21) |
 | GET | `/robots.txt`, `/sitemap.xml` | for search engines (`SeoController`, 2026-10-14) |
-| GET | `/pro` | "Scan2Play Pro" (V35): what stays free, what Pro adds, "Napisz, że chcesz Pro" (`mailto:`), the questions; a 404 while the plans are not enforced |
+| GET | `/pro` | the pricing page (V35): what stays free, what Pro adds, "Napisz, że chcesz Pro" (`mailto:`), the questions; while the plans are not enforced one card "Za darmo" (everything free, no word of Pro) |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |
 

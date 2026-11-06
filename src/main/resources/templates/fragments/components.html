@@ -429,9 +429,9 @@
         <p class="mb-2">
             <a href="/privacy" class="text-secondary me-3" th:text="#{footer.privacy}">Privacy Policy</a>
             <a href="/terms" class="text-secondary me-3" th:text="#{footer.terms}">Terms of Service</a>
-            <!--/* the pricing page, only while the plans are enforced (plansEnforced: HomeController, ForWhomController,
-                 LegalController) — before that it is a 404 */-->
-            <a th:if="${plansEnforced}" href="/pro" class="text-secondary me-3" id="footerPricing" th:text="#{footer.pricing}">Pricing</a>
+            <!--/* the pricing page, on the site's own pages (pricingLink: HomeController, ForWhomController, LegalController) —
+                 not on a party's */-->
+            <a th:if="${pricingLink}" href="/pro" class="text-secondary me-3" id="footerPricing" th:text="#{footer.pricing}">Pricing</a>
         </p>
         <nav th:replace="~{fragments/components :: langSwitch('langSwitch', 'mb-2')}"></nav>
         <p class="mb-0">&copy; 2026 Scan2Play</p>

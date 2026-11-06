@@ -13,12 +13,15 @@
 <!--/* The landing page (2026-10-17, an idea from Rekwest — its features, never its look or texts): at once how it looks, the DJ's
      panel on a laptop and the guest's page on a phone — real pictures of the app, of a made-up party, in the page's language
      (src/test/browser/screenshots.py writes them from GuestPageRenderTest / DashboardPageRenderTest) —, then three steps, what one
-     gets, for whom, the questions (details: no script, CSP) and the start again. No prices: the plans are not enforced (Next 5). */-->
+     gets, for whom, the questions (details: no script, CSP) and the start again. "Cennik" at the top and in the answer to the price,
+     whether the plans are enforced or not — /pro says what is true. */-->
 <body class="page-landing" th:with="lang=${#messages.msg('html.lang') == 'en' ? 'en' : 'pl'}">
 
 <header class="container s2p-landing-hero">
-    <!--/* the language at the top too (the owner, 2026-10-18): a visitor reads the page's first lines in it */-->
-    <div class="d-flex justify-content-end mb-2">
+    <!--/* the language at the top too: a visitor reads the page's first lines in it; and the price, a visitor's first question */-->
+    <div class="d-flex justify-content-end align-items-center gap-1 mb-2">
+        <a th:href="${lang == 'en' ? '/pro?lang=en' : '/pro'}" href="/pro" id="headerPricing" class="s2p-top-link small"
+           th:text="#{footer.pricing}">Pricing</a>
         <nav th:replace="~{fragments/components :: langSwitch('langSwitchTop', 'small')}"></nav>
     </div>
     <!--/* gx-4 on a phone: the row's negative margin (half the gutter) no wider than the container's padding — with g-5 it stuck out
@@ -145,10 +148,10 @@
                 <details><summary th:text="#{landing.faq.player.q}">Does Scan2Play play the music?</summary>
                     <p th:text="#{landing.faq.player.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.price.q}">How much does it cost?</summary>
-                    <!--/* Pro and its page only while the plans are enforced (HomeController; the owner, 2026-10-21: before, /pro is a
-                         404 — "schowaj to PRO, włączymy, jak będziemy używać") */-->
+                    <!--/* Pro named only while the plans are enforced (HomeController); the pricing page linked either way — before
+                         the switch it says that everything is free */-->
                     <p><th:block th:text="${plansEnforced} ? #{landing.faq.price.a} : #{landing.faq.price.free}">…</th:block>
-                        <a th:if="${plansEnforced}" href="/pro" class="d-block mt-2" th:text="#{landing.faq.price.link}">See what Pro gives →</a></p></details>
+                        <a th:href="${lang == 'en' ? '/pro?lang=en' : '/pro'}" href="/pro" class="d-block mt-2" th:text="#{landing.faq.price.link}">See the pricing →</a></p></details>
                 <details><summary th:text="#{landing.faq.tips.q}">Do you take a cut of the tips?</summary>
                     <p th:text="#{landing.faq.tips.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.ai.q}">What if the AI gets it wrong or is down?</summary>

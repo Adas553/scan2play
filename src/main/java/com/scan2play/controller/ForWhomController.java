@@ -42,8 +42,9 @@ public class ForWhomController {
         Page page = PAGES.stream().filter(p -> p.path().equals(path)).findFirst().orElseThrow();
         model.addAttribute("forWhom", page);
         model.addAttribute("forWhomOthers", PAGES.stream().filter(p -> p != page).toList());
-        // "Pro" only while the plans are enforced, as on the landing page (the owner, 2026-10-21)
+        // "Pro" only while the plans are enforced, as on the landing page; the header's and the footer's "Cennik" always
         model.addAttribute("plansEnforced", planService.isEnforced());
+        model.addAttribute("pricingLink", true);
         return "for-whom";
     }
 }
