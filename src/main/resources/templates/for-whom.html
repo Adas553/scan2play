@@ -29,8 +29,11 @@
                 <li class="breadcrumb-item active" aria-current="page" th:text="${#messages.msg('landing.who.' + forWhom.key + '.title')}">Wedding DJs</li>
             </ol>
         </nav>
-        <!--/* on the right when it wraps under the breadcrumbs (a phone) */-->
-        <nav th:replace="~{fragments/components :: langSwitch('langSwitchTop', 'small ms-auto')}"></nav>
+        <!--/* "Cennik" and the language on the right, also when they wrap under the breadcrumbs (a phone) */-->
+        <div class="d-flex align-items-center gap-1 ms-auto">
+            <a th:href="${'/pro' + q}" href="/pro" id="headerPricing" class="s2p-top-link small" th:text="#{footer.pricing}">Pricing</a>
+            <nav th:replace="~{fragments/components :: langSwitch('langSwitchTop', 'small')}"></nav>
+        </div>
     </div>
     <!--/* the landing page's gutters: gx-4 on a phone, else the row sticks out of the container and the page moves sideways */-->
     <div class="row align-items-center gx-4 gy-5 gx-lg-5">

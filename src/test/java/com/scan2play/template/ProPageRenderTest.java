@@ -16,7 +16,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.ui.ConcurrentModel;
-import org.springframework.web.server.ResponseStatusException;
 import org.thymeleaf.context.WebContext;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
@@ -30,13 +29,13 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The page "Scan2Play Pro" ({@code /pro}, V35; a page of the product since the review of 2026-10-14,
  * https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN): one action — write that you want Pro —, the plans Free and Pro, what Pro gives,
- * the questions one asks before buying; a 404 while the plans are not enforced. Leaves {@code pro-pl.html} / {@code pro-en.html} (a DJ
- * logged in) in {@code target/browser-harness/} for the browser tests ({@code scenarios/plans.js}).
+ * the questions one asks before buying; while the plans are not enforced one card, everything free, and no word of Pro. Leaves
+ * {@code pro-pl.html} / {@code pro-en.html} (a DJ logged in) and {@code pro-free-pl.html} / {@code pro-free-en.html} (a visitor, the
+ * plans off) in {@code target/browser-harness/} for the browser tests ({@code scenarios/plans.js}).
  */
 class ProPageRenderTest {
 
@@ -67,10 +66,15 @@ class ProPageRenderTest {
 
     /** What the controller does for the locale and the visitor (the plans enforced), rendered like the view resolver would. */
     private static String render(Locale locale, Authentication visitor) {
+        return render(locale, visitor, com.scan2play.service.Plans.enforced());
+    }
+
+    private static String render(Locale locale, Authentication visitor, PlanService plans) {
         LocaleContextHolder.setLocale(locale);
         ConcurrentModel model = new ConcurrentModel();
-        LegalController controller = new LegalController(com.scan2play.service.Plans.enforced());
-        model.addAttribute("plansEnforced", controller.plansEnforced());   // the controller's @ModelAttribute, as MVC calls it
+        LegalController controller = new LegalController(plans);
+        model.addAttribute("plansEnforced", controller.plansEnforced());   // the controller's @ModelAttributes, as MVC calls them
+        model.addAttribute("pricingLink", controller.pricingLink());
         String view = controller.pro(visitor, model);
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
@@ -171,23 +175,43 @@ class ProPageRenderTest {
     }
 
     @Test
-    @DisplayName("while the plans are not enforced the page is a 404: nothing says \"Pro\"")
-    void withThePlansOff_isNotFound() {
+    @DisplayName("while the plans are not enforced: one card, everything free, no word of Pro — the terms' section 5 for what may change")
+    void withThePlansOff_everythingIsFree() throws IOException {
         PlanService off = com.scan2play.service.Plans.off();
-        assertThatThrownBy(() -> new LegalController(off).pro(dj(), new ConcurrentModel()))
-                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("404");
+        String pl = render(PL, ANONYMOUS, off);
+
+        assertThat(pl).contains("<title>Cennik Scan2Play</title>", ">Cennik</h1>", "data-plan=\"all\"", ">Za darmo</h2>",
+                        "<p class=\"s2p-plan-price\" data-plan-price>0 zł</p>", "class=\"s2p-plans s2p-plans-one\"",
+                        "Dla każdego <span class=\"text-nowrap\">DJ-a</span>, na każdą imprezę.", ">Lista gospodarzy:", "obsługa do 10 osób", "kiosk dla gości bez telefonu",
+                        ">Czy tak zostanie?<", "dostaną je na 30 dni bez opłat", "href=\"/terms#plans\"", ">Czy potrzebuję karty?<", ">A goście?<",
+                        "href=\"/start\" class=\"btn btn-action w-100\" id=\"freeStart\">Zacznij za darmo<", "id=\"footerPricing\"",
+                        "content=\"Scan2Play jest za darmo: kod QR, prośby gości sprawdzane przez AI",
+                        "<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/pro\">")
+                .doesNotContain("??", "data-plan=\"free\"", "data-plan=\"pro\"", "data-feature", "data-pro-compare", "mailto:", "WCZESNY",
+                        "150", "s2p-pro\"")
+                .doesNotContainPattern("(?U)\\bPro\\b");
+        assertThat(count(pl, "btn-action")).as("one action on the page").isEqualTo(1);
+        assertThat(render(PL, dj(), off)).as("a DJ logged in has an account already").doesNotContain("id=\"freeStart\"", "btn-action");
+        DashboardPageRenderTest.assertNothingInline(pl);
+        write("pro-free-pl.html", pl);
+
+        String en = render(Locale.ENGLISH, ANONYMOUS, off);
+        assertThat(en).contains(">Pricing</h1>", "data-plan=\"all\"", ">Free</h2>", "For every DJ and every party.", ">Will it stay so?<",
+                        ">Do I need a card?<", "href=\"/terms#plans\"", ">Start for free<")
+                .doesNotContain("??", "data-plan=\"pro\"", "mailto:")
+                .doesNotContainPattern("(?U)\\bPro\\b");
+        write("pro-free-en.html", en);
     }
 
     @Test
-    @DisplayName("/cennik and /pricing lead to /pro in their language (one page, one canonical address); a 404 while the plans are off")
+    @DisplayName("/cennik and /pricing lead to /pro in their language (one page, one canonical address), the plans enforced or not")
     void theOtherAddresses_leadToThePage() {
-        LegalController on = new LegalController(com.scan2play.service.Plans.enforced());
-        assertThat(on.pricing(new MockHttpServletRequest("GET", "/cennik")).getUrl()).isEqualTo("/pro?lang=pl");
-        assertThat(on.pricing(new MockHttpServletRequest("GET", "/pricing")).getUrl()).isEqualTo("/pro?lang=en");
-        LegalController off = new LegalController(com.scan2play.service.Plans.off());
-        assertThat(off.plansEnforced()).as("no footer link").isFalse();
-        assertThatThrownBy(() -> off.pricing(new MockHttpServletRequest("GET", "/cennik")))
-                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("404");
+        for (PlanService plans : new PlanService[]{com.scan2play.service.Plans.enforced(), com.scan2play.service.Plans.off()}) {
+            LegalController controller = new LegalController(plans);
+            assertThat(controller.pricing(new MockHttpServletRequest("GET", "/cennik")).getUrl()).isEqualTo("/pro?lang=pl");
+            assertThat(controller.pricing(new MockHttpServletRequest("GET", "/pricing")).getUrl()).isEqualTo("/pro?lang=en");
+            assertThat(controller.pricingLink()).as("the footer's link").isTrue();
+        }
     }
 
     private static void write(String name, String html) throws IOException {

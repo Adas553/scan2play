@@ -6,7 +6,9 @@
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
     <title>Scan2Play pricing</title>
-    <th:block th:replace="~{fragments/components :: seo('/pro', 'Scan2Play pricing', 'Free for 0 zł and Pro in early access: what is free and what Pro adds.')}"></th:block>
+    <th:block th:replace="~{fragments/components :: seo('/pro', 'Scan2Play pricing', ${plansEnforced}
+            ? 'Free for 0 zł and Pro in early access: what is free and what Pro adds.'
+            : 'Scan2Play is free: the QR code, guest requests checked by AI, the queue and the evening summary — no card, nothing to install.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
@@ -20,6 +22,45 @@
         <a th:unless="${loggedIn}" href="/" id="proBack" class="btn btn-sm btn-outline-light text-nowrap">← Home</a>
     </div>
 
+    <!--/* While the plans are not enforced: everything free — pro_pl.html says why. */-->
+    <th:block th:unless="${plansEnforced}">
+    <header class="s2p-product-hero" data-pro-hero>
+        <h1>Pricing</h1>
+        <p class="s2p-product-lede mb-0">Scan2Play is free: every feature, no card, nothing to install.</p>
+    </header>
+
+    <div class="s2p-plans s2p-plans-one">
+        <section class="s2p-plan" data-plan="all">
+            <h2>Free</h2>
+            <p class="s2p-plan-price" data-plan-price>0 zł</p>
+            <p class="s2p-plan-sub">For every DJ and every party. A Google account is all you need.</p>
+            <ul>
+                <li><div>The QR code, a poster, table cards and tents — themes, fonts, a picture for social media, your logo</div></li>
+                <li><div>Requests checked by the AI: is it a song, does it fit the vibe, has it played tonight; dedications too; the AI's comments in four styles</div></li>
+                <li><div>The queue: Played, Skip, Undo, Copy, Add a song, keys; your library from rekordbox or M3U</div></li>
+                <li><div>The hosts' list: 🚫 what not to play, ⭐ what to play — the hosts fill it in themselves through a link</div></li>
+                <li><div>The guests' votes and 👍, the vibe, "Who's playing", the guests' page theme, the TV screen, a kiosk for guests without a phone</div></li>
+                <li><div>Your profiles and tips for the guests — 100% yours, no commission</div></li>
+                <li><div>The evening summary: to print, PDF and CSV, a link for the hosts, an <span class="text-nowrap">e-mail</span> in the morning</div></li>
+                <li><div>Your own guest limits, history of 30 days, notifications on your phone, staff of up to 10</div></li>
+            </ul>
+            <div class="s2p-plan-cta" th:unless="${loggedIn}">
+                <a href="/start" class="btn btn-action w-100" id="freeStart">Start for free</a>
+            </div>
+        </section>
+    </div>
+
+    <p class="s2p-faq-title">Good to know</p>
+    <div class="s2p-faq" data-pro-faq>
+        <div><h3>Will it stay so?</h3><p>What a party needs stays free. If some features ever become paid, we will tell you in the DJ's
+            dashboard first, and the accounts that exist then get them for 30 days at no charge. Nothing becomes paid without your
+            express consent — <a href="/terms#plans" id="freeTerms">Terms of Service, section 5</a>.</p></div>
+        <div><h3>Do I need a card?</h3><p>No. We charge nothing and ask for no payment details.</p></div>
+        <div><h3>And the guests?</h3><p>The guests pay nothing and install nothing: they scan the code and ask for a song.</p></div>
+    </div>
+    </th:block>
+
+    <th:block th:if="${plansEnforced}">
     <header class="s2p-product-hero" data-pro-hero>
         <h1>Pricing</h1>
         <p class="s2p-product-lede mb-0">Everything a party needs is free. Pro is for DJs who play every week: the hosts' list, your logo and
@@ -103,6 +144,7 @@
         <div><h3>Do the staff need Pro?</h3><p>No. The staff work on the plan of the party's organiser.</p></div>
         <div><h3>And the guests?</h3><p>The guests pay nothing and install nothing: they scan the code and ask for a song.</p></div>
     </div>
+    </th:block>
 </div>
 
 <div th:replace="~{fragments/components :: footer}"></div>

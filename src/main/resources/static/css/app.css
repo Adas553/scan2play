@@ -824,6 +824,13 @@ th[data-sort].sort-desc::after {
 .s2p-lang-switch a:focus-visible { color: var(--s2p-white) !important; }
 .s2p-lang-switch a[aria-current="true"] { background: var(--s2p-light); color: var(--s2p-bg) !important; font-weight: 600; }
 .s2p-lang-switch [aria-hidden="true"] { display: none; }   /* the "·" between them: for a page without this style */
+/* "Cennik" beside the language at the top of the landing page and the pages "Dla kogo": quiet as the language's links, as tall */
+.s2p-top-link {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.9rem;
+    color: var(--s2p-text-muted) !important; font-weight: 500; text-decoration: none;
+}
+.s2p-top-link:hover,
+.s2p-top-link:focus-visible { color: var(--s2p-white) !important; }
 /* The guest's 👍 (guest-queue.html): one width whatever the count, so "👍 9" → "👍 10" moves nothing; a song gone meanwhile (the DJ
    played or skipped it) stays in its place, dimmed, until the list is fetched again; the note of a 👍 that did not count floats over
    the page — shown, it pushes nothing down (guest-party.js hides it after a few seconds). */
@@ -1298,6 +1305,13 @@ th[data-sort].sort-desc::after {
 .s2p-product-cta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .s2p-plans { display: grid; gap: 1rem; margin-top: 1.75rem; }
 @media (min-width: 768px) { .s2p-plans { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); } }
+/* one card (the plans not enforced: everything free): the page's width, its list in two columns and its action a button's width on a
+   wide screen — half a page with nothing beside it looked unfinished */
+@media (min-width: 768px) {
+    .s2p-plans.s2p-plans-one { grid-template-columns: minmax(0, 1fr); }
+    .s2p-plans-one .s2p-plan ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2rem; }
+    .s2p-plans-one .s2p-plan-cta { max-width: 20rem; }
+}
 .s2p-plan { border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); padding: 1.25rem; background: var(--s2p-bg-card); min-width: 0; }
 .s2p-plan-pro {
     border-color: var(--s2p-action-45);
@@ -1342,6 +1356,7 @@ th[data-sort].sort-desc::after {
 }
 .s2p-faq h3 { font-size: 1rem; font-weight: 700; color: var(--s2p-light); margin: 0 0 0.35rem; }
 .s2p-faq p { color: var(--s2p-text-muted); margin: 0; font-size: 0.925rem; }
+.s2p-faq a { color: var(--s2p-action); }   /* as the landing page's questions' links, not Bootstrap's blue */
 
 /* The guide "Jak działa Scan2Play" (guide.html, 2026-10-12): a section per moment of a party, each line the app's own button or badge
    beside what it does — pictures of them (spans), not controls; one column on a phone. */

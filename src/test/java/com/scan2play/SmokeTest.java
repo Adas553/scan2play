@@ -55,7 +55,7 @@ class SmokeTest {
     }
 
     @Test
-    @DisplayName("GET /sitemap.xml → public: the public pages, Polish at their own address and English with ?lang=en, each with its alternates; no /pro while the plans are off")
+    @DisplayName("GET /sitemap.xml → public: the public pages, Polish at their own address and English with ?lang=en, each with its alternates; the pricing page too")
     void sitemap_listsThePublicPages_inBothLanguages() throws Exception {
         String xml = mockMvc.perform(get("/sitemap.xml"))
                 .andExpect(status().isOk())
@@ -64,13 +64,14 @@ class SmokeTest {
         assertThat(xml).contains("<loc>https://www.scan2play.com.pl/</loc>", "<loc>https://www.scan2play.com.pl/?lang=en</loc>",
                 "<loc>https://www.scan2play.com.pl/jak-to-dziala</loc>", "<loc>https://www.scan2play.com.pl/privacy</loc>",
                 "<loc>https://www.scan2play.com.pl/terms</loc>",
+                "<loc>https://www.scan2play.com.pl/pro</loc>", "<loc>https://www.scan2play.com.pl/pro?lang=en</loc>",
                 // the pages "Dla kogo" (2026-10-21): wedding DJs, clubs, pubs — no karaoke yet
                 "<loc>https://www.scan2play.com.pl/dj-weselny</loc>", "<loc>https://www.scan2play.com.pl/dj-weselny?lang=en</loc>",
                 "<loc>https://www.scan2play.com.pl/kluby</loc>", "<loc>https://www.scan2play.com.pl/puby?lang=en</loc>",
                 "hreflang=\"en\" href=\"https://www.scan2play.com.pl/kluby?lang=en\"",
                 "hreflang=\"pl\" href=\"https://www.scan2play.com.pl/jak-to-dziala\"",
                 "hreflang=\"en\" href=\"https://www.scan2play.com.pl/jak-to-dziala?lang=en\"", "hreflang=\"x-default\"")
-                .doesNotContain("/pro", "/dj/", "/p/", "/karaoke");
+                .doesNotContain("/dj/", "/p/", "/karaoke");
     }
 
     @Test
@@ -209,10 +210,22 @@ class SmokeTest {
     }
 
     @Test
-    @DisplayName("GET /pro → public, but a 404 while the plans are not enforced (V35): nothing says \"Pro\" yet")
-    void proPage_isNotThere_whileThePlansAreNotEnforced() throws Exception {
-        mockMvc.perform(get("/pro"))
-                .andExpect(status().isNotFound());
+    @DisplayName("GET /pro → public; while the plans are not enforced one card: everything free, no word of Pro, the terms' section 5")
+    void proPage_saysEverythingIsFree_whileThePlansAreNotEnforced() throws Exception {
+        for (String lang : java.util.List.of("pl", "en")) {
+            String html = mockMvc.perform(get("/pro").param("lang", lang))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            assertThat(html).as(lang).doesNotContainPattern("(?U)\\bPro\\b").doesNotContain("data-plan=\"free\"", "data-plan=\"pro\"",
+                            "data-pro-compare", "WCZESNY", "mailto:")
+                    .contains("data-plan=\"all\"", "<p class=\"s2p-plan-price\" data-plan-price>0 zł</p>", "href=\"/start\"",
+                            "href=\"/terms#plans\"", "id=\"footerPricing\"",
+                            lang.equals("pl") ? "na każdą imprezę. Wystarczy konto Google." : "For every DJ and every party.");
+        }
+        // the other addresses lead to it whether the plans are enforced or not
+        mockMvc.perform(get("/cennik")).andExpect(status().isMovedPermanently())
+                .andExpect(header().string("Location", "/pro?lang=pl"));
     }
 
     @Test
@@ -258,13 +271,15 @@ class SmokeTest {
     }
 
     @Test
-    @DisplayName("While the plans are not enforced the landing page says nothing of Pro: \"Ile to kosztuje?\" says it is free, no link to /pro (a 404 then)")
+    @DisplayName("While the plans are not enforced the landing page says nothing of Pro: \"Ile to kosztuje?\" says it is free; \"Cennik\" at the top, in the answer and the footer")
     void landingPage_saysNothingOfPro_whileThePlansAreOff() throws Exception {
         for (String lang : java.util.List.of("pl", "en")) {
             String html = mockMvc.perform(get("/").param("lang", lang)).andReturn().getResponse().getContentAsString();
 
-            assertThat(html).as(lang).doesNotContain("href=\"/pro\"").doesNotContainPattern("(?U)\\bPro\\b")
-                    .contains(lang.equals("pl") ? "Nic. Scan2Play jest za darmo" : "Nothing. Scan2Play is free");
+            String pricing = lang.equals("pl") ? "href=\"/pro\"" : "href=\"/pro?lang=en\"";
+            assertThat(html).as(lang).doesNotContainPattern("(?U)\\bPro\\b")
+                    .contains(lang.equals("pl") ? "Nic. Scan2Play jest za darmo" : "Nothing. Scan2Play is free")
+                    .contains(pricing + " id=\"headerPricing\"", pricing + " class=\"d-block mt-2\"", "id=\"footerPricing\"");
         }
     }
 
