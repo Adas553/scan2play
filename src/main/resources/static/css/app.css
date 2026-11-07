@@ -265,8 +265,10 @@ body::before {
     .s2p-home-logo { display: inline-block; padding-block: 9px; margin-block: -9px; }
     /* the link under an answer of the landing page's questions ("Zobacz cennik →"): its own line, 44 px to tap */
     .s2p-landing-faq a.d-block { padding-block: 10px; margin-block: -2px; }
-    /* "Otworzy się dziś o 20:00": the words fill the line's 44 px, as "✕" beside them */
-    a.s2p-schedule-text { align-self: stretch; display: flex; align-items: center; }
+    /* "Otworzy się dziś o 20:00": the tap reaches the line's 44 px, as "✕" beside them — by a layer over the line, so the words'
+       own box (one line, the panel's scenarios measure it) stays as it is */
+    a.s2p-schedule-text { position: relative; }
+    a.s2p-schedule-text::after { content: ""; position: absolute; inset: -11px 0; }
     .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
     /* the pages "Dla kogo": the breadcrumbs' links and "← Wróć na stronę główną" */
     .s2p-breadcrumb a,
