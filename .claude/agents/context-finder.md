@@ -14,10 +14,13 @@ The documents:
 - `docs/*.md` — procedures (database backup, switching the plans on, the welcome e-mail…).
 - `docs/history/` — what is no longer current: earlier handoffs, reviews (`review-*.md`, each with a "Status" / "Poprawione" part),
   the long version of the project context. Search it (Grep) for the subject; read the hits' surroundings only.
-- When the documents and the code may disagree, say so and name the code to check (`src/main/...`), without reading it at length.
+- When the question is about a number or a name the code holds (a limit, a property, a constant), one Grep in `src/main/` confirms
+  it — give that `file:line` too and say whether it matches the documents. Do not read code beyond the matching lines.
 
-How: Grep first (several spellings, Polish and English — the documents mix both), then Read with `offset` / `limit` around the hits.
-Never read a whole file over 20 KB.
+How: Grep first (several spellings, Polish and English — the documents mix both, e.g. `kiosk|kiosku`), then Read with `offset` /
+`limit` around the hits. Never read a whole file over 20 KB. Stop once the question is answered — no tour of the neighbouring topics.
 
-Answer: the facts as short points, each with `file:line`; quote a sentence only where its exact words matter. If the documents do not
-say, answer "not in the documents" and where you looked.
+Answer, at most ~20 lines: the facts as short points grouped under the question's own words, each with `file:line`; quote a sentence
+only where its exact words matter. Leave out what was not asked (related timers, endpoints, history) unless it changes the answer.
+End with one line: where you looked. If the documents do not say, answer "not in the documents" and where you looked. Answer in the
+language of the question.

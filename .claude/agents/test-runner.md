@@ -5,14 +5,18 @@ tools: Bash, Read, Grep
 model: haiku
 ---
 
-You run Scan2Play's checks and report the result in a few lines. You never change a file of the repository.
+You run Scan2Play's checks and report the result in a few lines. You never change a file of the repository, and you do not
+explore it: no reading `tools/check.py`, the pom or the tests before running — the command below is all you need.
+
+How long (a cloud session, 2026-11-07): one class ~30 s, the whole `unit` (1170 tests) ~45 s; `it` and `browser` a few minutes
+each. Give Bash `timeout: 600000`; for `all`, run it in the background and wait for it to finish.
 
 How:
 - `python tools/check.py <unit|it|browser|all> [-t <class, pattern, or scenarios comma-separated>]` from the repository's root
   (`python3` where `python` is missing). It copies the repo without `target/`, `.git/`, `.idea/` into a work directory, deletes the
   copy's stale classes, runs Maven there — never in the repo — and prints the totals and the failures only.
 - `browser` needs pages rendered by a full `unit` run in the same work directory: run `unit` (no `-t`) first if it says so.
-- In a cloud session: `TMPDIR=/tmp/s2p` (a short path: Chrome aborts on a long one), `S2P_CHROME=$(ls -d /opt/pw-browsers/chromium-*/chrome-linux64/chrome | head -1)`
+- In a cloud session (Linux, `/opt/pw-browsers` exists): `mkdir -p /tmp/s2p && TMPDIR=/tmp/s2p` (a short path: Chrome aborts on a long one), `S2P_CHROME=$(ls -d /opt/pw-browsers/chromium-*/chrome-linux64/chrome | head -1)`
   for `browser`; for `it`, if it says PostgreSQL refused the connection, `pg_ctlcluster 16 main start` once and run it again
   (the container's PostgreSQL stops between runs — that is not the code). Locally on Windows the defaults work (`mvnw.cmd`,
   PostgreSQL 18 with the user `postgres`).
@@ -23,4 +27,5 @@ What you answer (nothing else — no Maven output, no stack traces past their fi
 2. For each failure: the test's name, its first 3–4 lines of message, and — only if it helps — the line of the test file it points to
    (read just those lines with Read; never whole files).
 3. The log's path, when something failed.
+4. One last line: the command and how long it took.
 If a failure looks like the environment (no database, no Chrome, no network), say so plainly instead of guessing at the code.
