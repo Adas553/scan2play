@@ -24,9 +24,22 @@
   subject, with `file:line`), `railway-reader` (production's deployments, logs and metrics, read only, never a variable's value).
   Use them for those jobs; keep design decisions, edits and reviews in the main conversation.
 
+## Mind (traps seen before)
+
+- (1) a form with a CSRF token on a public page for a visitor without a session needs a test with `SessionRepositoryFilter`
+  (`LandingPageSessionWebTest`); (2) a browser scenario that checks a page fits measures `document.documentElement.clientWidth`, never
+  `window.innerWidth`; (3) after a release, curl production without cookies to the page's end, not only for a 200; (4) a layout that
+  must stay on one line: run its scenario with the runner's fonts too — locally take Inter out of fontconfig (`FONTCONFIG_FILE` with a
+  `<rejectfont>` globbing Inter's directory, e.g. `/usr/share/fonts/opentype/inter/*`, before the `<include>` of `/etc/fonts/fonts.conf`
+  — a glob `*Inter*` rejected nothing; check `fc-list | grep -ci inter` is 0), what is left is DejaVu and Liberation, as on GitHub. (5) in a cloud session the browser tests need a short `TMPDIR`
+  (`/tmp/s2p`): Chrome's profile under the long scratchpad path passes the length limit of a UNIX socket's name and the browser aborts
+  (code -6); the container's PostgreSQL (16) may stop between runs — `pg_ctlcluster 16 main start`; an `*IT` run failing everywhere at
+  once is that, not the code.
+
 ## Working agreements (the project owner's preferences)
 
 - **Leave changes uncommitted** so they can be reviewed as a diff in IntelliJ; commit and push only when asked.
+  Commit messages and PR titles and descriptions are written in English, whatever the language of the conversation.
 - **The app runs from IntelliJ** against `target/classes` with `spring-boot-devtools`, which restarts it whenever
   that directory changes. Do not run `mvnw` inside the repo while it is running: copy the repo without
   `target/`, `.git` and `.idea` to a scratch directory and build/test there
