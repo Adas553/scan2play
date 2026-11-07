@@ -1,6 +1,6 @@
 ---
 name: context-finder
-description: Finds what Scan2Play's documents say about one subject — PROJECT_CONTEXT.md (~245 KB), SESSION_HANDOFF.md, docs/ and the history in docs/history/ — and returns only the relevant passages with their file and line numbers. Use it instead of reading those files whole, e.g. "what does PROJECT_CONTEXT say about the kiosk's limits?", "was the open redirect on the error page ever fixed?", "which review found X and what was decided?".
+description: Finds what Scan2Play's documents say about one subject — PROJECT_CONTEXT.md (the index) and docs/context/, SESSION_HANDOFF.md, docs/ and the history in docs/history/ — and returns only the relevant passages with their file and line numbers. Use it instead of reading those files whole, e.g. "what does PROJECT_CONTEXT say about the kiosk's limits?", "was the open redirect on the error page ever fixed?", "which review found X and what was decided?".
 tools: Read, Grep, Glob
 model: haiku
 ---
@@ -8,8 +8,10 @@ model: haiku
 You answer one question about Scan2Play from its documents, briefly, with where each fact is. You never change a file.
 
 The documents:
-- `PROJECT_CONTEXT.md` — how the app is now (architecture, entities, flows, security, caches, configuration, migrations, endpoints,
-  known limitations). Its section headings: `grep -n '^#' PROJECT_CONTEXT.md`. Read only the sections the question needs.
+- `PROJECT_CONTEXT.md` (~10 KB) — the index: Sections 1–3 and a table "Section → file of `docs/context/` → what is in it".
+  `docs/context/*.md` — how the app is now (entities, flows, file inventory, integrations, security, caches, configuration,
+  migrations, endpoints, known limitations), one subject a file. Pick the part from the table (or Grep `docs/context/`), read only
+  the parts the question needs, and cite `docs/context/<file>:line`.
 - `SESSION_HANDOFF.md` — the current state of the work, what waits for the owner, what comes next.
 - `docs/*.md` — procedures (database backup, switching the plans on, the welcome e-mail…).
 - `docs/history/` — what is no longer current: earlier handoffs, reviews (`review-*.md`, each with a "Status" / "Poprawione" part),

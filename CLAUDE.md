@@ -5,9 +5,10 @@
 ## Read first
 
 - `SESSION_HANDOFF.md`, its "Start here" — the current state of the work, the next step and open items.
-- `PROJECT_CONTEXT.md` — architecture, domain model, endpoints, as they are now; Section 5 the DJ's and the guest's flows,
-  Section 10 Flyway migrations and the deploy checklist. It is ~245 KB (~70 000 tokens): **read only the sections the task needs**
-  (`grep -n '^#' PROJECT_CONTEXT.md` lists them; then Read with `offset` / `limit`), or ask the `context-finder` agent. YouTube and Spotify are gone (2026-10-04): the full app is the tag
+- `PROJECT_CONTEXT.md` (~10 KB) — the index: Sections 1–3 (product, stack, architecture) and a table of where Sections 4–14 are,
+  `docs/context/*.md`, one subject a file (5–19 KB each; together ~235 KB, ~65 000 tokens): **read only the parts the task needs**
+  (e.g. Section 5 the DJ's and the guest's flows `05-*`, Section 10 Flyway and the deploy checklist `10-2-migrations.md`), or ask the
+  `context-finder` agent. A "Section N" in the code is that row of the table. YouTube and Spotify are gone (2026-10-04): the full app is the tag
   `full-player-2026-10-04` and the clone `D:\Coding\scan2play-full` with its own database `scan2play_full` — leave them alone. Keep it to what is true now: the history (decisions, reports,
   how things were verified) goes to `docs/history/` — `project-context-2026-10-01.md` is the long version, word for word.
   `docs/history/` (~1 MB) is searched, never read whole.
