@@ -1,0 +1,69 @@
+> Part of `PROJECT_CONTEXT.md` (the index, at the repo root: what is in each part) — Section 6.3 – 6.6. Keep it to what is true now.
+
+### 6.3 Configuration
+
+`SecurityConfig` (routes, OAuth2 login, logout, CSRF, the CSP — Section 8), `AppConfig` (caching, scheduling, the Caffeine caches,
+the `webmanifest` MIME type), **versioned static addresses** (`spring.web.resources.chain.strategy.fixed`: the templates link
+`th:src` / `th:href="@{/js/...}"`, served as `/<RAILWAY_GIT_COMMIT_SHA>/js/...` — locally `/dev/...` —, so a deploy changes every
+script's and style's address and no cache on the way keeps an old one; the dashboard's modules import each other relatively and stay
+in the same version; 2026-10-06 Cloudflare kept serving an old `main.js` after a deploy). `VersionedAssetCacheFilter` lets the
+browsers and Cloudflare keep them for a year (`Cache-Control: public, max-age=31536000, immutable`): an address under the running
+deploy's version always gives the same file (an old version is a 404). An answer that is not the file (a 404, a 500) is
+set back to `no-store` — a missing file must not be kept for a year. The print's fonts (`/fonts/**`) carry their version in their
+file names (`source-sans-3-5.3.1-…`; a new font is a new name): a year too. Bootstrap (`/webjars/**`), `/images/**` and `/favicon.ico`
+have no version in their addresses: a day (`public, max-age=86400`; the review of 2026-10-21, P1 — every phone fetched Bootstrap's
+31 KB and the logo again on every page), so a changed one reaches everyone by the next day; Cloudflare keeps them too — purge its
+cache after changing one. Only for a commit's version, never `dev` (devtools changes the files under it); everything else keeps
+Spring Security's `no-store`,
+`GeminiConfig` (the Gemini client, 15 s timeout, one try — `GeminiConfigTest` checks both through the real SDK against a Gemini
+stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
+the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an empty header), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
+link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `OriginGuardFilter` (only requests with
+Cloudflare's secret header, `ORIGIN_SECRET` — Section 8), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
+`scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages; only for
+the controllers it names, `HomeController`, `LegalController`, `ForWhomController` — a new public page's controller goes there, or
+its head has no canonical address:
+`fragments/components :: seo(path, title, description)` writes the description, the canonical address in the page's language,
+the `hreflang` alternates, Open Graph with `images/og-image.png` and the site's icon — `rel="icon"` `/favicon.ico` (16 / 32 / 48 px)
+and `images/icon-192.png`, `apple-touch-icon` (Google Search shows the icon beside a result only when the home page names it;
+2026-10-16: a grey globe); on the landing page, the guide, `/privacy`, `/terms`, `/pro`).
+
+### 6.4 Templates
+
+`landing.html`, `for-whom.html` (the pages "Dla kogo"), `dashboard.html`, `history.html` (its `historyTableContent` fragment is also the dashboard's History tab),
+`qr-print.html`, `summary.html` (the evening summary), `index.html` (the guest's page), `result.html`, `party_ended.html`, `host.html` (the hosts' lists, V29), `join.html` (the staff's invitation, V30), `error.html`, `privacy[_pl].html` (every provider the data passes through — Railway us-east4 — its DPA with the standard contractual clauses signed by the owner, 2026-10-15 —, Cloudflare (its Web Analytics is off: the owner, 2026-10-15), Google, Apple's iTunes search, the push services —, the server's logs with the guests' texts kept 7 days by Railway Hobby, the plan; `SmokeTest` checks both languages; keep it true when a provider, the region or the plan changes), `guide[_pl].html` (the public guide "Jak działa Scan2Play", 2026-10-12: a section per moment of a party, the app's buttons as pictures — `.s2p-guide-row`; keep it true to the app),
+`terms[_pl].html`, `staff.html` (the owner's page "Obsługa", V32; its role picker `fragments/staff-role.html`), `settings.html` (the page "Ustawienia imprezy", 2026-10-10), `no-panel.html` (no panel at all, V32), `pro[_pl].html` ("Scan2Play Pro", V35: a page of the product — the one action, the plans Free and Pro, what Pro gives, "Dobrze wiedzieć"; keep it true to `PlanFeature`; `ProPageRenderTest`), `tv.html` (the screen for a TV, 2026-10-18: Polish and English at once like the QR poster, written in the
+template; its fragment `tvList`) — every page declares its colour scheme (`<meta name="color-scheme">`: `dark`, the print pages `only light`;
+`HtmlLangDeclarationTest`): Samsung Internet's own dark theme darkened a page without it — the logo's tile went grey, the yellow
+tip button brown (2026-10-08); `fragments/`: `components.html` (`dj-nav`: our logo and the account buttons in one row, the sticky tabs Panel DJ-a / Historia / Ustawienia, the
+feedback modal; `scroll-restore-script`; `moment`; `logo` — the mark and "Scan2Play" with a cyan "2", the heading of the
+dashboard and the guest page; `footer`), `guest-queue.html`. Texts the scripts need travel in `data-*`
+attributes. **No inline script, no `on…=` handler and no `style="…"`** on any page (`NoInlineCodeInTemplatesTest`).
+
+### 6.5 Static assets
+
+| File | Purpose |
+|------|---------|
+| `js/dashboard/*.js` | the dashboard as ES modules: `main.js` imports `list-tools.js` (sort, search, filters, "Show more" — the history page loads it alone), `forms.js` (AJAX forms — not logout and account deletion —, chosen by the form's whole path: `RELOADS`, `CHANGE_THE_QUEUE`, …; `data-auto-submit`; played / skipped / cleared / restored → `s2p:guest-queue-changed`; the "Cofnij" bar after a skip or a "Zagrane"; restored, the history cleared → `s2p:history-changed`), `tabs.js` (the history in place; fetched again on `s2p:history-changed`), `settings-toggle.js` (the settings folded), `install-hint.js` ("Panel jako aplikacja" under an empty queue on a phone), `welcome.js` (a new organiser's welcome above the queue, closed on the server, V48), `cards.js` (on a phone the requests of the queue and the history folded, a tap unfolds one, the unfolded ones opened again after a poll or a reload — the standalone history page loads it too), `queue-keys.js` ("Kopiuj" of a waiting request: "Wilki Baśka" to the clipboard — the song's words without " - ", for the search of the DJ's own software; the queue's keys ↑ ↓ / C / Enter = "Zagrane" / S = "Pomiń" / Backspace or Ctrl+Z = "Cofnij" while its bar is shown / Esc; Ctrl+C = C with a request chosen and no text selected — on a computer a click chooses a request too —, never while typing or with Ctrl / Alt / ⌘; the chosen request kept by id after a poll, or the one in its place; Enter on a link, a button or a `<summary>` is theirs, never "Zagrane"), `polling.js` (the queue every 3 s and its headers — the keyboard's focus kept on the same button of the same request when the rows are replaced, `common.js` `focusSpot` — the warnings near a limit; at once on `s2p:guest-queue-changed` and when the window is shown again; none while hidden), `common.js`; the page "Ustawienia imprezy" loads `settings-page.js` — `forms.js`, `push.js` (the switch of notifications on this device), `install.js` ("Zainstaluj aplikację"), `settings-rows.js` (the folded "To urządzenie": "Powiadomienia wł. / wył." for this browser), `library.js` (the DJ's library), `logo.js` (the DJ's logo); they talk only through the `s2p:*` events of `events.js`, never through `window` |
+| `js/dj-nav.js` | `form[data-confirm]` (capture phase, before `forms.js`), the feedback form, and "Kopiuj" of every DJ page: `button[data-copy-target]` (a field: the party link, the hosts' and the staff's link), `button[data-copy-text]` ("Pomoc i kontakt", "Kopiuj adres" of `/pro`); the clipboard, else the old way from a field of its own, else the text shown selected (the field, `data-copy-select`) — "Skopiowano" only when it was copied (scenarios `copy-the-*`). `queue-keys.js` keeps its own copy of a song (the keyboard's) |
+| `js/folds.js` | the folded cards of "Ustawienia imprezy" and "Obsługa" (`details.s2p-fold`, 2026-10-25): the card the address names (`#libraryCard`, an element inside a card) is unfolded on load and on a change of the address; a plain script, as `dj-nav.js` |
+| `js/staff.js` | the owner's page "Obsługa" (V32): in each of its forms (a person, "Zaproś", the link) a role ticks its permissions, a tick picks the role it makes ("Kopiuj" of the link: `dj-nav.js`) |
+| `js/scroll-restore.js` | the scroll memory of the DJ pages (in `<head>`; a browser that refuses the session storage gets the page at once, without the memory) |
+| `js/guest-party.js` | the guest's page: the list refresh, "sending…" |
+| `js/song-list-count.js` | the hosts' lists ("Ustawienia imprezy", `/h/…`): the entries each holds of `SongList.MAX_LINES`, a warning over it |
+| `js/song-autocomplete.js` | song suggestions from the iTunes Search API (debounced, client side, the Polish store; iTunes matches whole words only, so a word being typed is completed here — the words before it are asked too, 50 songs kept in memory while the word grows, both asks at once — and the songs whose title, then artist, has a word starting so come first ("shakira da" → "Dai Dai"); each song once; an answer for what the field no longer says is dropped; an ARIA combobox — `aria-expanded`, `aria-controls`, `aria-activedescendant`); a field with `data-library-url` (V58: the guest page and the kiosk, when `LibraryHintService.on`) asks which of the suggestions shown the DJ has and puts them first with `data-library-label` ("✓ DJ ma", at the start of the artist's part; the song picked without it), each part in iTunes's order, every song asked once (500 kept), the answer waited for at most 600 ms (`song-suggestions-library-*`) |
+| `js/qr-print.js`, `js/qr-social.js`, `css/qr-print.css`, `fonts/*.woff2`, `css/app.css` | the print page (`qr-social.js`: its pictures for Instagram, for whom has the editor; `fonts/`: its own fonts, Source Sans 3, Playfair Display and Dancing Script, OFL — their licences `fonts/OFL-*.txt`); the shared styles — the look of Section 6.7 |
+| `css/guest-themes.css`, `images/themes/*.svg`, `fonts/nosifer-*.woff2` | the guests' themes (V59, "Motyw dla gości"): the tokens of each theme under `[data-guest-theme]`, its ornament (our SVGs), the faces of "🎧 Gra: …" (Playfair Display; Nosifer for the scary one, OFL — `fonts/OFL-nosifer.txt`); loaded by the guests' pages of a party with a theme and by "Ustawienia imprezy" (the card's thumbnails) |
+| `js/tv.js`, `css/tv.css` | the screen for a TV: its list fetched again every 10 s (put in place only when it changed; a failed fetch or an answer that is not the list keeps it), the screen kept awake (Screen Wake Lock); dark, sized by the screen's height, nothing to scroll in landscape |
+| `js/summary.js`, `css/summary.css` | the evening summary: "Print / PDF", another evening picked shows at once, what played folded on a phone and unfolded to print, "Kopiuj listę" shown; white, for A4 (the font of `app.css`) |
+| `js/summary-social.js` | the evening summary's "Do internetu": a story or a post of the evening drawn on a canvas, shared or saved |
+| `sw.js`, `manifest.webmanifest`, `images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `badge-96.png` | the service worker of the notifications (shows and folds them; a tap opens the panel of the notification's party — `/dj/dashboard?party=CODE`: a window showing it is brought forward, else a DJ window goes there, else a new one — `openThePanel`, tested by the browser scenario `notification-opens-the-partys-panel`; no cache, no fetch handler); the web app manifest (the dashboard on the Home Screen, `start_url` `/dj/dashboard`) and its icons (the mark on a full dark square; `badge-96.png`: the mark alone in white on transparent — the status bar's small icon, Android draws only its transparency) |
+| `images/og-image.png` | the picture of a shared link (Open Graph, 1200×630: the mark, "Scan2Play", "Prośby o piosenki od gości przez kod QR"; 2026-10-14) |
+| `images/landing/*.webp` | the landing page's pictures of the app (2026-10-17): the DJ's panel (1920 × 1140) and the guest's page (780 × 1560), PL and EN, of a made-up party — `src/test/browser/screenshots.py` writes them |
+| `images/logo.svg`, `images/logo-small.svg`, `favicon.ico` | our mark: a cyan play triangle built of a QR code's modules (a few left out) on the dark tile — not the three finder corners with a sign in the fourth, the usual mark of QR apps (2026-10-25). `logo.svg` where the mark is large (the TV screen, the QR poster and cards, the icons `icon-192` / `icon-512` / `apple-touch-icon`, `badge-96` as its white silhouette, `og-image.png`); `logo-small.svg` — fewer, larger modules, which stay apart at 16 – 32 px — in the pages' logo (`components :: logo`), the evening summary and `favicon.ico` at 16 and 32 px (48 px: `logo.svg`). The landing page's pictures (`images/landing/*.webp`, `screenshots.py`) show it too |
+
+### 6.6 Resources
+
+`application.properties` (all configuration, env overrides — Section 10), the message bundles, `prompts/` (`prompt-template_{en,pl}`,
+`prompt-duplicate-rule_{en,pl}`, `prompt-vibe-note_{en,pl}`, `prompt-comment-style_{en,pl}`, `prompt-dedication_{en,pl}`), `db/migration/V1..V39`.
+

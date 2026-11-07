@@ -135,6 +135,11 @@ public class GuestRequestLimiter {
      * @return empty if the request may go on (it has been counted), otherwise the limit that refused it
      */
     public Optional<Refusal> tryAcquire(String clientIp, String partyCode) {
+        if (isPartyLimitReached(partyCode)) {
+            // the party's day is spent: refused whatever the address, and no address window is made — a flood from ever new
+            // addresses (IPv6 gives one each request) would otherwise fill the party's map up to its bound
+            return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW).map(wait -> new Refusal(Scope.PARTY, wait));
+        }
         Optional<Long> clientWait = acquire(clientWindowsOf(partyCode), clientIp, perClientLimit, clientWindow);
         if (clientWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, clientWait.get()));
@@ -227,6 +232,16 @@ public class GuestRequestLimiter {
             }
         }
         return perClientLimit > 0 ? Math.min(busiest, perClientLimit) : busiest;
+    }
+
+    /** How many address windows the party keeps in memory (tests). */
+    long addressWindowsOf(String partyCode) {
+        Cache<String, Window> windows = clientWindowsByParty.getIfPresent(partyCode);
+        if (windows == null) {
+            return 0;
+        }
+        windows.cleanUp();
+        return windows.estimatedSize();
     }
 
     private Cache<String, Window> clientWindowsOf(String partyCode) {

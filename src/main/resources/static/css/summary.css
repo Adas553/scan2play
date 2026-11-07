@@ -639,6 +639,13 @@ h2 {
     cursor: pointer;
 }
 
+/* the fold's heading is tapped on a phone: 44 px (the heading alone was 32) */
+@media (max-width: 767.98px), (pointer: coarse) {
+    #setlistFold > summary {
+        padding-block: 0.375rem;
+    }
+}
+
 #setlistFold > summary::-webkit-details-marker {
     display: none;
 }

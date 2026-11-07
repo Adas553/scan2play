@@ -56,6 +56,8 @@ class DjLibraryControllerTest {
     private DjLibraryService libraries;
     private PartySettingsCommandService settings;
     private MockMvc mvc;
+    private DjSessionHelper helper;
+    private StaticMessageSource messages;
 
     private static OAuth2AuthenticationToken user(String sub) {
         return new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", sub), "sub"),
@@ -72,8 +74,8 @@ class DjLibraryControllerTest {
         when(query.getSettings(PUB)).thenReturn(pub);
         PartySettingsRepository parties = mock(PartySettingsRepository.class);
         when(parties.findByOwnerId(anyString())).thenReturn(Optional.empty());
-        DjSessionHelper helper = new DjSessionHelper(query, mock(PartySettingsCommandService.class), parties, staff);
-        StaticMessageSource messages = new StaticMessageSource();
+        helper = new DjSessionHelper(query, mock(PartySettingsCommandService.class), parties, staff);
+        messages = new StaticMessageSource();
         messages.setUseCodeAsDefaultMessage(true);
         libraries = mock(DjLibraryService.class);
         settings = mock(PartySettingsCommandService.class);
@@ -103,6 +105,60 @@ class DjLibraryControllerTest {
         assertThat(upload(ORGANISER, "<html></html>".getBytes(StandardCharsets.UTF_8), 422))
                 .isEqualTo("settings.library.error." + DjLibraryParser.UnreadableLibraryException.Reason.UNKNOWN_FORMAT);
         verify(libraries, never()).replace(anyString(), any());
+    }
+
+    /**
+     * A file still arriving past the time allowed is refused (408), and the one turn of reading is free again: a body sent a few
+     * bytes at a time would otherwise hold it for hours, every other DJ hearing "try again in a moment".
+     */
+    @Test
+    void aFileArrivingTooSlowly_isRefused_andTheNextUploadIsRead() throws Exception {
+        DjLibraryController controller = new DjLibraryController(libraries, helper, Plans.off(), messages, settings, 8192,
+                java.time.Duration.ofMillis(200));
+        byte[] file = ("#EXTM3U\n" + "Wilki - Baśka.mp3\n".repeat(100)).getBytes(StandardCharsets.UTF_8);
+
+        org.springframework.http.ResponseEntity<String> slow = controller.upload(PUB, null, 1, slowly(file), java.util.Locale.ENGLISH,
+                user(ORGANISER), new MockHttpSession());
+        assertThat(slow.getStatusCode().value()).isEqualTo(408);
+        assertThat(slow.getBody()).isEqualTo("settings.library.error.TOO_SLOW");
+        verify(libraries, never()).replace(anyString(), any());
+
+        org.springframework.mock.web.MockHttpServletRequest fast = new org.springframework.mock.web.MockHttpServletRequest("POST", "/dj/library");
+        fast.setContent(file);
+        assertThat(controller.upload(PUB, null, 1, fast, java.util.Locale.ENGLISH, user(ORGANISER), new MockHttpSession())
+                .getStatusCode().value()).as("the turn given back").isEqualTo(200);
+    }
+
+    /** A request whose body arrives 16 bytes every 20 ms. */
+    private static org.springframework.mock.web.MockHttpServletRequest slowly(byte[] body) {
+        return new org.springframework.mock.web.MockHttpServletRequest("POST", "/dj/library") {
+            @Override
+            public jakarta.servlet.ServletInputStream getInputStream() {
+                java.io.ByteArrayInputStream bytes = new java.io.ByteArrayInputStream(body);
+                return new org.springframework.mock.web.DelegatingServletInputStream(bytes) {
+                    @Override
+                    public int read(byte[] buffer, int offset, int length) throws java.io.IOException {
+                        pause();
+                        return bytes.read(buffer, offset, Math.min(length, 16));
+                    }
+
+                    @Override
+                    public int read() throws java.io.IOException {
+                        pause();
+                        return bytes.read();
+                    }
+
+                    private void pause() throws java.io.IOException {
+                        try {
+                            Thread.sleep(20);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new java.io.InterruptedIOException();
+                        }
+                    }
+                };
+            }
+        };
     }
 
     /** Past the most bytes the reading stops: nothing is saved, whatever the file says it is (here: a body of no declared size). */
