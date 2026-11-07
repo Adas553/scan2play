@@ -4,11 +4,24 @@
 
 ## Read first
 
+- `SESSION_HANDOFF.md`, its "Start here" — the current state of the work, the next step and open items.
 - `PROJECT_CONTEXT.md` — architecture, domain model, endpoints, as they are now; Section 5 the DJ's and the guest's flows,
-  Section 10 Flyway migrations and the deploy checklist. YouTube and Spotify are gone (2026-10-04): the full app is the tag
+  Section 10 Flyway migrations and the deploy checklist. It is ~245 KB (~70 000 tokens): **read only the sections the task needs**
+  (`grep -n '^#' PROJECT_CONTEXT.md` lists them; then Read with `offset` / `limit`), or ask the `context-finder` agent. YouTube and Spotify are gone (2026-10-04): the full app is the tag
   `full-player-2026-10-04` and the clone `D:\Coding\scan2play-full` with its own database `scan2play_full` — leave them alone. Keep it to what is true now: the history (decisions, reports,
   how things were verified) goes to `docs/history/` — `project-context-2026-10-01.md` is the long version, word for word.
-- `SESSION_HANDOFF.md` — the current state of the work, the next step and open items.
+  `docs/history/` (~1 MB) is searched, never read whole.
+
+## Checks and agents (to keep the conversation small)
+
+- **`python tools/check.py unit|it|browser|all [-t <class, pattern or scenarios>]`** — the checks below in a copy of the repo (never
+  in it; the copy's stale classes deleted), printing the totals and only what failed; Maven's log stays in `<work>-logs/`. In a cloud
+  session: `TMPDIR=/tmp/s2p`, `S2P_CHROME=/opt/pw-browsers/chromium-*/chrome-linux64/chrome` for `browser`, and
+  `pg_ctlcluster 16 main start` when `it` says PostgreSQL refused the connection.
+- Project agents (`.claude/agents/`), each with its own context — their reading and logs never enter the main conversation:
+  `test-runner` (runs `tools/check.py`, reports failures; the cheap model), `context-finder` (what the documents say about one
+  subject, with `file:line`), `railway-reader` (production's deployments, logs and metrics, read only, never a variable's value).
+  Use them for those jobs; keep design decisions, edits and reviews in the main conversation.
 
 ## Working agreements (the project owner's preferences)
 
