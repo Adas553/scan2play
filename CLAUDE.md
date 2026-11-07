@@ -18,7 +18,10 @@
 - **`python tools/check.py unit|it|browser|all [-t <class, pattern or scenarios>]`** — the checks below in a copy of the repo (never
   in it; the copy's stale classes deleted), printing the totals and only what failed; Maven's log stays in `<work>-logs/`. In a cloud
   session: `TMPDIR=/tmp/s2p`, `S2P_CHROME=/opt/pw-browsers/chromium-*/chrome-linux64/chrome` for `browser`, and
-  `pg_ctlcluster 16 main start` when `it` says PostgreSQL refused the connection.
+  `pg_ctlcluster 16 main start` when `it` says PostgreSQL refused the connection. **`check.py audit [-t <page prefixes>]`** (after
+  `unit`; `tools/page_audit.py`): every rendered page at 320 / 390 / 1280 px — sideways scrolling and console errors fail it, touch
+  targets under 44 px on a phone are listed; `--shots DIR` of `page_audit.py` keeps a PNG of each. Run it after a change of a
+  page's layout or CSS, and in a review.
 - Project agents (`.claude/agents/`), each with its own context — their reading and logs never enter the main conversation:
   `test-runner` (runs `tools/check.py`, reports failures; the cheap model), `context-finder` (what the documents say about one
   subject, with `file:line`), `railway-reader` (production's deployments, logs and metrics, read only, never a variable's value).
