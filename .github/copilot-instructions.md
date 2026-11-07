@@ -74,9 +74,10 @@ Your goal is to act like a pragmatic senior engineer building a production-quali
 
 ## Project context
 
-Read `PROJECT_CONTEXT.md` at the repo root before making architectural decisions — it has
-the domain model, file inventory and endpoints as they are now. If you
-change architecture, entities, or endpoints, update `PROJECT_CONTEXT.md` in the same PR —
+Read `PROJECT_CONTEXT.md` at the repo root before making architectural decisions — it is the index (Sections 1–3, and a
+table saying which file of `docs/context/` holds each of Sections 4–14: the domain model, the flows, the file inventory,
+the configuration, the endpoints as they are now); read only the parts the task needs. If you
+change architecture, entities, or endpoints, update that part (and the index's table, if a part's subject changes) in the same PR —
 it goes stale otherwise (it did once already: it described a polling watcher that
 had already been removed from the code by the time anyone re-read it).
 
@@ -87,7 +88,7 @@ Hibernate only validates it (`ddl-auto=validate`). Any change to an `@Entity` th
 schema (new table/column/index/constraint) needs a new migration file in the same change —
 otherwise the app fails to start. Never edit a migration that has already been applied (add the
 next version instead), and never point ad-hoc SQL or `ddl-auto=update` at a shared database.
-Details and the production first-deploy checklist: `PROJECT_CONTEXT.md`, Section 10.
+Details and the production first-deploy checklist: `PROJECT_CONTEXT.md`, Section 10 (`docs/context/10-2-migrations.md`).
 
 ## Tests
 

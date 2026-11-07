@@ -5,6 +5,8 @@
     python tools/check.py it                the *IT tests on a throw-away PostgreSQL database (mvn verify -Pit)
     python tools/check.py browser           the browser scenarios on the pages the unit tests rendered (run.py --no-render)
     python tools/check.py all               unit, then it, then browser — stops at the first that fails
+    python tools/check.py audit [-t guest]  every rendered page at 320 / 390 / 1280 px: sideways scrolling, console errors, touch
+                                            targets under 44 px (tools/page_audit.py; after `unit`; not part of `all`)
 
 What it prints: the totals, then only what failed (the test, the first lines of its message) — never Maven's whole log, which is
 kept in <work>-logs/<step>.log for when the lines are not enough. Exit status 0 only when everything passed.
@@ -149,10 +151,28 @@ def browser(work: Path, only: str) -> bool:
     return code == 0
 
 
+def audit(work: Path, only: str) -> bool:
+    """tools/page_audit.py prints only what is wrong already; its whole output is kept in the log too."""
+    args = [sys.executable, str(REPO / "tools" / "page_audit.py"), "--work", str(work)]
+    if os.environ.get("S2P_CHROME"):
+        args += ["--chrome", os.environ["S2P_CHROME"], "--no-sandbox"]
+    if only:
+        args += ["-p", only]
+    log = logs(work) / "audit.log"
+    with open(log, "w", encoding="utf-8", errors="replace") as out:
+        code = subprocess.call(args, cwd=REPO, stdout=out, stderr=subprocess.STDOUT)
+    lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+    for line in lines[:60]:
+        print(line[:240])
+    if len(lines) > 60:
+        print(f"  … {len(lines) - 60} more lines in {log}")
+    return code == 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("step", choices=["unit", "it", "browser", "all"])
-    parser.add_argument("-t", "--only", default="", help="unit / it: a test class or pattern; browser: scenario names, comma-separated")
+    parser.add_argument("step", choices=["unit", "it", "browser", "all", "audit"])
+    parser.add_argument("-t", "--only", default="", help="unit / it: a test class or pattern; browser: scenario names; audit: page-name prefixes — comma-separated")
     parser.add_argument("--work", default=os.path.join(tempfile.gettempdir(), "scan2play-check"))
     options = parser.parse_args()
     work = Path(options.work).resolve()
@@ -160,7 +180,7 @@ def main() -> int:
         print("the work directory must not be inside the repo")
         return 2
     copy(work)
-    steps = {"unit": unit, "it": it, "browser": browser}
+    steps = {"unit": unit, "it": it, "browser": browser, "audit": audit}
     for step in (["unit", "it", "browser"] if options.step == "all" else [options.step]):
         if not steps[step](work, options.only):
             return 1

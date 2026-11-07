@@ -5,9 +5,10 @@
 ## Read first
 
 - `SESSION_HANDOFF.md`, its "Start here" — the current state of the work, the next step and open items.
-- `PROJECT_CONTEXT.md` — architecture, domain model, endpoints, as they are now; Section 5 the DJ's and the guest's flows,
-  Section 10 Flyway migrations and the deploy checklist. It is ~245 KB (~70 000 tokens): **read only the sections the task needs**
-  (`grep -n '^#' PROJECT_CONTEXT.md` lists them; then Read with `offset` / `limit`), or ask the `context-finder` agent. YouTube and Spotify are gone (2026-10-04): the full app is the tag
+- `PROJECT_CONTEXT.md` (~10 KB) — the index: Sections 1–3 (product, stack, architecture) and a table of where Sections 4–14 are,
+  `docs/context/*.md`, one subject a file (5–19 KB each; together ~235 KB, ~65 000 tokens): **read only the parts the task needs**
+  (e.g. Section 5 the DJ's and the guest's flows `05-*`, Section 10 Flyway and the deploy checklist `10-2-migrations.md`), or ask the
+  `context-finder` agent. A "Section N" in the code is that row of the table. YouTube and Spotify are gone (2026-10-04): the full app is the tag
   `full-player-2026-10-04` and the clone `D:\Coding\scan2play-full` with its own database `scan2play_full` — leave them alone. Keep it to what is true now: the history (decisions, reports,
   how things were verified) goes to `docs/history/` — `project-context-2026-10-01.md` is the long version, word for word.
   `docs/history/` (~1 MB) is searched, never read whole.
@@ -17,15 +18,31 @@
 - **`python tools/check.py unit|it|browser|all [-t <class, pattern or scenarios>]`** — the checks below in a copy of the repo (never
   in it; the copy's stale classes deleted), printing the totals and only what failed; Maven's log stays in `<work>-logs/`. In a cloud
   session: `TMPDIR=/tmp/s2p`, `S2P_CHROME=/opt/pw-browsers/chromium-*/chrome-linux64/chrome` for `browser`, and
-  `pg_ctlcluster 16 main start` when `it` says PostgreSQL refused the connection.
+  `pg_ctlcluster 16 main start` when `it` says PostgreSQL refused the connection. **`check.py audit [-t <page prefixes>]`** (after
+  `unit`; `tools/page_audit.py`): every rendered page at 320 / 390 / 1280 px — sideways scrolling and console errors fail it, touch
+  targets under 44 px on a phone are listed; `--shots DIR` of `page_audit.py` keeps a PNG of each. Run it after a change of a
+  page's layout or CSS, and in a review.
 - Project agents (`.claude/agents/`), each with its own context — their reading and logs never enter the main conversation:
   `test-runner` (runs `tools/check.py`, reports failures; the cheap model), `context-finder` (what the documents say about one
   subject, with `file:line`), `railway-reader` (production's deployments, logs and metrics, read only, never a variable's value).
   Use them for those jobs; keep design decisions, edits and reviews in the main conversation.
 
+## Mind (traps seen before)
+
+- (1) a form with a CSRF token on a public page for a visitor without a session needs a test with `SessionRepositoryFilter`
+  (`LandingPageSessionWebTest`); (2) a browser scenario that checks a page fits measures `document.documentElement.clientWidth`, never
+  `window.innerWidth`; (3) after a release, curl production without cookies to the page's end, not only for a 200; (4) a layout that
+  must stay on one line: run its scenario with the runner's fonts too — locally take Inter out of fontconfig (`FONTCONFIG_FILE` with a
+  `<rejectfont>` globbing Inter's directory, e.g. `/usr/share/fonts/opentype/inter/*`, before the `<include>` of `/etc/fonts/fonts.conf`
+  — a glob `*Inter*` rejected nothing; check `fc-list | grep -ci inter` is 0), what is left is DejaVu and Liberation, as on GitHub. (5) in a cloud session the browser tests need a short `TMPDIR`
+  (`/tmp/s2p`): Chrome's profile under the long scratchpad path passes the length limit of a UNIX socket's name and the browser aborts
+  (code -6); the container's PostgreSQL (16) may stop between runs — `pg_ctlcluster 16 main start`; an `*IT` run failing everywhere at
+  once is that, not the code.
+
 ## Working agreements (the project owner's preferences)
 
 - **Leave changes uncommitted** so they can be reviewed as a diff in IntelliJ; commit and push only when asked.
+  Commit messages and PR titles and descriptions are written in English, whatever the language of the conversation.
 - **The app runs from IntelliJ** against `target/classes` with `spring-boot-devtools`, which restarts it whenever
   that directory changes. Do not run `mvnw` inside the repo while it is running: copy the repo without
   `target/`, `.git` and `.idea` to a scratch directory and build/test there
