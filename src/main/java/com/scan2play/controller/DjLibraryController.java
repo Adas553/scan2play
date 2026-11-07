@@ -10,6 +10,7 @@ import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlanService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +54,13 @@ public class DjLibraryController {
     /** How long an upload waits for the one being read before it is refused (503). */
     static final int WAIT_SECONDS = 30;
 
+    /**
+     * The longest a file may take to arrive and be read, its turn held all the while: 64 MB in 5 minutes is 1.7 Mbit/s, and a DJ's
+     * usual collection of a few MB arrives in seconds even on a phone's network. Without it a body sent a byte at a time (each within
+     * the server's read timeout) would hold the one turn for hours and every other DJ would hear "try again in a moment".
+     */
+    static final Duration READ_LIMIT = Duration.ofMinutes(5);
+
     private final Semaphore reading = new Semaphore(1);
 
     private final DjLibraryService libraryService;
@@ -60,16 +69,25 @@ public class DjLibraryController {
     private final MessageSource messageSource;
     private final PartySettingsCommandService partySettingsCommandService;
     private final long maxBytes;
+    private final Duration readLimit;
 
+    @Autowired
     public DjLibraryController(DjLibraryService libraryService, DjSessionHelper sessionHelper, PlanService planService,
                                MessageSource messageSource, PartySettingsCommandService partySettingsCommandService,
                                @Value("${scan2play.library.max-bytes:" + MAX_BYTES + "}") long maxBytes) {
+        this(libraryService, sessionHelper, planService, messageSource, partySettingsCommandService, maxBytes, READ_LIMIT);
+    }
+
+    DjLibraryController(DjLibraryService libraryService, DjSessionHelper sessionHelper, PlanService planService,
+                        MessageSource messageSource, PartySettingsCommandService partySettingsCommandService, long maxBytes,
+                        Duration readLimit) {
         this.libraryService = libraryService;
         this.sessionHelper = sessionHelper;
         this.planService = planService;
         this.messageSource = messageSource;
         this.partySettingsCommandService = partySettingsCommandService;
         this.maxBytes = maxBytes;
+        this.readLimit = readLimit;
     }
 
     /**
@@ -96,10 +114,12 @@ public class DjLibraryController {
             Thread.currentThread().interrupt();
             return answer(HttpStatus.SERVICE_UNAVAILABLE, "settings.library.error.BUSY", locale);
         }
-        try (InputStream in = new Bounded(request.getInputStream(), maxBytes)) {
+        try (InputStream in = new Bounded(request.getInputStream(), maxBytes, System.nanoTime() + readLimit.toNanos())) {
             library = DjLibraryParser.parse(in, DjLibraryService.MAX_TRACKS, DjLibraryParser.MAX_COLLECTION, playlist, occurrence);
         } catch (TooLarge e) {
             return answer(HttpStatus.PAYLOAD_TOO_LARGE, "settings.library.error.TOO_LARGE", locale);
+        } catch (TooSlow e) {
+            return answer(HttpStatus.REQUEST_TIMEOUT, "settings.library.error.TOO_SLOW", locale);
         } catch (UnreadableLibraryException e) {
             return answer(HttpStatus.UNPROCESSABLE_ENTITY, "settings.library.error." + e.reason(), locale);
         } finally {
@@ -142,7 +162,8 @@ public class DjLibraryController {
 
     private ResponseEntity<String> answer(HttpStatus status, String code, Locale locale, Object... args) {
         Object[] all = args.length > 0 ? args
-                : new Object[]{DjLibraryService.MAX_TRACKS, maxBytes / (1024 * 1024), DjLibraryParser.MAX_COLLECTION};
+                : new Object[]{DjLibraryService.MAX_TRACKS, maxBytes / (1024 * 1024), DjLibraryParser.MAX_COLLECTION,
+                        readLimit.toMinutes()};
         return ResponseEntity.status(status).contentType(new MediaType(MediaType.TEXT_PLAIN, java.nio.charset.StandardCharsets.UTF_8))
                 .body(messageSource.getMessage(code, all, locale));
     }
@@ -151,15 +172,24 @@ public class DjLibraryController {
     private static final class TooLarge extends IOException {
     }
 
-    /** The request's body, but never more than {@code max} bytes of it: past them, {@link TooLarge}. */
+    /** The file still arriving past {@link #READ_LIMIT}. */
+    private static final class TooSlow extends IOException {
+    }
+
+    /**
+     * The request's body, but never more than {@code max} bytes of it (past them, {@link TooLarge}) and none after {@code deadline}
+     * ({@link System#nanoTime()}; past it, {@link TooSlow}).
+     */
     private static final class Bounded extends FilterInputStream {
 
         private final long max;
+        private final long deadline;
         private long read;
 
-        Bounded(InputStream in, long max) {
+        Bounded(InputStream in, long max, long deadline) {
             super(in);
             this.max = max;
+            this.deadline = deadline;
         }
 
         @Override
@@ -180,10 +210,13 @@ public class DjLibraryController {
             return n;
         }
 
-        private void count(long n) throws TooLarge {
+        private void count(long n) throws IOException {
             read += n;
             if (read > max) {
                 throw new TooLarge();
+            }
+            if (System.nanoTime() - deadline > 0) {
+                throw new TooSlow();
             }
         }
     }

@@ -322,7 +322,8 @@ and with underscores read as spaces —, line by line in UTF-8 or else
 Windows-1250 (an old Windows playlist), a name with one " - " kept the other way round too, as a swapped key) of at most
 `DjLibraryService.MAX_TRACKS` = 50 000 tracks kept and 64 MB replaces the whole library in one transaction under the party row's lock
 (`DjLibraryIT`: two uploads at once end as one of them). One file is read at a time on the whole server (`DjLibraryController`, a
-semaphore: a second upload waits up to 30 s, then 503 "try again"). What the settings and the panel's ETag read of it (`Info`) is
+semaphore: a second upload waits up to 30 s, then 503 "try again"; the file must arrive within 5 minutes — `READ_LIMIT`, then 408
+"Wgrywanie trwało za długo" — so a body sent a byte at a time cannot hold the one turn). What the settings and the panel's ETag read of it (`Info`) is
 cached (`djLibrary`, evicted after an upload's or a deletion's commit and with the party). Goes when deleted ("Usuń bibliotekę", whatever the plan), with a new upload,
 or with the party; V42 deleted the libraries of V41 (their single key could not be made into a title and artists —
 `LibraryTitlesMigrationIT`). The playlists to choose from are read from the chosen file in the browser (`js/dashboard/library.js`,
@@ -1040,7 +1041,8 @@ decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else 
    `GuestController.waitText` says it: whole minutes rounded up from a minute on ("3 min"), seconds below it ("45 s");
 2. client IP + party: `guest.limit.per-ip-party` (60) per `guest.limit.per-ip-window-minutes` (10) — loose, a venue's Wi-Fi is one
    address — `guest.error.too_many_requests`;
-3. party: `guest.limit.per-party-daily` (300) per 24 h — `guest.error.party_daily_limit`.
+3. party: `guest.limit.per-party-daily` (300) per 24 h — `guest.error.party_daily_limit`. Once spent, a request is refused before
+   2 is counted: no address window is kept for it (an IPv6 flood, a new address each request, would fill the party's map).
 
 A request that 2 or 3 refused gives the guest's own place back too (`giveBack`; review 2026-10-14 W2: the guest was then held by their
 own cooldown for requests never sent). One guest with a script can spend 3 for the whole party (60 per 10 min from one address reach
@@ -1426,7 +1428,7 @@ names (IDOR): `DjSessionHelper.require(partyCode, StaffPermission)` — the owne
 what every person of the staff sees (the queue's poll, the QR print); and then, for a feature of the Pro plan, `PlanService.require`
 (V35: the party's organiser's plan; a 403 without it while the plans are enforced — `PlanFeatureEndpointsTest`; the hosts' page
 `/h/{token}` is a 404 then). `POST /join/{token}` joins only logged in, with CSRF; an
-invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` and `/email/stop/*` are exempt). Google's login always asks which account (`prompt=select_account`, `SecurityConfig.accountPicker`): "Wyloguj" ends our session, not Google's, and on a shared device the next login must not go into the last DJ's account. A guest's request whose token went with the session (the page open over 30 minutes) goes back to `/p/{code}` with the typed song, its dedication (review 2026-10-21, U3) and "Strona była otwarta za długo — wyślij prośbę jeszcze raz." (`GuestFormExpiredHandler`), not to the error page "403". Logout `POST
+invitation by e-mail is answered only by the account whose address Google verified (V34). CSRF on (tokens in `<meta>` for AJAX; `/csp-report` and `/email/stop/*` are exempt). Google's login always asks which account (`prompt=select_account`, `SecurityConfig.accountPicker`): "Wyloguj" ends our session, not Google's, and on a shared device the next login must not go into the last DJ's account. A login whose return from Google fails (`SecurityConfig.loginFailure`): a person logged in already — a second "Zaloguj" replaced the first login on its way (`authorization_request_not_found`) — goes back to the panel; anyone else to `/?error=auth_failed`, "Błąd logowania. Spróbuj ponownie." A guest's request whose token went with the session (the page open over 30 minutes) goes back to `/p/{code}` with the typed song, its dedication (review 2026-10-21, U3) and "Strona była otwarta za długo — wyślij prośbę jeszcze raz." (`GuestFormExpiredHandler`), not to the error page "403". Logout `POST
 /dj/logout`. `th:utext` only for texts of our own bundles; song names and the guests' words are escaped.
 `Referrer-Policy: same-origin` (the secrets in `/h/…` and `/join/…` never leave in a `Referer`) and `Permissions-Policy` (no camera,
 microphone, location, payment, devices — `SecurityConfig.PERMISSIONS_POLICY`) on every answer. The error page's "Spróbuj ponownie"
@@ -1728,7 +1730,7 @@ GuestQueueService          → DjService
 | GET | `/dj/stats` | the site's counter (V40) as text, the last 30 days, the organisers new in the last 7 days with their address (V48), and the e-mails' state (V64: the key set, the last send, a later failure); only the account `ADMIN_GOOGLE_ID` names, else 404 |
 | POST | `/dj/dashboard/morning-summary` | "Poranne podsumowanie" (V64): `on` (none = off); the organiser's alone; with `X-Requested-With: fetch` the card alone, else back to the settings |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
-| POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s) |
+| POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s), 408 the file still arriving after 5 minutes |
 | POST | `/dj/logo` | `partyCode`; the body is the picture (`application/octet-stream`): the DJ's logo (V45, Pro, the organiser) — text: 200 saved, 413 over 2 MB, 422 not a PNG / JPEG, over 4096 px a side or 16 megapixels, unreadable; 503 two others being decoded |
 | POST | `/dj/logo/delete` | `partyCode`: the logo deleted (the organiser, any plan); back to `/dj/settings#logoCard` |
 | POST | `/dj/library/delete` | `partyCode`: the library deleted (the organiser, any plan); back to `/dj/settings#libraryCard` |

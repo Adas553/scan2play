@@ -5,6 +5,15 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+
+import java.util.Map;
 import org.springframework.security.web.savedrequest.RequestCache;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,6 +62,29 @@ class LoginReturnTest {
         remembered.saveRequest(request(session, "/dj/dashboard", "party=ABC12", "navigate"), new MockHttpServletResponse());
 
         assertThat(afterTheLogin(session)).contains("/dj/dashboard?party=ABC12");
+    }
+
+    /** Where a failed login sends the person, with what the session holds. */
+    private static String afterAFailedLogin(MockHttpSession session) throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        SecurityConfig.loginFailure().onAuthenticationFailure(request(session, "/login/oauth2/code/google", "code=x&state=y", "navigate"),
+                response, new OAuth2AuthenticationException(new OAuth2Error("authorization_request_not_found")));
+        return response.getRedirectedUrl();
+    }
+
+    /**
+     * A second "Zaloguj" replaces the first login on its way, whose return from Google then fails: a DJ logged in already went to
+     * "Błąd logowania" while their panel worked. They go back to the panel; a person not logged in still reads the message.
+     */
+    @Test
+    void aFailedReturnFromGoogle_ofAPersonLoggedInAlready_opensThePanel() throws Exception {
+        MockHttpSession loggedIn = new MockHttpSession();
+        OAuth2AuthenticationToken dj = new OAuth2AuthenticationToken(new DefaultOAuth2User(
+                AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", "dj"), "sub"), AuthorityUtils.createAuthorityList("ROLE_USER"), "google");
+        loggedIn.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, new SecurityContextImpl(dj));
+        assertThat(afterAFailedLogin(loggedIn)).isEqualTo("/dj/dashboard");
+
+        assertThat(afterAFailedLogin(new MockHttpSession())).isEqualTo("/?error=auth_failed");
     }
 
     @Test

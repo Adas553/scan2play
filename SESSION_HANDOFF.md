@@ -1,4 +1,4 @@
-# Session Handoff — 2026-11-05
+# Session Handoff — 2026-11-06
 
 The current state only: the branch, what waits for the owner, what comes next. **The history** (decisions, the owner's words, what
 was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`,
@@ -11,21 +11,25 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Start here
 
-- **2026-11-06 — the full review** (`docs/history/review-2026-11-06.md`; `main` = `1d81386`, #244): nothing critical. **PR #245**
-  (`claude/adoring-edison-dr87gy` → `dev`, waiting for the owner's review), three commits: (1) the review's fixes — the logo's upload
-  reads its body only once it has its turn (a burst of uploads could fill the 512 MB heap); the guests' limit per address 30 → 60 a 10
-  minutes (the owner: a room on one Wi-Fi); "Ostatnie wieczory" whole on a phone; the pages "Dla kogo"' ways back 44 px; no "👍 0" on
-  the TV; stack traces cut to 30 lines a cause (Railway drops lines past 500 a second); `PROJECT_CONTEXT.md`'s numbers; (2) **Spring Boot
-  4.1.2** (4.0's free updates end 2026-12-31; 4.2 is at RC2); (3) **`OriginGuardFilter`** — Railway's own address answered past
-  Cloudflare (the owner's `curl --resolve`, a 200 from `railway-hikari`).
-- **After #245 reaches `main`, the owner switches the guard on** (off until then, nothing changes by the merge alone), in this order
-  (`PROJECT_CONTEXT.md` Section 10): the Cloudflare Transform Rule `X-Scan2Play-Origin` = a long random value, then Railway's
-  `ORIGIN_SECRET` = the same; check the start's "Origin guard on", the site 200, the `--resolve` curl 403. The variable first = every page
-  403 (back: delete it).
+- **2026-11-06 — the state.** `main` = `32af3bf` (the release merge #246; #245 the same into `dev`), deployed 2026-11-06 22:34 UTC,
+  SUCCESS. Checked (Railway, read only): Spring Boot 4.1.2, Tomcat 11.0.27, "Schema is up to date" (no migration), "Origin guard on".
+  It brought the full review of 2026-11-06 (`docs/history/review-2026-11-06.md`, nothing critical): the logo's upload reads its body
+  only once it has its turn (a burst of uploads could fill the 512 MB heap); the guests' limit per address 30 → 60 a 10 minutes (the
+  owner: a room on one Wi-Fi); "Ostatnie wieczory" whole on a phone; the pages "Dla kogo"' ways back 44 px; no "👍 0" on the TV; stack
+  traces cut to 30 lines a cause; **Spring Boot 4.1.2** (4.0's free updates end 2026-12-31; 4.2 is at RC2 — 4.1 holds until ~2027-07);
+  **`OriginGuardFilter`** (Railway's own address answered past Cloudflare).
+- **Only Cloudflare reaches the app — on since 2026-11-06 22:47 UTC.** The owner set the Cloudflare Transform Rule `X-Scan2Play-Origin`
+  and Railway's `ORIGIN_SECRET` (the first value showed in a screenshot and was replaced at once); checked: the site 200 through
+  Cloudflare, Railway's own address (`oqz5xl6q.up.railway.app`, `153.52.255.99`) 403. To change the secret: the Cloudflare rule and the
+  variable together — between the two the site is 403 for a minute (`PROJECT_CONTEXT.md` Sections 8, 10).
 - **The database's copy:** the owner took one on 2026-11-06 (`scan2play-2026-11-06.dump`, 250 KB, on their computer); the Postgres TCP
-  proxy is added only for a copy and removed right after it (`docs/database-backup.md`). Next: before #245 reaches `main`, and weekly.
-- Open from the review: the hypotheses H2 (a login started twice shows "Błąd logowania"), H3 (a slow library upload holds its one
-  turn), H4 (the limiter's address windows bounded per party, not overall).
+  proxy was removed after it (checked: only the private endpoint). Weekly, and before a release with a migration
+  (`docs/database-backup.md`: the proxy only for the copy).
+- **The review's hypotheses H2–H4** — fixed on `claude/adoring-edison-dr87gy` (restarted from `main` after #246): H2 a login's return
+  from Google that fails for a person logged in already (a second "Zaloguj" replaced the first) opens the panel, not "Błąd logowania"
+  (`SecurityConfig.loginFailure`, `LoginReturnTest`); H3 a library's file must arrive within 5 minutes, or 408 "Wgrywanie trwało za
+  długo" and the one turn of reading is free again (`DjLibraryController.READ_LIMIT`); H4 past the party's daily limit a request from a
+  new address is refused without a window kept for it (`GuestRequestLimiter.tryAcquire`, an IPv6 flood no longer fills the party's map).
 - **2026-11-05 — the state.** `main` = `09667ea` (the release merge #236), deployed 2026-11-05 13:13 UTC, SUCCESS. Checked (Railway,
   read only): PostgreSQL 18.6, Flyway "Successfully validated 65 migrations", "E-mails on (Brevo), from contact@scan2play.com.pl",
   started in 9.2 s. Every item of "Next" below that said "waiting for a review / a release" is on production: V48 and V49 with #192
@@ -322,7 +326,5 @@ F. **A light theme — only when someone asks** (the owner, 2026-10-28: not now)
   disabled OAuth secret `****IgiS` — delete it.
 - Search Console: request the indexing of `/dj-weselny`, `/kluby`, `/puby`.
 - `SCAN2PLAY_GUEST_URL` in IntelliJ follows the local network's address — change it when the network changes.
-- **Railway's own address can be reached past Cloudflare** (the owner's `curl --resolve`, 2026-11-06: a 200 from `railway-hikari`):
-  there `X-Forwarded-*` (`server.forward-headers-strategy=FRAMEWORK`) and `CF-Connecting-IP` are the client's to choose.
-  `OriginGuardFilter` closes it once switched on — after the release: the Cloudflare Transform Rule first, then `ORIGIN_SECRET` on
-  Railway (`PROJECT_CONTEXT.md` Section 10, the order matters).
+- `server.forward-headers-strategy=FRAMEWORK` trusts `X-Forwarded-*` and the guests' limit `CF-Connecting-IP`: safe because only
+  Cloudflare reaches the app (`OriginGuardFilter`, `ORIGIN_SECRET`) — keep the Cloudflare rule and the variable together.
