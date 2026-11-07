@@ -78,6 +78,7 @@ class MigrationIT extends PostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT comment_style FROM party_settings WHERE party_code = ?", String.class, code))
                 .isEqualTo("CLASSIC");
         jdbc.update("UPDATE party_settings SET comment_style = 'SARCASTIC' WHERE party_code = ?", code);
+        jdbc.update("UPDATE party_settings SET comment_style = 'TRIVIA' WHERE party_code = ?", code);   // V65
         for (String unknown : List.of("RUDE", "SARCASTIC_LIGHT")) {
             assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET comment_style = ? WHERE party_code = ?", unknown, code))
                     .hasMessageContaining("party_settings_comment_style_check");

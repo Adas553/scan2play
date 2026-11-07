@@ -21,6 +21,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   on a phone, `tools/page_audit.py`, `PROJECT_CONTEXT.md` split into `docs/context/`, `tools/check.py` and the project agents),
   deployed 2026-11-07 10:56 UTC, SUCCESS. Checked (Railway, read only): started in 5.3 s, no migration, no WARN, 0 × 5xx (483
   requests), RAM 0.56 GB steady; curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`. No open PR.
+- **The comment style "Ciekawostki"** (`CommentStyle.TRIVIA`, V65) on `claude/dazzling-heisenberg-oilwvm`: a fact about an accepted
+  song from Gemini's own knowledge, no search; not sure → a plain comment, none on a refusal. Before a release: `GeminiComparison
+  trivia` (17 cases × 2, the owner's key) and each fact checked by hand; Google Search only if they are often wrong. V65 → a database copy.
 - **Only Cloudflare reaches the app — on since 2026-11-06 22:47 UTC.** The owner set the Cloudflare Transform Rule `X-Scan2Play-Origin`
   and Railway's `ORIGIN_SECRET` (the first value showed in a screenshot and was replaced at once); checked: the site 200 through
   Cloudflare, Railway's own address (`oqz5xl6q.up.railway.app`, `153.52.255.99`) 403. To change the secret: the Cloudflare rule and the

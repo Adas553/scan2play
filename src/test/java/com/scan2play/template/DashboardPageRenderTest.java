@@ -420,7 +420,7 @@ class DashboardPageRenderTest {
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
         assertThat(html).as("the AI's comment style (V22): the party's own picked, saved as soon as picked")
                 .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", ">Komentarze AI<",
-                        "selected=\"selected\">Klasyczne<", ">Sarkastyczne<")
+                        "selected=\"selected\">Klasyczne<", ">Sarkastyczne<", ">Ciekawostki<")
                 .doesNotContain("data-example", "commentStyleExample", "łagodne", "SARCASTIC_LIGHT");
         assertThat(html).as("the vibe note (V16) and who plays (V17): one form, one \"Zapisz\"")
                 .contains("action=\"/dj/dashboard/party-words\"", "id=\"vibeNoteInput\"", "id=\"djNameInput\"", ">Opis klimatu<", ">Kto gra<")
@@ -807,7 +807,7 @@ class DashboardPageRenderTest {
 
         assertWhatTheScriptsNeed(html);
         assertThat(html).as("the comment styles: \"Klasyczne\" to pick, the others under \"W planie Pro\" and not")
-                .contains(">Klasyczne<", "<optgroup label=\"W planie Pro\">", ">Zabawne<", ">Sarkastyczne<", ">Krótkie<")
+                .contains(">Klasyczne<", "<optgroup label=\"W planie Pro\">", ">Zabawne<", ">Sarkastyczne<", ">Ciekawostki<", ">Krótkie<")
                 .doesNotContain("· Pro<")
                 .containsPattern("disabled=\"disabled\"[^>]*value=\"FUNNY\"|value=\"FUNNY\"[^>]*disabled=\"disabled\"");
         assertThat(html).as("the queue: no 💸 and no ⭐ without Pro — the song's own number and the buttons stay")

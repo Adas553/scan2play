@@ -184,7 +184,7 @@ public class DjPartySettingsController {
     }
 
     /**
-     * How the AI words its comment to the guest (V22): classic, funny, lightly sarcastic, sarcastic or short. An unknown value is a
+     * How the AI words its comment to the guest (V22): classic, funny, sarcastic, trivia or short. An unknown value is a
      * 400 (the enum binding), as for the vibe.
      */
     @PostMapping("/dashboard/comment-style")
