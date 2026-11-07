@@ -13,7 +13,7 @@ Chrome (src/test/browser/run.py's pieces), one browser for all of them. Prints o
   - "errors": an uncaught error, a console.error, a CSP violation;
   - "small" (phone widths only, < 1000 px — a mouse needs no 44 px): a link, a button, a field or a summary smaller than 44 × 44 px —
     a link inside a sentence is left out (its line is the target), a checkbox or radio is measured with its label, a `.stretched-link`
-    with its card. One line a target, with the pages and widths it was seen on, after the pages. Reported, but it does not fail the
+    with the box it covers, a visually hidden field (≤ 2 px, a styled file input) not at all. One line a target, with the pages and widths it was seen on, after the pages. Reported, but it does not fail the
     run: some are deliberate.
 
 Exit status 1 when a page scrolls sideways or logs an error. Standard library only.
@@ -71,12 +71,16 @@ MEASURE = r"""
     if (!shown(el)) continue;
     let box = el;
     if (el.matches('input[type=checkbox],input[type=radio]')) box = el.closest('label') || (el.id && document.querySelector('label[for="' + el.id + '"]')) || el.parentElement;
-    if (el.classList.contains('stretched-link')) box = el.closest('.card') || el.parentElement;
+    if (el.classList.contains('stretched-link')) {   // its ::after covers the nearest positioned ancestor (Bootstrap)
+      box = el.parentElement;
+      while (box.parentElement && getComputedStyle(box).position === 'static') box = box.parentElement;
+    }
     if (el.tagName === 'A' && el.parentElement && box === el) {
       const own = (el.textContent || '').trim().length, around = (el.parentElement.textContent || '').trim().length;
       if (around > own + 15 && getComputedStyle(el).display === 'inline') continue;   // a link inside a sentence
     }
     const r = box.getBoundingClientRect();
+    if (r.width <= 2 || r.height <= 2) continue;   // visually hidden (a styled file input): its label is the target
     if (width < 1000 && Math.min(r.width, r.height) < 44 - 0.5) {
       const label = (el.getAttribute('aria-label') || el.textContent || el.value || '').trim().replace(/\s+/g, ' ').slice(0, 24);
       small.push(name(el) + (label ? ' "' + label + '"' : '') + ' ' + Math.round(Math.min(r.width, r.height)) + ' px');
@@ -135,7 +139,7 @@ def audit(chrome, port, names, widths, no_sandbox, shots):
                     problems.append('scroll +%dpx: %s' % (found['scroll'], ', '.join('%s +%d' % (n, d) for d, n in found['wide']) or '?'))
                 if found['errors']:
                     problems.append('errors: ' + ' | '.join(e[:160] for e in found['errors'][:3]))
-                for target in found['small']:
+                for target in dict.fromkeys(found['small']):
                     small.setdefault(target, []).append('%s@%d' % (name, width))
                 if problems:
                     print('x %-34s %4d  %s' % (name, width, ('\n' + ' ' * 42).join(problems)), flush=True)
