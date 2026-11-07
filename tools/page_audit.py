@@ -40,14 +40,16 @@ import server  # noqa: E402
 HEIGHT = {320: 640, 390: 844}
 TARGET = 44
 
-# Runs before the page's own scripts (CSP does not apply to it): keeps what the page reports as broken.
-RECORDER = r"""
+# Runs before the page's own scripts (CSP does not apply to it): keeps what the page reports as broken. In a function of its own:
+# a top-level name here would clash with one of the page's scripts.
+RECORDER = r"""(() => {
 window.__audit = [];
 addEventListener('error', e => __audit.push('error: ' + (e.message || (e.target && (e.target.src || e.target.href)) || e.type)), true);
 addEventListener('unhandledrejection', e => __audit.push('rejection: ' + (e.reason && e.reason.message || e.reason)));
 addEventListener('securitypolicyviolation', e => __audit.push('CSP: ' + e.violatedDirective + ' ' + (e.blockedURI || '')));
 const original = console.error;
 console.error = function (...args) { __audit.push('console.error: ' + args.map(String).join(' ')); return original.apply(this, args); };
+})();
 """
 
 MEASURE = r"""
@@ -81,7 +83,7 @@ MEASURE = r"""
     }
     const r = box.getBoundingClientRect();
     if (r.width <= 2 || r.height <= 2) continue;   // visually hidden (a styled file input): its label is the target
-    if (width < 1000 && Math.min(r.width, r.height) < 44 - 0.5) {
+    if (width < 1000 && Math.min(r.width, r.height) < TARGET - 0.5) {
       const label = (el.getAttribute('aria-label') || el.textContent || el.value || '').trim().replace(/\s+/g, ' ').slice(0, 24);
       small.push(name(el) + (label ? ' "' + label + '"' : '') + ' ' + Math.round(Math.min(r.width, r.height)) + ' px');
     }
@@ -127,13 +129,22 @@ def audit(chrome, port, names, widths, no_sandbox, shots):
             height = HEIGHT.get(width, 800)
             devtools.call('Emulation.setDeviceMetricsOverride', width=width, height=height, deviceScaleFactor=1, mobile=width < 1000)
             for name in names:
-                devtools.call('Page.navigate', url='http://127.0.0.1:%d/dj/dashboard?page=%s' % (port, name))
+                # the width in the address too: the same page at the next width is a new address, so the old document, still
+                # "complete", is never taken for the new one
+                search = '?page=%s&w=%d' % (name, width)
+                devtools.call('Page.navigate', url='http://127.0.0.1:%d/dj/dashboard%s' % (port, search))
+                ready = 'location.search === %s && document.readyState === "complete"' % json.dumps(search)
                 deadline = time.monotonic() + 15
-                while evaluate(devtools, 'document.readyState') != 'complete' and time.monotonic() < deadline:
+                while not evaluate(devtools, ready) and time.monotonic() < deadline:
                     time.sleep(0.1)
                 time.sleep(0.4)   # the page's own scripts (a list fitted, a card folded) after the load
-                found = json.loads(evaluate(devtools, MEASURE))
+                measured = evaluate(devtools, MEASURE.replace('TARGET', str(TARGET)))
                 checked += 1
+                if measured is None:
+                    print('x %-34s %4d  the page could not be measured (it did not load, or the measuring script failed)' % (name, width))
+                    failed += 1
+                    continue
+                found = json.loads(measured)
                 problems = []
                 if found['scroll'] > 0:
                     problems.append('scroll +%dpx: %s' % (found['scroll'], ', '.join('%s +%d' % (n, d) for d, n in found['wide']) or '?'))
