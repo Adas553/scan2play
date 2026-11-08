@@ -9,6 +9,7 @@
  *   .page-error     — error.html
  *   .page-ended     — party_ended.html
  *   .page-email     — email-stop.html, email-stopped.html ("Nie wysyłaj mi tego", V64)
+ *   .page-report    — stats-report.html (the owner's daily report by hand)
  *
  * Sections:
  *   1. Design Tokens (CSS Custom Properties)
@@ -1679,3 +1680,19 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
     .s2p-kiosk-grid { grid-template-rows: auto; }
     .s2p-kiosk-songs { overflow-y: visible; }
 }
+
+/* --- The owner's daily report (stats-report.html): the e-mail's text as it is, wrapped on a phone, never wider than the page --- */
+.page-report { background-color: var(--s2p-bg); }
+.s2p-report {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.85rem;
+    color: var(--s2p-light);
+    background-color: var(--s2p-bg-elevated);
+    border: 1px solid var(--s2p-border);
+    border-radius: 8px;
+    padding: 1rem;
+}
+.s2p-report-schedule { max-width: 30rem; }
+.s2p-report-time { max-width: 9rem; min-height: 44px; }
+.s2p-report-day { min-width: 3.25rem; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
