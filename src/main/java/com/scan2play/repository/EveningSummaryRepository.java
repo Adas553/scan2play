@@ -130,4 +130,15 @@ public interface EveningSummaryRepository extends JpaRepository<EveningSummaryEn
             + ") guests GROUP BY party_code HAVING count(*) >= :minimum ORDER BY party_code LIMIT :limit", nativeQuery = true)
     List<String> busyParties(@Param("from") Instant from, @Param("to") Instant to, @Param("minimum") int minimum,
                              @Param("limit") int limit);
+
+    /**
+     * The guests' requests of each of {@code partyCodes} since {@code from} (the ones still there and the ones kept), a row
+     * {@code [party_code, count]} — the owner's report: whether a new organiser has had a party yet. A party with none has no row.
+     */
+    @Query(value = "SELECT party_code, count(*) FROM ("
+            + " SELECT party_code FROM song_requests WHERE party_code IN (:partyCodes) AND requested_at >= :from AND NOT added_by_dj"
+            + " UNION ALL"
+            + " SELECT party_code FROM evening_song WHERE party_code IN (:partyCodes) AND requested_at >= :from AND NOT added_by_dj"
+            + ") guests GROUP BY party_code", nativeQuery = true)
+    List<Object[]> guestRequestsSince(@Param("partyCodes") java.util.Collection<String> partyCodes, @Param("from") Instant from);
 }

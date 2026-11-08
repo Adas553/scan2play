@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--/* The owner's daily report by hand (AdminReportController, AdminReportService): the report as it would go now, and a button that
+     sends it at once. Only the owner sees it (scan2play.admin-id), so it is Polish only, its words written in. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex">
+    <title>Raport — Scan2Play</title>
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="page-report">
+<div class="container py-4">
+    <h1 class="h4 text-light-custom mb-1">Raport dzienny</h1>
+    <p class="text-secondary-bright mb-3">
+        <span th:if="${address != ''}">Na <b th:text="${address}">adres</b>, za dzień poprzedni.</span>
+        <span th:if="${address == ''}">Brak adresu (ADMIN_EMAIL): raport nie wychodzi.</span>
+        <a href="/dj/stats" class="text-secondary-bright">Statystyki</a>
+    </p>
+    <p th:if="${sent == 'yes'}" class="alert alert-success py-2" id="reportSent">Wysłane.</p>
+    <p th:if="${sent == 'no'}" class="alert alert-danger py-2" id="reportFailed">Nie wysłane — zobacz „E-maile” w raporcie.</p>
+    <form th:action="@{/dj/stats/report}" method="post" class="mb-3" th:if="${canSend}">
+        <button type="submit" class="btn btn-action px-4" id="reportSend">Wyślij teraz</button>
+    </form>
+    <!--/* When it goes by itself (V66): on or off, the time (Polish time), the days; a failed send is tried again for 3 hours */-->
+    <form th:action="@{/dj/stats/report/schedule}" method="post" class="s2p-report-schedule mb-3" id="reportSchedule">
+        <p th:if="${saved == 'yes'}" class="alert alert-success py-2 mb-2" id="reportSaved">Zapisane.</p>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" role="switch" id="reportOn" name="on" value="true"
+                   th:checked="${schedule.on()}">
+            <label class="form-check-label text-light-custom" for="reportOn">Wysyłaj sam</label>
+        </div>
+        <label for="reportTime" class="form-label text-secondary-bright mb-1">O godzinie (czas polski)</label>
+        <input type="time" id="reportTime" name="time" class="form-control bg-black text-light border-secondary mb-2 s2p-report-time"
+               required th:value="${#temporals.format(schedule.time(), 'HH:mm')}">
+        <fieldset class="mb-2">
+            <legend class="form-label text-secondary-bright fs-6 mb-1">W dni</legend>
+            <div class="d-flex flex-wrap gap-1">
+                <th:block th:each="weekDay : ${weekDays}">
+                    <input type="checkbox" class="btn-check" name="days" th:id="${'reportDay' + weekDay.day()}"
+                           th:value="${weekDay.day()}" th:checked="${schedule.days().contains(weekDay.day())}">
+                    <label class="btn btn-outline-light s2p-report-day" th:for="${'reportDay' + weekDay.day()}"
+                           th:text="${weekDay.name()}">pon.</label>
+                </th:block>
+            </div>
+        </fieldset>
+        <button type="submit" class="btn btn-outline-light px-4" id="reportScheduleSave">Zapisz</button>
+    </form>
+    <p th:unless="${canSend}" class="text-secondary-bright" id="reportCannotSend">Wysyłka niemożliwa: brak adresu albo klucza Brevo.</p>
+    <p class="text-light-custom fw-bold mb-2" th:text="${subject}">Temat</p>
+    <pre class="s2p-report" id="reportText" th:text="${text}">Raport</pre>
+</div>
+</body>
+</html>
