@@ -56,9 +56,9 @@ public class AdminReportService {
     private static final DateTimeFormatter SHORT_MOMENT = DateTimeFormatter.ofPattern("dd.MM HH:mm").withZone(Times.DISPLAY_ZONE);
 
     /**
-     * The report: its subject, its text with the organisers' addresses and names (the owner's page) and the e-mail's text without
-     * them — the privacy policy gives an organiser's address to Brevo only to write to that organiser, so the e-mail names a party by
-     * its code and the page says who it is.
+     * The report: its subject, its text with the organisers' addresses and names and the evenings' titles (the owner's page) and the
+     * e-mail's text without them — the privacy policy gives Brevo an organiser's address, and an evening's title, only to write to
+     * that organiser, so the e-mail names a party by its code and the page says whose it is.
      */
     public record Report(String subject, String text, String emailText) {
     }
@@ -138,17 +138,30 @@ public class AdminReportService {
                 + " AND (admin_report_day IS NULL OR admin_report_day < ?)", Date.valueOf(today), Date.valueOf(today)) != 1) {
             return false;
         }
-        boolean sent = send(build(clock.instant(), logTally.take()));
-        if (!sent) {
-            jdbc.update("UPDATE email_status SET admin_report_day = NULL WHERE id = 1 AND admin_report_day = ?", Date.valueOf(today));
-            log.warn("The owner's report of {} not sent; tried again at 11:10", today);
+        LogTally.Tally tally = logTally.take();
+        boolean sent = false;
+        try {
+            sent = send(build(clock.instant(), tally));
+        } catch (RuntimeException e) {
+            log.warn("The owner's report of {} not built: {}", today, e.toString());
+        } finally {
+            if (!sent) {
+                // the claim and the log's counts back: the 11:10 run sends them
+                logTally.giveBack(tally);
+                jdbc.update("UPDATE email_status SET admin_report_day = NULL WHERE id = 1 AND admin_report_day = ?",
+                        Date.valueOf(today));
+                log.warn("The owner's report of {} not sent; tried again at 11:10", today);
+            }
         }
         return sent;
     }
 
-    /** Sends the report now (the owner's button); the log's counts start again from zero. True when Brevo took it. */
+    /**
+     * Sends the report now (the owner's button). The log's counts are kept: the morning's report still has the night's errors. True
+     * when Brevo took it.
+     */
     public boolean sendNow() {
-        return canSend() && send(build(clock.instant(), logTally.take()));
+        return canSend() && send(build(clock.instant(), logTally.peek()));
     }
 
     /** The report as it would go now, the log's counts kept (the page's preview). */
@@ -171,8 +184,9 @@ public class AdminReportService {
         LocalDate yesterday = now.atZone(Times.DISPLAY_ZONE).toLocalDate().minusDays(1);
         List<SiteCounter.Day> days = siteCounter.lastDays(AVERAGE_DAYS + 1);
         List<NewOrganiser> organisers = newOrganisers(now);
+        // the demo's two parties may be among the rows: asked for, then left out, before the limit says whether there are more
         List<String> codes = eveningSummaryRepository.busyParties(EveningSummaryService.startOf(yesterday),
-                EveningSummaryService.startOf(yesterday.plusDays(1)), 1, MAX_PARTIES + 1).stream()
+                EveningSummaryService.startOf(yesterday.plusDays(1)), 1, MAX_PARTIES + 3).stream()
                 .filter(code -> !DemoParty.isDemo(code)).toList();
         List<PartyLine> parties = new ArrayList<>();
         for (String code : codes.stream().limit(MAX_PARTIES).toList()) {
@@ -182,8 +196,10 @@ public class AdminReportService {
         String text = render(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, health, true);
         String emailText = render(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, health, false)
                 + "\nAdresy i imiona DJ-ów: " + mailer.siteUrl() + "/dj/stats/report\n";
-        String subject = "Scan2Play — raport za " + yesterday.format(SHORT_DAY) + ": " + (count(days, yesterday, Event.LANDING_PL) + count(days, yesterday, Event.LANDING_EN))
-                + " wejść, " + parties.size() + " " + Texts.polishPlural(parties.size(), "impreza", "imprezy", "imprez")
+        long visits = count(days, yesterday, Event.LANDING_PL) + count(days, yesterday, Event.LANDING_EN);
+        String subject = "Scan2Play — raport za " + yesterday.format(SHORT_DAY) + ": " + visits + " "
+                + Texts.polishPlural(visits, "wejście", "wejścia", "wejść") + ", " + parties.size() + " "
+                + Texts.polishPlural(parties.size(), "impreza", "imprezy", "imprez")
                 + (tally.errors() > 0 ? ", " + tally.errors() + " ERROR" : "");
         return new Report(subject, text, emailText);
     }
@@ -274,7 +290,7 @@ public class AdminReportService {
             if (contacts) {
                 text.append("  ").append(party.ownerEmail() == null ? "(bez adresu)" : party.ownerEmail());
             }
-            if (party.title() != null && !party.title().isBlank()) {
+            if (contacts && party.title() != null && !party.title().isBlank()) {
                 text.append(" · „").append(party.title()).append('”');
             }
             text.append('\n');

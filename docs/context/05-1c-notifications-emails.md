@@ -32,10 +32,12 @@ the last 7 days with their address are on `/dj/stats` for the site's owner.
 `scan2play.admin-email` (`ADMIN_EMAIL`, by default the Gmail of the replies): yesterday's traffic and funnel beside the 7 days' average
 (`SiteCounter`), the organisers new in 7 days with their guests' requests since (`EveningSummaryRepository.guestRequestsSince`), every
 party of yesterday's evening (6:00–6:00: guests' requests, played, refused by the AI and before it, kiosk, tips, the DJ's own), the AI's
-and the e-mails' state and the log's ERROR / WARN since the last report (`LogTally`, in memory: a restart starts from zero). The e-mail
-names a party by its code — no organiser's address or name (the privacy policy gives Brevo an address only to write to that
-organiser); the page `/dj/stats/report` (`AdminReportController`, the owner only) shows them, and its "Wyślij teraz" sends it at once.
-"Once a day": the claim of `email_status.admin_report_day`, a failed send gives it back (`AdminReportIT`).
+and the e-mails' state and the log's ERROR / WARN since the last report (`LogTally`, in memory: a restart starts from zero; a kind
+is the message's pattern with its numbers as "#", at most 30 kinds). The e-mail names a party by its code — no organiser's address or
+name, no evening's title (the privacy policy gives Brevo those only to write to that organiser); the page `/dj/stats/report`
+(`AdminReportController`, the owner only) shows them, and its "Wyślij teraz" sends it at once without zeroing the log's counts.
+"Once a day": the claim of `email_status.admin_report_day`; a failed send or build gives back the claim and the log's counts
+(`AdminReportIT`, `AdminReportServiceTest`).
 
 **The automatic e-mails** (V64, Section 7.4 Brevo): **the welcome** — once an account (`welcome_sent_at`), the text of
 `docs/welcome-email.md` in the panel's language (`email_language`, kept with the address when the organiser opens the panel), no
