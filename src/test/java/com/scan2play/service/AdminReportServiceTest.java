@@ -110,7 +110,7 @@ class AdminReportServiceTest {
         assertThat(service.sendOnce(YESTERDAY.plusDays(1))).isFalse();
 
         verify(jdbc).update(org.mockito.ArgumentMatchers.startsWith("UPDATE email_status SET admin_report_day = NULL"),
-                any(Object.class));
+                org.mockito.ArgumentMatchers.eq(java.sql.Date.valueOf(YESTERDAY.plusDays(1))));
         verify(mailer, never()).send(any());
         assertThat(tally.peek().errors()).as("the night's error waits for the 11:10 run").isEqualTo(1);
     }
