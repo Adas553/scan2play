@@ -73,7 +73,7 @@ What every page shares, so a new screen looks like the others:
   co daje Pro" → `/pro` (`components :: proOffer`, `.s2p-pro-box`: a box tinted with the cyan, a solid line — never dashed, that reads
   as an empty place; on a wide screen the sentence and its outline button on one line); a fact is said once (the staff's places: the
   offer, not the help line again); the other choices of a list are there but not to pick, under the list's own heading (`<optgroup label="W planie Pro">`, quieter —
-  the comment styles "Zabawne", "Sarkastyczne", "Ciekawostki", "Krótkie"; never "· Pro" after each, it read as one more choice); "Podsumowanie wieczoru PRO" leads
+  the comment styles "Zabawne", "Sarkastyczne", "Krótkie"; never "· Pro" after each, it read as one more choice); "Podsumowanie wieczoru PRO" leads
   to `/pro`. **The page `/pro` is the pricing page** ("Cennik" / "Pricing", the owner's variant A of 2026-11-05; `/cennik` and
   `/pricing` redirect to it in their language — one canonical address): the plans Free and Pro side by side on a wide screen — Free
   "0 zł zawsze" with "Zacznij za darmo" (`/start`, a visitor only), Pro tinted with the tag "WCZESNY DOSTĘP" and "Napisz do nas" in

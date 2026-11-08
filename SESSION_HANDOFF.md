@@ -21,9 +21,6 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   on a phone, `tools/page_audit.py`, `PROJECT_CONTEXT.md` split into `docs/context/`, `tools/check.py` and the project agents),
   deployed 2026-11-07 10:56 UTC, SUCCESS. Checked (Railway, read only): started in 5.3 s, no migration, no WARN, 0 × 5xx (483
   requests), RAM 0.56 GB steady; curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`. No open PR.
-- **The comment style "Ciekawostki"** (`CommentStyle.TRIVIA`, V65) on `claude/dazzling-heisenberg-oilwvm`: a fact about an accepted
-  song from Gemini's own knowledge, no search; not sure → a plain comment, none on a refusal. Before a release: `GeminiComparison
-  trivia` (17 cases × 2, the owner's key) and each fact checked by hand; Google Search only if they are often wrong. V65 → a database copy.
 - **Only Cloudflare reaches the app — on since 2026-11-06 22:47 UTC.** The owner set the Cloudflare Transform Rule `X-Scan2Play-Origin`
   and Railway's `ORIGIN_SECRET` (the first value showed in a screenshot and was replaced at once); checked: the site 200 through
   Cloudflare, Railway's own address (`oqz5xl6q.up.railway.app`, `153.52.255.99`) 403. To change the secret: the Cloudflare rule and the
@@ -98,6 +95,10 @@ F. **A light theme — only when someone asks** (the owner, 2026-10-28: not now)
    (`text-light` ×71, `btn-outline-light` ×60, `border-secondary` ×58, `bg-dark` ×28, `bg-black` ×24, `text-white` ×23) and
    `color-scheme: dark` on 22 pages — each moved to a token, then every contrast checked twice. When DJs of daytime outdoor events
    ask: first the guest page alone, light by the phone's own setting (`prefers-color-scheme`), the panel staying dark.
+
+G. **The comment style "Ciekawostki"** (`CommentStyle.TRIVIA`, V65): built in `93938b2`, reverted after `GeminiComparison trivia`
+   (2026-11-08): the world's hits right, the Polish songs about half made up ("Orła cień" sung by Kasia Stankiewicz, "Sen o
+   Victorii" on "Detox") although the prompt forbids guessing. Parked (the owner); again only with Google Search, measured first.
 
 ## Waiting for the owner (not code)
 

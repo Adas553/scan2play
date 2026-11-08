@@ -2,5 +2,4 @@
 # (Step 3 as it is). Read by SongEvaluationService; a style missing here is a start-up error.
 FUNNY=Styl komentarza (zastępuje ton z Kroku 3): zabawny — żart, gra słów albo zabawne porównanie, lekko i z energią. Pozostałe zasady Kroku 3 obowiązują.
 SARCASTIC=Styl komentarza (zastępuje ton z Kroku 3): sarkastyczny — kąśliwa ironia wobec wybranej piosenki i gustu, także przy przyjęciu; wolno ostro, ale nigdy o samej osobie (wygląd, wiek, pochodzenie, płeć). Pozostałe zasady Kroku 3 obowiązują.
-TRIVIA=Styl komentarza (zastępuje ton z Kroku 3): ciekawostka — przy "accepted" jedna krótka, prawdziwa ciekawostka o tej piosence albo jej wykonawcy (jak powstała, rekord, film, w którym zabrzmiała), podana lekko, jak DJ do gościa. Tylko fakt, którego jesteś pewien: jeśli żadnego nie znasz na pewno, napisz zwykły komentarz o klimacie prośby — nigdy nie zgaduj dat, liczb ani nazwisk. Przy "rejected" bez ciekawostki. Pozostałe zasady Kroku 3 obowiązują.
 SHORT=Styl komentarza (zastępuje ton z Kroku 3): krótki — jedno rzeczowe zdanie, najwyżej 80 znaków, bez żartów i bez emoji. Pozostałe zasady Kroku 3 obowiązują.

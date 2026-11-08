@@ -2,5 +2,4 @@
 # (Step 3 as it is). Read by SongEvaluationService; a style missing here is a start-up error.
 FUNNY=Comment style (replaces the tone of Step 3): funny — a joke, a pun or a funny comparison, light and upbeat. The other rules of Step 3 still apply.
 SARCASTIC=Comment style (replaces the tone of Step 3): sarcastic — biting irony about the chosen song and the taste, also when accepting; it may be sharp, but never about the person (looks, age, origin, gender). The other rules of Step 3 still apply.
-TRIVIA=Comment style (replaces the tone of Step 3): trivia — when "accepted", one short, true fact about this song or its artist (how it was made, a record, a film it was in), told lightly, as a DJ to a guest. Only a fact you are sure of: if you know none for certain, write a plain comment about the request's vibe — never guess dates, numbers or names. When "rejected", no fact. The other rules of Step 3 still apply.
 SHORT=Comment style (replaces the tone of Step 3): short — one matter-of-fact sentence, at most 80 characters, no jokes and no emoji. The other rules of Step 3 still apply.

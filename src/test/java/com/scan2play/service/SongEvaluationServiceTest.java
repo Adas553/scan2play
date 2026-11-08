@@ -122,11 +122,6 @@ class SongEvaluationServiceTest {
         assertThat(promptBuilder.build("sanah", "ANY", null, null, CommentStyle.SARCASTIC, pl))
                 .contains("sarkastyczny — kąśliwa", "nigdy o samej osobie").doesNotContain("łagodny");
         assertThat(promptBuilder.build("sanah", "ANY", null, null, CommentStyle.SHORT, java.util.Locale.ENGLISH)).contains("at most 80 characters");
-        // trivia: from the model's own knowledge, so a fallback when it is not sure, and none on a refusal
-        assertThat(promptBuilder.build("sanah", "ANY", null, null, CommentStyle.TRIVIA, pl))
-                .contains("ciekawostka", "Tylko fakt, którego jesteś pewien", "nigdy nie zgaduj", "Przy \"rejected\" bez ciekawostki");
-        assertThat(promptBuilder.build("sanah", "ANY", null, null, CommentStyle.TRIVIA, java.util.Locale.ENGLISH))
-                .contains("trivia", "Only a fact you are sure of", "never guess", "When \"rejected\", no fact");
     }
 
     @Test
@@ -150,7 +145,7 @@ class SongEvaluationServiceTest {
     @Test
     void aCommentStyleWithoutItsBlock_stopsTheStart() {
         String file = "# comment" + System.lineSeparator() + "FUNNY=a" + System.lineSeparator() + System.lineSeparator()
-                + "SARCASTIC=c" + System.lineSeparator() + "TRIVIA=t";
+                + "SARCASTIC=c";
 
         assertThatThrownBy(() -> PromptBuilder.commentStyleRules(file, "pl")).hasMessageContaining("SHORT");
         assertThat(PromptBuilder.commentStyleRules(file + System.lineSeparator() + "SHORT= d ", "pl"))

@@ -41,8 +41,6 @@ import java.util.concurrent.Future;
  * cents. 2026-10-24 the rewrite of S1 b beside the prompt before it: the messages kept out 12 of 12 (before: 5, twice with a
  * made-up song), 83 ok / 1 WRONG (before: 75 / 9), 1.4 s on average; it went live. To try a rewrite, put the prompt's files in
  * {@code src/test/resources/gemini-comparison/proposed} and add a "proposed" variant.
- * <p>
- * With the argument {@code trivia}: {@link #TRIVIA_CASES} on production's model — 34 calls; the facts are for a person to check.
  */
 public final class GeminiComparison {
 
@@ -187,30 +185,6 @@ public final class GeminiComparison {
             new Case("kazik spalam się", null, CommentStyle.CLASSIC, PL, "Spalam się", true),
             new Case("cypis gdzie jest biały węgorz", null, CommentStyle.CLASSIC, PL, "węgorz", null));
 
-    /**
-     * The comment style "trivia" (V65): a fact from the model's own knowledge, no search. Run with the argument {@code trivia} and
-     * check each fact by hand in {@code target/gemini-comparison.md}: hits, songs known well, a Polish niche and songs few know —
-     * on these the comment should fall back to the request's vibe, not invent a date or a name; a refusal carries no fact.
-     */
-    static final List<Case> TRIVIA_CASES = List.of(
-            new Case("bohemian rhapsody", null, CommentStyle.TRIVIA, PL, "Bohemian Rhapsody", true),
-            new Case("dancing queen", null, CommentStyle.TRIVIA, PL, "Dancing Queen", true),
-            new Case("despacito", null, CommentStyle.TRIVIA, PL, "Despacito", true),
-            new Case("the one from titanic", null, CommentStyle.TRIVIA, Locale.ENGLISH, "My Heart Will Go On", true),
-            new Case("sweet caroline", null, CommentStyle.TRIVIA, Locale.ENGLISH, "Sweet Caroline", true),
-            new Case("sen o wiktorii", null, CommentStyle.TRIVIA, PL, "Dżem - Sen o", true),
-            new Case("jolka jolka", null, CommentStyle.TRIVIA, PL, "Jolka", true),
-            new Case("przez twe oczy zielone", null, CommentStyle.TRIVIA, PL, "Przez twe oczy zielone", true),
-            new Case("sanah szampan", null, CommentStyle.TRIVIA, PL, "Szampan", true),
-            new Case("kolorowe jarmarki", null, CommentStyle.TRIVIA, PL, "Kolorowe jarmarki", true),
-            new Case("orła cień", null, CommentStyle.TRIVIA, PL, "Varius Manx", true),
-            new Case("zenek przekorny los", "wesele 40+", CommentStyle.TRIVIA, PL, "Przekorny los", true),
-            new Case("cypis gdzie jest biały węgorz", null, CommentStyle.TRIVIA, PL, "węgorz", null),
-            new Case("El Zorro - Somos Hermanos", "Salsa", CommentStyle.TRIVIA, PL, "Somos Hermanos", null),
-            new Case("con que", "Salsa", CommentStyle.TRIVIA, PL, "=con que", null),
-            new Case("nirvana smells like teen spirit", "Latino", CommentStyle.TRIVIA, PL, "Smells Like Teen Spirit", false),
-            new Case("coś wolnego dla par", null, CommentStyle.TRIVIA, PL, "mood", false));
-
     /** Production's model and thinking (application.properties): the only variant the dedications are asked of. */
     static final Variant PRODUCTION = new Variant("gemini-3.6-flash", "low", "current");
 
@@ -242,12 +216,11 @@ public final class GeminiComparison {
         String mode = args.length > 0 ? args[0] : "";
         List<Variant> variants = switch (mode) {
             case "dedications" -> List.of(PRODUCTION);
-            case "offensive", "trivia" -> List.of(PRODUCTION);
+            case "offensive" -> List.of(PRODUCTION);
             default -> VARIANTS;
         };
         List<Case> cases = switch (mode) {
             case "dedications" -> DEDICATION_CASES;
-            case "trivia" -> TRIVIA_CASES;
             case "offensive" -> java.util.stream.Stream.concat(OFFENSIVE_CASES.stream(), CASES.stream()).toList();
             default -> CASES;
         };

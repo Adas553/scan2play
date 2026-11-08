@@ -51,8 +51,7 @@ that would change nothing; a weekly plan, later, would write its next moment int
 `kioskToken` (V56, ≤ 32, UNIQUE, null = no kiosk: the secret of the venue's kiosk link `/k/{token}` — 128 random bits, as the hosts'
 link; it does not run out, a new one makes the old link dead — "Kiosk dla gości", 5.1),
 `commentStyle` (V22, `CommentStyle`:
-CLASSIC / FUNNY / SARCASTIC / TRIVIA / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic; V65: TRIVIA "Ciekawostki" — a
-fact about an accepted song from the model's own knowledge, no search; not sure, a plain comment; none on a refusal), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
+CLASSIC / FUNNY / SARCASTIC / SHORT (V26: "sarcastic (gentle)" gone, its parties sarcastic), NOT NULL, default CLASSIC: how the AI words its comment to the guest — a block
 of `prompts/prompt-comment-style_{pl,en}.txt` closes the prompt's rules, CLASSIC adds none; every style keeps "mock the request, not
 the person", no profanity and no song's name in an accepted one; the dashboard's list "💬 Komentarze AI",
 `POST /dj/dashboard/comment-style`), `dedicationsOn` (V38, NOT NULL, default true — every party there too: whether the guests
