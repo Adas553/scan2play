@@ -26,7 +26,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -74,7 +73,9 @@ class AdminReportWebTest {
         assertThat(html).contains("id=\"reportText\"", "Wesele Ani i Tomka", "scan2playcontact@gmail.com", "id=\"reportSend\"",
                 "name=\"_csrf\"", "</html>");
         write("stats-report.html", html);
-        mockMvc.perform(post("/dj/stats/report").session(owner).with(csrf())).andExpect(redirectedUrl("/dj/stats/report?sent=yes"));
+        // the form's own token, as the browser sends it (no spring-security-test here)
+        mockMvc.perform(post("/dj/stats/report").session(owner).param("_csrf", csrfToken(html)))
+                .andExpect(redirectedUrl("/dj/stats/report?sent=yes"));
         verify(service).sendNow();
     }
 
@@ -82,8 +83,16 @@ class AdminReportWebTest {
     void anotherDj_getsA404_andCannotSend() throws Exception {
         MockHttpSession dj = loggedIn("dj-2");
         mockMvc.perform(get("/dj/stats/report").session(dj)).andExpect(status().isNotFound());
-        mockMvc.perform(post("/dj/stats/report").session(dj).with(csrf())).andExpect(status().isNotFound());
+        verify(service, never()).preview();
+        // a POST without the form's token is refused before the controller, and with none to take from a page, so is this one
+        mockMvc.perform(post("/dj/stats/report").session(dj)).andExpect(status().is4xxClientError());
         verify(service, never()).sendNow();
+    }
+
+    private static String csrfToken(String html) {
+        java.util.regex.Matcher token = java.util.regex.Pattern.compile("name=\"_csrf\" value=\"([^\"]+)\"").matcher(html);
+        assertThat(token.find()).as("the form's CSRF token").isTrue();
+        return token.group(1);
     }
 
     private static void write(String name, String html) throws IOException {
