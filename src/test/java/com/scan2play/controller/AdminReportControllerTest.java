@@ -37,18 +37,35 @@ class AdminReportControllerTest {
         AdminReportController controller = new AdminReportController(service, OWNER);
         ConcurrentModel model = new ConcurrentModel();
 
-        assertThat(controller.report(null, login(OWNER), model)).isEqualTo("stats-report");
+        assertThat(controller.report(null, null, login(OWNER), model)).isEqualTo("stats-report");
         assertThat(model.getAttribute("text")).isEqualTo("RUCH …");
         assertThat(model.getAttribute("address")).isEqualTo("owner@example.com");
         assertThat(model.getAttribute("canSend")).isEqualTo(true);
+        assertThat(model.getAttribute("weekDays")).asList().hasSize(7);
         assertThat(controller.send(login(OWNER))).isEqualTo("redirect:/dj/stats/report?sent=yes");
         assertThat(controller.send(login(OWNER))).isEqualTo("redirect:/dj/stats/report?sent=no");
     }
 
     @Test
+    void theSchedule_isSaved_aTimeThatIsNotOneIsA400() {
+        AdminReportController controller = new AdminReportController(service, OWNER);
+
+        assertThat(controller.schedule(true, " 07:45 ", List.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.SATURDAY), login(OWNER)))
+                .isEqualTo("redirect:/dj/stats/report?saved=yes");
+        org.mockito.Mockito.verify(service).saveSchedule(new AdminReportService.Schedule(true, java.time.LocalTime.of(7, 45),
+                java.util.Set.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.SATURDAY)));
+        controller.schedule(false, "08:00", null, login(OWNER));
+        org.mockito.Mockito.verify(service).saveSchedule(new AdminReportService.Schedule(false, java.time.LocalTime.of(8, 0),
+                java.util.Set.of()));
+        assertThatThrownBy(() -> controller.schedule(true, "25:99", null, login(OWNER)))
+                .isInstanceOfSatisfying(ResponseStatusException.class, e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+        assertThatThrownBy(() -> controller.schedule(true, "08:00", null, login("someone-else"))).isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
     void anyoneElse_andEveryoneWhileUnset_getA404() {
         AdminReportController controller = new AdminReportController(service, OWNER);
-        assertThatThrownBy(() -> controller.report(null, login("someone-else"), new ConcurrentModel()))
+        assertThatThrownBy(() -> controller.report(null, null, login("someone-else"), new ConcurrentModel()))
                 .isInstanceOfSatisfying(ResponseStatusException.class, e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
         assertThatThrownBy(() -> controller.send(null)).isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() -> new AdminReportController(service, "").send(login(OWNER))).isInstanceOf(ResponseStatusException.class);

@@ -18,22 +18,29 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 import java.sql.Date;
+import java.sql.Time;
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The owner's daily report by e-mail: yesterday's traffic and its funnel beside the week's average ({@link SiteCounter}), the
  * organisers new in the last {@value #NEW_DAYS} days and whether they have had a party yet, every party of yesterday's evening with its
- * numbers, and the health of the AI, the e-mails and the log ({@link LogTally}). Sent to {@code scan2play.admin-email} at 9:10 Polish
- * time (at 11:10 again when the first send failed), and by hand from {@code /dj/stats/report}. No address or no Brevo key: nothing.
+ * numbers, and the health of the AI, the e-mails and the log ({@link LogTally}). Sent to {@code scan2play.admin-email} when the
+ * owner's {@link Schedule} says (V66; every day at 9:10 by default; a failed send tried again for 3 hours), and by hand from
+ * {@code /dj/stats/report}. No address or no Brevo key: nothing.
  * <p>
  * "Once a day" is the claim of {@code email_status.admin_report_day} (V65), one conditional UPDATE: two runs at once — or the old and
  * the new server during a deploy — send it once. A failed send gives the claim back.
@@ -124,10 +131,65 @@ public class AdminReportService {
         return !address.isEmpty() && mailer.isOn();
     }
 
-    /** At 9:10 yesterday's report; at 11:10 again, if the first did not go. */
-    @Scheduled(cron = "0 10 9,11 * * *", zone = Times.SCHEDULE_ZONE)
-    public void sendDaily() {
-        if (canSend()) {
+    /**
+     * When the report goes (V66, the owner's page): on or off, the time of day in Polish time and the days of the week. The report is
+     * always of the day before.
+     */
+    public record Schedule(boolean on, LocalTime time, Set<DayOfWeek> days) {
+
+        public Schedule {
+            days = Set.copyOf(days);
+        }
+
+        /** The days as the column keeps them: Monday 1, Tuesday 2, … Sunday 64. */
+        int daysBits() {
+            return days.stream().mapToInt(day -> 1 << (day.getValue() - 1)).sum();
+        }
+
+        static Set<DayOfWeek> days(int bits) {
+            Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
+            for (DayOfWeek day : DayOfWeek.values()) {
+                if ((bits & (1 << (day.getValue() - 1))) != 0) {
+                    days.add(day);
+                }
+            }
+            return days;
+        }
+
+        /**
+         * Whether a report is due at {@code now} (Polish time): on, a day of the schedule, from its time until 3 hours after it (a
+         * failed send is tried again on the next ticks), never past midnight.
+         */
+        boolean isDue(LocalDateTime now) {
+            if (!on || !days.contains(now.getDayOfWeek()) || now.toLocalTime().isBefore(time)) {
+                return false;
+            }
+            LocalTime until = time.plusHours(RETRY_HOURS);
+            return until.isBefore(time) || now.toLocalTime().isBefore(until);
+        }
+    }
+
+    /** How long after its time a report that did not go is tried again, every {@value #TICK_MINUTES} minutes. */
+    static final int RETRY_HOURS = 3;
+    static final int TICK_MINUTES = 5;
+
+    /** The schedule as the owner set it; every day at 9:10 until then. */
+    public Schedule schedule() {
+        List<Schedule> rows = jdbc.query("SELECT admin_report_on, admin_report_time, admin_report_days FROM email_status WHERE id = 1",
+                (row, n) -> new Schedule(row.getBoolean(1), row.getTime(2).toLocalTime(), Schedule.days(row.getInt(3))));
+        return rows.isEmpty() ? new Schedule(true, LocalTime.of(9, 10), EnumSet.allOf(DayOfWeek.class)) : rows.getFirst();
+    }
+
+    /** Keeps the owner's schedule (minutes only: the seconds are dropped). */
+    public void saveSchedule(Schedule schedule) {
+        jdbc.update("UPDATE email_status SET admin_report_on = ?, admin_report_time = ?, admin_report_days = ? WHERE id = 1",
+                schedule.on(), Time.valueOf(schedule.time().withSecond(0).withNano(0)), schedule.daysBits());
+    }
+
+    /** Every {@value #TICK_MINUTES} minutes: the report, when the schedule says it is due and it has not gone today. */
+    @Scheduled(cron = "0 */" + TICK_MINUTES + " * * * *", zone = Times.SCHEDULE_ZONE)
+    public void sendDue() {
+        if (canSend() && schedule().isDue(LocalDateTime.now(clock.withZone(Times.DISPLAY_ZONE)))) {
             sendOnce(today());
         }
     }
@@ -146,11 +208,11 @@ public class AdminReportService {
             log.warn("The owner's report of {} not built: {}", today, e.toString());
         } finally {
             if (!sent) {
-                // the claim and the log's counts back: the 11:10 run sends them
+                // the claim and the log's counts back: the next tick sends them
                 logTally.giveBack(tally);
                 jdbc.update("UPDATE email_status SET admin_report_day = NULL WHERE id = 1 AND admin_report_day = ?",
                         Date.valueOf(today));
-                log.warn("The owner's report of {} not sent; tried again at 11:10", today);
+                log.warn("The owner's report of {} not sent; tried again in {} minutes", today, TICK_MINUTES);
             }
         }
         return sent;

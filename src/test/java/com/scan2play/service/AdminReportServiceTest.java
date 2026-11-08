@@ -117,6 +117,29 @@ class AdminReportServiceTest {
     }
 
     @Test
+    void theSchedule_isDueFromItsTimeForThreeHours_onItsDaysOnly() {
+        AdminReportService.Schedule weekdays = new AdminReportService.Schedule(true, java.time.LocalTime.of(9, 10),
+                java.util.EnumSet.range(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.FRIDAY));
+        java.time.LocalDate monday = LocalDate.parse("2026-11-09");
+
+        assertThat(weekdays.isDue(monday.atTime(9, 9))).isFalse();
+        assertThat(weekdays.isDue(monday.atTime(9, 10))).isTrue();
+        assertThat(weekdays.isDue(monday.atTime(12, 9))).as("a failed send tried again").isTrue();
+        assertThat(weekdays.isDue(monday.atTime(12, 10))).isFalse();
+        assertThat(weekdays.isDue(monday.minusDays(1).atTime(9, 30))).as("Sunday").isFalse();
+        assertThat(new AdminReportService.Schedule(false, weekdays.time(), weekdays.days()).isDue(monday.atTime(9, 30))).isFalse();
+        // late in the evening: until midnight, never into the next day
+        AdminReportService.Schedule late = new AdminReportService.Schedule(true, java.time.LocalTime.of(22, 30),
+                java.util.EnumSet.allOf(java.time.DayOfWeek.class));
+        assertThat(late.isDue(monday.atTime(23, 59))).isTrue();
+        assertThat(late.isDue(monday.atTime(0, 30))).isFalse();
+        // the days as the column keeps them: Monday 1 … Sunday 64
+        assertThat(weekdays.daysBits()).isEqualTo(31);
+        assertThat(AdminReportService.Schedule.days(64)).containsExactly(java.time.DayOfWeek.SUNDAY);
+        assertThat(AdminReportService.Schedule.days(127)).hasSize(7);
+    }
+
+    @Test
     void withoutAnAddressOrAKey_nothingIsSent() {
         Mailer mailer = mock(Mailer.class);
         when(mailer.isOn()).thenReturn(true);
@@ -124,7 +147,7 @@ class AdminReportServiceTest {
 
         assertThat(noAddress.canSend()).isFalse();
         assertThat(noAddress.sendNow()).isFalse();
-        noAddress.sendDaily();
+        noAddress.sendDue();
         verify(mailer, never()).send(any());
 
         when(mailer.isOn()).thenReturn(false);

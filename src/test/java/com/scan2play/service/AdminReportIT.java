@@ -159,6 +159,28 @@ class AdminReportIT extends PostgresIntegrationTest {
         assertThat(sender.sent).hasSize(2);
     }
 
+    @Test
+    void theSchedule_everyDayAt910ByDefault_isKeptAsSet() {
+        AdminReportService service = service(Instant.now());
+        AdminReportService.Schedule before = service.schedule();
+        assertThat(before).as("V66's default, while no test has changed it").isEqualTo(new AdminReportService.Schedule(true,
+                java.time.LocalTime.of(9, 10), java.util.EnumSet.allOf(java.time.DayOfWeek.class)));
+        try {
+            service.saveSchedule(new AdminReportService.Schedule(true, java.time.LocalTime.of(9, 10),
+                    java.util.EnumSet.allOf(java.time.DayOfWeek.class)));
+            assertThat(jdbc.queryForObject("SELECT admin_report_days FROM email_status WHERE id = 1", Integer.class)).isEqualTo(127);
+
+            service.saveSchedule(new AdminReportService.Schedule(false, java.time.LocalTime.of(7, 45, 30),
+                    java.util.Set.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.SUNDAY)));
+
+            assertThat(service.schedule()).isEqualTo(new AdminReportService.Schedule(false, java.time.LocalTime.of(7, 45),
+                    java.util.Set.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.SUNDAY)));
+            assertThat(jdbc.queryForObject("SELECT admin_report_days FROM email_status WHERE id = 1", Integer.class)).isEqualTo(65);
+        } finally {
+            service.saveSchedule(before);
+        }
+    }
+
     private static void sleep(long millis) {
         try {
             Thread.sleep(millis);

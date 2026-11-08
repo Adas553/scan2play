@@ -1693,3 +1693,6 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
     border-radius: 8px;
     padding: 1rem;
 }
+.s2p-report-schedule { max-width: 30rem; }
+.s2p-report-time { max-width: 9rem; min-height: 44px; }
+.s2p-report-day { min-width: 3.25rem; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }

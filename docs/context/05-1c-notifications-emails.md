@@ -28,7 +28,9 @@ działa" and "Panel jako aplikacja" wait (`app.css`, `:has`). On a phone up to 4
 runner's fonts too), "Napisz do nas" the card's width and the guide under it. Browser scenarios `welcome-card-*`. The organisers new in
 the last 7 days with their address are on `/dj/stats` for the site's owner.
 
-**The owner's daily report** (`AdminReportService`, V65): an e-mail at 9:10 Polish time (11:10 again when the first failed) to
+**The owner's daily report** (`AdminReportService`, V65, V66): an e-mail when the owner's schedule says — set on `/dj/stats/report`
+(on / off, the time in Polish time, the days of the week; by default every day at 9:10), checked every 5 minutes, a failed send tried
+again for 3 hours, never past midnight — to
 `scan2play.admin-email` (`ADMIN_EMAIL`, by default the Gmail of the replies): yesterday's traffic and funnel beside the 7 days' average
 (`SiteCounter`), the organisers new in 7 days with their guests' requests since (`EveningSummaryRepository.guestRequestsSince`), every
 party of yesterday's evening (6:00–6:00: guests' requests, played, refused by the AI and before it, kiosk, tips, the DJ's own), the AI's

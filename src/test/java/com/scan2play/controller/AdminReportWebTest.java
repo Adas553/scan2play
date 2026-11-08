@@ -65,6 +65,8 @@ class AdminReportWebTest {
         when(service.address()).thenReturn("scan2playcontact@gmail.com");
         when(service.canSend()).thenReturn(true);
         when(service.sendNow()).thenReturn(true);
+        when(service.schedule()).thenReturn(new AdminReportService.Schedule(true, java.time.LocalTime.of(9, 10),
+                java.util.EnumSet.range(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.FRIDAY)));
         MockHttpSession owner = loggedIn("owner-1");
 
         String html = mockMvc.perform(get("/dj/stats/report").session(owner)).andExpect(status().isOk()).andReturn().getResponse()
@@ -77,6 +79,14 @@ class AdminReportWebTest {
         mockMvc.perform(post("/dj/stats/report").session(owner).param("_csrf", csrfToken(html)))
                 .andExpect(redirectedUrl("/dj/stats/report?sent=yes"));
         verify(service).sendNow();
+
+        // the schedule: the form's fields as the browser sends them
+        assertThat(html).contains("id=\"reportTime\"", "value=\"09:10\"", "id=\"reportDayMONDAY\"", ">pon.<");
+        assertThat(html).containsPattern("id=\"reportDayFRIDAY\"[^>]*checked").doesNotContainPattern("id=\"reportDaySUNDAY\"[^>]*checked");
+        mockMvc.perform(post("/dj/stats/report/schedule").session(owner).param("_csrf", csrfToken(html)).param("on", "true")
+                .param("time", "07:45").param("days", "MONDAY", "SUNDAY")).andExpect(redirectedUrl("/dj/stats/report?saved=yes"));
+        verify(service).saveSchedule(new AdminReportService.Schedule(true, java.time.LocalTime.of(7, 45),
+                java.util.Set.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.SUNDAY)));
     }
 
     @Test
