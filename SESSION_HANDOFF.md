@@ -21,6 +21,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   on a phone, `tools/page_audit.py`, `PROJECT_CONTEXT.md` split into `docs/context/`, `tools/check.py` and the project agents),
   deployed 2026-11-07 10:56 UTC, SUCCESS. Checked (Railway, read only): started in 5.3 s, no migration, no WARN, 0 × 5xx (483
   requests), RAM 0.56 GB steady; curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`. No open PR.
+- **The owner's daily report** (`AdminReportService`, V65) on `claude/dazzling-heisenberg-oilwvm`: an e-mail at 9:10 to
+  `scan2playcontact@gmail.com` (`ADMIN_EMAIL`), the page `/dj/stats/report` with "Wyślij teraz" (docs/context 5.1c). The e-mail has no
+  organiser's address or name (the privacy policy); to put them in: a sentence in the policy's Brevo point first. V65 → a database copy.
 - **Only Cloudflare reaches the app — on since 2026-11-06 22:47 UTC.** The owner set the Cloudflare Transform Rule `X-Scan2Play-Origin`
   and Railway's `ORIGIN_SECRET` (the first value showed in a screenshot and was replaced at once); checked: the site 200 through
   Cloudflare, Railway's own address (`oqz5xl6q.up.railway.app`, `153.52.255.99`) 403. To change the secret: the Cloudflare rule and the
