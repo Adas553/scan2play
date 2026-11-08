@@ -95,8 +95,9 @@ class AdminReportServiceTest {
     @Test
     void aReportThatCannotBeBuilt_givesTheDayAndTheLogsCountsBack() {
         org.springframework.jdbc.core.JdbcTemplate jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
-        when(jdbc.update(org.mockito.ArgumentMatchers.startsWith("UPDATE email_status SET admin_report_day = ?"), any(), any()))
-                .thenReturn(1);
+        java.sql.Date today = java.sql.Date.valueOf(YESTERDAY.plusDays(1));
+        when(jdbc.update(org.mockito.ArgumentMatchers.startsWith("UPDATE email_status SET admin_report_day = ?"),
+                org.mockito.ArgumentMatchers.eq(today), org.mockito.ArgumentMatchers.eq(today))).thenReturn(1);
         SiteCounter counter = mock(SiteCounter.class);
         when(counter.lastDays(org.mockito.ArgumentMatchers.anyInt())).thenThrow(new IllegalStateException("the database is away"));
         Mailer mailer = mock(Mailer.class);
@@ -110,7 +111,7 @@ class AdminReportServiceTest {
         assertThat(service.sendOnce(YESTERDAY.plusDays(1))).isFalse();
 
         verify(jdbc).update(org.mockito.ArgumentMatchers.startsWith("UPDATE email_status SET admin_report_day = NULL"),
-                org.mockito.ArgumentMatchers.eq(java.sql.Date.valueOf(YESTERDAY.plusDays(1))));
+                org.mockito.ArgumentMatchers.eq(today));
         verify(mailer, never()).send(any());
         assertThat(tally.peek().errors()).as("the night's error waits for the 11:10 run").isEqualTo(1);
     }
