@@ -15,7 +15,6 @@ import org.springframework.data.domain.Limit;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
 
 import java.sql.Date;
 import java.sql.Time;
@@ -67,20 +66,46 @@ public class AdminReportService {
      * e-mail's text without them — the privacy policy gives Brevo an organiser's address, and an evening's title, only to write to
      * that organiser, so the e-mail names a party by its code and the page says whose it is.
      */
-    public record Report(String subject, String text, String emailText) {
+    public record Report(String subject, String text, String emailText, View view) {
+    }
+
+    /**
+     * The report for the eye (the HTML e-mail, {@code templates/email/admin-report_pl.html}, and the owner's page): every number
+     * worked out and every word written here, so the two templates only lay it out. {@code organisers} and {@code parties} carry the
+     * addresses and the titles; the e-mail's template leaves them out.
+     */
+    public record View(String day, String dayShort, List<Tile> tiles, List<Bar> visits, List<Step> funnel, List<NewOrganiser> organisers,
+                       List<PartyLine> parties, boolean moreParties, int totalRequests, int totalPlayed, List<Check> checks,
+                       List<LogTally.Line> logLines, String logSince, String pageUrl) {
+    }
+
+    /** A number of yesterday beside the week's average: "up", "down" or "flat", and by how much ("+30 %"; empty with no average). */
+    public record Tile(String label, long value, String average, String trend, String change) {
+    }
+
+    /** One day of the visits' chart: its label, its count and its length (0–100, of the week's busiest day). */
+    public record Bar(String day, long value, int percent) {
+    }
+
+    /** One step of yesterday's funnel: its count and its share of the first step's. */
+    public record Step(String label, long value, String share) {
+    }
+
+    /** One line of the health: ok or not, and what it says. */
+    public record Check(String label, boolean ok, String detail) {
     }
 
     /** One party of the evening, as the report lists it. */
-    record PartyLine(String partyCode, String ownerEmail, String plan, String title, int guestRequests, int played,
+    public record PartyLine(String partyCode, String ownerEmail, String plan, String title, int guestRequests, int played,
                      int rejectedByAi, int refusedBeforeAi, int viaKiosk, int tips, int addedByDj) {
     }
 
     /** One new organiser: when, the party, the address and name, the plan, the guests' requests since. */
-    record NewOrganiser(Instant createdAt, String partyCode, String email, String name, String plan, long guestRequests) {
+    public record NewOrganiser(Instant createdAt, String partyCode, String email, String name, String plan, long guestRequests) {
     }
 
     /** What the report says of the AI and the e-mails. */
-    record Health(boolean aiDown, boolean emailsOn, Mailer.Status emails, LogTally.Tally log) {
+    public record Health(boolean aiDown, boolean emailsOn, Mailer.Status emails, LogTally.Tally log) {
     }
 
     private final SiteCounter siteCounter;
@@ -231,9 +256,9 @@ public class AdminReportService {
         return build(clock.instant(), logTally.peek());
     }
 
+    /** The HTML e-mail (its text part: the report's text without the addresses). */
     private boolean send(Report report) {
-        String html = "<pre style=\"font-family:Menlo,Consolas,monospace;font-size:13px;line-height:1.45;white-space:pre-wrap;"
-                + "margin:0;color:#1a1a1a;\">" + HtmlUtils.htmlEscape(report.emailText()) + "</pre>";
+        String html = mailer.render("admin-report", PL, Map.of("v", report.view()));
         return mailer.send(new Email(address, report.subject(), html, report.emailText(), null));
     }
 
@@ -263,7 +288,73 @@ public class AdminReportService {
                 + Texts.polishPlural(visits, "wejście", "wejścia", "wejść") + ", " + parties.size() + " "
                 + Texts.polishPlural(parties.size(), "impreza", "imprezy", "imprez")
                 + (tally.errors() > 0 ? ", " + tally.errors() + " ERROR" : "");
-        return new Report(subject, text, emailText);
+        View view = view(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, health,
+                mailer.siteUrl() + "/dj/stats/report");
+        return new Report(subject, text, emailText, view);
+    }
+
+    // ---- the report for the eye ----
+
+    private static final DateTimeFormatter BAR_DAY = DateTimeFormatter.ofPattern("EEE d.MM", PL);
+
+    public static View view(LocalDate yesterday, List<SiteCounter.Day> days, List<NewOrganiser> organisers, List<PartyLine> parties,
+                     boolean moreParties, Health health, String pageUrl) {
+        long visits = visits(days, yesterday);
+        double visitsWeek = average(days, yesterday, Event.LANDING_PL) + average(days, yesterday, Event.LANDING_EN);
+        List<Tile> tiles = List.of(
+                tile("Wejścia", visits, visitsWeek),
+                tile("„Zacznij”", count(days, yesterday, Event.START), average(days, yesterday, Event.START)),
+                tile("Nowi DJ-e", count(days, yesterday, Event.NEW_DJ), average(days, yesterday, Event.NEW_DJ)),
+                tile("Prośby gości", count(days, yesterday, Event.GUEST_REQUEST), average(days, yesterday, Event.GUEST_REQUEST)));
+
+        List<Long> week = new ArrayList<>();
+        for (int back = AVERAGE_DAYS - 1; back >= 0; back--) {
+            week.add(visits(days, yesterday.minusDays(back)));
+        }
+        long busiest = week.stream().mapToLong(Long::longValue).max().orElse(0);
+        List<Bar> bars = new ArrayList<>();
+        for (int i = 0; i < week.size(); i++) {
+            LocalDate day = yesterday.minusDays(AVERAGE_DAYS - 1L - i);
+            long value = week.get(i);
+            // a day with any visit gets a sliver, so it does not read as none
+            int percent = busiest == 0 ? 0 : (int) Math.max(value > 0 ? 2 : 0, Math.round(100.0 * value / busiest));
+            bars.add(new Bar(day.format(BAR_DAY), value, percent));
+        }
+
+        long start = count(days, yesterday, Event.START);
+        long login = count(days, yesterday, Event.LOGIN);
+        long newDj = count(days, yesterday, Event.NEW_DJ);
+        List<Step> funnel = List.of(new Step("Wejścia", visits, visits > 0 ? "100 %" : "—"),
+                new Step("„Zacznij”", start, percent(start, visits)), new Step("Logowania", login, percent(login, visits)),
+                new Step("Nowi DJ-e", newDj, percent(newDj, visits)));
+
+        Mailer.Status emails = health.emails();
+        boolean emailFailed = emails.lastFailed() != null && (emails.lastSent() == null || emails.lastFailed().isAfter(emails.lastSent()));
+        LogTally.Tally log = health.log();
+        List<Check> checks = List.of(
+                new Check("AI (Gemini)", !health.aiDown(), health.aiDown() ? "nie odpowiada — prośby idą do DJ-a bez oceny" : "odpowiada"),
+                new Check("E-maile", health.emailsOn() && !emailFailed, !health.emailsOn() ? "brak klucza (BREVO_API_KEY)"
+                        : emailFailed ? "ostatni błąd " + Times.display(emails.lastFailed()) + ": " + emails.lastFailure() : "działają"),
+                new Check("Log", log.errors() == 0, "ERROR " + log.errors() + " · WARN " + log.warnings()));
+
+        int requests = parties.stream().mapToInt(PartyLine::guestRequests).sum();
+        int played = parties.stream().mapToInt(PartyLine::played).sum();
+        return new View(yesterday.format(DAY), yesterday.format(SHORT_DAY), tiles, bars, funnel, organisers, parties, moreParties,
+                requests, played, checks, log.lines(), Times.display(log.since()), pageUrl);
+    }
+
+    static Tile tile(String label, long value, double average) {
+        String averageText = String.format(PL, "śr. %.1f", average);
+        if (average <= 0) {
+            return new Tile(label, value, averageText, value > 0 ? "up" : "flat", "");
+        }
+        long change = Math.round(100 * (value - average) / average);
+        String trend = change > 5 ? "up" : change < -5 ? "down" : "flat";
+        return new Tile(label, value, averageText, trend, (change > 0 ? "+" : "") + change + " %");
+    }
+
+    private static long visits(List<SiteCounter.Day> days, LocalDate day) {
+        return count(days, day, Event.LANDING_PL) + count(days, day, Event.LANDING_EN);
     }
 
     private List<NewOrganiser> newOrganisers(Instant now) {

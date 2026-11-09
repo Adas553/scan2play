@@ -1696,3 +1696,17 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-report-schedule { max-width: 30rem; }
 .s2p-report-time { max-width: 9rem; min-height: 44px; }
 .s2p-report-day { min-width: 3.25rem; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+/* the report for the eye: tiles, the week's bars (<progress>), the health's dots */
+.s2p-report-tile { background-color: var(--s2p-bg-elevated); border: 1px solid var(--s2p-border); border-radius: 10px; padding: 0.75rem; }
+.s2p-report-number { font-size: 1.75rem; font-weight: 700; line-height: 1.2; color: var(--s2p-light); }
+.s2p-report-number-sm { font-size: 1.25rem; font-weight: 700; color: var(--s2p-light); }
+.s2p-trend-up { color: var(--s2p-green); font-weight: 700; }
+.s2p-trend-down { color: var(--s2p-danger-text); font-weight: 700; }
+.s2p-trend-flat { color: var(--s2p-text-dim); }
+.s2p-report-bar-row { display: grid; grid-template-columns: 5.5rem 1fr 2.5rem; gap: 0.5rem; align-items: center; margin-bottom: 0.25rem; }
+.s2p-report-bar-row b { text-align: right; }
+.s2p-report-bar-row progress { width: 100%; height: 0.9rem; accent-color: var(--s2p-cyan); }
+.s2p-report-table td { vertical-align: top; }
+.s2p-dot { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 50%; margin-right: 0.35rem; }
+.s2p-dot-ok { background-color: var(--s2p-green); }
+.s2p-dot-bad { background-color: var(--s2p-red); }

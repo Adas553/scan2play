@@ -30,7 +30,7 @@ class AdminReportControllerTest {
 
     @Test
     void theOwner_seesTheReportAsItWouldGo_andSendsIt() {
-        when(service.preview()).thenReturn(new AdminReportService.Report("Scan2Play — raport za 7.11", "RUCH …", "RUCH (bez adresów)"));
+        when(service.preview()).thenReturn(new AdminReportService.Report("Scan2Play — raport za 7.11", "RUCH …", "RUCH (bez adresów)", null));
         when(service.address()).thenReturn("owner@example.com");
         when(service.canSend()).thenReturn(true);
         when(service.sendNow()).thenReturn(true, false);
