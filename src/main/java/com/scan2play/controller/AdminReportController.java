@@ -43,6 +43,7 @@ public class AdminReportController {
         AdminReportService.Report report = adminReportService.preview();
         model.addAttribute("subject", report.subject());
         model.addAttribute("text", report.text());
+        model.addAttribute("view", report.view());
         model.addAttribute("address", adminReportService.address());
         model.addAttribute("canSend", adminReportService.canSend());
         model.addAttribute("sent", sent);

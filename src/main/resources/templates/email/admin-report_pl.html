@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--/* The owner's daily report as an e-mail (AdminReportService.View): four tiles beside the week's average, the week's visits as bars,
+     yesterday's funnel, the new DJs and the evening's parties by their code — no organiser's address, name or evening's title (the
+     privacy policy) —, the health. Inline styles and tables only (mail programs), one column up to 640 px, no images, no script. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Raport Scan2Play</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;line-height:1.45;">
+<div style="max-width:640px;margin:0 auto;padding:20px 12px;">
+
+<div style="background:#0b0b0b;color:#ffffff;border-radius:12px 12px 0 0;padding:18px 20px;">
+    <div style="font-size:13px;color:#7fd8ea;letter-spacing:.04em;text-transform:uppercase;">Scan2Play · raport dzienny</div>
+    <div style="font-size:22px;font-weight:bold;margin-top:2px;" th:text="${v.day()}">czwartek 5.11.2026</div>
+</div>
+<div style="background:#ffffff;border-radius:0 0 12px 12px;padding:18px 20px 8px;">
+
+<!--/* the four tiles, two a row (a phone keeps them readable) */-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 8px;">
+    <tr th:each="pair : ${#numbers.sequence(0, #lists.size(v.tiles()) - 1, 2)}">
+        <td th:each="i : ${#numbers.sequence(pair, pair + 1)}" th:if="${i < #lists.size(v.tiles())}" width="50%"
+            style="vertical-align:top;padding:0 4px;" th:with="t=${v.tiles()[i]}">
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+                <div style="font-size:13px;color:#555555;" th:text="${t.label()}">Wejścia</div>
+                <div style="font-size:28px;font-weight:bold;line-height:1.2;" th:text="${t.value()}">8</div>
+                <div style="font-size:13px;">
+                    <span th:if="${t.trend() == 'up'}" style="color:#1a7f37;font-weight:bold;" th:text="'▲ ' + ${t.change()}">▲ +30 %</span>
+                    <span th:if="${t.trend() == 'down'}" style="color:#b42318;font-weight:bold;" th:text="'▼ ' + ${t.change()}">▼ −20 %</span>
+                    <span th:if="${t.trend() == 'flat'}" style="color:#6b7280;" th:text="'● ' + ${t.change()}">● 0 %</span>
+                    <span style="color:#6b7280;" th:text="${t.average()}">śr. 5,7</span>
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<h2 style="font-size:16px;margin:16px 0 8px;">Wejścia — 7 dni</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
+    <tr th:each="bar, row : ${v.visits()}">
+        <td style="width:70px;padding:3px 8px 3px 0;color:#555555;white-space:nowrap;" th:text="${bar.day()}">czw. 5.11</td>
+        <td style="padding:3px 0;">
+            <div th:style="'background:' + (${row.last} ? '#0a7f99' : '#9fd3df') + ';height:14px;border-radius:3px;width:' + ${bar.percent()} + '%;'"
+                 style="background:#9fd3df;height:14px;border-radius:3px;width:60%;"></div>
+        </td>
+        <td style="width:40px;padding:3px 0 3px 8px;text-align:right;font-weight:bold;" th:text="${bar.value()}">8</td>
+    </tr>
+</table>
+
+<h2 style="font-size:16px;margin:18px 0 8px;">Od wejścia do konta — wczoraj</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+    <tr th:each="step : ${v.funnel()}" style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:6px 0;" th:text="${step.label()}">Wejścia</td>
+        <td style="padding:6px 0;text-align:right;font-weight:bold;width:60px;" th:text="${step.value()}">8</td>
+        <td style="padding:6px 0;text-align:right;color:#6b7280;width:130px;" th:text="${step.share()}">10 % wejść</td>
+    </tr>
+</table>
+
+<h2 style="font-size:16px;margin:18px 0 8px;" th:text="'Imprezy wczoraj (' + ${#lists.size(v.parties())} + (${v.moreParties()} ? '+' : '') + ')'">Imprezy wczoraj (1)</h2>
+<p th:if="${#lists.isEmpty(v.parties())}" style="margin:0;color:#6b7280;">Żadnej.</p>
+<table th:unless="${#lists.isEmpty(v.parties())}" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+    <tr th:each="party : ${v.parties()}" style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:8px 0;vertical-align:top;">
+            <b th:text="${party.partyCode()}">AB12</b> <span style="color:#6b7280;font-size:12px;" th:text="${party.plan()}">PRO</span>
+            <div style="color:#555555;font-size:13px;">
+                <span th:text="'zagrane ' + ${party.played()}">zagrane 31</span> ·
+                <span th:text="'AI odrzuciło ' + ${party.rejectedByAi()}">AI odrzuciło 5</span> ·
+                <span th:text="'przed AI ' + ${party.refusedBeforeAi()}">przed AI 3</span><th:block th:if="${party.viaKiosk() > 0}"> ·
+                <span th:text="'kiosk ' + ${party.viaKiosk()}">kiosk 4</span></th:block><th:block th:if="${party.tips() > 0}"> ·
+                <span th:text="'napiwki ' + ${party.tips()}">napiwki 2</span></th:block><th:block th:if="${party.addedByDj() > 0}"> ·
+                <span th:text="'od DJ-a ' + ${party.addedByDj()}">od DJ-a 6</span></th:block>
+            </div>
+        </td>
+        <td style="padding:8px 0;text-align:right;vertical-align:top;width:80px;">
+            <div style="font-size:20px;font-weight:bold;" th:text="${party.guestRequests()}">48</div>
+            <div style="font-size:12px;color:#6b7280;">próśb</div>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:8px 0;color:#555555;" th:text="'Razem · zagrane ' + ${v.totalPlayed()}">Razem · zagrane 31</td>
+        <td style="padding:8px 0;text-align:right;font-weight:bold;" th:text="${v.totalRequests()}">48</td>
+    </tr>
+</table>
+
+<h2 style="font-size:16px;margin:18px 0 8px;" th:text="'Nowi DJ-e — 7 dni (' + ${#lists.size(v.organisers())} + ')'">Nowi DJ-e — 7 dni (0)</h2>
+<p th:if="${#lists.isEmpty(v.organisers())}" style="margin:0;color:#6b7280;">Nikt nowy.</p>
+<table th:unless="${#lists.isEmpty(v.organisers())}" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+    <tr th:each="dj : ${v.organisers()}" style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:6px 0;"><b th:text="${dj.partyCode()}">AB12</b> <span style="color:#6b7280;font-size:12px;" th:text="${dj.plan()}">PRO</span></td>
+        <td style="padding:6px 0;color:#555555;" th:text="${T(com.scan2play.util.Times).display(dj.createdAt())}">06.11.2026 14:02:00</td>
+        <td style="padding:6px 0;text-align:right;" th:text="${dj.guestRequests()} + ' próśb'">12 próśb</td>
+    </tr>
+</table>
+
+<h2 style="font-size:16px;margin:18px 0 8px;">Zdrowie</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+    <tr th:each="check : ${v.checks()}">
+        <td style="padding:4px 8px 4px 0;width:22px;vertical-align:top;">
+            <span th:style="'display:inline-block;width:12px;height:12px;border-radius:6px;margin-top:4px;background:' + (${check.ok()} ? '#1a7f37' : '#b42318') + ';'"
+                  style="display:inline-block;width:12px;height:12px;border-radius:6px;background:#1a7f37;"></span>
+        </td>
+        <td style="padding:4px 0;"><b th:text="${check.label()}">AI (Gemini)</b> <span style="color:#555555;" th:text="${check.detail()}">odpowiada</span></td>
+    </tr>
+</table>
+<div th:unless="${#lists.isEmpty(v.logLines())}" style="margin:8px 0 0;font-family:Menlo,Consolas,monospace;font-size:12px;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;">
+    <div th:each="line : ${v.logLines()}" th:text="${line.count()} + '× ' + ${line.text()}">2× WARN Mailer: E-mail not sent: {}</div>
+</div>
+<p style="margin:6px 0 0;font-size:12px;color:#6b7280;" th:text="'Log liczony od ' + ${v.logSince()}">Log liczony od 05.11.2026 09:10:00</p>
+
+<p style="margin:22px 0 14px;">
+    <a th:href="${v.pageUrl()}" href="#" style="display:inline-block;background:#0a7f99;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:6px;font-weight:bold;">Adresy i imiona DJ-ów, ustawienia raportu</a>
+</p>
+</div>
+</div>
+</body>
+</html>

@@ -15,7 +15,6 @@ import org.springframework.data.domain.Limit;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
 
 import java.sql.Date;
 import java.sql.Time;
@@ -67,20 +66,56 @@ public class AdminReportService {
      * e-mail's text without them — the privacy policy gives Brevo an organiser's address, and an evening's title, only to write to
      * that organiser, so the e-mail names a party by its code and the page says whose it is.
      */
-    public record Report(String subject, String text, String emailText) {
+    public record Report(String subject, String text, String emailText, View view) {
+    }
+
+    /**
+     * The report for the eye (the HTML e-mail, {@code templates/email/admin-report_pl.html}, and the owner's page): every number
+     * worked out and every word written here, so the two templates only lay it out. {@code organisers} and {@code parties} carry the
+     * addresses and the titles for the page; the e-mail gets {@link #withoutContacts()}, so they are not there to print.
+     */
+    public record View(String day, List<Tile> tiles, List<Bar> visits, List<Step> funnel, List<NewOrganiser> organisers,
+                       List<PartyLine> parties, boolean moreParties, int totalRequests, int totalPlayed, List<Check> checks,
+                       List<LogTally.Line> logLines, String logSince, String pageUrl) {
+
+        /** The same without the organisers' addresses and names and the evenings' titles: what the e-mail may carry. */
+        public View withoutContacts() {
+            return new View(day, tiles, visits, funnel,
+                    organisers.stream().map(o -> new NewOrganiser(o.createdAt(), o.partyCode(), null, null, o.plan(), o.guestRequests()))
+                            .toList(),
+                    parties.stream().map(p -> new PartyLine(p.partyCode(), null, p.plan(), null, p.guestRequests(), p.played(),
+                            p.rejectedByAi(), p.refusedBeforeAi(), p.viaKiosk(), p.tips(), p.addedByDj())).toList(),
+                    moreParties, totalRequests, totalPlayed, checks, logLines, logSince, pageUrl);
+        }
+    }
+
+    /** A number of yesterday beside the week's average: "up", "down" or "flat", and by how much ("+30 %"; empty with no average). */
+    public record Tile(String label, long value, String average, String trend, String change) {
+    }
+
+    /** One day of the visits' chart: its label, its count and its length (0–100, of the week's busiest day). */
+    public record Bar(String day, long value, int percent) {
+    }
+
+    /** One step of yesterday's funnel: its count and its share of the first step's. */
+    public record Step(String label, long value, String share) {
+    }
+
+    /** One line of the health: ok or not, and what it says. */
+    public record Check(String label, boolean ok, String detail) {
     }
 
     /** One party of the evening, as the report lists it. */
-    record PartyLine(String partyCode, String ownerEmail, String plan, String title, int guestRequests, int played,
+    public record PartyLine(String partyCode, String ownerEmail, String plan, String title, int guestRequests, int played,
                      int rejectedByAi, int refusedBeforeAi, int viaKiosk, int tips, int addedByDj) {
     }
 
     /** One new organiser: when, the party, the address and name, the plan, the guests' requests since. */
-    record NewOrganiser(Instant createdAt, String partyCode, String email, String name, String plan, long guestRequests) {
+    public record NewOrganiser(Instant createdAt, String partyCode, String email, String name, String plan, long guestRequests) {
     }
 
     /** What the report says of the AI and the e-mails. */
-    record Health(boolean aiDown, boolean emailsOn, Mailer.Status emails, LogTally.Tally log) {
+    public record Health(boolean aiDown, boolean emailsOn, Mailer.Status emails, LogTally.Tally log) {
     }
 
     private final SiteCounter siteCounter;
@@ -231,9 +266,9 @@ public class AdminReportService {
         return build(clock.instant(), logTally.peek());
     }
 
+    /** The HTML e-mail (its text part: the report's text without the addresses). */
     private boolean send(Report report) {
-        String html = "<pre style=\"font-family:Menlo,Consolas,monospace;font-size:13px;line-height:1.45;white-space:pre-wrap;"
-                + "margin:0;color:#1a1a1a;\">" + HtmlUtils.htmlEscape(report.emailText()) + "</pre>";
+        String html = mailer.render("admin-report", PL, Map.of("v", report.view().withoutContacts()));
         return mailer.send(new Email(address, report.subject(), html, report.emailText(), null));
     }
 
@@ -244,7 +279,8 @@ public class AdminReportService {
     /** The report of the day before {@code now} (Polish time); the parties of that day's evening (6:00 to 6:00). */
     Report build(Instant now, LogTally.Tally tally) {
         LocalDate yesterday = now.atZone(Times.DISPLAY_ZONE).toLocalDate().minusDays(1);
-        List<SiteCounter.Day> days = siteCounter.lastDays(AVERAGE_DAYS + 1);
+        // today, yesterday and the 7 days before it
+        List<SiteCounter.Day> days = siteCounter.lastDays(AVERAGE_DAYS + 2);
         List<NewOrganiser> organisers = newOrganisers(now);
         // the demo's two parties may be among the rows: asked for, then left out, before the limit says whether there are more
         List<String> codes = eveningSummaryRepository.busyParties(EveningSummaryService.startOf(yesterday),
@@ -263,7 +299,75 @@ public class AdminReportService {
                 + Texts.polishPlural(visits, "wejście", "wejścia", "wejść") + ", " + parties.size() + " "
                 + Texts.polishPlural(parties.size(), "impreza", "imprezy", "imprez")
                 + (tally.errors() > 0 ? ", " + tally.errors() + " ERROR" : "");
-        return new Report(subject, text, emailText);
+        View view = view(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, health,
+                mailer.siteUrl() + "/dj/stats/report");
+        return new Report(subject, text, emailText, view);
+    }
+
+    // ---- the report for the eye ----
+
+    private static final DateTimeFormatter BAR_DAY = DateTimeFormatter.ofPattern("EEE d.MM", PL);
+
+    public static View view(LocalDate yesterday, List<SiteCounter.Day> days, List<NewOrganiser> organisers, List<PartyLine> parties,
+                     boolean moreParties, Health health, String pageUrl) {
+        long visits = visits(days, yesterday);
+        double visitsWeek = average(days, yesterday, Event.LANDING_PL) + average(days, yesterday, Event.LANDING_EN);
+        List<Tile> tiles = List.of(
+                tile("Wejścia", visits, visitsWeek),
+                tile("„Zacznij”", count(days, yesterday, Event.START), average(days, yesterday, Event.START)),
+                tile("Nowi DJ-e", count(days, yesterday, Event.NEW_DJ), average(days, yesterday, Event.NEW_DJ)),
+                tile("Prośby gości", count(days, yesterday, Event.GUEST_REQUEST), average(days, yesterday, Event.GUEST_REQUEST)));
+
+        List<Long> week = new ArrayList<>();
+        for (int back = AVERAGE_DAYS - 1; back >= 0; back--) {
+            week.add(visits(days, yesterday.minusDays(back)));
+        }
+        long busiest = week.stream().mapToLong(Long::longValue).max().orElse(0);
+        List<Bar> bars = new ArrayList<>();
+        for (int i = 0; i < week.size(); i++) {
+            LocalDate day = yesterday.minusDays(AVERAGE_DAYS - 1L - i);
+            long value = week.get(i);
+            // a day with any visit gets a sliver, so it does not read as none
+            int percent = busiest == 0 ? 0 : (int) Math.max(value > 0 ? 2 : 0, Math.round(100.0 * value / busiest));
+            bars.add(new Bar(day.format(BAR_DAY), value, percent));
+        }
+
+        long start = count(days, yesterday, Event.START);
+        long login = count(days, yesterday, Event.LOGIN);
+        long newDj = count(days, yesterday, Event.NEW_DJ);
+        // a share only where the step comes from the one before: a login is also a DJ coming back, who never saw the landing page
+        List<Step> funnel = List.of(new Step("Wejścia na stronę główną", visits, ""),
+                new Step("„Zacznij”", start, visits > 0 ? percent(start, visits) + " wejść" : ""),
+                new Step("Nowi DJ-e", newDj, start > 0 ? percent(newDj, start) + " „Zacznij”" : ""),
+                new Step("Logowania (też powracający DJ-e)", login, ""));
+
+        Mailer.Status emails = health.emails();
+        boolean emailFailed = emails.lastFailed() != null && (emails.lastSent() == null || emails.lastFailed().isAfter(emails.lastSent()));
+        LogTally.Tally log = health.log();
+        List<Check> checks = List.of(
+                new Check("AI (Gemini)", !health.aiDown(), health.aiDown() ? "nie odpowiada — prośby idą do DJ-a bez oceny" : "odpowiada"),
+                new Check("E-maile", health.emailsOn() && !emailFailed, !health.emailsOn() ? "brak klucza (BREVO_API_KEY)"
+                        : emailFailed ? "ostatni błąd " + Times.display(emails.lastFailed()) + ": " + emails.lastFailure() : "działają"),
+                new Check("Log", log.errors() == 0, "ERROR " + log.errors() + " · WARN " + log.warnings()));
+
+        int requests = parties.stream().mapToInt(PartyLine::guestRequests).sum();
+        int played = parties.stream().mapToInt(PartyLine::played).sum();
+        return new View(yesterday.format(DAY), tiles, bars, funnel, organisers, parties, moreParties,
+                requests, played, checks, log.lines(), Times.display(log.since()), pageUrl);
+    }
+
+    static Tile tile(String label, long value, double average) {
+        String averageText = String.format(PL, "śr. %.1f", average);
+        if (average <= 0) {
+            return new Tile(label, value, averageText, value > 0 ? "up" : "flat", "");
+        }
+        long change = Math.round(100 * (value - average) / average);
+        String trend = change > 5 ? "up" : change < -5 ? "down" : "flat";
+        return new Tile(label, value, averageText, trend, (change > 0 ? "+" : "") + change + " %");
+    }
+
+    private static long visits(List<SiteCounter.Day> days, LocalDate day) {
+        return count(days, day, Event.LANDING_PL) + count(days, day, Event.LANDING_EN);
     }
 
     private List<NewOrganiser> newOrganisers(Instant now) {
@@ -308,7 +412,7 @@ public class AdminReportService {
             Map.entry(Event.GUEST_REQUEST, "Prośby gości"), Map.entry(Event.DEMO, "Demo"));
 
     static void renderTraffic(StringBuilder text, LocalDate yesterday, List<SiteCounter.Day> days) {
-        text.append("RUCH (ludzie, bez robotów) — wczoraj · średnio ").append(AVERAGE_DAYS).append(" dni\n");
+        text.append("RUCH (ludzie, bez robotów) — wczoraj · średnio ").append(AVERAGE_DAYS).append(" dni przed nim\n");
         for (Map.Entry<Event, String> row : TRAFFIC) {
             text.append(String.format(PL, "%-18s %5d · %6.1f%n", row.getValue(), count(days, yesterday, row.getKey()),
                     average(days, yesterday, row.getKey())));
@@ -399,10 +503,13 @@ public class AdminReportService {
         return days.stream().filter(d -> d.day().equals(day)).mapToLong(d -> d.counts().getOrDefault(event, 0)).sum();
     }
 
-    /** The average of the {@value #AVERAGE_DAYS} days up to {@code yesterday}; a day without a row counts as 0. */
+    /**
+     * The average of the {@value #AVERAGE_DAYS} days before {@code yesterday} — not with it: a day is compared with the week it
+     * follows, never with an average it pulls itself. A day without a row counts as 0.
+     */
     static double average(List<SiteCounter.Day> days, LocalDate yesterday, Event event) {
-        LocalDate first = yesterday.minusDays(AVERAGE_DAYS - 1L);
-        return days.stream().filter(d -> !d.day().isBefore(first) && !d.day().isAfter(yesterday))
+        LocalDate first = yesterday.minusDays(AVERAGE_DAYS);
+        return days.stream().filter(d -> !d.day().isBefore(first) && d.day().isBefore(yesterday))
                 .mapToLong(d -> d.counts().getOrDefault(event, 0)).sum() / (double) AVERAGE_DAYS;
     }
 
