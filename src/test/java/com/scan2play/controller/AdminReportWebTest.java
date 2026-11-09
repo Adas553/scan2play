@@ -61,7 +61,7 @@ class AdminReportWebTest {
                 + "Strona główna PL      40 ·   10,0\n\nIMPREZY WCZORAJ — wieczór 7.11, 6:00–6:00 (1)\nAB12  PRO  "
                 + "a-very-long-address-of-an-organiser@example-of-a-long-domain.com · „Wesele Ani i Tomka”\n"
                 + "  prośby 48 · zagrane 31 · AI odrzuciło 5 · przed AI 3 · kiosk 4 · napiwki 2 · dodane przez DJ-a 6\n";
-        when(service.preview()).thenReturn(new AdminReportService.Report("Scan2Play — raport za 7.11: 40 wejść, 1 impreza", text, ""));
+        when(service.preview()).thenReturn(new AdminReportService.Report("Scan2Play — raport za 7.11: 40 wejść, 1 impreza", text, "", view()));
         when(service.address()).thenReturn("scan2playcontact@gmail.com");
         when(service.canSend()).thenReturn(true);
         when(service.sendNow()).thenReturn(true);
@@ -72,6 +72,8 @@ class AdminReportWebTest {
         String html = mockMvc.perform(get("/dj/stats/report").session(owner)).andExpect(status().isOk()).andReturn().getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
 
+        assertThat(html).contains("id=\"reportView\"", "Raport za sobota 7.11.2026", "<progress max=\"100\" value=\"100\"",
+                "s2p-dot s2p-dot-bad", "id=\"reportParties\"");
         assertThat(html).contains("id=\"reportText\"", "Wesele Ani i Tomka", "scan2playcontact@gmail.com", "id=\"reportSend\"",
                 "name=\"_csrf\"", "</html>");
         write("stats-report.html", html);
@@ -97,6 +99,29 @@ class AdminReportWebTest {
         // a POST without the form's token is refused before the controller, and with none to take from a page, so is this one
         mockMvc.perform(post("/dj/stats/report").session(dj)).andExpect(status().is4xxClientError());
         verify(service, never()).sendNow();
+    }
+
+    /** A full report for the eye: a week of visits, a new DJ, two parties (one with a long address and title), a failing check. */
+    static AdminReportService.View view() {
+        java.util.List<com.scan2play.service.SiteCounter.Day> days = new java.util.ArrayList<>();
+        for (int back = 0; back < 7; back++) {
+            java.util.Map<com.scan2play.service.SiteCounter.Event, Integer> counts = new java.util.EnumMap<>(com.scan2play.service.SiteCounter.Event.class);
+            for (com.scan2play.service.SiteCounter.Event event : com.scan2play.service.SiteCounter.Event.values()) {
+                counts.put(event, back * 3 % 7);
+            }
+            counts.put(com.scan2play.service.SiteCounter.Event.LANDING_PL, 40 - back * 5);
+            days.add(new com.scan2play.service.SiteCounter.Day(java.time.LocalDate.parse("2026-11-07").minusDays(back), counts));
+        }
+        return AdminReportService.view(java.time.LocalDate.parse("2026-11-07"), days,
+                java.util.List.of(new AdminReportService.NewOrganiser(java.time.Instant.parse("2026-11-06T13:02:00Z"), "AB12",
+                        "a-very-long-address-of-an-organiser@example-of-a-long-domain.com", "Jan Kowalski", "PRO", 12)),
+                java.util.List.of(new AdminReportService.PartyLine("AB12", "a-very-long-address-of-an-organiser@example-of-a-long-domain.com",
+                                "PRO", "Wesele Ani i Tomka", 48, 31, 5, 3, 4, 2, 6),
+                        new AdminReportService.PartyLine("CD34", null, "FREE", null, 2, 0, 0, 0, 0, 0, 0)), false,
+                new AdminReportService.Health(false, true, new com.scan2play.service.Mailer.Status(null, java.time.Instant.parse("2026-11-07T08:00:00Z"),
+                        "the key was refused"), new com.scan2play.service.LogTally.Tally(java.time.Instant.parse("2026-11-07T08:10:00Z"), 1, 2,
+                        java.util.List.of(new com.scan2play.service.LogTally.Line("WARN Mailer: E-mail not sent: {} [java.net.SocketTimeoutException]", 2)))),
+                "https://www.scan2play.com.pl/dj/stats/report");
     }
 
     private static String csrfToken(String html) {

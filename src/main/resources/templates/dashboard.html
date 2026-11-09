@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
+    <!-- the demo (/demo, /demo?lang=…): an app screen with made-up data, not a page to find in Google — its ?lang addresses read as
+         duplicates of it; the landing page and "Dla kogo" link to it -->
+    <meta th:if="${demo == true}" name="robots" content="noindex, follow">
 
     <!-- CSRF Tokens for JavaScript requests -->
     <meta name="_csrf" th:content="${_csrf.token}"/>

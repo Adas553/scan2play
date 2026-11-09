@@ -49,8 +49,88 @@
         <button type="submit" class="btn btn-outline-light px-4" id="reportScheduleSave">Zapisz</button>
     </form>
     <p th:unless="${canSend}" class="text-secondary-bright" id="reportCannotSend">Wysyłka niemożliwa: brak adresu albo klucza Brevo.</p>
-    <p class="text-light-custom fw-bold mb-2" th:text="${subject}">Temat</p>
-    <pre class="s2p-report" id="reportText" th:text="${text}">Raport</pre>
+    <!--/* The report as the e-mail lays it out (AdminReportService.View), with the organisers' addresses and the evenings' titles the
+         e-mail leaves out; classes, not inline styles (the CSP): the bars are <progress> */-->
+    <section class="s2p-report-view" id="reportView" th:with="v=${view}">
+        <p class="text-secondary-bright small mb-1" th:text="${subject}">Temat</p>
+        <h2 class="h5 text-light-custom mb-3" th:text="'Raport za ' + ${v.day()}">Raport za czwartek 5.11.2026</h2>
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3" th:each="t : ${v.tiles()}">
+                <div class="s2p-report-tile h-100">
+                    <div class="small text-secondary-bright" th:text="${t.label()}">Wejścia</div>
+                    <div class="s2p-report-number" th:text="${t.value()}">8</div>
+                    <div class="small">
+                        <span th:class="${'s2p-trend-' + t.trend()}"
+                              th:text="${(t.trend() == 'up' ? '▲ ' : t.trend() == 'down' ? '▼ ' : '● ') + t.change()}">▲ +30 %</span>
+                        <span class="text-secondary-bright" th:text="${t.average()}">śr. 5,7</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="h6 text-light-custom">Wejścia — 7 dni</h3>
+        <div class="s2p-report-bars mb-3">
+            <div class="s2p-report-bar-row" th:each="bar : ${v.visits()}">
+                <span class="small text-secondary-bright" th:text="${bar.day()}">czw. 5.11</span>
+                <progress max="100" th:value="${bar.percent()}" th:attr="aria-label=${bar.day() + ': ' + bar.value()}">60</progress>
+                <b class="small text-light-custom" th:text="${bar.value()}">8</b>
+            </div>
+        </div>
+
+        <h3 class="h6 text-light-custom">Od wejścia do konta — wczoraj</h3>
+        <table class="table table-dark table-sm s2p-report-table mb-3">
+            <tr th:each="step : ${v.funnel()}">
+                <td th:text="${step.label()}">Wejścia</td>
+                <td class="text-end fw-bold" th:text="${step.value()}">8</td>
+                <td class="text-end text-secondary-bright small" th:text="${step.share()}">10 % wejść</td>
+            </tr>
+        </table>
+
+        <h3 class="h6 text-light-custom" th:text="'Imprezy wczoraj (' + ${#lists.size(v.parties())} + (${v.moreParties()} ? '+' : '') + ')'">Imprezy wczoraj (1)</h3>
+        <p th:if="${#lists.isEmpty(v.parties())}" class="text-secondary-bright">Żadnej.</p>
+        <table th:unless="${#lists.isEmpty(v.parties())}" class="table table-dark table-sm s2p-report-table mb-3" id="reportParties">
+            <tr th:each="party : ${v.parties()}">
+                <td>
+                    <b th:text="${party.partyCode()}">AB12</b> <span class="small text-secondary-bright" th:text="${party.plan()}">PRO</span>
+                    <span class="small" th:text="${party.ownerEmail() == null ? '(bez adresu)' : party.ownerEmail()}">dj@example.com</span>
+                    <span class="small text-secondary-bright" th:if="${party.title() != null and !#strings.isEmpty(party.title())}"
+                          th:text="'„' + ${party.title()} + '”'">„Wesele”</span>
+                    <div class="small text-secondary-bright"
+                         th:text="'zagrane ' + ${party.played()} + ' · AI odrzuciło ' + ${party.rejectedByAi()} + ' · przed AI ' + ${party.refusedBeforeAi()}
+                                  + (${party.viaKiosk() > 0} ? ' · kiosk ' + ${party.viaKiosk()} : '') + (${party.tips() > 0} ? ' · napiwki ' + ${party.tips()} : '')
+                                  + (${party.addedByDj() > 0} ? ' · od DJ-a ' + ${party.addedByDj()} : '')">zagrane 31</div>
+                </td>
+                <td class="text-end"><span class="s2p-report-number-sm" th:text="${party.guestRequests()}">48</span><div class="small text-secondary-bright">próśb</div></td>
+            </tr>
+            <tr><td class="text-secondary-bright" th:text="'Razem · zagrane ' + ${v.totalPlayed()}">Razem</td><td class="text-end fw-bold" th:text="${v.totalRequests()}">48</td></tr>
+        </table>
+
+        <h3 class="h6 text-light-custom" th:text="'Nowi DJ-e — 7 dni (' + ${#lists.size(v.organisers())} + ')'">Nowi DJ-e — 7 dni (0)</h3>
+        <p th:if="${#lists.isEmpty(v.organisers())}" class="text-secondary-bright">Nikt nowy.</p>
+        <table th:unless="${#lists.isEmpty(v.organisers())}" class="table table-dark table-sm s2p-report-table mb-3">
+            <tr th:each="dj : ${v.organisers()}">
+                <td><b th:text="${dj.partyCode()}">AB12</b> <span class="small text-secondary-bright" th:text="${dj.plan()}">PRO</span>
+                    <div class="small"><span th:text="${dj.email()}">dj@example.com</span><span th:if="${dj.name() != null}" th:text="' · ' + ${dj.name()}"> · Jan</span></div></td>
+                <td class="small text-secondary-bright" th:text="${T(com.scan2play.util.Times).display(dj.createdAt())}">06.11.2026</td>
+                <td class="text-end" th:text="${dj.guestRequests()} + ' próśb'">12 próśb</td>
+            </tr>
+        </table>
+
+        <h3 class="h6 text-light-custom">Zdrowie</h3>
+        <ul class="list-unstyled mb-2">
+            <li th:each="check : ${v.checks()}" class="mb-1">
+                <span th:class="${check.ok() ? 's2p-dot s2p-dot-ok' : 's2p-dot s2p-dot-bad'}" th:attr="aria-label=${check.ok() ? 'w porządku' : 'problem'}"></span>
+                <b class="text-light-custom" th:text="${check.label()}">AI</b> <span class="text-secondary-bright" th:text="${check.detail()}">odpowiada</span>
+            </li>
+        </ul>
+        <pre th:unless="${#lists.isEmpty(v.logLines())}" class="s2p-report"><th:block th:each="line : ${v.logLines()}" th:text="${line.count()} + '× ' + ${line.text()} + '&#10;'">2× WARN</th:block></pre>
+        <p class="small text-secondary-bright" th:text="'Log liczony od ' + ${v.logSince()}">Log liczony od …</p>
+
+        <details class="mt-3">
+            <summary class="text-secondary-bright">Wersja tekstowa</summary>
+            <pre class="s2p-report mt-2" id="reportText" th:text="${text}">Raport</pre>
+        </details>
+    </section>
 </div>
 </body>
 </html>

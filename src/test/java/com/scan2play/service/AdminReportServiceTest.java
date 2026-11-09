@@ -41,16 +41,16 @@ class AdminReportServiceTest {
 
     @Test
     void theTraffic_yesterdayBesideTheWeeksAverage_aMissingDayCountsAsZero() {
-        // today's row is not yesterday's nor the week's; 2026-10-31 is outside the 7 days (11-01 … 11-07)
+        // today's row is not yesterday's nor the week's; the week is the 7 days before yesterday (10-31 … 11-06), 10-30 outside
         List<SiteCounter.Day> days = List.of(day("2026-11-08", 99, 99), day("2026-11-07", 40, 4), day("2026-11-05", 30, 3),
-                day("2026-10-31", 500, 50));
+                day("2026-10-30", 500, 50));
 
         StringBuilder text = new StringBuilder();
         AdminReportService.renderTraffic(text, YESTERDAY, days);
 
-        assertThat(text.toString()).contains("RUCH (ludzie, bez robotów) — wczoraj · średnio 7 dni")
-                .contains("Strona główna PL      40 ·   10,0")
-                .contains("„Zacznij”              4 ·    1,0")
+        assertThat(text.toString()).contains("RUCH (ludzie, bez robotów) — wczoraj · średnio 7 dni przed nim")
+                .contains("Strona główna PL      40 ·    4,3")
+                .contains("„Zacznij”              4 ·    0,4")
                 .contains("„Zacznij” / wejścia  10 % ·   10 %");
         assertThat(AdminReportService.percent(1, 0)).isEqualTo("—");
     }
@@ -137,6 +137,53 @@ class AdminReportServiceTest {
         assertThat(weekdays.daysBits()).isEqualTo(31);
         assertThat(AdminReportService.Schedule.days(64)).containsExactly(java.time.DayOfWeek.SUNDAY);
         assertThat(AdminReportService.Schedule.days(127)).hasSize(7);
+    }
+
+    @Test
+    void theTiles_sayTheTrendBesideTheAverage() {
+        assertThat(AdminReportService.tile("Wejścia", 13, 10)).isEqualTo(new AdminReportService.Tile("Wejścia", 13, "śr. 10,0", "up", "+30 %"));
+        assertThat(AdminReportService.tile("Wejścia", 8, 10)).isEqualTo(new AdminReportService.Tile("Wejścia", 8, "śr. 10,0", "down", "-20 %"));
+        assertThat(AdminReportService.tile("Wejścia", 10, 10).trend()).isEqualTo("flat");
+        assertThat(AdminReportService.tile("Nowi DJ-e", 1, 0)).isEqualTo(new AdminReportService.Tile("Nowi DJ-e", 1, "śr. 0,0", "up", ""));
+    }
+
+    /**
+     * The HTML e-mail through its real template: the numbers, the bars, the parties by their code — and none of the addresses, names
+     * or titles the view carries for the owner's page. Written to {@code target/email-preview/admin-report.html} to look at.
+     */
+    @Test
+    void theHtmlEmail_laysOutTheView_withoutTheOrganisersAddressesNamesOrTitles() throws Exception {
+        org.thymeleaf.templateresolver.ClassLoaderTemplateResolver resolver = new org.thymeleaf.templateresolver.ClassLoaderTemplateResolver();
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        resolver.setCharacterEncoding("UTF-8");
+        org.thymeleaf.spring6.SpringTemplateEngine engine = new org.thymeleaf.spring6.SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        List<SiteCounter.Day> days = List.of(day("2026-11-07", 40, 4), day("2026-11-06", 20, 2), day("2026-11-05", 30, 3));
+        AdminReportService.View view = AdminReportService.view(YESTERDAY, days,
+                List.of(new NewOrganiser(Instant.parse("2026-11-06T13:02:00Z"), "AB12", "jan@example.com", "Jan K.", "PRO", 12)),
+                List.of(new PartyLine("AB12", "jan@example.com", "PRO", "Wesele Ani", 48, 31, 5, 3, 4, 2, 6)), false,
+                new Health(false, true, new Mailer.Status(null, Instant.parse("2026-11-07T08:00:00Z"), "the key was refused"),
+                        new LogTally.Tally(Instant.parse("2026-11-07T08:10:00Z"), 1, 0, List.of(new LogTally.Line("ERROR X: boom", 1)))),
+                "https://www.scan2play.com.pl/dj/stats/report");
+
+        // the e-mail gets the view without the contacts: they are not there to print
+        AdminReportService.View forEmail = view.withoutContacts();
+        assertThat(forEmail.organisers().getFirst().email()).isNull();
+        assertThat(forEmail.parties().getFirst().title()).isNull();
+        assertThat(forEmail.parties().getFirst().guestRequests()).isEqualTo(48);
+        String html = engine.process("email/admin-report_pl", new org.thymeleaf.context.Context(java.util.Locale.forLanguageTag("pl"),
+                Map.of("v", forEmail)));
+        java.nio.file.Path out = java.nio.file.Path.of("target", "email-preview", "admin-report.html");
+        java.nio.file.Files.createDirectories(out.getParent());
+        java.nio.file.Files.writeString(out, html);
+
+        assertThat(view.visits()).hasSize(7);
+        assertThat(view.visits().getLast()).isEqualTo(new AdminReportService.Bar("sob. 7.11", 40, 100));
+        assertThat(view.funnel().get(1)).isEqualTo(new AdminReportService.Step("„Zacznij”", 4, "10 % wejść"));
+        assertThat(html).contains("sobota 7.11.2026", "▲ +", ">AB12<", ">48<", "width:50%;", "width:100%;", "ERROR 1 · WARN 0",
+                "ostatni błąd 07.11.2026 09:00:00: the key was refused", "1× ERROR X: boom", "href=\"https://www.scan2play.com.pl/dj/stats/report\"")
+                .doesNotContain("jan@example.com", "Jan K.", "Wesele Ani");
     }
 
     @Test

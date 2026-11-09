@@ -133,6 +133,8 @@ class DemoPageRenderTest {
     @Test
     void theDemo_isThePanelToLookAt_withTheExamplesAndTheVisitorsOwn() throws IOException {
         String html = render(PL);
+        // not for Google: an app screen with made-up data, its ?lang addresses would read as duplicates
+        assertThat(html).contains("<meta name=\"robots\" content=\"noindex, follow\">");
 
         assertThat(html).contains("<body class=\"page-dj\" data-demo=\"true\">", "id=\"demoBar\"", "id=\"demoNotice\"",
                 "To jest demo: przykładowa impreza", "<a href=\"/\" class=\"s2p-home-logo\"", "title=\"Scan2Play — strona główna\"",

@@ -418,6 +418,7 @@ class DashboardPageRenderTest {
                 "<h1 class=\"visually-hidden\">Panel DJ-a</h1>");
         assertThat(html).as("the queue sorts by votes, the most wanted first").contains("<th data-sort=\"votes\" data-sort-first=\"desc\"", ">Głosy<");
         // the DJ's vibe note form, and "any" means "the AI judges" here: the guests pick no vibe
+        assertThat(html).as("only the demo tells robots off; the panel is behind the login and robots.txt").doesNotContain("name=\"robots\"");
         assertThat(html).as("the AI's comment style (V22): the party's own picked, saved as soon as picked")
                 .contains("action=\"/dj/dashboard/comment-style\"", "id=\"commentStyleSelect\"", ">Komentarze AI<",
                         "selected=\"selected\">Klasyczne<", ">Sarkastyczne<")
