@@ -1710,3 +1710,8 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-dot { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 50%; margin-right: 0.35rem; }
 .s2p-dot-ok { background-color: var(--s2p-green); }
 .s2p-dot-bad { background-color: var(--s2p-red); }
+/* the switch "Wysyłaj sam" and "Wersja tekstowa": 44 px to tap on a phone */
+.s2p-report-schedule .form-switch { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; }
+.s2p-report-schedule .form-switch .form-check-input { width: 2.75rem; height: 1.5rem; }
+.s2p-report-schedule .form-switch .form-check-label { padding-block: 0.65rem; }
+.page-report details > summary { padding-block: 0.65rem; }

@@ -77,12 +77,12 @@
             </div>
         </div>
 
-        <h3 class="h6 text-light-custom">Lejek wczoraj</h3>
+        <h3 class="h6 text-light-custom">Od wejścia do konta — wczoraj</h3>
         <table class="table table-dark table-sm s2p-report-table mb-3">
             <tr th:each="step : ${v.funnel()}">
                 <td th:text="${step.label()}">Wejścia</td>
                 <td class="text-end fw-bold" th:text="${step.value()}">8</td>
-                <td class="text-end text-secondary-bright" th:text="${step.share()}">100 %</td>
+                <td class="text-end text-secondary-bright small" th:text="${step.share()}">10 % wejść</td>
             </tr>
         </table>
 

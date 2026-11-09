@@ -41,16 +41,16 @@ class AdminReportServiceTest {
 
     @Test
     void theTraffic_yesterdayBesideTheWeeksAverage_aMissingDayCountsAsZero() {
-        // today's row is not yesterday's nor the week's; 2026-10-31 is outside the 7 days (11-01 … 11-07)
+        // today's row is not yesterday's nor the week's; the week is the 7 days before yesterday (10-31 … 11-06), 10-30 outside
         List<SiteCounter.Day> days = List.of(day("2026-11-08", 99, 99), day("2026-11-07", 40, 4), day("2026-11-05", 30, 3),
-                day("2026-10-31", 500, 50));
+                day("2026-10-30", 500, 50));
 
         StringBuilder text = new StringBuilder();
         AdminReportService.renderTraffic(text, YESTERDAY, days);
 
-        assertThat(text.toString()).contains("RUCH (ludzie, bez robotów) — wczoraj · średnio 7 dni")
-                .contains("Strona główna PL      40 ·   10,0")
-                .contains("„Zacznij”              4 ·    1,0")
+        assertThat(text.toString()).contains("RUCH (ludzie, bez robotów) — wczoraj · średnio 7 dni przed nim")
+                .contains("Strona główna PL      40 ·    4,3")
+                .contains("„Zacznij”              4 ·    0,4")
                 .contains("„Zacznij” / wejścia  10 % ·   10 %");
         assertThat(AdminReportService.percent(1, 0)).isEqualTo("—");
     }
@@ -167,15 +167,20 @@ class AdminReportServiceTest {
                         new LogTally.Tally(Instant.parse("2026-11-07T08:10:00Z"), 1, 0, List.of(new LogTally.Line("ERROR X: boom", 1)))),
                 "https://www.scan2play.com.pl/dj/stats/report");
 
+        // the e-mail gets the view without the contacts: they are not there to print
+        AdminReportService.View forEmail = view.withoutContacts();
+        assertThat(forEmail.organisers().getFirst().email()).isNull();
+        assertThat(forEmail.parties().getFirst().title()).isNull();
+        assertThat(forEmail.parties().getFirst().guestRequests()).isEqualTo(48);
         String html = engine.process("email/admin-report_pl", new org.thymeleaf.context.Context(java.util.Locale.forLanguageTag("pl"),
-                Map.of("v", view)));
+                Map.of("v", forEmail)));
         java.nio.file.Path out = java.nio.file.Path.of("target", "email-preview", "admin-report.html");
         java.nio.file.Files.createDirectories(out.getParent());
         java.nio.file.Files.writeString(out, html);
 
         assertThat(view.visits()).hasSize(7);
         assertThat(view.visits().getLast()).isEqualTo(new AdminReportService.Bar("sob. 7.11", 40, 100));
-        assertThat(view.funnel().get(1)).isEqualTo(new AdminReportService.Step("„Zacznij”", 4, "10 %"));
+        assertThat(view.funnel().get(1)).isEqualTo(new AdminReportService.Step("„Zacznij”", 4, "10 % wejść"));
         assertThat(html).contains("sobota 7.11.2026", "▲ +", ">AB12<", ">48<", "width:50%;", "width:100%;", "ERROR 1 · WARN 0",
                 "ostatni błąd 07.11.2026 09:00:00: the key was refused", "1× ERROR X: boom", "href=\"https://www.scan2play.com.pl/dj/stats/report\"")
                 .doesNotContain("jan@example.com", "Jan K.", "Wesele Ani");

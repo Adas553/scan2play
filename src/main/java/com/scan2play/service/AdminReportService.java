@@ -72,11 +72,21 @@ public class AdminReportService {
     /**
      * The report for the eye (the HTML e-mail, {@code templates/email/admin-report_pl.html}, and the owner's page): every number
      * worked out and every word written here, so the two templates only lay it out. {@code organisers} and {@code parties} carry the
-     * addresses and the titles; the e-mail's template leaves them out.
+     * addresses and the titles for the page; the e-mail gets {@link #withoutContacts()}, so they are not there to print.
      */
-    public record View(String day, String dayShort, List<Tile> tiles, List<Bar> visits, List<Step> funnel, List<NewOrganiser> organisers,
+    public record View(String day, List<Tile> tiles, List<Bar> visits, List<Step> funnel, List<NewOrganiser> organisers,
                        List<PartyLine> parties, boolean moreParties, int totalRequests, int totalPlayed, List<Check> checks,
                        List<LogTally.Line> logLines, String logSince, String pageUrl) {
+
+        /** The same without the organisers' addresses and names and the evenings' titles: what the e-mail may carry. */
+        public View withoutContacts() {
+            return new View(day, tiles, visits, funnel,
+                    organisers.stream().map(o -> new NewOrganiser(o.createdAt(), o.partyCode(), null, null, o.plan(), o.guestRequests()))
+                            .toList(),
+                    parties.stream().map(p -> new PartyLine(p.partyCode(), null, p.plan(), null, p.guestRequests(), p.played(),
+                            p.rejectedByAi(), p.refusedBeforeAi(), p.viaKiosk(), p.tips(), p.addedByDj())).toList(),
+                    moreParties, totalRequests, totalPlayed, checks, logLines, logSince, pageUrl);
+        }
     }
 
     /** A number of yesterday beside the week's average: "up", "down" or "flat", and by how much ("+30 %"; empty with no average). */
@@ -258,7 +268,7 @@ public class AdminReportService {
 
     /** The HTML e-mail (its text part: the report's text without the addresses). */
     private boolean send(Report report) {
-        String html = mailer.render("admin-report", PL, Map.of("v", report.view()));
+        String html = mailer.render("admin-report", PL, Map.of("v", report.view().withoutContacts()));
         return mailer.send(new Email(address, report.subject(), html, report.emailText(), null));
     }
 
@@ -269,7 +279,8 @@ public class AdminReportService {
     /** The report of the day before {@code now} (Polish time); the parties of that day's evening (6:00 to 6:00). */
     Report build(Instant now, LogTally.Tally tally) {
         LocalDate yesterday = now.atZone(Times.DISPLAY_ZONE).toLocalDate().minusDays(1);
-        List<SiteCounter.Day> days = siteCounter.lastDays(AVERAGE_DAYS + 1);
+        // today, yesterday and the 7 days before it
+        List<SiteCounter.Day> days = siteCounter.lastDays(AVERAGE_DAYS + 2);
         List<NewOrganiser> organisers = newOrganisers(now);
         // the demo's two parties may be among the rows: asked for, then left out, before the limit says whether there are more
         List<String> codes = eveningSummaryRepository.busyParties(EveningSummaryService.startOf(yesterday),
@@ -324,9 +335,11 @@ public class AdminReportService {
         long start = count(days, yesterday, Event.START);
         long login = count(days, yesterday, Event.LOGIN);
         long newDj = count(days, yesterday, Event.NEW_DJ);
-        List<Step> funnel = List.of(new Step("Wejścia", visits, visits > 0 ? "100 %" : "—"),
-                new Step("„Zacznij”", start, percent(start, visits)), new Step("Logowania", login, percent(login, visits)),
-                new Step("Nowi DJ-e", newDj, percent(newDj, visits)));
+        // a share only where the step comes from the one before: a login is also a DJ coming back, who never saw the landing page
+        List<Step> funnel = List.of(new Step("Wejścia na stronę główną", visits, ""),
+                new Step("„Zacznij”", start, visits > 0 ? percent(start, visits) + " wejść" : ""),
+                new Step("Nowi DJ-e", newDj, start > 0 ? percent(newDj, start) + " „Zacznij”" : ""),
+                new Step("Logowania (też powracający DJ-e)", login, ""));
 
         Mailer.Status emails = health.emails();
         boolean emailFailed = emails.lastFailed() != null && (emails.lastSent() == null || emails.lastFailed().isAfter(emails.lastSent()));
@@ -339,7 +352,7 @@ public class AdminReportService {
 
         int requests = parties.stream().mapToInt(PartyLine::guestRequests).sum();
         int played = parties.stream().mapToInt(PartyLine::played).sum();
-        return new View(yesterday.format(DAY), yesterday.format(SHORT_DAY), tiles, bars, funnel, organisers, parties, moreParties,
+        return new View(yesterday.format(DAY), tiles, bars, funnel, organisers, parties, moreParties,
                 requests, played, checks, log.lines(), Times.display(log.since()), pageUrl);
     }
 
@@ -399,7 +412,7 @@ public class AdminReportService {
             Map.entry(Event.GUEST_REQUEST, "Prośby gości"), Map.entry(Event.DEMO, "Demo"));
 
     static void renderTraffic(StringBuilder text, LocalDate yesterday, List<SiteCounter.Day> days) {
-        text.append("RUCH (ludzie, bez robotów) — wczoraj · średnio ").append(AVERAGE_DAYS).append(" dni\n");
+        text.append("RUCH (ludzie, bez robotów) — wczoraj · średnio ").append(AVERAGE_DAYS).append(" dni przed nim\n");
         for (Map.Entry<Event, String> row : TRAFFIC) {
             text.append(String.format(PL, "%-18s %5d · %6.1f%n", row.getValue(), count(days, yesterday, row.getKey()),
                     average(days, yesterday, row.getKey())));
@@ -490,10 +503,13 @@ public class AdminReportService {
         return days.stream().filter(d -> d.day().equals(day)).mapToLong(d -> d.counts().getOrDefault(event, 0)).sum();
     }
 
-    /** The average of the {@value #AVERAGE_DAYS} days up to {@code yesterday}; a day without a row counts as 0. */
+    /**
+     * The average of the {@value #AVERAGE_DAYS} days before {@code yesterday} — not with it: a day is compared with the week it
+     * follows, never with an average it pulls itself. A day without a row counts as 0.
+     */
     static double average(List<SiteCounter.Day> days, LocalDate yesterday, Event event) {
-        LocalDate first = yesterday.minusDays(AVERAGE_DAYS - 1L);
-        return days.stream().filter(d -> !d.day().isBefore(first) && !d.day().isAfter(yesterday))
+        LocalDate first = yesterday.minusDays(AVERAGE_DAYS);
+        return days.stream().filter(d -> !d.day().isBefore(first) && d.day().isBefore(yesterday))
                 .mapToLong(d -> d.counts().getOrDefault(event, 0)).sum() / (double) AVERAGE_DAYS;
     }
 
