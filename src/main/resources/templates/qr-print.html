@@ -106,10 +106,10 @@
                         th:selected="${t == poster.posterTheme}" th:text="#{'qr.edit.theme.' + ${t.name().toLowerCase()}}">Classic</option>
             </select>
             <!--/* the guests' pages have a look of their own (V59), set in "Ustawienia imprezy": said here, where a DJ picking the print's
-                 look may look for it */-->
-            <small th:if="${guestTheme != null}" class="editor-hint" id="posterGuestTheme"><span
-                    th:text="#{qr.edit.guest_theme(#{${guestTheme.messageKey()}})}">The guests' page: Classic</span> · <a
-                    th:href="@{/dj/settings(party=${partyCode})} + '#guestThemeCard'" th:text="#{qr.edit.guest_theme.change}">change</a></small>
+                 look may look for it; "Zmień" the editor's outlined button (qr-print.css .editor-hint-row), not a bare link */-->
+            <small th:if="${guestTheme != null}" class="editor-hint editor-hint-row" id="posterGuestTheme"><span
+                    th:text="#{qr.edit.guest_theme(#{${guestTheme.messageKey()}})}">The guests' page: Classic</span><a class="editor-link-button"
+                    th:href="@{/dj/settings(party=${partyCode})} + '#guestThemeCard'" th:text="#{qr.edit.guest_theme.change}">Change</a></small>
         </div>
         <details id="posterMoreLook" class="editor-more" th:open="${moreLook}">
             <summary th:text="#{qr.edit.more}">More: paper, font, colour</summary>
