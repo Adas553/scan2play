@@ -74,3 +74,22 @@ S2P.scenario({
         t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
 });
+
+// Nothing waits: nothing for "Ukryj „Nie masz”" to hide, so it is hidden with the search (app.css, :has); the first request brings it back.
+S2P.scenario({
+    name: 'library-only-empty-queue',
+    page: 'dashboard-library',
+    title: '"Ukryj „Nie masz”" hidden while the queue is empty, shown again with the first request — "+ Dodaj piosenkę" stays',
+    setup: { queue: [] },
+    run: async function (t) {
+        const visible = function (el) { return getComputedStyle(el).display !== 'none'; };
+        const only = document.getElementById('libraryOnly');
+        const add = document.getElementById('addSongToggle');
+        await t.waitFor(function () { return !document.querySelector('#song-list tr[data-song-id]'); }, 'the empty queue poll', 8000);
+        t.step('empty: the switch hidden, "+ Dodaj" shown', [visible(only), visible(add)], [false, true]);
+
+        await t.stand.config({ queue: [{ id: 21, name: 'sanah - Szampan', url: 'https://www.youtube.com/results?search_query=x', library: 'missing' }] });
+        await t.waitFor(function () { return document.querySelector('#song-list tr[data-song-id="21"]'); }, 'the next poll', 8000);
+        t.step('a request: the switch shown', [visible(only), visible(add)], [true, true]);
+    }
+});

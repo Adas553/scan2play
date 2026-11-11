@@ -1137,11 +1137,13 @@ th[data-sort].sort-desc::after {
 .s2p-btn-tip { min-width: 4rem; font-variant-numeric: tabular-nums; }
 #queueList .s2p-clear-queue { display: none; }
 #queueList:has(#song-list > tr[data-song-id]) .s2p-clear-queue { display: block; }
-/* nothing waits: what to do next (the QR code, the print, the vibe) in place of the table and its search */
+/* nothing waits: what to do next (the QR code, the print, the vibe) in place of the table, its search and "Ukryj „Nie masz”" (nothing
+   to hide); "+ Dodaj piosenkę" stays — the DJ's first song may be one asked for at the booth */
 #queueList .s2p-queue-empty { display: none; }
 #queueList:not(:has(#song-list > tr[data-song-id])) .s2p-queue-empty { display: block; }
 #queueList:not(:has(#song-list > tr[data-song-id])) .table-responsive,
 #queueList:not(:has(#song-list > tr[data-song-id])) [data-list-search],
+#queueList:not(:has(#song-list > tr[data-song-id])) [data-list-library],
 #queueList:not(:has(#song-list > tr[data-song-id])) .s2p-queue-keys { display: none !important; }
 /* Under a hosts' list: how many entries it holds of the most kept (js/song-list-count.js); over the limit, the warning's yellow */
 .s2p-list-count { margin-top: 0.25rem; font-size: 0.8125rem; color: var(--s2p-text-muted); text-align: right; }
