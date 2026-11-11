@@ -330,6 +330,37 @@ body {
     line-height: 1.35;
 }
 
+/* a hint with its action beside it ("Strona gościa: Klasyczny" · "Zmień"): the action an outlined button like the toolbar's, a
+   thumb's target — a bare link was the browser's blue, small on the dark editor */
+.editor-hint-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 10px;
+}
+
+.editor-link-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 1px solid #6c757d;
+    border-radius: 8px;
+    color: #f8f9fa;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+
+.editor-link-button:hover {
+    border-color: #adb5bd;
+}
+
+.editor-link-button:focus-visible {
+    outline: 2px solid #0dcaf0;
+    outline-offset: 2px;
+}
+
 /* a warning of the editor: the heading stands out poorly from the paper */
 .editor-warning {
     color: #ffd166;
