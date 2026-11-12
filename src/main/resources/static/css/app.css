@@ -1393,6 +1393,12 @@ th[data-sort].sort-desc::after {
 @media (max-width: 575.98px) {
     .s2p-guide-row { grid-template-columns: minmax(0, 1fr); }
 }
+/* the guide's videos: as wide as the column, their place kept before the poster loads; the phone's one upright and narrow */
+.s2p-guide-video { margin: 0; }
+.s2p-guide-video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: var(--s2p-black);
+                         border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
+.s2p-guide-video-tall video { aspect-ratio: 9 / 16; max-width: 20rem; }
+.s2p-guide-video figcaption { margin-top: 0.4rem; font-size: 0.875rem; color: var(--s2p-text-muted); }
 /* the server's limits in one line, what they are unfolded */
 .s2p-server-limits > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 @media (max-width: 767.98px), (pointer: coarse) {

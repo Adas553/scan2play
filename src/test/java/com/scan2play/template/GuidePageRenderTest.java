@@ -109,6 +109,7 @@ class GuidePageRenderTest {
                 "Nowy link", "🖥 kiosk", "Z kiosku");
         assertThat(html.substring(html.indexOf("Współorganizator"), html.indexOf("Własne"))).as("a co-organiser has the kiosk (V56)")
                 .contains("kiosk dla gości");
+        assertTheVideos(html, "pl");
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
     }
@@ -137,7 +138,31 @@ class GuidePageRenderTest {
                 "3 requests a minute", "20 👍 per 10 minutes", "New link", "🖥 kiosk", "From the kiosk");
         assertThat(html.substring(html.indexOf("Co-organiser"), html.indexOf("Custom"))).contains("guest kiosk");
         assertThat(render(Locale.GERMAN, ANONYMOUS)).contains("lang=\"en\"", ">How Scan2Play works</h1>");
+        assertTheVideos(html, "en");
         write("guide-en.html", html);
+    }
+
+    /**
+     * The five videos in the page's language, each in its section (1 and 2 getting started, 3 the party, 4 the phone, 5 after it),
+     * fetched only on a play, and their files there: a video renamed or missing would leave a black box on a public page.
+     */
+    private static void assertTheVideos(String html, String lang) {
+        List<String> sectionOf = List.of("start", "start", "party", "phone", "after");
+        for (int n = 1; n <= 5; n++) {
+            String file = "guide-" + n + "-" + lang;
+            int at = html.indexOf("id=\"guideVideo" + n + "\"");
+            assertThat(at).as("video %d", n).isPositive();
+            String figure = html.substring(at, html.indexOf("</figure>", at));
+            assertThat(figure).as("video %d", n).contains("preload=\"none\"", "controls", "playsinline",
+                    "poster=\"/images/guide/" + file + ".jpg\"", "src=\"/images/guide/" + file + ".mp4\"", "type=\"video/mp4\"", "<figcaption>");
+            String section = sectionOf.get(n - 1);
+            int start = html.indexOf("<section id=\"" + section + "\"");
+            assertThat(at).as("video %d in #%s", n, section).isGreaterThan(start).isLessThan(html.indexOf("</section>", start));
+            for (String ext : List.of(".mp4", ".jpg")) {
+                assertThat(Path.of("src/main/resources/static/images/guide", file + ext)).as("the file").isRegularFile();
+            }
+        }
+        assertThat(html).as("the phone's video is upright").contains("s2p-guide-video s2p-guide-video-tall\" id=\"guideVideo4\"");
     }
 
     private static void write(String name, String html) throws IOException {

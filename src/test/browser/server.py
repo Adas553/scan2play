@@ -63,7 +63,7 @@ LOGO_PNG = png(240, 240)
 HERE = os.path.dirname(os.path.abspath(__file__))
 TYPES = {'.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
          '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml',
-         '.woff2': 'font/woff2'}
+         '.woff2': 'font/woff2', '.jpg': 'image/jpeg', '.mp4': 'video/mp4'}
 
 
 def default_state():

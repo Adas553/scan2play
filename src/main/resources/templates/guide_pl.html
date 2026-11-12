@@ -13,7 +13,10 @@
 <!--/* The guide for DJs (the owner, 2026-10-12: the app may not be easy, the new features above all; the text approved on
      https://claude.ai/artifact/SdMaijjMmaECKtNjwH2vjc). Public (LegalController.guide), one file per language as the legal pages.
      In the order of a party. The buttons and badges in it are the app's own classes — pictures of them, not controls (spans, no
-     focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too. */-->
+     focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too.
+     The five videos (static/images/guide/guide-<n>-<pl|en>.mp4, recorded from the app's real pages, captions in the picture) do
+     go stale: when a screen they show changes, record that one again in both languages. preload="none": the page fetches nothing
+     of them until a play. */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
 
@@ -39,6 +42,12 @@
 
     <section id="start">
         <h2>Na start</h2>
+        <figure class="s2p-guide-video" id="guideVideo1">
+            <video controls preload="none" playsinline width="1920" height="1080" poster="/images/guide/guide-1-pl.jpg">
+                <source src="/images/guide/guide-1-pl.mp4" type="video/mp4">
+            </video>
+            <figcaption>Film z napisami, 44 s: ustaw imprezę — klimat, opis klimatu i kto gra.</figcaption>
+        </figure>
         <div class="s2p-guide-row s2p-guide-text"><p>Zaloguj się kontem Google. Panel i Twoja impreza tworzą się same.</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-light s2p-settings-toggle" aria-hidden="true">Impreza i kod QR</span>
@@ -49,6 +58,12 @@
                 klimat i opis też widzą. Komentarze AI mogą być klasyczne, zabawne, sarkastyczne albo krótkie. Tu też włączasz
                 <strong>dedykacje gości</strong>.</p>
         </div>
+        <figure class="s2p-guide-video" id="guideVideo2">
+            <video controls preload="none" playsinline width="1920" height="1080" poster="/images/guide/guide-2-pl.jpg">
+                <source src="/images/guide/guide-2-pl.mp4" type="video/mp4">
+            </video>
+            <figcaption>Film z napisami, 53 s: wydrukuj kod QR — plakat, kartki, motyw i grafika na Instagram.</figcaption>
+        </figure>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Drukuj plakat i karty</span>
             <p>Kod QR jako plakat A4 albo osiem kart na stoły. Nad wydrukiem możesz wpisać własny nagłówek i jedną linię tekstu
@@ -74,6 +89,12 @@
 
     <section id="party">
         <h2>W trakcie imprezy</h2>
+        <figure class="s2p-guide-video" id="guideVideo3">
+            <video controls preload="none" playsinline width="1920" height="1080" poster="/images/guide/guide-3-pl.jpg">
+                <source src="/images/guide/guide-3-pl.mp4" type="video/mp4">
+            </video>
+            <figcaption>Film z napisami, 44 s: prośby w trakcie imprezy — Kopiuj, Zagrane, Cofnij i Pomiń.</figcaption>
+        </figure>
         <div class="s2p-guide-row s2p-guide-text"><p>Nowe prośby pojawiają się w kolejce same. Gdy gość prosi o piosenkę, która już czeka,
             liczy się to jako głos. Posortuj po „Głosy”, żeby najbardziej chciane były na górze.</p></div>
         <div class="s2p-guide-row">
@@ -148,6 +169,12 @@
 
     <section id="phone">
         <h2>Na telefonie</h2>
+        <figure class="s2p-guide-video s2p-guide-video-tall" id="guideVideo4">
+            <video controls preload="none" playsinline width="1080" height="1920" poster="/images/guide/guide-4-pl.jpg">
+                <source src="/images/guide/guide-4-pl.mp4" type="video/mp4">
+            </video>
+            <figcaption>Film z napisami, 31 s: panel na telefonie i powiadomienia.</figcaption>
+        </figure>
         <div class="s2p-guide-row s2p-guide-text"><p>Każda prośba to karta z tytułem, głosami, ⚠ / ⭐ i przyciskami „Zagrane” / „Pomiń”.
             Stuknij kartę (albo ▾), żeby zobaczyć słowa gościa, komentarz AI, „Podejrzyj” i 💸.</p></div>
         <div class="s2p-guide-row s2p-guide-text"><p><strong>Powiadomienia o nowych prośbach:</strong> Ustawienia imprezy → To urządzenie.
@@ -158,6 +185,12 @@
 
     <section id="after">
         <h2>Po imprezie</h2>
+        <figure class="s2p-guide-video" id="guideVideo5">
+            <video controls preload="none" playsinline width="1920" height="1080" poster="/images/guide/guide-5-pl.jpg">
+                <source src="/images/guide/guide-5-pl.mp4" type="video/mp4">
+            </video>
+            <figcaption>Film z napisami, 51 s: historia, Przywróć i podsumowanie wieczoru.</figcaption>
+        </figure>
         <div class="s2p-guide-row s2p-guide-text"><p><strong>Historia</strong> pokazuje wszystko, co zagrało, zostało pominięte, odrzucone przez
             AI (z komentarzem, dlaczego) albo wyczyszczone, dzień po dniu, przez 30 dni.</p></div>
         <div class="s2p-guide-row">
