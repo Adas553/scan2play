@@ -13,7 +13,11 @@
 <!--/* The guide for DJs (the owner, 2026-10-12: the app may not be easy, the new features above all; the text approved on
      https://claude.ai/artifact/SdMaijjMmaECKtNjwH2vjc). Public (LegalController.guide), one file per language as the legal pages.
      In the order of a party. The buttons and badges in it are the app's own classes — pictures of them, not controls (spans, no
-     focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too. */-->
+     focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too.
+     The three pictures (#guidePicture1–3: the panel on a computer — the landing page's own —, on a phone, the evening summary) are
+     screenshots of a made-up party that src/test/browser/screenshots.py makes of the render tests' pages: when one of those screens
+     changes, run it again (--only guide for the guide's two of its own). Each is a link to itself: on a phone the computer's screen is
+     small, a tap opens it whole to zoom into. */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
 
@@ -45,7 +49,7 @@
             <p><strong>Klimat</strong>, np. „Klasyki weselne”: według niego AI ocenia prośby. <strong>Opis klimatu</strong> jest opcjonalny, ale
                 AI czyta go przy każdej prośbie i liczy się dla niego bardziej niż sam klimat. Możesz nim uzupełnić klimat („wesele 40+, bez
                 rapu”) albo go zastąpić: gdy grasz własną mieszankę, wybierz klimat „Dowolny” i opisz ją sam („polskie lata 90., disco polo i rock,
-                bez techno”). Prośby wyraźnie z nim sprzeczne AI odrzuci. Do tego <strong>Kto gra</strong> (goście zobaczą „🎧 Gra: DJ Adam”);
+                bez techno”). Prośby wyraźnie z nim sprzeczne AI odrzuci. Do tego <strong>Kto gra</strong> (goście zobaczą „🎧 Gra: DJ Kuba”);
                 klimat i opis też widzą. Komentarze AI mogą być klasyczne, zabawne, sarkastyczne albo krótkie. Tu też włączasz
                 <strong>dedykacje gości</strong>.</p>
         </div>
@@ -74,6 +78,13 @@
 
     <section id="party">
         <h2>W trakcie imprezy</h2>
+        <figure class="s2p-guide-picture" id="guidePicture1">
+            <a href="/images/landing/dashboard-pl.webp">
+                <img src="/images/landing/dashboard-pl.webp" width="1920" height="1140" loading="lazy" decoding="async"
+                     alt="Kolejka próśb na komputerze: słowa gości, komentarze AI, głosy, „Zagrane” i „Pomiń”">
+            </a>
+            <figcaption>Panel w trakcie imprezy — przykładowe wesele.</figcaption>
+        </figure>
         <div class="s2p-guide-row s2p-guide-text"><p>Nowe prośby pojawiają się w kolejce same. Gdy gość prosi o piosenkę, która już czeka,
             liczy się to jako głos. Posortuj po „Głosy”, żeby najbardziej chciane były na górze.</p></div>
         <div class="s2p-guide-row">
@@ -148,6 +159,13 @@
 
     <section id="phone">
         <h2>Na telefonie</h2>
+        <figure class="s2p-guide-picture s2p-guide-picture-tall" id="guidePicture2">
+            <a href="/images/guide/phone-pl.webp">
+                <img src="/images/guide/phone-pl.webp" width="780" height="1560" loading="lazy" decoding="async"
+                     alt="Kolejka na telefonie: karty próśb z głosami, „Zagrane” i „Pomiń”">
+            </a>
+            <figcaption>Ten sam panel na telefonie.</figcaption>
+        </figure>
         <div class="s2p-guide-row s2p-guide-text"><p>Każda prośba to karta z tytułem, głosami, ⚠ / ⭐ i przyciskami „Zagrane” / „Pomiń”.
             Stuknij kartę (albo ▾), żeby zobaczyć słowa gościa, komentarz AI, „Podejrzyj” i 💸.</p></div>
         <div class="s2p-guide-row s2p-guide-text"><p><strong>Powiadomienia o nowych prośbach:</strong> Ustawienia imprezy → To urządzenie.
@@ -164,6 +182,13 @@
             <span class="btn btn-sm btn-outline-light" aria-hidden="true">Podsumowanie wieczoru</span>
             <p>Ile było próśb, co grało, czego goście chcieli, a nie usłyszeli, i najczęściej proszeni wykonawcy. Do druku, jako PDF albo CSV.</p>
         </div>
+        <figure class="s2p-guide-picture" id="guidePicture3">
+            <a href="/images/guide/summary-pl.webp">
+                <img src="/images/guide/summary-pl.webp" width="1500" height="1080" loading="lazy" decoding="async"
+                     alt="Podsumowanie wieczoru: liczby wieczoru i najczęściej proszone piosenki">
+            </a>
+            <figcaption>Podsumowanie wieczoru po weselu.</figcaption>
+        </figure>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Wyczyść historię</span>
             <p>Usuwa zagrane i odrzucone prośby razem ze słowami gości. Potem AI nie pamięta, co już grało.</p>

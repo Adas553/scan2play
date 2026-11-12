@@ -174,3 +174,15 @@ piece of work or when a task names an item. A finished item stays here until its
    summary's link waits for item 1c's sender. **Then** (the owner: "prośby odrzucone jeszcze przed AI — możemy zrobić"; **V63**): the
    requests refused before the AI (the hosts' "nie grać" list, a song the DJ skipped lately, a mood or a message) counted per evening and
    reason in `evening_refusal` — no song, no guest's words —, one line "Zatrzymane, zanim zapytano AI" in the DJ's version.
+10. **The guide's videos on "Jak działa Scan2Play" / "How Scan2Play works" — waiting** (the owner, 2026-11-12: not now). Five videos a
+   language (setting up, the QR print, the party, the phone, after it; ~27 MB of mp4) with their `<figure>`s, CSS and
+   `GuidePageRenderTest.assertTheVideos` are on the branch `claude/epic-noether-ikboeo`, PR #259 kept as a draft — not merged, so
+   nothing of them is in `main`'s history; once merged, every recording stays in it for good (mp4 does not delta). The review of
+   2026-11-12 found in them: the cursor and the highlight left on the next row after "Pomiń" / "Zagrane" / "Przywróć" (video 3 at
+   ~34 s looks like skipping Queen, while Smash Mouth is skipped), the undo bar gone before "Cofnij" is clicked (video 3, ~30 s), the
+   16:9 captions unreadable on a phone (~6 px at 390 px), captions too short or over what they name, one-frame black flashes between
+   pages, test data ("HARN1", "DJ Koko", dates of the history and the summary that disagree), "Puściłeś" / "pominąłeś". **Back to it
+   when:** the recording script is in the repo (next to `src/test/browser/screenshots.py`) — a changed screen means recording again;
+   those faults are fixed; the captions are readable on a phone (zoom on the place of the action, or upright videos); and where the
+   files live is decided — the repo (a version in the file name, a purge of Cloudflare after a change) or Cloudflare R2 on its own
+   host (`media-src` in the CSP, a sentence in the privacy policy). Meanwhile the guide's text alone covers what the videos show.

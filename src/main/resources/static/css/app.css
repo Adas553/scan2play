@@ -1393,6 +1393,15 @@ th[data-sort].sort-desc::after {
 @media (max-width: 575.98px) {
     .s2p-guide-row { grid-template-columns: minmax(0, 1fr); }
 }
+/* the guide's pictures: as wide as the column, their place kept before they load (width / height); the phone's upright and narrow.
+   No margin: the section's grid gap spaces them as its rows. The link (the picture whole, to zoom into) is a block as big as the
+   picture, so its focus ring goes round the picture and a tap beside the phone's narrow one opens nothing. */
+.s2p-guide-picture { margin: 0; }
+.s2p-guide-picture a { display: block; border-radius: var(--s2p-radius-card); }
+.s2p-guide-picture a:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 2px; }
+.s2p-guide-picture img { display: block; width: 100%; height: auto; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
+.s2p-guide-picture-tall a { max-width: 16rem; }
+.s2p-guide-picture figcaption { margin-top: 0.4rem; font-size: 0.875rem; color: var(--s2p-text-muted); }
 /* the server's limits in one line, what they are unfolded */
 .s2p-server-limits > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 @media (max-width: 767.98px), (pointer: coarse) {
