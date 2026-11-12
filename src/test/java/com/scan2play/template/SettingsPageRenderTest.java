@@ -100,6 +100,7 @@ class SettingsPageRenderTest {
     private static PartySettingsEntity party() {
         return PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY)
                 .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko")
+                .bookingEmail("rezerwacje@djkoko.pl").bookingPhone("600 100 200")
                 .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz")
                 .hostTokenMadeAt(java.time.Instant.now()).build();
     }
@@ -260,7 +261,7 @@ class SettingsPageRenderTest {
                 .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"deviceCard\">",
-                        "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · napiwki<",
+                        "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · kontakt · napiwki<",
                         "class=\"s2p-fold-state\">Nie wgrano<", "<script src=\"/js/folds.js\">")
                 .doesNotContain("id=\"settingsJump\"", "s2p-fold\" id=\"hostListsCard\" open");
         assertThat(html).as("\"Obsługa\" a row like a folded card, with its state, leading to its page")
@@ -283,7 +284,11 @@ class SettingsPageRenderTest {
                         "id=\"facebookInput\"", "id=\"tiktokInput\"", "value=\"https://www.instagram.com/dj.koko/\"",
                         "Goście widzą je na swojej stronie i na wydruku.", "id=\"tipLinkForm\"", "action=\"/dj/dashboard/tip-link\"",
                         "id=\"tipInput\" name=\"tip\"", "value=\"https://buycoffee.to/djkoko\"", ">Link do napiwków<",
-                        "pieniądze idą w 100% prosto do Ciebie, Scan2Play nie bierze prowizji", "Nie zapisano: to nie jest link do Twojej strony", "data-form-error hidden")
+                        "pieniądze idą w 100% prosto do Ciebie, Scan2Play nie bierze prowizji", "Nie zapisano: to nie jest link do Twojej strony", "data-form-error hidden",
+                        // the contact for bookings (V67), in the same card
+                        "id=\"bookingContactForm\"", "action=\"/dj/dashboard/booking-contact\"", ">Kontakt do rezerwacji<",
+                        "id=\"bookingEmailInput\" name=\"bookingEmail\"", "value=\"rezerwacje@djkoko.pl\"", "id=\"bookingPhoneInput\" name=\"bookingPhone\"",
+                        "value=\"600 100 200\"", "podaj kontakt firmowy", "Nie zapisano: wpisz adres e-mail", ">Profile, kontakt i napiwki<")
                 .doesNotContain("Scan2Play ich nie dotyka", "(goście widzą");
         assertThat(html).as("a form refused by the server (the session ran out) says so, hidden until then (review 2026-10-14 W1)")
                 .contains("data-form-refused hidden", "Nie zapisano. Sesja mogła wygasnąć albo zerwało się połączenie",
@@ -787,8 +792,9 @@ class SettingsPageRenderTest {
                 .doesNotContain("id=\"hostListsForm\"", "action=\"/dj/dashboard/host-lists\"", "id=\"hostLinkInput\"",
                         "action=\"/dj/dashboard/host-link\"", ">Hej sokoły</textarea>");
         assertThat(html).as("the profiles and the tip link: kept, not editable")
-                .contains("id=\"linksCard\"", "Twoje profile i link do napiwków są zachowane. Wrócą, gdy włączysz Pro.")
-                .doesNotContain("id=\"djLinksForm\"", "id=\"tipLinkForm\"", "dj.koko", "buycoffee.to/djkoko");
+                .contains("id=\"linksCard\"", "Twoje profile, kontakt do rezerwacji i link do napiwków są zachowane. Wrócą, gdy włączysz Pro.")
+                .doesNotContain("id=\"djLinksForm\"", "id=\"tipLinkForm\"", "dj.koko", "buycoffee.to/djkoko", "id=\"bookingContactForm\"",
+                        "rezerwacje@djkoko.pl");
         assertThat(html).as("the limits: what holds without Pro, the server's use still there")
                 .contains("id=\"limitsCard\"", "Każda impreza bez Pro: 2 prośby na gościa, potem 3 min przerwy, bez powtórek z ostatnich 15.",
                         "id=\"serverLimitsInfo\"")
@@ -819,7 +825,7 @@ class SettingsPageRenderTest {
         PartySettingsEntity fresh = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).globalVibe(VibeType.ANY).build();
         String html = render(new PartyStaffService.Access(fresh, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""),
                 PL, com.scan2play.service.Plans.enforced());
-        assertThat(html).contains(">Dostępne w planie Pro.<", "Przyciski Twoich profili i „Napiwek dla DJ-a” u gości i na wydruku — w planie Pro.")
+        assertThat(html).contains(">Dostępne w planie Pro.<", "Przyciski Twoich profili, Twój e-mail i telefon do rezerwacji i „Napiwek dla DJ-a” u gości i na wydruku — w planie Pro.")
                 .doesNotContain("zachowane");
     }
 

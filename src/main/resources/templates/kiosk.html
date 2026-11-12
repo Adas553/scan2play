@@ -69,7 +69,8 @@
             <!--/* the request form, as the party page's: a song, the dedication when the DJ takes them */-->
             <th:block th:if="${response == null}">
                 <h1 id="kioskAskTitle" class="s2p-kiosk-title" th:text="#{kiosk.title}">Request a song</h1>
-                <div th:if="${errorMessage}" id="kioskError" class="alert alert-warning" role="alert" th:text="${errorMessage}">Wait a moment.</div>
+                <div th:if="${errorMessage}" id="kioskError" class="alert alert-warning" role="alert"><span th:text="${errorMessage}">Wait a moment.</span><span
+                     th:if="${errorHint}" id="errorHint" class="d-block mt-1" th:text="${errorHint}">Want to tell the DJ something?</span></div>
                 <form id="requestForm" th:action="@{/k/{t}/request(t=${kioskToken})}" method="POST" class="m-0">
                     <label for="songInput" class="form-label fw-bold fs-5" th:text="#{home.subtitle}">What do you want to hear?</label>
                     <div class="song-autocomplete-wrapper">

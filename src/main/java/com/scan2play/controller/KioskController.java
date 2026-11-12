@@ -135,6 +135,7 @@ public class KioskController {
                 redirectAttributes.addFlashAttribute(LAST_REQUEST, mood.songName());
                 redirectAttributes.addFlashAttribute(LAST_DEDICATION, mood.dedication());
                 redirectAttributes.addFlashAttribute(ERROR_MESSAGE, messageSource.getMessage("guest.error.song_only", null, locale));
+                GuestController.songOnlyHint(redirectAttributes, party, locale, messageSource);
                 return "redirect:/k/" + token;
             }
             model.addAttribute(RESPONSE, ((Sent.Answered) sent).response());

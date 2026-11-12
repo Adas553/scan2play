@@ -467,6 +467,10 @@ th[data-sort].sort-desc::after {
 .s2p-booking-dj    { margin: 0; color: var(--s2p-action); font-size: 0.9rem; font-weight: 600; }
 .s2p-booking-title { margin: 0; color: var(--s2p-white); font-size: 1.15rem; font-weight: 700; text-wrap: balance; }
 .s2p-booking-note  { margin: 0 0 0.5rem; color: var(--s2p-text-muted); font-size: 0.9rem; }
+/* The DJ's e-mail and phone (V67): the address is the button's text — a long one breaks anywhere instead of widening a phone's page */
+.s2p-booking-contact { max-width: 100%; min-width: 0; text-align: left; }
+.s2p-booking-contact span { min-width: 0; overflow-wrap: anywhere; }
+.s2p-booking-private { color: var(--s2p-text-muted); }
 
 /* ==========================================================================
  * 6. LANDING PAGE

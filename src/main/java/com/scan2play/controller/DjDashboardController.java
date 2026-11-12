@@ -274,6 +274,8 @@ public class DjDashboardController {
         model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
+        model.addAttribute(BOOKING_EMAIL, settings.getBookingEmail());   // the contact for bookings (V67), with the profiles
+        model.addAttribute(BOOKING_PHONE, settings.getBookingPhone());
         model.addAttribute(TIP_URL, settings.getTipUrl());
         model.addAttribute(COMMENT_STYLE, planned.getCommentStyle());
         model.addAttribute(DEDICATIONS_ON, settings.isDedicationsOn());   // the guests' dedications on or off (V38)

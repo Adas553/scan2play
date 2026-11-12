@@ -228,6 +228,8 @@ public class PlanService {
             planned.setInstagramUrl(null);
             planned.setFacebookUrl(null);
             planned.setTiktokUrl(null);
+            planned.setBookingEmail(null);
+            planned.setBookingPhone(null);
         }
         if (!plan.includes(PlanFeature.TIPS)) {
             planned.setTipUrl(null);

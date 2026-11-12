@@ -35,6 +35,8 @@
 
         <div th:if="${errorMessage}" class="alert alert-danger text-center fw-bold" role="alert">
             <span th:text="${errorMessage}"></span>
+            <!--/* where a message can go instead (a mood or a message sent as a song): a dedication with a song */-->
+            <span th:if="${errorHint}" id="errorHint" class="d-block fw-normal mt-1" th:text="${errorHint}">Want to tell the DJ something?</span>
         </div>
 
         <!-- Dynamic form action based on party code -->

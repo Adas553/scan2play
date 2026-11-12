@@ -49,6 +49,11 @@ public final class ViewAttributes {
     public static final String INSTAGRAM_URL = "instagramUrl";
     public static final String FACEBOOK_URL = "facebookUrl";
     public static final String TIKTOK_URL = "tiktokUrl";
+    /** The DJ's contact for bookings (V67): the settings' form — the address and the number as kept, or null. */
+    public static final String BOOKING_EMAIL = "bookingEmail";
+    public static final String BOOKING_PHONE = "bookingPhone";
+    /** The same for the guests: {@code util.BookingContact} with its links, or null. */
+    public static final String BOOKING = "booking";
     /** The DJ's tip link (V27): an https address on a service that takes tips, or null. */
     public static final String TIP_URL = "tipUrl";
     public static final String COMMENT_STYLE = "commentStyle";
@@ -119,6 +124,8 @@ public final class ViewAttributes {
     /** The song of a 👍 as it is now (its new votes), or null when it no longer waits. */
     public static final String VOTE_SONG = "voteSong";
     public static final String ERROR_MESSAGE = "errorMessage";
+    /** A second, quieter line under {@link #ERROR_MESSAGE}: what the guest can do instead (a dedication for a message). */
+    public static final String ERROR_HINT = "errorHint";
     /** The text of a request sent back to the form (a mood, not a song). */
     public static final String LAST_REQUEST = "lastRequest";
     /** The dedication of a request sent back to the form (V38), as the guest typed it. */

@@ -311,7 +311,7 @@ class KioskWebTest {
         String html = mockMvc.perform(get(KIOSK).session(session).flashAttrs(refused.getFlashMap())).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         assertThat(html).contains("data-kiosk-turn=\"begun\"", "data-kiosk-state=\"form\"", "value=\"coś skocznego\"",
-                "value=\"dla Kasi\"", "id=\"kioskError\"");
+                "value=\"dla Kasi\"", "id=\"kioskError\"", "id=\"errorHint\"");
         write("kiosk-refused.html", html);
 
         when(guestVoteService.myVotes(any(), eq(partyCode))).thenReturn(Set.of(8L));   // a 👍 given, then the page again

@@ -113,6 +113,8 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.HOST_LISTS, true, post("/dj/dashboard/host-link").param("partyCode", PUB).param("link", "new")),
                 Arguments.of(PlanFeature.PROFILES, false, post("/dj/dashboard/dj-links").param("partyCode", PUB).param("instagram", "@dj")),
                 Arguments.of(PlanFeature.TIPS, false, post("/dj/dashboard/tip-link").param("partyCode", PUB).param("tip", "")),
+                Arguments.of(PlanFeature.PROFILES, false, post("/dj/dashboard/booking-contact").param("partyCode", PUB)
+                        .param("bookingEmail", "dj@koko.pl")),
                 Arguments.of(PlanFeature.TIPS, true, post("/dj/dashboard/tip-count").param("partyCode", PUB).param("id", "1")),
                 Arguments.of(PlanFeature.COMMENT_STYLES, true, post("/dj/dashboard/comment-style").param("partyCode", PUB).param("commentStyle", "FUNNY")),
                 Arguments.of(PlanFeature.GUEST_LIMITS, true, post("/dj/dashboard/limits").param("partyCode", PUB).param("requestLimit", "5")

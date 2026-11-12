@@ -278,12 +278,64 @@ class GuestControllerTest {
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of(), null, false))
                 .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", "mood"));
         when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
+        when(messageSource.getMessage(eq("guest.error.song_only.hint"), any(), any())).thenReturn("add a dedication");
 
         assertThat(request("coś do tańca")).isEqualTo("redirect:/p/" + PARTY);
         assertThat(new java.util.HashMap<String, Object>(redirectAttributes.getFlashAttributes()))
                 .containsEntry(ViewAttributes.ERROR_MESSAGE, "type a song")
+                .containsEntry(ViewAttributes.ERROR_HINT, "add a dedication")
                 .containsEntry(ViewAttributes.LAST_REQUEST, "coś do tańca");
         verify(guestSessionService).giveBack(session, PARTY);
+    }
+
+    /**
+     * The DJ's contact for bookings (V67) under "Zarezerwuj tego DJ-a": the page "party ended" — a subject without a date, the page is
+     * opened days after too — and an accepted request — the subject names the evening, so the DJ knows where the guest saw them.
+     */
+    @Test
+    void theContactForBookings_onThePartyEndedPage_andUnderAnAcceptedRequest() throws Exception {
+        settings.setBookingEmail("rezerwacje@djkoko.pl");
+        settings.setBookingPhone("+48 600 100 200");
+        when(messageSource.getMessage(eq("party.book.subject"), any(), any())).thenReturn("Zapytanie");
+        when(messageSource.getMessage(eq("party.book.subject.evening"), any(), any())).thenReturn("Zapytanie 14.11");
+
+        settings.setActive(false);
+        ExtendedModelMap ended = new ExtendedModelMap();
+        assertThat(controller.partyIndex(PARTY, ended, request)).isEqualTo("party_ended");
+        assertThat(ended.getAttribute(ViewAttributes.BOOKING)).isEqualTo(new com.scan2play.util.BookingContact(
+                "rezerwacje@djkoko.pl", "+48 600 100 200", "mailto:rezerwacje@djkoko.pl?subject=Zapytanie", "tel:+48600100200"));
+
+        settings.setActive(true);
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "Song", "ANY", java.util.Set.of(), null, false))
+                .thenReturn(new DjResponse("accepted", "ok", "Song", "title", 42L));
+        ExtendedModelMap result = new ExtendedModelMap();
+        assertThat(controller.requestSong(PARTY, "Song", null, result, session, request, redirectAttributes).call()).isEqualTo("result");
+        assertThat(((com.scan2play.util.BookingContact) result.getAttribute(ViewAttributes.BOOKING)).mailto())
+                .isEqualTo("mailto:rezerwacje@djkoko.pl?subject=Zapytanie%2014.11");
+
+        settings.setBookingEmail(null);
+        settings.setBookingPhone(null);
+        ExtendedModelMap none = new ExtendedModelMap();
+        controller.requestSong(PARTY, "Song", null, none, session, request, redirectAttributes).call();
+        assertThat(none.getAttribute(ViewAttributes.BOOKING)).isNull();
+    }
+
+    /** With the dedications off the hint "add a dedication" would name a field the page does not have: only the message. */
+    @Test
+    void aMood_withTheDedicationsOff_hasNoHint() throws Exception {
+        settings.setDedicationsOn(false);
+        when(guestSessionService.tryAcquire(session, PARTY, settings)).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquire(IP, PARTY)).thenReturn(Optional.empty());
+        when(songEvaluationService.evaluateAndSaveSong(PARTY, "sto lat Ania", "ANY", java.util.Set.of(), null, false))
+                .thenReturn(new DjResponse("rejected", "To nastrój", "sto lat Ania", "mood"));
+        when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
+
+        assertThat(request("sto lat Ania")).isEqualTo("redirect:/p/" + PARTY);
+        assertThat(new java.util.HashMap<String, Object>(redirectAttributes.getFlashAttributes()))
+                .containsEntry(ViewAttributes.ERROR_MESSAGE, "type a song")
+                .doesNotContainKey(ViewAttributes.ERROR_HINT);
     }
 
     /** The AI down: the request went to the DJ unchecked (SongEvaluationService) — it counts like any request. */
