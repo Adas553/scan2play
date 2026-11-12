@@ -36,6 +36,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the
   Default environment allows no site.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
+- **2026-11-12 — the guide's videos, uncommitted on `claude/epic-noether-ikboeo`:** five videos per language in
+  `static/images/guide/` on "Jak działa Scan2Play" / "How Scan2Play works" (`GuidePageRenderTest` checks each is in its section and its
+  file is there). The recording scripts are not in the repo; a screen that changes makes its video stale (`PROJECT_CONTEXT.md` 6.5).
 
 ## Pricing and the Free plan's limit (the owner's picks, 2026-11-05)
 
