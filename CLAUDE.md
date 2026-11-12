@@ -42,6 +42,9 @@
 ## Working agreements (the project owner's preferences)
 
 - **Leave changes uncommitted** so they can be reviewed as a diff in IntelliJ; commit and push only when asked.
+  That is for a local session. In a cloud session the container and its disk go after a while, and its stop hook asks for every
+  change to be committed and pushed: there commit and push to the session's own branch (never `main`, no PR unless asked); the owner
+  reviews it as a diff after `git fetch` — that branch compared with `main` in IntelliJ.
   Commit messages and PR titles and descriptions are written in English, whatever the language of the conversation.
 - **The app runs from IntelliJ** against `target/classes` with `spring-boot-devtools`, which restarts it whenever
   that directory changes. Do not run `mvnw` inside the repo while it is running: copy the repo without
