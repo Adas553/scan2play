@@ -129,6 +129,10 @@ class SummaryPageTest {
         return requests;
     }
 
+    /** Who plays and the DJ's logo (V45): of every test but the guide's picture, which shows the party without a logo. */
+    private static String djName = "DJ Koko";
+    private static String logoVersion = "0123456789abcdef".repeat(4);
+
     /** The evenings' titles, links and kept songs (V61): none, unless a test gives some. */
     private static com.scan2play.repository.EveningSummaryRepository kept = mock(com.scan2play.repository.EveningSummaryRepository.class);
 
@@ -175,7 +179,7 @@ class SummaryPageTest {
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(requests);
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any()))
-                .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").logoVersion("0123456789abcdef".repeat(4)).build());
+                .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName(djName).logoVersion(logoVersion).build());
         DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries, kept), sessionHelper, messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
 
         ConcurrentModel model = new ConcurrentModel();
@@ -445,6 +449,40 @@ class SummaryPageTest {
                 .contains("When the guests asked", "Played on request, in order (6)", "The first request, 19:05",
                         // the picture's foot, as the poster's: "Powered by Scan2Play"
                         "data-made=\"Powered by\"").doesNotContain("??");
+    }
+
+    /**
+     * The evening summary of a made-up wedding, for the guide's picture (src/test/browser/screenshots.py:
+     * {@code static/images/guide/summary-<lang>.webp}): the DJ of the landing page's picture, no logo, and in English songs known
+     * everywhere — as the landing page's dashboard. No real person in it.
+     */
+    @Test
+    void theGuidesPicture_ofTheSummary() throws IOException {
+        String[] english = {"Whitney Houston - I Wanna Dance with Somebody", "Bon Jovi - Livin' on a Prayer", "Ed Sheeran - Perfect",
+                "ABBA - Dancing Queen", "Queen - Don't Stop Me Now", "Nirvana - Smells Like Teen Spirit", "Mark Ronson - Uptown Funk",
+                "Earth, Wind & Fire - September"};
+        String savedDj = djName;
+        String savedLogo = logoVersion;
+        try {
+            logoVersion = null;
+            djName = "DJ Kuba";
+            String pl = render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "guide-demo-pl");
+            djName = "DJ Alex";
+            List<SongRequestEntity> weddingEn = wedding();
+            assertThat(english).as("a song in English for each of the wedding's").hasSize(weddingEn.size());
+            for (int i = 0; i < weddingEn.size(); i++) {
+                weddingEn.get(i).setSongName(english[i]);
+            }
+            String en = render(Locale.ENGLISH, null, TWO_EVENINGS, weddingEn, "guide-demo-en");
+
+            assertThat(pl).contains("🎧 DJ Kuba", "<strong>6</strong><span>Zagrane</span>", "Zenek Martyniuk - Przekorny los")
+                    .doesNotContain("DJ Koko", "??");
+            assertThat(en).contains("🎧 DJ Alex", "<strong>6</strong><span>Played</span>", "Bon Jovi - Livin&#39; on a Prayer")
+                    .doesNotContain("DJ Koko", "Zenek", "Sanah", "Golec", "Bajm", "??");
+        } finally {
+            djName = savedDj;
+            logoVersion = savedLogo;
+        }
     }
 
     @Test
