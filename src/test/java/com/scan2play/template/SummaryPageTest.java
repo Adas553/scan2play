@@ -469,6 +469,7 @@ class SummaryPageTest {
             String pl = render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "guide-demo-pl");
             djName = "DJ Alex";
             List<SongRequestEntity> weddingEn = wedding();
+            assertThat(english).as("a song in English for each of the wedding's").hasSize(weddingEn.size());
             for (int i = 0; i < weddingEn.size(); i++) {
                 weddingEn.get(i).setSongName(english[i]);
             }

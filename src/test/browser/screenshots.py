@@ -85,6 +85,9 @@ def main():
                                                    '(e.g. guide): the others are not written again')
     parser.add_argument('--no-sandbox', action='store_true', help="Chrome's --no-sandbox (a container running as root)")
     args = parser.parse_args()
+    only = [prefix for prefix in args.only.split(',') if prefix]
+    if only and not any(name.startswith(prefix) for name, *_ in SHOTS for prefix in only):
+        sys.exit('--only %s matches no picture: %s' % (args.only, ', '.join(name for name, *_ in SHOTS)))
 
     work = Path(args.work).resolve()
     if work == run.REPO or run.REPO in work.parents:
@@ -102,7 +105,6 @@ def main():
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
-    only = [prefix for prefix in args.only.split(',') if prefix]
     for name, page, width, height, scale, phone in SHOTS:
         if only and not any(name.startswith(prefix) for prefix in only):
             continue

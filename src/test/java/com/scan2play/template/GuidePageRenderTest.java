@@ -21,9 +21,11 @@ import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -145,8 +147,8 @@ class GuidePageRenderTest {
     /**
      * The three pictures in the page's language, each in its section — the panel on a computer (the landing page's picture) during the
      * party, the panel on a phone, the evening summary after the party, by its row —, its file there (a missing one would be a broken
-     * picture on a public page), its size given (no jump when it loads), loaded only when scrolled to, described, and a link to itself (a tap opens it whole, to
-     * zoom into on a phone).
+     * picture on a public page), its size given and the file's own (no jump when it loads), loaded only when scrolled to, described, and a link to itself (a tap
+     * opens it whole, to zoom into on a phone).
      */
     private static void assertThePictures(String html, String lang) {
         List<String> files = List.of("landing/dashboard-" + lang, "guide/phone-" + lang, "guide/summary-" + lang);
@@ -156,9 +158,12 @@ class GuidePageRenderTest {
             assertThat(at).as("picture %d", n).isPositive();
             String figure = html.substring(at, html.indexOf("</figure>", at));
             String file = files.get(n - 1);
-            assertThat(figure).as("picture %d", n).contains("<a href=\"/images/" + file + ".webp\">", "src=\"/images/" + file + ".webp\"", "loading=\"lazy\"", "width=\"", "height=\"",
-                    "<figcaption>").containsPattern("alt=\"[^\"]{20,}\"");
-            assertThat(Path.of("src/main/resources/static/images", file + ".webp")).as("picture %d's file", n).isRegularFile();
+            Path picture = Path.of("src/main/resources/static/images", file + ".webp");
+            assertThat(picture).as("picture %d's file", n).isRegularFile();
+            int[] size = webpSize(picture);
+            assertThat(figure).as("picture %d", n).contains("<a href=\"/images/" + file + ".webp\">", "src=\"/images/" + file + ".webp\"",
+                    "width=\"" + size[0] + "\" height=\"" + size[1] + "\"", "loading=\"lazy\"", "<figcaption>")
+                    .containsPattern("alt=\"[^\"]{20,}\"");
             int start = html.indexOf("<section id=\"" + sections.get(n - 1) + "\"");
             assertThat(start).as("section #%s", sections.get(n - 1)).isPositive();
             assertThat(at).as("picture %d in #%s", n, sections.get(n - 1)).isGreaterThan(start)
@@ -167,6 +172,25 @@ class GuidePageRenderTest {
         assertThat(html).as("the phone's picture is upright").contains("s2p-guide-picture s2p-guide-picture-tall\" id=\"guidePicture2\"");
         assertThat(html.indexOf("id=\"guidePicture3\"")).as("the summary's picture under its row")
                 .isGreaterThan(html.indexOf(lang.equals("pl") ? ">Podsumowanie wieczoru</span>" : ">Evening summary</span>"));
+    }
+
+    /**
+     * A WebP's width and height, from its header (the extended format Chrome writes: "VP8X", each less one in 24 bits): the page's
+     * width / height must be the file's, or the place kept for it has another shape than the picture after screenshots.py made it again.
+     */
+    private static int[] webpSize(Path file) {
+        try {
+            byte[] head = Arrays.copyOf(Files.readAllBytes(file), 30);
+            assertThat(new String(head, 0, 4, StandardCharsets.US_ASCII) + new String(head, 8, 8, StandardCharsets.US_ASCII))
+                    .as("%s: a WebP of screenshots.py", file).isEqualTo("RIFFWEBPVP8X");
+            return new int[]{1 + threeBytes(head, 24), 1 + threeBytes(head, 27)};
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static int threeBytes(byte[] bytes, int at) {
+        return (bytes[at] & 0xff) | (bytes[at + 1] & 0xff) << 8 | (bytes[at + 2] & 0xff) << 16;
     }
 
     private static void write(String name, String html) throws IOException {
