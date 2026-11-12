@@ -470,6 +470,7 @@ th[data-sort].sort-desc::after {
 /* The DJ's e-mail and phone (V67): the address is the button's text — a long one breaks anywhere instead of widening a phone's page */
 .s2p-booking-contact { max-width: 100%; min-width: 0; text-align: left; }
 .s2p-booking-contact span { min-width: 0; overflow-wrap: anywhere; }
+.s2p-booking-contact svg  { flex: none; }   /* the icon keeps its 16 px beside a long address */
 .s2p-booking-private { color: var(--s2p-text-muted); }
 
 /* ==========================================================================

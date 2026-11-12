@@ -597,6 +597,7 @@ class GuestControllerTest {
         when(songEvaluationService.evaluateAndSaveSong(PARTY, "coś do tańca", "ANY", java.util.Set.of(), "dla Ani", false))
                 .thenReturn(new DjResponse("rejected", "To nastrój", "coś do tańca", "mood"));
         when(messageSource.getMessage(eq("guest.error.song_only"), any(), any())).thenReturn("type a song");
+        when(messageSource.getMessage(eq("guest.error.song_only.hint"), any(), any())).thenReturn("add a dedication");
         assertThat(controller.requestSong(PARTY, "coś do tańca", "dla Ani", new ExtendedModelMap(), session, request, redirectAttributes).call())
                 .isEqualTo("redirect:/p/" + PARTY);
         assertThat(new java.util.HashMap<String, Object>(redirectAttributes.getFlashAttributes()))

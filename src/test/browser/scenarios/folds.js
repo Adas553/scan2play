@@ -22,7 +22,7 @@
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('guestThemeCard'), stateOf('hostListsCard'),
                 stateOf('linksCard'), stateOf('logoCard'), stateOf('limitsCard'), stateOf('libraryCard'), stateOf('morningSummaryCard'),
                 stateOf('partyCodeCard')],
-                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
+                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · kontakt · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
                     'HARN1']);
             t.step('"Obsługa" a line like them, leading to its page', [text(document.querySelector('#staffRow .s2p-fold-name')),
                 document.getElementById('staffRow').getAttribute('href')], ['Obsługa', '/dj/staff?party=HARN1']);
