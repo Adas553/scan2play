@@ -16,8 +16,8 @@
      focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too.
      The three pictures (#guidePicture1–3: the panel on a computer — the landing page's own —, on a phone, the evening summary) are
      screenshots of a made-up party that src/test/browser/screenshots.py makes of the render tests' pages: when one of those screens
-     changes, run it again (--only guide for the guide's two of its own). Each is a link to itself: on a phone the computer's screen is
-     small, a tap opens it whole to zoom into. */-->
+     changes, run it again (--only guide for the guide's two of its own). A tap shows it whole in the middle of the screen
+     (guide-pictures.js, #guidePictureDialog): on a phone the computer's screen is small; without the script the link opens the file. */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
 
@@ -237,6 +237,13 @@
     </section>
 </div>
 
+<!--/* a picture tapped, whole in the middle of the screen (guide-pictures.js); a tap anywhere, "✕" or Esc closes it */-->
+<dialog class="s2p-picture-dialog" id="guidePictureDialog" aria-label="Obrazek w powiększeniu">
+    <button type="button" class="btn-close btn-close-white" aria-label="Zamknij"></button>
+    <img alt="">
+</dialog>
+
 <div th:replace="~{fragments/components :: footer}"></div>
+<script src="/js/guide-pictures.js" th:src="@{/js/guide-pictures.js}"></script>
 </body>
 </html>

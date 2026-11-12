@@ -87,6 +87,7 @@
     --s2p-white-12:       rgba(255, 255, 255, 0.12);
     --s2p-white-08:       rgba(255, 255, 255, 0.08);
     --s2p-white-05:       rgba(255, 255, 255, 0.05);
+    --s2p-black-85:       rgba(0, 0, 0, 0.85);
     --s2p-black-70:       rgba(0, 0, 0, 0.7);
     --s2p-black-60:       rgba(0, 0, 0, 0.6);
     --s2p-black-50:       rgba(0, 0, 0, 0.5);
@@ -1401,6 +1402,21 @@ th[data-sort].sort-desc::after {
 .s2p-guide-picture a:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 2px; }
 .s2p-guide-picture img { display: block; width: 100%; height: auto; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
 .s2p-guide-picture-tall a { max-width: 16rem; }
+/* a guide's picture tapped (guide-pictures.js): whole, in the middle of the screen, over a dark backdrop; a tap anywhere closes it */
+.s2p-picture-dialog { padding: 0; border: 0; background: transparent; max-width: 100vw; max-height: 100dvh; overflow: visible; cursor: zoom-out; }
+.s2p-picture-dialog::backdrop { background: var(--s2p-black-85); }
+.s2p-picture-dialog img { display: block; max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); width: auto; height: auto;
+                          border-radius: var(--s2p-radius-card); }
+.s2p-picture-dialog .btn-close { position: fixed; top: 0.5rem; right: 0.5rem; width: 44px; height: 44px; padding: 0;
+                                 background-color: var(--s2p-black-60); background-size: 1rem; border-radius: 50%; opacity: 1; }
+/* a computer's screen on an upright phone: twice the screen's width, as high as it comes, slid along with a finger — whole it would
+   be no bigger than on the page */
+@media (max-width: 767.98px) and (orientation: portrait) {
+    .s2p-picture-dialog.s2p-picture-wide[open] { display: flex; align-items: center; width: 100vw; height: 100dvh; max-height: 100dvh;
+                                                 margin: 0; overflow-x: auto; overflow-y: hidden; }
+    .s2p-picture-dialog.s2p-picture-wide img { flex: none; width: 200vw; max-width: none; max-height: none; border-radius: 0; }
+}
+.s2p-guide-picture a { cursor: zoom-in; }
 .s2p-guide-picture figcaption { margin-top: 0.4rem; font-size: 0.875rem; color: var(--s2p-text-muted); }
 /* the server's limits in one line, what they are unfolded */
 .s2p-server-limits > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
