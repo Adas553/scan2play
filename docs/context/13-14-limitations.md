@@ -43,8 +43,9 @@
   (V19: the YouTube parties go with their data, a requests-only party stays), `SkipCommentMigrationIT`, `CommentStyleMigrationIT`,
   `RequestNumberMigrationIT` (V28), `StaffLinkMigrationIT`, `StaffPermissionMigrationIT` (V32), `TrialUsedMigrationIT` (V36: the trials before it remembered), `RequestCheckedMigrationIT` (V39: the requests that went unchecked before it). New SQL that locks or counts gets a
   test there.
-- **The landing page's pictures** (`python src/test/browser/screenshots.py`): the same pieces as the browser tests (a copy of the
-  repo, Maven there, the stand-in, headless Chrome) write `static/images/landing/*.webp` — look at them before committing.
+- **The landing page's and the guide's pictures** (`python src/test/browser/screenshots.py`): the same pieces as the browser tests (a copy of the
+  repo, Maven there, the stand-in, headless Chrome) write `static/images/landing/*.webp` and the guide's `static/images/guide/*.webp` (`--only guide`: those alone) — look at them
+  before committing.
 - **Browser tests** (`python src/test/browser/run.py`; guide: its `README.md`): the real scripts on the real rendered dashboard
   (`DashboardPageRenderTest` writes it), the guest page and the QR print page (`GuestPageRenderTest`, `QrPrintPageTest`) in a headless
   Chrome, with a Python stand-in server that the scenarios configure; 388 scenarios (2026-11-06). The stand-in sends the real CSP **enforced** and

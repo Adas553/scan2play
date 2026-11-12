@@ -109,6 +109,7 @@ class GuidePageRenderTest {
                 "Nowy link", "🖥 kiosk", "Z kiosku");
         assertThat(html.substring(html.indexOf("Współorganizator"), html.indexOf("Własne"))).as("a co-organiser has the kiosk (V56)")
                 .contains("kiosk dla gości");
+        assertThePictures(html, "pl");
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
     }
@@ -137,7 +138,35 @@ class GuidePageRenderTest {
                 "3 requests a minute", "20 👍 per 10 minutes", "New link", "🖥 kiosk", "From the kiosk");
         assertThat(html.substring(html.indexOf("Co-organiser"), html.indexOf("Custom"))).contains("guest kiosk");
         assertThat(render(Locale.GERMAN, ANONYMOUS)).contains("lang=\"en\"", ">How Scan2Play works</h1>");
+        assertThePictures(html, "en");
         write("guide-en.html", html);
+    }
+
+    /**
+     * The three pictures in the page's language, each in its section — the panel on a computer (the landing page's picture) during the
+     * party, the panel on a phone, the evening summary after the party, by its row —, its file there (a missing one would be a broken
+     * picture on a public page), its size given (no jump when it loads), loaded only when scrolled to, described, and a link to itself (a tap opens it whole, to
+     * zoom into on a phone).
+     */
+    private static void assertThePictures(String html, String lang) {
+        List<String> files = List.of("landing/dashboard-" + lang, "guide/phone-" + lang, "guide/summary-" + lang);
+        List<String> sections = List.of("party", "phone", "after");
+        for (int n = 1; n <= 3; n++) {
+            int at = html.indexOf("id=\"guidePicture" + n + "\"");
+            assertThat(at).as("picture %d", n).isPositive();
+            String figure = html.substring(at, html.indexOf("</figure>", at));
+            String file = files.get(n - 1);
+            assertThat(figure).as("picture %d", n).contains("<a href=\"/images/" + file + ".webp\">", "src=\"/images/" + file + ".webp\"", "loading=\"lazy\"", "width=\"", "height=\"",
+                    "<figcaption>").containsPattern("alt=\"[^\"]{20,}\"");
+            assertThat(Path.of("src/main/resources/static/images", file + ".webp")).as("picture %d's file", n).isRegularFile();
+            int start = html.indexOf("<section id=\"" + sections.get(n - 1) + "\"");
+            assertThat(start).as("section #%s", sections.get(n - 1)).isPositive();
+            assertThat(at).as("picture %d in #%s", n, sections.get(n - 1)).isGreaterThan(start)
+                    .isLessThan(html.indexOf("</section>", start));
+        }
+        assertThat(html).as("the phone's picture is upright").contains("s2p-guide-picture s2p-guide-picture-tall\" id=\"guidePicture2\"");
+        assertThat(html.indexOf("id=\"guidePicture3\"")).as("the summary's picture under its row")
+                .isGreaterThan(html.indexOf(lang.equals("pl") ? ">Podsumowanie wieczoru</span>" : ">Evening summary</span>"));
     }
 
     private static void write(String name, String html) throws IOException {
