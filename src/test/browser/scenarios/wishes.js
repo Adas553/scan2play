@@ -104,9 +104,12 @@
         viewport: '390,844',
         run: async function (t) {
             const list = document.querySelector('[data-more-list]');
-            const shown = function () { return Array.from(list.querySelectorAll('#wishRows > li')).filter(function (li) { return !li.hidden; }).length; };
+            // what the screen shows, not the attribute: a row's d-flex (!important) once drew the hidden ones too
+            const shown = function () { return Array.from(list.querySelectorAll('#wishRows > li')).filter(function (li) { return li.checkVisibility(); }).length; };
             const more = list.querySelector('[data-more-show]');
             const fold = list.querySelector('[data-more-fold]');
+            const check = document.querySelectorAll('#wishCheck > li');
+            t.step('the ones to check: 10 drawn too', Array.from(check).filter(function (li) { return li.checkVisibility(); }).length, 10);
             t.step('10 shown, "Pokaż więcej (15)", no "Zwiń"', [shown(), more.hidden, more.textContent.replace(/\s+/g, ' ').trim(), fold.hidden],
                 [10, false, 'Pokaż więcej (15)', true]);
             t.check('no list scrolls on its own', Array.from(document.querySelectorAll('#wishEvent *')).every(function (el) {
