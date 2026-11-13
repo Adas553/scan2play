@@ -230,6 +230,13 @@
     </section>
 </div>
 
+<!--/* a picture tapped, whole in the middle of the screen (guide-pictures.js); a tap anywhere, "✕" or Esc closes it */-->
+<dialog class="s2p-picture-dialog" id="guidePictureDialog" aria-label="The picture enlarged">
+    <button type="button" class="btn-close btn-close-white" aria-label="Close"></button>
+    <img alt="">
+</dialog>
+
 <div th:replace="~{fragments/components :: footer}"></div>
+<script src="/js/guide-pictures.js" th:src="@{/js/guide-pictures.js}"></script>
 </body>
 </html>
