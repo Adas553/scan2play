@@ -140,3 +140,27 @@ print `/dj/qr-print?wish=`, the settings card, texts, privacy policy, terms, `/p
 
 **Release after fixes:** W1 (the limit and the bound on events) and the tests W2–W3. The rest (D1–D6, S1–S3) can go in the same
 change or later; nothing found is a security hole reachable by a guest.
+
+## Fixed (2026-11-13, the same session)
+
+The branch `claude/blissful-cannon-h66za3` holds the reviewed commits with the fixes on top. Each test was seen red before the fix
+(W2/W3 by taking the checks out of the code: five failures, then put back).
+
+- **W1** — `WishService.reopen` counts the open events under the party row's lock as `create` does (`Reopened.TOO_MANY`, the page
+  says `wishes.done.reopen_too_many`); `WishService.MAX_EVENTS` = 20 events kept a party, open, closed or past, checked by `create`
+  (`wishes.done.too_many_kept`, no form on the page at 20); `eventsOf` lists `MAX_EVENTS`, so every kept event is on the page.
+  `setClosed` became `close` + `reopen`. Tests: `WishServiceIT.reopening_keepsTheLimitOfOpenEvents`,
+  `WishServiceIT.aParty_keepsAtMostTwentyEvents_closedOrNot_andListsEachOfThem`,
+  `WishesPageRenderTest.theLimits_areSaid_twentyKept_andFiveOpenWhenReopening`.
+- **W2** — `StaffPermissionEndpointsTest` (nine `/dj/wishes` and `qr-print?wish=` requests) and `PlanFeatureEndpointsTest` (five Pro
+  ones, nothing touched in `WishService` when refused; four that stay everyone's), over the real `DjWishesController`
+  (`WishControllers`, a test helper).
+- **W3** — `WishControllerTest` (a party without Pro: the page and the form are 404, nothing written, the limiter not asked; a wish
+  over the address limit is said and not counted as one of the guest's five), `GuestRequestLimiterTest
+  .theWishes_haveTheirOwnLimit_anAddressAtAnEvent`.
+- **D4** — `wish.note.full` = "Lista życzeń na tę imprezę jest już pełna. Dziękujemy!"; `ImpersonalPolishTextsTest` now also refuses
+  "DJ" with a gendered past verb. Three older texts match it and are listed in the test to be rewritten in the owner's words:
+  `guest.vote.gone` ("DJ ją zagrał"), `party.ended.subtitle` ("DJ zrobił przerwę"), `party.tip.title` ("DJ będzie wiedział").
+- **D6** — `wishLinks` removed.
+
+Checks after the fixes: `unit` 1289, `it` 167, `browser` 400 scenarios, `audit -t wish,wishes,qr-print,settings` — all OK.

@@ -92,10 +92,10 @@ public class DjWishesController {
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
         model.addAttribute(PLAN, planService.view(settings, access.owner()));
         List<WishService.Event> events = wishService.eventsOf(partyCode);
-        Map<Long, String> links = new LinkedHashMap<>();
-        events.forEach(one -> links.put(one.id(), linkOf(one)));
         model.addAttribute(WISH_EVENTS, events);
-        model.addAttribute(WISH_LINKS, links);
+        // eventsOf lists MAX_EVENTS at most, which is all a party keeps: as many listed is as many kept
+        model.addAttribute(WISH_KEPT_FULL, events.size() >= WishService.MAX_EVENTS);
+        model.addAttribute(WISH_MAX_EVENTS, WishService.MAX_EVENTS);
         model.addAttribute(WISH_OPEN, wishService.openEvents(partyCode));
         model.addAttribute(WISH_MAX_OPEN, WishService.MAX_OPEN_EVENTS);
         model.addAttribute(WISH_NAME_MAX, WishService.NAME_MAX);
@@ -159,12 +159,20 @@ public class DjWishesController {
             done(redirectAttributes, "created", made.name());
             return back(partyCode, made.id());
         }).orElseGet(() -> {
-            done(redirectAttributes, "too_many", String.valueOf(WishService.MAX_OPEN_EVENTS));
+            // which of the two limits: the page says what to do about it
+            if (wishService.events(partyCode) >= WishService.MAX_EVENTS) {
+                done(redirectAttributes, "too_many_kept", String.valueOf(WishService.MAX_EVENTS));
+            } else {
+                done(redirectAttributes, "too_many", String.valueOf(WishService.MAX_OPEN_EVENTS));
+            }
             return back(partyCode, null);
         });
     }
 
-    /** "Zakończ zbieranie" ({@code closed=true}) or "Wznów zbieranie". Reopened only with Pro. */
+    /**
+     * "Zakończ zbieranie" ({@code closed=true}) or "Wznów zbieranie" — reopened only with Pro, and only while fewer than
+     * {@value WishService#MAX_OPEN_EVENTS} are open (the page says so otherwise).
+     */
     @PostMapping("/{id}/closed")
     public String closed(@PathVariable long id, @RequestParam String partyCode, @RequestParam boolean closed,
                          OAuth2AuthenticationToken authentication, HttpSession session, RedirectAttributes redirectAttributes) {
@@ -172,8 +180,18 @@ public class DjWishesController {
         if (!closed) {
             planService.require(party, PlanFeature.WISHES);
         }
-        found(wishService.setClosed(partyCode, id, closed));
-        done(redirectAttributes, closed ? "closed" : "reopened");
+        if (closed) {
+            found(wishService.close(partyCode, id));
+            done(redirectAttributes, "closed");
+            return back(partyCode, id);
+        }
+        WishService.Reopened reopened = wishService.reopen(partyCode, id);
+        found(reopened != WishService.Reopened.NOT_FOUND);
+        if (reopened == WishService.Reopened.TOO_MANY) {
+            done(redirectAttributes, "reopen_too_many", String.valueOf(WishService.MAX_OPEN_EVENTS));
+        } else {
+            done(redirectAttributes, "reopened");
+        }
         return back(partyCode, id);
     }
 

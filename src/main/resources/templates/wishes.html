@@ -31,7 +31,8 @@
 
     <!--/* what the last form did */-->
     <div th:if="${wishDone != null}" id="wishDone" class="alert py-2 mb-0" role="status"
-         th:classappend="${wishDone == 'invalid' or wishDone == 'too_many' or wishDone == 'must_play_full'} ? 'alert-warning' : 'alert-success'"
+         th:classappend="${wishDone == 'invalid' or wishDone == 'too_many' or wishDone == 'too_many_kept' or wishDone == 'reopen_too_many'
+                          or wishDone == 'must_play_full'} ? 'alert-warning' : 'alert-success'"
          th:text="${#messages.msgWithParams('wishes.done.' + wishDone, wishDoneArg)}">Saved</div>
 
     <!--/* without Pro: the offer, and the events made before only to delete */-->
@@ -40,7 +41,7 @@
     <!--/* a new event: its name and day, as the guests read them */-->
     <section th:unless="${plan.pro('WISHES')}" class="card bg-dark border-secondary p-3" id="wishNewCard">
         <h2 class="s2p-card-title" th:text="#{wishes.new.title}">New event</h2>
-        <form th:if="${wishOpen < wishMaxOpen}" th:action="@{/dj/wishes/create}" method="POST" class="m-0" id="wishNewForm">
+        <form th:if="${wishOpen < wishMaxOpen and !wishKeptFull}" th:action="@{/dj/wishes/create}" method="POST" class="m-0" id="wishNewForm">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
             <div class="d-flex flex-column flex-sm-row gap-2">
                 <div class="flex-grow-1">
@@ -57,7 +58,8 @@
             <button type="submit" id="wishCreateBtn" class="btn btn-sm btn-outline-light mt-3" th:text="#{wishes.new.create}">Create the link</button>
         </form>
         <p class="small text-secondary mt-2 mb-0" id="wishOpenCount"
-           th:text="${wishOpen < wishMaxOpen} ? #{wishes.new.kept(${wishOpen}, ${wishMaxOpen})} : #{wishes.new.full(${wishMaxOpen})}">Open: 2 of 5.</p>
+           th:text="${wishKeptFull} ? #{wishes.done.too_many_kept(${wishMaxEvents})}
+                    : (${wishOpen < wishMaxOpen} ? #{wishes.new.kept(${wishOpen}, ${wishMaxOpen})} : #{wishes.new.full(${wishMaxOpen})})">Open: 2 of 5.</p>
     </section>
 
     <!--/* the party's events: the open ones first, the nearest first; a passed one a week, then gone with its wishes */-->

@@ -63,6 +63,7 @@ class PlanFeatureEndpointsTest {
     private final PartySettingsEntity pub = PartySettingsEntity.builder().partyCode(PUB).ownerId(ORGANISER).active(true).build();
     private PartyStaffService staff;
     private PartySettingsCommandService settings;
+    private com.scan2play.service.WishService wishes;
 
     private static OAuth2AuthenticationToken user(String sub) {
         return new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", sub), "sub"),
@@ -73,6 +74,7 @@ class PlanFeatureEndpointsTest {
     void setUp() {
         staff = mock(PartyStaffService.class);
         settings = mock(PartySettingsCommandService.class);
+        wishes = WishControllers.wishes(PUB);
         when(staff.partiesOf(anyString())).thenReturn(List.of(pub));
         when(staff.accessOf(pub, ORGANISER)).thenReturn(Optional.of(new PartyStaffService.Access(pub, true, StaffPermission.all())));
         when(staff.accessOf(pub, "kasia")).thenReturn(Optional.of(new PartyStaffService.Access(pub, false, StaffPermission.all())));
@@ -90,6 +92,7 @@ class PlanFeatureEndpointsTest {
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), settings, mock(QrCodeService.class), helper,
                 history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
+        dashboard.setWishService(wishes);
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
                         new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class)),
@@ -98,7 +101,8 @@ class PlanFeatureEndpointsTest {
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans, "https://www.scan2play.com.pl/"),
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),
                                 settings, DjLibraryController.MAX_BYTES),
-                        new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()))
+                        new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()),
+                        WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -130,7 +134,14 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.LIBRARY, false, post("/dj/library/hints").param("partyCode", PUB).param("on", "true")),
                 Arguments.of(PlanFeature.LOGO, false, post("/dj/logo").param("partyCode", PUB)
                         .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
-                        .content(com.scan2play.service.TestImages.png(40, 20))));
+                        .content(com.scan2play.service.TestImages.png(40, 20))),
+                // "Życzenia przed imprezą" (V68): a new event, reopening, a new link, "⭐", the invitation's print
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/create").param("partyCode", PUB).param("name", "Wesele")
+                        .param("date", com.scan2play.service.WishService.today().plusDays(1).toString())),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "false")),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/link").param("partyCode", PUB)),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("song", "Wilki - Baśka")),
+                Arguments.of(PlanFeature.WISHES, true, get("/dj/qr-print").param("party", PUB).param("wish", "1")));
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -140,6 +151,7 @@ class PlanFeatureEndpointsTest {
         assertThatThrownBy(() -> perform(mvc(Plans.enforced()), ORGANISER, request))
                 .hasRootCauseInstanceOf(PlanRequiredException.class).rootCause().extracting("feature").isEqualTo(feature);
         verify(settings, never()).updateSettings(anyString(), any());
+        org.mockito.Mockito.verifyNoInteractions(wishes);
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -182,7 +194,12 @@ class PlanFeatureEndpointsTest {
                 // nor switching the guests' marked suggestions off (V58)
                 Arguments.of(post("/dj/library/hints").param("partyCode", PUB).param("on", "false")),
                 // nor deleting the logo (V45)
-                Arguments.of(post("/dj/logo/delete").param("partyCode", PUB)));
+                Arguments.of(post("/dj/logo/delete").param("partyCode", PUB)),
+                // nor the events of "Życzenia przed imprezą" made before (V68): seen, closed, downloaded, deleted
+                Arguments.of(get("/dj/wishes").param("party", PUB).param("event", "1")),
+                Arguments.of(post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "true")),
+                Arguments.of(get("/dj/wishes/1/csv").param("party", PUB)),
+                Arguments.of(post("/dj/wishes/1/delete").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{0}")

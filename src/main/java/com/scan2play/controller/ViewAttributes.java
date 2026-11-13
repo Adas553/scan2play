@@ -287,9 +287,11 @@ public final class ViewAttributes {
     public static final String WISH_LEFT = "wishLeft";
     /** Flash: why a guest's wish was not kept, as the page says it. */
     public static final String WISH_NOTE = "wishNote";
-    /** The party's events on the DJ's page ({@code WishService.Event}), and their links by id. */
+    /** The party's events on the DJ's page ({@code WishService.Event}). */
     public static final String WISH_EVENTS = "wishEvents";
-    public static final String WISH_LINKS = "wishLinks";
+    /** Whether the party keeps as many events as it may ({@code WishService.MAX_EVENTS}): no new one until one is deleted. */
+    public static final String WISH_KEPT_FULL = "wishKeptFull";
+    public static final String WISH_MAX_EVENTS = "wishMaxEvents";
     /** The event's songs on the DJ's page ({@code DjWishesController.Row}): the named ones, and the ones to check apart. */
     public static final String WISH_ROWS = "wishRows";
     public static final String WISH_CHECK = "wishCheck";

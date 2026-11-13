@@ -85,9 +85,9 @@ class WishServiceIT extends PostgresIntegrationTest {
     void aClosedOrPastEvent_takesNothing_andReopenedTakesAgain() {
         String party = party();
         WishService.Event event = event(party);
-        assertThat(wishes.setClosed(party, event.id(), true)).isTrue();
+        assertThat(wishes.close(party, event.id())).isTrue();
         assertThat(wishes.add(event.token(), "Wilki - Baśka")).isEqualTo(WishService.Added.CLOSED);
-        assertThat(wishes.setClosed(party, event.id(), false)).isTrue();
+        assertThat(wishes.reopen(party, event.id())).isEqualTo(WishService.Reopened.REOPENED);
         assertThat(wishes.add(event.token(), "Wilki - Baśka")).isEqualTo(WishService.Added.ADDED);
 
         jdbc.update("UPDATE wish_event SET event_date = ? WHERE id = ?", java.sql.Date.valueOf(WishService.today().minusDays(1)), event.id());
@@ -104,16 +104,54 @@ class WishServiceIT extends PostgresIntegrationTest {
             made.add(wishes.create(party, "Impreza " + i, WishService.today().plusDays(i)).orElseThrow());
         }
         assertThat(wishes.create(party, "Szósta", WishService.today())).isEmpty();
-        wishes.setClosed(party, made.get(0).id(), true);
+        wishes.close(party, made.get(0).id());
         assertThat(wishes.create(party, "Szósta", WishService.today())).isPresent();
         assertThat(wishes.eventsOf(party)).hasSize(WishService.MAX_OPEN_EVENTS + 1);
 
         String other = party();
         assertThat(wishes.event(other, made.get(1).id())).isEmpty();
-        assertThat(wishes.setClosed(other, made.get(1).id(), true)).isFalse();
+        assertThat(wishes.close(other, made.get(1).id())).isFalse();
+        assertThat(wishes.reopen(other, made.get(0).id())).isEqualTo(WishService.Reopened.NOT_FOUND);
         assertThat(wishes.newLink(other, made.get(1).id())).isFalse();
         assertThat(wishes.delete(other, made.get(1).id())).isFalse();
         assertThat(wishes.byToken(made.get(1).token())).isPresent();
+    }
+
+    @Test
+    void reopening_keepsTheLimitOfOpenEvents() {
+        String party = party();
+        List<WishService.Event> made = new ArrayList<>();
+        for (int i = 0; i < WishService.MAX_OPEN_EVENTS; i++) {
+            made.add(wishes.create(party, "Impreza " + i, WishService.today().plusDays(i)).orElseThrow());
+        }
+        wishes.close(party, made.get(0).id());
+        WishService.Event sixth = wishes.create(party, "Szósta", WishService.today()).orElseThrow();
+
+        assertThat(wishes.reopen(party, made.get(0).id())).isEqualTo(WishService.Reopened.TOO_MANY);
+        assertThat(wishes.openEvents(party)).isEqualTo(WishService.MAX_OPEN_EVENTS);
+        assertThat(wishes.event(party, made.get(0).id()).orElseThrow().closed()).as("still closed").isTrue();
+
+        wishes.close(party, sixth.id());
+        assertThat(wishes.reopen(party, made.get(0).id())).isEqualTo(WishService.Reopened.REOPENED);
+        assertThat(wishes.reopen(party, made.get(1).id())).as("open already: nothing to count").isEqualTo(WishService.Reopened.REOPENED);
+        assertThat(wishes.openEvents(party)).isEqualTo(WishService.MAX_OPEN_EVENTS);
+    }
+
+    @Test
+    void aParty_keepsAtMostTwentyEvents_closedOrNot_andListsEachOfThem() {
+        String party = party();
+        List<WishService.Event> made = new ArrayList<>();
+        for (int i = 0; i < WishService.MAX_EVENTS; i++) {
+            WishService.Event one = wishes.create(party, "Impreza " + i, WishService.today().plusDays(i)).orElseThrow();
+            wishes.close(party, one.id());
+            made.add(one);
+        }
+        assertThat(wishes.create(party, "Jedna za dużo", WishService.today())).isEmpty();
+        assertThat(wishes.events(party)).isEqualTo(WishService.MAX_EVENTS);
+        assertThat(wishes.eventsOf(party)).hasSize(WishService.MAX_EVENTS);
+
+        wishes.delete(party, made.get(0).id());
+        assertThat(wishes.create(party, "Jedna za dużo", WishService.today())).isPresent();
     }
 
     @Test

@@ -228,6 +228,41 @@ class WishesPageRenderTest {
                 new MockHttpSession(), answer)).isEqualTo("redirect:/dj/wishes?party=WISH1&event=7#wishEvent");
     }
 
+    /**
+     * The two limits said: twenty events kept — no form, the page says to delete one; five open — "Wznów" refused and said, a
+     * refused "Utwórz" says which limit it met.
+     */
+    @Test
+    void theLimits_areSaid_twentyKept_andFiveOpenWhenReopening() {
+        List<WishService.Event> twenty = new java.util.ArrayList<>();
+        for (int i = 0; i < WishService.MAX_EVENTS; i++) {
+            twenty.add(new WishService.Event(100 + i, PARTY, "Wish_tok3n-" + i, "Impreza " + i, WishService.today().plusDays(i), true, 0,
+                    Instant.now()));
+        }
+        when(wishes.eventsOf(PARTY)).thenReturn(twenty);
+        String html = render(Plans.off(), null, Map.of());
+        assertThat(html).doesNotContain("id=\"wishNewForm\"")
+                .contains("Wydarzeń jest już 20 (razem z zakończonymi) — usuń któreś, żeby dodać kolejne.");
+
+        DjWishesController controller = controller(Plans.off());
+        RedirectAttributesModelMap created = new RedirectAttributesModelMap();
+        when(wishes.create(anyString(), anyString(), any())).thenReturn(Optional.empty());
+        when(wishes.events(PARTY)).thenReturn(WishService.MAX_EVENTS);
+        controller.create(PARTY, "Wesele", WishService.today().toString(), user("owner"), new MockHttpSession(), created);
+        assertThat(created.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("too_many_kept");
+        when(wishes.events(PARTY)).thenReturn(WishService.MAX_OPEN_EVENTS);
+        controller.create(PARTY, "Wesele", WishService.today().toString(), user("owner"), new MockHttpSession(), created);
+        assertThat(created.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("too_many");
+
+        RedirectAttributesModelMap reopened = new RedirectAttributesModelMap();
+        when(wishes.reopen(PARTY, 7L)).thenReturn(WishService.Reopened.TOO_MANY);
+        assertThat(controller.closed(7L, PARTY, false, user("owner"), new MockHttpSession(), reopened))
+                .isEqualTo("redirect:/dj/wishes?party=WISH1&event=7#wishEvent");
+        assertThat(reopened.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("reopen_too_many");
+        assertThat(render(Plans.off(), 7L, Map.of(ViewAttributes.WISH_DONE, "reopen_too_many", ViewAttributes.WISH_DONE_ARG,
+                new String[]{"5"}))).contains("Otwartych wydarzeń jest już 5 — zakończ zbieranie w jednym, żeby wznowić to.");
+    }
+
     @Test
     void mustPlay_addsTheEventsSongs_neverAnotherText_andSaysWhatDidNotFit() {
         DjWishesController controller = controller(Plans.off());

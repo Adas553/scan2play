@@ -158,7 +158,7 @@ class WishWebTest {
         verify(wishService, never()).add(anyString(), eq("  !! "));
         when(wishService.add(eq(TOKEN), anyString())).thenReturn(WishService.Added.FULL);
         mockMvc.perform(post(PAGE).session(session).param("_csrf", token).param("song", "Wilki - Baśka"))
-                .andExpect(flash().attribute(ViewAttributes.WISH_NOTE, "DJ zebrał już wszystkie życzenia na tę imprezę. Dziękujemy!"))
+                .andExpect(flash().attribute(ViewAttributes.WISH_NOTE, "Lista życzeń na tę imprezę jest już pełna. Dziękujemy!"))
                 .andExpect(flash().attributeCount(1));
     }
 

@@ -47,8 +47,11 @@ public class WishService {
     public static final int KEPT_DAYS_AFTER = 7;
     /** The songs the DJ's page lists of one event, the most wished first: the rest are in its CSV. */
     public static final int LIST_MAX = 500;
-    /** Events listed on the DJ's page: the open ones and the ones of the last week, never more. */
-    static final int EVENTS_MAX = 50;
+    /**
+     * Events a party keeps at once — open, closed or past (a week after their date): every one of them is on the DJ's page, where it
+     * can be closed or deleted, and a party's rows stay bounded however often events are closed and made again.
+     */
+    public static final int MAX_EVENTS = 20;
 
     /** One event: its guests' link's secret, its name and date, whether the DJ closed it, how many wishes it took. */
     public record Event(long id, String partyCode, String token, String name, LocalDate date, boolean closed, int wishCount,
@@ -77,6 +80,9 @@ public class WishService {
         }
     }
 
+    /** What became of "Wznów zbieranie". */
+    public enum Reopened { REOPENED, NOT_FOUND, TOO_MANY }
+
     /** What became of a guest's wish. */
     public enum Added { ADDED, CLOSED, FULL, EMPTY }
 
@@ -100,7 +106,7 @@ public class WishService {
     public List<Event> eventsOf(String partyCode) {
         return jdbc.query("SELECT " + EVENT_COLUMNS + " FROM wish_event WHERE party_code = ?"
                 + " ORDER BY (event_date < ?), CASE WHEN event_date < ? THEN NULL ELSE event_date END, event_date DESC, id LIMIT ?",
-                EVENT, partyCode, Date.valueOf(today()), Date.valueOf(today()), EVENTS_MAX);
+                EVENT, partyCode, Date.valueOf(today()), Date.valueOf(today()), MAX_EVENTS);
     }
 
     /** The party's event of that id; another party's is none. */
@@ -125,16 +131,16 @@ public class WishService {
     }
 
     /**
-     * A new event with its guests' link — none when the party has {@value #MAX_OPEN_EVENTS} open already. Counted under the party
-     * row's lock: two "Utwórz" at once make one too many no more.
+     * A new event with its guests' link — none when the party has {@value #MAX_OPEN_EVENTS} open already, or keeps
+     * {@value #MAX_EVENTS} events. Counted under the party row's lock: two "Utwórz" at once make one too many no more.
      *
      * @param name a name {@link #tidyName} kept
      * @param date today or later, within {@value #MAX_DAYS_AHEAD} days
      */
     @Transactional
     public Optional<Event> create(String partyCode, String name, LocalDate date) {
-        jdbc.queryForObject("SELECT party_code FROM party_settings WHERE party_code = ? FOR UPDATE", String.class, partyCode);
-        if (openEvents(partyCode) >= MAX_OPEN_EVENTS) {
+        lockParty(partyCode);
+        if (openEvents(partyCode) >= MAX_OPEN_EVENTS || events(partyCode) >= MAX_EVENTS) {
             return Optional.empty();
         }
         Long id = jdbc.queryForObject("INSERT INTO wish_event (party_code, token, name, event_date) VALUES (?, ?, ?, ?) RETURNING id",
@@ -143,9 +149,39 @@ public class WishService {
         return event(partyCode, id);
     }
 
-    /** "Zakończ zbieranie" ({@code closed}) or "Wznów": the guests' link says it is closed, or takes wishes again. */
-    public boolean setClosed(String partyCode, long id, boolean closed) {
-        return jdbc.update("UPDATE wish_event SET closed = ? WHERE party_code = ? AND id = ?", closed, partyCode, id) == 1;
+    /** "Zakończ zbieranie": the guests' link says the collecting has ended. */
+    public boolean close(String partyCode, long id) {
+        return jdbc.update("UPDATE wish_event SET closed = true WHERE party_code = ? AND id = ?", partyCode, id) == 1;
+    }
+
+    /**
+     * "Wznów zbieranie": the guests' link takes wishes again — unless that makes more than {@value #MAX_OPEN_EVENTS} open, counted
+     * under the party row's lock as {@link #create} counts them (else closing and reopening would pass the limit). An event whose day
+     * has passed is reopened without counting: it takes nothing anyway.
+     */
+    @Transactional
+    public Reopened reopen(String partyCode, long id) {
+        lockParty(partyCode);
+        Optional<Event> event = event(partyCode, id);
+        if (event.isEmpty()) {
+            return Reopened.NOT_FOUND;
+        }
+        if (event.get().closed() && !event.get().date().isBefore(today()) && openEvents(partyCode) >= MAX_OPEN_EVENTS) {
+            return Reopened.TOO_MANY;
+        }
+        jdbc.update("UPDATE wish_event SET closed = false WHERE party_code = ? AND id = ?", partyCode, id);
+        return Reopened.REOPENED;
+    }
+
+    /** The party's row locked for this transaction: what counts its events and then adds to them is one at a time. */
+    private void lockParty(String partyCode) {
+        jdbc.queryForObject("SELECT party_code FROM party_settings WHERE party_code = ? FOR UPDATE", String.class, partyCode);
+    }
+
+    /** How many events the party keeps, open, closed or past. */
+    public int events(String partyCode) {
+        Integer events = jdbc.queryForObject("SELECT count(*) FROM wish_event WHERE party_code = ?", Integer.class, partyCode);
+        return events == null ? 0 : events;
     }
 
     /** "Nowy link": a new secret — the old link (on a photo of an invitation online, say) opens nothing now. The wishes stay. */

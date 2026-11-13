@@ -9,7 +9,8 @@ ones to play to the hosts' "⭐ Koniecznie zagrać" (V29). Nothing of the guest 
 a name the guests read (≤ 80, `WishService.tidyName`) and the party's date (today … `MAX_DAYS_AHEAD` = 2 × 366 days ahead), its guests'
 link `/w/{token}` (128 bits, as the hosts' — "Nowy link" makes the old one dead, the wishes stay), `closed` ("Zakończ zbieranie" /
 "Wznów zbieranie", the latter Pro), `wish_count`. A party has at most `MAX_OPEN_EVENTS` = 5 open at once (not closed, the date today or
-later; counted under the party row's lock). An event takes wishes while it is open (its day ends at midnight Polish time) and below
+later; counted under the party row's lock, by "Utwórz" and by "Wznów zbieranie" alike — `WishService.reopen`) and keeps at most
+`MAX_EVENTS` = 20, open, closed or past — every one on its page, where it can be closed or deleted. An event takes wishes while it is open (its day ends at midnight Polish time) and below
 `MAX_WISHES` = 2 000 — raised in the `UPDATE … WHERE … wish_count < ? RETURNING` that takes the wish, so guests writing at once never
 pass it (`WishServiceIT`). Deleted `KEPT_DAYS_AFTER` = 7 days after its date, or two years after it was made (`WishService.purge`, daily
 04:50 Polish time), with the party, or by "Usuń wydarzenie" (any plan); its code follows "Zmień kod imprezy" (ON UPDATE CASCADE).
@@ -30,7 +31,7 @@ an empty line goes back unsent. A form left open past the session comes back to 
 
 **The DJ's page** (`DjWishesController`, `wishes.html`, `/dj/wishes?party=&event=`; the card "Życzenia przed imprezą" on "Ustawienia
 imprezy" leads to it, its state the events collecting now; without Pro the offer, and an event made before can still be deleted):
-"Nowe wydarzenie" (name, date, "Utwórz link dla gości"; "Otwarte: 2 z 5"), "Twoje wydarzenia" (the ones ahead first, the nearest first,
+"Nowe wydarzenie" (name, date, "Utwórz link dla gości"; "Otwarte: 2 z 5"; at 20 kept no form, "usuń któreś"), "Twoje wydarzenia" (the ones ahead first, the nearest first,
 then the past ones still kept; each its date, "życzeń: N" and "zbiera" / "zakończone" / "po imprezie"), and the event opened: its link
 to copy and open, "Drukuj zaproszenia", "Zakończ zbieranie", "Nowy link" (asks first), "życzeń: N · piosenek: M · nie masz w
 bibliotece: K", the songs the most wished first (at most `LIST_MAX` = 500; the CSV has every one) — each "×N", the library's mark and
