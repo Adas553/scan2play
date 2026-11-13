@@ -241,7 +241,7 @@ public class GuestController {
                     // A mood, not a song (the DJ sets the mood): nothing was saved. Back to the form with the text, asking for a song.
                     redirectAttributes.addFlashAttribute(LAST_REQUEST, mood.songName());
                     redirectAttributes.addFlashAttribute(LAST_DEDICATION, mood.dedication());
-                    songOnlyHint(redirectAttributes, settings, locale, messageSource);
+                    SongOnlyHint.add(redirectAttributes, settings, locale, messageSource);
                     return refuse(redirectAttributes, partyCode, "guest.error.song_only");
                 }
                 DjResponse response = ((Sent.Answered) sent).response();
@@ -299,18 +299,6 @@ public class GuestController {
         model.addAttribute(FACEBOOK_URL, settings.getFacebookUrl());
         model.addAttribute(TIKTOK_URL, settings.getTiktokUrl());
         model.addAttribute(DJ_LOGO, settings.logoPath());
-    }
-
-    /**
-     * Under "the DJ takes songs here" (a mood or a message, not a song): where the guest's words can go — a dedication with a song
-     * ({@code guest.error.song_only.hint}). Only while the DJ takes dedications: the hint names their field. A wish ("sto lat dla
-     * Ani") reaches the DJ that way, checked by the AI as every dedication — no message of its own to the DJ.
-     */
-    static void songOnlyHint(RedirectAttributes redirectAttributes, PartySettingsEntity settings, Locale locale,
-                             MessageSource messageSource) {
-        if (settings.isDedicationsOn()) {
-            redirectAttributes.addFlashAttribute(ERROR_HINT, messageSource.getMessage("guest.error.song_only.hint", null, locale));
-        }
     }
 
     /** Back to the party page with the message of the limit that refused the request. */

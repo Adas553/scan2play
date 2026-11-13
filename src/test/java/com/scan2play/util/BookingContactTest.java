@@ -25,7 +25,7 @@ class BookingContactTest {
     /** Nothing a {@code mailto:} would read as more than an address: no "?", "&", "#", "%0A", spaces, quotes or a second "@". */
     @ParameterizedTest
     @ValueSource(strings = {"djkoko", "dj@koko", "dj@koko.", "dj koko@x.pl", "dj@x.pl?bcc=a@b.pl", "dj@x.pl&cc=a@b.pl",
-            "dj@x.pl#x", "\"dj\"@x.pl", "a@b@x.pl", "dj..koko@x.pl", "javascript:alert(1)@x.pl", "dj@x.p1"})
+            "dj@x.pl#x", "dj%0Abcc%3Ax@x.pl", "\"dj\"@x.pl", "a@b@x.pl", "dj..koko@x.pl", "javascript:alert(1)@x.pl", "dj@x.p1"})
     void notAPlainAddress_isRefused(String typed) {
         assertThatThrownBy(() -> BookingContact.email(typed)).isInstanceOf(IllegalArgumentException.class);
     }
@@ -77,5 +77,6 @@ class BookingContactTest {
         assertThat(phoneOnly.tel()).isEqualTo("tel:221234567");
 
         assertThat(BookingContact.of(null, null, "x")).isNull();
+        assertThat(BookingContact.of("dj@koko.pl", null, null).mailto()).as("no subject").isEqualTo("mailto:dj@koko.pl");
     }
 }

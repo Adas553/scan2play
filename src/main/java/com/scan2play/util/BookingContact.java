@@ -23,21 +23,24 @@ public record BookingContact(String email, String phone, String mailto, String t
     /** The longest number kept, as written (the column). */
     public static final int PHONE_MAX = 20;
 
-    /** A name of letters, digits and {@code . _ % + -}, a domain of labels with a dot — nothing a mail link would read as more. */
-    private static final Pattern EMAIL = Pattern.compile("[a-z0-9._%+-]{1,64}@[a-z0-9-]{1,63}(?:\\.[a-z0-9-]{1,63})*\\.[a-z]{2,24}");
+    /**
+     * A name of letters, digits and {@code . _ + -}, a domain of labels with a dot — nothing a mail link would read as more ("%" too:
+     * a mail app decodes "%0A" in a {@code mailto:} into a new line).
+     */
+    private static final Pattern EMAIL = Pattern.compile("[a-z0-9._+-]{1,64}@[a-z0-9-]{1,63}(?:\\.[a-z0-9-]{1,63})*\\.[a-z]{2,24}");
     /** Digits with spaces, dashes, dots or brackets between them, a "+" only in front. */
     private static final Pattern PHONE = Pattern.compile("\\+?[0-9 ().-]+");
 
     /**
      * The links for the guests; null when the DJ gave neither.
      *
-     * @param subject the e-mail's subject ("Zapytanie o rezerwację DJ-a"), in the guest's language
+     * @param subject the e-mail's subject ("Zapytanie o rezerwację DJ-a"), in the guest's language; null: none
      */
     public static BookingContact of(String email, String phone, String subject) {
         if (email == null && phone == null) {
             return null;
         }
-        String mailto = email == null ? null
+        String mailto = email == null ? null : subject == null ? "mailto:" + email
                 : "mailto:" + email + "?subject=" + URLEncoder.encode(subject, StandardCharsets.UTF_8).replace("+", "%20");
         String tel = phone == null ? null : "tel:" + (phone.startsWith("+") ? "+" : "") + phone.replaceAll("[^0-9]", "");
         return new BookingContact(email, phone, mailto, tel);

@@ -311,11 +311,11 @@
             </form>
             <!--/* The contact for bookings (V67): the guests see it under "Zarezerwuj tego DJ-a" — a request that reached the DJ, the page
                  "party ended" — and write or call the DJ straight. On a public page: the help says to give a business one. */-->
-            <form th:action="@{/dj/dashboard/booking-contact}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="bookingContactForm">
+            <form th:action="@{/dj/dashboard/booking-contact}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="bookingContactForm" novalidate>
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <p class="form-label d-block text-light small mb-1" th:text="#{dashboard.booking.label}">Contact for bookings</p>
                 <div class="d-flex flex-column gap-2">
-                    <input type="email" id="bookingEmailInput" name="bookingEmail" maxlength="254" autocomplete="off"
+                    <input type="text" inputmode="email" id="bookingEmailInput" name="bookingEmail" maxlength="254" autocomplete="off"
                            class="form-control form-control-sm bg-black text-light border-secondary" th:aria-label="#{dashboard.booking.email}"
                            th:value="${bookingEmail}" th:placeholder="#{dashboard.booking.email}">
                     <input type="tel" id="bookingPhoneInput" name="bookingPhone" maxlength="20" autocomplete="off"

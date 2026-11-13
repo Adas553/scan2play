@@ -1403,7 +1403,7 @@ th[data-sort].sort-desc::after {
    No margin: the section's grid gap spaces them as its rows. The link (the picture whole, to zoom into) is a block as big as the
    picture, so its focus ring goes round the picture and a tap beside the phone's narrow one opens nothing. */
 .s2p-guide-picture { margin: 0; }
-.s2p-guide-picture a { display: block; border-radius: var(--s2p-radius-card); }
+.s2p-guide-picture a { display: block; border-radius: var(--s2p-radius-card); cursor: zoom-in; }
 .s2p-guide-picture a:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 2px; }
 .s2p-guide-picture img { display: block; width: 100%; height: auto; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
 .s2p-guide-picture-tall a { max-width: 16rem; }
@@ -1421,7 +1421,6 @@ th[data-sort].sort-desc::after {
                                                  margin: 0; overflow-x: auto; overflow-y: hidden; }
     .s2p-picture-dialog.s2p-picture-wide img { flex: none; width: 200vw; max-width: none; max-height: none; border-radius: 0; }
 }
-.s2p-guide-picture a { cursor: zoom-in; }
 .s2p-guide-picture figcaption { margin-top: 0.4rem; font-size: 0.875rem; color: var(--s2p-text-muted); }
 /* the server's limits in one line, what they are unfolded */
 .s2p-server-limits > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
