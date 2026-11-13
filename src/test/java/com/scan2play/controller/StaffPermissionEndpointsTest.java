@@ -144,6 +144,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "true")),
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "false")),
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/link").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/theme").param("partyCode", PUB).param("theme", "WEDDING")),
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/delete").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("top", "true")),
                 Arguments.of(StaffPermission.WISHES, get("/dj/wishes/1/csv").param("party", PUB)),

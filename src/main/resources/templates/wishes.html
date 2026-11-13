@@ -59,6 +59,14 @@
                     <input type="date" id="wishDate" name="date" required th:attr="min=${wishDateMin},max=${wishDateMax}"
                            class="form-control bg-black text-light border-secondary">
                 </div>
+                <!--/* the look of the event's guests' page (V69): its own, not the party's "Motyw dla gości" */-->
+                <div>
+                    <label for="wishTheme" class="form-label small text-secondary mb-1" th:text="#{wishes.theme}">Look of the guests' page</label>
+                    <select id="wishTheme" name="theme" class="form-select bg-black text-light border-secondary">
+                        <option th:each="t : ${guestThemes}" th:value="${t.name()}" th:selected="${t.name() == 'CLASSIC'}"
+                                th:text="#{${t.messageKey()}}">Classic</option>
+                    </select>
+                </div>
             </div>
             <button type="submit" id="wishCreateBtn" class="btn btn-sm btn-outline-light mt-3" th:text="#{wishes.new.create}">Create the link</button>
         </form>
@@ -112,6 +120,15 @@
                 <input type="hidden" name="closed" th:value="${!wishEvent.closed()}">
                 <button type="submit" id="wishCloseBtn" class="btn btn-sm btn-outline-light text-nowrap"
                         th:text="${wishEvent.closed()} ? #{wishes.reopen} : #{wishes.close}">Stop collecting</button>
+            </form>
+            <!--/* the look of this event's guests' page (V69): its own — the party's "Motyw dla gości" changed during a party leaves it */-->
+            <form th:action="@{/dj/wishes/{id}/theme(id=${wishEvent.id()})}" method="POST" class="m-0 d-flex gap-2" id="wishThemeForm">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <select name="theme" class="form-select form-select-sm bg-dark text-light border-secondary" th:attr="aria-label=#{wishes.theme}">
+                    <option th:each="t : ${guestThemes}" th:value="${t.name()}" th:selected="${t == wishEvent.theme()}"
+                            th:text="#{${t.messageKey()}}">Classic</option>
+                </select>
+                <button type="submit" id="wishThemeBtn" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{wishes.theme.save}">Change the look</button>
             </form>
             <form th:action="@{/dj/wishes/{id}/link(id=${wishEvent.id()})}" method="POST" class="m-0" th:attr="data-confirm=#{wishes.new_link.confirm}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">

@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.GuestTheme;
 import com.scan2play.model.LibraryMark;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
@@ -97,6 +98,7 @@ public class DjWishesController {
         // eventsOf lists MAX_EVENTS at most, which is all a party keeps: as many listed is as many kept
         model.addAttribute(WISH_KEPT_FULL, events.size() >= WishService.MAX_EVENTS);
         model.addAttribute(WISH_MAX_EVENTS, WishService.MAX_EVENTS);
+        model.addAttribute(GUEST_THEMES, GuestTheme.values());   // the look of an event's guests' page (V69)
         model.addAttribute(WISH_OPEN, wishService.openEvents(partyCode));
         model.addAttribute(WISH_MAX_OPEN, WishService.MAX_OPEN_EVENTS);
         model.addAttribute(WISH_NAME_MAX, WishService.NAME_MAX);
@@ -149,7 +151,8 @@ public class DjWishesController {
     /** "Utwórz": a new event with its guests' link — its name and day as the guests read them. */
     @PostMapping("/create")
     public String create(@RequestParam String partyCode, @RequestParam(required = false) String name,
-                         @RequestParam(required = false) String date, OAuth2AuthenticationToken authentication, HttpSession session,
+                         @RequestParam(required = false) String date, @RequestParam(required = false) String theme,
+                         OAuth2AuthenticationToken authentication, HttpSession session,
                          RedirectAttributes redirectAttributes) {
         planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
         String kept = WishService.tidyName(name);
@@ -158,7 +161,7 @@ public class DjWishesController {
             done(redirectAttributes, "invalid");
             return back(partyCode, null);
         }
-        return wishService.create(partyCode, kept, day).map(made -> {
+        return wishService.create(partyCode, kept, day, GuestTheme.of(theme)).map(made -> {
             done(redirectAttributes, "created", made.name());
             return back(partyCode, made.id());
         }).orElseGet(() -> {
@@ -205,6 +208,19 @@ public class DjWishesController {
         planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
         found(wishService.newLink(partyCode, id));
         done(redirectAttributes, "new_link");
+        return back(partyCode, id);
+    }
+
+    /**
+     * The look of the event's guests' page (V69): its own, not the party's "Motyw dla gości" — which a DJ changes during a party. Pro,
+     * as making the event; anything but a look of the guests' pages is the classic one.
+     */
+    @PostMapping("/{id}/theme")
+    public String theme(@PathVariable long id, @RequestParam String partyCode, @RequestParam(required = false) String theme,
+                        OAuth2AuthenticationToken authentication, HttpSession session, RedirectAttributes redirectAttributes) {
+        planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
+        found(wishService.setTheme(partyCode, id, GuestTheme.of(theme)));
+        done(redirectAttributes, "theme");
         return back(partyCode, id);
     }
 

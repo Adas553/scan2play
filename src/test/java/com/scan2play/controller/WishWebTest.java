@@ -77,7 +77,7 @@ class WishWebTest {
 
     static WishService.Event event(boolean closed) {
         return new WishService.Event(EVENTS.incrementAndGet(), "WSH01", TOKEN, "Wesele Ani i Kuby", java.time.LocalDate.of(2099, 6, 14),
-                closed, 12, Instant.now());
+                closed, 12, Instant.now(), com.scan2play.model.GuestTheme.CLASSIC);
     }
 
     static String csrf(String html) {
@@ -160,6 +160,17 @@ class WishWebTest {
         mockMvc.perform(post(PAGE).session(session).param("_csrf", token).param("song", "Wilki - Baśka"))
                 .andExpect(flash().attribute(ViewAttributes.WISH_NOTE, "Lista życzeń na tę imprezę jest już pełna. Dziękujemy!"))
                 .andExpect(flash().attributeCount(1));
+    }
+
+    /** The event's own look, not the party's: "Motyw dla gości" changed during a party leaves an invitation to a wedding as it was. */
+    @Test
+    void thePage_hasTheEventsLook_notTheParties() throws Exception {
+        when(partySettingsRepository.findByPartyCode("WSH01")).thenReturn(Optional.of(PartySettingsEntity.builder().partyCode("WSH01")
+                .ownerId("owner").guestTheme(com.scan2play.model.GuestTheme.SCARY).build()));
+        event = new WishService.Event(EVENTS.incrementAndGet(), "WSH01", TOKEN, "Wesele Ani i Kuby", java.time.LocalDate.of(2099, 6, 14),
+                false, 0, Instant.now(), com.scan2play.model.GuestTheme.WEDDING);
+        String html = html(mockMvc.perform(get(PAGE)).andExpect(status().isOk()).andReturn());
+        assertThat(html).contains("data-guest-theme=\"WEDDING\"").doesNotContain("SCARY");
     }
 
     @Test

@@ -7,7 +7,8 @@ ones to play to the hosts' "⭐ Koniecznie zagrać" (V29). Nothing of the guest 
 **An event** (`wish_event`, `WishService.Event`): a party has one code for every event, so the wishes belong to an event of their own —
 a name the guests read (≤ 80, `WishService.tidyName`) and the party's date (today … `MAX_DAYS_AHEAD` = 2 × 366 days ahead), its guests'
 link `/w/{token}` (128 bits, as the hosts' — "Nowy link" makes the old one dead, the wishes stay), `closed` ("Zakończ zbieranie" /
-"Wznów zbieranie", the latter Pro), `wish_count`. A party has at most `MAX_OPEN_EVENTS` = 5 open at once (not closed, the date today or
+"Wznów zbieranie", the latter Pro), `wish_count`, `guest_theme` (V69: the look of its guests' page — its own, picked when it is
+made, Klasyczny first, and changed on its card, Pro; never the party's "Motyw dla gości", which a DJ changes during a party). A party has at most `MAX_OPEN_EVENTS` = 5 open at once (not closed, the date today or
 later; counted under the party row's lock, by "Utwórz" and by "Wznów zbieranie" alike — `WishService.reopen`) and keeps at most
 `MAX_EVENTS` = 20, open, closed or past — every one on its page, where it can be closed or deleted. An event takes wishes while it is open (its day ends at midnight Polish time) and below
 `MAX_WISHES` = 2 000 — raised in the `UPDATE … WHERE … wish_count < ? RETURNING` that takes the wish, so guests writing at once never

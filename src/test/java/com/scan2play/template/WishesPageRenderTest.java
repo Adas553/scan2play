@@ -81,7 +81,7 @@ class WishesPageRenderTest {
     private final PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
     private PartySettingsEntity party;
     private final WishService.Event event = new WishService.Event(7L, PARTY, "Wish_tok3n-AbCdEfGhIjKl", "Wesele Ani i Kuby",
-            WishService.today().plusDays(40), false, 23, Instant.now());
+            WishService.today().plusDays(40), false, 23, Instant.now(), com.scan2play.model.GuestTheme.CLASSIC);
 
     @BeforeAll
     static void setUpEngine() {
@@ -103,7 +103,7 @@ class WishesPageRenderTest {
     void setUp() {
         party = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).hostWanted("Akcent").build();
         WishService.Event closed = new WishService.Event(8L, PARTY, "Wish_tok3n-Zzzzzzzzzzzz", "Osiemnastka Oli",
-                WishService.today().plusDays(9), true, 4, Instant.now());
+                WishService.today().plusDays(9), true, 4, Instant.now(), com.scan2play.model.GuestTheme.CLASSIC);
         when(wishes.eventsOf(PARTY)).thenReturn(List.of(closed, event));
         when(wishes.openEvents(PARTY)).thenReturn(1);
         when(wishes.event(PARTY, 7L)).thenReturn(Optional.of(event));
@@ -191,6 +191,29 @@ class WishesPageRenderTest {
         write("wishes.html", html);
     }
 
+    /**
+     * The look of the event's guests' page, its own: picked when it is made (Klasyczny first), changed on the event — not the party's
+     * "Motyw dla gości", which a DJ changes during a party.
+     */
+    @Test
+    void theEventsLook_isPickedWhenMade_andChangedOnTheEvent() throws IOException {
+        String html = render(Plans.off(), 7L, Map.of());
+        String made = html.substring(html.indexOf("id=\"wishNewForm\""), html.indexOf("</form>", html.indexOf("id=\"wishNewForm\"")));
+        assertThat(made).contains("name=\"theme\"", "value=\"CLASSIC\" selected=\"selected\"", "value=\"WEDDING\"", ">Weselny<", ">Straszny<");
+        String opened = html.substring(html.indexOf("id=\"wishThemeForm\""), html.indexOf("</form>", html.indexOf("id=\"wishThemeForm\"")));
+        assertThat(opened).contains("value=\"CLASSIC\" selected=\"selected\"", "value=\"CONFETTI\"");
+        assertThat(html).contains("action=\"/dj/wishes/7/theme\"");
+
+        RedirectAttributesModelMap answer = new RedirectAttributesModelMap();
+        when(wishes.setTheme(PARTY, 7L, com.scan2play.model.GuestTheme.CONFETTI)).thenReturn(true);
+        assertThat(controller(Plans.off()).theme(7L, PARTY, "CONFETTI", user("owner"), new MockHttpSession(), answer))
+                .isEqualTo("redirect:/dj/wishes?party=WISH1&event=7");
+        verify(wishes).setTheme(PARTY, 7L, com.scan2play.model.GuestTheme.CONFETTI);
+        assertThat(answer.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("theme");
+        assertThat(render(Plans.off(), 7L, Map.of(ViewAttributes.WISH_DONE, "theme", ViewAttributes.WISH_DONE_ARG, new String[0])))
+                .contains("Wygląd strony dla gości zmieniony.");
+    }
+
     /** Every one of the most wished on the list already: no "⭐ Dodaj 10 najczęstszych", it would add nothing. */
     @Test
     void theTopButton_isGone_whenTheListHasThemAll() throws IOException {
@@ -204,10 +227,10 @@ class WishesPageRenderTest {
         assertThat(html).contains("data-pro-offer", "Życzenia gości przed imprezą — w planie Pro.")
                 .doesNotContain("id=\"wishNewForm\"", "id=\"wishLinkInput\"", ">⭐ Do „Koniecznie zagrać”<");
         assertThat(html).as("an event made before may be deleted").contains(">Usuń wydarzenie<");
-        assertThatThrownBy(() -> controller(Plans.enforced()).create(PARTY, "Wesele", WishService.today().toString(), user("owner"),
+        assertThatThrownBy(() -> controller(Plans.enforced()).create(PARTY, "Wesele", WishService.today().toString(), null, user("owner"),
                 new MockHttpSession(), new RedirectAttributesModelMap())).isInstanceOf(PlanRequiredException.class)
                 .extracting("feature").isEqualTo(PlanFeature.WISHES);
-        verify(wishes, never()).create(anyString(), anyString(), any());
+        verify(wishes, never()).create(anyString(), anyString(), any(), any());
     }
 
     @Test
@@ -227,15 +250,15 @@ class WishesPageRenderTest {
     void create_needsANameAndADayAhead() {
         DjWishesController controller = controller(Plans.off());
         RedirectAttributesModelMap answer = new RedirectAttributesModelMap();
-        assertThat(controller.create(PARTY, "  ", WishService.today().toString(), user("owner"), new MockHttpSession(), answer))
+        assertThat(controller.create(PARTY, "  ", WishService.today().toString(), null, user("owner"), new MockHttpSession(), answer))
                 .isEqualTo("redirect:/dj/wishes?party=WISH1");
         assertThat(answer.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("invalid");
-        controller.create(PARTY, "Wesele", WishService.today().minusDays(1).toString(), user("owner"), new MockHttpSession(), answer);
-        controller.create(PARTY, "Wesele", "14.06.2027", user("owner"), new MockHttpSession(), answer);
-        verify(wishes, never()).create(anyString(), anyString(), any());
+        controller.create(PARTY, "Wesele", WishService.today().minusDays(1).toString(), null, user("owner"), new MockHttpSession(), answer);
+        controller.create(PARTY, "Wesele", "14.06.2027", null, user("owner"), new MockHttpSession(), answer);
+        verify(wishes, never()).create(anyString(), anyString(), any(), any());
 
-        when(wishes.create(PARTY, "Wesele Ani i Kuby", WishService.today().plusDays(3))).thenReturn(Optional.of(event));
-        assertThat(controller.create(PARTY, "  Wesele\tAni  i Kuby ", WishService.today().plusDays(3).toString(), user("owner"),
+        when(wishes.create(PARTY, "Wesele Ani i Kuby", WishService.today().plusDays(3), com.scan2play.model.GuestTheme.WEDDING)).thenReturn(Optional.of(event));
+        assertThat(controller.create(PARTY, "  Wesele\tAni  i Kuby ", WishService.today().plusDays(3).toString(), "WEDDING", user("owner"),
                 new MockHttpSession(), answer)).isEqualTo("redirect:/dj/wishes?party=WISH1&event=7");
     }
 
@@ -248,7 +271,7 @@ class WishesPageRenderTest {
         List<WishService.Event> twenty = new java.util.ArrayList<>();
         for (int i = 0; i < WishService.MAX_EVENTS; i++) {
             twenty.add(new WishService.Event(100 + i, PARTY, "Wish_tok3n-" + i, "Impreza " + i, WishService.today().plusDays(i), true, 0,
-                    Instant.now()));
+                    Instant.now(), com.scan2play.model.GuestTheme.CLASSIC));
         }
         when(wishes.eventsOf(PARTY)).thenReturn(twenty);
         String html = render(Plans.off(), null, Map.of());
@@ -257,12 +280,12 @@ class WishesPageRenderTest {
 
         DjWishesController controller = controller(Plans.off());
         RedirectAttributesModelMap created = new RedirectAttributesModelMap();
-        when(wishes.create(anyString(), anyString(), any())).thenReturn(Optional.empty());
+        when(wishes.create(anyString(), anyString(), any(), any())).thenReturn(Optional.empty());
         when(wishes.events(PARTY)).thenReturn(WishService.MAX_EVENTS);
-        controller.create(PARTY, "Wesele", WishService.today().toString(), user("owner"), new MockHttpSession(), created);
+        controller.create(PARTY, "Wesele", WishService.today().toString(), null, user("owner"), new MockHttpSession(), created);
         assertThat(created.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("too_many_kept");
         when(wishes.events(PARTY)).thenReturn(WishService.MAX_OPEN_EVENTS);
-        controller.create(PARTY, "Wesele", WishService.today().toString(), user("owner"), new MockHttpSession(), created);
+        controller.create(PARTY, "Wesele", WishService.today().toString(), null, user("owner"), new MockHttpSession(), created);
         assertThat(created.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("too_many");
 
         RedirectAttributesModelMap reopened = new RedirectAttributesModelMap();

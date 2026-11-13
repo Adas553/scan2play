@@ -72,7 +72,8 @@ public class WishController {
         PartySettingsEntity planned = planService.asPlanned(party);
         model.addAttribute(DJ_NAME, party.getDjName());
         model.addAttribute(DJ_LOGO, planned.logoPath());
-        model.addAttribute(GUEST_THEME, party.getGuestTheme());   // the party's look (V59), as its other guests' pages
+        // the event's own look (V69), not the party's: "Motyw dla gości" changed during a party leaves the invitation as it was
+        model.addAttribute(GUEST_THEME, event.theme());
         return "wish";
     }
 

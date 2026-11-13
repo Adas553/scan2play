@@ -34,13 +34,14 @@ final class WishControllers {
     static WishService wishes(String partyCode) {
         WishService wishes = mock(WishService.class);
         WishService.Event event = new WishService.Event(EVENT, partyCode, "wish-token", "Wesele Ani i Kuby",
-                WishService.today().plusDays(30), false, 0, Instant.now());
+                WishService.today().plusDays(30), false, 0, Instant.now(), com.scan2play.model.GuestTheme.CLASSIC);
         when(wishes.event(partyCode, EVENT)).thenReturn(Optional.of(event));
         when(wishes.eventsOf(partyCode)).thenReturn(List.of(event));
-        when(wishes.create(anyString(), anyString(), any())).thenReturn(Optional.of(event));
+        when(wishes.create(anyString(), anyString(), any(), any())).thenReturn(Optional.of(event));
         when(wishes.close(partyCode, EVENT)).thenReturn(true);
         when(wishes.reopen(partyCode, EVENT)).thenReturn(WishService.Reopened.REOPENED);
         when(wishes.newLink(partyCode, EVENT)).thenReturn(true);
+        when(wishes.setTheme(org.mockito.ArgumentMatchers.eq(partyCode), org.mockito.ArgumentMatchers.eq(EVENT), any())).thenReturn(true);
         when(wishes.delete(partyCode, EVENT)).thenReturn(true);
         when(wishes.wishes(anyLong())).thenReturn(List.of());
         when(wishes.wishes(anyLong(), anyInt())).thenReturn(List.of());

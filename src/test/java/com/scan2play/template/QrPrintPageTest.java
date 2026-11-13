@@ -94,7 +94,7 @@ class QrPrintPageTest {
 
     /** An event of "Życzenia przed imprezą" (V68): the invitation the print makes of its guests' link. */
     private static final com.scan2play.service.WishService.Event INVITATION = new com.scan2play.service.WishService.Event(7L, PARTY,
-            "Wish_tok3n-AbCdEfGhIjKl", "Wesele Ani i Kuby", java.time.LocalDate.of(2027, 6, 14), false, 0, java.time.Instant.now());
+            "Wish_tok3n-AbCdEfGhIjKl", "Wesele Ani i Kuby", java.time.LocalDate.of(2027, 6, 14), false, 0, java.time.Instant.now(), com.scan2play.model.GuestTheme.CLASSIC);
 
     /** {@code wish}: the invitation of {@link #INVITATION}, or the party's own print (null). */
     private static String render(String layout, Locale locale, PartySettingsEntity party, PartyStaffService.Access access, Long wish)

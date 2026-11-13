@@ -1,5 +1,6 @@
 package com.scan2play.service;
 
+import com.scan2play.model.GuestTheme;
 import com.scan2play.model.LibraryMark;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.LibraryKey;
@@ -58,9 +59,12 @@ public class WishService {
      */
     public static final int MAX_EVENTS = 20;
 
-    /** One event: its guests' link's secret, its name and date, whether the DJ closed it, how many wishes it took. */
+    /**
+     * One event: its guests' link's secret, its name and date, whether the DJ closed it, how many wishes it took, and the look of its
+     * guests' page — its own, not the party's ("Motyw dla gości" changed during a party leaves an invitation to a wedding as it was).
+     */
     public record Event(long id, String partyCode, String token, String name, LocalDate date, boolean closed, int wishCount,
-                        Instant createdAt) {
+                        Instant createdAt, GuestTheme theme) {
 
         /** Whether the guests may write now: not closed by the DJ, and its day has not passed (Polish time). */
         public boolean open(LocalDate today) {
@@ -93,9 +97,9 @@ public class WishService {
 
     private static final RowMapper<Event> EVENT = (row, n) -> new Event(row.getLong("id"), row.getString("party_code"),
             row.getString("token"), row.getString("name"), row.getDate("event_date").toLocalDate(), row.getBoolean("closed"),
-            row.getInt("wish_count"), row.getTimestamp("created_at").toInstant());
+            row.getInt("wish_count"), row.getTimestamp("created_at").toInstant(), GuestTheme.of(row.getString("guest_theme")));
 
-    private static final String EVENT_COLUMNS = "id, party_code, token, name, event_date, closed, wish_count, created_at";
+    private static final String EVENT_COLUMNS = "id, party_code, token, name, event_date, closed, wish_count, created_at, guest_theme";
 
     private final JdbcTemplate jdbc;
 
@@ -141,15 +145,16 @@ public class WishService {
      *
      * @param name a name {@link #tidyName} kept
      * @param date today or later, within {@value #MAX_DAYS_AHEAD} days
+     * @param theme the look of its guests' page
      */
     @Transactional
-    public Optional<Event> create(String partyCode, String name, LocalDate date) {
+    public Optional<Event> create(String partyCode, String name, LocalDate date, GuestTheme theme) {
         lockParty(partyCode);
         if (openEvents(partyCode) >= MAX_OPEN_EVENTS || events(partyCode) >= MAX_EVENTS) {
             return Optional.empty();
         }
-        Long id = jdbc.queryForObject("INSERT INTO wish_event (party_code, token, name, event_date) VALUES (?, ?, ?, ?) RETURNING id",
-                Long.class, partyCode, CodeGenerator.generateSecret(), name, Date.valueOf(date));
+        Long id = jdbc.queryForObject("INSERT INTO wish_event (party_code, token, name, event_date, guest_theme) VALUES (?, ?, ?, ?, ?)"
+                + " RETURNING id", Long.class, partyCode, CodeGenerator.generateSecret(), name, Date.valueOf(date), theme.name());
         log.info("Party [{}]: wishes event {} made for {}", partyCode, id, date);
         return event(partyCode, id);
     }
@@ -190,6 +195,11 @@ public class WishService {
     }
 
     /** "Nowy link": a new secret — the old link (on a photo of an invitation online, say) opens nothing now. The wishes stay. */
+    /** The look of the event's guests' page: its own, whatever the party's "Motyw dla gości" is. */
+    public boolean setTheme(String partyCode, long id, GuestTheme theme) {
+        return jdbc.update("UPDATE wish_event SET guest_theme = ? WHERE party_code = ? AND id = ?", theme.name(), partyCode, id) == 1;
+    }
+
     public boolean newLink(String partyCode, long id) {
         return jdbc.update("UPDATE wish_event SET token = ? WHERE party_code = ? AND id = ?", CodeGenerator.generateSecret(), partyCode,
                 id) == 1;

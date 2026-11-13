@@ -46,7 +46,7 @@ class WishControllerTest {
     void setUp() {
         messages.setUseCodeAsDefaultMessage(true);
         when(wishes.byToken(TOKEN)).thenReturn(Optional.of(new WishService.Event(1, "WSH01", TOKEN, "Wesele", WishService.today().plusDays(9),
-                false, 0, Instant.now())));
+                false, 0, Instant.now(), com.scan2play.model.GuestTheme.CLASSIC)));
         when(parties.findByPartyCode("WSH01")).thenReturn(Optional.of(PartySettingsEntity.builder().partyCode("WSH01").ownerId(OWNER).build()));
         when(limiter.clientIp(org.mockito.ArgumentMatchers.any())).thenReturn("203.0.113.7");
         when(limiter.tryAcquireWish(anyString(), anyString())).thenReturn(Optional.empty());

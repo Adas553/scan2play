@@ -139,6 +139,7 @@ class PlanFeatureEndpointsTest {
                         .param("date", com.scan2play.service.WishService.today().plusDays(1).toString())),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "false")),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/link").param("partyCode", PUB)),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/theme").param("partyCode", PUB).param("theme", "WEDDING")),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("song", "Wilki - Baśka")),
                 Arguments.of(PlanFeature.WISHES, true, get("/dj/qr-print").param("party", PUB).param("wish", "1")));
     }

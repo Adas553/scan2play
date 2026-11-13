@@ -35,11 +35,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the
   Default environment allows no site.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
-- **2026-11-13 — PRs to `main` and `dev` from `claude/blissful-cannon-h66za3` (V68 → a database copy first):** the reviewed
+- **2026-11-13 — PRs to `main` and `dev` from `claude/blissful-cannon-h66za3` (V68, V69 → a database copy first):** the reviewed
   `claude/happy-carson-5odcet` (`docs/ideas.md` item 12 — "Życzenia przed imprezą": `/w/{token}`, `/dj/wishes`, the invitation's print,
   WISHES, Pro; the hint to vote 👍 above the guests' list, on the kiosk and the TV) with the review's fixes on top
   (`docs/history/review-2026-11-13-wishes.md`: W1 reopening kept to five open, 20 events a party; W2–W3 tests; D1, D3, D4, D6, S1–S3;
-  D2, D5 left, said why). Waits for the owner: the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
+  D2, D5 left, said why); then the owner's notes: no page of the wishes or the settings jumps (no anchors, `scroll-restore.js`, the
+  answer in a bar at the bottom, the settings' folds remembered), the guests' hint shorter, and an event's own look (V69). Waits for the owner: the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
   `party.ended.subtitle`, `party.tip.title`, listed in `ImpersonalPolishTextsTest`). Item 13 waits for the owner's picks. To try: an
   invitation printed, its link on a phone, "⭐" from the wishes before a party.
 
