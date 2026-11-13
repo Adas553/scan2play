@@ -52,6 +52,27 @@ class GuestRequestLimiterTest {
     }
 
     /**
+     * "Życzenia przed imprezą" (V68): {@value GuestRequestLimiter#WISHES_PER_ADDRESS} wishes an address and an event in the address's
+     * window — not the party's day nor its requests; another event or another address has its own.
+     */
+    @Test
+    void theWishes_haveTheirOwnLimit_anAddressAtAnEvent() {
+        GuestRequestLimiter limiter = limiter();
+        for (int i = 0; i < GuestRequestLimiter.WISHES_PER_ADDRESS; i++) {
+            assertThat(limiter.tryAcquireWish(IP, "event-a")).isEmpty();
+        }
+        clock.advance(Duration.ofMinutes(4));
+        assertThat(limiter.tryAcquireWish(IP, "event-a")).contains(360L);
+        assertThat(limiter.tryAcquireWish(IP, "event-b")).as("another event").isEmpty();
+        assertThat(limiter.tryAcquireWish("198.51.100.1", "event-a")).as("another address").isEmpty();
+        assertThat(limiter.tryAcquire(IP, PARTY)).as("the requests: untouched").isEmpty();
+        assertThat(limiter.partyRequestsUsed(PARTY)).isEqualTo(1);
+
+        clock.advance(Duration.ofMinutes(7));
+        assertThat(limiter.tryAcquireWish(IP, "event-a")).as("the window passed").isEmpty();
+    }
+
+    /**
      * The venue's kiosk (V56): its own limit — three requests a minute — in place of an address's (it shares the venue's Wi-Fi with
      * the phones: their window stays whole); the party's day counts its requests as every guest's.
      */

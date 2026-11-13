@@ -11,16 +11,15 @@ was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff
 `session-handoff-2026-10-16.md`, `session-handoff-2026-10-18.md`, `session-handoff-2026-10-21.md`, `session-handoff-2026-10-24.md`
 (2026-10-22 … 24: the review of 2026-10-21 and its releases, the DJ's library, the ideas list — items 1–7 — word for word),
 `session-handoff-2026-10-26.md` (2026-10-26 … 28: the DJ's logo, the QR poster's editor and look, the panel's review — word for word),
-`session-handoff-2026-10-30.md` (the "Start here" of 2026-10-28 … 30: the state, the releases and the use of those days — word for word), `session-handoff-2026-11-06.md` (the "Start here" of 2026-11-04 … 05: the state, the releases #219 … #236, the review of 2026-11-05), `session-handoff-2026-11-07.md` (the state of 2026-11-06, H2–H4, the pricing's state and the review of PR #239 — released with #246 … #249).
+`session-handoff-2026-10-30.md` (the "Start here" of 2026-10-28 … 30: the state, the releases and the use of those days — word for word), `session-handoff-2026-11-06.md` (the "Start here" of 2026-11-04 … 05: the state, the releases #219 … #236, the review of 2026-11-05), `session-handoff-2026-11-07.md` (the state of 2026-11-06, H2–H4, the pricing's state and the review of PR #239 — released with #246 … #249), `session-handoff-2026-11-13.md` (the state of 2026-11-07, the releases #261, #262).
 Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. Reviews: `docs/history/review-*.md` (the latest
-`review-2026-11-05.md`: the releases #219 … #236).
+`review-2026-11-13-wishes.md`: "Życzenia przed imprezą", before its PR).
 
 ## Start here
 
-- **2026-11-07 — the state.** `main` = `58ca921` (the release merge #249; #247 the review's hypotheses H2–H4, #248 touch targets
-  on a phone, `tools/page_audit.py`, `PROJECT_CONTEXT.md` split into `docs/context/`, `tools/check.py` and the project agents),
-  deployed 2026-11-07 10:56 UTC, SUCCESS. Checked (Railway, read only): started in 5.3 s, no migration, no WARN, 0 × 5xx (483
-  requests), RAM 0.56 GB steady; curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`. No open PR.
+- **2026-11-13 — the state.** `main` = `d033d77` (#262: item 11 B0 — the DJ's contact for bookings, V67 — and A0; #261 the guide's
+  pictures), deployed 2026-11-13 06:11 UTC, SUCCESS: Flyway 66 → 67, started in 5.3 s, no WARN, 0 × 5xx (166 requests), RAM 0.6 GB
+  (Railway, read only); curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`. The items released: `docs/history/session-handoff-2026-11-13.md`.
 - **The owner's daily report** (`AdminReportService`, V65) on `claude/dazzling-heisenberg-oilwvm`: an e-mail to
   `scan2playcontact@gmail.com` (`ADMIN_EMAIL`) when the owner sets on `/dj/stats/report` (V66; 9:10 daily by default), "Wyślij teraz". The e-mail has no
   organiser's address or name (the privacy policy); to put them in: a sentence in the policy's Brevo point first. V65, V66 → a database copy.
@@ -36,9 +35,18 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the
   Default environment allows no site.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
-- **2026-11-12 — `claude/confident-bell-nf6tu7`, no PR yet:** three pictures on "Jak działa Scan2Play" (the panel on a computer — the
-  landing page's —, on a phone, the evening summary; `screenshots.py --only guide`), `CLAUDE.md` (a cloud session commits to its own
-  branch), `docs/ideas.md` item 10. The guide's videos wait: PR #259 a draft, not to be merged as it is (item 10).
+- **2026-11-13 — PRs to `main` and `dev` from `claude/blissful-cannon-h66za3` (V68, V69 → a database copy first):** the reviewed
+  `claude/happy-carson-5odcet` (`docs/ideas.md` item 12 — "Życzenia przed imprezą": `/w/{token}`, `/dj/wishes`, the invitation's print,
+  WISHES, Pro; the hint to vote 👍 above the guests' list, on the kiosk and the TV) with the review's fixes on top
+  (`docs/history/review-2026-11-13-wishes.md`: W1 reopening kept to five open, 20 events a party; W2–W3 tests; D1, D3, D4, D6, S1–S3;
+  D2, D5 left, said why); then the owner's notes: no page of the wishes or the settings jumps (no anchors, `scroll-restore.js`, the
+  answer in a bar at the bottom, the settings' folds remembered), the guests' hint shorter, and an event's own look (V69). Waits for the owner: the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
+  `party.ended.subtitle`, `party.tip.title`, listed in `ImpersonalPolishTextsTest`). Item 13 waits for the owner's picks. To try: an
+  invitation printed, its link on a phone, "⭐" from the wishes before a party.
+- **2026-11-13 — the second review's fixes on `claude/quirky-faraday-mhc53m`** (that branch = `claude/blissful-cannon-h66za3` + the fixes;
+  `docs/history/review-2026-11-13-wishes-2.md`): the look on a line of its own, the invitation's look the event's, `pagehide`, "Dodaj 10"
+  sends what it names, the toast goes by itself, "Zobacz życzenia" to the event. To try on an **iPhone**: "⭐" and "Nowy link" in
+  "Obsługa" come back where they were.
 
 ## Pricing and the Free plan's limit (the owner's picks, 2026-11-05)
 

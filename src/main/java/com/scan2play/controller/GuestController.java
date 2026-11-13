@@ -11,7 +11,9 @@ import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.LibraryHintService;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsQueryService;
+import com.scan2play.service.EveningSummaryService;
 import com.scan2play.service.PlanService;
+import com.scan2play.util.BookingContact;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
@@ -25,6 +27,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -236,6 +241,7 @@ public class GuestController {
                     // A mood, not a song (the DJ sets the mood): nothing was saved. Back to the form with the text, asking for a song.
                     redirectAttributes.addFlashAttribute(LAST_REQUEST, mood.songName());
                     redirectAttributes.addFlashAttribute(LAST_DEDICATION, mood.dedication());
+                    SongOnlyHint.add(redirectAttributes, settings, locale, messageSource);
                     return refuse(redirectAttributes, partyCode, "guest.error.song_only");
                 }
                 DjResponse response = ((Sent.Answered) sent).response();
@@ -245,8 +251,12 @@ public class GuestController {
                 model.addAttribute(TIP_URL, settings.getTipUrl());
                 // who plays, at the top as on the party page: the result is the same party, not another app (the design review, 2026-10-09)
                 model.addAttribute(DJ_NAME, settings.getDjName());
-                // "Zarezerwuj tego DJ-a" under an accepted request: the guest writes to the DJ on a profile (an idea from Rekwest)
+                // "Zarezerwuj tego DJ-a" under an accepted request: the guest writes to the DJ on a profile (an idea from Rekwest), or
+                // by e-mail or phone (V67) — the subject names the evening, so the DJ knows where the guest saw them
                 addProfiles(model, settings);
+                addBooking(model, settings, messageSource.getMessage("party.book.subject.evening", new Object[]{
+                        DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)
+                                .format(EveningSummaryService.eveningOf(Instant.now()))}, locale));
                 return "result";
             } catch (IllegalArgumentException e) {
                 log.warn("Song request for unknown party code: {}", partyCode);
@@ -266,7 +276,17 @@ public class GuestController {
         // "Prośby od 20:00" in place of "DJ nie przyjmuje teraz próśb" while the party opens by itself later (V55)
         model.addAttribute(OPENS_AT, partyScheduleService.guestOpens(settings, LocaleContextHolder.getLocale()));
         addProfiles(model, settings);
+        // no date in the e-mail's subject here: the page is also opened days after the party
+        addBooking(model, settings, messageSource.getMessage("party.book.subject", null, LocaleContextHolder.getLocale()));
         return "party_ended";
+    }
+
+    /**
+     * The DJ's contact for bookings (V67) under "Zarezerwuj tego DJ-a": the e-mail link with {@code subject} filled in and the phone
+     * link, or null when the DJ gave neither (or the plan has no profiles — {@code settings} is as planned).
+     */
+    private static void addBooking(Model model, PartySettingsEntity settings, String subject) {
+        model.addAttribute(BOOKING, BookingContact.of(settings.getBookingEmail(), settings.getBookingPhone(), subject));
     }
 
     /**

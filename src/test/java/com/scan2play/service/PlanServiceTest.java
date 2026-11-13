@@ -38,6 +38,7 @@ class PlanServiceTest {
         return PartySettingsEntity.builder().partyCode("ABC12").ownerId("owner").active(true).vibeNote("wesele 40+").djName("DJ Koko")
                 .hostBlocked("Akcent").hostWanted("Hej sokoły").hostToken("tok").instagramUrl("https://www.instagram.com/dj/")
                 .facebookUrl("https://www.facebook.com/dj").tiktokUrl("https://www.tiktok.com/@dj").tipUrl("https://buycoffee.to/dj")
+                .bookingEmail("rezerwacje@djkoko.pl").bookingPhone("600 100 200")
                 .commentStyle(CommentStyle.SARCASTIC).requestLimit(5).cooldownMinutes(10).duplicateCheckWindow(40).build();
     }
 
@@ -148,6 +149,8 @@ class PlanServiceTest {
         assertThat(planned.getInstagramUrl()).isNull();
         assertThat(planned.getFacebookUrl()).isNull();
         assertThat(planned.getTiktokUrl()).isNull();
+        assertThat(planned.getBookingEmail()).as("the contact for bookings goes with the profiles (V67)").isNull();
+        assertThat(planned.getBookingPhone()).isNull();
         assertThat(planned.getTipUrl()).isNull();
         assertThat(planned.getCommentStyle()).isEqualTo(CommentStyle.CLASSIC);
         assertThat(planned.getRequestLimit()).isEqualTo(2);
@@ -159,6 +162,7 @@ class PlanServiceTest {
 
         assertThat(party.getHostWanted()).as("the party itself keeps it").isEqualTo("Hej sokoły");
         assertThat(party.getTipUrl()).isEqualTo("https://buycoffee.to/dj");
+        assertThat(party.getBookingEmail()).isEqualTo("rezerwacje@djkoko.pl");
         assertThat(party.getRequestLimit()).isEqualTo(5);
     }
 

@@ -32,6 +32,10 @@
     <section id="tvList" class="tv-list" th:fragment="tvList" th:attr="data-url=@{/p/{code}/tv/list(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}">
         <h2><span aria-hidden="true">🔥</span> <span th:if="${#locale.language == 'pl'}" lang="pl">Najczęściej wybierane</span>
             <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Most wanted</span></h2>
+        <!--/* the votes are given on the phone: the screen shows them, so it says where */-->
+        <p th:if="${isActive and !#lists.isEmpty(tvSongs)}" id="tvVoteHint" class="tv-hint">
+            <span th:if="${#locale.language == 'pl'}" lang="pl">Głosuj 👍 na telefonie</span>
+            <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Vote 👍 on your phone</span></p>
         <th:block th:if="${isActive}">
             <ol th:unless="${#lists.isEmpty(tvSongs)}" class="tv-songs">
                 <li class="tv-song" th:each="song : ${tvSongs}">

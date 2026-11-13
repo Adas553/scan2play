@@ -63,6 +63,42 @@ class DjPartySettingsControllerLinksTest {
         assertThat(party.getTiktokUrl()).isNull();
     }
 
+    /** The contact for bookings (V67, {@code POST /dj/dashboard/booking-contact}): the organiser's, kept tidy, an empty one clears it. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void theContactForBookings_isKept_andAnEmptyOneClearsIt() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/booking-contact").param("partyCode", PARTY).principal(token).session(new MockHttpSession())
+                        .param("bookingEmail", " Rezerwacje@DJKoko.pl ").param("bookingPhone", "+48  600 100 200"))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/dj/dashboard/booking-contact").param("partyCode", PARTY).principal(token).session(new MockHttpSession())
+                        .param("bookingEmail", "").param("bookingPhone", ""))
+                .andExpect(status().is3xxRedirection());
+
+        verify(sessionHelper, org.mockito.Mockito.times(2)).requireOwner(eq(PARTY), any(), any());
+        ArgumentCaptor<Consumer<PartySettingsEntity>> updater = ArgumentCaptor.forClass(Consumer.class);
+        verify(settingsService, org.mockito.Mockito.times(2)).updateSettings(eq(PARTY), updater.capture());
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).build();
+        updater.getAllValues().get(0).accept(party);
+        assertThat(party.getBookingEmail()).isEqualTo("rezerwacje@djkoko.pl");
+        assertThat(party.getBookingPhone()).isEqualTo("+48 600 100 200");
+        updater.getAllValues().get(1).accept(party);
+        assertThat(party.getBookingEmail()).isNull();
+        assertThat(party.getBookingPhone()).isNull();
+    }
+
+    /** One of the two not an address or a number: nothing saved, not even the other one (the form says why). */
+    @Test
+    void aContactThatIsNoAddress_isRefused_andNothingIsSaved() throws Exception {
+        mockMvc.perform(post("/dj/dashboard/booking-contact").param("partyCode", PARTY).principal(token).session(new MockHttpSession())
+                        .param("bookingEmail", "dj@koko.pl?bcc=all@x.pl").param("bookingPhone", "600 100 200"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/dj/dashboard/booking-contact").param("partyCode", PARTY).principal(token).session(new MockHttpSession())
+                        .param("bookingEmail", "dj@koko.pl").param("bookingPhone", "zadzwoń"))
+                .andExpect(status().isBadRequest());
+
+        verify(settingsService, never()).updateSettings(any(), any());
+    }
+
     /** The tip link (V27, {@code POST /dj/dashboard/tip-link}): kept as an address on the service, an empty one clears it. */
     @Test
     @SuppressWarnings("unchecked")

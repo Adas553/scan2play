@@ -40,6 +40,8 @@
 
             <label for="wanted" class="form-label fw-bold" th:text="#{host.wanted.label}">⭐ Must play</label>
             <p class="small text-secondary mb-1" th:text="#{host.wanted.help}">A guest's request for one always reaches the DJ, marked ⭐.</p>
+            <!--/* the guests' wishes the hosts gathered themselves (an RSVP form, a chat) go here too */-->
+            <p class="small text-secondary mb-1" id="hostWantedGuests" th:text="#{host.wanted.guests}">Got wishes from the guests? Paste them here.</p>
             <textarea id="wanted" name="wanted" rows="6" maxlength="16000" class="form-control"
                       th:text="${hostWanted}" th:placeholder="#{host.wanted.placeholder}"></textarea>
             <div class="s2p-list-count mb-3" data-list-for="wanted" aria-live="polite"

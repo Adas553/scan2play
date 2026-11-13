@@ -53,7 +53,7 @@ class DjDashboardControllerOwnerContactTest {
     private final DjDashboardController controller = new DjDashboardController(mock(DjService.class), commands,
             mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), mock(GuestRequestLimiter.class),
             mock(PushNotificationService.class), mock(PartyStaffService.class), mock(StaffInvitationService.class), Plans.off(),
-            new AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), welcome, com.scan2play.service.FreeAiLimit.off());
+            new AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), welcome, com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class));
 
     DjDashboardControllerOwnerContactTest() {
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080");

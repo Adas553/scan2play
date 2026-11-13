@@ -32,5 +32,10 @@ public enum PlanFeature {
      * The venue's kiosk (V56): a tablet where guests without a phone ask for a song and vote. Without Pro the link opens nothing (a
      * 404) and the card offers Pro; a link made before is kept, and taking it away needs no plan.
      */
-    KIOSK
+    KIOSK,
+    /**
+     * "Życzenia przed imprezą" (V68): the guests write the songs they want before the event. Without Pro the guests' links open
+     * nothing (a 404) and no event is made; the wishes are kept until they are purged, and an event may be deleted on any plan.
+     */
+    WISHES
 }

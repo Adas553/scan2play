@@ -74,8 +74,9 @@ class StaffPermissionEndpointsTest {
 
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
+        com.scan2play.service.WishService wishes = WishControllers.wishes(PUB);
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
+                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes);
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
@@ -90,7 +91,9 @@ class StaffPermissionEndpointsTest {
                                 com.scan2play.service.Plans.off(), codesAsTexts(), mock(PartySettingsCommandService.class),
                                 DjLibraryController.MAX_BYTES),
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper,
-                                com.scan2play.service.Plans.off(), codesAsTexts()))
+                                com.scan2play.service.Plans.off(), codesAsTexts()),
+                        WishControllers.djWishes(wishes, helper, com.scan2play.service.Plans.off(),
+                                mock(PartySettingsCommandService.class), codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -133,7 +136,19 @@ class StaffPermissionEndpointsTest {
                 // the evening's title and its hosts' link (V61)
                 Arguments.of(StaffPermission.SUMMARY, post("/dj/summary/title").param("party", PUB).param("evening", "2026-10-10").param("title", "x")),
                 Arguments.of(StaffPermission.SUMMARY, post("/dj/summary/share").param("party", PUB).param("evening", "2026-10-10")),
-                Arguments.of(StaffPermission.SUMMARY, post("/dj/summary/share/off").param("party", PUB).param("evening", "2026-10-10")));
+                Arguments.of(StaffPermission.SUMMARY, post("/dj/summary/share/off").param("party", PUB).param("evening", "2026-10-10")),
+                // "Życzenia przed imprezą" (V68): the events, their links, the wishes, the invitation's print
+                Arguments.of(StaffPermission.WISHES, get("/dj/wishes").param("party", PUB).param("event", "1")),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/create").param("partyCode", PUB).param("name", "Wesele")
+                        .param("date", com.scan2play.service.WishService.today().plusDays(1).toString())),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "true")),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "false")),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/link").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/theme").param("partyCode", PUB).param("theme", "WEDDING")),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/delete").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("song", "Wilki - Baśka")),
+                Arguments.of(StaffPermission.WISHES, get("/dj/wishes/1/csv").param("party", PUB)),
+                Arguments.of(StaffPermission.WISHES, get("/dj/qr-print").param("party", PUB).param("wish", "1")));
     }
 
     @ParameterizedTest(name = "{1}: {0}")
@@ -187,6 +202,7 @@ class StaffPermissionEndpointsTest {
         return Stream.of(
                 Arguments.of(post("/dj/dashboard/dj-links").param("partyCode", PUB).param("instagram", "@x")),
                 Arguments.of(post("/dj/dashboard/tip-link").param("partyCode", PUB).param("tip", "")),
+                Arguments.of(post("/dj/dashboard/booking-contact").param("partyCode", PUB).param("bookingEmail", "")),
                 Arguments.of(post("/dj/dashboard/clear-history").param("partyCode", PUB)),
                 Arguments.of(post("/dj/dashboard/welcome-dismiss").param("partyCode", PUB)),
                 Arguments.of(post("/dj/dashboard/party-code").param("partyCode", PUB)),

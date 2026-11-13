@@ -229,6 +229,23 @@ class GuestPageRenderTest {
     }
 
     /**
+     * What the 👍 is for, above the list — under it, after five songs and "Pokaż pozostałe", a phone showed it below the screen —, and
+     * only while there is a song to vote for: the guest's own is their vote already.
+     */
+    @Test
+    void theHintToVote_standsAboveTheList_onlyWithASongToVoteFor() {
+        String html = render(PL, Map.of("guestQueue", queue(List.of(numbered(2, "Newest", 18), numbered(1, "Mine", 17)), Set.of(1L), "Mine")));
+        assertThat(html).contains("id=\"voteHint\"", ">Daj 👍 piosenkom, które też chcesz usłyszeć — DJ widzi, czego goście chcą najbardziej.<");
+        assertThat(html.split("id=\"voteHint\"", -1)).as("once").hasSize(2);
+        assertThat(html.indexOf("id=\"voteHint\"")).isGreaterThan(html.indexOf(">Prośby gości<")).isLessThan(html.indexOf("id=\"guestRequests\""));
+        assertThat(render(Locale.ENGLISH, Map.of("guestQueue", queue(List.of(numbered(2, "Newest", 18)), Set.of(), null))))
+                .contains(">Tap 👍 on the songs you want to hear too — the DJ sees what guests want most.<");
+
+        String onlyMine = render(PL, Map.of("guestQueue", queue(List.of(numbered(1, "Mine", 17)), Set.of(1L), "Mine")));
+        assertThat(onlyMine).contains(">Prośby gości<").doesNotContain("voteHint");
+    }
+
+    /**
      * The guests' theme (V59): the themes' stylesheet after app.css and the theme on <body> — the party page, the result, the "party
      * ended" page; nothing more for the classic look (app.css alone, as before). Written as {@code guest-theme-<theme>.html} (the list
      * and the guest's own song, so the browser tests see the statuses in each theme), {@code result-theme.html} and
@@ -486,7 +503,12 @@ class GuestPageRenderTest {
         String html = render(PL, Map.of("lastRequest", "coś do tańca", "errorMessage", "Tutaj DJ przyjmuje konkretne piosenki"));
 
         assertThat(tag(html, "songInput")).contains("value=\"coś do tańca\"");
-        assertThat(html).contains("Tutaj DJ przyjmuje konkretne piosenki");
+        assertThat(html).contains("Tutaj DJ przyjmuje konkretne piosenki").doesNotContain("errorHint");
+
+        // where a message can go instead: a dedication with a song (the controller sends it only while the DJ takes dedications)
+        String hinted = render(PL, Map.of("lastRequest", "sto lat Ania", "errorMessage", "Tutaj DJ przyjmuje konkretne piosenki",
+                "errorHint", "Chcesz coś przekazać DJ\u2011owi?"));
+        assertThat(hinted).contains("<span id=\"errorHint\" class=\"d-block fw-normal mt-1\">Chcesz coś przekazać DJ\u2011owi?</span>");
     }
 
     private static String renderResult(com.scan2play.model.DjResponse response) {
@@ -579,7 +601,7 @@ class GuestPageRenderTest {
                 "btn-outline-warning", "aria-pressed=\"false\"", "title=\"Zagłosuj na tę piosenkę\"", ">👍 1<");
         assertThat(row.apply("Voted")).contains("name=\"on\" value=\"false\"", "btn-warning", "aria-pressed=\"true\"",
                 "title=\"Twój głos — dotknij, aby go cofnąć\"", ">👍 3<").doesNotContain("btn-outline-warning");
-        assertThat(html).contains("👍 Oddaj głos na piosenkę — DJ widzi, czego goście chcą najbardziej").doesNotContain("??", "id=\"moreRequests\"");
+        assertThat(html).contains("id=\"voteHint\"").doesNotContain("??", "id=\"moreRequests\"");
     }
 
     /** A fragment of guest-queue.html alone, as the server renders it for the page's script. */
@@ -741,24 +763,42 @@ class GuestPageRenderTest {
      */
     @Test
     void theDjsContact_onThePartyEndedPage_andUnderAnAcceptedRequest() {
+        // the contact for bookings (V67) too: a long address, which must not widen a phone's page (scenarios dj-booking-*)
         Map<String, Object> dj = Map.of("djName", "DJ <b>Koko</b>", "instagramUrl", "https://www.instagram.com/dj.koko/",
-                "facebookUrl", "https://www.facebook.com/djkoko", "tiktokUrl", "https://www.tiktok.com/@dj_koko");
+                "facebookUrl", "https://www.facebook.com/djkoko", "tiktokUrl", "https://www.tiktok.com/@dj_koko",
+                "booking", com.scan2play.util.BookingContact.of("rezerwacje.wesela.i.osiemnastki@dj-koko-entertainment.com.pl",
+                        "+48 600 100 200", "Zapytanie o rezerwację DJ-a (Scan2Play)"));
         String ended = renderEnded(PL, dj);
         writePreview("party-ended.html", ended);
         writeForTheBrowserTests("party-ended.html", ended);
 
-        assertThat(ended).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ\u2011a na swoją imprezę<", ">Napisz do DJ\u2011a przez profil:<",
+        assertThat(ended).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ\u2011a na swoją imprezę<", ">Skontaktuj się prosto z DJ\u2011em:<",
+                "href=\"mailto:rezerwacje.wesela.i.osiemnastki@dj-koko-entertainment.com.pl?subject=Zapytanie%20o%20rezerwacj%C4%99%20DJ-a%20%28Scan2Play%29\"",
+                ">rezerwacje.wesela.i.osiemnastki@dj-koko-entertainment.com.pl<", "href=\"tel:+48600100200\"", ">+48 600 100 200<",
+                ">Wiadomość trafia prosto do DJ\u2011a — Scan2Play jej nie widzi.<",
                 "🎧 DJ &lt;b&gt;Koko&lt;/b&gt;", "<a href=\"https://www.instagram.com/dj.koko/\" target=\"_blank\" rel=\"noopener noreferrer nofollow\"",
                 "href=\"https://www.facebook.com/djkoko\"", "href=\"https://www.tiktok.com/@dj_koko\"").doesNotContain("??");
-        assertThat(ended.split("<svg ", -1)).as("an icon on each button").hasSize(4);
+        assertThat(ended.split("<svg ", -1)).as("an icon on each button").hasSize(6);
+        assertThat(ended.indexOf("id=\"djContact\"")).as("the e-mail and the phone before the profiles")
+                .isLessThan(ended.indexOf("id=\"djLinks\""));
         assertThat(ended.indexOf("id=\"djBooking\"")).as("under \"check again\"").isGreaterThan(ended.indexOf("id=\"checkAgainBtn\""));
-        assertThat(renderEnded(Locale.ENGLISH, dj)).contains(">Book this DJ for your own party<", ">Message the DJ on their profile:<");
+        assertThat(renderEnded(Locale.ENGLISH, dj)).contains(">Book this DJ for your own party<", ">Contact the DJ directly:<",
+                ">Your message goes straight to the DJ — Scan2Play does not see it.<");
+        Map<String, Object> profilesOnly = new HashMap<>(dj);
+        profilesOnly.remove("booking");
+        assertThat(renderEnded(PL, profilesOnly)).contains(">Napisz do DJ\u2011a przez profil:<")
+                .doesNotContain("djContact", "mailto:", "tel:", "Scan2Play jej nie widzi");
+        // a contact alone is a way to reach the DJ: the box without profiles, only the phone
+        assertThat(renderEnded(PL, Map.of("djName", "DJ Koko", "booking", com.scan2play.util.BookingContact.of(null, "600 100 200", "x"))))
+                .contains("id=\"djBooking\"", "href=\"tel:600100200\"", ">Skontaktuj się prosto z DJ\u2011em:<")
+                .doesNotContain("djContactEmail", "mailto:", "id=\"djLinks\"");
         assertThat(renderEnded(PL, Map.of("djName", "DJ Koko"))).as("a name alone").doesNotContain("djBooking", "Zarezerwuj", "DJ Koko");
         assertThat(renderEnded(PL, Map.of())).doesNotContain("djBooking").contains("id=\"checkAgainBtn\"");
 
         String accepted = renderResult(new com.scan2play.model.DjResponse("accepted", "Dobry wybór", "sanah - Szampan", "title"), dj);
         writeForTheBrowserTests("result.html", accepted);
-        assertThat(accepted).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ\u2011a na swoją imprezę<", "href=\"https://www.tiktok.com/@dj_koko\"")
+        assertThat(accepted).contains("id=\"djBooking\"", ">Zarezerwuj tego DJ\u2011a na swoją imprezę<", "href=\"https://www.tiktok.com/@dj_koko\"",
+                        "href=\"tel:+48600100200\"")
                 .doesNotContain("??");
         assertThat(accepted.split("🎧", -1)).as("who plays once, at the top").hasSize(2);
         assertThat(accepted.indexOf("id=\"djBooking\"")).as("under the page's one action")

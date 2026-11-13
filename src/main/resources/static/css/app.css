@@ -87,6 +87,7 @@
     --s2p-white-12:       rgba(255, 255, 255, 0.12);
     --s2p-white-08:       rgba(255, 255, 255, 0.08);
     --s2p-white-05:       rgba(255, 255, 255, 0.05);
+    --s2p-black-85:       rgba(0, 0, 0, 0.85);
     --s2p-black-70:       rgba(0, 0, 0, 0.7);
     --s2p-black-60:       rgba(0, 0, 0, 0.6);
     --s2p-black-50:       rgba(0, 0, 0, 0.5);
@@ -467,6 +468,11 @@ th[data-sort].sort-desc::after {
 .s2p-booking-dj    { margin: 0; color: var(--s2p-action); font-size: 0.9rem; font-weight: 600; }
 .s2p-booking-title { margin: 0; color: var(--s2p-white); font-size: 1.15rem; font-weight: 700; text-wrap: balance; }
 .s2p-booking-note  { margin: 0 0 0.5rem; color: var(--s2p-text-muted); font-size: 0.9rem; }
+/* The DJ's e-mail and phone (V67): the address is the button's text — a long one breaks anywhere instead of widening a phone's page */
+.s2p-booking-contact { max-width: 100%; min-width: 0; text-align: left; }
+.s2p-booking-contact span { min-width: 0; overflow-wrap: anywhere; }
+.s2p-booking-contact svg  { flex: none; }   /* the icon keeps its 16 px beside a long address */
+.s2p-booking-private { color: var(--s2p-text-muted); }
 
 /* ==========================================================================
  * 6. LANDING PAGE
@@ -1397,10 +1403,24 @@ th[data-sort].sort-desc::after {
    No margin: the section's grid gap spaces them as its rows. The link (the picture whole, to zoom into) is a block as big as the
    picture, so its focus ring goes round the picture and a tap beside the phone's narrow one opens nothing. */
 .s2p-guide-picture { margin: 0; }
-.s2p-guide-picture a { display: block; border-radius: var(--s2p-radius-card); }
+.s2p-guide-picture a { display: block; border-radius: var(--s2p-radius-card); cursor: zoom-in; }
 .s2p-guide-picture a:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 2px; }
 .s2p-guide-picture img { display: block; width: 100%; height: auto; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
 .s2p-guide-picture-tall a { max-width: 16rem; }
+/* a guide's picture tapped (guide-pictures.js): whole, in the middle of the screen, over a dark backdrop; a tap anywhere closes it */
+.s2p-picture-dialog { padding: 0; border: 0; background: transparent; max-width: 100vw; max-height: 100dvh; overflow: visible; cursor: zoom-out; }
+.s2p-picture-dialog::backdrop { background: var(--s2p-black-85); }
+.s2p-picture-dialog img { display: block; max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); width: auto; height: auto;
+                          border-radius: var(--s2p-radius-card); }
+.s2p-picture-dialog .btn-close { position: fixed; top: 0.5rem; right: 0.5rem; width: 44px; height: 44px; padding: 0;
+                                 background-color: var(--s2p-black-60); background-size: 1rem; border-radius: 50%; opacity: 1; }
+/* a computer's screen on an upright phone: twice the screen's width, as high as it comes, slid along with a finger — whole it would
+   be no bigger than on the page */
+@media (max-width: 767.98px) and (orientation: portrait) {
+    .s2p-picture-dialog.s2p-picture-wide[open] { display: flex; align-items: center; width: 100vw; height: 100dvh; max-height: 100dvh;
+                                                 margin: 0; overflow-x: auto; overflow-y: hidden; }
+    .s2p-picture-dialog.s2p-picture-wide img { flex: none; width: 200vw; max-width: none; max-height: none; border-radius: 0; }
+}
 .s2p-guide-picture figcaption { margin-top: 0.4rem; font-size: 0.875rem; color: var(--s2p-text-muted); }
 /* the server's limits in one line, what they are unfolded */
 .s2p-server-limits > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
@@ -1485,6 +1505,10 @@ th[data-sort].sort-desc::after {
 .s2p-undo-toast[hidden] { display: none; }
 /* a form not saved (forms.js, components :: formRefused): the same toast, red-edged, above the "Cofnij" one when both show */
 .s2p-refused-toast { border-color: var(--bs-danger); bottom: 5rem; }
+/* what a form of "Życzenia przed imprezą" did (wishes.html #wishDone): the same bar, green-edged, amber for a refusal; ✕ a finger's size */
+.s2p-done-toast { border-color: var(--bs-success); }
+.s2p-done-toast-warning { border-color: var(--bs-warning); }
+.s2p-done-toast .btn-close { width: 44px; height: 44px; padding: 0; }
 /* A screen without a pointer that hovers (a phone): a tap leaves the button hovered until the next tap elsewhere, so an outline
    button stayed filled white — "Ukryj „Nie masz”" switched off looked on, "+ Dodaj piosenkę" looked pressed. There hover changes
    nothing; the tap itself (:active) and a button that is on (.active, aria-pressed) keep their fill. Last in the file and with
@@ -1659,6 +1683,33 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-hint { color: var(--s2p-light); font-size: 1rem; margin: 0.75rem 0 0; }
 .s2p-kiosk-list { display: flex; flex-direction: column; min-height: 0; }
 .s2p-kiosk-list h2 { font-size: 1.5rem; font-weight: 700; color: var(--s2p-white); margin-bottom: 1rem; }
+/* "← Ustawienia imprezy" over the pages a card of the settings leads to ("Obsługa", "Życzenia przed imprezą"): one look for both — a
+   quiet line, a tap target of 44 px on a phone */
+.s2p-back-link { display: inline-flex; align-items: center; min-height: 44px; align-self: flex-start; color: var(--s2p-text-muted);
+    text-decoration: none; }
+.s2p-back-link:hover, .s2p-back-link:focus-visible { color: var(--s2p-light); }
+/* The wishes' songs as the panel's queue (wishes.html): the number and the votes' badge in columns of their own, one under another in
+   every row and under the heading's "Nr" / "Głosy" — the song takes the rest and wraps */
+.s2p-wish-rank { flex: 0 0 2.25rem; text-align: end; color: var(--s2p-text-muted); font-variant-numeric: tabular-nums; }
+.s2p-wish-votes { flex: 0 0 3rem; text-align: center; font-variant-numeric: tabular-nums; }
+.s2p-wish-head { padding-bottom: 0.25rem; border-bottom: 1px solid var(--bs-border-color); }
+/* "⭐ Do „Koniecznie zagrać”" on one line — but a phone of 320 px has not the room beside the two columns: there it wraps to two lines,
+   and the columns are narrower */
+.s2p-wish-star { white-space: nowrap; }
+@media (max-width: 359.98px) {
+    .s2p-wish-star { white-space: normal; text-align: start; }
+    .s2p-wish-rank { flex-basis: 1.75rem; }
+    .s2p-wish-votes { flex-basis: 2.5rem; }
+}
+/* The event opened (wishes.html): its guests' link takes the line, "Nowy link" beside it or under it on a phone; the look's select
+   as wide as its longest name — in a row of buttons a phone of 390 px squeezed it to its arrow */
+.s2p-wish-link { flex: 1 1 16rem; min-width: 0; }
+.s2p-wish-theme { flex: 0 1 12rem; min-width: 10rem; }
+/* "Pokaż więcej" / "Pokaż mniej" under a long list of wishes (wishes.html, wishes-list.js): a finger's size */
+.s2p-wish-more-row .btn { min-height: 44px; }
+/* a row past the shown ones is hidden — its d-flex (display: flex !important, Bootstrap) would draw it anyway */
+[data-more-list] li[hidden] { display: none !important; }
+.s2p-kiosk-vote-hint { color: var(--s2p-light); font-size: 1rem; margin: -0.5rem 0 0.75rem; }
 .s2p-kiosk-songs {
     list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk;
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;

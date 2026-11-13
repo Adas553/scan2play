@@ -14,6 +14,7 @@ import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
+import com.scan2play.util.BookingContact;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.PartySchedule;
 import com.scan2play.util.SocialLinks;
@@ -355,6 +356,33 @@ public class DjPartySettingsController {
             s.setInstagramUrl(instagramUrl);
             s.setFacebookUrl(facebookUrl);
             s.setTiktokUrl(tiktokUrl);
+        });
+        return REDIRECT_DASHBOARD;
+    }
+
+    /**
+     * The DJ's contact for bookings (V67, with the profiles): an e-mail address and a phone number the guests see under "Zarezerwuj
+     * tego DJ-a" ({@link BookingContact}); an empty one clears it. 400 and nothing saved when one of them is not an address or a
+     * number. The organiser's alone, as the profiles: it is their business's contact.
+     */
+    @PostMapping("/dashboard/booking-contact")
+    public String updateBookingContact(@RequestParam String partyCode, @RequestParam(required = false) String bookingEmail,
+                                       @RequestParam(required = false) String bookingPhone,
+                                       OAuth2AuthenticationToken authentication, HttpSession session) {
+        planService.require(sessionHelper.requireOwner(partyCode, authentication, session), PlanFeature.PROFILES);
+        String email;
+        String phone;
+        try {
+            email = BookingContact.email(bookingEmail);
+            phone = BookingContact.phone(bookingPhone);
+        } catch (IllegalArgumentException e) {
+            // not the value: it is the DJ's contact, and the log is kept by the host
+            log.info("Party [{}]: the contact for bookings not saved — not an e-mail address or a phone number", partyCode);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        partySettingsCommandService.updateSettings(partyCode, s -> {
+            s.setBookingEmail(email);
+            s.setBookingPhone(phone);
         });
         return REDIRECT_DASHBOARD;
     }

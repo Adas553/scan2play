@@ -49,6 +49,11 @@ public final class ViewAttributes {
     public static final String INSTAGRAM_URL = "instagramUrl";
     public static final String FACEBOOK_URL = "facebookUrl";
     public static final String TIKTOK_URL = "tiktokUrl";
+    /** The DJ's contact for bookings (V67): the settings' form — the address and the number as kept, or null. */
+    public static final String BOOKING_EMAIL = "bookingEmail";
+    public static final String BOOKING_PHONE = "bookingPhone";
+    /** The same for the guests: {@code util.BookingContact} with its links, or null. */
+    public static final String BOOKING = "booking";
     /** The DJ's tip link (V27): an https address on a service that takes tips, or null. */
     public static final String TIP_URL = "tipUrl";
     public static final String COMMENT_STYLE = "commentStyle";
@@ -119,6 +124,8 @@ public final class ViewAttributes {
     /** The song of a 👍 as it is now (its new votes), or null when it no longer waits. */
     public static final String VOTE_SONG = "voteSong";
     public static final String ERROR_MESSAGE = "errorMessage";
+    /** A second, quieter line under {@link #ERROR_MESSAGE}: what the guest can do instead (a dedication for a message). */
+    public static final String ERROR_HINT = "errorHint";
     /** The text of a request sent back to the form (a mood, not a song). */
     public static final String LAST_REQUEST = "lastRequest";
     /** The dedication of a request sent back to the form (V38), as the guest typed it. */
@@ -264,4 +271,49 @@ public final class ViewAttributes {
     public static final String JOIN_PROBLEM = "joinProblem";
     /** The screen for a TV (Next 7 c): the most wanted of the waiting songs, {@code GuestQueueService.mostWanted}. */
     public static final String TV_SONGS = "tvSongs";
+
+    // --- "Życzenia przed imprezą" (V68) ---
+    /** The guests' page of an event ({@code /w/{token}}): its secret for its form. */
+    public static final String WISH_TOKEN = "wishToken";
+    /** The event ({@code WishService.Event}): the guests' page its name and date, the DJ's page the one shown. */
+    public static final String WISH_EVENT = "wishEvent";
+    /** The event's date as the page's language writes it ("14 czerwca 2027"). */
+    public static final String WISH_DATE = "wishDate";
+    /** Whether the guests may write now (the event not closed, its day not passed, its ceiling not reached). */
+    public static final String WISH_OPEN = "wishOpen";
+    /** Flash: the song a guest's wish was kept as. */
+    public static final String WISH_ADDED = "wishAdded";
+    /** How many more songs this guest may write to the event (of {@code WishController.PER_GUEST}). */
+    public static final String WISH_LEFT = "wishLeft";
+    /** Flash: why a guest's wish was not kept, as the page says it. */
+    public static final String WISH_NOTE = "wishNote";
+    /** The party's events on the DJ's page ({@code WishService.Event}). */
+    public static final String WISH_EVENTS = "wishEvents";
+    /** Whether the party keeps as many events as it may ({@code WishService.MAX_EVENTS}): no new one until one is deleted. */
+    public static final String WISH_KEPT_FULL = "wishKeptFull";
+    public static final String WISH_MAX_EVENTS = "wishMaxEvents";
+    /** The event's songs on the DJ's page ({@code DjWishesController.Row}): the named ones, and the ones to check apart. */
+    public static final String WISH_ROWS = "wishRows";
+    /** The songs "⭐ Dodaj 10 najczęstszych" would add (the most wished named ones not on the list yet), for its question. */
+    public static final String WISH_TOP = "wishTop";
+    /** The songs of an event listed at first, and how many more "Pokaż więcej" shows ({@code DjWishesController.SHOWN}, {@code STEP}). */
+    public static final String WISH_SHOWN = "wishShown";
+    public static final String WISH_STEP = "wishStep";
+    public static final String WISH_CHECK = "wishCheck";
+    /** How many songs the event's wishes are, and how many of them the DJ's library has not. */
+    public static final String WISH_SONGS = "wishSongs";
+    public static final String WISH_MISSING = "wishMissing";
+    /** The event's guests' link, to copy and to print. */
+    public static final String WISH_LINK = "wishLink";
+    /** Flash: what the DJ's page says after a form ({@code wishes.done.*}), and its argument. */
+    public static final String WISH_DONE = "wishDone";
+    public static final String WISH_DONE_ARG = "wishDoneArg";
+    /** The most events open at once, the most wishes a guest writes, an event's name's length: the page says and the fields hold them. */
+    public static final String WISH_MAX_OPEN = "wishMaxOpen";
+    public static final String WISH_NAME_MAX = "wishNameMax";
+    /** The days the date field offers: today and the last one ({@code WishService.MAX_DAYS_AHEAD}). */
+    public static final String WISH_DATE_MIN = "wishDateMin";
+    public static final String WISH_DATE_MAX = "wishDateMax";
+    /** The QR print of an event's guests' link (an invitation): the event; null for the party's own code. */
+    public static final String WISH_PRINT = "wishPrint";
 }

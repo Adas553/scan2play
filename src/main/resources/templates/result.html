@@ -60,7 +60,7 @@
 
         <!--/* "Zarezerwuj tego DJ-a" (the DJ's profiles) under a request that reached the DJ, as the tip: the moment a guest is glad */-->
         <th:block th:if="${response.decision == 'accepted'}">
-            <div th:replace="~{fragments/components :: djBooking(null, ${instagramUrl}, ${facebookUrl}, ${tiktokUrl})}"></div>
+            <div th:replace="~{fragments/components :: djBooking(null, ${instagramUrl}, ${facebookUrl}, ${tiktokUrl}, ${booking})}"></div>
         </th:block>
     </div>
 </div>

@@ -218,6 +218,8 @@ public class SecurityConfig {
                         // the venue's kiosk (V56): a tablet without a login, its secret link and what its page sends; "/k" the
                         // same page by the kiosk's cookie
                         .requestMatchers("/k", "/k/*", "/k/*/*").permitAll()
+                        // "Życzenia przed imprezą" (V68): an event's guests' page and its form, by its secret link (WishController)
+                        .requestMatchers("/w/*").permitAll()
                         // The staff's invitation (V30): opened before the login, it names the party (StaffController)
                         // "Nie wysyłaj mi tego" of an e-mail (V64): its secret link, without a login (EmailStopController)
                         .requestMatchers("/email/stop/*").permitAll()

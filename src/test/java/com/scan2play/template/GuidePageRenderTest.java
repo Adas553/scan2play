@@ -100,8 +100,10 @@ class GuidePageRenderTest {
         }
         assertThat(html).as("every jump has its section").contains("href=\"#start\"", "href=\"#party\"", "href=\"#phone\"",
                 "href=\"#after\"", "href=\"#staff\"", "href=\"#guests\"");
-        assertThat(html).as("the pictures of buttons are not controls: no <button> and no form")
+        // the guide's own text; after it only the dialog of a tapped picture, whose "✕" is a real button
+        assertThat(html.substring(0, html.indexOf("<dialog"))).as("the pictures of buttons are not controls: no <button> and no form")
                 .doesNotContain("<button", "<form");
+        assertThat(html.substring(html.indexOf("<dialog"))).doesNotContain("<form").containsOnlyOnce("<button");
         assertThat(html).as("the party's hours (V55), in the party's section").contains("id=\"guideHours\"", "Godziny imprezy", "Prośby od 20:00");
         assertThat(html.indexOf("id=\"guideHours\"")).isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"phone\""));
         assertThat(html).as("the venue's kiosk (V56)").contains("id=\"guideKiosk\"", "Kiosk dla gości", "Następny gość");
@@ -148,7 +150,7 @@ class GuidePageRenderTest {
      * The three pictures in the page's language, each in its section — the panel on a computer (the landing page's picture) during the
      * party, the panel on a phone, the evening summary after the party, by its row —, its file there (a missing one would be a broken
      * picture on a public page), its size given and the file's own (no jump when it loads), loaded only when scrolled to, described, and a link to itself (a tap
-     * opens it whole, to zoom into on a phone).
+     * shows it whole in the middle of the screen — guide-pictures.js —; without the script the link opens the file).
      */
     private static void assertThePictures(String html, String lang) {
         List<String> files = List.of("landing/dashboard-" + lang, "guide/phone-" + lang, "guide/summary-" + lang);
@@ -169,6 +171,9 @@ class GuidePageRenderTest {
             assertThat(at).as("picture %d in #%s", n, sections.get(n - 1)).isGreaterThan(start)
                     .isLessThan(html.indexOf("</section>", start));
         }
+        assertThat(html).as("a tap shows a picture whole, on the same page (guide-pictures.js)").contains(
+                "<dialog class=\"s2p-picture-dialog\" id=\"guidePictureDialog\" aria-label=\"", "class=\"btn-close btn-close-white\"",
+                "<script src=\"/js/guide-pictures.js\"></script>");
         assertThat(html).as("the phone's picture is upright").contains("s2p-guide-picture s2p-guide-picture-tall\" id=\"guidePicture2\"");
         assertThat(html.indexOf("id=\"guidePicture3\"")).as("the summary's picture under its row")
                 .isGreaterThan(html.indexOf(lang.equals("pl") ? ">Podsumowanie wieczoru</span>" : ">Evening summary</span>"));

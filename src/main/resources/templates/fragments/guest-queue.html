@@ -25,6 +25,9 @@
                                                   : #{home.queue.my_waiting_many(${guestQueue.myWaiting()})}">Your request waits for the DJ</div>
 
     <h6 class="queue-title text-center" th:text="#{home.queue.title}">🔥 Guests' requests</h6>
+    <!--/* What the 👍 is for, above the list: under it, after five songs and "Pokaż pozostałe", a phone showed it below the screen —
+         read after the list, if at all. Only with a song to vote for (the guest's own is their vote already). */-->
+    <p th:if="${guestQueue.votable()}" id="voteHint" class="small text-secondary text-center mb-2" th:text="#{home.queue.vote.hint}">Tap 👍 on the songs you want to hear too</p>
     <ul class="list-group shadow-sm" id="guestRequests">
         <th:block th:each="song : ${guestQueue.shown()}"><li th:replace="~{fragments/guest-queue :: songRow(${song})}"></li></th:block>
     </ul>
@@ -40,7 +43,6 @@
         <div class="s2p-more-list" aria-live="polite"></div>
         <p id="requestSearchNone" class="small text-secondary text-center mt-2 mb-0 d-none" th:text="#{home.queue.search.none}">No such request — send it with the form above.</p>
     </details>
-    <p class="small text-secondary text-center mt-2 mb-0" th:text="#{home.queue.vote.hint}">👍 Vote for a song — the DJ sees what you want most</p>
 </div>
 
 <!--/* The folded rest of the list (GET /p/{code}/queue/more): guest-party.js puts it in the unfolded "Pokaż pozostałe prośby". */-->

@@ -16,13 +16,13 @@
         viewport: '390,844',
         run: async function (t) {
             t.step('every card folded', folds().map(function (fold) { return [fold.id, fold.open]; }),
-                [['partyHoursCard', false], ['guestThemeCard', false], ['hostListsCard', false], ['kioskCard', false], ['linksCard', false],
+                [['partyHoursCard', false], ['guestThemeCard', false], ['hostListsCard', false], ['kioskCard', false], ['wishesCard', false], ['linksCard', false],
                     ['logoCard', false], ['limitsCard', false], ['libraryCard', false], ['morningSummaryCard', false], ['deviceCard', false],
                     ['partyCodeCard', false]]);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('guestThemeCard'), stateOf('hostListsCard'),
                 stateOf('linksCard'), stateOf('logoCard'), stateOf('limitsCard'), stateOf('libraryCard'), stateOf('morningSummaryCard'),
                 stateOf('partyCodeCard')],
-                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
+                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · kontakt · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
                     'HARN1']);
             t.step('"Obsługa" a line like them, leading to its page', [text(document.querySelector('#staffRow .s2p-fold-name')),
                 document.getElementById('staffRow').getAttribute('href')], ['Obsługa', '/dj/staff?party=HARN1']);
@@ -69,6 +69,27 @@
             await t.sleep(200);
             t.step('an address typed by hand breaks nothing', document.getElementById('libraryCard').open, true);
             history.replaceState(null, '', location.pathname + location.search);
+        }
+    });
+
+    S2P.scenario({
+        name: 'settings-back-where-it-was',
+        title: 'the page "Ustawienia imprezy" left and opened again in the tab ("← Ustawienia imprezy" of "Życzenia przed imprezą"): the cards '
+            + 'unfolded then are unfolded again and the page is where it was — no jump to a card, nor to the top',
+        page: 'settings',
+        viewport: '390,844',
+        run: async function (t) {
+            const src = document.querySelector('script[src*="folds"]').src;
+            t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
+            document.querySelector('#wishesCard > summary').click();
+            window.dispatchEvent(new Event('pagehide'));   // the DJ follows "Wydarzenia i życzenia" (all an iPhone's Safari says)
+            document.getElementById('wishesCard').open = false;   // the page as it loads again: every card folded
+            const again = document.createElement('script');   // folds.js once more, as on a page load
+            again.src = src;
+            await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
+            t.step('the card unfolded when the page was left is unfolded again; the others folded',
+                folds().filter(function (fold) { return fold.open; }).map(function (fold) { return fold.id; }), ['wishesCard']);
+            sessionStorage.clear();
         }
     });
 
@@ -170,6 +191,26 @@
         run: async function (t) {
             document.querySelectorAll('details.s2p-fold, details.s2p-staff-member').forEach(function (fold) { fold.open = true; });
             buttonsOfTheirWords(t);
+        }
+    });
+
+    S2P.scenario({
+        name: 'staff-back-where-it-was',
+        title: 'the page "Obsługa" after "Zaproś" or "Nowy link" (a page load): where it was (scroll-restore.js, no anchor), the cards '
+            + 'unfolded then unfolded again — no jump to a card',
+        page: 'staff',
+        viewport: '390,844',
+        run: async function (t) {
+            const src = document.querySelector('script[src*="folds"]').src;
+            t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
+            document.querySelector('#staffLinkCard > summary').click();
+            window.dispatchEvent(new Event('pagehide'));   // "Nowy link" sent (all an iPhone's Safari says)
+            document.getElementById('staffLinkCard').open = false;   // the page as it loads again
+            const again = document.createElement('script');
+            again.src = src;
+            await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
+            t.step('the link\'s card unfolded again', document.getElementById('staffLinkCard').open, true);
+            sessionStorage.clear();
         }
     });
 

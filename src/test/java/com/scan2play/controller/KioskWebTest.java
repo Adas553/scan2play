@@ -155,6 +155,10 @@ class KioskWebTest {
                 .contains("id=\"requestForm\"", "id=\"kioskNext\"", "data-kiosk-next");
         assertThat(ask.indexOf("id=\"kioskNext\"")).isGreaterThan(ask.indexOf("id=\"submitBtn\""));
         assertThat(html).as("no line under the field that says its placeholder again").doesNotContain("Wpisz wykonawcę i tytuł.");
+        assertThat(html).as("what the 👍 is for, under the list's heading, above its songs")
+                .contains("id=\"kioskVoteHint\" class=\"s2p-kiosk-vote-hint\">Dotknij 👍 przy piosence, którą też chcesz usłyszeć.<");
+        assertThat(html.indexOf("id=\"kioskVoteHint\"")).isGreaterThan(html.indexOf("id=\"kioskListTitle\""))
+                .isLessThan(html.indexOf("class=\"s2p-kiosk-songs\""));
         assertThat(html).as("a list read as one by a screen reader (no list-style), and a place outside it that reads a 👍's note out")
                 .contains("<ol role=\"list\" class=\"s2p-kiosk-songs\">", "id=\"kioskAnnounce\" class=\"visually-hidden\" role=\"status\"");
         assertThat(html.indexOf("id=\"kioskAnnounce\"")).as("outside the list, which is put in place anew").isGreaterThan(
@@ -311,7 +315,7 @@ class KioskWebTest {
         String html = mockMvc.perform(get(KIOSK).session(session).flashAttrs(refused.getFlashMap())).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         assertThat(html).contains("data-kiosk-turn=\"begun\"", "data-kiosk-state=\"form\"", "value=\"coś skocznego\"",
-                "value=\"dla Kasi\"", "id=\"kioskError\"");
+                "value=\"dla Kasi\"", "id=\"kioskError\"", "id=\"errorHint\"");
         write("kiosk-refused.html", html);
 
         when(guestVoteService.myVotes(any(), eq(partyCode))).thenReturn(Set.of(8L));   // a 👍 given, then the page again
@@ -346,7 +350,7 @@ class KioskWebTest {
         assertThat(mockMvc.perform(get(KIOSK + "/list")).andReturn().getResponse().getContentAsString()).contains("data-active=\"true\"");
         party.setActive(false);
         String closed = mockMvc.perform(get(KIOSK + "/list")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        assertThat(closed).contains("id=\"kioskList\"", "data-active=\"false\"");
+        assertThat(closed).contains("id=\"kioskList\"", "data-active=\"false\"").doesNotContain("kioskVoteHint");
         write("kiosk-list-closed.html", closed);
     }
 

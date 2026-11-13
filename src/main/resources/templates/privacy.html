@@ -27,9 +27,11 @@
             <li>Party settings and configuration preferences</li>
             <li>The account’s plan (Free or Pro), where it comes from (e.g. a trial) and until when it lasts</li>
             <li>If the DJ gives them: the addresses of the DJ’s Instagram, Facebook and TikTok profiles — shown publicly to the guests on the party page and on the QR print</li>
+            <li>If the DJ gives them: their e-mail address and phone number for bookings — shown publicly to the guests of their party under “Book this DJ” (under an accepted request and on the page of a party that has ended)</li>
             <li>If the DJ gives it: the link to the DJ’s tip page (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — shown publicly to the guests on the party page, under an accepted request and on the QR print</li>
             <li>When the DJ uploads it: their logo — an image re-encoded on our server into a PNG of at most 512 pixels a side, without the data stored in the file (such as EXIF: the place, the camera, the date); shown publicly to the guests on the party page, the TV screen, the QR print and in the DJ’s evening summary</li>
             <li>When the DJ uploads it: their library of songs (a rekordbox collection or an M3U file) — we keep the artists and titles as the file writes them and in a simplified form (no case, no accents and no additions such as “Radio Edit”), and from a rekordbox collection also the songs’ tempo (BPM), key, genre and year; besides, the number of songs, the day of the upload and the name of the list of songs chosen from the collection. We keep no paths to files, notes, ratings or play counts. The library serves only the ✓ / ? / ✗ marks (with the tempo and the key of the DJ’s track) at the requests in the queue of their party and in their evening summary, and, unless the DJ switches it off, the mark “✓ The DJ has it” at the song suggestions the guests of their party see (a guest learns only whether the DJ has a song suggested to them; the library as a whole is shown to no one)</li>
+            <li>When the DJ makes an event of “Wishes before the party”: its name and date — the guests who open the event’s link for wishes see them</li>
             <li>Feedback messages submitted through the dashboard</li>
             <li>If the DJ switches on notifications on a device: that browser’s push subscription (the push service’s address of the browser and its encryption keys) and the dashboard’s language</li>
             <li>If someone joins a party’s staff (a bartender, a second DJ) by the owner’s invitation link or invitation: their Google account’s identifier, the name on that account and what the owner allows them to do — the party’s owner sees the name on the list of the staff</li>
@@ -43,8 +45,12 @@
             <li>Song request text (a title, an artist or a line of the lyrics) — kept as typed (up to 150 characters) and shown to the party's DJ beside the song the AI picked. The other guests of the party (on the list of requests) and the TV screen in the hall see that song's name — when the AI does not recognise the song, the name is your own words; a request the AI could not check is seen only by you and the DJ. The text also goes into the server’s logs (with the party’s code, without the IP address); please do not type personal data into it</li>
             <li>A dedication with a request, when you add one (up to 100 characters) — only the DJ of the party sees it, by the song, not the
                 other guests; the AI (Google Gemini) checks it with the request; deleted with the request</li>
-            <li>A session identifier (a cookie) — for the request limit and to recognise your earlier requests and your 👍 at the party (marked “Yours”, a vote counted once); no personal data</li>
-            <li>IP address — Cloudflare and the hosting provider (section 6), which every connection to the site passes through, see it. The application itself keeps it in the server’s memory only, for the limits of requests and of 👍 from one network at a party (against abuse); it never stores it in the database or in its own logs</li>
+            <li>A wish before the party, when the DJ shares the link for wishes of their event (with the invitation, say): the song you write
+                (up to 150 characters) and how many people wrote the same — no name, no e-mail address, no IP address. Only the DJ sees it (and
+                the people of their staff they allow), not the other guests; the hosts see only the songs the DJ moves to their list “⭐ Must
+                play”. It goes neither to the AI nor to the server’s logs</li>
+            <li>A session identifier (a cookie) — for the limits of requests and of wishes before the party, and to recognise your earlier requests and your 👍 at the party (marked “Yours”, a vote counted once); no personal data</li>
+            <li>IP address — Cloudflare and the hosting provider (section 6), which every connection to the site passes through, see it. The application itself keeps it in the server’s memory only, for the limits of requests, of 👍 and of wishes before the party from one network (against abuse); it never stores it in the database or in its own logs</li>
         </ul>
 
         <h3>3. How We Use Your Data</h3>
@@ -66,6 +72,10 @@
         <p>The Instagram, Facebook and TikTok buttons on the party page lead to the DJ’s profiles there. Scan2Play embeds none of
             their content or scripts — the site opens only when a guest clicks, and its own privacy rules apply there.
         </p>
+        <p>The DJ’s e-mail address and phone number under “Book this DJ” open your e-mail app or your phone. The message or the call
+            goes straight to the DJ, outside Scan2Play: we do not see it and keep neither your address nor your number. What happens to
+            them afterwards is the DJ’s to decide.
+        </p>
         <p>The “💸 Tip the DJ” button leads to the DJ’s page on a tipping service. The payment happens only there, straight to the
             DJ: Scan2Play takes no part in it, sees neither the amount nor any payment details and takes no commission. The tip and
             its settlement are between the guest, the DJ and that service, on its terms.
@@ -77,7 +87,7 @@
             <li>The evening summary: when a request is deleted (after 30 days, or when the DJ clears the history), only what the summary counts is kept of it — the song’s name, the times, the number of votes, tips and dedications, why the AI rejected it (played already / off the vibe) — and only the number of requests stopped before the AI (on the hosts’ list, skipped lately, not a song) — without the guest’s words, the dedications’ text, the AI’s comment or anything that tells who asked (of a request the AI rejected not even the name); with it the evening’s title the DJ typed and the hosts’ link (it works 30 days). Deleted 13 months after the evening, or with the DJ’s account</li>
             <li>Sessions (the DJ’s login, a guest’s session identifier): stored in the database and deleted after 30 minutes without activity</li>
             <li>The page’s language you picked: when you pick it by an address with <code>?lang=pl</code> or <code>?lang=en</code>, the cookie <code>lang</code>, holding only the language’s code, keeps it in your browser for a year, so the next pages are in that language; nothing goes to the database</li>
-            <li>A guest’s IP address: in the server’s memory only, forgotten 10 minutes after the last request or 👍 from that network</li>
+            <li>A guest’s IP address: in the server’s memory only, forgotten 10 minutes after the last request, 👍 or wish from that network</li>
             <li>DJ account data: stored until the DJ deletes their account</li>
             <li>The party owner’s e-mail address and the day the account was made: until the DJ deletes their account (the messages we exchanged stay in our mailbox, as any correspondence); the log of the e-mails sent through Brevo (the recipient’s address, the subject, the delivery status) — 1 month from the sending, also after the account is deleted; Brevo does not keep the content of the e-mails sent</li>
             <li>A device’s notification subscription: until the DJ switches the notifications off on it, the browser drops it, or the DJ deletes their account</li>
@@ -86,6 +96,9 @@
             <li>Server logs (holding the guests’ request texts with the party’s code): kept by the hosting provider for 7 days, then deleted</li>
             <li>The DJ’s logo: until a new one is uploaded (it replaces the previous one), the DJ deletes it or deletes their account; the guests’ browsers and Cloudflare’s network may keep a copy of it for one hour at most</li>
             <li>The DJ’s library of songs: until a new one is uploaded (it replaces the previous one), the DJ deletes it or deletes their account</li>
+            <li>Wishes before the party (the event, its link and the guests’ wishes): deleted by themselves 7 days after the party’s date (two
+                years after the event was made at the latest), earlier when the DJ deletes the event or their account</li>
+            <li>The DJ’s e-mail address and phone number for bookings: until the DJ changes or deletes them, or deletes their account</li>
             <li>Feedback and the account’s plan: until the DJ deletes their account</li>
             <li>When the account had a trial of the Pro plan: a hash (SHA-256) of the Google account’s identifier — no name, no e-mail address, nothing of a party — stays after the account is deleted too, for as long as Scan2Play offers a trial of the Pro plan, so that the same account gets no second trial (our legitimate interest: preventing abuse of the trial)</li>
         </ul>
