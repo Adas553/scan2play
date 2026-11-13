@@ -46,7 +46,7 @@ class DjDashboardControllerGuestLimitsTest {
         sessionHelper = mock(DjSessionHelper.class);
         limiter = mock(GuestRequestLimiter.class);
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
-                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), aiHealth, com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
+                mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), aiHealth, com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class));
         when(djService.getQueueFingerprint(PARTY)).thenReturn("3-42");
         when(djService.getWaiting(PARTY)).thenReturn(List.of());
         party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
@@ -163,7 +163,7 @@ class DjDashboardControllerGuestLimitsTest {
         com.scan2play.service.FreeAiLimit freeAi = new com.scan2play.service.FreeAiLimit(2, plans);
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
                 mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
-                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), freeAi);
+                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), freeAi, org.mockito.Mockito.mock(com.scan2play.service.WishService.class));
         freeAi.tryAcquire(party);
         assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_USE_HEADER)).isEqualTo("0,0,1");
         assertThat(poll(true).getHeader(DjDashboardController.GUEST_LIMITS_HEADER)).isEqualTo("none");
@@ -177,7 +177,7 @@ class DjDashboardControllerGuestLimitsTest {
     private String etagWith(com.scan2play.service.PlanService plans) {
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class), sessionHelper,
                 mock(PlayHistoryService.class), limiter, mock(PushNotificationService.class), mock(com.scan2play.service.PartyStaffService.class),
-                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
+                mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class));
         return poll(false).getHeader("ETag");
     }
 }

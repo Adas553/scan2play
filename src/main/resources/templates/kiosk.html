@@ -104,6 +104,9 @@
         <section id="kioskList" class="s2p-kiosk-list" th:fragment="kioskList" aria-labelledby="kioskListTitle"
                  th:attr="data-url=@{/k/{t}/list(t=${kioskToken})},data-active=${isActive}">
             <h2 id="kioskListTitle"><span aria-hidden="true">🔥</span> <span th:text="#{kiosk.wanted}">Most wanted</span></h2>
+            <!--/* what the 👍 is for: nothing else on the kiosk said a song can be voted for */-->
+            <p th:if="${isActive and !#lists.isEmpty(tvSongs)}" id="kioskVoteHint" class="s2p-kiosk-vote-hint"
+               th:text="#{kiosk.vote.hint}">Tap 👍 on a song you want to hear too.</p>
             <p th:if="${voteNote}" id="kioskVoteNote" class="s2p-kiosk-note" th:text="${voteNote}">One vote per song.</p>
             <th:block th:if="${isActive}">
             <ol th:unless="${#lists.isEmpty(tvSongs)}" role="list" class="s2p-kiosk-songs">

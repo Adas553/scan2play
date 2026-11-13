@@ -73,7 +73,7 @@ public class EveningSummaryService {
     private static final int MINUTES_A_DAY = 24 * 60;
 
     /** First in the CSV file: Excel then reads it as UTF-8. */
-    private static final char BYTE_ORDER_MARK = 0xFEFF;
+    static final char BYTE_ORDER_MARK = 0xFEFF;
     private static final DateTimeFormatter CSV_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(Times.DISPLAY_ZONE);
 
     /**

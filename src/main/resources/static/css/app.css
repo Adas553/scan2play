@@ -1505,6 +1505,10 @@ th[data-sort].sort-desc::after {
 .s2p-undo-toast[hidden] { display: none; }
 /* a form not saved (forms.js, components :: formRefused): the same toast, red-edged, above the "Cofnij" one when both show */
 .s2p-refused-toast { border-color: var(--bs-danger); bottom: 5rem; }
+/* what a form of "Życzenia przed imprezą" did (wishes.html #wishDone): the same bar, green-edged, amber for a refusal; ✕ a finger's size */
+.s2p-done-toast { border-color: var(--bs-success); }
+.s2p-done-toast-warning { border-color: var(--bs-warning); }
+.s2p-done-toast .btn-close { width: 44px; height: 44px; padding: 0; }
 /* A screen without a pointer that hovers (a phone): a tap leaves the button hovered until the next tap elsewhere, so an outline
    button stayed filled white — "Ukryj „Nie masz”" switched off looked on, "+ Dodaj piosenkę" looked pressed. There hover changes
    nothing; the tap itself (:active) and a button that is on (.active, aria-pressed) keep their fill. Last in the file and with
@@ -1679,6 +1683,29 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-hint { color: var(--s2p-light); font-size: 1rem; margin: 0.75rem 0 0; }
 .s2p-kiosk-list { display: flex; flex-direction: column; min-height: 0; }
 .s2p-kiosk-list h2 { font-size: 1.5rem; font-weight: 700; color: var(--s2p-white); margin-bottom: 1rem; }
+/* "← Ustawienia imprezy" over the pages a card of the settings leads to ("Obsługa", "Życzenia przed imprezą"): one look for both — a
+   quiet line, a tap target of 44 px on a phone */
+.s2p-back-link { display: inline-flex; align-items: center; min-height: 44px; align-self: flex-start; color: var(--s2p-text-muted);
+    text-decoration: none; }
+.s2p-back-link:hover, .s2p-back-link:focus-visible { color: var(--s2p-light); }
+/* The wishes' songs as the panel's queue (wishes.html): the number and the votes' badge in columns of their own, one under another in
+   every row and under the heading's "Nr" / "Głosy" — the song takes the rest and wraps */
+.s2p-wish-rank { flex: 0 0 2.25rem; text-align: end; color: var(--s2p-text-muted); font-variant-numeric: tabular-nums; }
+.s2p-wish-votes { flex: 0 0 3rem; text-align: center; font-variant-numeric: tabular-nums; }
+.s2p-wish-head { padding-bottom: 0.25rem; border-bottom: 1px solid var(--bs-border-color); }
+/* "⭐ Do „Koniecznie zagrać”" on one line — but a phone of 320 px has not the room beside the two columns: there it wraps to two lines,
+   and the columns are narrower */
+.s2p-wish-star { white-space: nowrap; }
+@media (max-width: 359.98px) {
+    .s2p-wish-star { white-space: normal; text-align: start; }
+    .s2p-wish-rank { flex-basis: 1.75rem; }
+    .s2p-wish-votes { flex-basis: 2.5rem; }
+}
+/* "Pokaż więcej" / "Zwiń" under a long list of wishes (wishes.html, wishes-list.js): a finger's size */
+.s2p-wish-more-row .btn { min-height: 44px; }
+/* a row past the shown ones is hidden — its d-flex (display: flex !important, Bootstrap) would draw it anyway */
+[data-more-list] li[hidden] { display: none !important; }
+.s2p-kiosk-vote-hint { color: var(--s2p-light); font-size: 1rem; margin: -0.5rem 0 0.75rem; }
 .s2p-kiosk-songs {
     list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk;
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;

@@ -22,6 +22,7 @@ import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
+import com.scan2play.service.WishService;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
@@ -36,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
@@ -44,8 +46,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -89,6 +94,8 @@ public class DjDashboardController {
     private final WelcomeEmailService welcomeEmailService;
     /** The Free plan's AI checks an evening: the panel's line near it, its bar at it, the organiser's note the next day. */
     private final FreeAiLimit freeAiLimit;
+    /** "Życzenia przed imprezą" (V68): the settings card's state, the invitation's print. */
+    private final WishService wishService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -294,6 +301,8 @@ public class DjDashboardController {
         model.addAttribute(HOST_LINK_UNTIL, hostLinkWorks ? Times.day(PartySettingsEntity.linkWorksUntil(settings.getHostTokenMadeAt())) : null);
         // the venue's kiosk (V56): its link to copy and open on the tablet, or none
         model.addAttribute(KIOSK_LINK, settings.kioskLink(cleanBaseUrl));
+        // "Życzenia przed imprezą" (V68): the card's state, the events collecting now
+        model.addAttribute(WISH_OPEN, wishService.openEvents(partyCode));
         model.addAttribute(REQUEST_LIMIT, planned.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, planned.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, planned.getDuplicateCheckWindow());
@@ -434,9 +443,14 @@ public class DjDashboardController {
      * {@code cards} — eight cards on a sheet to cut out and put on the tables — or {@code tent} — a table tent, one A4 sheet folded
      * across its middle (V50); the cards and the tents as many as the party's tables, numbered, when the DJ set them. The bar above it,
      * which is not printed, follows the DJ's language. Anything else is the poster.
+     * <p>
+     * With {@code wish} (V68, whoever has WISHES, Pro): the invitation of an event of "Życzenia przed imprezą" — the code and the
+     * address of its guests' link, its own heading ("Jaką piosenkę chcesz usłyszeć?") and the event's name and day, in the look of
+     * the occasion "Zaproszenie"; the editor shows its changes but saves none (the party's own print stays as the DJ saved it).
      */
     @GetMapping("/qr-print")
     public String qrPrint(@RequestParam(defaultValue = "poster") String layout, @RequestParam(required = false) String party,
+                          @RequestParam(required = false) Long wish,
                           Model model, OAuth2AuthenticationToken authentication, HttpSession session, Locale locale) {
         // the staff's too (V30): the code is on the tables anyway, a bartender prints a new one
         // the profiles and the tip link as the organiser's plan has them (V35)
@@ -444,6 +458,16 @@ public class DjDashboardController {
         PartySettingsEntity settings = planService.asPlanned(access.party());
         String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
+        WishService.Event invitation = null;
+        if (wish != null) {
+            planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
+            invitation = wishService.event(partyCode, wish).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+            guestUrl = cleanBaseUrl + "/w/" + invitation.token();
+            // a copy, never saved: the invitation's heading is ours, its line the event, its look the occasion "Zaproszenie"
+            settings = settings.toBuilder().posterHeading(null).posterLine(invitationLine(invitation.name(), invitation.date()))
+                    .posterTheme(com.scan2play.model.PosterTheme.ELEGANT).posterFont(com.scan2play.model.PosterFont.SCRIPT)
+                    .posterAccent(null).posterPaper(null).posterTables(null).build();
+        }
         model.addAttribute(PARTY_CODE, partyCode);
         // the DJ's profiles under the code: on paper the guests read them, "@djkoko" (V24)
         model.addAttribute(INSTAGRAM_URL, settings.getInstagramUrl());
@@ -458,11 +482,31 @@ public class DjDashboardController {
         // the party's card "Impreza"; the parts left off are rendered hidden, so the editor's preview shows them again at once
         model.addAttribute(POSTER, settings);
         model.addAttribute(PRINT_LANG, settings.getPosterLanguage().printed(locale.getLanguage()));
-        model.addAttribute(POSTER_EDIT, access.may(StaffPermission.VIBE));
+        model.addAttribute(POSTER_EDIT, invitation != null || access.may(StaffPermission.VIBE));
+        model.addAttribute(WISH_PRINT, invitation);
         model.addAttribute(POSTER_THEMES, com.scan2play.model.PosterTheme.values());
         model.addAttribute(POSTER_FONTS, com.scan2play.model.PosterFont.values());
         model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // the editor's line: the guests' look is set apart (V59)
         return "qr-print";
+    }
+
+    /**
+     * The invitation's line: the event's name and its day, within the print's line ({@value PartySettingsEntity#POSTER_LINE_MAX}, the
+     * cards' and the tents' room) — an event's name may be {@value WishService#NAME_MAX}: a long one is cut, at a space when one is
+     * near the end, and the day stays whole.
+     */
+    public static String invitationLine(String name, LocalDate date) {
+        String day = " · " + date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        int room = PartySettingsEntity.POSTER_LINE_MAX - day.length();
+        if (name.length() <= room) {
+            return name + day;
+        }
+        String cut = name.substring(0, room - 1);   // "…" takes the last place
+        if (Character.isHighSurrogate(cut.charAt(cut.length() - 1))) {
+            cut = cut.substring(0, cut.length() - 1);   // never half an emoji
+        }
+        int space = cut.lastIndexOf(' ');
+        return (space > room / 2 ? cut.substring(0, space) : cut).strip() + "…" + day;
     }
 
     /** The address the guests open: what the QR code holds. */

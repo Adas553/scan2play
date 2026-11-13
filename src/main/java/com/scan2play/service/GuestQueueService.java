@@ -44,6 +44,11 @@ public class GuestQueueService {
         public Optional<SongRequestEntity> song(long id) {
             return java.util.stream.Stream.concat(shown.stream(), more.stream()).filter(song -> song.getId() == id).findFirst();
         }
+
+        /** Whether the list has a song the guest may give a 👍 — one that is not their own: the hint to vote is shown only then. */
+        public boolean votable() {
+            return java.util.stream.Stream.concat(shown.stream(), more.stream()).anyMatch(song -> !myIds.contains(song.getId()));
+        }
     }
 
     public GuestQueue view(String partyCode, Set<Long> myIds) {

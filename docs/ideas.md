@@ -204,3 +204,31 @@ piece of work or when a task names an item. A finished item stays here until its
    bases and the guests' rights (missing today, whatever this idea becomes). **Rejected:** a message during the party (A), the DJ's
    answer on the guest's page (C), a chat (D) — they distract the DJ at work, need moderation, and C would not outlive the guest's
    30-minute session.
+
+12. **"Życzenia przed imprezą" — variant A of the analysis "Prośby przed imprezą"** (the artifact
+   https://claude.ai/artifact/SWNHdiZB3q1MoK6Twkah77; the owner, 2026-11-13: "dobry pomysł (nie tylko na wesela)", then A "tak", Pro
+   and the hosts "jak uważasz", the limits "tak", "nowe uprawnienie", the print "od razu wzór") — **on `claude/happy-carson-5odcet`,
+   not released (V68 → a database copy first).** The guests of a wedding, an 18th, a ball, a company party write the songs they want
+   before it, on the event's own link (`/w/{token}`, on the invitation or in a message): five a guest, nothing of them kept, no other
+   guest's wish shown (no AI checks them). The DJ (`/dj/wishes`, the permission WISHES, Pro) makes up to five open events — a party has
+   one code for every event, so the wishes are an event's —, sees them counted, the most wished first, marked by the library, and moves
+   the ones to play to the hosts' "⭐ Koniecznie zagrać" (the hosts see only those); a line without "Artist - Title" is listed apart, to
+   check. "Drukuj zaproszenia": the QR print of the event's link, its own words, the occasion "Zaproszenie" — an editor that saves
+   nothing. Deleted a week after the party. The privacy policy PL / EN, the terms, `/pro`, the hosts' page (the guests' wishes the
+   hosts gathered themselves go in "⭐" too). Details: `PROJECT_CONTEXT.md` 5.1, `docs/context/05-1i-wishes.md`. To try: a real
+   invitation printed (the cards cut to an envelope's size), the link on a phone, "⭐" before a party and the queue's "⭐" during it.
+   **Later, only if DJs ask:** an e-mail three days before the party ("84 życzenia, 6 nie masz w bibliotece"); the AI for each wish
+   (the list clean enough for the hosts to see whole); the guests' 👍 on the others' wishes (only after the AI). **Rejected:** the
+   wishes as requests in the evening's queue — weeks-old wishes would bury the room's requests, and "⭐" already carries what the DJ picks.
+
+13. **The ideas of 2026-11-13 — waiting for the owner's picks.** **"Propozycje z listy DJ-a"** (the owner's "Wylosuj z playlisty
+   DJ-a"; the artifact https://claude.ai/artifact/YY17E3WR3GzzQA2zsJ1x3C): a random song of the whole library is weak (intros and
+   edits, songs off the vibe) and lists the library to a script (~99 % of 20 000 tracks in a day from ten addresses), against the
+   privacy policy; the analysis recommends B — "Nie wiesz, co wybrać?", three songs of a short list the DJ uploads as the guests'
+   (≤ 300, kept in memory), without the played, waiting and "🚫" ones, sent without the AI, "🎲 z propozycji" in the queue. Its variant
+   0 is done: the hint to vote 👍 stands above the guests' list now, on the kiosk and the TV too (it was under the list, below a
+   phone's screen). Measured: `TABLESAMPLE` samples the whole table, not one party's — no use. Open: B at all, Pro or Free, the list
+   uploaded apart or as a second playlist of the same file, the dedication with it, the limits. **Not now** (the owner): "Co to
+   było?" — the guests' list of what played tonight knows only the guests' requests, not the DJ's set (later perhaps the set's history
+   uploaded after the party); "🎶 Leci Twoja piosenka!" (the guest page would ask the server every half minute); 🔥 for the song that
+   plays. **Good, not started:** "Brakuje Ci" — the songs asked for at several parties of the last 30 days that the library has not.

@@ -12,6 +12,13 @@ document.addEventListener('submit', function (e) {
     }
 }, true);
 
+// What a page's form did, said at the bottom of the screen (.s2p-done-toast, "Życzenia przed imprezą"): ✕ closes it.
+document.addEventListener('click', function (e) {
+    var close = e.target.closest ? e.target.closest('[data-toast-close]') : null;
+    var toast = close && close.closest('.s2p-undo-toast');
+    if (toast) toast.hidden = true;
+});
+
 // ---- "Kopiuj", one for every DJ page (review 2026-10-14: four copies of it, each failing its own way): a button with
 // data-copy-target copies the value of that field (the party link, the hosts' and the staff's link), one with data-copy-text its text
 // (the address in "Pomoc i kontakt" and on /pro). "Skopiowano" (data-copied) on the button for a moment — only when it was copied.

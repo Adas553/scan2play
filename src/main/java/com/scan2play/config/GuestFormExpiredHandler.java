@@ -23,13 +23,15 @@ import java.util.regex.Pattern;
  * and Spring Security refused it — the error page "403", the typed song lost (review 2026-10-14). Such a request goes back to the
  * party's page with what the guest typed — the song and the dedication — and a note to send it again; the page has a new session and token.
  * The same at the venue's kiosk (V56, {@code /k/{token}}): a request back to the kiosk's page with what was typed, a 👍 or "Następny
- * gość" back to it alone. Every other refusal is Spring Security's own.
+ * gość" back to it alone; a wish before an event (V68, {@code /w/{token}}) back to its page, saying to send it again. Every other refusal is Spring Security's own.
  */
 class GuestFormExpiredHandler implements AccessDeniedHandler {
 
     private static final Pattern GUEST_REQUEST = Pattern.compile("/p/([A-Za-z0-9]{1,10})/request");
     /** The venue's kiosk (V56): its request, its 👍 and "Następny gość" — the tablet's page back, a new session and token. */
     private static final Pattern KIOSK_FORM = Pattern.compile("/k/([A-Za-z0-9_-]{1,64})/(request|vote|next)");
+    /** "Życzenia przed imprezą" (V68): a guest's wish — the event's page back, a new session and token. */
+    private static final Pattern WISH_FORM = Pattern.compile("/w/([A-Za-z0-9_-]{1,32})");
 
     private final AccessDeniedHandler otherwise = new AccessDeniedHandlerImpl();
     private final SessionFlashMapManager flashes = new SessionFlashMapManager();
@@ -48,6 +50,15 @@ class GuestFormExpiredHandler implements AccessDeniedHandler {
         Matcher guestRequest = GUEST_REQUEST.matcher(path);
         Matcher kioskForm = KIOSK_FORM.matcher(path);
         boolean kiosk = kioskForm.matches();
+        Matcher wishForm = WISH_FORM.matcher(path);
+        if (refused instanceof CsrfException && "POST".equals(request.getMethod()) && wishForm.matches()) {
+            FlashMap flash = new FlashMap();
+            flash.put(ViewAttributes.WISH_NOTE, messages.getMessage("wish.form.expired", null, locales.resolveLocale(request)));
+            flash.setTargetRequestPath("/w/" + wishForm.group(1));
+            flashes.saveOutputFlashMap(flash, request, response);
+            response.sendRedirect(request.getContextPath() + "/w/" + wishForm.group(1));
+            return;
+        }
         if (!(refused instanceof CsrfException) || !"POST".equals(request.getMethod()) || !(kiosk || guestRequest.matches())) {
             otherwise.handle(request, response, refused);
             return;

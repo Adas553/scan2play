@@ -23,6 +23,9 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
     <meta name="theme-color" content="#1a1a1a">
+    <!--/* opened again in the tab ("← Ustawienia imprezy" of "Życzenia przed imprezą", "Wstecz"): where the DJ was, the cards unfolded
+         then unfolded again (folds.js) — no jump; an address naming a card (#libraryCard) still goes to it */-->
+    <th:block th:replace="~{fragments/components :: scroll-restore-script}"></th:block>
 </head>
 <!--/* The page "Ustawienia imprezy" (the design review, 2026-10-10: the panel's settings were seven cards, 4900 px of a phone): what a DJ
      sets before a party, not during it — the hosts' lists, the profiles and the tip link, the guests' limits, this device. The panel
@@ -275,6 +278,26 @@
             </div>
             <p class="small text-secondary mt-2 mb-0" id="kioskTip" th:text="#{settings.kiosk.tip}">Guided Access on an iPad…</p>
             </th:block>
+            </div>
+        </details>
+
+        <!--/* "Życzenia przed imprezą" (V68): the guests write songs before an event, on its own link — the card leads to the page of
+             the events and their wishes (DjWishesController); its state the events collecting now. Whoever has WISHES; without Pro
+             the organiser sees the offer here and on the page. */-->
+        <details th:if="${access.may('WISHES') and (plan.allows('WISHES') or plan.pro('WISHES'))}"
+                 class="card bg-dark border-secondary s2p-fold" id="wishesCard">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{wishes.title}">Wishes before the party</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+                <span class="s2p-fold-state" id="wishesState" th:unless="${plan.pro('WISHES')}"
+                      th:text="${wishOpen > 0} ? #{settings.wishes.open(${wishOpen})} : #{settings.wishes.none}">None</span>
+            </summary>
+            <div class="s2p-fold-body">
+                <th:block th:if="${plan.pro('WISHES')}"><div th:replace="~{fragments/components :: proOffer(#{plan.wishes.offer})}"></div></th:block>
+                <th:block th:unless="${plan.pro('WISHES')}">
+                <p class="s2p-card-help" th:text="#{settings.wishes.help}">Send the guests a link with the invitation…</p>
+                <a th:href="@{/dj/wishes(party=${partyCode})}" id="wishesOpen" class="btn btn-sm btn-outline-light"
+                   th:text="#{settings.wishes.go}">Events and wishes</a>
+                </th:block>
             </div>
         </details>
 

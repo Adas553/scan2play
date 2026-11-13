@@ -81,6 +81,7 @@ its part (and this table, if a part's subject changes); a new subject goes to th
 | 5.1 (cont.) | [`docs/context/05-1f-kiosk.md`](docs/context/05-1f-kiosk.md) | 5 KB | the venue's kiosk (V56): the link, the page, the turns, its limits |
 | 5.1 (cont.) | [`docs/context/05-1g-history-summary.md`](docs/context/05-1g-history-summary.md) | 12 KB | the history (`PlayHistoryService`); "Podsumowanie wieczoru" (the evening, the hosts' version, CSV) |
 | 5.1 (cont.) | [`docs/context/05-1h-staff.md`](docs/context/05-1h-staff.md) | 11 KB | the party's staff: roles, permissions, invitations, joining, which party a request works on |
+| 5.1 (cont.) | [`docs/context/05-1i-wishes.md`](docs/context/05-1i-wishes.md) | 6 KB | "Życzenia przed imprezą" (V68): the events, the guests' page `/w/`, the DJ's page, "⭐" from the wishes, the invitation's print |
 | 5.2 – 5.5 | [`docs/context/05-2-guest-flow.md`](docs/context/05-2-guest-flow.md) | 14 KB | the guest's page `/p/{code}`; what reaches the AI; the limits; the Free plan's AI checks; (5.3, 5.4 removed); the demo |
 | 6, 6.1, 6.2 | [`docs/context/06-1-controllers-services.md`](docs/context/06-1-controllers-services.md) | 15 KB | file inventory: controllers, services |
 | 6.3 – 6.6 | [`docs/context/06-3-config-templates-static.md`](docs/context/06-3-config-templates-static.md) | 13 KB | file inventory: configuration classes, templates, static assets, resources |

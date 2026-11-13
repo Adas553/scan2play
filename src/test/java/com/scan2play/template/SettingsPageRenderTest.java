@@ -139,7 +139,7 @@ class SettingsPageRenderTest {
         when(push.publicKey()).thenReturn(PUBLIC_KEY);
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), limiter, push, staff,
-                mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
+                mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
