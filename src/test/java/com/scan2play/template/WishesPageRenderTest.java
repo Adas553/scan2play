@@ -236,7 +236,7 @@ class WishesPageRenderTest {
 
         when(wishes.create(PARTY, "Wesele Ani i Kuby", WishService.today().plusDays(3))).thenReturn(Optional.of(event));
         assertThat(controller.create(PARTY, "  Wesele\tAni  i Kuby ", WishService.today().plusDays(3).toString(), user("owner"),
-                new MockHttpSession(), answer)).isEqualTo("redirect:/dj/wishes?party=WISH1&event=7#wishEvent");
+                new MockHttpSession(), answer)).isEqualTo("redirect:/dj/wishes?party=WISH1&event=7");
     }
 
     /**
@@ -268,7 +268,7 @@ class WishesPageRenderTest {
         RedirectAttributesModelMap reopened = new RedirectAttributesModelMap();
         when(wishes.reopen(PARTY, 7L)).thenReturn(WishService.Reopened.TOO_MANY);
         assertThat(controller.closed(7L, PARTY, false, user("owner"), new MockHttpSession(), reopened))
-                .isEqualTo("redirect:/dj/wishes?party=WISH1&event=7#wishEvent");
+                .isEqualTo("redirect:/dj/wishes?party=WISH1&event=7");
         assertThat(reopened.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("reopen_too_many");
         assertThat(render(Plans.off(), 7L, Map.of(ViewAttributes.WISH_DONE, "reopen_too_many", ViewAttributes.WISH_DONE_ARG,
                 new String[]{"5"}))).contains("Otwartych wydarzeń jest już 5 — zakończ zbieranie w jednym, żeby wznowić to.");

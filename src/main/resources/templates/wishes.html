@@ -12,16 +12,18 @@
     <!--/* the menu "Konto" and the window "Pomoc i kontakt" of the heading (dj-nav) */-->
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <!--/* the page loads again after each form: where the DJ was, not at an anchor — a button never makes the page jump */-->
+    <th:block th:replace="~{fragments/components :: scroll-restore-script}"></th:block>
 </head>
 <!--/* "Życzenia przed imprezą" (V68, DjWishesController): the party's events — each a guests' link to send or print as an invitation —
      and the wishes of the one opened, the most wished first, marked by the DJ's library, each with "⭐ Do „Koniecznie zagrać”". Plain
-     forms, a page load each (the page back at the event); "Nowy link" and "Usuń" ask first (data-confirm, dj-nav.js). */-->
+     forms, a page load each (the page back where it was, scroll-restore.js; what was done said at the bottom of the screen); "Nowy link" and "Usuń" ask first (data-confirm, dj-nav.js). */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
     <div th:replace="~{fragments/components :: dj-nav(activeTab='settings', isActive=${isActive}, partyCode=${partyCode})}"></div>
 
     <div class="s2p-mw-800 s2p-dj-page-body d-flex flex-column gap-3">
-    <a th:href="@{/dj/settings(party=${partyCode})} + '#wishesCard'" class="text-secondary text-decoration-none s2p-wishes-back"
+    <a th:href="@{/dj/settings(party=${partyCode})}" class="text-secondary text-decoration-none s2p-wishes-back"
        th:text="#{wishes.back}">← Party settings</a>
     <div>
         <h1 class="h3 text-white mb-2"><span th:text="#{wishes.title}">Wishes before the party</span><th:block
@@ -29,11 +31,14 @@
         <p class="s2p-card-help mb-0" th:text="#{wishes.help(${wishLeft})}">Guests write songs before the party…</p>
     </div>
 
-    <!--/* what the last form did */-->
-    <div th:if="${wishDone != null}" id="wishDone" class="alert py-2 mb-0" role="status"
+    <!--/* what the last form did: at the bottom of the screen, over the page — seen wherever the page was left, and moving nothing;
+         ✕ closes it (dj-nav.js) */-->
+    <div th:if="${wishDone != null}" id="wishDone" class="s2p-undo-toast s2p-done-toast" role="status"
          th:classappend="${wishDone == 'invalid' or wishDone == 'too_many' or wishDone == 'too_many_kept' or wishDone == 'reopen_too_many'
-                          or wishDone == 'must_play_full'} ? 'alert-warning' : 'alert-success'"
-         th:text="${#messages.msgWithParams('wishes.done.' + wishDone, wishDoneArg)}">Saved</div>
+                          or wishDone == 'must_play_full'} ? 's2p-done-toast-warning'">
+        <span th:text="${#messages.msgWithParams('wishes.done.' + wishDone, wishDoneArg)}">Saved</span>
+        <button type="button" class="btn-close btn-close-white flex-shrink-0" data-toast-close th:attr="aria-label=#{dashboard.form.refused.close}"></button>
+    </div>
 
     <!--/* without Pro: the offer, and the events made before only to delete */-->
     <th:block th:if="${plan.pro('WISHES')}"><div th:replace="~{fragments/components :: proOffer(#{plan.wishes.offer})}"></div></th:block>
@@ -77,7 +82,7 @@
                         <span th:text="${e.date().isBefore(today)} ? #{wishes.state.after} : (${e.closed()} ? #{wishes.state.closed} : #{wishes.state.open})">collecting</span>
                     </span>
                 </span>
-                <a th:href="@{/dj/wishes(party=${partyCode},event=${e.id()})} + '#wishEvent'" class="btn btn-sm btn-outline-light text-nowrap"
+                <a th:href="@{/dj/wishes(party=${partyCode},event=${e.id()})}" class="btn btn-sm btn-outline-light text-nowrap"
                    th:classappend="${wishEvent != null and wishEvent.id() == e.id()} ? 'active'"
                    th:text="#{wishes.events.open}">Show the wishes</a>
             </li>

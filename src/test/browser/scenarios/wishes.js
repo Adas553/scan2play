@@ -66,6 +66,30 @@
     });
 
     S2P.scenario({
+        name: 'wishes-answer-in-place',
+        title: 'the DJ\'s page of wishes after a form: the page where it was (scroll-restore.js, no anchor), what was done said at the '
+            + 'bottom of the screen whatever the scroll — the page under it not moved — and closed with ✕',
+        page: 'wishes-empty',
+        viewport: '390,844',
+        run: async function (t) {
+            t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
+            t.step('no link to the wishes or the settings jumps to an anchor', Array.from(document.querySelectorAll('a[href*="/dj/wishes"], a[href*="/dj/settings"]'))
+                .filter(function (a) { return a.getAttribute('href').indexOf('#') >= 0; }).map(function (a) { return a.getAttribute('href'); }), []);
+            const done = document.getElementById('wishDone');
+            const box = done.getBoundingClientRect();
+            t.check('said on the screen, at its bottom', box.bottom <= window.innerHeight && box.top > window.innerHeight / 2);
+            t.check('over the page, not in it', getComputedStyle(done).position === 'fixed');
+            window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+            t.check('still on the screen at the end of the page', done.getBoundingClientRect().bottom <= window.innerHeight);
+            const close = done.querySelector('[data-toast-close]');
+            t.check('✕ a finger\'s size', close.getBoundingClientRect().height >= 44 && close.getBoundingClientRect().width >= 44);
+            close.click();
+            t.step('✕ closes it', done.hidden, true);
+            t.check('nothing sideways', fits());
+        }
+    });
+
+    S2P.scenario({
         name: 'qr-print-invitation-saves-nothing',
         title: 'the invitation\'s print: a heading typed shows on every card, the editor says nothing of "not saved" and leaving asks nothing',
         page: 'qr-print-cards-own-tables-invitation',

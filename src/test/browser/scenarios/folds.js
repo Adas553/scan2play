@@ -73,6 +73,27 @@
     });
 
     S2P.scenario({
+        name: 'settings-back-where-it-was',
+        title: 'the page "Ustawienia imprezy" left and opened again in the tab ("← Ustawienia imprezy" of "Życzenia przed imprezą"): the cards '
+            + 'unfolded then are unfolded again and the page is where it was — no jump to a card, nor to the top',
+        page: 'settings',
+        viewport: '390,844',
+        run: async function (t) {
+            const src = document.querySelector('script[src*="folds"]').src;
+            t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
+            document.querySelector('#wishesCard > summary').click();
+            window.dispatchEvent(new Event('beforeunload'));   // the DJ follows "Wydarzenia i życzenia"
+            document.getElementById('wishesCard').open = false;   // the page as it loads again: every card folded
+            const again = document.createElement('script');   // folds.js once more, as on a page load
+            again.src = src;
+            await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
+            t.step('the card unfolded when the page was left is unfolded again; the others folded',
+                folds().filter(function (fold) { return fold.open; }).map(function (fold) { return fold.id; }), ['wishesCard']);
+            sessionStorage.clear();
+        }
+    });
+
+    S2P.scenario({
         name: 'settings-folded-wide',
         title: 'the page "Ustawienia imprezy" on a computer: the folded lines one under another, the states on the right, all of one width',
         page: 'settings',

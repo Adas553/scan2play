@@ -50,7 +50,7 @@ import static com.scan2play.controller.ViewAttributes.*;
  * The DJ's page of "Życzenia przed imprezą" (V68, Pro; whoever has the permission WISHES): the party's events, each with its guests'
  * link to send or print as an invitation ({@code /dj/qr-print?wish=}), and the wishes of the one opened — counted, the most wished
  * first, each marked by the DJ's library when there is one — with "⭐ Do „Koniecznie zagrać”", which adds it to the hosts' wish
- * list (V29): the list the AI lets through and the queue marks. A full page load after each form, the page back where it was.
+ * list (V29): the list the AI lets through and the queue marks. A full page load after each form, the page back where it was (scroll-restore.js), what was done said at the bottom of the screen.
  * <p>
  * Without Pro the page offers it: no event is made and the guests' links open nothing ({@link WishController}); an event made before
  * may still be deleted.
@@ -298,6 +298,7 @@ public class DjWishesController {
     }
 
     private static String back(String partyCode, Long event) {
-        return "redirect:/dj/wishes?party=" + partyCode + (event == null ? "" : "&event=" + event + "#wishEvent");
+        // no anchor: the page loads again where the DJ was (scroll-restore.js), the answer at the bottom of the screen
+        return "redirect:/dj/wishes?party=" + partyCode + (event == null ? "" : "&event=" + event);
     }
 }

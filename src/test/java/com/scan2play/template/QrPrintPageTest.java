@@ -160,7 +160,7 @@ class QrPrintPageTest {
         for (String layout : List.of("cards", "poster")) {
             String html = render(layout, Locale.forLanguageTag("pl"), party, new PartyStaffService.Access(party, true, StaffPermission.all()), 7L);
             assertThat(html).contains("<title>Wydruk kodu QR</title>", ">Zaproszenie: życzenia muzyczne<", ">Powrót do życzeń<",
-                    "href=\"/dj/wishes?party=PRNT1&amp;event=7#wishEvent\"",
+                    "href=\"/dj/wishes?party=PRNT1&amp;event=7\"",
                     "<span>www.scan2play.com.pl/w/</span><wbr><span class=\"link-code\">Wish_tok3n-AbCdEfGhIjKl</span>",
                     "lang=\"pl\">Jaką piosenkę chcesz usłyszeć?</span>", "class=\"second\">Which song do you want to hear?</span>",
                     "Wesele Ani i Kuby · 14.06.2027", "theme-elegant", "font-script", "data-preview-only=\"true\"", "id=\"posterPreviewOnly\"",

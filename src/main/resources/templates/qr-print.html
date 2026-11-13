@@ -28,7 +28,7 @@
 <nav class="toolbar no-print">
     <a th:unless="${wish}" th:href="@{/dj/dashboard(party=${partyCode})}" href="/dj/dashboard" class="toolbar-back" th:text="#{qr.print.back}">Back to the dashboard</a>
     <!--/* an invitation of "Życzenia przed imprezą" (V68): back to its event */-->
-    <a th:if="${wish}" th:href="@{/dj/wishes(party=${partyCode},event=${wishPrint.id()})} + '#wishEvent'" class="toolbar-back"
+    <a th:if="${wish}" th:href="@{/dj/wishes(party=${partyCode},event=${wishPrint.id()})}" class="toolbar-back"
        th:text="#{qr.print.back.wishes}">Back to the wishes</a>
     <strong class="toolbar-title" th:text="${wish} ? #{qr.print.title.wishes} : #{qr.print.title}">Print the QR code</strong>
     <!--/* the three layouts as one switch; the editor's unsaved changes go along (qr-print.js keeps them for the tab) */-->

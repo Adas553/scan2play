@@ -40,7 +40,9 @@ past the AI; gone when the list has them all), "Do sprawdzenia", "Pobierz
 CSV" (`Piosenka;Ile osób;W bibliotece`), "Usuń wydarzenie" (asks first). "⭐" adds only the event's named songs, never another text, to
 `party_settings.host_wanted` as the hosts' list keeps it (`SongList.tidy`, 100 lines): what did not fit is said ("Nie zmieściło się:
 N"). The wish list is one for every event of the party: the page says to clear it before the next one. Plain forms, a page load each,
-back at the event (`#wishEvent`).
+the page back where the DJ was (`scroll-restore.js`, no anchor: a button never makes it jump), what was done said in a bar at the
+bottom of the screen (`.s2p-done-toast`, ✕ closes it, `dj-nav.js`). "← Ustawienia imprezy" goes back to the settings as they were
+left: the scroll (`scroll-restore.js`) and the cards unfolded then (`folds.js`, the tab's session storage).
 
 **The invitation** (`/dj/qr-print?party=&wish=&layout=cards`, `DjDashboardController.qrPrint`): the QR print of the event's link —
 the cards by default (eight on a sheet, the size of an invitation's insert), the poster and the tent too; its own heading "Jaką

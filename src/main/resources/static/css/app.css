@@ -1505,6 +1505,10 @@ th[data-sort].sort-desc::after {
 .s2p-undo-toast[hidden] { display: none; }
 /* a form not saved (forms.js, components :: formRefused): the same toast, red-edged, above the "Cofnij" one when both show */
 .s2p-refused-toast { border-color: var(--bs-danger); bottom: 5rem; }
+/* what a form of "Życzenia przed imprezą" did (wishes.html #wishDone): the same bar, green-edged, amber for a refusal; ✕ a finger's size */
+.s2p-done-toast { border-color: var(--bs-success); }
+.s2p-done-toast-warning { border-color: var(--bs-warning); }
+.s2p-done-toast .btn-close { width: 44px; height: 44px; padding: 0; }
 /* A screen without a pointer that hovers (a phone): a tap leaves the button hovered until the next tap elsewhere, so an outline
    button stayed filled white — "Ukryj „Nie masz”" switched off looked on, "+ Dodaj piosenkę" looked pressed. There hover changes
    nothing; the tap itself (:active) and a button that is on (.active, aria-pressed) keep their fill. Last in the file and with
