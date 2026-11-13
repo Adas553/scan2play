@@ -50,6 +50,24 @@
         }
     });
 
+    // What the 👍 is for was one line under the list — after five songs and "Pokaż pozostałe", on a phone below the screen, read
+    // after the list if at all. Now above the list, under its heading: the guest reads it before the songs it is about.
+    S2P.scenario({
+        name: 'guest-vote-hint-above-the-list',
+        title: 'the guest page on a phone: "Daj 👍 piosenkom…" under the list\'s heading, above its first song, readable at once',
+        page: 'guest',
+        viewport: '390,844',
+        run: async function (t) {
+            const hint = document.getElementById('voteHint');
+            t.check('the hint is there', !!hint);
+            const first = document.querySelector('#guestQueueBox li[data-song-id]');
+            const title = document.querySelector('#guestQueueBox .queue-title');
+            t.check('under the heading, above the first song', hint.getBoundingClientRect().top >= title.getBoundingClientRect().bottom
+                && hint.getBoundingClientRect().bottom <= first.getBoundingClientRect().top);
+            t.check('fits the phone\'s width', hint.getBoundingClientRect().right <= document.documentElement.clientWidth);
+        }
+    });
+
     // The owner (2026-10-09): "#18 Dawid Podsiadło - Let You / Down" — the second line of a long name went under the number. The number
     // is a column of its own: every line of the name starts where the name does, right of the number.
     S2P.scenario({

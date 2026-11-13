@@ -1679,6 +1679,7 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-hint { color: var(--s2p-light); font-size: 1rem; margin: 0.75rem 0 0; }
 .s2p-kiosk-list { display: flex; flex-direction: column; min-height: 0; }
 .s2p-kiosk-list h2 { font-size: 1.5rem; font-weight: 700; color: var(--s2p-white); margin-bottom: 1rem; }
+.s2p-kiosk-vote-hint { color: var(--s2p-light); font-size: 1rem; margin: -0.5rem 0 0.75rem; }
 .s2p-kiosk-songs {
     list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk;
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;

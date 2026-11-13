@@ -229,6 +229,23 @@ class GuestPageRenderTest {
     }
 
     /**
+     * What the 👍 is for, above the list — under it, after five songs and "Pokaż pozostałe", a phone showed it below the screen —, and
+     * only while there is a song to vote for: the guest's own is their vote already.
+     */
+    @Test
+    void theHintToVote_standsAboveTheList_onlyWithASongToVoteFor() {
+        String html = render(PL, Map.of("guestQueue", queue(List.of(numbered(2, "Newest", 18), numbered(1, "Mine", 17)), Set.of(1L), "Mine")));
+        assertThat(html).contains("id=\"voteHint\"", ">Daj 👍 piosenkom, które też chcesz usłyszeć — DJ widzi, czego goście chcą najbardziej.<");
+        assertThat(html.split("id=\"voteHint\"", -1)).as("once").hasSize(2);
+        assertThat(html.indexOf("id=\"voteHint\"")).isGreaterThan(html.indexOf(">Prośby gości<")).isLessThan(html.indexOf("id=\"guestRequests\""));
+        assertThat(render(Locale.ENGLISH, Map.of("guestQueue", queue(List.of(numbered(2, "Newest", 18)), Set.of(), null))))
+                .contains(">Tap 👍 on the songs you want to hear too — the DJ sees what guests want most.<");
+
+        String onlyMine = render(PL, Map.of("guestQueue", queue(List.of(numbered(1, "Mine", 17)), Set.of(1L), "Mine")));
+        assertThat(onlyMine).contains(">Prośby gości<").doesNotContain("voteHint");
+    }
+
+    /**
      * The guests' theme (V59): the themes' stylesheet after app.css and the theme on <body> — the party page, the result, the "party
      * ended" page; nothing more for the classic look (app.css alone, as before). Written as {@code guest-theme-<theme>.html} (the list
      * and the guest's own song, so the browser tests see the statuses in each theme), {@code result-theme.html} and
@@ -584,7 +601,7 @@ class GuestPageRenderTest {
                 "btn-outline-warning", "aria-pressed=\"false\"", "title=\"Zagłosuj na tę piosenkę\"", ">👍 1<");
         assertThat(row.apply("Voted")).contains("name=\"on\" value=\"false\"", "btn-warning", "aria-pressed=\"true\"",
                 "title=\"Twój głos — dotknij, aby go cofnąć\"", ">👍 3<").doesNotContain("btn-outline-warning");
-        assertThat(html).contains("👍 Oddaj głos na piosenkę — DJ widzi, czego goście chcą najbardziej").doesNotContain("??", "id=\"moreRequests\"");
+        assertThat(html).contains("id=\"voteHint\"").doesNotContain("??", "id=\"moreRequests\"");
     }
 
     /** A fragment of guest-queue.html alone, as the server renders it for the page's script. */
