@@ -39,9 +39,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-12 — `claude/blissful-fermi-izymid`, no PR yet (V67 → a database copy first):** item 11 B0 — the DJ's e-mail and phone
   for bookings in "Zarezerwuj tego DJ-a" (Pro, `/dj/dashboard/booking-contact`) — and A0 — the refusal "not a song" points to the
   dedication. The privacy policy, the terms, `/pro`, the guide with it. To try: the card on a phone, the `mailto:` on a phone.
-- **2026-11-13 — `claude/happy-carson-5odcet`, no PR yet:** the hint to vote 👍 above the guests' list (it was under it, below a
-  phone's screen), on the kiosk and the TV; no migration. The analyses "Propozycje z listy DJ-a" (https://claude.ai/artifact/YY17E3WR3GzzQA2zsJ1x3C)
-  and "Prośby przed imprezą" (https://claude.ai/artifact/SWNHdiZB3q1MoK6Twkah77) wait for the owner's picks — then `docs/ideas.md` items 12, 13.
+- **2026-11-13 — `claude/happy-carson-5odcet`, no PR yet (V68 → a database copy first):** `docs/ideas.md` item 12 —
+  "Życzenia przed imprezą" (`/w/{token}`, `/dj/wishes`, the invitation's print, the permission WISHES, Pro); the hint to vote 👍 above
+  the guests' list, on the kiosk and the TV. Item 13 waits for the owner's picks ("Propozycje z listy DJ-a"). To try: an invitation
+  printed, its link on a phone, "⭐" from the wishes before a party.
 - **2026-11-12 — `claude/confident-bell-nf6tu7`, no PR yet:** three pictures on "Jak działa Scan2Play" (the panel on a computer — the
   landing page's —, on a phone, the evening summary; `screenshots.py --only guide`), `CLAUDE.md` (a cloud session commits to its own
   branch), `docs/ideas.md` item 10. The guide's videos wait: PR #259 a draft, not to be merged as it is (item 10).

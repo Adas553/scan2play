@@ -31,6 +31,7 @@
             <li>Gdy DJ go poda: link do jego strony napiwków (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — publicznie widoczny dla gości na stronie imprezy, pod przyjętą prośbą i na wydruku kodu QR</li>
             <li>Gdy DJ je wgra: jego logo — obraz przekodowany na naszym serwerze do pliku PNG o boku najwyżej 512 pikseli, bez danych zapisanych w pliku (np. EXIF: miejsca, aparatu, daty); publicznie widoczne dla gości na stronie imprezy, na ekranie TV, na wydruku kodu QR i w podsumowaniu wieczoru DJ-a</li>
             <li>Gdy DJ ją wgra: jego biblioteka utworów (kolekcja z rekordboxa albo plik M3U) — zapisujemy wykonawców i tytuły tak, jak są zapisane w pliku, i w uproszczonej postaci (bez wielkości liter, polskich znaków i dopisków typu „Radio Edit”), a z kolekcji rekordboxa także tempo (BPM), tonację, gatunek i rok utworów; do tego liczbę utworów, dzień wgrania i nazwę wybranej listy utworów z kolekcji. Nie zapisujemy ścieżek do plików, notatek, ocen ani liczby odtworzeń. Biblioteka służy tylko do znaczników ✓ / ? / ✗ (z tempem i tonacją utworu DJ-a) przy prośbach w kolejce jego imprezy i w jego podsumowaniu wieczoru, a jeśli DJ tego nie wyłączy — także do znaku „✓ DJ ma” przy podpowiedziach piosenek, które widzą goście jego imprezy (gość dowiaduje się tylko, czy DJ ma podpowiadaną mu piosenkę; całej biblioteki nikomu nie pokazujemy)</li>
+            <li>Gdy DJ utworzy wydarzenie „Życzenia przed imprezą”: jego nazwa i data — widzą je goście, którzy otworzą link do życzeń tego wydarzenia</li>
             <li>Zgłoszenia (problemy i pomysły) przesłane przez panel DJ-a</li>
             <li>Gdy DJ włączy powiadomienia na urządzeniu: subskrypcja powiadomień tej przeglądarki (adres przeglądarki w usłudze powiadomień i jej klucze szyfrowania) oraz język panelu</li>
             <li>Gdy ktoś dołączy do obsługi imprezy (barman, drugi DJ) przez link zaproszenia albo zaproszenie właściciela: identyfikator jego konta Google, imię z tego konta i to, co właściciel pozwolił mu robić — imię widzi właściciel imprezy na liście obsługi</li>
@@ -44,8 +45,12 @@
             <li>Tekst zamówienia piosenki (tytuł, wykonawca albo fragment tekstu) — zapisywany tak, jak go wpisano (do 150 znaków), i widoczny dla DJ-a tej imprezy obok piosenki wybranej przez AI. Nazwę tej piosenki widzą też inni goście imprezy (na liście próśb) i ekran TV w sali — gdy AI nie rozpozna piosenki, nazwą są Twoje słowa; prośbę, której AI nie mogło ocenić, widzisz tylko Ty i DJ. Tekst trafia też do logów serwera (z kodem imprezy, bez adresu IP); nie wpisuj w nim danych osobowych</li>
             <li>Dedykacja do prośby, gdy ją dopiszesz (do 100 znaków) — widzi ją tylko DJ tej imprezy przy piosence, inni goście nie;
                 sprawdza ją AI (Google Gemini) razem z prośbą; usuwana razem z prośbą</li>
-            <li>Identyfikator sesji (ciasteczko) — do limitu próśb i do rozpoznania Twoich wcześniejszych próśb i 👍 na tej imprezie (oznaczenie „Twoja”, głos liczony raz); bez danych osobowych</li>
-            <li>Adres IP — widzą go Cloudflare i dostawca hostingu (pkt 6), przez których przechodzi każde połączenie ze stroną. Sama aplikacja trzyma go tylko w pamięci serwera, do limitów próśb i 👍 z jednej sieci na imprezie (ochrona przed nadużyciami); nie zapisuje go w bazie danych ani w swoich logach</li>
+            <li>Życzenie przed imprezą, gdy DJ udostępni link do życzeń swojego wydarzenia (np. z zaproszeniem): wpisana piosenka (do 150 znaków)
+                i liczba osób, które wpisały tę samą — bez imienia, adresu e-mail i adresu IP. Widzi je tylko DJ (i osoby z jego obsługi, którym
+                na to pozwoli), nie inni goście; gospodarze widzą tylko piosenki, które DJ przeniesie na listę „⭐ Koniecznie zagrać”. Nie trafia do
+                AI ani do logów serwera</li>
+            <li>Identyfikator sesji (ciasteczko) — do limitu próśb i życzeń przed imprezą oraz do rozpoznania Twoich wcześniejszych próśb i 👍 na tej imprezie (oznaczenie „Twoja”, głos liczony raz); bez danych osobowych</li>
+            <li>Adres IP — widzą go Cloudflare i dostawca hostingu (pkt 6), przez których przechodzi każde połączenie ze stroną. Sama aplikacja trzyma go tylko w pamięci serwera, do limitów próśb, 👍 i życzeń przed imprezą z jednej sieci (ochrona przed nadużyciami); nie zapisuje go w bazie danych ani w swoich logach</li>
         </ul>
 
         <h3>3. Jak wykorzystujemy Twoje dane</h3>
@@ -82,7 +87,7 @@
             <li>Podsumowanie wieczoru: gdy zamówienie jest usuwane (po 30 dniach albo gdy DJ wyczyści historię), zostaje z niego tylko to, co liczy podsumowanie — nazwa piosenki, godziny, liczba głosów, napiwków i dedykacji, powód odrzucenia przez AI (już grała / nie pasowała) — oraz sama liczba próśb zatrzymanych przed AI (z listy „nie grać”, niedawno pominięte, nie piosenka) — bez słów gościa, treści dedykacji, komentarza AI i bez niczego, co wskazuje, kto prosił (z prośby odrzuconej przez AI nie zostaje nawet nazwa); do tego tytuł wieczoru wpisany przez DJ-a i link dla gospodarzy (działa 30 dni). Usuwane po 13 miesiącach od wieczoru albo z kontem DJ-a</li>
             <li>Sesje (logowanie DJ-a, identyfikator sesji gościa): przechowywane w bazie danych i usuwane po 30 minutach bez aktywności</li>
             <li>Wybrany język strony: gdy wybierzesz go adresem z <code>?lang=pl</code> albo <code>?lang=en</code>, ciasteczko <code>lang</code> z samym kodem języka zapamiętuje go w Twojej przeglądarce na rok, żeby kolejne strony były w tym języku; nic nie trafia do bazy danych</li>
-            <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie lub 👍 z tej sieci</li>
+            <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie, 👍 lub życzeniu z tej sieci</li>
             <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
             <li>Adres e-mail właściciela imprezy i dzień założenia konta: do usunięcia konta (wiadomości, które sobie wymieniliśmy, zostają w naszej skrzynce pocztowej jak każda korespondencja); dziennik maili wysłanych przez Brevo (adres odbiorcy, temat, stan doręczenia) — 1 miesiąc od wysyłki, także po usunięciu konta; treści wysłanych maili Brevo nie przechowuje</li>
             <li>Subskrypcja powiadomień urządzenia: do wyłączenia powiadomień na nim przez DJ-a, porzucenia jej przez przeglądarkę albo usunięcia konta</li>
@@ -91,6 +96,8 @@
             <li>Logi serwera (w nich tekst próśb gości z kodem imprezy): przechowywane przez dostawcę hostingu przez 7 dni, potem usuwane</li>
             <li>Logo DJ-a: do wgrania nowego (zastępuje poprzednie), usunięcia go przez DJ-a albo usunięcia konta; przeglądarki gości i sieć Cloudflare mogą trzymać jego kopię jeszcze najwyżej godzinę</li>
             <li>Biblioteka utworów DJ-a: do wgrania nowej (zastępuje poprzednią), usunięcia jej przez DJ-a albo usunięcia konta</li>
+            <li>Życzenia przed imprezą (wydarzenie, jego link i życzenia gości): usuwane automatycznie 7 dni po dacie imprezy (najpóźniej dwa
+                lata od utworzenia wydarzenia), wcześniej, gdy DJ usunie wydarzenie albo swoje konto</li>
             <li>Adres e-mail i telefon DJ-a do rezerwacji: do ich zmiany lub usunięcia przez DJ-a albo usunięcia konta</li>
             <li>Zgłoszenia i plan konta: do usunięcia konta przez DJ-a</li>
             <li>Gdy konto miało okres próbny planu Pro: skrót (SHA-256) identyfikatora konta Google — bez imienia, adresu e-mail i danych imprezy — zostaje także po usunięciu konta, dopóki Scan2Play oferuje okres próbny planu Pro, żeby to samo konto nie dostało drugiego okresu próbnego (nasz prawnie uzasadniony interes: zapobieganie nadużyciom okresu próbnego)</li>

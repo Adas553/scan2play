@@ -89,16 +89,30 @@ class QrPrintPageTest {
 
     private static String render(String layout, Locale locale, PartySettingsEntity party, PartyStaffService.Access access)
             throws IOException {
+        return render(layout, locale, party, access, null);
+    }
+
+    /** An event of "Życzenia przed imprezą" (V68): the invitation the print makes of its guests' link. */
+    private static final com.scan2play.service.WishService.Event INVITATION = new com.scan2play.service.WishService.Event(7L, PARTY,
+            "Wish_tok3n-AbCdEfGhIjKl", "Wesele Ani i Kuby", java.time.LocalDate.of(2027, 6, 14), false, 0, java.time.Instant.now());
+
+    /** {@code wish}: the invitation of {@link #INVITATION}, or the party's own print (null). */
+    private static String render(String layout, Locale locale, PartySettingsEntity party, PartyStaffService.Access access, Long wish)
+            throws IOException {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.access(any(), any(), any())).thenReturn(access);
+        when(sessionHelper.require(any(), any(), any(), any())).thenReturn(party);
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
                 mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "https://www.scan2play.com.pl/");
+        com.scan2play.service.WishService wishes = mock(com.scan2play.service.WishService.class);
+        when(wishes.event(PARTY, 7L)).thenReturn(java.util.Optional.of(INVITATION));
+        ReflectionTestUtils.setField(controller, "wishService", wishes);
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
-        String view = controller.qrPrint(layout, null, model, ownerToken(), new MockHttpSession(), locale);
+        String view = controller.qrPrint(layout, null, wish, model, ownerToken(), new MockHttpSession(), locale);
         assertThat(view).isEqualTo("qr-print");
 
         MockServletContext servletContext = new MockServletContext();
@@ -119,9 +133,35 @@ class QrPrintPageTest {
         String variant = (party.getLogoVersion() != null ? "-logo" : "")
                 + (party.getPosterHeading() != null || party.getPosterLine() != null || party.getPosterLanguage() != com.scan2play.model.PosterLanguage.AUTO ? "-own" : "")
                 + (party.getPosterTables() != null ? "-tables" : "")
-                + (access.owner() ? "" : "-staff");
+                + (access.owner() ? "" : "-staff") + (wish != null ? "-invitation" : "");
         Files.writeString(BROWSER_HARNESS.resolve("qr-print-" + layout + variant + ".html"), html, StandardCharsets.UTF_8);
         return html;
+    }
+
+    /**
+     * The invitation of "Życzenia przed imprezą" (V68): the code and the address of the event's guests' link, its own heading and the
+     * event in the line, the look of the occasion "Zaproszenie" — and an editor that saves nothing: no "Zapisz", no language, no
+     * tables, its way back to the event. The party's own print as the DJ saved it is not touched.
+     */
+    @Test
+    void anInvitation_hasTheEventsLinkAndWords_andAnEditorThatSavesNothing() throws IOException {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).posterHeading("Osiemnastka Dawida").posterTables(12)
+                .instagramUrl("https://www.instagram.com/dj.koko/").build();
+        for (String layout : List.of("cards", "poster")) {
+            String html = render(layout, Locale.forLanguageTag("pl"), party, new PartyStaffService.Access(party, true, StaffPermission.all()), 7L);
+            assertThat(html).contains("<title>Wydruk kodu QR</title>", ">Zaproszenie: życzenia muzyczne<", ">Powrót do życzeń<",
+                    "href=\"/dj/wishes?party=PRNT1&amp;event=7#wishEvent\"",
+                    "<span>www.scan2play.com.pl/w/</span><wbr><span class=\"link-code\">Wish_tok3n-AbCdEfGhIjKl</span>",
+                    "lang=\"pl\">Jaką piosenkę chcesz usłyszeć?</span>", "class=\"second\">Which song do you want to hear?</span>",
+                    "Wesele Ani i Kuby · 14.06.2027", "theme-elegant", "font-script", "data-preview-only=\"true\"", "id=\"posterPreviewOnly\"",
+                    "<option value=\"INVITATION\"");
+            assertThat(html).as("the occasion \"Zaproszenie\" picked").containsPattern("<option value=\"INVITATION\"[^>]*selected=\"selected\"");
+            assertThat(html).as("nothing of the party's own print and code").doesNotContain("value=\"Osiemnastka Dawida\"", ">Osiemnastka Dawida<", "Kod imprezy", ">Kod<",
+                    "/p/PRNT1", "id=\"posterSave\"", "id=\"posterLanguage\"");
+            assertThat(html).contains("party=PRNT1&amp;wish=7\"");
+        }
+        assertThat(render("cards", Locale.forLanguageTag("pl"))).as("the party's own print offers no invitation")
+                .doesNotContain("INVITATION", "data-preview-only").contains("id=\"posterSave\"");
     }
 
     @Test

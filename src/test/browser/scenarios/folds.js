@@ -16,7 +16,7 @@
         viewport: '390,844',
         run: async function (t) {
             t.step('every card folded', folds().map(function (fold) { return [fold.id, fold.open]; }),
-                [['partyHoursCard', false], ['guestThemeCard', false], ['hostListsCard', false], ['kioskCard', false], ['linksCard', false],
+                [['partyHoursCard', false], ['guestThemeCard', false], ['hostListsCard', false], ['kioskCard', false], ['wishesCard', false], ['linksCard', false],
                     ['logoCard', false], ['limitsCard', false], ['libraryCard', false], ['morningSummaryCard', false], ['deviceCard', false],
                     ['partyCodeCard', false]]);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('guestThemeCard'), stateOf('hostListsCard'),

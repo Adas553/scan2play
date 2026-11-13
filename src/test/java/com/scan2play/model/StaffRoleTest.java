@@ -53,13 +53,26 @@ class StaffRoleTest {
     @Test
     void theKiosksMigration_matchesTheWholeSetAsItWasStored() throws java.io.IOException {
         EnumSet<StaffPermission> before = EnumSet.allOf(StaffPermission.class);
+        before.remove(StaffPermission.WISHES);   // V68's, after V56
         before.remove(StaffPermission.KIOSK);
-        String sql;
-        try (java.io.InputStream in = getClass().getResourceAsStream("/db/migration/V56__kiosk.sql")) {
-            sql = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        }
-        assertThat(sql.split("= '" + StaffPermission.format(before) + "';", -1)).as("the three tables").hasSize(4);
-        before.add(StaffPermission.KIOSK);
+        assertThat(sql("/db/migration/V56__kiosk.sql").split("= '" + StaffPermission.format(before) + "';", -1))
+                .as("the three tables").hasSize(4);
+    }
+
+    /** V68 gave WISHES to the sets that were the whole set before it (KIOSK included), the same way. */
+    @Test
+    void theWishesMigration_matchesTheWholeSetAsItWasStored() throws java.io.IOException {
+        EnumSet<StaffPermission> before = EnumSet.allOf(StaffPermission.class);
+        before.remove(StaffPermission.WISHES);
+        assertThat(sql("/db/migration/V68__guest_wishes.sql").split("= '" + StaffPermission.format(before) + "';", -1))
+                .as("the three tables").hasSize(4);
+        before.add(StaffPermission.WISHES);
         assertThat(StaffRole.of(StaffPermission.parse(StaffPermission.format(before)))).isEqualTo(StaffRole.CO_ORGANISER);
+    }
+
+    private String sql(String migration) throws java.io.IOException {
+        try (java.io.InputStream in = getClass().getResourceAsStream(migration)) {
+            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
     }
 }

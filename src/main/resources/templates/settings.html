@@ -278,6 +278,26 @@
             </div>
         </details>
 
+        <!--/* "Życzenia przed imprezą" (V68): the guests write songs before an event, on its own link — the card leads to the page of
+             the events and their wishes (DjWishesController); its state the events collecting now. Whoever has WISHES; without Pro
+             the organiser sees the offer here and on the page. */-->
+        <details th:if="${access.may('WISHES') and (plan.allows('WISHES') or plan.pro('WISHES'))}"
+                 class="card bg-dark border-secondary s2p-fold" id="wishesCard">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{wishes.title}">Wishes before the party</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+                <span class="s2p-fold-state" id="wishesState" th:unless="${plan.pro('WISHES')}"
+                      th:text="${wishOpen > 0} ? #{settings.wishes.open(${wishOpen})} : #{settings.wishes.none}">None</span>
+            </summary>
+            <div class="s2p-fold-body">
+                <th:block th:if="${plan.pro('WISHES')}"><div th:replace="~{fragments/components :: proOffer(#{plan.wishes.offer})}"></div></th:block>
+                <th:block th:unless="${plan.pro('WISHES')}">
+                <p class="s2p-card-help" th:text="#{settings.wishes.help}">Send the guests a link with the invitation…</p>
+                <a th:href="@{/dj/wishes(party=${partyCode})}" id="wishesOpen" class="btn btn-sm btn-outline-light"
+                   th:text="#{settings.wishes.go}">Events and wishes</a>
+                </th:block>
+            </div>
+        </details>
+
         <!--/* The DJ's profiles (V24) and tip link (V27) — the owner's alone (money): the guests see them under "Kto gra" and on the QR
              print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks, TipLinks) —
              400 when it is not one, and the form says why. One "Zapisz" for the profiles, one for the tip link (two endpoints). */-->

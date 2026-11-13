@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{wish.page.title}">Your song for the party - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <!-- a secret link (WishController): no search engine, and no Referer that would carry it to another site -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <link th:replace="~{fragments/components :: guestThemeCss}">
+</head>
+<!--/* "Życzenia przed imprezą" (V68, /w/{token}): before an event a guest writes the songs they want to hear — the DJ sees them counted.
+     The event's name and date, who plays, one field with the song suggestions of the party page (iTunes, asked by the browser), and
+     after a wish what became of it. No list of the others' wishes: they are not checked by the AI, the DJ alone reads them. */-->
+<body class="page-guest" th:attr="data-guest-theme=${guestTheme != null and guestTheme.themed()} ? ${guestTheme.name()} : null">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500">
+        <div class="text-center mb-3">
+            <h1 class="display-6 fw-bold mb-2"><th:block th:replace="~{fragments/components :: djLogo}"></th:block><th:block
+                    th:if="${djLogo == null}"><th:block th:replace="~{fragments/components :: logo}"></th:block></th:block></h1>
+            <p th:if="${djName != null}" id="djName" class="fw-bold mb-2"><span th:text="#{party.dj.label}">🎧 Gra:</span> <span
+                    th:replace="~{fragments/components :: djNameText}">DJ Koko</span></p>
+            <h2 class="h4 fw-bold mb-1" id="wishEventName" th:text="${wishEvent.name}">Wesele Ani i Kuby</h2>
+            <p class="text-secondary mb-0" id="wishEventDate" th:text="${wishDate}">14 czerwca 2027</p>
+        </div>
+
+        <!--/* what became of the guest's last wish */-->
+        <div th:if="${wishAdded != null}" id="wishAdded" class="alert alert-success text-center py-2" role="status">
+            <span class="fw-bold" th:text="#{wish.added(${wishAdded})}">✓ Saved: Wilki - Baśka</span><br>
+            <span th:text="${wishLeft > 0} ? #{wish.added.more(${wishLeft})} : #{wish.added.last}">You can add 4 more songs.</span>
+        </div>
+        <div th:if="${wishNote != null}" id="wishNote" class="alert alert-warning text-center py-2" role="status" th:text="${wishNote}">Too many</div>
+
+        <th:block th:if="${wishOpen and wishLeft > 0}">
+        <form th:action="@{/w/{token}(token=${wishToken})}" method="post" class="m-0" id="wishForm">
+            <div class="mb-3">
+                <label for="songInput" class="form-label fw-bold fs-5" th:text="#{wish.question}">Which song do you want to hear at the party?</label>
+                <div class="song-autocomplete-wrapper">
+                    <!--/* the suggestions of the party page (song-autocomplete.js): "Artist – Title", which the DJ's page counts as one song */-->
+                    <input type="text" id="songInput" name="song" class="form-control form-control-lg" required maxlength="150"
+                           data-autocomplete="songs" th:placeholder="#{home.form.input.placeholder}" autocomplete="off">
+                </div>
+                <div id="songInputHelp" class="form-text text-secondary mt-2" th:text="#{wish.help(${wishLeft})}">Pick it from the suggestions…</div>
+            </div>
+            <button type="submit" id="wishSubmit" class="btn btn-action btn-lg w-100" th:text="#{wish.send}">Send my wish</button>
+        </form>
+        </th:block>
+        <!--/* the guest wrote all theirs: nothing to fill, a farewell */-->
+        <p th:if="${wishOpen and wishLeft <= 0 and wishAdded == null}" id="wishAllWritten" class="text-center fw-bold mb-0"
+           th:text="#{wish.all_written}">You wrote all your songs. See you on the dance floor!</p>
+        <p th:unless="${wishOpen}" id="wishClosed" class="text-center fw-bold mb-0" th:text="#{wish.closed}">The collecting has ended. See you on the dance floor!</p>
+
+        <p class="small text-secondary text-center mt-3 mb-0" id="wishPrivacy" th:text="#{wish.privacy}">The DJ sees the wishes before the party…</p>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+<script src="/js/song-autocomplete.js" th:src="@{/js/song-autocomplete.js}"></script>
+</body>
+</html>

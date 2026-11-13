@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{wishes.page.title}">Wishes before the party - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <!-- the guests' links are secrets: no Referer that would carry one to another site -->
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <!--/* the menu "Konto" and the window "Pomoc i kontakt" of the heading (dj-nav) */-->
+    <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* "Życzenia przed imprezą" (V68, DjWishesController): the party's events — each a guests' link to send or print as an invitation —
+     and the wishes of the one opened, the most wished first, marked by the DJ's library, each with "⭐ Do „Koniecznie zagrać”". Plain
+     forms, a page load each (the page back at the event); "Nowy link" and "Usuń" ask first (data-confirm, dj-nav.js). */-->
+<body class="page-dj">
+<div class="container mt-3 mt-md-5 p-3 p-md-4">
+    <div th:replace="~{fragments/components :: dj-nav(activeTab='settings', isActive=${isActive}, partyCode=${partyCode})}"></div>
+
+    <div class="s2p-mw-800 s2p-dj-page-body d-flex flex-column gap-3">
+    <a th:href="@{/dj/settings(party=${partyCode})} + '#wishesCard'" class="text-secondary text-decoration-none s2p-wishes-back"
+       th:text="#{wishes.back}">← Party settings</a>
+    <div>
+        <h1 class="h3 text-white mb-2"><span th:text="#{wishes.title}">Wishes before the party</span><th:block
+                th:if="${plan.pro('WISHES')}"> <span th:replace="~{fragments/components :: proMark}"></span></th:block></h1>
+        <p class="s2p-card-help mb-0" th:text="#{wishes.help(${wishLeft})}">Guests write songs before the party…</p>
+    </div>
+
+    <!--/* what the last form did */-->
+    <div th:if="${wishDone != null}" id="wishDone" class="alert py-2 mb-0" role="status"
+         th:classappend="${wishDone == 'invalid' or wishDone == 'too_many' or wishDone == 'must_play_full'} ? 'alert-warning' : 'alert-success'"
+         th:text="${#messages.msgWithParams('wishes.done.' + wishDone, wishDoneArg)}">Saved</div>
+
+    <!--/* without Pro: the offer, and the events made before only to delete */-->
+    <th:block th:if="${plan.pro('WISHES')}"><div th:replace="~{fragments/components :: proOffer(#{plan.wishes.offer})}"></div></th:block>
+
+    <!--/* a new event: its name and day, as the guests read them */-->
+    <section th:unless="${plan.pro('WISHES')}" class="card bg-dark border-secondary p-3" id="wishNewCard">
+        <h2 class="s2p-card-title" th:text="#{wishes.new.title}">New event</h2>
+        <form th:if="${wishOpen < wishMaxOpen}" th:action="@{/dj/wishes/create}" method="POST" class="m-0" id="wishNewForm">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <div class="flex-grow-1">
+                    <label for="wishName" class="form-label small text-secondary mb-1" th:text="#{wishes.new.name}">Name (the guests see it)</label>
+                    <input type="text" id="wishName" name="name" required th:attr="maxlength=${wishNameMax}" autocomplete="off"
+                           class="form-control bg-black text-light border-secondary" th:placeholder="#{wishes.new.name.placeholder}">
+                </div>
+                <div>
+                    <label for="wishDate" class="form-label small text-secondary mb-1" th:text="#{wishes.new.date}">Party date</label>
+                    <input type="date" id="wishDate" name="date" required th:attr="min=${wishDateMin},max=${wishDateMax}"
+                           class="form-control bg-black text-light border-secondary">
+                </div>
+            </div>
+            <button type="submit" id="wishCreateBtn" class="btn btn-sm btn-outline-light mt-3" th:text="#{wishes.new.create}">Create the link</button>
+        </form>
+        <p class="small text-secondary mt-2 mb-0" id="wishOpenCount"
+           th:text="${wishOpen < wishMaxOpen} ? #{wishes.new.kept(${wishOpen}, ${wishMaxOpen})} : #{wishes.new.full(${wishMaxOpen})}">Open: 2 of 5.</p>
+    </section>
+
+    <!--/* the party's events: the open ones first, the nearest first; a passed one a week, then gone with its wishes */-->
+    <section th:unless="${#lists.isEmpty(wishEvents)}" class="card bg-dark border-secondary p-3" id="wishEventsCard">
+        <h2 class="s2p-card-title" th:text="#{wishes.events.title}">Your events</h2>
+        <ul class="list-unstyled m-0 d-flex flex-column gap-2" id="wishEvents">
+            <li th:each="e : ${wishEvents}" class="d-flex flex-wrap align-items-center justify-content-between gap-2 s2p-wish-event"
+                th:attr="data-event-id=${e.id()}"
+                th:with="today=${T(com.scan2play.service.WishService).today()}">
+                <span class="s2p-min-w-0">
+                    <span class="fw-bold text-white text-break" th:text="${e.name()}">Wesele Ani i Kuby</span><br>
+                    <span class="small text-secondary">
+                        <span th:text="${#temporals.format(e.date(), 'dd.MM.yyyy')}">14.06.2027</span> ·
+                        <span th:text="#{wishes.count(${e.wishCount()})}">84 wishes</span> ·
+                        <span th:text="${e.date().isBefore(today)} ? #{wishes.state.after} : (${e.closed()} ? #{wishes.state.closed} : #{wishes.state.open})">collecting</span>
+                    </span>
+                </span>
+                <a th:href="@{/dj/wishes(party=${partyCode},event=${e.id()})} + '#wishEvent'" class="btn btn-sm btn-outline-light text-nowrap"
+                   th:classappend="${wishEvent != null and wishEvent.id() == e.id()} ? 'active'"
+                   th:text="#{wishes.events.open}">Show the wishes</a>
+            </li>
+        </ul>
+    </section>
+
+    <!--/* the event opened: its link, its buttons, its wishes */-->
+    <section th:if="${wishEvent != null}" class="card bg-dark border-secondary p-3" id="wishEvent"
+             th:with="past=${wishEvent.date().isBefore(T(com.scan2play.service.WishService).today())}">
+        <h2 class="s2p-card-title mb-1" th:text="${wishEvent.name()}">Wesele Ani i Kuby</h2>
+        <p class="small text-secondary mb-3" th:text="${wishDate}">14 czerwca 2027</p>
+
+        <th:block th:unless="${plan.pro('WISHES') or past}">
+        <div class="input-group input-group-sm mb-2">
+            <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${wishLink}" id="wishLinkInput" readonly
+                   th:attr="aria-label=#{wishes.link}">
+            <button class="btn btn-outline-secondary" type="button" data-copy-target="wishLinkInput" th:text="#{dashboard.qr.copy}"
+                    th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
+            <a class="btn btn-outline-secondary" id="wishLinkOpen" th:href="${wishLink}" target="_blank" rel="noopener"
+               th:text="#{wishes.link.open}">Open</a>
+        </div>
+        <div class="s2p-btn-row mb-3">
+            <a class="btn btn-sm btn-outline-light text-nowrap" id="wishPrintBtn" target="_blank" rel="noopener"
+               th:href="@{/dj/qr-print(party=${partyCode},wish=${wishEvent.id()},layout='cards')}" th:text="#{wishes.print}">Print invitations</a>
+            <form th:action="@{/dj/wishes/{id}/closed(id=${wishEvent.id()})}" method="POST" class="m-0">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="hidden" name="closed" th:value="${!wishEvent.closed()}">
+                <button type="submit" id="wishCloseBtn" class="btn btn-sm btn-outline-light text-nowrap"
+                        th:text="${wishEvent.closed()} ? #{wishes.reopen} : #{wishes.close}">Stop collecting</button>
+            </form>
+            <form th:action="@{/dj/wishes/{id}/link(id=${wishEvent.id()})}" method="POST" class="m-0" th:attr="data-confirm=#{wishes.new_link.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" id="wishNewLinkBtn" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{wishes.new_link}">New link</button>
+            </form>
+        </div>
+        </th:block>
+
+        <p class="text-white mb-2" id="wishSummary">
+            <span th:text="#{wishes.count(${wishEvent.wishCount()})}">84 wishes</span> ·
+            <span th:text="#{wishes.songs(${wishSongs})}">52 songs</span><th:block th:if="${wishMissing != null}"> ·
+            <span th:text="#{wishes.missing(${wishMissing})}">6 not in your library</span></th:block>
+        </p>
+
+        <p th:if="${#lists.isEmpty(wishRows) and #lists.isEmpty(wishCheck)}" class="text-secondary" id="wishEmpty"
+           th:text="#{wishes.empty}">Nobody has written a song yet…</p>
+
+        <th:block th:unless="${#lists.isEmpty(wishRows)}">
+        <ol class="list-group list-group-flush mb-2 s2p-wish-list" id="wishRows">
+            <li th:each="row : ${wishRows}" class="list-group-item bg-dark text-light border-secondary d-flex flex-wrap align-items-center gap-2 px-0"
+                th:with="mark=${row.mark() == null ? null : #strings.toLowerCase(row.mark().name())}">
+                <span class="me-auto s2p-min-w-0">
+                    <span class="fw-bold text-break" th:text="${row.songName()}">Wilki - Baśka</span>
+                    <span class="small text-secondary text-nowrap" th:text="#{wishes.row.count(${row.wishes()})}">7 guests</span><br th:if="${mark != null}">
+                    <span th:if="${mark != null}" class="badge s2p-library"
+                          th:classappend="${mark == 'have'} ? 'text-bg-success' : (${mark == 'similar'} ? 'text-bg-dark border border-warning text-warning' : 'text-bg-dark border border-secondary')"
+                          th:attr="data-library=${mark}" th:title="#{${'dashboard.library.' + mark + '.title'}}"
+                          th:text="#{${'dashboard.library.' + mark}}">✓ Masz</span>
+                    <span th:if="${row.bpm() != null or row.tonality() != null}" class="small text-secondary"
+                          th:text="${row.bpm() == null} ? ${row.tonality()} : (${row.tonality() == null} ? #{dashboard.library.bpm(${row.bpm()})}
+                                   : #{dashboard.library.bpm(${row.bpm()})} + ' · ' + ${row.tonality()})">128 BPM · 5A</span>
+                </span>
+                <span th:if="${row.wanted()}" class="small text-warning text-nowrap" th:text="#{wishes.row.wanted}">⭐ On "Must play"</span>
+                <form th:unless="${row.wanted() or plan.pro('WISHES')}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}" method="POST" class="m-0">
+                    <input type="hidden" name="partyCode" th:value="${partyCode}">
+                    <input type="hidden" name="song" th:value="${row.songName()}">
+                    <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap s2p-wish-star" th:text="#{wishes.row.to_wanted}">⭐ To "Must play"</button>
+                </form>
+            </li>
+        </ol>
+        <form th:unless="${plan.pro('WISHES')}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}" method="POST" class="m-0 mb-2">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <input type="hidden" name="top" value="true">
+            <button type="submit" id="wishTopBtn" class="btn btn-sm btn-outline-warning" th:text="#{wishes.top(${T(com.scan2play.controller.DjWishesController).TOP})}">⭐ Add the 10 most wished</button>
+        </form>
+        <p class="small text-secondary mb-3" th:text="#{wishes.wanted.note}">"Must play" holds 100 songs and is one for all your events…</p>
+        </th:block>
+
+        <!--/* written without "Artist - Title": a title alone or a line of the lyrics — the DJ reads them */-->
+        <th:block th:unless="${#lists.isEmpty(wishCheck)}">
+        <h3 class="h6 text-white mt-2" th:text="#{wishes.check.title}">To check</h3>
+        <p class="small text-secondary mb-1" th:text="#{wishes.check.help}">Written without the artist…</p>
+        <ul class="list-unstyled small mb-3" id="wishCheck">
+            <li th:each="row : ${wishCheck}" class="text-break text-light"><span th:text="${row.songName()}">coś od zenka</span>
+                <span class="text-secondary" th:text="'(' + ${row.wishes()} + ')'">(2)</span></li>
+        </ul>
+        </th:block>
+
+        <div class="s2p-btn-row">
+            <a th:unless="${#lists.isEmpty(wishRows) and #lists.isEmpty(wishCheck)}" class="btn btn-sm btn-outline-secondary" id="wishCsv"
+               th:href="@{/dj/wishes/{id}/csv(id=${wishEvent.id()},party=${partyCode})}" th:text="#{wishes.csv}">Download CSV</a>
+            <form th:action="@{/dj/wishes/{id}/delete(id=${wishEvent.id()})}" method="POST" class="m-0" th:attr="data-confirm=#{wishes.delete.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" id="wishDeleteBtn" class="btn btn-sm btn-outline-danger" th:text="#{wishes.delete}">Delete the event</button>
+            </form>
+        </div>
+        <p class="small text-secondary mt-2 mb-0" th:text="#{wishes.kept(${T(com.scan2play.service.WishService).KEPT_DAYS_AFTER})}">Deleted 7 days after the party.</p>
+    </section>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: formRefused}"></div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>
