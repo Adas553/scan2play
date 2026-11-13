@@ -12,6 +12,8 @@
     <!--/* the menu "Konto" and the window "Pomoc i kontakt" of the heading (dj-nav) */-->
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <!--/* the page loads again after each form: where the owner was, the cards unfolded then unfolded again (folds.js) — no jump */-->
+    <th:block th:replace="~{fragments/components :: scroll-restore-script}"></th:block>
 </head>
 <!--/* The owner's page "Obsługa" (V32, the review of 2026-10-10: the card in the settings was 1750 px down a phone and 990 px tall
      with ten people): who helps, what each may do — a role, or permissions ticked one by one —, the invitations by e-mail waiting
@@ -19,7 +21,7 @@
      (StaffController); js/staff.js keeps each form's role and ticks in step; js/dj-nav.js (with the heading) copies the link.
      "Zaproś" and the link are folded like the people (details.s2p-fold, as on "Ustawienia imprezy"), each with its state in the line:
      the places free, the link's role and how long it works. Unfolded by itself: "Zaproś" when it has an answer to show or nobody
-     helps yet (the first thing to do), the link after it was made or turned off (#staffLinkCard, folds.js). */-->
+     helps yet (the first thing to do), the link when it was unfolded as the page was left — after "Nowy link" or turning it off (folds.js, remembered for the tab). */-->
 <body class="page-dj">
 
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
@@ -29,7 +31,7 @@
     <div th:replace="~{fragments/components :: dj-nav(activeTab='settings', isActive=${isActive}, partyCode=${partyCode})}"></div>
 
     <div class="s2p-mw-800 s2p-dj-page-body">
-    <a th:href="@{/dj/settings(party=${partyCode})}" href="/dj/settings" id="backToSettings" class="btn btn-link px-0 mb-1"
+    <a th:href="@{/dj/settings(party=${partyCode})}" href="/dj/settings" id="backToSettings" class="s2p-back-link"
        th:text="'← ' + #{settings.title}">← Party settings</a>
     <h1 class="h3 text-white mb-1" th:text="#{staff.page.heading}">The party's staff</h1>
     <p class="text-secondary mb-4" th:text="#{staff.page.help}">People who help you run the party.</p>

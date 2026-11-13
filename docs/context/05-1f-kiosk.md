@@ -13,7 +13,7 @@ the secret kept out of the tablet's address bar, where a guest could read it and
 cookie `S2P_KIOSK` (HttpOnly, `Path=/k`, 90 days) and kiosk.js shows the address `/k`, which opens the same kiosk by the cookie — a pull
 to refresh too; the forms and kiosk.js's way back still go by the token):
 the request form as the party page's (the iTunes suggestions, the dedication when on) and beside it — on a tablet held across, else under
-it — the most wanted with 👍, as the TV screen; "Następny gość" under the form, in its column; one screen on a tablet, the page never
+it — the most wanted with 👍, as the TV screen, "Dotknij 👍 przy piosence, którą też chcesz usłyszeć." under its heading; "Następny gość" under the form, in its column; one screen on a tablet, the page never
 scrolls (the list scrolls in its card, keeps its place there when it comes again and fades at the bottom while more is below — a
 tablet hides the scrollbar); a screen too small for the form and three songs (a phone; under 900 px wide and 1000 px high, or under
 560 px high) scrolls as a page, the whole list under the form (scenarios `kiosk-full-*`); no link out (no profiles, tip link, footer).

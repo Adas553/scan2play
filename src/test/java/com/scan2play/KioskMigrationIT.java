@@ -62,15 +62,17 @@ class KioskMigrationIT {
                     + " ('PUB01', 'Jan@x.pl', 'jan@x.pl', '" + EVERYTHING + "', now()), ('PUB01', 'ala@x.pl', 'ala@x.pl', 'HISTORY', now())");
         }
 
+        // to the end: V56 adds KIOSK to the whole sets, then V68 WISHES to the sets that are whole with it — a set ticked by hand
+        // gets neither
         Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
 
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
             assertThat(rows(statement, "SELECT member_id || ': ' || permissions FROM party_staff ORDER BY member_id")).containsExactly(
-                    "ewa: HISTORY,SUMMARY", "kasia: " + EVERYTHING + ",KIOSK", "ola: " + QUEUE_ROLE);
+                    "ewa: HISTORY,SUMMARY", "kasia: " + EVERYTHING + ",KIOSK,WISHES", "ola: " + QUEUE_ROLE);
             assertThat(rows(statement, "SELECT party_code || ': ' || staff_link_permissions FROM party_settings ORDER BY party_code"))
-                    .containsExactly("PUB01: " + EVERYTHING + ",KIOSK", "PUB02: " + QUEUE_ROLE);
+                    .containsExactly("PUB01: " + EVERYTHING + ",KIOSK,WISHES", "PUB02: " + QUEUE_ROLE);
             assertThat(rows(statement, "SELECT email_key || ': ' || permissions FROM staff_invitation ORDER BY email_key"))
-                    .containsExactly("ala@x.pl: HISTORY", "jan@x.pl: " + EVERYTHING + ",KIOSK");
+                    .containsExactly("ala@x.pl: HISTORY", "jan@x.pl: " + EVERYTHING + ",KIOSK,WISHES");
             assertThat(rows(statement, "SELECT coalesce(kiosk_token, 'none') FROM party_settings")).containsExactly("none", "none");
         }
     }

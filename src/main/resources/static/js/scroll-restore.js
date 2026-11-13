@@ -24,9 +24,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.documentElement.style.visibility = '';
 
-    window.addEventListener("beforeunload", function () {
+    // "pagehide" too: Safari on an iPhone leaves a page without "beforeunload" — the page would come back at its top
+    function remember() {
         try {
             sessionStorage.setItem(scrollKey, window.scrollY);
         } catch (e) { /* storage blocked: nothing remembered */ }
-    });
+    }
+    window.addEventListener("beforeunload", remember);
+    window.addEventListener("pagehide", remember);
 });

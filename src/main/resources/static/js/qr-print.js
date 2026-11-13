@@ -248,6 +248,9 @@
     }
     const answer = document.getElementById('posterAnswer');
     const save = document.getElementById('posterSave');
+    // An invitation of "Życzenia przed imprezą" (V68): the editor shows its changes and saves none — no "Zapisz", no language, no
+    // "not saved" note and no question on leaving; the party's own print stays as the DJ saved it.
+    const previewOnly = form.dataset.previewOnly === 'true';
 
     function all(selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); }
 
@@ -441,7 +444,7 @@
 
     // Changes not saved yet go with the DJ to the other layouts (poster, cards, tent), so they can be compared before "Zapisz": kept in
     // this tab only, for the next page, and gone once it has them.
-    const stashKey = 's2p-poster-' + form.elements.partyCode.value;
+    const stashKey = 's2p-poster-' + form.elements.partyCode.value + (previewOnly ? '-invitation' : '');
 
     /** The fields that go along: every one of the form by its name — the language saves itself, the party's code is the page's. */
     function carried(el) { return el.name && el.name !== 'partyCode' && el.name !== 'language' && el.type !== 'hidden'; }
@@ -501,6 +504,7 @@
 
     function markUnsaved() {
         unsaved = true;
+        if (previewOnly) return;   // nothing to save: no note
         say(form.dataset.unsaved, false);
         answer.classList.add('unsaved');
     }
@@ -541,7 +545,7 @@
     unstash();
     takeFirst();
 
-    form.elements.language.addEventListener('change', async function () {
+    if (form.elements.language) form.elements.language.addEventListener('change', async function () {
         say(form.dataset.sending, false);
         try {
             await send();
@@ -555,13 +559,14 @@
     // Changes not saved: leaving the page asks first — "Powrót do panelu", the tab closed after printing —, or they are gone without
     // a word
     window.addEventListener('beforeunload', function (e) {
-        if (!unsaved || switching) return;
+        if (!unsaved || switching || previewOnly) return;
         e.preventDefault();
         e.returnValue = '';
     });
 
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
+        if (previewOnly || !save) return;   // Enter in a field of an invitation: nothing to save
         save.disabled = true;
         say(form.dataset.sending, false);
         try {

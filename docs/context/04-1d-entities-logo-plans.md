@@ -48,7 +48,7 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 - **Pro features** (`PlanFeature`): the hosts' lists and their link (`HOST_LISTS`), the profiles (`PROFILES`), the tip link and 💸
   (`TIPS`), the AI's comment styles but "Klasyczne" (`COMMENT_STYLES`), the guests' limits set by the DJ (`GUEST_LIMITS` — without Pro
   every party has a new party's 2 requests / 3 min / no repeats of the last 15, `PartySettingsEntity.DEFAULT_*`), "Podsumowanie
-  wieczoru" and its CSV (`SUMMARY`), the venue's kiosk (`KIOSK`, V56 — without Pro its link opens nothing; taking it away needs no plan), the DJ's logo (`LOGO`, V45 — without Pro kept, not shown; deleting it needs no plan), the DJ's library and its marks in the queue (`LIBRARY`, V41 — without Pro the library is kept,
+  wieczoru" and its CSV (`SUMMARY`), the venue's kiosk (`KIOSK`, V56 — without Pro its link opens nothing; taking it away needs no plan), the guests' wishes before an event (`WISHES`, V68 — without Pro their links open nothing and no event is made; deleting one needs no plan), the DJ's logo (`LOGO`, V45 — without Pro kept, not shown; deleting it needs no plan), the DJ's library and its marks in the queue (`LIBRARY`, V41 — without Pro the library is kept,
   unmarked; deleting it needs no plan); and the staff's places (`Plan.staffPlaces`): 10 with Pro, 1 without (the invitations by e-mail
   waiting count, as before). **Everyone's**: the QR code and prints, the AI, the queue and its keys, the votes and 👍, the vibe, its
   note and "Kto gra", the history, the notifications, 1 person of staff.
@@ -81,12 +81,12 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
 
 `StaffPermission` (V32) QUEUE ("Zagrane", "Pomiń", "Cofnij", "↩ Przywróć", "Dodaj piosenkę" — V44), TIPS (💸), CLEAR_QUEUE, OPEN_CLOSE (end / resume the
 party), HISTORY, VIBE (the card "Impreza"), LIMITS, HOST_LISTS (the lists and their link), SUMMARY (the evening summary and its CSV),
-KIOSK (V56: the kiosk's link; given by V56 to everyone who had all the rest — `KioskMigrationIT`) ·
+KIOSK (V56: the kiosk's link; given by V56 to everyone who had all the rest — `KioskMigrationIT`) · WISHES (V68: "Życzenia przed imprezą"; given by V68 the same way) ·
 `StaffRole` (V32, ready sets by what the person does, not by their job) VIEWER "Podgląd" (HISTORY), QUEUE "Obsługa kolejki" (QUEUE,
 TIPS, CLEAR_QUEUE, OPEN_CLOSE, HISTORY — what every person of the staff could do before V32; `DEFAULT`: the role picked first for a new link and for "Zaproś", and what a link made before V33 gives), CO_ORGANISER
 "Współorganizator" (all of them), CUSTOM "Własne" (ticked one by one) ·
 `Plan` (V35) FREE (1 place of staff) / PRO (every `PlanFeature`, 10 places) · `PlanFeature` HOST_LISTS, PROFILES, TIPS, COMMENT_STYLES,
-GUEST_LIMITS, SUMMARY, LIBRARY, LOGO, KIOSK (V56) · `PlanSource` TRIAL / PAID / GIFT ·
+GUEST_LIMITS, SUMMARY, LIBRARY, LOGO, KIOSK (V56), WISHES (V68) · `PlanSource` TRIAL / PAID / GIFT ·
 `HistoryFilter` all / played / rejected (an old link's "guest" / "background" reads as all) · `VibeType` ANY and 16 genres (V16:
 Polish hits, 2000s/2010s, R&B & soul, folk / biesiada, kids added; bachata, salsa and reggaeton merged into LATINO — the rows moved
 by the migration).

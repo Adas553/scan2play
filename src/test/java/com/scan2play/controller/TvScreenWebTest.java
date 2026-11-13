@@ -136,6 +136,10 @@ class TvScreenWebTest {
                 .hasSize(10);
         assertThat(html).contains("Zenek Martyniuk - Przez twe oczy zielone", ">9<", "Wilki - Baśka")
                 .doesNotContain("Lady Pank");
+        assertThat(html).as("where the votes are given, under the list's heading, in both languages")
+                .contains("<span lang=\"pl\">Głosuj 👍 na telefonie</span>", "<span lang=\"en\" class=\"second\">Vote 👍 on your phone</span>");
+        assertThat(html.indexOf("id=\"tvVoteHint\"")).isGreaterThan(html.indexOf("Najczęściej wybierane"))
+                .isLessThan(html.indexOf("class=\"tv-song\""));
         assertThat(html).as("what the guests see under their form, no more: no words, no dedications, no numbers")
                 .doesNotContain("guest words", "💌", "#12");
         assertThat(html).as("no form: nothing to post, no CSRF token").doesNotContain("<form", "_csrf");
@@ -178,7 +182,7 @@ class TvScreenWebTest {
 
         when(guestQueueService.mostWanted("ABC12")).thenReturn(List.of());
         String empty = noSession(mockMvc.perform(get("/p/ABC12/tv/list")).andExpect(status().isOk()).andReturn());
-        assertThat(empty).contains("id=\"tvEmpty\"").doesNotContain("class=\"tv-song\"");
+        assertThat(empty).contains("id=\"tvEmpty\"").doesNotContain("class=\"tv-song\"", "tvVoteHint");
         write("tv-list-empty.html", empty);
     }
 

@@ -39,7 +39,7 @@ class DjDashboardControllerInvitationTest {
     private final StaffInvitationService invitations = mock(StaffInvitationService.class);
     private final DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
             mock(QrCodeService.class), sessionHelper, mock(PlayHistoryService.class), mock(GuestRequestLimiter.class),
-            mock(PushNotificationService.class), mock(PartyStaffService.class), invitations, com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
+            mock(PushNotificationService.class), mock(PartyStaffService.class), invitations, com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class));
 
     private static OAuth2AuthenticationToken kasia(boolean verified) {
         return new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"),

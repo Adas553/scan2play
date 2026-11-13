@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +24,15 @@ class ImpersonalPolishTextsTest {
     private static final Pattern GENDERED = Pattern.compile("\\p{L}+(łeś|łaś|łbyś|łabyś)\\b|\\bgotow[ya]\\b",
             Pattern.UNICODE_CHARACTER_CLASS | Pattern.CASE_INSENSITIVE);
 
+    /**
+     * "DJ" with a verb in the past by gender ("DJ zebrał", "DJ już zagrała") — the DJ is not always a man either: "Lista jest pełna",
+     * not "DJ zebrał wszystkie".
+     */
+    private static final Pattern DJ_BY_GENDER = Pattern.compile("\\bDJ\\s+(?:\\p{L}+\\s+)?\\p{L}+ła?\\b", Pattern.UNICODE_CHARACTER_CLASS);
+
+    /** Texts with "DJ" and a masculine verb written before the rule above: to be rewritten in the owner's words, not more of them. */
+    private static final Set<String> DJ_BY_GENDER_TO_REWRITE = Set.of("guest.vote.gone", "party.ended.subtitle", "party.tip.title");
+
     private static Properties polish() throws IOException {
         Properties texts = new Properties();
         try (InputStream in = ImpersonalPolishTextsTest.class.getResourceAsStream("/messages_pl.properties")) {
@@ -37,6 +47,13 @@ class ImpersonalPolishTextsTest {
         assertThat(texts.stringPropertyNames()).as("the bundle was read").hasSizeGreaterThan(100);
         assertThat(texts.stringPropertyNames()).allSatisfy(key ->
                 assertThat(GENDERED.matcher(texts.getProperty(key)).find()).as(key + " = " + texts.getProperty(key)).isFalse());
+    }
+
+    @Test
+    void noPolishText_saysWhatTheDjDidByGender() throws IOException {
+        Properties texts = polish();
+        assertThat(texts.stringPropertyNames()).filteredOn(key -> !DJ_BY_GENDER_TO_REWRITE.contains(key)).allSatisfy(key ->
+                assertThat(DJ_BY_GENDER.matcher(texts.getProperty(key)).find()).as(key + " = " + texts.getProperty(key)).isFalse());
     }
 
     /** The owner's words (2026-10-24). */

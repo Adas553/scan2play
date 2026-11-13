@@ -1,6 +1,8 @@
 package com.scan2play.model;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,14 +14,19 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** The guests' themes (V59): the check of the migration names every theme of the enum and nothing else; a form's value read leniently. */
+/** The guests' themes (V59, V69): the checks of the migrations name every theme of the enum and nothing else; a form's value read leniently. */
 class GuestThemeTest {
 
-    @Test
-    void theMigrationsCheck_isTheEnum() throws IOException {
+    /**
+     * Every CHECK of a guests' look names every theme of the enum and nothing else: the party's (V59) and an event's of "Życzenia przed
+     * imprezą" (V69) — a look missing from one would make its form a 500.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"V59__guest_theme.sql", "V69__wish_event_theme.sql"})
+    void theMigrationsCheck_isTheEnum(String migration) throws IOException {
         String sql;
-        try (InputStream in = getClass().getResourceAsStream("/db/migration/V59__guest_theme.sql")) {
-            assertThat(in).as("V59").isNotNull();
+        try (InputStream in = getClass().getResourceAsStream("/db/migration/" + migration)) {
+            assertThat(in).as(migration).isNotNull();
             sql = new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
         Matcher check = Pattern.compile("guest_theme IN \\(([^)]*)\\)").matcher(sql);

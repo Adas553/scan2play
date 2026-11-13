@@ -19,7 +19,9 @@ the AI kept it out (`DjResponse.dedicationOk`); the DJ's queue shows the newest 
 więcej") — on a phone's folded card only "💌 3" beside the votes (the owner's screenshot, 2026-10-17: three filled half the
 screen), a tap shows them, each on a line of its own. An empty request (only spaces) goes back at once with `guest.error.empty` — no
 limit used, no AI asked. Under the form: "Twoja prośba „…” czeka u DJ-a" — or, with several, "Czekają u DJ-a Twoje prośby: 3" — and
-**one list**, "Prośby gości": every waiting request once, the most votes first and the newest first among equal votes
+**one list**, "Prośby gości" — under its heading, above the songs, "Daj 👍 piosenkom, które też chcesz usłyszeć — DJ widzi, czego
+goście chcą najbardziej." (`#voteHint`, only while a song not the guest's own waits, `GuestQueue.votable`; under the list a phone
+showed it below the screen, scenario `guest-vote-hint-above-the-list`): every waiting request once, the most votes first and the newest first among equal votes
 (`GuestQueueService.byVotes`), unnumbered — the DJ picks the order —, the first 5 shown and the rest folded under "Pokaż pozostałe
 prośby (N)" (a `<details>`; **its rows are not in the list's fragment** — `GET /p/{partyCode}/queue/more`, the fragment `moreList`,
 fetched only when it is unfolded and again when the list is fetched while it is unfolded: with 300 waiting, every guest's refresh

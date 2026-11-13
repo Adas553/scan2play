@@ -55,6 +55,12 @@ public class GuestRequestLimiter {
     static final int KIOSK_REQUESTS = 3;
     static final Duration KIOSK_WINDOW = Duration.ofMinutes(1);
     public static final int KIOSK_VOTES = 20;
+    /**
+     * "Życzenia przed imprezą" (V68): the wishes one address may write to one event in the address's window — an office's Wi-Fi is
+     * one address for a company party's guests, five songs each; the event's own ceiling ({@code WishService.MAX_WISHES}) holds the
+     * rest.
+     */
+    public static final int WISHES_PER_ADDRESS = 30;
     /** Parties with open windows at once (only known parties count requests: GuestController reads the party first). */
     private static final int MAX_PARTIES = 10_000;
     /** Address windows of one party at once: a venue has hundreds; a flood beyond it drops that party's own oldest. */
@@ -79,6 +85,7 @@ public class GuestRequestLimiter {
     private final Cache<String, Window> voteWindows;
     private final Cache<String, Window> partyWindows;
     private final Cache<String, Window> kioskWindows;
+    private final Cache<String, Window> wishWindows;
 
     @Autowired
     public GuestRequestLimiter(@Value("${guest.limit.per-ip-party:60}") int perClientLimit,
@@ -112,6 +119,7 @@ public class GuestRequestLimiter {
         this.voteWindows = Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(100_000).build();
         this.partyWindows = Caffeine.newBuilder().expireAfterWrite(PARTY_WINDOW).maximumSize(10_000).build();
         this.kioskWindows = Caffeine.newBuilder().expireAfterWrite(KIOSK_WINDOW).maximumSize(MAX_PARTIES).build();
+        this.wishWindows = Caffeine.newBuilder().expireAfterWrite(clientWindow).maximumSize(100_000).build();
     }
 
     /**
@@ -166,6 +174,16 @@ public class GuestRequestLimiter {
     /** Counts one 👍 (or its taking back) at the party's kiosk (V56) against the kiosk's own limit of votes. */
     public Optional<Long> tryAcquireKioskVote(String partyCode) {
         return acquire(voteWindows, partyCode + "|kiosk", KIOSK_VOTES, clientWindow);
+    }
+
+    /**
+     * Counts one wish written before an event (V68) against the address's limit at that event's link — not the party's day: the
+     * wishes are no requests and ask no AI.
+     *
+     * @return empty if the wish may go on (it has been counted), otherwise the seconds to wait
+     */
+    public Optional<Long> tryAcquireWish(String clientIp, String eventToken) {
+        return acquire(wishWindows, clientIp + "|" + eventToken, WISHES_PER_ADDRESS, clientWindow);
     }
 
     /**
